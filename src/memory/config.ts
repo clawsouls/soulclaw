@@ -50,16 +50,16 @@ export const DEFAULT_CHUNKER_CONFIG: ChunkerConfig = {
 
 export const DEFAULT_EMBEDDING_CONFIG: EmbeddingConfig = {
   provider: "ollama",
-  model: "nomic-embed-text",
+  model: "bge-m3",
   ollamaUrl: "http://localhost:11434",
   batchSize: 32,
-  dimensions: 768,
-  timeoutMs: 30_000,
+  dimensions: 1024,
+  timeoutMs: 60_000,
 };
 
 export const DEFAULT_VECTOR_STORE_CONFIG: VectorStoreConfig = {
   dbPath: "memory-index.db",
-  dimensions: 768,
+  dimensions: 1024,
 };
 
 export const DEFAULT_SEARCH_CONFIG: SearchConfig = {
