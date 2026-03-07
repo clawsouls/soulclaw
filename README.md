@@ -35,7 +35,7 @@ Disable with `SOULCLAW_TIERED_BOOTSTRAP=0` if you want upstream behavior.
 
 Vector-based memory retrieval using local Ollama embeddings. Find related memories by meaning, not just keywords.
 
-- Ollama `nomic-embed-text` embeddings (768d)
+- Ollama `bge-m3` embeddings (1024d, 100+ languages)
 - SQLite + sqlite-vec vector index
 - Incremental updates (only re-embed changed chunks)
 - Auto-fallback to text matching if Ollama unavailable
@@ -166,16 +166,14 @@ SoulClaw works without Ollama — it falls back to keyword-based text matching (
 
 ## Roadmap
 
-| Milestone | Status         | Description                                            |
-| --------- | -------------- | ------------------------------------------------------ |
-| v2026.3.3 | ✅ Released    | Contained runtime (`OPENCLAW_STATE_DIR` workspace fix) |
-| v2026.4.1 | 🔨 In Progress | Semantic memory search (vector embeddings)             |
-| v2026.4.2 | 📋 Planned     | Persona engine (drift detection + recovery)            |
-| v2026.4.3 | 📋 Planned     | Inline SoulScan (built-in security scanning)           |
-| v2026.4.4 | 📋 Planned     | Native swarm memory (auto-sync via heartbeat)          |
-| v2026.3.6 | ✅ Released    | Tiered bootstrap loading (40-60% token savings)        |
-| v2026.5.x | 📋 Future      | Multi-agent orchestration                              |
-| v2026.5.x | 📋 Future      | Plugin SDK enhancements                                |
+| Milestone | Status      | Description                                            |
+| --------- | ----------- | ------------------------------------------------------ |
+| v2026.3.3 | ✅ Released | Contained runtime (`OPENCLAW_STATE_DIR` workspace fix) |
+| v2026.3.4 | ✅ Released | Semantic memory search (bge-m3 vector embeddings)      |
+| v2026.3.5 | ✅ Released | Persona engine + Inline SoulScan + Native Swarm Memory |
+| v2026.3.6 | ✅ Released | Tiered bootstrap loading (40-60% token savings)        |
+| v2026.5.x | 📋 Future   | Multi-agent orchestration                              |
+| v2026.5.x | 📋 Future   | Plugin SDK enhancements                                |
 
 ## Upstream Compatibility
 
