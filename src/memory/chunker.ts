@@ -137,6 +137,11 @@ export function chunkMarkdown(
     }
 
     const tokens = estimateTokens(text);
+    // Skip trivially short chunks (headings only, near-empty sections)
+    // Short chunks become "hub vectors" that match everything poorly
+    if (tokens < 20) {
+      continue;
+    }
     if (tokens <= cfg.maxTokens) {
       const withOverlap = previousTail && cfg.overlapTokens > 0 ? previousTail + "\n" + text : text;
 
