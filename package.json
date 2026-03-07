@@ -1,20 +1,21 @@
 {
-  "name": "openclaw",
+  "name": "soulclaw",
   "version": "2026.3.3",
-  "description": "Multi-channel AI gateway with extensible messaging integrations",
+  "description": "Soul-aware OpenClaw fork — enhanced memory search and contained runtime",
   "keywords": [],
-  "homepage": "https://github.com/openclaw/openclaw#readme",
+  "homepage": "https://github.com/clawsouls/soulclaw#readme",
   "bugs": {
-    "url": "https://github.com/openclaw/openclaw/issues"
+    "url": "https://github.com/clawsouls/soulclaw/issues"
   },
   "license": "MIT",
   "author": "",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openclaw/openclaw.git"
+    "url": "git+https://github.com/clawsouls/soulclaw.git"
   },
   "bin": {
-    "openclaw": "openclaw.mjs"
+    "openclaw": "openclaw.mjs",
+    "soulclaw": "openclaw.mjs"
   },
   "directories": {
     "doc": "docs",
