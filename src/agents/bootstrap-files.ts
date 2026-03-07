@@ -7,6 +7,7 @@ import {
   resolveBootstrapMaxChars,
   resolveBootstrapTotalMaxChars,
 } from "./pi-embedded-helpers.js";
+import { filterByTier, type TieredFilterOptions } from "./tiered-bootstrap.js";
 import {
   filterBootstrapFilesForSession,
   loadWorkspaceBootstrapFiles,
@@ -70,6 +71,8 @@ export async function resolveBootstrapFilesForRun(params: {
   warn?: (message: string) => void;
   contextMode?: BootstrapContextMode;
   runKind?: BootstrapContextRunKind;
+  /** SoulClaw: tiered bootstrap options for progressive disclosure */
+  tieredBootstrap?: TieredFilterOptions;
 }): Promise<WorkspaceBootstrapFile[]> {
   const sessionKey = params.sessionKey ?? params.sessionId;
   const rawFiles = params.sessionKey
@@ -78,8 +81,17 @@ export async function resolveBootstrapFilesForRun(params: {
         sessionKey: params.sessionKey,
       })
     : await loadWorkspaceBootstrapFiles(params.workspaceDir);
+
+  // Apply session-level filtering (subagent/cron get minimal set)
+  let filtered = filterBootstrapFilesForSession(rawFiles, sessionKey);
+
+  // SoulClaw: Apply tiered progressive disclosure for main sessions
+  if (params.tieredBootstrap && !params.tieredBootstrap.disabled) {
+    filtered = filterByTier(filtered, params.tieredBootstrap);
+  }
+
   const bootstrapFiles = applyContextModeFilter({
-    files: filterBootstrapFilesForSession(rawFiles, sessionKey),
+    files: filtered,
     contextMode: params.contextMode,
     runKind: params.runKind,
   });
@@ -104,6 +116,7 @@ export async function resolveBootstrapContextForRun(params: {
   warn?: (message: string) => void;
   contextMode?: BootstrapContextMode;
   runKind?: BootstrapContextRunKind;
+  tieredBootstrap?: TieredFilterOptions;
 }): Promise<{
   bootstrapFiles: WorkspaceBootstrapFile[];
   contextFiles: EmbeddedContextFile[];

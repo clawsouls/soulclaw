@@ -790,6 +790,17 @@ export async function runEmbeddedAttempt(
     });
 
     const sessionLabel = params.sessionKey ?? params.sessionId;
+
+    // SoulClaw: Determine tiered bootstrap options for progressive disclosure
+    const tieredBootstrapEnabled = process.env.SOULCLAW_TIERED_BOOTSTRAP !== "0";
+    const isHeartbeatRun = params.bootstrapContextRunKind === "heartbeat";
+    const isContinuation = params.sessionFile
+      ? await fs
+          .stat(params.sessionFile)
+          .then(() => true)
+          .catch(() => false)
+      : false;
+
     const { bootstrapFiles: hookAdjustedBootstrapFiles, contextFiles } =
       await resolveBootstrapContextForRun({
         workspaceDir: effectiveWorkspace,
@@ -799,6 +810,12 @@ export async function runEmbeddedAttempt(
         warn: makeBootstrapWarn({ sessionLabel, warn: (message) => log.warn(message) }),
         contextMode: params.bootstrapContextMode,
         runKind: params.bootstrapContextRunKind,
+        tieredBootstrap: tieredBootstrapEnabled
+          ? {
+              turnCount: isContinuation ? 1 : 0,
+              isHeartbeat: isHeartbeatRun,
+            }
+          : undefined,
       });
     const bootstrapMaxChars = resolveBootstrapMaxChars(params.config);
     const bootstrapTotalMaxChars = resolveBootstrapTotalMaxChars(params.config);
