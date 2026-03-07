@@ -375,6 +375,11 @@ export async function compactEmbeddedPiSessionDirect(
       sessionKey: params.sessionKey,
       sessionId: params.sessionId,
       warn: makeBootstrapWarn({ sessionLabel, warn: (message) => log.warn(message) }),
+      // SoulClaw: Compaction uses tier 1+2 (identity + context, no memory)
+      tieredBootstrap:
+        process.env.SOULCLAW_TIERED_BOOTSTRAP !== "0"
+          ? { turnCount: 0, isHeartbeat: false }
+          : undefined,
     });
     const runAbortController = new AbortController();
     const toolsRaw = createOpenClawCodingTools({
