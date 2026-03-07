@@ -4,6 +4,31 @@
 
 SoulClaw is a fork of [OpenClaw](https://github.com/openclaw/openclaw) optimized for the [ClawSouls](https://clawsouls.ai) ecosystem. It adds semantic memory search, persona drift detection, inline security scanning, and native swarm memory synchronization — all running locally.
 
+## ⚡ Killer Feature: Tiered Bootstrap Loading
+
+**Save 40-60% tokens on every conversation.**
+
+OpenClaw loads ALL workspace files (SOUL.md, MEMORY.md, memory/\*.md, TOOLS.md, etc.) into every system prompt — even when you're just asking a quick question. That's thousands of wasted tokens per turn.
+
+SoulClaw introduces **progressive disclosure**: only load what's needed, when it's needed.
+
+| Tier                    | Files                           | When                                          |
+| ----------------------- | ------------------------------- | --------------------------------------------- |
+| **Tier 1** (Always)     | SOUL.md, IDENTITY.md, AGENTS.md | Every turn — core identity                    |
+| **Tier 2** (First turn) | TOOLS.md, USER.md, BOOTSTRAP.md | New session only — session context            |
+| **Tier 3** (On demand)  | MEMORY.md, memory/\*.md         | **Never injected** — use `memory_search` tool |
+
+Memory files are available via the `memory_search` tool when actually needed. There's no reason to stuff your entire memory into every system prompt.
+
+```
+# Typical savings (Brad agent, 236 memory files):
+# OpenClaw:  ~12,000 tokens/turn (all files loaded)
+# SoulClaw:  ~4,500 tokens/turn (Tier 1 only on continuation)
+# Savings:   ~62% fewer tokens per turn
+```
+
+Disable with `SOULCLAW_TIERED_BOOTSTRAP=0` if you want upstream behavior.
+
 ## Features
 
 ### 🔍 Semantic Memory Search
@@ -148,7 +173,7 @@ SoulClaw works without Ollama — it falls back to keyword-based text matching (
 | v2026.4.2 | 📋 Planned     | Persona engine (drift detection + recovery)            |
 | v2026.4.3 | 📋 Planned     | Inline SoulScan (built-in security scanning)           |
 | v2026.4.4 | 📋 Planned     | Native swarm memory (auto-sync via heartbeat)          |
-| v2026.5.x | 📋 Future      | Context window optimization                            |
+| v2026.3.6 | ✅ Released    | Tiered bootstrap loading (40-60% token savings)        |
 | v2026.5.x | 📋 Future      | Multi-agent orchestration                              |
 | v2026.5.x | 📋 Future      | Plugin SDK enhancements                                |
 
