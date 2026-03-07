@@ -51,7 +51,7 @@ export class VectorStore {
 
   async init(): Promise<void> {
     const { DatabaseSync } = requireNodeSqlite();
-    this.db = new DatabaseSync(this.config.dbPath);
+    this.db = new DatabaseSync(this.config.dbPath, { allowExtension: true });
 
     // Load sqlite-vec
     const result = await loadSqliteVecExtension({ db: this.db });
@@ -201,9 +201,8 @@ export class VectorStore {
                   c.heading, c.content, v.distance
            FROM chunks_vec v
            JOIN chunks c ON c.id = v.id
-           WHERE v.embedding MATCH ?
-           ORDER BY v.distance
-           LIMIT ?`,
+           WHERE v.embedding MATCH ? AND k = ?
+           ORDER BY v.distance`,
         )
         .all(vectorBlob, topK) as Array<{
         id: string;
