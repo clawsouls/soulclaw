@@ -65,17 +65,79 @@ soulclaw gateway start
 
 # With contained runtime (for extensions/embedding)
 OPENCLAW_STATE_DIR=/path/to/state soulclaw gateway start
-
-# Memory search uses vector index automatically if Ollama is running
-ollama pull nomic-embed-text
 ```
+
+## Setting Up Ollama for Semantic Memory Search
+
+SoulClaw uses [Ollama](https://ollama.com) for local embedding generation. No API keys needed — everything runs on your machine.
+
+### 1. Install Ollama
+
+```bash
+# macOS / Linux
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Windows — download from https://ollama.com/download
+```
+
+### 2. Pull the embedding model
+
+```bash
+ollama pull bge-m3
+```
+
+**Why bge-m3?** It's a multilingual embedding model (100+ languages) that handles mixed Korean/English content accurately. Other English-only models (e.g. `nomic-embed-text`) perform poorly on non-English text.
+
+| Model              | Dimensions | Multilingual      | RAM Usage | Recommended             |
+| ------------------ | ---------- | ----------------- | --------- | ----------------------- |
+| `bge-m3`           | 1024       | ✅ 100+ languages | ~1.3 GB   | ✅ Default              |
+| `nomic-embed-text` | 768        | ❌ English only   | ~0.3 GB   | English-only workspaces |
+
+### 3. Verify
+
+```bash
+ollama list  # Should show bge-m3
+```
+
+That's it. SoulClaw auto-detects Ollama on startup and begins indexing your memory files.
+
+### Hardware Compatibility
+
+| Environment           | Works?           | Speed (per query) |
+| --------------------- | ---------------- | ----------------- |
+| Apple Silicon (M1-M4) | ✅ GPU via Metal | ~50ms             |
+| NVIDIA GPU (CUDA)     | ✅ GPU           | ~30ms             |
+| CPU only (no GPU)     | ✅ Works         | ~500ms            |
+| Raspberry Pi          | ⚠️ Very slow     | ~3-5s             |
+
+bge-m3 loads on demand and unloads automatically after idle (~17s). Peak RAM: **~1.3 GB** during search, 0 when idle.
+
+### Using a different model
+
+```jsonc
+// openclaw.json
+{
+  "memory": {
+    "search": {
+      "embedding": {
+        "model": "nomic-embed-text", // or any Ollama embedding model
+        "ollamaUrl": "http://localhost:11434",
+      },
+    },
+  },
+}
+```
+
+### Without Ollama
+
+SoulClaw works without Ollama — it falls back to keyword-based text matching (same as standard OpenClaw). Ollama just makes search significantly more accurate.
 
 ## Requirements
 
 - Node.js >= 22.12.0
-- [Ollama](https://ollama.com) (optional, for semantic search + persona features)
-  - `nomic-embed-text` — memory search embeddings
-  - Any chat model (e.g. `llama3.2`) — persona drift detection, conflict resolution
+- [Ollama](https://ollama.com) (optional but recommended)
+  - `bge-m3` — memory search embeddings (default)
+  - Any chat model (e.g. `llama3.2`) — persona drift detection, conflict resolution (future)
 
 ## Roadmap
 
