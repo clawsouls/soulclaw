@@ -375,6 +375,10 @@ export async function ensureAgentWorkspace(params?: {
   const identityTemplate = await loadTemplate(DEFAULT_IDENTITY_FILENAME);
   const userTemplate = await loadTemplate(DEFAULT_USER_FILENAME);
   const heartbeatTemplate = await loadTemplate(DEFAULT_HEARTBEAT_FILENAME);
+  // Ensure memory/ directory exists for memory search indexing
+  const memoryDir = path.join(dir, "memory");
+  await fs.mkdir(memoryDir, { recursive: true });
+
   await writeFileIfMissing(agentsPath, agentsTemplate);
   await writeFileIfMissing(soulPath, soulTemplate);
   await writeFileIfMissing(toolsPath, toolsTemplate);
