@@ -3,7 +3,7 @@ import type { PortListener, PortListenerKind, PortUsage } from "./ports-types.js
 
 export function classifyPortListener(listener: PortListener, port: number): PortListenerKind {
   const raw = `${listener.commandLine ?? ""} ${listener.command ?? ""}`.trim().toLowerCase();
-  if (raw.includes("openclaw")) {
+  if (raw.includes("openclaw") || raw.includes("soulclaw")) {
     return "gateway";
   }
   if (raw.includes("ssh")) {
