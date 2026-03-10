@@ -12,11 +12,12 @@ type SoulSummary = {
   category: string;
 };
 
-type SoulDetail = {
-  fullName: string;
-  displayName: string;
-  description: string;
-  files: Record<string, { content?: string }>;
+type SoulBundle = {
+  manifest: { displayName?: string };
+  files: Record<string, string>;
+  owner: string;
+  name: string;
+  version: string;
 };
 
 async function fetchPopularSouls(limit = 10): Promise<SoulSummary[]> {
@@ -36,10 +37,10 @@ async function fetchPopularSouls(limit = 10): Promise<SoulSummary[]> {
   }
 }
 
-async function fetchSoulFiles(fullName: string): Promise<SoulDetail | null> {
+async function fetchSoulBundle(fullName: string): Promise<SoulBundle | null> {
   try {
     const [owner, name] = fullName.split("/");
-    const url = `${CLAWSOULS_API}/souls/${owner}/${name}`;
+    const url = `${CLAWSOULS_API}/bundle/${owner}/${name}`;
     const res = await fetch(url, {
       signal: AbortSignal.timeout(8_000),
       headers: { "User-Agent": "SoulClaw-Onboard/1.0" },
@@ -47,7 +48,7 @@ async function fetchSoulFiles(fullName: string): Promise<SoulDetail | null> {
     if (!res.ok) {
       return null;
     }
-    return (await res.json()) as SoulDetail;
+    return (await res.json()) as SoulBundle;
   } catch {
     return null;
   }
@@ -103,32 +104,51 @@ export async function promptSoulSelection(params: {
     return { selected: false };
   }
 
-  // Fetch full soul details
-  const detail = await fetchSoulFiles(chosen);
-  if (!detail || !detail.files) {
+  // Fetch full soul bundle (includes file contents)
+  const bundle = await fetchSoulBundle(chosen);
+  if (!bundle || !bundle.files || Object.keys(bundle.files).length === 0) {
     await prompter.note(
-      `Could not fetch soul details for ${chosen}. Using default persona.`,
+      `Could not fetch soul files for ${chosen}. Using default persona.`,
       "Soul Selection",
     );
     return { selected: false };
   }
 
-  // Write SOUL.md
-  const soulContent = detail.files["SOUL.md"]?.content;
-  if (soulContent) {
-    const soulPath = path.join(workspaceDir, "SOUL.md");
-    await fs.writeFile(soulPath, soulContent, "utf-8");
+  // Known workspace files that a soul can override
+  const SOUL_FILES = [
+    "SOUL.md",
+    "IDENTITY.md",
+    "AGENTS.md",
+    "STYLE.md",
+    "HEARTBEAT.md",
+    "TOOLS.md",
+    "USER.md",
+    "BOOTSTRAP.md",
+  ];
+
+  // Remove existing soul files before writing new ones
+  for (const filename of SOUL_FILES) {
+    const filePath = path.join(workspaceDir, filename);
+    try {
+      await fs.unlink(filePath);
+    } catch {
+      // File doesn't exist — fine
+    }
   }
 
-  // Write IDENTITY.md if available
-  const identityContent = detail.files["IDENTITY.md"]?.content;
-  if (identityContent) {
-    const identityPath = path.join(workspaceDir, "IDENTITY.md");
-    await fs.writeFile(identityPath, identityContent, "utf-8");
+  // Write all files from the bundle
+  const writtenFiles: string[] = [];
+  for (const [filename, content] of Object.entries(bundle.files)) {
+    if (typeof content === "string" && content.length > 0) {
+      const filePath = path.join(workspaceDir, filename);
+      await fs.writeFile(filePath, content, "utf-8");
+      writtenFiles.push(filename);
+    }
   }
 
+  const displayName = bundle.manifest?.displayName ?? chosen;
   await prompter.note(
-    `Installed ${detail.displayName} as your AI persona.\nBrowse more at https://clawsouls.ai/souls`,
+    `Installed ${displayName} (${writtenFiles.join(", ")}).\nBrowse more at https://clawsouls.ai/souls`,
     "Soul Selection",
   );
 
