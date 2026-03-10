@@ -23,7 +23,7 @@ If not installed, install globally:
 npm install -g clawsouls
 ```
 
-Current version: **v0.6.0**
+Current version: **v0.6.2**
 
 ## Commands
 
@@ -195,6 +195,35 @@ Instructions to get API token: Sign in at https://clawsouls.ai → Dashboard →
 3. **Create** — `npx clawsouls init my-soul` → edit files
 4. **Publish** — `npx clawsouls publish ./my-soul/`
 5. **Manage** — Dashboard at https://clawsouls.ai/dashboard (delete, view downloads)
+
+### Memory Sync (Swarm)
+
+```bash
+npx clawsouls sync                  # sync encrypted memory to/from GitHub
+npx clawsouls swarm                 # multi-agent memory branch & merge system
+```
+
+Sync agent memory across machines via encrypted Git. Uses `age` encryption for local-first privacy.
+
+### Soul Checkpoints (Rollback)
+
+```bash
+npx clawsouls checkpoint            # manage soul checkpoints
+npx clawsouls checkpoint create     # create a checkpoint of current soul state
+npx clawsouls checkpoint list       # list available checkpoints
+npx clawsouls checkpoint restore    # restore from a checkpoint
+```
+
+Checkpoint-based rollback for persona contamination detection and recovery.
+
+### Platform Detection
+
+```bash
+npx clawsouls platform              # show detected agent platform(s) and workspace path
+npx clawsouls detect                # alias
+```
+
+Detects which agent platform is running (OpenClaw, SoulClaw, ZeroClaw, etc.) and shows workspace paths.
 
 ## MCP Server (for Claude Desktop / Cowork)
 
