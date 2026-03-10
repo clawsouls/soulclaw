@@ -102,7 +102,7 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     label: "memory_search",
     description: "Semantic search",
     sectionId: "memory",
-    profiles: ["coding"],
+    profiles: ["coding", "messaging"],
     includeInOpenClawGroup: true,
   },
   {
@@ -110,7 +110,7 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     label: "memory_get",
     description: "Read memory files",
     sectionId: "memory",
-    profiles: ["coding"],
+    profiles: ["coding", "messaging"],
     includeInOpenClawGroup: true,
   },
   {
