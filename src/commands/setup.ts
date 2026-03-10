@@ -41,8 +41,24 @@ export async function setupCommand(
 
   const workspace = desiredWorkspace ?? defaults.workspace ?? DEFAULT_AGENT_WORKSPACE_DIR;
 
+  // Ensure ollama provider config exists as default for local-first usage
+  const existingProviders = cfg.models?.providers ?? {};
+  const ollamaProvider = existingProviders.ollama ?? {
+    baseUrl: "http://127.0.0.1:11434/v1",
+    apiKey: "dummy",
+    api: "openai-completions",
+    models: [],
+  };
+
   const next: OpenClawConfig = {
     ...cfg,
+    models: {
+      ...cfg.models,
+      providers: {
+        ...existingProviders,
+        ollama: ollamaProvider,
+      },
+    },
     agents: {
       ...cfg.agents,
       defaults: {
