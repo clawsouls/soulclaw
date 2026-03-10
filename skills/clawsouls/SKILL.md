@@ -186,7 +186,8 @@ Instructions to get API token: Sign in at https://clawsouls.ai → Dashboard →
 2. **Install** — `npx clawsouls install clawsouls/surgical-coder`
 3. **Activate** — `npx clawsouls use clawsouls/surgical-coder`
 4. **Restart** — Run `soulclaw gateway restart` to apply the new persona
-5. **Restore** — If they want to go back, `npx clawsouls restore`
+5. **New Session** — Send `/new` in chat to clear previous persona context from conversation history
+6. **Restore** — If they want to go back, `npx clawsouls restore`
 
 ### Publishing a Soul
 
@@ -245,7 +246,7 @@ GitHub: https://github.com/clawsouls/soul-spec-mcp
 
 ## Important Notes
 
-- After `use`, always remind the user to run `soulclaw gateway restart`
+- After `use`, always remind the user to run `soulclaw gateway restart` **and then `/new`** to start a fresh session (old conversation history retains the previous persona's identity)
 - The `use` command creates automatic backups — data loss is unlikely
 - Souls may include STYLE.md and examples/ for enhanced persona customization
 - Published souls appear at `https://clawsouls.ai/souls/owner/name`
