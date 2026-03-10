@@ -177,7 +177,15 @@ SoulClaw works without Ollama — it falls back to keyword-based text matching (
 
 ## Upstream Compatibility
 
-SoulClaw tracks OpenClaw `main` branch. All OpenClaw features, plugins, and configurations work as-is. SoulClaw adds functionality — it doesn't remove or break anything.
+SoulClaw is forked from [OpenClaw](https://github.com/openclaw/openclaw) **v2026.3.7** (March 7, 2026).
+
+|                      | Version                |
+| -------------------- | ---------------------- |
+| **Fork base**        | OpenClaw `2026.3.7`    |
+| **Current SoulClaw** | `2026.3.11`            |
+| **License**          | MIT (same as OpenClaw) |
+
+All OpenClaw features, plugins, and configurations work as-is. SoulClaw adds functionality — it doesn't remove or break anything.
 
 Universal patches are contributed back to upstream via PR.
 
