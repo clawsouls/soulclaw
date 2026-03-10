@@ -15,7 +15,7 @@ export type OllamaEmbeddingClient = {
 };
 type OllamaEmbeddingClientConfig = Omit<OllamaEmbeddingClient, "embedBatch">;
 
-export const DEFAULT_OLLAMA_EMBEDDING_MODEL = "nomic-embed-text";
+export const DEFAULT_OLLAMA_EMBEDDING_MODEL = "bge-m3";
 const DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434";
 
 function sanitizeAndNormalizeEmbedding(vec: number[]): number[] {
