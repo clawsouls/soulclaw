@@ -512,6 +512,14 @@ export async function runOnboardingWizard(
     skipBootstrap: Boolean(nextConfig.agents?.defaults?.skipBootstrap),
   });
 
+  // Soul selection from ClawSouls
+  try {
+    const { promptSoulSelection } = await import("../commands/onboard-soul-picker.js");
+    await promptSoulSelection({ workspaceDir, prompter });
+  } catch {
+    // Soul selection is optional — network errors shouldn't block onboarding
+  }
+
   if (opts.skipSearch) {
     await prompter.note("Skipping search setup.", "Search");
   } else {
