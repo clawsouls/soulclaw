@@ -27,6 +27,7 @@ import {
   scheduleRestartSentinelWake,
   shouldWakeFromRestartSentinel,
 } from "./server-restart-sentinel.js";
+import { detectAndResetOnSoulChange } from "./server-soul-change-detect.js";
 import { startGatewayMemoryBackend } from "./server-startup-memory.js";
 
 const SESSION_LOCK_STALE_MS = 30 * 60 * 1000;
@@ -59,6 +60,16 @@ export async function startGatewaySidecars(params: {
     }
   } catch (err) {
     params.log.warn(`session lock cleanup failed on startup: ${String(err)}`);
+  }
+
+  // Detect soul changes and auto-reset sessions
+  try {
+    await detectAndResetOnSoulChange({
+      workspaceDir: params.defaultWorkspaceDir,
+      log: params.log,
+    });
+  } catch (err) {
+    params.log.warn(`soul change detection failed: ${String(err)}`);
   }
 
   // Start OpenClaw browser control server (unless disabled via config).
