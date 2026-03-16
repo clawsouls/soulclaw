@@ -121,3 +121,8 @@ dist/protocol.schema.json
 
 # Synthing
 **/.stfolder/
+
+# Vector index cache (auto-generated from memory files)
+.memory-index/
+*.memory-vec.db
+*.memory-vec.db-journal
