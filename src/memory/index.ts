@@ -17,6 +17,8 @@ export { VectorStore } from "./vector-store.js";
 export type { StoredChunk, VectorSearchResult, VectorStoreStats } from "./vector-store.js";
 export { chunkMarkdown } from "./chunker.js";
 export type { Chunk } from "./chunker.js";
+export { maybeExtractPassiveMemory, clearPassiveMemoryState } from "./passive-memory.js";
+export type { PassiveMemoryConfig } from "./passive-memory.js";
 export {
   resolveMemorySearchConfig,
   type MemorySearchConfig,
