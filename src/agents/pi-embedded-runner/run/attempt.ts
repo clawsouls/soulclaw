@@ -13,6 +13,7 @@ import type { OpenClawConfig } from "../../../config/config.js";
 import { getMachineDisplayName } from "../../../infra/machine-name.js";
 import { ensureGlobalUndiciStreamTimeouts } from "../../../infra/net/undici-global-dispatcher.js";
 import { MAX_IMAGE_BYTES } from "../../../media/constants.js";
+import { maybeExtractPassiveMemory } from "../../../memory/passive-memory.js";
 import { getGlobalHookRunner } from "../../../plugins/hook-runner-global.js";
 import type {
   PluginHookAgentContext,
@@ -1978,6 +1979,17 @@ export async function runEmbeddedAttempt(
               log.warn(`agent_end hook failed: ${err}`);
             });
         }
+
+        // Passive memory: background extraction of important conversation details
+        maybeExtractPassiveMemory({
+          messages: messagesSnapshot,
+          sessionKey: params.sessionKey,
+          sessionId: params.sessionId,
+          workspaceDir: params.workspaceDir,
+          agentId: hookAgentId,
+        }).catch((err) => {
+          log.warn(`Passive memory extraction failed: ${err}`);
+        });
       } finally {
         clearTimeout(abortTimer);
         if (abortWarnTimer) {
