@@ -13,6 +13,7 @@ import type { OpenClawConfig } from "../../../config/config.js";
 import { getMachineDisplayName } from "../../../infra/machine-name.js";
 import { ensureGlobalUndiciStreamTimeouts } from "../../../infra/net/undici-global-dispatcher.js";
 import { MAX_IMAGE_BYTES } from "../../../media/constants.js";
+import { maybeDagStore } from "../../../memory/dag-hook.js";
 import { maybeExtractPassiveMemory } from "../../../memory/passive-memory.js";
 import { getGlobalHookRunner } from "../../../plugins/hook-runner-global.js";
 import type {
@@ -1979,6 +1980,15 @@ export async function runEmbeddedAttempt(
               log.warn(`agent_end hook failed: ${err}`);
             });
         }
+
+        // DAG store: persist all conversation messages for lossless recall
+        maybeDagStore({
+          messages: messagesSnapshot,
+          sessionKey: params.sessionKey,
+          workspaceDir: params.workspaceDir,
+        }).catch((err) => {
+          log.warn(`DAG store failed: ${err}`);
+        });
 
         // Passive memory: background extraction of important conversation details
         maybeExtractPassiveMemory({
