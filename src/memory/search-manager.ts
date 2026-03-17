@@ -1,4 +1,4 @@
-import { resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
+import * as path from "node:path";
 import type { OpenClawConfig } from "../config/config.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import type { ResolvedQmdConfig } from "./backend-config.js";
@@ -255,9 +255,9 @@ function maybeWrapDag(
       return manager;
     }
 
-    const defaultAgentId =
-      ((cfg.agents?.defaults as Record<string, unknown> | undefined)?.agentId as string) ?? "main";
-    const workspaceDir = resolveAgentWorkspaceDir(cfg, defaultAgentId);
+    const workspaceDir =
+      (cfg.agents?.defaults?.workspace as string) ||
+      path.join(process.env.HOME || "/tmp", ".openclaw/workspace");
     if (!workspaceDir) {
       return manager;
     }
