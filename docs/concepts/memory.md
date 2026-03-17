@@ -738,3 +738,84 @@ Notes:
 
 - `remote.*` takes precedence over `models.providers.openai.*`.
 - `remote.headers` merge with OpenAI headers; remote wins on key conflicts. Omit `remote.headers` to use the OpenAI defaults.
+
+## DAG Lossless Conversation Store
+
+> Added in v2026.3.18
+
+The DAG (Directed Acyclic Graph) store provides **lossless conversation persistence**. Every message exchanged between the user and agent is stored permanently in a local SQLite database, ensuring no information is ever lost to context window pruning or compaction.
+
+### How it works
+
+The DAG store hooks into the agent lifecycle and runs automatically after each conversation turn:
+
+1. **Raw storage (Level 0)**: Every user and assistant message is stored as-is
+2. **Chunk summarization (Level 1)**: After 10 accumulated turns, the LLM generates a concise summary
+3. **Higher-level summaries (Level 2+)**: Summaries are recursively rolled up for long-running sessions
+
+```
+Level 0: Raw messages (never deleted)
+   ↓ Every 10 turns
+Level 1: Chunk summaries
+   ↓ Recursive
+Level 2+: Higher-level summaries
+```
+
+### Storage location
+
+The database is stored at:
+
+```
+<workspace>/.dag-memory.sqlite
+```
+
+Typical storage: ~50 conversation turns ≈ 300KB.
+
+### FTS5 full-text search
+
+The DAG store includes an [FTS5](https://www.sqlite.org/fts5.html) virtual table for fast full-text search across all stored conversations. This complements the existing vector-based semantic search by providing exact keyword matching.
+
+### Activation
+
+The DAG store activates **automatically** when `memorySearch.provider` is configured (any value except `"none"`). No additional configuration is needed:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "memorySearch": {
+        "provider": "local"
+      }
+    }
+  }
+}
+```
+
+If `memorySearch` is not configured, the DAG store remains inactive and no SQLite file is created.
+
+### 3-Tier Memory Architecture
+
+The DAG store is part of SoulClaw's 3-tier memory system:
+
+| Tier | Component      | Purpose                                         | Storage              |
+| ---- | -------------- | ----------------------------------------------- | -------------------- |
+| 1    | DAG Store      | Lossless conversation persistence + FTS5 search | `.dag-memory.sqlite` |
+| 2    | Vector Search  | Semantic similarity search over memory files    | `memory-index.db`    |
+| 3    | Passive Memory | Automatic extraction of important facts         | `memory/*.md` files  |
+
+All three tiers work together: the DAG ensures nothing is lost, passive memory extracts signal from noise, and vector search provides semantic retrieval.
+
+### Inspecting the DAG
+
+You can query the DAG database directly with any SQLite client:
+
+```bash
+# Count stored nodes
+sqlite3 .dag-memory.sqlite "SELECT level, COUNT(*) FROM dag_nodes GROUP BY level"
+
+# Search conversation history
+sqlite3 .dag-memory.sqlite "SELECT content FROM dag_fts WHERE dag_fts MATCH 'deployment' LIMIT 5"
+
+# Recent messages
+sqlite3 .dag-memory.sqlite "SELECT role, substr(content,1,80) FROM dag_nodes WHERE level=0 ORDER BY created_at DESC LIMIT 10"
+```
