@@ -2,6 +2,7 @@ import { Type } from "@sinclair/typebox";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { MemoryCitationsMode } from "../../config/types.memory.js";
 import { resolveMemoryBackendConfig } from "../../memory/backend-config.js";
+import { searchDagFts5 } from "../../memory/dag-search-inline.js";
 import { getMemorySearchManager } from "../../memory/index.js";
 import type { MemorySearchResult } from "../../memory/types.js";
 import { parseAgentSessionKey } from "../../routing/session-key.js";
@@ -69,11 +70,24 @@ export function createMemorySearchTool(options: {
           mode: citationsMode,
           sessionKey: options.agentSessionKey,
         });
-        const rawResults = await manager.search(query, {
-          maxResults,
-          minScore,
-          sessionKey: options.agentSessionKey,
-        });
+        // Run standard search + DAG FTS5 in parallel
+        const dagLimit = Math.min(5, Math.ceil((maxResults ?? 10) / 2));
+        const [standardResults, dagResults] = await Promise.all([
+          manager.search(query, {
+            maxResults,
+            minScore,
+            sessionKey: options.agentSessionKey,
+          }),
+          searchDagFts5({ cfg, query, limit: dagLimit }),
+        ]);
+        // Merge: standard results first, then DAG (deduplicated)
+        const existingSnippets = new Set(standardResults.map((r) => r.snippet.slice(0, 100)));
+        const rawResults = [...standardResults];
+        for (const d of dagResults) {
+          if (!existingSnippets.has(d.snippet.slice(0, 100))) {
+            rawResults.push(d);
+          }
+        }
         const status = manager.status();
         const decorated = decorateCitations(rawResults, includeCitations);
         const resolved = resolveMemoryBackendConfig({ cfg, agentId });
