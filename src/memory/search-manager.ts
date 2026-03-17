@@ -1,7 +1,9 @@
+import { resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import type { ResolvedQmdConfig } from "./backend-config.js";
 import { resolveMemoryBackendConfig } from "./backend-config.js";
+import { wrapWithDagSearch } from "./dag-search-wrapper.js";
 import type {
   MemoryEmbeddingProbeResult,
   MemorySearchManager,
@@ -64,10 +66,11 @@ export async function getMemorySearchManager(params: {
             }
           },
         );
+        const dagWrapped = maybeWrapDag(wrapper, params.cfg) ?? wrapper;
         if (cacheKey) {
-          QMD_MANAGER_CACHE.set(cacheKey, wrapper);
+          QMD_MANAGER_CACHE.set(cacheKey, dagWrapped);
         }
-        return { manager: wrapper };
+        return { manager: dagWrapped };
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -78,7 +81,7 @@ export async function getMemorySearchManager(params: {
   try {
     const { MemoryIndexManager } = await loadManagerRuntime();
     const manager = await MemoryIndexManager.get(params);
-    return { manager };
+    return { manager: maybeWrapDag(manager, params.cfg) };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return { manager: null, error: message };
@@ -233,4 +236,34 @@ function buildQmdCacheKey(agentId: string, config: ResolvedQmdConfig): string {
   // ResolvedQmdConfig is assembled in a stable field order in resolveMemoryBackendConfig.
   // Fast stringify avoids deep key-sorting overhead on this hot path.
   return `${agentId}:${JSON.stringify(config)}`;
+}
+
+/**
+ * Wrap a MemorySearchManager with DAG FTS5 search if memorySearch is configured.
+ * Returns the original manager unchanged if workspace dir can't be resolved.
+ */
+function maybeWrapDag(
+  manager: MemorySearchManager | null,
+  cfg: OpenClawConfig,
+): MemorySearchManager | null {
+  if (!manager) {
+    return null;
+  }
+  try {
+    const provider = cfg.agents?.defaults?.memorySearch?.provider as string | undefined;
+    if (!provider || provider === "none") {
+      return manager;
+    }
+
+    const defaultAgentId =
+      ((cfg.agents?.defaults as Record<string, unknown> | undefined)?.agentId as string) ?? "main";
+    const workspaceDir = resolveAgentWorkspaceDir(cfg, defaultAgentId);
+    if (!workspaceDir) {
+      return manager;
+    }
+
+    return wrapWithDagSearch(manager, workspaceDir);
+  } catch {
+    return manager;
+  }
 }
