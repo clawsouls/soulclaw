@@ -19,6 +19,11 @@ export { chunkMarkdown } from "./chunker.js";
 export type { Chunk } from "./chunker.js";
 export { maybeExtractPassiveMemory, clearPassiveMemoryState } from "./passive-memory.js";
 export type { PassiveMemoryConfig } from "./passive-memory.js";
+
+// DAG Lossless Conversation Store
+export { DagStore } from "./dag-store.js";
+export { maybeDagStore, getDagStore } from "./dag-hook.js";
+export { maybeSummarizeDag } from "./dag-summarizer.js";
 export {
   resolveMemorySearchConfig,
   type MemorySearchConfig,
