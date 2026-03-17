@@ -1986,6 +1986,9 @@ export async function runEmbeddedAttempt(
           messages: messagesSnapshot,
           sessionKey: params.sessionKey,
           workspaceDir: params.workspaceDir,
+          memorySearchProvider: params.config?.agents?.defaults?.memorySearch?.provider as
+            | string
+            | undefined,
         }).catch((err) => {
           log.warn(`DAG store failed: ${err}`);
         });
