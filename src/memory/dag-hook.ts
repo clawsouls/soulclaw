@@ -68,10 +68,16 @@ export async function maybeDagStore(params: {
   messages: unknown[];
   sessionKey?: string;
   workspaceDir?: string;
+  memorySearchProvider?: string;
 }): Promise<void> {
-  const { messages, sessionKey, workspaceDir } = params;
+  const { messages, sessionKey, workspaceDir, memorySearchProvider } = params;
 
   if (!sessionKey || !workspaceDir) {
+    return;
+  }
+
+  // Only activate DAG when memory search is configured (same gate as passive memory)
+  if (!memorySearchProvider || memorySearchProvider === "none") {
     return;
   }
 
