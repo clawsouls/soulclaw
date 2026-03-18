@@ -2016,10 +2016,22 @@ export async function runEmbeddedAttempt(
         });
 
         // Persona drift detection: check assistant responses for persona alignment
+        const driftCfg = ((params.config?.agents?.defaults ?? {}) as Record<string, unknown>)
+          .personaDrift as Record<string, unknown> | undefined;
         maybeCheckDrift({
           messages: messagesSnapshot,
           workspaceDir: params.workspaceDir,
           sessionKey: params.sessionKey,
+          enabled: driftCfg?.enabled === true,
+          personaConfig: driftCfg
+            ? {
+                checkInterval: driftCfg.checkInterval as number | undefined,
+                driftThreshold: driftCfg.driftThreshold as number | undefined,
+                severeThreshold: driftCfg.severeThreshold as number | undefined,
+                useOllama: driftCfg.useOllama as boolean | undefined,
+                ollamaModel: driftCfg.ollamaModel as string | undefined,
+              }
+            : undefined,
         }).catch((err) => {
           log.warn(`Persona drift check failed: ${err}`);
         });

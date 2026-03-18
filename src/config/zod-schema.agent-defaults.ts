@@ -188,6 +188,25 @@ export const AgentDefaultsSchema = z
       .strict()
       .optional(),
     sandbox: AgentSandboxSchema,
+    personaDrift: z
+      .object({
+        /** Enable periodic persona drift checks (default: false) */
+        enabled: z.boolean().optional(),
+        /** Check interval: every N agent responses (default: 5) */
+        checkInterval: z.number().int().positive().optional(),
+        /** Drift score threshold for warning (0-1, default: 0.3) */
+        driftThreshold: z.number().min(0).max(1).optional(),
+        /** Drift score threshold for severe alert (0-1, default: 0.7) */
+        severeThreshold: z.number().min(0).max(1).optional(),
+        /** Send notifications on drift detection (default: true) */
+        notify: z.boolean().optional(),
+        /** Use Ollama for drift detection (default: true, falls back to keyword) */
+        useOllama: z.boolean().optional(),
+        /** Ollama model for drift detection (default: qwen3:8b) */
+        ollamaModel: z.string().optional(),
+      })
+      .strict()
+      .optional(),
     swarm: z
       .object({
         /** Path to shared swarm git directory (default: ~/.openclaw/swarm) */

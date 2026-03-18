@@ -2,9 +2,10 @@
  * `soulclaw swarm` CLI — Swarm Memory management commands.
  *
  * Usage:
- *   soulclaw swarm init [--remote <url>]   Initialize swarm memory repo
- *   soulclaw swarm status                  Show swarm sync status
- *   soulclaw swarm sync                    Force sync now
+ *   soulclaw swarm init [--remote <url>]       Initialize swarm memory repo
+ *   soulclaw swarm status                      Show swarm sync status
+ *   soulclaw swarm sync [--llm-merge]          Force sync now
+ *   soulclaw swarm resolve [file] [--llm|--ours|--theirs|--manual]
  */
 
 import { execSync } from "node:child_process";
@@ -41,7 +42,6 @@ export function registerSwarmCli(program: Command) {
 
       console.log(colorize(theme.info, `\nInitializing Swarm Memory at: ${swarmDir}\n`));
 
-      // Create directory
       if (!fs.existsSync(swarmDir)) {
         fs.mkdirSync(swarmDir, { recursive: true });
         console.log(colorize(theme.success, "✓ Created swarm directory"));
@@ -49,7 +49,6 @@ export function registerSwarmCli(program: Command) {
         console.log(colorize(theme.dim, "· Swarm directory already exists"));
       }
 
-      // Init git repo
       if (!fs.existsSync(path.join(swarmDir, ".git"))) {
         try {
           execSync("git init", { cwd: swarmDir, stdio: "pipe" });
@@ -62,10 +61,8 @@ export function registerSwarmCli(program: Command) {
         console.log(colorize(theme.dim, "· Git repository already initialized"));
       }
 
-      // Add remote if provided
       if (opts.remote) {
         try {
-          // Check if remote already exists
           const existing = execSync("git remote get-url origin", {
             cwd: swarmDir,
             stdio: "pipe",
@@ -73,21 +70,14 @@ export function registerSwarmCli(program: Command) {
             .toString()
             .trim();
           if (existing !== opts.remote) {
-            execSync(`git remote set-url origin ${opts.remote}`, {
-              cwd: swarmDir,
-              stdio: "pipe",
-            });
+            execSync(`git remote set-url origin ${opts.remote}`, { cwd: swarmDir, stdio: "pipe" });
             console.log(colorize(theme.success, `✓ Updated remote: ${opts.remote}`));
           } else {
             console.log(colorize(theme.dim, `· Remote already set: ${opts.remote}`));
           }
         } catch {
-          // No remote yet
           try {
-            execSync(`git remote add origin ${opts.remote}`, {
-              cwd: swarmDir,
-              stdio: "pipe",
-            });
+            execSync(`git remote add origin ${opts.remote}`, { cwd: swarmDir, stdio: "pipe" });
             console.log(colorize(theme.success, `✓ Added remote: ${opts.remote}`));
           } catch (err) {
             console.error(colorize(theme.error, `✗ Failed to add remote: ${String(err)}`));
@@ -95,21 +85,18 @@ export function registerSwarmCli(program: Command) {
         }
       }
 
-      // Create initial MEMORY.md if not exists
       const memoryFile = path.join(swarmDir, "MEMORY.md");
       if (!fs.existsSync(memoryFile)) {
         fs.writeFileSync(memoryFile, "# Swarm Memory\n\nShared memory across agents.\n");
         console.log(colorize(theme.success, "✓ Created initial MEMORY.md"));
       }
 
-      // Create memory/ directory
       const memoryDir = path.join(swarmDir, "memory");
       if (!fs.existsSync(memoryDir)) {
         fs.mkdirSync(memoryDir, { recursive: true });
         console.log(colorize(theme.success, "✓ Created memory/ directory"));
       }
 
-      // Initial commit
       try {
         execSync("git add -A", { cwd: swarmDir, stdio: "pipe" });
         const status = execSync("git status --porcelain", { cwd: swarmDir, stdio: "pipe" })
@@ -120,7 +107,7 @@ export function registerSwarmCli(program: Command) {
           console.log(colorize(theme.success, "✓ Created initial commit"));
         }
       } catch {
-        // Commit may fail if nothing to commit — that's ok
+        // nothing to commit
       }
 
       console.log(
@@ -162,12 +149,8 @@ export function registerSwarmCli(program: Command) {
       console.log(colorize(theme.info, `\nSwarm Memory Status\n`));
       console.log(`  Directory: ${swarmDir}`);
 
-      // Check remote
       try {
-        const remote = execSync("git remote get-url origin", {
-          cwd: swarmDir,
-          stdio: "pipe",
-        })
+        const remote = execSync("git remote get-url origin", { cwd: swarmDir, stdio: "pipe" })
           .toString()
           .trim();
         console.log(`  Remote: ${remote}`);
@@ -175,7 +158,6 @@ export function registerSwarmCli(program: Command) {
         console.log(`  Remote: ${colorize(theme.dim, "(none)")}`);
       }
 
-      // Count files
       const memoryDir = path.join(swarmDir, "memory");
       let memoryFileCount = 0;
       if (fs.existsSync(memoryDir)) {
@@ -184,7 +166,6 @@ export function registerSwarmCli(program: Command) {
       const hasMemoryMd = fs.existsSync(path.join(swarmDir, "MEMORY.md"));
       console.log(`  Files: MEMORY.md=${hasMemoryMd ? "✓" : "✗"}, memory/*.md=${memoryFileCount}`);
 
-      // Last commit
       try {
         const lastCommit = execSync('git log -1 --format="%H %s" 2>/dev/null', {
           cwd: swarmDir,
@@ -199,17 +180,12 @@ export function registerSwarmCli(program: Command) {
         console.log(`  Last commit: ${colorize(theme.dim, "(no commits)")}`);
       }
 
-      // Git status
       try {
-        const gitStatus = execSync("git status --porcelain", {
-          cwd: swarmDir,
-          stdio: "pipe",
-        })
+        const gitStatus = execSync("git status --porcelain", { cwd: swarmDir, stdio: "pipe" })
           .toString()
           .trim();
         if (gitStatus) {
-          const lines = gitStatus.split("\n");
-          console.log(`  Uncommitted changes: ${lines.length} file(s)`);
+          console.log(`  Uncommitted changes: ${gitStatus.split("\n").length} file(s)`);
         } else {
           console.log(`  Working tree: ${colorize(theme.success, "clean")}`);
         }
@@ -224,7 +200,9 @@ export function registerSwarmCli(program: Command) {
   swarm
     .command("sync")
     .description("Force sync swarm memory now")
-    .action(async () => {
+    .option("--llm-merge", "Use LLM for semantic conflict resolution (default: fallback to 'ours')")
+    .option("--model <model>", "Ollama model for LLM merge (default: gemma3:4b)")
+    .action(async (opts: { llmMerge?: boolean; model?: string }) => {
       const swarmDir = getSwarmDir();
 
       if (!fs.existsSync(path.join(swarmDir, ".git"))) {
@@ -233,10 +211,22 @@ export function registerSwarmCli(program: Command) {
       }
 
       console.log(colorize(theme.info, "Syncing swarm memory..."));
+      if (opts.llmMerge) {
+        console.log(
+          colorize(theme.dim, `  LLM merge enabled (model: ${opts.model ?? "gemma3:4b"})`),
+        );
+      }
 
       try {
         const { syncCycle } = await import("../swarm/auto-sync.js");
-        const result = await syncCycle({ swarmDir });
+        const syncConfig: Record<string, unknown> = { swarmDir };
+        if (opts.model) {
+          syncConfig["llmModel"] = opts.model;
+        }
+        if (!opts.llmMerge) {
+          syncConfig["ollamaUrl"] = "http://localhost:0";
+        } // disable LLM
+        const result = await syncCycle(syncConfig as never);
 
         if (result.success) {
           console.log(colorize(theme.success, `✓ Sync complete: ${result.action}`));
@@ -252,4 +242,152 @@ export function registerSwarmCli(program: Command) {
         console.error(colorize(theme.error, `✗ Sync failed: ${String(err)}`));
       }
     });
+
+  // ─── resolve ─────────────────────────────────────────────
+  swarm
+    .command("resolve")
+    .description("Resolve merge conflicts in swarm files")
+    .argument("[file]", "Specific file to resolve (default: all conflicted files)")
+    .option("--llm", "Use LLM for semantic merge (default)")
+    .option("--manual", "List conflicted files for manual editing")
+    .option("--ours", "Keep our version (discard theirs)")
+    .option("--theirs", "Keep their version (discard ours)")
+    .option("--model <model>", "Ollama model for LLM merge")
+    .action(
+      async (
+        file?: string,
+        opts?: {
+          llm?: boolean;
+          manual?: boolean;
+          ours?: boolean;
+          theirs?: boolean;
+          model?: string;
+        },
+      ) => {
+        const swarmDir = getSwarmDir();
+
+        if (!fs.existsSync(path.join(swarmDir, ".git"))) {
+          console.log(colorize(theme.warning, "Swarm not initialized. Run: soulclaw swarm init"));
+          return;
+        }
+
+        const { resolveConflict, hasConflictMarkers } =
+          await import("../swarm/conflict-resolver.js");
+
+        // Find files with conflicts
+        let targetFiles: string[] = [];
+        if (file) {
+          const filePath = path.resolve(swarmDir, file);
+          if (!fs.existsSync(filePath)) {
+            console.error(colorize(theme.error, `File not found: ${filePath}`));
+            process.exit(1);
+          }
+          targetFiles = [filePath];
+        } else {
+          const scanDir = (dir: string) => {
+            if (!fs.existsSync(dir)) {
+              return;
+            }
+            for (const f of fs.readdirSync(dir)) {
+              const fp = path.join(dir, f);
+              const stat = fs.statSync(fp);
+              if (stat.isFile() && f.endsWith(".md")) {
+                const content = fs.readFileSync(fp, "utf-8");
+                if (hasConflictMarkers(content)) {
+                  targetFiles.push(fp);
+                }
+              } else if (stat.isDirectory() && f !== ".git") {
+                scanDir(fp);
+              }
+            }
+          };
+          scanDir(swarmDir);
+        }
+
+        if (targetFiles.length === 0) {
+          console.log(colorize(theme.success, "\nNo conflicts found.\n"));
+          return;
+        }
+
+        console.log(
+          colorize(theme.info, `\nResolving ${targetFiles.length} conflicted file(s):\n`),
+        );
+
+        for (const fp of targetFiles) {
+          const relPath = path.relative(swarmDir, fp);
+
+          if (opts?.manual) {
+            console.log(
+              colorize(
+                theme.warning,
+                `  ⚠ ${relPath} — edit manually, then run 'soulclaw swarm sync'`,
+              ),
+            );
+            continue;
+          }
+
+          if (opts?.theirs) {
+            const content = fs.readFileSync(fp, "utf-8");
+            fs.writeFileSync(fp, keepSide(content, "theirs"));
+            console.log(colorize(theme.success, `  ✓ ${relPath} — kept theirs`));
+            continue;
+          }
+
+          if (opts?.ours) {
+            const content = fs.readFileSync(fp, "utf-8");
+            fs.writeFileSync(fp, keepSide(content, "ours"));
+            console.log(colorize(theme.success, `  ✓ ${relPath} — kept ours`));
+            continue;
+          }
+
+          // Default: LLM merge
+          const config: Record<string, unknown> = {};
+          if (opts?.model) {
+            config["llmModel"] = opts.model;
+          }
+          const result = await resolveConflict(fp, config as never);
+          const methodLabel = result.method === "llm" ? "LLM semantic merge" : "fallback (ours)";
+          console.log(
+            colorize(
+              theme.success,
+              `  ✓ ${relPath} — ${methodLabel}${result.reason ? ` (${result.reason})` : ""}`,
+            ),
+          );
+        }
+
+        console.log("");
+      },
+    );
+}
+
+/** Keep one side of git conflict markers */
+function keepSide(content: string, side: "ours" | "theirs"): string {
+  const lines = content.split("\n");
+  const result: string[] = [];
+  let inConflict = false;
+  let inOurs = false;
+
+  for (const line of lines) {
+    if (line.startsWith("<<<<<<<")) {
+      inConflict = true;
+      inOurs = true;
+      continue;
+    }
+    if (line.startsWith("=======")) {
+      inOurs = false;
+      continue;
+    }
+    if (line.startsWith(">>>>>>>")) {
+      inConflict = false;
+      continue;
+    }
+    if (!inConflict) {
+      result.push(line);
+    } else if (side === "ours" && inOurs) {
+      result.push(line);
+    } else if (side === "theirs" && !inOurs) {
+      result.push(line);
+    }
+  }
+  return result.join("\n");
 }
