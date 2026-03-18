@@ -26,5 +26,19 @@ export const theme = {
 
 export const isRich = () => Boolean(baseChalk.level > 0);
 
-export const colorize = (rich: boolean, color: (value: string) => string, value: string) =>
-  rich ? color(value) : value;
+export function colorize(rich: boolean, color: (value: string) => string, value: string): string;
+export function colorize(color: (value: string) => string, value: string): string;
+export function colorize(
+  richOrColor: boolean | ((value: string) => string),
+  colorOrValue: ((value: string) => string) | string,
+  maybeValue?: string,
+): string {
+  if (typeof richOrColor === "boolean") {
+    // 3-arg form: colorize(rich, color, value)
+    const color = colorOrValue as (v: string) => string;
+    const value = maybeValue as string;
+    return richOrColor ? color(value) : value;
+  }
+  // 2-arg form: colorize(color, value) — always rich
+  return richOrColor(colorOrValue as string);
+}
