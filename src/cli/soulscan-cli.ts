@@ -31,7 +31,7 @@ export function registerSoulScanCli(program: Command) {
       const hasSoulMd = fs.existsSync(path.join(targetDir, "SOUL.md"));
       const hasSoulJson = fs.existsSync(path.join(targetDir, "soul.json"));
       if (!hasSoulMd && !hasSoulJson) {
-        console.error(colorize(theme.warning, `No SOUL.md or soul.json found in: ${targetDir}`));
+        console.error(colorize(theme.warn, `No SOUL.md or soul.json found in: ${targetDir}`));
         process.exit(1);
       }
 
@@ -53,7 +53,7 @@ export function registerSoulScanCli(program: Command) {
             : result.score >= 70
               ? theme.info
               : result.score >= 40
-                ? theme.warning
+                ? theme.warn
                 : theme.error;
 
         console.log(`  Score: ${colorize(scoreColor, `${result.score}/100`)}`);
@@ -71,8 +71,8 @@ export function registerSoulScanCli(program: Command) {
               issue.severity === "error"
                 ? colorize(theme.error, "✗")
                 : issue.severity === "warning"
-                  ? colorize(theme.warning, "⚠")
-                  : colorize(theme.dim, "ℹ");
+                  ? colorize(theme.warn, "⚠")
+                  : colorize(theme.muted, "ℹ");
             const fileInfo = issue.file ? ` [${issue.file}]` : "";
             console.log(`    ${icon} ${issue.code}: ${issue.message}${fileInfo}`);
           }
