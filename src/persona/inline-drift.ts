@@ -25,7 +25,7 @@ const log = {
 
 export interface InlineDriftOptions {
   /** All messages in conversation */
-  messages: Array<{ role: string; content?: string }>;
+  messages: Array<{ role: string; content?: unknown }>;
   /** Workspace directory */
   workspaceDir?: string;
   /** Session key for logging */
