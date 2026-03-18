@@ -149,6 +149,19 @@ const coreEntries: CoreCliEntry[] = [
   {
     commands: [
       {
+        name: "swarm",
+        description: "Manage Swarm Memory — shared memory sync across agents",
+        hasSubcommands: true,
+      },
+    ],
+    register: async ({ program }) => {
+      const mod = await import("../swarm-cli.js");
+      mod.registerSwarmCli(program);
+    },
+  },
+  {
+    commands: [
+      {
         name: "agent",
         description: "Run one agent turn via the Gateway",
         hasSubcommands: false,

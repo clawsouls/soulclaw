@@ -2028,6 +2028,15 @@ export async function runEmbeddedAttempt(
         maybeSwarmSync({
           workspaceDir: params.workspaceDir,
           sessionKey: params.sessionKey,
+          swarmConfig: params.config?.agents?.defaults?.swarm
+            ? {
+                swarmDir: (params.config.agents.defaults.swarm as Record<string, unknown>).dir as
+                  | string
+                  | undefined,
+                autoSync: (params.config.agents.defaults.swarm as Record<string, unknown>)
+                  .autoSync as boolean | undefined,
+              }
+            : undefined,
         }).catch((err) => {
           log.warn(`Swarm memory sync failed: ${err}`);
         });
