@@ -2040,13 +2040,16 @@ export async function runEmbeddedAttempt(
         maybeSwarmSync({
           workspaceDir: params.workspaceDir,
           sessionKey: params.sessionKey,
-          swarmConfig: params.config?.agents?.defaults?.swarm
+          swarmConfig: ((params.config?.agents?.defaults ?? {}) as Record<string, unknown>).swarm
             ? {
-                swarmDir: (params.config.agents.defaults.swarm as Record<string, unknown>).dir as
-                  | string
-                  | undefined,
-                autoSync: (params.config.agents.defaults.swarm as Record<string, unknown>)
-                  .autoSync as boolean | undefined,
+                swarmDir: (
+                  ((params.config?.agents?.defaults ?? {}) as Record<string, unknown>)
+                    .swarm as Record<string, unknown>
+                ).dir as string | undefined,
+                autoSync: (
+                  ((params.config?.agents?.defaults ?? {}) as Record<string, unknown>)
+                    .swarm as Record<string, unknown>
+                ).autoSync as boolean | undefined,
               }
             : undefined,
         }).catch((err) => {
