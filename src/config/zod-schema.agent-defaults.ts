@@ -188,6 +188,17 @@ export const AgentDefaultsSchema = z
       .strict()
       .optional(),
     sandbox: AgentSandboxSchema,
+    swarm: z
+      .object({
+        /** Path to shared swarm git directory (default: ~/.openclaw/swarm) */
+        dir: z.string().optional(),
+        /** Enable automatic sync after agent turns (default: true) */
+        autoSync: z.boolean().optional(),
+        /** Sync interval in minutes (default: 10) */
+        syncIntervalMinutes: z.number().int().positive().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   .optional();
