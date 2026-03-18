@@ -251,7 +251,6 @@ SoulClaw is part of the ClawSouls ecosystem:
 - [ClawSouls](https://clawsouls.ai) — AI agent persona platform
 - [Soul Spec](https://docs.clawsouls.ai) — Open specification for agent identity
 - [ClawSouls CLI](https://www.npmjs.com/package/clawsouls) — Soul management, SoulScan, checkpoints
-- [SoulClaw Android](https://play.google.com/store/apps/details?id=ai.clawsouls.app) — Mobile AI assistant
 
 ## License
 
