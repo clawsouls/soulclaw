@@ -15,6 +15,7 @@ import { ensureGlobalUndiciStreamTimeouts } from "../../../infra/net/undici-glob
 import { MAX_IMAGE_BYTES } from "../../../media/constants.js";
 import { maybeDagStore } from "../../../memory/dag-hook.js";
 import { maybeExtractPassiveMemory } from "../../../memory/passive-memory.js";
+import { maybeCheckDrift } from "../../../persona/inline-drift.js";
 import { getGlobalHookRunner } from "../../../plugins/hook-runner-global.js";
 import type {
   PluginHookAgentContext,
@@ -24,6 +25,8 @@ import type {
 import { isSubagentSessionKey } from "../../../routing/session-key.js";
 import { joinPresentTextSegments } from "../../../shared/text/join-segments.js";
 import { resolveSignalReactionLevel } from "../../../signal/reaction-level.js";
+import { maybeInlineScan } from "../../../soulscan/inline-scan.js";
+import { maybeSwarmSync } from "../../../swarm/inline-sync.js";
 import { resolveTelegramInlineButtonsScope } from "../../../telegram/inline-buttons.js";
 import { resolveTelegramReactionLevel } from "../../../telegram/reaction-level.js";
 import { buildTtsSystemPromptHint } from "../../../tts/tts.js";
@@ -2002,6 +2005,31 @@ export async function runEmbeddedAttempt(
           agentId: hookAgentId,
         }).catch((err) => {
           log.warn(`Passive memory extraction failed: ${err}`);
+        });
+
+        // Inline SoulScan: periodic soul file integrity check
+        maybeInlineScan({
+          workspaceDir: params.workspaceDir,
+          sessionKey: params.sessionKey,
+        }).catch((err) => {
+          log.warn(`Inline SoulScan failed: ${err}`);
+        });
+
+        // Persona drift detection: check assistant responses for persona alignment
+        maybeCheckDrift({
+          messages: messagesSnapshot,
+          workspaceDir: params.workspaceDir,
+          sessionKey: params.sessionKey,
+        }).catch((err) => {
+          log.warn(`Persona drift check failed: ${err}`);
+        });
+
+        // Swarm memory sync: push/pull memory files to shared repo
+        maybeSwarmSync({
+          workspaceDir: params.workspaceDir,
+          sessionKey: params.sessionKey,
+        }).catch((err) => {
+          log.warn(`Swarm memory sync failed: ${err}`);
         });
       } finally {
         clearTimeout(abortTimer);
