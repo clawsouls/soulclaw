@@ -162,6 +162,32 @@ const coreEntries: CoreCliEntry[] = [
   {
     commands: [
       {
+        name: "soulscan",
+        description: "Scan soul files for security and quality issues",
+        hasSubcommands: false,
+      },
+    ],
+    register: async ({ program }) => {
+      const mod = await import("../soulscan-cli.js");
+      mod.registerSoulScanCli(program);
+    },
+  },
+  {
+    commands: [
+      {
+        name: "persona",
+        description: "Persona drift detection and metrics",
+        hasSubcommands: true,
+      },
+    ],
+    register: async ({ program }) => {
+      const mod = await import("../persona-cli.js");
+      mod.registerPersonaCli(program);
+    },
+  },
+  {
+    commands: [
+      {
         name: "agent",
         description: "Run one agent turn via the Gateway",
         hasSubcommands: false,
