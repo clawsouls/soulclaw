@@ -1,6 +1,7 @@
 /**
  * SoulScan — Inline soul package scanner for SoulClaw.
- * Fully local, no external API dependencies.
+ * Delegates to clawsouls scanner package for security rules.
+ * Falls back to basic structural checks when clawsouls is not installed.
  *
  * @example
  * ```ts
@@ -11,20 +12,6 @@
  * ```
  */
 
-export {
-  scanSoul,
-  SOULSCAN_VERSION,
-  type ScanResult,
-  type Issue,
-  type ScanOptions,
-} from "./engine.ts";
+export { scanSoul, SOULSCAN_VERSION, type ScanResult, type Issue } from "./engine.ts";
 export { formatReport, formatSummary } from "./report.ts";
 export { scanGate, isSoulSafe, type ScanHookOptions, type ScanGateResult } from "./hook.ts";
-export {
-  DEFAULT_RULES,
-  RULES_VERSION,
-  type ScanRule,
-  type ScanRuleSet,
-  type RuleCategory,
-  type RuleSeverity,
-} from "./rules.ts";
