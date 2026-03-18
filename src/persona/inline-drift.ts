@@ -9,6 +9,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { mergeConfig, type PersonaEngineConfig } from "./config.js";
 import { detectDrift, type DriftResult } from "./drift-detector.js";
+import { notifyDrift } from "./drift-notifier.js";
 import { evaluateDrift, type EnforcementAction } from "./enforcer.js";
 import { recordDrift } from "./metrics.js";
 import { parseSoulSpec, type PersonaRules } from "./parser.js";
@@ -31,6 +32,8 @@ export interface InlineDriftOptions {
   sessionKey?: string;
   /** Partial config overrides */
   personaConfig?: Partial<PersonaEngineConfig>;
+  /** Whether drift detection is enabled (from openclaw.json agents.defaults.personaDrift.enabled) */
+  enabled?: boolean;
   /** Callback when drift is detected above threshold */
   onDriftDetected?: (result: DriftResult, action: EnforcementAction) => void;
 }
@@ -46,8 +49,13 @@ const _rulesCache = new Map<string, { rules: PersonaRules; mtime: number }>();
  * Fire-and-forget — never throws.
  */
 export async function maybeCheckDrift(options: InlineDriftOptions): Promise<void> {
-  const { messages, workspaceDir, sessionKey } = options;
+  const { messages, workspaceDir, sessionKey, enabled } = options;
   if (!workspaceDir || !sessionKey) {
+    return;
+  }
+
+  // Gated: only run when explicitly enabled (default: off)
+  if (enabled !== true) {
     return;
   }
 
@@ -92,6 +100,10 @@ export async function maybeCheckDrift(options: InlineDriftOptions): Promise<void
       log.warn(
         `persona drift detected: score=${result.score.toFixed(2)} action=${action.type} session=${sessionKey}`,
       );
+
+      // Send notification via gateway/Telegram
+      notifyDrift(result, action, sessionKey).catch(() => {});
+
       if (options.onDriftDetected) {
         options.onDriftDetected(result, action);
       }

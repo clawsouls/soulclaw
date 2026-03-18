@@ -175,4 +175,147 @@ export function registerPersonaCli(program: Command) {
         console.log("");
       }
     });
+
+  // ─── config ──────────────────────────────────────────────
+  persona
+    .command("config")
+    .description("Show or set persona drift detection settings")
+    .option("--enable", "Enable persona drift detection")
+    .option("--disable", "Disable persona drift detection")
+    .option("--interval <n>", "Check every N agent responses")
+    .option("--threshold <n>", "Drift warning threshold (0-1)")
+    .option("--severe <n>", "Severe drift threshold (0-1)")
+    .option("--notify", "Enable notifications on drift")
+    .option("--no-notify", "Disable notifications on drift")
+    .option("--ollama", "Use Ollama for detection")
+    .option("--no-ollama", "Use keyword-only detection")
+    .option("--model <model>", "Ollama model for drift detection")
+    .action(
+      async (opts: {
+        enable?: boolean;
+        disable?: boolean;
+        interval?: string;
+        threshold?: string;
+        severe?: string;
+        notify?: boolean;
+        ollama?: boolean;
+        model?: string;
+      }) => {
+        const configPath = path.join(resolveStateDir(), "..", "openclaw.json");
+
+        // Read current config
+        let config: Record<string, unknown> = {};
+        if (fs.existsSync(configPath)) {
+          try {
+            config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as Record<string, unknown>;
+          } catch {
+            console.error(colorize(theme.error, "Failed to parse openclaw.json"));
+            process.exit(1);
+          }
+        }
+
+        // Navigate to agents.defaults.personaDrift
+        if (!config["agents"]) {
+          config["agents"] = {};
+        }
+        const agents = config["agents"] as Record<string, unknown>;
+        if (!agents["defaults"]) {
+          agents["defaults"] = {};
+        }
+        const defaults = agents["defaults"] as Record<string, unknown>;
+        if (!defaults["personaDrift"]) {
+          defaults["personaDrift"] = {};
+        }
+        const drift = defaults["personaDrift"] as Record<string, unknown>;
+
+        const hasChanges =
+          opts.enable !== undefined ||
+          opts.disable !== undefined ||
+          opts.interval !== undefined ||
+          opts.threshold !== undefined ||
+          opts.severe !== undefined ||
+          opts.notify !== undefined ||
+          opts.ollama !== undefined ||
+          opts.model !== undefined;
+
+        if (!hasChanges) {
+          // Show current config
+          console.log(colorize(theme.info, "\nPersona Drift Configuration\n"));
+          const dEnabled = drift["enabled"] === true;
+          const dInterval = typeof drift["checkInterval"] === "number" ? drift["checkInterval"] : 5;
+          const dThreshold =
+            typeof drift["driftThreshold"] === "number" ? drift["driftThreshold"] : 0.3;
+          const dSevere =
+            typeof drift["severeThreshold"] === "number" ? drift["severeThreshold"] : 0.7;
+          const dNotify = drift["notify"] !== false;
+          const dOllama = drift["useOllama"] !== false;
+          const dModel =
+            typeof drift["ollamaModel"] === "string" ? drift["ollamaModel"] : "qwen3:8b";
+
+          console.log(
+            `  Enabled: ${dEnabled ? colorize(theme.success, "yes") : colorize(theme.dim, "no (default)")}`,
+          );
+          console.log(`  Check interval: every ${dInterval} responses`);
+          console.log(`  Warning threshold: ${dThreshold}`);
+          console.log(`  Severe threshold: ${dSevere}`);
+          console.log(`  Notifications: ${dNotify ? "on (default)" : "off"}`);
+          console.log(`  Ollama: ${dOllama ? "on (default)" : "off (keyword only)"}`);
+          console.log(`  Ollama model: ${dModel}`);
+          console.log(
+            colorize(
+              theme.dim,
+              "\n  Enable with: soulclaw persona config --enable\n" +
+                "  Customize: soulclaw persona config --interval 3 --threshold 0.4\n",
+            ),
+          );
+          return;
+        }
+
+        // Apply changes
+        if (opts.enable) {
+          drift["enabled"] = true;
+        }
+        if (opts.disable) {
+          drift["enabled"] = false;
+        }
+        if (opts.interval) {
+          drift["checkInterval"] = parseInt(opts.interval, 10);
+        }
+        if (opts.threshold) {
+          drift["driftThreshold"] = parseFloat(opts.threshold);
+        }
+        if (opts.severe) {
+          drift["severeThreshold"] = parseFloat(opts.severe);
+        }
+        if (opts.notify !== undefined) {
+          drift["notify"] = opts.notify;
+        }
+        if (opts.ollama !== undefined) {
+          drift["useOllama"] = opts.ollama;
+        }
+        if (opts.model) {
+          drift["ollamaModel"] = opts.model;
+        }
+
+        // Save
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
+
+        console.log(colorize(theme.success, "\n✓ Persona drift configuration updated.\n"));
+
+        if (opts.enable) {
+          console.log(
+            colorize(
+              theme.info,
+              "  Drift detection is now ON. Checks run every " +
+                `${typeof drift["checkInterval"] === "number" ? drift["checkInterval"] : 5} agent responses.\n`,
+            ),
+          );
+        }
+        if (opts.disable) {
+          console.log(colorize(theme.dim, "  Drift detection is now OFF.\n"));
+        }
+
+        console.log(colorize(theme.dim, "  Restart gateway for changes to take effect.\n"));
+      },
+    );
 }
