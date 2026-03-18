@@ -35,11 +35,14 @@ npm install -g soulclaw
 
 This does NOT touch your existing OpenClaw installation. Both can coexist.
 
-## Step 3: Start SoulClaw Gateway
+## Step 3: Install and Start SoulClaw Gateway
 
 ```bash
+soulclaw gateway install    # Register LaunchAgent (macOS) or systemd service (Linux)
 soulclaw gateway start
 ```
+
+> **Important**: Use `gateway install` before `gateway start`. If you only run `gateway start` without `install`, the service may fail to start because the LaunchAgent/service file still points to the old OpenClaw binary.
 
 That's it. SoulClaw reads the same `~/.openclaw/openclaw.json` config and `~/.openclaw/workspace/` directory.
 
