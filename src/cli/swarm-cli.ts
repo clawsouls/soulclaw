@@ -46,7 +46,7 @@ export function registerSwarmCli(program: Command) {
         fs.mkdirSync(swarmDir, { recursive: true });
         console.log(colorize(theme.success, "✓ Created swarm directory"));
       } else {
-        console.log(colorize(theme.dim, "· Swarm directory already exists"));
+        console.log(colorize(theme.muted, "· Swarm directory already exists"));
       }
 
       if (!fs.existsSync(path.join(swarmDir, ".git"))) {
@@ -58,7 +58,7 @@ export function registerSwarmCli(program: Command) {
           process.exit(1);
         }
       } else {
-        console.log(colorize(theme.dim, "· Git repository already initialized"));
+        console.log(colorize(theme.muted, "· Git repository already initialized"));
       }
 
       if (opts.remote) {
@@ -73,7 +73,7 @@ export function registerSwarmCli(program: Command) {
             execSync(`git remote set-url origin ${opts.remote}`, { cwd: swarmDir, stdio: "pipe" });
             console.log(colorize(theme.success, `✓ Updated remote: ${opts.remote}`));
           } else {
-            console.log(colorize(theme.dim, `· Remote already set: ${opts.remote}`));
+            console.log(colorize(theme.muted, `· Remote already set: ${opts.remote}`));
           }
         } catch {
           try {
@@ -120,7 +120,7 @@ export function registerSwarmCli(program: Command) {
       if (!opts.remote) {
         console.log(
           colorize(
-            theme.dim,
+            theme.muted,
             "Tip: Add a remote later with:\n" +
               `  cd ${swarmDir}\n` +
               "  git remote add origin <your-repo-url>\n",
@@ -137,12 +137,12 @@ export function registerSwarmCli(program: Command) {
       const swarmDir = getSwarmDir();
 
       if (!fs.existsSync(swarmDir)) {
-        console.log(colorize(theme.warning, "Swarm not initialized. Run: soulclaw swarm init"));
+        console.log(colorize(theme.warn, "Swarm not initialized. Run: soulclaw swarm init"));
         return;
       }
 
       if (!fs.existsSync(path.join(swarmDir, ".git"))) {
-        console.log(colorize(theme.warning, "Swarm directory exists but is not a git repo."));
+        console.log(colorize(theme.warn, "Swarm directory exists but is not a git repo."));
         return;
       }
 
@@ -155,7 +155,7 @@ export function registerSwarmCli(program: Command) {
           .trim();
         console.log(`  Remote: ${remote}`);
       } catch {
-        console.log(`  Remote: ${colorize(theme.dim, "(none)")}`);
+        console.log(`  Remote: ${colorize(theme.muted, "(none)")}`);
       }
 
       const memoryDir = path.join(swarmDir, "memory");
@@ -177,7 +177,7 @@ export function registerSwarmCli(program: Command) {
           console.log(`  Last commit: ${lastCommit.slice(0, 50)}...`);
         }
       } catch {
-        console.log(`  Last commit: ${colorize(theme.dim, "(no commits)")}`);
+        console.log(`  Last commit: ${colorize(theme.muted, "(no commits)")}`);
       }
 
       try {
@@ -206,14 +206,14 @@ export function registerSwarmCli(program: Command) {
       const swarmDir = getSwarmDir();
 
       if (!fs.existsSync(path.join(swarmDir, ".git"))) {
-        console.log(colorize(theme.warning, "Swarm not initialized. Run: soulclaw swarm init"));
+        console.log(colorize(theme.warn, "Swarm not initialized. Run: soulclaw swarm init"));
         return;
       }
 
       console.log(colorize(theme.info, "Syncing swarm memory..."));
       if (opts.llmMerge) {
         console.log(
-          colorize(theme.dim, `  LLM merge enabled (model: ${opts.model ?? "gemma3:4b"})`),
+          colorize(theme.muted, `  LLM merge enabled (model: ${opts.model ?? "gemma3:4b"})`),
         );
       }
 
@@ -232,11 +232,11 @@ export function registerSwarmCli(program: Command) {
           console.log(colorize(theme.success, `✓ Sync complete: ${result.action}`));
           if (result.conflicts && result.conflicts.length > 0) {
             console.log(
-              colorize(theme.warning, `  Conflicts resolved: ${result.conflicts.join(", ")}`),
+              colorize(theme.warn, `  Conflicts resolved: ${result.conflicts.join(", ")}`),
             );
           }
         } else {
-          console.log(colorize(theme.dim, `· Sync skipped: ${result.reason ?? "unknown"}`));
+          console.log(colorize(theme.muted, `· Sync skipped: ${result.reason ?? "unknown"}`));
         }
       } catch (err) {
         console.error(colorize(theme.error, `✗ Sync failed: ${String(err)}`));
@@ -267,7 +267,7 @@ export function registerSwarmCli(program: Command) {
         const swarmDir = getSwarmDir();
 
         if (!fs.existsSync(path.join(swarmDir, ".git"))) {
-          console.log(colorize(theme.warning, "Swarm not initialized. Run: soulclaw swarm init"));
+          console.log(colorize(theme.warn, "Swarm not initialized. Run: soulclaw swarm init"));
           return;
         }
 
@@ -319,7 +319,7 @@ export function registerSwarmCli(program: Command) {
           if (opts?.manual) {
             console.log(
               colorize(
-                theme.warning,
+                theme.warn,
                 `  ⚠ ${relPath} — edit manually, then run 'soulclaw swarm sync'`,
               ),
             );

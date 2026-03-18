@@ -10,7 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Command } from "commander";
-import { resolveStateDir } from "../config/paths.js";
+import { resolveStateDir, resolveCanonicalConfigPath } from "../config/paths.js";
 import { colorize, theme } from "../terminal/theme.js";
 
 function getWorkspaceDir(): string {
@@ -31,7 +31,7 @@ export function registerPersonaCli(program: Command) {
       const soulMdPath = path.join(workspaceDir, "SOUL.md");
 
       if (!fs.existsSync(soulMdPath)) {
-        console.error(colorize(theme.warning, "No SOUL.md found in workspace."));
+        console.error(colorize(theme.warn, "No SOUL.md found in workspace."));
         process.exit(1);
       }
 
@@ -59,7 +59,7 @@ export function registerPersonaCli(program: Command) {
       const action = evaluateDrift(result, config);
 
       const scoreColor =
-        result.score <= 0.3 ? theme.success : result.score <= 0.7 ? theme.warning : theme.error;
+        result.score <= 0.3 ? theme.success : result.score <= 0.7 ? theme.warn : theme.error;
 
       console.log(`  Drift Score: ${colorize(scoreColor, result.score.toFixed(3))}`);
       console.log(`  Method Used: ${result.method}`);
@@ -73,7 +73,7 @@ export function registerPersonaCli(program: Command) {
         console.log(colorize(theme.success, "\n  ✓ Persona aligned\n"));
       } else if (action.type === "reminder") {
         console.log(
-          colorize(theme.warning, "\n  ⚠ Minor drift detected — reminder would be injected\n"),
+          colorize(theme.warn, "\n  ⚠ Minor drift detected — reminder would be injected\n"),
         );
       } else {
         console.log(colorize(theme.error, "\n  ✗ Severe drift — correction needed\n"));
@@ -98,7 +98,7 @@ export function registerPersonaCli(program: Command) {
       const lastN = parseInt(opts.last ?? "20", 10);
 
       if (entries.length === 0) {
-        console.log(colorize(theme.dim, "\nNo drift metrics recorded yet.\n"));
+        console.log(colorize(theme.muted, "\nNo drift metrics recorded yet.\n"));
         return;
       }
 
@@ -114,7 +114,7 @@ export function registerPersonaCli(program: Command) {
       for (const entry of recent) {
         const date = new Date(entry.timestamp).toISOString().slice(0, 19);
         const scoreColor =
-          entry.score <= 0.3 ? theme.success : entry.score <= 0.7 ? theme.warning : theme.error;
+          entry.score <= 0.3 ? theme.success : entry.score <= 0.7 ? theme.warn : theme.error;
         console.log(
           `  ${date}  ${colorize(scoreColor, entry.score.toFixed(3).padStart(5))}  [${entry.method}]`,
         );
@@ -133,7 +133,7 @@ export function registerPersonaCli(program: Command) {
       const soulMdPath = path.join(workspaceDir, "SOUL.md");
 
       if (!fs.existsSync(soulMdPath)) {
-        console.error(colorize(theme.warning, "No SOUL.md found in workspace."));
+        console.error(colorize(theme.warn, "No SOUL.md found in workspace."));
         process.exit(1);
       }
 
@@ -170,8 +170,8 @@ export function registerPersonaCli(program: Command) {
           }
         }
 
-        console.log(colorize(theme.dim, "\n  --- Prompt Block ---"));
-        console.log(colorize(theme.dim, `  ${rulesToPromptBlock(rules).replace(/\n/g, "\n  ")}`));
+        console.log(colorize(theme.muted, "\n  --- Prompt Block ---"));
+        console.log(colorize(theme.muted, `  ${rulesToPromptBlock(rules).replace(/\n/g, "\n  ")}`));
         console.log("");
       }
     });
@@ -201,7 +201,7 @@ export function registerPersonaCli(program: Command) {
         ollama?: boolean;
         model?: string;
       }) => {
-        const configPath = path.join(resolveStateDir(), "..", "openclaw.json");
+        const configPath = resolveCanonicalConfigPath();
 
         // Read current config
         let config: Record<string, unknown> = {};
@@ -253,7 +253,7 @@ export function registerPersonaCli(program: Command) {
             typeof drift["ollamaModel"] === "string" ? drift["ollamaModel"] : "qwen3:8b";
 
           console.log(
-            `  Enabled: ${dEnabled ? colorize(theme.success, "yes") : colorize(theme.dim, "no (default)")}`,
+            `  Enabled: ${dEnabled ? colorize(theme.success, "yes") : colorize(theme.muted, "no (default)")}`,
           );
           console.log(`  Check interval: every ${dInterval} responses`);
           console.log(`  Warning threshold: ${dThreshold}`);
@@ -263,7 +263,7 @@ export function registerPersonaCli(program: Command) {
           console.log(`  Ollama model: ${dModel}`);
           console.log(
             colorize(
-              theme.dim,
+              theme.muted,
               "\n  Enable with: soulclaw persona config --enable\n" +
                 "  Customize: soulclaw persona config --interval 3 --threshold 0.4\n",
             ),
@@ -312,10 +312,10 @@ export function registerPersonaCli(program: Command) {
           );
         }
         if (opts.disable) {
-          console.log(colorize(theme.dim, "  Drift detection is now OFF.\n"));
+          console.log(colorize(theme.muted, "  Drift detection is now OFF.\n"));
         }
 
-        console.log(colorize(theme.dim, "  Restart gateway for changes to take effect.\n"));
+        console.log(colorize(theme.muted, "  Restart gateway for changes to take effect.\n"));
       },
     );
 }
