@@ -1,6 +1,8 @@
 # SoulClaw
 
 > Soul-aware OpenClaw fork — enhanced memory, persona, and security for AI agents.
+>
+> Forked from [OpenClaw](https://github.com/openclaw/openclaw) `main` branch at `v2026.3.1` (MIT License).
 
 SoulClaw is a fork of [OpenClaw](https://github.com/openclaw/openclaw) optimized for the [ClawSouls](https://clawsouls.ai) ecosystem. It adds semantic memory search, persona drift detection, inline security scanning, and native swarm memory synchronization — all running locally.
 
