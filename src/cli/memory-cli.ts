@@ -568,6 +568,19 @@ export async function runMemoryStatus(opts: MemoryCommandOptions) {
         lines.push(`  ${warn(issue)}`);
       }
     }
+    // Soul Memory: tier statistics
+    if (status.workspaceDir) {
+      try {
+        const { computeTierStats } = await import("../memory/tier-stats.js");
+        const tierStats = await computeTierStats(status.workspaceDir);
+        lines.push(label("Soul Memory Tiers"));
+        lines.push(`  ${muted("T0 Soul:")} ${info(`${tierStats.t0.files} files`)}`);
+        lines.push(`  ${muted("T1 Core:")} ${info(`${tierStats.t1.files} files`)}`);
+        lines.push(`  ${muted("T2 Working:")} ${info(`${tierStats.t2.files} files`)}`);
+      } catch {
+        // Non-critical
+      }
+    }
     defaultRuntime.log(lines.join("\n"));
     defaultRuntime.log("");
   }
@@ -660,6 +673,40 @@ async function runMemoryPromote(
     defaultRuntime.log(JSON.stringify({ candidates }, null, 2));
   } else {
     defaultRuntime.log(formatPromotionReport(candidates));
+  }
+}
+
+async function runMemoryCompact(
+  opts: MemoryCommandOptions & {
+    days?: number;
+    apply?: boolean;
+    remove?: boolean;
+  },
+) {
+  const { config: cfg } = await loadMemoryCommandConfig("memory compact");
+  const agentId = resolveAgent(cfg, opts.agent);
+  const { resolveAgentWorkspaceDir } = await import("../agents/agent-scope.js");
+  const workspaceDir = resolveAgentWorkspaceDir(cfg, agentId);
+  const memoryDir = path.join(workspaceDir, "memory");
+
+  const { findCompactionCandidates, compactToQuarterly, formatCompactionReport } =
+    await import("../memory/compaction.js");
+
+  const candidates = await findCompactionCandidates(memoryDir, opts.days ?? 90);
+
+  if (opts.apply) {
+    const results = await compactToQuarterly(memoryDir, candidates, opts.remove ?? false);
+    if (opts.json) {
+      defaultRuntime.log(JSON.stringify({ results }, null, 2));
+    } else {
+      defaultRuntime.log(formatCompactionReport(candidates, results));
+    }
+  } else {
+    if (opts.json) {
+      defaultRuntime.log(JSON.stringify({ candidates }, null, 2));
+    } else {
+      defaultRuntime.log(formatCompactionReport(candidates));
+    }
   }
 }
 
@@ -919,6 +966,26 @@ export function registerMemoryCli(program: Command) {
         },
       ) => {
         await runMemoryPromote(opts);
+      },
+    );
+
+  memory
+    .command("compact")
+    .description("Archive old T2 working memory files into quarterly summaries")
+    .option("--agent <id>", "Agent id (default: default agent)")
+    .option("--days <n>", "Min age in days to compact (default: 90)", (v: string) => Number(v))
+    .option("--apply", "Execute compaction (archive files)")
+    .option("--remove", "Remove original files after archiving (use with --apply)")
+    .option("--json", "Print JSON")
+    .action(
+      async (
+        opts: MemoryCommandOptions & {
+          days?: number;
+          apply?: boolean;
+          remove?: boolean;
+        },
+      ) => {
+        await runMemoryCompact(opts);
       },
     );
 }
