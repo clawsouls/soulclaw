@@ -636,6 +636,26 @@ async function runMemoryPromote(
     minConfidence: opts.minConfidence ?? 0.4,
   });
 
+  if ((opts as Record<string, unknown>).apply) {
+    if (candidates.length === 0) {
+      defaultRuntime.log("No candidates to promote.");
+      return;
+    }
+    const { executeBatchPromotion, formatPromotionResults } =
+      await import("../memory/promotion-executor.js");
+    const targetFile = (opts as Record<string, unknown>).target as string | undefined;
+    const results = await executeBatchPromotion(workspaceDir, candidates, {
+      targetFile,
+      removeFromSource: true,
+    });
+    if (opts.json) {
+      defaultRuntime.log(JSON.stringify({ results }, null, 2));
+    } else {
+      defaultRuntime.log(formatPromotionResults(results));
+    }
+    return;
+  }
+
   if (opts.json) {
     defaultRuntime.log(JSON.stringify({ candidates }, null, 2));
   } else {
@@ -887,6 +907,8 @@ export function registerMemoryCli(program: Command) {
     .option("--days <n>", "Days back to scan (default: 7)", (v: string) => Number(v))
     .option("--min-confidence <n>", "Min confidence 0-1 (default: 0.4)", (v: string) => Number(v))
     .option("--frequency", "Show frequently accessed memories instead")
+    .option("--apply", "Execute promotions (move to Core Memory)")
+    .option("--target <file>", "Target file for --apply (default: auto-detect or MEMORY.md)")
     .option("--json", "Print JSON")
     .action(
       async (
