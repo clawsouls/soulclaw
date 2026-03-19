@@ -11,6 +11,7 @@ import { resolveSessionTranscriptsDirForAgent } from "../config/sessions/paths.j
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { onSessionTranscriptUpdate } from "../sessions/transcript-events.js";
 import { resolveUserPath } from "../utils.js";
+import { ensureAccessTrackerSchema } from "./access-tracker.js";
 import { DEFAULT_GEMINI_EMBEDDING_MODEL } from "./embeddings-gemini.js";
 import { DEFAULT_MISTRAL_EMBEDDING_MODEL } from "./embeddings-mistral.js";
 import { DEFAULT_OLLAMA_EMBEDDING_MODEL } from "./embeddings-ollama.js";
@@ -357,6 +358,12 @@ export abstract class MemoryManagerSyncOps {
       if (this.fts.enabled) {
         log.warn(`fts unavailable: ${result.ftsError}`);
       }
+    }
+    // Soul Memory: access frequency tracker for T2→T1 promotion
+    try {
+      ensureAccessTrackerSchema(this.db);
+    } catch (err) {
+      log.warn(`access tracker schema failed: ${String(err)}`);
     }
   }
 
