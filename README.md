@@ -6,51 +6,61 @@
 
 SoulClaw is a fork of [OpenClaw](https://github.com/openclaw/openclaw) optimized for the [ClawSouls](https://clawsouls.ai) ecosystem. It adds a **3-Tier long-term memory system**, semantic memory search, persona drift detection, inline security scanning, and native swarm memory synchronization — all running locally.
 
-## 🧠 3-Tier Long-Term Memory System
+## 🧠 Soul Memory — 4-Tier Adaptive Memory Architecture
 
-SoulClaw agents **never forget**. Every conversation is preserved, indexed, and searchable through a 3-tier architecture:
+SoulClaw agents **never forget** while maintaining coherent identity. Soul Memory separates identity from experience through a 4-tier hierarchy with temporal decay and automatic promotion:
 
 ```
-User message → Agent processes → Response generated
-                                       ↓
-                              ┌────────┴────────┐
-                              ↓                  ↓
-                     Layer 0: DAG Store    Layer 1: Passive Memory
-                    (raw messages →        (extract important
-                     SQLite + FTS5)         facts → memory/*.md)
-                              ↓                  ↓
-                              └────────┬────────┘
-                                       ↓
-                              Layer 2: Semantic Vector Index
-                              (embed memory files + FTS5 DAG search)
-                                       ↓
-                              3-Tier Retrieval on next memory_search
+┌─────────────────────────────────────────────┐
+│  T0: SOUL (Identity)                        │
+│  SOUL.md, IDENTITY.md                       │
+│  Immutable. Human-authorized changes only.  │
+│  "Who I am"                                 │
+├─────────────────────────────────────────────┤
+│  T1: CORE MEMORY (Evergreen)                │
+│  MEMORY.md, memory/roadmap.md, etc.         │
+│  No decay. Curated knowledge.               │
+│  "What I must never forget"                 │
+├─────────────────────────────────────────────┤
+│  T2: WORKING MEMORY (Temporal)              │
+│  memory/2026-03-19.md (dated files)         │
+│  Decay: half-life 23 days.                  │
+│  "What happened recently"                   │
+├─────────────────────────────────────────────┤
+│  T3: SESSION MEMORY (Ephemeral)             │
+│  Current conversation context.              │
+│  Gone after session ends.                   │
+│  "What we're talking about right now"       │
+└─────────────────────────────────────────────┘
 ```
 
-### Layer 0 — DAG Lossless Store
+### T0: Soul (Identity)
 
-Every message is stored verbatim in a SQLite DAG (Directed Acyclic Graph) with FTS5 full-text search. Nothing is ever lost.
+Your agent's `SOUL.md` and `IDENTITY.md`. These define _who the agent is_ — personality, values, behavioral rules. They're loaded fresh every session, never modified by the agent, and never subject to search decay.
 
-- **SQLite + FTS5** — keyword search across entire conversation history
-- **Hierarchical summarization** — every 10 turns auto-summarized into higher-level nodes
-- **Level 0** = raw messages, **Level 1+** = compressed summaries
-- **Zero config** — activates automatically when `memorySearch` is configured
+**Defense against Memory-Identity Paradox**: No matter how much experience accumulates, the identity anchor remains unchanged.
 
-### Layer 1 — Passive Memory
+### T1: Core Memory (Evergreen)
 
-After each conversation turn, the agent silently extracts important facts — decisions, preferences, names, dates — and writes them to `memory/*.md` files. No explicit "remember this" needed.
+`MEMORY.md` and undated topic files (`memory/roadmap.md`, `memory/legal.md`). These store curated, long-term knowledge: decisions, architecture choices, key relationships, strategies.
 
-### Layer 2 — Semantic Vector Search
+**No temporal decay.** Core memories are always at full relevance, whether they were written today or a year ago.
 
-Memory files are embedded using local Ollama models (bge-m3) and indexed in a SQLite vector store. When `memory_search` is called:
+### T2: Working Memory (Temporal)
 
-1. **FTS5** searches the DAG for exact keyword matches across all history
-2. **Semantic search** finds conceptually related memories from indexed files
-3. Results are **merged and deduplicated** — both precision and recall
+Date-stamped files like `memory/2026-03-19.md`. These are daily work logs, debug notes, meeting records, task progress.
+
+**Temporal decay with 23-day half-life**: Today's working memory has full relevance. Last week's has 81%. Last month's has 41%. Three months ago? 7%.
+
+Important working memories are automatically promoted to Core Memory (T1) based on:
+
+- Rule-based detection (decisions, architecture, financial, legal terms)
+- Access frequency (memories retrieved 3+ times across sessions)
+- Weekly review with human approval
 
 ### Configuration
 
-The entire 3-tier system activates with a single config:
+Soul Memory activates with embedding provider + temporal decay:
 
 ```jsonc
 // openclaw.json
@@ -58,14 +68,37 @@ The entire 3-tier system activates with a single config:
   "agents": {
     "defaults": {
       "memorySearch": {
-        "provider": "local", // "local" | "openai" | "gemini"
+        "provider": "ollama", // "ollama" | "openai" | "gemini"
+        "model": "bge-m3", // Recommended: multilingual
+        "query": {
+          "hybrid": {
+            "temporalDecay": {
+              "enabled": true,
+              "halfLifeDays": 23, // 23-day half-life for T2
+            },
+          },
+        },
       },
     },
   },
 }
 ```
 
-That's it. DAG storage, passive memory extraction, and vector indexing all start automatically.
+### Memory Promotion CLI
+
+Scan for promotion candidates:
+
+```bash
+openclaw memory promote --days 7          # Last 7 days
+openclaw memory promote --frequency       # Show frequently accessed
+```
+
+Execute promotions:
+
+```bash
+openclaw memory promote --apply           # Auto-promote to MEMORY.md
+openclaw memory promote --apply --target memory/legal.md  # Specific file
+```
 
 ## ⚡ Tiered Bootstrap Loading
 
