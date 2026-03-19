@@ -573,6 +573,76 @@ export async function runMemoryStatus(opts: MemoryCommandOptions) {
   }
 }
 
+async function runMemoryPromote(
+  opts: MemoryCommandOptions & {
+    days?: number;
+    minConfidence?: number;
+    frequency?: boolean;
+  },
+) {
+  const { config: cfg, diagnostics } = await loadMemoryCommandConfig("memory promote");
+  emitMemorySecretResolveDiagnostics(diagnostics, { json: Boolean(opts.json) });
+  const agentId = resolveAgent(cfg, opts.agent);
+
+  if (opts.frequency) {
+    // Show frequently accessed memories from sqlite
+    await withMemoryManagerForAgent({
+      cfg,
+      agentId,
+      run: async (manager) => {
+        const { getFrequentlyAccessedMemories, getAccessStats, formatAccessReport } =
+          await import("../memory/access-tracker.js");
+        const status = manager.status();
+        const dbPath = (status as Record<string, unknown>).dbPath as string | undefined;
+        if (!dbPath) {
+          defaultRuntime.error("Cannot determine database path.");
+          process.exitCode = 1;
+          return;
+        }
+        const { DatabaseSync } = await import("node:sqlite");
+        const db = new DatabaseSync(dbPath, { open: true });
+        try {
+          const stats = getAccessStats(db);
+          const records = getFrequentlyAccessedMemories(db, {
+            daysBack: opts.days ?? 30,
+          });
+          if (opts.json) {
+            defaultRuntime.log(JSON.stringify({ stats, records }, null, 2));
+          } else {
+            defaultRuntime.log(formatAccessReport(records));
+            defaultRuntime.log("");
+            defaultRuntime.log(
+              `Total: ${stats.totalHits} hits, ${stats.uniquePaths} paths, ${stats.uniqueSessions} sessions`,
+            );
+          }
+        } finally {
+          db.close();
+        }
+      },
+    });
+    return;
+  }
+
+  // Scan for promotion candidates using rule-based detection
+  const { resolveAgentWorkspaceDir } = await import("../agents/agent-scope.js");
+  const workspaceDir = resolveAgentWorkspaceDir(cfg, agentId);
+  const memoryDir = path.join(workspaceDir, "memory");
+
+  const { scanForPromotionCandidates, formatPromotionReport } =
+    await import("../memory/promotion-detector.js");
+
+  const candidates = await scanForPromotionCandidates(memoryDir, {
+    daysBack: opts.days ?? 7,
+    minConfidence: opts.minConfidence ?? 0.4,
+  });
+
+  if (opts.json) {
+    defaultRuntime.log(JSON.stringify({ candidates }, null, 2));
+  } else {
+    defaultRuntime.log(formatPromotionReport(candidates));
+  }
+}
+
 export function registerMemoryCli(program: Command) {
   const memory = program
     .command("memory")
@@ -807,6 +877,26 @@ export function registerMemoryCli(program: Command) {
             defaultRuntime.log(lines.join("\n").trim());
           },
         });
+      },
+    );
+
+  memory
+    .command("promote")
+    .description("Scan working memory for promotion candidates (T2 → T1)")
+    .option("--agent <id>", "Agent id (default: default agent)")
+    .option("--days <n>", "Days back to scan (default: 7)", (v: string) => Number(v))
+    .option("--min-confidence <n>", "Min confidence 0-1 (default: 0.4)", (v: string) => Number(v))
+    .option("--frequency", "Show frequently accessed memories instead")
+    .option("--json", "Print JSON")
+    .action(
+      async (
+        opts: MemoryCommandOptions & {
+          days?: number;
+          minConfidence?: number;
+          frequency?: boolean;
+        },
+      ) => {
+        await runMemoryPromote(opts);
       },
     );
 }
