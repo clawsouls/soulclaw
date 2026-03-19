@@ -7,6 +7,7 @@ import type { ResolvedMemorySearchConfig } from "../agents/memory-search.js";
 import { resolveMemorySearchConfig } from "../agents/memory-search.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
+import { recordSearchHits } from "./access-tracker.js";
 import {
   createEmbeddingProvider,
   type EmbeddingProvider,
@@ -238,6 +239,38 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
   }
 
   async search(
+    query: string,
+    opts?: {
+      maxResults?: number;
+      minScore?: number;
+      sessionKey?: string;
+    },
+  ): Promise<MemorySearchResult[]> {
+    const results = await this._searchImpl(query, opts);
+    // Soul Memory: track access frequency for T2→T1 promotion
+    if (results.length > 0) {
+      try {
+        const hits = results
+          .filter(
+            (r): r is typeof r & { id: string } =>
+              "id" in r && typeof (r as Record<string, unknown>).id === "string",
+          )
+          .map((r) => ({
+            chunkId: r.id,
+            path: r.path,
+            score: r.score,
+          }));
+        if (hits.length > 0) {
+          recordSearchHits(this.db, hits, opts?.sessionKey ?? "unknown", query);
+        }
+      } catch {
+        // Non-critical; don't break search on tracker failure
+      }
+    }
+    return results;
+  }
+
+  private async _searchImpl(
     query: string,
     opts?: {
       maxResults?: number;
