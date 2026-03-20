@@ -87,6 +87,26 @@ export type HookConfig = {
   [key: string]: unknown;
 };
 
+/**
+ * Per-hook typed config for session-memory-autoflush.
+ * Accessed via resolveHookConfig(cfg, "session-memory-autoflush").
+ */
+export type SessionMemoryAutoflushHookConfig = HookConfig & {
+  /** Error behavior: "warn" (default), "error", or "silent". */
+  onFailure?: "warn" | "error" | "silent";
+  /** Session end reasons to skip (e.g., ["command"]). Default: ["command"]. */
+  excludeReasons?: string[];
+};
+
+/**
+ * Per-hook typed config for session-start-index.
+ * Accessed via resolveHookConfig(cfg, "session-start-index").
+ */
+export type SessionStartIndexHookConfig = HookConfig & {
+  /** Max time in ms for incremental index (default: 5000). */
+  timeoutMs?: number;
+};
+
 export type HookInstallRecord = InstallRecordBase & {
   hooks?: string[];
 };

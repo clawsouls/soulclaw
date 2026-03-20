@@ -14,6 +14,7 @@ import {
   archiveSessionTranscripts,
   cleanupArchivedSessionTranscripts,
 } from "../gateway/session-utils.fs.js";
+import { createInternalHookEvent, triggerInternalHook } from "../hooks/internal-hooks.js";
 import { isCronRunSessionKey } from "../sessions/session-key-utils.js";
 import type { Logger } from "./service/state.js";
 
@@ -150,6 +151,24 @@ export async function sweepCronRunSessions(params: {
       { pruned, retentionMs },
       `cron-reaper: pruned ${pruned} expired cron run session(s)`,
     );
+
+    // Fire session:end for each reaped session
+    for (const [sessionId, sessionFile] of prunedSessions) {
+      try {
+        const sessionEndEvent = createInternalHookEvent("session", "end", sessionId, {
+          sessionId,
+          sessionKey: sessionId,
+          workspaceDir: sessionFile ? path.dirname(path.dirname(sessionFile)) : "",
+          reason: "reaper",
+        });
+        await triggerInternalHook(sessionEndEvent);
+      } catch (err) {
+        params.log.warn(
+          { err: String(err) },
+          `cron-reaper: session:end hook failed for ${sessionId}`,
+        );
+      }
+    }
   }
 
   return { swept: true, pruned };

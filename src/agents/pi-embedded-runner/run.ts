@@ -5,6 +5,7 @@ import {
   ensureContextEnginesInitialized,
   resolveContextEngine,
 } from "../../context-engine/index.js";
+import { createInternalHookEvent, triggerInternalHook } from "../../hooks/internal-hooks.js";
 import { computeBackoff, sleepWithAbort, type BackoffPolicy } from "../../infra/backoff.js";
 import { generateSecureToken } from "../../infra/secure-random.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
@@ -352,6 +353,28 @@ export async function runEmbeddedPiAgent(
       if (modelResolveOverride?.modelOverride) {
         modelId = modelResolveOverride.modelOverride;
         log.info(`[hooks] model overridden to ${modelId}`);
+      }
+
+      // Fire session:start hook
+      try {
+        const sessionStartEvent = createInternalHookEvent(
+          "session",
+          "start",
+          params.sessionKey?.trim() || params.sessionId,
+          {
+            sessionId: params.sessionId,
+            sessionKey: params.sessionKey?.trim() || params.sessionId,
+            workspaceDir: resolvedWorkspace,
+            agentId: workspaceResolution.agentId,
+            cfg: params.config,
+          },
+        );
+        await triggerInternalHook(sessionStartEvent);
+      } catch (err) {
+        log.warn("session:start hook failed", {
+          errorMessage: err instanceof Error ? err.message : String(err),
+          errorStack: err instanceof Error ? err.stack : undefined,
+        });
       }
 
       const { model, error, authStorage, modelRegistry } = resolveModel(
