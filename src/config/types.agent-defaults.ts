@@ -284,6 +284,17 @@ export type AgentDefaultsConfig = {
   };
   /** Optional sandbox settings for non-main sessions. */
   sandbox?: AgentSandboxConfig;
+  /** Weekly memory review configuration (Soul Memory promotion detection). */
+  weeklyReview?: {
+    /** Disable weekly review entirely. Default: false (enabled). */
+    disabled?: boolean;
+    /** Day of week to run (0=Sun, 1=Mon, ..., 5=Fri, 6=Sat). Default: 5 (Friday). */
+    reviewDay?: number;
+    /** Number of days to look back. Default: 7. */
+    daysBack?: number;
+    /** Minimum confidence threshold. Default: 0.4. */
+    minConfidence?: number;
+  };
 };
 
 export type AgentCompactionMode = "default" | "safeguard";
