@@ -541,6 +541,10 @@ export async function runOnboardingWizard(
   const { setupInternalHooks } = await import("../commands/onboard-hooks.js");
   nextConfig = await setupInternalHooks(nextConfig, runtime, prompter);
 
+  // Weekly memory review (only if memory search is configured)
+  const { setupWeeklyReview } = await import("../commands/onboard-weekly-review.js");
+  nextConfig = await setupWeeklyReview(nextConfig, runtime, prompter);
+
   nextConfig = onboardHelpers.applyWizardMetadata(nextConfig, { command: "onboard", mode });
   await writeConfigFile(nextConfig);
 
