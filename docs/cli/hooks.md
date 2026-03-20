@@ -316,3 +316,77 @@ openclaw hooks enable boot-md
 ```
 
 **See:** [boot-md documentation](/automation/hooks#boot-md)
+
+### session-memory-autoflush
+
+Automatically saves session context to memory when sessions end unexpectedly (compaction, timeout, reaper). Prevents memory loss from abnormal session termination.
+
+**Events**: `session:end`
+
+**Enable**:
+
+```bash
+openclaw hooks enable session-memory-autoflush
+```
+
+**Output:** `~/.openclaw/workspace/memory/YYYY-MM-DD-autoflush.md`
+
+**Configuration:**
+
+| Option           | Type     | Default       | Description                                        |
+| ---------------- | -------- | ------------- | -------------------------------------------------- |
+| `excludeReasons` | string[] | `["command"]` | Session end reasons to skip                        |
+| `onFailure`      | string   | `"warn"`      | Error behavior: `"warn"`, `"error"`, or `"silent"` |
+
+```json
+{
+  "hooks": {
+    "internal": {
+      "entries": {
+        "session-memory-autoflush": {
+          "enabled": true,
+          "excludeReasons": ["command"],
+          "onFailure": "warn"
+        }
+      }
+    }
+  }
+}
+```
+
+**See:** [session-memory-autoflush documentation](/automation/hooks#session-memory-autoflush)
+
+### session-start-index
+
+Runs incremental memory index when a new agent session starts, ensuring recent memory files are immediately searchable.
+
+**Events**: `session:start`
+
+**Enable**:
+
+```bash
+openclaw hooks enable session-start-index
+```
+
+**Configuration:**
+
+| Option      | Type   | Default | Description                    |
+| ----------- | ------ | ------- | ------------------------------ |
+| `timeoutMs` | number | `5000`  | Max time for incremental index |
+
+```json
+{
+  "hooks": {
+    "internal": {
+      "entries": {
+        "session-start-index": {
+          "enabled": true,
+          "timeoutMs": 3000
+        }
+      }
+    }
+  }
+}
+```
+
+**See:** [session-start-index documentation](/automation/hooks#session-start-index)
