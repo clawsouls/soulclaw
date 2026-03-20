@@ -33,6 +33,16 @@ export interface WeeklyReviewOptions {
 }
 
 /**
+ * Build WeeklyReviewOptions from openclaw.json config.
+ * Config path: agents.defaults.weeklyReview
+ */
+export function resolveWeeklyReviewOptions(cfg?: {
+  agents?: { defaults?: { weeklyReview?: WeeklyReviewOptions } };
+}): WeeklyReviewOptions {
+  return cfg?.agents?.defaults?.weeklyReview ?? {};
+}
+
+/**
  * Check if today is review day and return promotion report if so.
  * Returns null if not review day, already ran today, or no candidates found.
  */

@@ -693,8 +693,10 @@ export async function runHeartbeatOnce(opts: {
   // Append weekly memory review on review day (default: Friday)
   let enrichedPrompt = prompt;
   try {
-    const { maybeRunWeeklyReview } = await import("../memory/weekly-review.js");
-    const weeklyReview = await maybeRunWeeklyReview(workspaceDir);
+    const { maybeRunWeeklyReview, resolveWeeklyReviewOptions } =
+      await import("../memory/weekly-review.js");
+    const reviewOpts = resolveWeeklyReviewOptions(cfg);
+    const weeklyReview = await maybeRunWeeklyReview(workspaceDir, reviewOpts);
     if (weeklyReview) {
       enrichedPrompt = `${prompt}\n\n${weeklyReview}`;
     }
