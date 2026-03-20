@@ -371,12 +371,20 @@ Compaction lifecycle hooks exposed through the plugin hook runner:
 - **`before_compaction`**: Runs before compaction with count/token metadata
 - **`after_compaction`**: Runs after compaction with compaction summary metadata
 
+### Session Lifecycle Events
+
+- **`session:start`**: When a new agent session begins. Fires after workspace resolution but before the first model call. Context includes `sessionId`, `sessionKey`, `workspaceDir`, `agentId`, and `cfg`.
+- **`session:end`**: When a session ends for any reason. Context includes a `reason` field:
+  - `"command"` — User issued `/stop`
+  - `"compaction"` — Session was compacted (context window limit reached)
+  - `"timeout"` — Session timed out
+  - `"crash"` — Session crashed unexpectedly
+  - `"reaper"` — Cron reaper pruned an expired session
+
 ### Future Events
 
 Planned event types:
 
-- **`session:start`**: When a new session begins
-- **`session:end`**: When a session ends
 - **`agent:error`**: When an agent encounters an error
 
 ## Creating Custom Hooks
@@ -710,6 +718,111 @@ Internal hooks must be enabled for this to run.
 
 ```bash
 openclaw hooks enable boot-md
+```
+
+### session-memory-autoflush
+
+Automatically saves session context to memory when sessions end unexpectedly (compaction, timeout, reaper). This prevents memory loss from abnormal session termination — a critical gap when sessions crash or get reaped before the agent can write a memory flush.
+
+**Events**: `session:end`
+
+**Requirements**: `workspace.dir` must be configured
+
+**Output**: `<workspace>/memory/YYYY-MM-DD-autoflush.md`
+
+**What it does**:
+
+1. Checks the session end reason — skips `command` (the `session-memory` hook handles `/new` and `/reset`)
+2. Extracts the last 15 user/assistant messages from the session transcript
+3. Appends to a dated autoflush memory file with session metadata
+4. Times out after 10 seconds to never block session cleanup
+
+**Example output**:
+
+```markdown
+## Autoflush: 2026-03-20 04:30:00 UTC
+
+- **Session Key**: agent:main:main
+- **Session ID**: abc123def456
+- **Reason**: compaction
+
+### Recent Conversation
+
+user: How do I configure webhooks?
+assistant: You can configure webhooks in the settings...
+```
+
+**Configuration**:
+
+```json
+{
+  "hooks": {
+    "internal": {
+      "entries": {
+        "session-memory-autoflush": {
+          "enabled": true,
+          "excludeReasons": ["command"],
+          "onFailure": "warn"
+        }
+      }
+    }
+  }
+}
+```
+
+| Option           | Type     | Default       | Description                                        |
+| ---------------- | -------- | ------------- | -------------------------------------------------- |
+| `excludeReasons` | string[] | `["command"]` | Session end reasons to skip                        |
+| `onFailure`      | string   | `"warn"`      | Error behavior: `"warn"`, `"error"`, or `"silent"` |
+
+**Enable**:
+
+```bash
+openclaw hooks enable session-memory-autoflush
+```
+
+### session-start-index
+
+Runs an incremental memory index when a new agent session starts, ensuring that any memory files written since the last session are immediately searchable.
+
+**Events**: `session:start`
+
+**Requirements**: Memory search must be configured (embedding provider + model)
+
+**Output**: No files written; memory vector index updated in-place.
+
+**What it does**:
+
+1. Resolves the workspace and agent ID from session context
+2. Initializes the memory index manager
+3. Runs an incremental sync (only new/changed files)
+4. Times out after 5 seconds to avoid delaying session start
+
+**Configuration**:
+
+```json
+{
+  "hooks": {
+    "internal": {
+      "entries": {
+        "session-start-index": {
+          "enabled": true,
+          "timeoutMs": 3000
+        }
+      }
+    }
+  }
+}
+```
+
+| Option      | Type   | Default | Description                    |
+| ----------- | ------ | ------- | ------------------------------ |
+| `timeoutMs` | number | `5000`  | Max time for incremental index |
+
+**Enable**:
+
+```bash
+openclaw hooks enable session-start-index
 ```
 
 ## Best Practices
