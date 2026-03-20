@@ -60,6 +60,34 @@ Runs `BOOT.md` whenever the gateway starts (after channels start).
 openclaw hooks enable boot-md
 ```
 
+### 🔄 session-memory-autoflush
+
+Automatically saves session context to memory when sessions end unexpectedly.
+
+**Events**: `session:end`
+**What it does**: When a session ends due to compaction, timeout, or reaper, extracts recent conversation and appends to a dated autoflush memory file. Skips `command` reason (handled by `session-memory`).
+**Output**: `<workspace>/memory/YYYY-MM-DD-autoflush.md`
+
+**Enable**:
+
+```bash
+openclaw hooks enable session-memory-autoflush
+```
+
+### 📇 session-start-index
+
+Runs incremental memory index when a new agent session starts.
+
+**Events**: `session:start`
+**What it does**: Calls the memory manager's sync to index any new or changed memory files, ensuring they're searchable. Times out gracefully after 5 seconds.
+**Output**: No files written; memory index updated in-place.
+
+**Enable**:
+
+```bash
+openclaw hooks enable session-start-index
+```
+
 ## Hook Structure
 
 Each hook is a directory containing:
@@ -168,10 +196,16 @@ Currently supported events:
 - **command:new**: `/new` command specifically
 - **command:reset**: `/reset` command
 - **command:stop**: `/stop` command
+- **session:start**: Agent session begins
+- **session:end**: Agent session ends (compaction, command, timeout, crash, reaper)
+- **session:compact:before**: Before session compaction
+- **session:compact:after**: After session compaction
 - **agent:bootstrap**: Before workspace bootstrap files are injected
 - **gateway:startup**: Gateway startup (after channels start)
-
-More event types coming soon (session lifecycle, agent errors, etc.).
+- **message:received**: Inbound message received
+- **message:sent**: Outbound message sent
+- **message:transcribed**: Audio message transcribed
+- **message:preprocessed**: Message preprocessing complete
 
 ## Handler API
 
