@@ -33,13 +33,19 @@ export async function searchDagFts5(params: {
       log.info(`DAG FTS5: ${ftsResults.length} results for "${query.slice(0, 50)}"`);
     }
 
-    // Deduplicate DAG results by id (FTS5 can return same node multiple times)
-    const seen = new Set<string>();
+    // Deduplicate DAG results by id AND content (FTS5 can match same content across different rows)
+    const seenIds = new Set<string>();
+    const seenContent = new Set<string>();
     const deduped = ftsResults.filter((r) => {
-      if (seen.has(r.id)) {
+      if (seenIds.has(r.id)) {
         return false;
       }
-      seen.add(r.id);
+      const contentKey = (r.summary || r.content).slice(0, 200);
+      if (seenContent.has(contentKey)) {
+        return false;
+      }
+      seenIds.add(r.id);
+      seenContent.add(contentKey);
       return true;
     });
 

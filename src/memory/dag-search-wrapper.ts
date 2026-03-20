@@ -37,15 +37,16 @@ export function wrapWithDagSearch(
         searchDag(workspaceDir, query, dagMaxResults),
       ]);
 
-      // Merge: inner results first, then DAG results (deduplicated)
+      // Merge: inner results first, then DAG results (deduplicated by snippet content)
       const merged = [...innerResults];
-      const existingSnippets = new Set(innerResults.map((r) => r.snippet.slice(0, 100)));
+      const existingSnippets = new Set(innerResults.map((r) => r.snippet.slice(0, 200)));
 
       for (const dagResult of dagResults) {
-        // Skip if substantially similar to an existing result
-        if (existingSnippets.has(dagResult.snippet.slice(0, 100))) {
+        const key = dagResult.snippet.slice(0, 200);
+        if (existingSnippets.has(key)) {
           continue;
         }
+        existingSnippets.add(key);
         merged.push(dagResult);
       }
 
@@ -99,13 +100,19 @@ async function searchDag(
     const store = getDagStore(workspaceDir);
     const ftsResults = store.search(query, limit);
 
-    // Deduplicate DAG results by id
-    const seen = new Set<string>();
+    // Deduplicate DAG results by id AND content (FTS5 can match same content across different rows)
+    const seenIds = new Set<string>();
+    const seenContent = new Set<string>();
     const deduped = ftsResults.filter((r) => {
-      if (seen.has(r.id)) {
+      if (seenIds.has(r.id)) {
         return false;
       }
-      seen.add(r.id);
+      const contentKey = (r.summary || r.content).slice(0, 200);
+      if (seenContent.has(contentKey)) {
+        return false;
+      }
+      seenIds.add(r.id);
+      seenContent.add(contentKey);
       return true;
     });
 
