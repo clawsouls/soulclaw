@@ -446,3 +446,62 @@ export function isMessagePreprocessedEvent(
   }
   return hasStringContextField(context, "channelId");
 }
+
+// ============================================================================
+// Session Lifecycle Hook Events
+// ============================================================================
+
+export type SessionEndHookContext = {
+  sessionId: string;
+  sessionKey: string;
+  workspaceDir: string;
+  agentId?: string;
+  reason: "command" | "compaction" | "timeout" | "crash" | "reaper";
+  messageCount?: number;
+  durationMs?: number;
+  cfg?: OpenClawConfig;
+};
+
+export type SessionEndHookEvent = InternalHookEvent & {
+  type: "session";
+  action: "end";
+  context: SessionEndHookContext;
+};
+
+export function isSessionEndEvent(event: InternalHookEvent): event is SessionEndHookEvent {
+  if (!isHookEventTypeAndAction(event, "session", "end")) {
+    return false;
+  }
+  const context = getHookContext<SessionEndHookContext>(event);
+  if (!context) {
+    return false;
+  }
+  return hasStringContextField(context, "sessionId") && hasStringContextField(context, "reason");
+}
+
+export type SessionStartHookContext = {
+  sessionId: string;
+  sessionKey: string;
+  workspaceDir: string;
+  agentId?: string;
+  cfg?: OpenClawConfig;
+};
+
+export type SessionStartHookEvent = InternalHookEvent & {
+  type: "session";
+  action: "start";
+  context: SessionStartHookContext;
+};
+
+export function isSessionStartEvent(event: InternalHookEvent): event is SessionStartHookEvent {
+  if (!isHookEventTypeAndAction(event, "session", "start")) {
+    return false;
+  }
+  const context = getHookContext<SessionStartHookContext>(event);
+  if (!context) {
+    return false;
+  }
+  return (
+    hasStringContextField(context, "sessionId") && hasStringContextField(context, "sessionKey")
+  );
+}

@@ -795,6 +795,24 @@ export async function compactEmbeddedPiSessionDirect(
             errorStack: err instanceof Error ? err.stack : undefined,
           });
         }
+        // Fire session:end after compaction completes
+        try {
+          const sessionEndEvent = createInternalHookEvent("session", "end", hookSessionKey, {
+            sessionId: params.sessionId,
+            sessionKey: hookSessionKey,
+            workspaceDir: effectiveWorkspace,
+            agentId: sessionAgentId,
+            reason: "compaction",
+            messageCount: messageCountAfter,
+            cfg: params.config,
+          });
+          await triggerInternalHook(sessionEndEvent);
+        } catch (err) {
+          log.warn("session:end hook failed", {
+            errorMessage: err instanceof Error ? err.message : String(err),
+            errorStack: err instanceof Error ? err.stack : undefined,
+          });
+        }
         if (hookRunner?.hasHooks("after_compaction")) {
           try {
             await hookRunner.runAfterCompaction(
