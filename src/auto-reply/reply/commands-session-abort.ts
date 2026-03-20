@@ -135,6 +135,25 @@ export const handleStopCommand: CommandHandler = async (params, allowTextCommand
   );
   await triggerInternalHook(hookEvent);
 
+  // Fire session:end for /stop command
+  try {
+    const sessionEndEvent = createInternalHookEvent(
+      "session",
+      "end",
+      abortTarget.key ?? params.sessionKey ?? "",
+      {
+        sessionId: abortTarget.sessionId ?? abortTarget.entry?.sessionId ?? "",
+        sessionKey: abortTarget.key ?? params.sessionKey ?? "",
+        workspaceDir: params.workspaceDir,
+        reason: "command",
+        cfg: params.cfg,
+      },
+    );
+    await triggerInternalHook(sessionEndEvent);
+  } catch (err) {
+    logVerbose(`session:end hook failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   const { stopped } = stopSubagentsForRequester({
     cfg: params.cfg,
     requesterSessionKey: abortTarget.key ?? params.sessionKey,
