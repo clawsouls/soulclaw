@@ -80,11 +80,15 @@ export function createMemorySearchTool(options: {
           }),
           searchDagFts5({ cfg, query, limit: dagLimit }),
         ]);
-        // Merge: standard results first, then DAG (deduplicated)
-        const existingSnippets = new Set(standardResults.map((r) => r.snippet.slice(0, 100)));
+        // Merge: standard results first, then DAG (deduplicated by citation + snippet prefix)
+        const existingKeys = new Set(
+          standardResults.map((r) => `${r.citation ?? ""}|${r.snippet.slice(0, 100)}`),
+        );
         const rawResults = [...standardResults];
         for (const d of dagResults) {
-          if (!existingSnippets.has(d.snippet.slice(0, 100))) {
+          const key = `${d.citation ?? ""}|${d.snippet.slice(0, 100)}`;
+          if (!existingKeys.has(key)) {
+            existingKeys.add(key);
             rawResults.push(d);
           }
         }
