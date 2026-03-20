@@ -99,14 +99,24 @@ async function searchDag(
     const store = getDagStore(workspaceDir);
     const ftsResults = store.search(query, limit);
 
-    return ftsResults.map((r) => ({
+    // Deduplicate DAG results by id
+    const seen = new Set<string>();
+    const deduped = ftsResults.filter((r) => {
+      if (seen.has(r.id)) {
+        return false;
+      }
+      seen.add(r.id);
+      return true;
+    });
+
+    return deduped.map((r) => ({
       path: ".dag-memory.sqlite",
       startLine: 0,
       endLine: 0,
-      score: Math.min(1, Math.abs(r.rank) / 10), // Normalize FTS5 rank
+      score: Math.min(0.5, Math.abs(r.rank) / 20), // Lower score — semantic results take priority
       snippet: formatDagSnippet(r),
       source: "memory" as const,
-      citation: `dag:${r.id}`,
+      citation: `.dag-memory.sqlite#L0`,
     }));
   } catch (err) {
     log.debug(`DAG search failed (non-fatal): ${String(err)}`);
