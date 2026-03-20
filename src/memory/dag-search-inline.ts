@@ -33,14 +33,25 @@ export async function searchDagFts5(params: {
       log.info(`DAG FTS5: ${ftsResults.length} results for "${query.slice(0, 50)}"`);
     }
 
-    return ftsResults.map((r) => ({
+    // Deduplicate DAG results by id (FTS5 can return same node multiple times)
+    const seen = new Set<string>();
+    const deduped = ftsResults.filter((r) => {
+      if (seen.has(r.id)) {
+        return false;
+      }
+      seen.add(r.id);
+      return true;
+    });
+
+    return deduped.map((r) => ({
       path: ".dag-memory.sqlite",
       startLine: 0,
       endLine: 0,
-      score: Math.min(1, Math.abs(r.rank) / 10),
+      // Lower score so semantic/file results take priority
+      score: Math.min(0.5, Math.abs(r.rank) / 20),
       snippet: formatSnippet(r),
       source: "memory" as const,
-      citation: `dag:${r.id}`,
+      citation: `.dag-memory.sqlite#L0`,
     }));
   } catch (err) {
     log.debug(`DAG FTS5 search failed (non-fatal): ${String(err)}`);
