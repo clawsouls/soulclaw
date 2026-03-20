@@ -690,8 +690,19 @@ export async function runHeartbeatOnce(opts: {
     canRelayToUser,
     workspaceDir,
   });
+  // Append weekly memory review on review day (default: Friday)
+  let enrichedPrompt = prompt;
+  try {
+    const { maybeRunWeeklyReview } = await import("../memory/weekly-review.js");
+    const weeklyReview = await maybeRunWeeklyReview(workspaceDir);
+    if (weeklyReview) {
+      enrichedPrompt = `${prompt}\n\n${weeklyReview}`;
+    }
+  } catch {
+    // Weekly review failure is non-fatal
+  }
   const ctx = {
-    Body: appendCronStyleCurrentTimeLine(prompt, cfg, startedAt),
+    Body: appendCronStyleCurrentTimeLine(enrichedPrompt, cfg, startedAt),
     From: sender,
     To: sender,
     OriginatingChannel: delivery.channel !== "none" ? delivery.channel : undefined,
