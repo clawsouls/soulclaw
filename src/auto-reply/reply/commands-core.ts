@@ -2,6 +2,8 @@ import fs from "node:fs/promises";
 import { resetAcpSessionInPlace } from "../../acp/persistent-bindings.js";
 import { logVerbose } from "../../globals.js";
 import { createInternalHookEvent, triggerInternalHook } from "../../hooks/internal-hooks.js";
+import { createSubsystemLogger } from "../../logging/subsystem.js";
+import { topicBeforeReset } from "../../memory/topic-snapshot-hooks.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { isAcpSessionKey } from "../../routing/session-key.js";
 import { resolveSendPolicy } from "../../sessions/send-policy.js";
@@ -126,6 +128,17 @@ export async function emitResetCommandHooks(params: {
             workspaceDir: params.workspaceDir,
           },
         );
+        // ── Topic Snapshot: auto-save before reset ──
+        if (params.sessionKey) {
+          await topicBeforeReset(
+            { reason: params.action },
+            {
+              sessionKey: params.sessionKey,
+              workspaceDir: params.workspaceDir,
+              log: createSubsystemLogger("topic-snapshot"),
+            },
+          );
+        }
       } catch (err: unknown) {
         logVerbose(`before_reset hook failed: ${String(err)}`);
       }
