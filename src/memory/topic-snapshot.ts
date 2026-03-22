@@ -231,6 +231,199 @@ export function shouldSkipSession(sessionKey: string): boolean {
   );
 }
 
+// ── Keyword-based Topic Name Suggestion ────────────────────────────────────────
+/**
+ * Extract a meaningful topic name from a compaction summary.
+ * Uses heuristics: section titles, frequent nouns, decision keywords.
+ * No LLM calls.
+ */
+export function suggestTopicNameFromSummary(summary: string): string | null {
+  // Strategy 1: Look for a dominant project/feature name in Decisions
+  const decisionsMatch = summary.match(/##\s*Decisions\s*\n([\s\S]*?)(?=\n##\s|\n---|\n$|$)/i);
+  if (decisionsMatch?.[1]) {
+    const words = extractSignificantWords(decisionsMatch[1]);
+    if (words.length > 0) {
+      return words[0];
+    }
+  }
+
+  // Strategy 2: Look in Open TODOs
+  const todosMatch = summary.match(
+    /##\s*(?:Open TODOs?|Current Status|Status)\s*\n([\s\S]*?)(?=\n##\s|\n---|\n$|$)/i,
+  );
+  if (todosMatch?.[1]) {
+    const words = extractSignificantWords(todosMatch[1]);
+    if (words.length > 0) {
+      return words[0];
+    }
+  }
+
+  // Strategy 3: First heading after top-level
+  const headingMatch = summary.match(/^#+\s+(.+)$/m);
+  if (headingMatch?.[1]) {
+    return sanitizeTopicName(headingMatch[1]).slice(0, 30);
+  }
+
+  return null;
+}
+
+/** Extract significant words (likely project/feature names) from text */
+function extractSignificantWords(text: string): string[] {
+  // Common stop words to exclude
+  const stopWords = new Set([
+    "the",
+    "a",
+    "an",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "have",
+    "has",
+    "had",
+    "do",
+    "does",
+    "did",
+    "will",
+    "would",
+    "could",
+    "should",
+    "may",
+    "might",
+    "shall",
+    "can",
+    "need",
+    "must",
+    "for",
+    "and",
+    "nor",
+    "but",
+    "or",
+    "yet",
+    "so",
+    "in",
+    "on",
+    "at",
+    "to",
+    "from",
+    "by",
+    "with",
+    "of",
+    "as",
+    "into",
+    "through",
+    "during",
+    "before",
+    "after",
+    "above",
+    "below",
+    "between",
+    "out",
+    "off",
+    "over",
+    "under",
+    "again",
+    "further",
+    "then",
+    "once",
+    "here",
+    "there",
+    "when",
+    "where",
+    "why",
+    "how",
+    "all",
+    "each",
+    "every",
+    "both",
+    "few",
+    "more",
+    "most",
+    "other",
+    "some",
+    "such",
+    "no",
+    "not",
+    "only",
+    "own",
+    "same",
+    "than",
+    "too",
+    "very",
+    "just",
+    "about",
+    "up",
+    "down",
+    // Korean common particles (just filter short words)
+    "이",
+    "가",
+    "을",
+    "를",
+    "의",
+    "에",
+    "도",
+    "는",
+    "은",
+    "로",
+    "으로",
+    "와",
+    "과",
+    "한",
+    "된",
+    "하는",
+    "하기",
+    "위해",
+    "대한",
+    "및",
+    // Tech generic
+    "fix",
+    "add",
+    "update",
+    "remove",
+    "change",
+    "set",
+    "get",
+    "new",
+    "old",
+    "test",
+    "done",
+    "todo",
+    "pending",
+    "open",
+    "closed",
+    "true",
+    "false",
+    "none",
+    "null",
+    "undefined",
+    "error",
+    "warning",
+    "info",
+    "debug",
+  ]);
+
+  // Extract capitalized/significant words (likely names)
+  const wordCounts = new Map<string, number>();
+  const words = text.match(/[A-Z][a-zA-Z]{2,}|[a-z]{4,}/g) ?? [];
+
+  for (const word of words) {
+    const lower = word.toLowerCase();
+    if (stopWords.has(lower) || lower.length < 3) {
+      continue;
+    }
+    wordCounts.set(lower, (wordCounts.get(lower) ?? 0) + 1);
+  }
+
+  // Sort by frequency
+  return [...wordCounts.entries()]
+    .toSorted((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([word]) => sanitizeTopicName(word));
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 export function sanitizeTopicName(input: string): string {
   return input
