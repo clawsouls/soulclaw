@@ -10,6 +10,7 @@ import {
   shouldSkipSession,
   buildInjectionText,
   stripInjectedContext,
+  suggestTopicNameFromSummary,
 } from "./topic-snapshot.js";
 
 describe("topic-snapshot", () => {
@@ -108,6 +109,34 @@ describe("topic-snapshot", () => {
       expect(map2.getTopicForSession("test:session:auto")).toBe("test-session-auto");
 
       await fs.rm(tmpDir, { recursive: true, force: true });
+    });
+  });
+
+  describe("suggestTopicNameFromSummary", () => {
+    it("should suggest topic name from decisions section", () => {
+      const summary = `## Decisions
+- 2026-03-22: ClawSouls Hosting BYOK model confirmed
+- 2026-03-22: ClawSouls Hosting pricing set to $14.99/mo
+- 2026-03-22: Docker deployment via Fly remote builder
+`;
+      const result = suggestTopicNameFromSummary(summary);
+      expect(result).toBeTruthy();
+      // Should pick a significant word like "clawsouls" or "hosting"
+      expect(typeof result).toBe("string");
+    });
+
+    it("should return null for empty summary", () => {
+      const result = suggestTopicNameFromSummary("");
+      expect(result).toBeNull();
+    });
+
+    it("should extract from TODOs when no decisions", () => {
+      const summary = `## Open TODOs
+- Test Kubernetes deployment pipeline
+- Configure Kubernetes monitoring alerts
+`;
+      const result = suggestTopicNameFromSummary(summary);
+      expect(result).toBeTruthy();
     });
   });
 

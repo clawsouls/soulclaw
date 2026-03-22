@@ -11,6 +11,7 @@ import {
   TopicSnapshot,
   buildInjectionText,
   shouldSkipSession,
+  suggestTopicNameFromSummary,
 } from "./topic-snapshot.js";
 
 export interface TopicSnapshotHookContext {
@@ -69,7 +70,21 @@ export async function topicAfterCompaction(
     const map = new TopicMap(ctx.workspaceDir);
     await map.load();
 
-    const topic = map.getTopicForSession(ctx.sessionKey);
+    let topic = map.getTopicForSession(ctx.sessionKey);
+
+    // If no topic bound yet and we have a summary, try keyword-based suggestion
+    if (!topic && event.summary) {
+      const suggested = suggestTopicNameFromSummary(event.summary);
+      if (suggested) {
+        topic = suggested;
+        map.bindSession(ctx.sessionKey, topic);
+        await map.save();
+        ctx.log.info(`[topic-snapshot] keyword-suggested topic name: "${topic}"`);
+      } else {
+        topic = map.autoBindSession(ctx.sessionKey);
+        await map.save();
+      }
+    }
     if (!topic) {
       return;
     }

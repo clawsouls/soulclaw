@@ -551,6 +551,22 @@ function buildChatCommands(): ChatCommandDefinition[] {
       category: "session",
     }),
     defineChatCommand({
+      key: "topic",
+      nativeName: "topic",
+      description: "Bind, show, or list topic snapshots.",
+      textAlias: "/topic",
+      acceptsArgs: true,
+      category: "session",
+      args: [
+        {
+          name: "action",
+          description: "Action: bind <name>, show [name], list",
+          type: "string",
+          captureRemaining: true,
+        },
+      ],
+    }),
+    defineChatCommand({
       key: "compact",
       nativeName: "compact",
       description: "Compact the session context.",
