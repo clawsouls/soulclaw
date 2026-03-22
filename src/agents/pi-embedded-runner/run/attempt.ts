@@ -1681,11 +1681,6 @@ export async function runEmbeddedAttempt(
         }
 
         {
-          // Apply topic context first (most important context goes first)
-          if (topicContext) {
-            effectivePrompt = `${topicContext}\n\n${effectivePrompt}`;
-            log.debug(`[topic-snapshot] injected topic context (${topicContext.length} chars)`);
-          }
           if (hookResult?.prependContext) {
             effectivePrompt = `${hookResult.prependContext}\n\n${params.prompt}`;
             log.debug(
@@ -1699,10 +1694,14 @@ export async function runEmbeddedAttempt(
             systemPromptText = legacySystemPrompt;
             log.debug(`hooks: applied systemPrompt override (${legacySystemPrompt.length} chars)`);
           }
+          // Merge topic context into appendSystemContext
+          const combinedAppendContext =
+            [hookResult?.appendSystemContext, topicContext].filter(Boolean).join("\n\n") ||
+            undefined;
           const prependedOrAppendedSystemPrompt = composeSystemPromptWithHookContext({
             baseSystemPrompt: systemPromptText,
             prependSystemContext: hookResult?.prependSystemContext,
-            appendSystemContext: hookResult?.appendSystemContext,
+            appendSystemContext: combinedAppendContext,
           });
           if (prependedOrAppendedSystemPrompt) {
             const prependSystemLen = hookResult?.prependSystemContext?.trim().length ?? 0;
