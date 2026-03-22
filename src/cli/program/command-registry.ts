@@ -149,6 +149,19 @@ const coreEntries: CoreCliEntry[] = [
   {
     commands: [
       {
+        name: "topic",
+        description: "Manage topic snapshots — auto-saved session context",
+        hasSubcommands: true,
+      },
+    ],
+    register: async ({ program }) => {
+      const mod = await import("../commands/topic.js");
+      mod.registerTopicCommands(program);
+    },
+  },
+  {
+    commands: [
+      {
         name: "swarm",
         description: "Manage Swarm Memory — shared memory sync across agents",
         hasSubcommands: true,

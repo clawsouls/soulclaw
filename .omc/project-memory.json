@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1773981915989,
+  "lastScanned": 1774165947529,
   "projectRoot": "/Users/openclaw/projects/soulclaw",
   "techStack": {
     "languages": [
@@ -180,33 +180,33 @@
       "path": "Swabble",
       "purpose": null,
       "fileCount": 8,
-      "lastAccessed": 1773981915976,
+      "lastAccessed": 1774165947519,
       "keyFiles": ["CHANGELOG.md", "LICENSE", "Package.resolved", "Package.swift", "README.md"]
     },
     "apps": {
       "path": "apps",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1773981915977,
+      "lastAccessed": 1774165947521,
       "keyFiles": []
     },
     "assets": {
       "path": "assets",
       "purpose": "Static assets",
       "fileCount": 3,
-      "lastAccessed": 1773981915980,
+      "lastAccessed": 1774165947521,
       "keyFiles": ["avatar-placeholder.svg", "dmg-background-small.png", "dmg-background.png"]
     },
     "dist": {
       "path": "dist",
       "purpose": "Distribution/build output",
-      "fileCount": 927,
-      "lastAccessed": 1773981915981,
+      "fileCount": 924,
+      "lastAccessed": 1774165947523,
       "keyFiles": [
-        "access-tracker-1KSeNzzp.js",
-        "access-tracker-C95Kr-_n.js",
+        "access-tracker-B2_anxdS.js",
+        "access-tracker-BZqNR7F5.js",
+        "access-tracker-DM6lyMgV.js",
         "access-tracker-DPkeMT6S.js",
-        "access-tracker-DwXP55MI.js",
         "account-helpers-BqSrsCej.js"
       ]
     },
@@ -214,7 +214,7 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 19,
-      "lastAccessed": 1773981915982,
+      "lastAccessed": 1774165947523,
       "keyFiles": [
         "CNAME",
         "auth-credential-semantics.md",
@@ -227,35 +227,35 @@
       "path": "extensions",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1773981915982,
+      "lastAccessed": 1774165947523,
       "keyFiles": []
     },
     "git-hooks": {
       "path": "git-hooks",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1773981915982,
+      "lastAccessed": 1774165947523,
       "keyFiles": ["pre-commit"]
     },
     "packages": {
       "path": "packages",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1773981915982,
+      "lastAccessed": 1774165947523,
       "keyFiles": []
     },
     "patches": {
       "path": "patches",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1773981915982,
+      "lastAccessed": 1774165947523,
       "keyFiles": []
     },
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 100,
-      "lastAccessed": 1773981915982,
+      "lastAccessed": 1774165947524,
       "keyFiles": [
         "auth-monitor.sh",
         "bench-cli-startup.ts",
@@ -268,14 +268,14 @@
       "path": "skills",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1773981915982,
+      "lastAccessed": 1774165947524,
       "keyFiles": []
     },
     "src": {
       "path": "src",
       "purpose": "Source code",
       "fileCount": 20,
-      "lastAccessed": 1773981915983,
+      "lastAccessed": 1774165947524,
       "keyFiles": [
         "channel-web.ts",
         "docker-image-digests.test.ts",
@@ -288,7 +288,7 @@
       "path": "test",
       "purpose": "Test files",
       "fileCount": 9,
-      "lastAccessed": 1773981915983,
+      "lastAccessed": 1774165947524,
       "keyFiles": [
         "appcast.test.ts",
         "cli-json-stdout.e2e.test.ts",
@@ -301,7 +301,7 @@
       "path": "ui",
       "purpose": null,
       "fileCount": 5,
-      "lastAccessed": 1773981915983,
+      "lastAccessed": 1774165947524,
       "keyFiles": [
         "index.html",
         "package.json",
@@ -314,21 +314,21 @@
       "path": "vendor",
       "purpose": "Third-party code",
       "fileCount": 0,
-      "lastAccessed": 1773981915983,
+      "lastAccessed": 1774165947524,
       "keyFiles": []
     },
     "docs/assets": {
       "path": "docs/assets",
       "purpose": "Static assets",
       "fileCount": 4,
-      "lastAccessed": 1773981915984,
+      "lastAccessed": 1774165947525,
       "keyFiles": ["install-script.svg", "openclaw-logo-text-dark.png", "openclaw-logo-text.png"]
     },
     "test/fixtures": {
       "path": "test/fixtures",
       "purpose": "Test fixtures",
       "fileCount": 5,
-      "lastAccessed": 1773981915984,
+      "lastAccessed": 1774165947525,
       "keyFiles": [
         "exec-allowlist-shell-parser-parity.json",
         "exec-wrapper-resolution-parity.json",
@@ -339,21 +339,21 @@
       "path": "test/helpers",
       "purpose": "Helper functions",
       "fileCount": 14,
-      "lastAccessed": 1773981915984,
+      "lastAccessed": 1774165947525,
       "keyFiles": ["dispatch-inbound-capture.ts", "envelope-timestamp.ts", "fast-short-timeouts.ts"]
     },
     "test/mocks": {
       "path": "test/mocks",
       "purpose": "Mock data",
       "fileCount": 1,
-      "lastAccessed": 1773981915984,
+      "lastAccessed": 1774165947525,
       "keyFiles": ["baileys.ts"]
     },
     "test/scripts": {
       "path": "test/scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 5,
-      "lastAccessed": 1773981915984,
+      "lastAccessed": 1774165947525,
       "keyFiles": [
         "check-channel-agnostic-boundaries.test.ts",
         "check-no-random-messaging-tmp.test.ts",
@@ -364,257 +364,101 @@
       "path": "ui/node_modules",
       "purpose": "Dependencies",
       "fileCount": 0,
-      "lastAccessed": 1773981915984,
+      "lastAccessed": 1774165947526,
       "keyFiles": []
     },
     "ui/public": {
       "path": "ui/public",
       "purpose": "Public files",
       "fileCount": 4,
-      "lastAccessed": 1773981915985,
+      "lastAccessed": 1774165947526,
       "keyFiles": ["apple-touch-icon.png", "favicon-32.png", "favicon.ico"]
     },
     "ui/src": {
       "path": "ui/src",
       "purpose": "Source code",
       "fileCount": 3,
-      "lastAccessed": 1773981915985,
+      "lastAccessed": 1774165947526,
       "keyFiles": ["css.d.ts", "main.ts", "styles.css"]
     }
   },
   "hotPaths": [
     {
-      "path": "src/agents/pi-embedded-runner/run.ts",
-      "accessCount": 7,
-      "lastAccessed": 1773982305216,
+      "path": "src/agents/pi-embedded-runner/compact.ts",
+      "accessCount": 6,
+      "lastAccessed": 1774166069140,
+      "type": "file"
+    },
+    {
+      "path": "src/plugins/loader.ts",
+      "accessCount": 6,
+      "lastAccessed": 1774166245301,
       "type": "file"
     },
     {
       "path": "src",
-      "accessCount": 4,
-      "lastAccessed": 1773982110298,
+      "accessCount": 5,
+      "lastAccessed": 1774166126839,
       "type": "directory"
     },
     {
-      "path": "src/cron/session-reaper.ts",
+      "path": "src/plugins/registry.ts",
       "accessCount": 4,
-      "lastAccessed": 1773982201523,
+      "lastAccessed": 1774166116259,
       "type": "file"
-    },
-    {
-      "path": "src/auto-reply/reply/commands-session-abort.ts",
-      "accessCount": 4,
-      "lastAccessed": 1773982206375,
-      "type": "file"
-    },
-    {
-      "path": "src/memory/manager.ts",
-      "accessCount": 4,
-      "lastAccessed": 1773982344336,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/internal-hooks.test.ts",
-      "accessCount": 4,
-      "lastAccessed": 1773982438539,
-      "type": "directory"
     },
     {
       "path": "src/hooks/internal-hooks.ts",
       "accessCount": 3,
-      "lastAccessed": 1773982158036,
+      "lastAccessed": 1774166079095,
       "type": "file"
     },
     {
-      "path": "src/agents/pi-embedded-runner/compact.ts",
-      "accessCount": 3,
-      "lastAccessed": 1773982178075,
+      "path": "src/plugins/types.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774166080963,
       "type": "file"
     },
     {
-      "path": "src/memory",
-      "accessCount": 3,
-      "lastAccessed": 1773982334128,
+      "path": "src/plugins/hooks.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774166123328,
+      "type": "file"
+    },
+    {
+      "path": "src/routing/session-key.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774165964124,
+      "type": "file"
+    },
+    {
+      "path": "src/agents/pi-embedded-runner/logger.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774166074414,
+      "type": "file"
+    },
+    {
+      "path": "src/plugins/hook-runner-global.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774166108293,
+      "type": "file"
+    },
+    {
+      "path": "src/gateway",
+      "accessCount": 1,
+      "lastAccessed": 1774166122467,
       "type": "directory"
     },
     {
-      "path": "src/config/types.hooks.ts",
-      "accessCount": 3,
-      "lastAccessed": 1773982380339,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/bundled/README.md",
-      "accessCount": 3,
-      "lastAccessed": 1773982399563,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/bundled/session-memory/handler.ts",
-      "accessCount": 2,
-      "lastAccessed": 1773982092559,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/bundled/session-memory/HOOK.md",
-      "accessCount": 2,
-      "lastAccessed": 1773982092995,
-      "type": "file"
-    },
-    {
-      "path": "src/auto-reply/reply/commands-core.ts",
-      "accessCount": 2,
-      "lastAccessed": 1773982094152,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/config.ts",
-      "accessCount": 2,
-      "lastAccessed": 1773982102040,
-      "type": "file"
-    },
-    {
-      "path": "src/auto-reply/reply/session-hooks.ts",
-      "accessCount": 2,
-      "lastAccessed": 1773982102307,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/bundled/session-start-index/handler.ts",
-      "accessCount": 2,
-      "lastAccessed": 1773982361563,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/bundled/session-start-index/handler.test.ts",
-      "accessCount": 2,
-      "lastAccessed": 1773982513361,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/types.ts",
+      "path": "src/memory/topic-snapshot.ts",
       "accessCount": 1,
-      "lastAccessed": 1773981937471,
+      "lastAccessed": 1774166187785,
       "type": "file"
     },
     {
-      "path": "src/hooks/loader.ts",
+      "path": "src/memory/topic-snapshot-hooks.ts",
       "accessCount": 1,
-      "lastAccessed": 1773981944586,
-      "type": "file"
-    },
-    {
-      "path": "src/auto-reply/reply/memory-flush.ts",
-      "accessCount": 1,
-      "lastAccessed": 1773981946189,
-      "type": "file"
-    },
-    {
-      "path": "src/memory/index.ts",
-      "accessCount": 1,
-      "lastAccessed": 1773981954741,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/hooks.ts",
-      "accessCount": 1,
-      "lastAccessed": 1773981966860,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/bundled-dir.ts",
-      "accessCount": 1,
-      "lastAccessed": 1773981967264,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/bundled/boot-md/HOOK.md",
-      "accessCount": 1,
-      "lastAccessed": 1773981968274,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/bundled/command-logger/HOOK.md",
-      "accessCount": 1,
-      "lastAccessed": 1773981968583,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/bundled/bootstrap-extra-files/HOOK.md",
-      "accessCount": 1,
-      "lastAccessed": 1773981969430,
-      "type": "file"
-    },
-    {
-      "path": "",
-      "accessCount": 1,
-      "lastAccessed": 1773981970252,
-      "type": "directory"
-    },
-    {
-      "path": "src/hooks/workspace.ts",
-      "accessCount": 1,
-      "lastAccessed": 1773981977742,
-      "type": "file"
-    },
-    {
-      "path": "src/memory/manager-sync-ops.ts",
-      "accessCount": 1,
-      "lastAccessed": 1773981987269,
-      "type": "file"
-    },
-    {
-      "path": "src/gateway/server-methods/sessions.ts",
-      "accessCount": 1,
-      "lastAccessed": 1773981995893,
-      "type": "file"
-    },
-    {
-      "path": "src/agents/bootstrap-hooks.ts",
-      "accessCount": 1,
-      "lastAccessed": 1773981996195,
-      "type": "file"
-    },
-    {
-      "path": "src/auto-reply/reply/commands-session.ts",
-      "accessCount": 1,
-      "lastAccessed": 1773982100892,
-      "type": "directory"
-    },
-    {
-      "path": "src/agents/pi-embedded-runner",
-      "accessCount": 1,
-      "lastAccessed": 1773982117915,
-      "type": "directory"
-    },
-    {
-      "path": "src/auto-reply/reply/commands-types.ts",
-      "accessCount": 1,
-      "lastAccessed": 1773982207204,
-      "type": "directory"
-    },
-    {
-      "path": "src/hooks/bundled/session-memory-autoflush/HOOK.md",
-      "accessCount": 1,
-      "lastAccessed": 1773982243545,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/bundled/session-memory-autoflush/handler.ts",
-      "accessCount": 1,
-      "lastAccessed": 1773982268306,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/bundled/session-start-index/HOOK.md",
-      "accessCount": 1,
-      "lastAccessed": 1773982318446,
-      "type": "file"
-    },
-    {
-      "path": "src/hooks/bundled/session-memory-autoflush/handler.test.ts",
-      "accessCount": 1,
-      "lastAccessed": 1773982458276,
+      "lastAccessed": 1774166215019,
       "type": "file"
     }
   ],

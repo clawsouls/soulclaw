@@ -18,6 +18,7 @@ import {
 import { createInternalHookEvent, triggerInternalHook } from "../../hooks/internal-hooks.js";
 import { getMachineDisplayName } from "../../infra/machine-name.js";
 import { generateSecureToken } from "../../infra/secure-random.js";
+import { topicBeforeCompaction, topicAfterCompaction } from "../../memory/topic-snapshot-hooks.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
 import { type enqueueCommand, enqueueCommandInLane } from "../../process/command-queue.js";
 import { isCronSessionKey, isSubagentSessionKey } from "../../routing/session-key.js";
@@ -709,6 +710,11 @@ export async function compactEmbeddedPiSessionDirect(
             });
           }
         }
+        // ── Topic Snapshot: auto-save before compaction ──
+        await topicBeforeCompaction(
+          { messageCount: messageCountBefore, tokenCount: tokenCountBefore },
+          { sessionKey: hookSessionKey, workspaceDir: effectiveWorkspace, log },
+        );
         const diagEnabled = log.isEnabled("debug");
         const preMetrics = diagEnabled ? summarizeCompactionMessages(session.messages) : undefined;
         if (diagEnabled && preMetrics) {
@@ -836,6 +842,11 @@ export async function compactEmbeddedPiSessionDirect(
             });
           }
         }
+        // ── Topic Snapshot: update from compaction summary ──
+        await topicAfterCompaction(
+          { messageCount: messageCountAfter, compactedCount, summary: result.summary },
+          { sessionKey: hookSessionKey, workspaceDir: effectiveWorkspace, log },
+        );
         return {
           ok: true,
           compacted: true,

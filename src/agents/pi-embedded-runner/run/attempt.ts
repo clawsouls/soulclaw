@@ -15,6 +15,7 @@ import { ensureGlobalUndiciStreamTimeouts } from "../../../infra/net/undici-glob
 import { MAX_IMAGE_BYTES } from "../../../media/constants.js";
 import { maybeDagStore } from "../../../memory/dag-hook.js";
 import { maybeExtractPassiveMemory } from "../../../memory/passive-memory.js";
+import { topicBeforePromptBuild } from "../../../memory/topic-snapshot-hooks.js";
 import { maybeCheckDrift } from "../../../persona/inline-drift.js";
 import { getGlobalHookRunner } from "../../../plugins/hook-runner-global.js";
 import type {
@@ -1664,7 +1665,27 @@ export async function runEmbeddedAttempt(
           hookRunner,
           legacyBeforeAgentStartResult: params.legacyBeforeAgentStartResult,
         });
+
+        // ── Topic Snapshot: inject topic context ──
+        let topicContext: string | undefined;
+        if (params.sessionKey) {
+          try {
+            topicContext = await topicBeforePromptBuild({
+              sessionKey: params.sessionKey,
+              workspaceDir: params.workspaceDir,
+              log,
+            });
+          } catch (err) {
+            log.warn(`[topic-snapshot] prompt injection failed: ${String(err)}`);
+          }
+        }
+
         {
+          // Apply topic context first (most important context goes first)
+          if (topicContext) {
+            effectivePrompt = `${topicContext}\n\n${effectivePrompt}`;
+            log.debug(`[topic-snapshot] injected topic context (${topicContext.length} chars)`);
+          }
           if (hookResult?.prependContext) {
             effectivePrompt = `${hookResult.prependContext}\n\n${params.prompt}`;
             log.debug(
