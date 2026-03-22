@@ -1293,6 +1293,7 @@
                   "cli/skills",
                   "cli/status",
                   "cli/system",
+                  "cli/topic",
                   "cli/tui",
                   "cli/uninstall",
                   "cli/update",
