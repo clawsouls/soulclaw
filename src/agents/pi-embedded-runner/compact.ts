@@ -65,6 +65,7 @@ import {
   type SkillSnapshot,
 } from "../skills.js";
 import { resolveTranscriptPolicy } from "../transcript-policy.js";
+import { notifyCompaction } from "./compaction-notify.js";
 import {
   compactWithSafetyTimeout,
   EMBEDDED_COMPACTION_TIMEOUT_MS,
@@ -710,6 +711,22 @@ export async function compactEmbeddedPiSessionDirect(
             });
           }
         }
+        // ── Compaction Notification (before) ──
+        await notifyCompaction(
+          {
+            sessionKey: hookSessionKey,
+            compactedCount: messageCountBefore,
+            messageCount: messageCountBefore,
+            phase: "before",
+          },
+          {
+            config: params.config,
+            channel: resolvedMessageProvider,
+            chatId: params.sessionId,
+            log,
+          },
+        );
+
         // ── Topic Snapshot: auto-save before compaction ──
         await topicBeforeCompaction(
           { messageCount: messageCountBefore, tokenCount: tokenCountBefore },
@@ -847,6 +864,7 @@ export async function compactEmbeddedPiSessionDirect(
           { messageCount: messageCountAfter, compactedCount, summary: result.summary },
           { sessionKey: hookSessionKey, workspaceDir: effectiveWorkspace, log },
         );
+
         return {
           ok: true,
           compacted: true,
