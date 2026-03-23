@@ -95,6 +95,8 @@ export const AgentDefaultsSchema = z
           .union([z.literal("strict"), z.literal("off"), z.literal("custom")])
           .optional(),
         identifierInstructions: z.string().optional(),
+        /** Send a notification to the active channel when compaction completes. Default: true. */
+        notify: z.boolean().optional(),
         qualityGuard: z
           .object({
             enabled: z.boolean().optional(),
