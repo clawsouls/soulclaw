@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { dashboardCommand } from "../../commands/dashboard.js";
 import { doctorCommand } from "../../commands/doctor.js";
+import { hostCommand } from "../../commands/host.js";
 import { resetCommand } from "../../commands/reset.js";
 import { uninstallCommand } from "../../commands/uninstall.js";
 import { defaultRuntime } from "../../runtime.js";
@@ -55,6 +56,13 @@ export function registerMaintenanceCommands(program: Command) {
           noOpen: opts.open === false,
         });
       });
+    });
+
+  program
+    .command("host")
+    .description("Open ClawSouls Hosting — deploy your agent to the cloud")
+    .action(async () => {
+      await hostCommand();
     });
 
   program
