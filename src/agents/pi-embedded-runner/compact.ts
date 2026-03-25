@@ -723,6 +723,7 @@ export async function compactEmbeddedPiSessionDirect(
             config: params.config,
             channel: resolvedMessageProvider,
             chatId: params.sessionId,
+            sessionFile: params.sessionFile,
             log,
           },
         );
