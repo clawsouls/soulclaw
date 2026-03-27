@@ -33,12 +33,21 @@ interface NotifyContext {
  */
 export async function notifyCompaction(info: CompactionInfo, ctx: NotifyContext): Promise<void> {
   try {
+    ctx.log.info("[compaction-notify] notifyCompaction called", {
+      phase: info.phase,
+      sessionKey: info.sessionKey,
+      messageCount: info.messageCount,
+      hasSessionFile: !!ctx.sessionFile,
+      channel: ctx.channel,
+    });
+
     // Check config: compaction.notify (default: true)
     const notify = (ctx.config as Record<string, unknown> | undefined)?.agents
       ? getNotifySetting(ctx.config)
       : true;
 
     if (!notify) {
+      ctx.log.info("[compaction-notify] notify disabled in config, skipping");
       return;
     }
 
@@ -64,6 +73,11 @@ export async function notifyCompaction(info: CompactionInfo, ctx: NotifyContext)
 
     // Resolve the chat target from session key, config, or session file
     const to = resolveNotifyTarget(info.sessionKey, ctx.config, channel, ctx.sessionFile);
+    ctx.log.info("[compaction-notify] resolveNotifyTarget result", {
+      to: to ?? "undefined",
+      sessionKey: info.sessionKey,
+      sessionFile: ctx.sessionFile ?? "undefined",
+    });
     if (!to) {
       ctx.log.info("[compaction-notify] No notification target resolved, skipping");
       return;
