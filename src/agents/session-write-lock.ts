@@ -42,8 +42,8 @@ const HELD_LOCKS_KEY = Symbol.for("openclaw.sessionWriteLockHeldLocks");
 const WATCHDOG_STATE_KEY = Symbol.for("openclaw.sessionWriteLockWatchdogState");
 
 const DEFAULT_STALE_MS = 30 * 60 * 1000;
-const DEFAULT_MAX_HOLD_MS = 5 * 60 * 1000;
-const DEFAULT_WATCHDOG_INTERVAL_MS = 60_000;
+const DEFAULT_MAX_HOLD_MS = 3 * 60 * 1000; // 5 minutes -> 3 minutes
+const DEFAULT_WATCHDOG_INTERVAL_MS = 30_000; // 60 seconds -> 30 seconds
 const DEFAULT_TIMEOUT_GRACE_MS = 2 * 60 * 1000;
 const MAX_LOCK_HOLD_MS = 2_147_000_000;
 
@@ -142,8 +142,13 @@ async function releaseHeldLock(
   }
 
   if (held.releasePromise) {
-    await held.releasePromise.catch(() => undefined);
-    return true;
+    try {
+      await held.releasePromise;
+      return true;
+    } catch {
+      // Previous release failed, continue with fresh attempt
+      held.releasePromise = undefined;
+    }
   }
 
   HELD_LOCKS.delete(normalizedSessionFile);
@@ -219,8 +224,9 @@ function ensureWatchdogStarted(intervalMs: number): void {
   watchdogState.started = true;
   watchdogState.intervalMs = intervalMs;
   watchdogState.timer = setInterval(() => {
-    void runLockWatchdogCheck().catch(() => {
-      // Ignore watchdog errors - best effort cleanup only.
+    void runLockWatchdogCheck().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error(`[session-write-lock] watchdog error:`, err);
     });
   }, intervalMs);
   watchdogState.timer.unref?.();
