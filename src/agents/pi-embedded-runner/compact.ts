@@ -928,6 +928,25 @@ export async function compactEmbeddedPiSession(
           modelContextWindow: ceModel?.contextWindow,
           defaultTokens: DEFAULT_CONTEXT_TOKENS,
         });
+        // ── Compaction Notification (before) ──
+        const ceHookSessionKey = params.sessionKey?.trim() || params.sessionId;
+        const ceResolvedMessageProvider = params.messageChannel ?? params.messageProvider;
+        await notifyCompaction(
+          {
+            sessionKey: ceHookSessionKey,
+            compactedCount: 0,
+            messageCount: 0,
+            phase: "before",
+          },
+          {
+            config: params.config,
+            channel: ceResolvedMessageProvider,
+            chatId: params.sessionId,
+            sessionFile: params.sessionFile,
+            log,
+          },
+        );
+
         const result = await contextEngine.compact({
           sessionId: params.sessionId,
           sessionFile: params.sessionFile,
@@ -936,6 +955,26 @@ export async function compactEmbeddedPiSession(
           force: params.trigger === "manual",
           legacyParams: params as Record<string, unknown>,
         });
+
+        // ── Compaction Notification (after) ──
+        if (result.compacted) {
+          await notifyCompaction(
+            {
+              sessionKey: ceHookSessionKey,
+              compactedCount: result.result?.tokensBefore ?? 0,
+              messageCount: 0,
+              phase: "after",
+            },
+            {
+              config: params.config,
+              channel: ceResolvedMessageProvider,
+              chatId: params.sessionId,
+              sessionFile: params.sessionFile,
+              log,
+            },
+          );
+        }
+
         return {
           ok: result.ok,
           compacted: result.compacted,
