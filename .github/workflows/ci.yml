@@ -2181,6 +2181,7 @@ jobs:
             ${{ runner.os }}-swiftpm-
 
       - name: Cache Swift build directory
+        id: swift-build-cache
         uses: actions/cache@v5
         with:
           path: apps/macos/.build
@@ -2189,6 +2190,7 @@ jobs:
             ${{ runner.os }}-swift-build-v1-${{ steps.swift-toolchain.outputs.key }}-
 
       - name: Patch mlx-audio-swift manifest
+        if: steps.swift-build-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           if [ ! -f apps/macos/.build/checkouts/mlx-audio-swift/Package.swift ]; then
