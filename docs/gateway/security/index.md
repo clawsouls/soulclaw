@@ -1024,7 +1024,17 @@ Hardening tips:
 - Use full-disk encryption on the gateway host.
 - Prefer a dedicated OS user account for the Gateway if the host is shared.
 
-### 0.8) Logs + transcripts (redaction + retention)
+### 0.8) Workspace `.env` files
+
+OpenClaw loads workspace-local `.env` files for agents and tools, but never lets those files silently override gateway runtime controls.
+
+- Any key that starts with `OPENCLAW_*` is blocked from untrusted workspace `.env` files.
+- The block is fail-closed: a new runtime-control variable added in a future release cannot be inherited from a checked-in or attacker-supplied `.env`; the key is ignored and the gateway keeps its own value.
+- Trusted process/OS environment variables (the gateway's own shell, launchd/systemd unit, app bundle) still apply — this only constrains `.env` file loading.
+
+Why: workspace `.env` files frequently live next to agent code, get committed by accident, or get written by tools. Blocking the whole `OPENCLAW_*` prefix means adding a new `OPENCLAW_*` flag later can never regress into silent inheritance from workspace state.
+
+### 0.9) Logs + transcripts (redaction + retention)
 
 Logs and transcripts can leak sensitive info even when access controls are correct:
 
