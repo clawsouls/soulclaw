@@ -34,6 +34,7 @@ Docs: https://docs.openclaw.ai
 - OpenShell: pin host-side sandbox writes under the mounted root so symlink-parent rebinds cannot redirect `writeFile` outside the workspace during local mirror updates. (#69797) Thanks @drobison00.
 - Ollama/media understanding: register Ollama as an image-capable media-understanding provider so `agents.defaults.imageModel.primary` values like `ollama/qwen2.5vl:7b` route through the Ollama plugin instead of failing as unknown models. (#69816) Thanks @soloclz.
 - CLI/media understanding: make `openclaw infer image describe --model <provider/model>` execute the explicit image model instead of skipping description when that model supports native vision.
+- Usage/providers: keep plugin-owned usage auth enabled when manifest-declared provider auth env vars such as `MINIMAX_CODE_PLAN_KEY` are present, so `/usage` can resolve MiniMax billing credentials through the provider plugin.
 
 ## 2026.4.20
 
