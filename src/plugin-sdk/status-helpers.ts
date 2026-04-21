@@ -68,6 +68,7 @@ function buildComputedAccountStatusAdapterBase<ResolvedAccount, Probe, Audit>(
 ): Omit<ChannelStatusAdapter<ResolvedAccount, Probe, Audit>, "buildAccountSnapshot"> {
   return {
     defaultRuntime: options.defaultRuntime,
+    skipStaleSocketHealthCheck: options.skipStaleSocketHealthCheck,
     buildChannelSummary: options.buildChannelSummary,
     probeAccount: options.probeAccount,
     formatCapabilitiesProbe: options.formatCapabilitiesProbe,
