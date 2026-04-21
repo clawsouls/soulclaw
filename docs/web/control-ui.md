@@ -290,6 +290,16 @@ What this means in practice:
 
 You do not need to change anything to get this behavior — it is always on and not configurable.
 
+## Avatar route auth
+
+When gateway auth is configured, the Control UI avatar endpoint requires the same gateway token as the rest of the API:
+
+- `GET /avatar/<agentId>` returns the avatar image only to authenticated callers. `GET /avatar/<agentId>?meta=1` returns the avatar metadata under the same rule.
+- Unauthenticated requests to either route are rejected (matching the sibling assistant-media route). This prevents the avatar route from leaking agent identity on hosts that are otherwise protected.
+- The Control UI itself forwards the gateway token as a bearer header when fetching avatars, and uses authenticated blob URLs so the image still renders in dashboards.
+
+If you disable gateway auth (not recommended on shared hosts), the avatar route also becomes unauthenticated, in line with the rest of the gateway.
+
 ## Building the UI
 
 The Gateway serves static files from `dist/control-ui`. Build them with:
