@@ -2336,6 +2336,11 @@ jobs:
           distribution: temurin
           # Keep sdkmanager on the stable JDK path for Linux CI runners.
           java-version: 17
+          cache: gradle
+          cache-dependency-path: |
+            apps/android/**/*.gradle*
+            apps/android/**/gradle-wrapper.properties
+            apps/android/gradle/libs.versions.toml
 
       - name: Setup Android SDK cmdline-tools
         run: |
@@ -2355,11 +2360,6 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
           echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
           echo "$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5
-        with:
-          gradle-version: 8.11.1
 
       - name: Install Android SDK packages
         run: |
