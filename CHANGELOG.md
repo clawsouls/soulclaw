@@ -6,6 +6,7 @@ Docs: https://docs.openclaw.ai
 
 ### Changes
 
+- Fireworks/models: add Kimi K2.6 (`fireworks/accounts/fireworks/models/kimi-k2p6`) to the bundled catalog and live-model priority list, while keeping Kimi thinking disabled for Fireworks K2.6 requests.
 - Onboard/wizard: simplify the security disclaimer copy (drop the yellow banner and warning icon in favor of plain-prose paragraphs), and flip remaining onboarding pickers with long dynamic option lists to searchable autocompletes (search provider, plugin configure, model provider filter).
 - Channels/preview streaming: stream tool-progress updates into live preview edits for Discord, Slack, and Telegram so in-flight replies show incremental tool state in the same preview message before finalization. (#69611) Thanks @thewilloftheshadow.
 - Ollama/onboard: populate the cloud-only model list from `ollama.com/api/tags` so `openclaw onboard` reflects the live cloud catalog instead of a static three-model seed; cap the discovered list at 500 and fall back to the previous hardcoded suggestions when ollama.com is unreachable or returns no models. (#68463) Thanks @BruceMacD.
