@@ -2055,18 +2055,74 @@ jobs:
 
           path = Path("apps/macos/.build/checkouts/mlx-audio-swift/Package.swift")
           text = path.read_text()
-          if "Models/Qwen3/README.md" in text:
+          excludes = {
+              "Sources/MLXAudioTTS": [
+                  "Models/Llama/README.md",
+                  "Models/Marvis/README.md",
+                  "Models/PocketTTS/README.md",
+                  "Models/Qwen3/README.md",
+                  "Models/Soprano/README.md",
+              ],
+              "Sources/MLXAudioSTT": [
+                  "Models/GLMASR/README.md",
+                  "Models/VoxtralRealtime/README.md",
+                  "Models/Qwen3ASR/README.md",
+                  "Models/GraniteSpeech/README.md",
+                  "Models/Parakeet/README.md",
+              ],
+              "Sources/MLXAudioVAD": [
+                  "Models/SmartTurn/README.md",
+                  "Models/Sortformer/README.md",
+              ],
+              "Sources/MLXAudioLID": [
+                  "README.md",
+              ],
+              "Sources/MLXAudioSTS": [
+                  "Models/SAMAudio/README.md",
+                  "Models/LFMAudio/README.md",
+              ],
+              "Sources/Tools/mlx-audio-swift-tts": [
+                  "README.md",
+              ],
+              "Sources/Tools/mlx-audio-swift-codec": [
+                  "README.md",
+              ],
+              "Sources/Tools/mlx-audio-swift-sts": [
+                  "README.md",
+              ],
+              "Sources/Tools/mlx-audio-swift-stt": [
+                  "README.md",
+              ],
+              "Sources/Tools/mlx-audio-swift-lid": [
+                  "README.md",
+              ],
+          }
+
+          updated = False
+          for target_path, files in excludes.items():
+              already_patched = f'path: "{target_path}",\n            exclude: [' in text
+              if already_patched:
+                  continue
+
+              needle = f'            path: "{target_path}"\n'
+              replacement = (
+                  f'            path: "{target_path}",\n'
+                  "            exclude: [\n"
+                  + "".join(f'                "{file}",\n' for file in files)
+                  + "            ]\n"
+              )
+
+              if needle not in text:
+                  raise SystemExit(f"Could not find {target_path} target path in mlx-audio-swift Package.swift")
+
+              text = text.replace(needle, replacement, 1)
+              updated = True
+
+          if updated:
+              path.write_text(text)
+              print(f"Patched {path}")
+          else:
               print("mlx-audio-swift README excludes already present")
-              raise SystemExit(0)
-
-          needle = '            path: "Sources/MLXAudioTTS"\n'
-          replacement = """            path: \"Sources/MLXAudioTTS\",\n            exclude: [\n                \"Models/Llama/README.md\",\n                \"Models/Marvis/README.md\",\n                \"Models/PocketTTS/README.md\",\n                \"Models/Qwen3/README.md\",\n                \"Models/Soprano/README.md\",\n            ]\n"""
-
-          if needle not in text:
-              raise SystemExit("Could not find MLXAudioTTS target path in mlx-audio-swift Package.swift")
-
-          path.write_text(text.replace(needle, replacement, 1))
-          print(f"Patched {path}")
           PY
 
       - name: TS tests (macOS)
@@ -2148,18 +2204,74 @@ jobs:
 
           path = Path("apps/macos/.build/checkouts/mlx-audio-swift/Package.swift")
           text = path.read_text()
-          if "Models/Qwen3/README.md" in text:
+          excludes = {
+              "Sources/MLXAudioTTS": [
+                  "Models/Llama/README.md",
+                  "Models/Marvis/README.md",
+                  "Models/PocketTTS/README.md",
+                  "Models/Qwen3/README.md",
+                  "Models/Soprano/README.md",
+              ],
+              "Sources/MLXAudioSTT": [
+                  "Models/GLMASR/README.md",
+                  "Models/VoxtralRealtime/README.md",
+                  "Models/Qwen3ASR/README.md",
+                  "Models/GraniteSpeech/README.md",
+                  "Models/Parakeet/README.md",
+              ],
+              "Sources/MLXAudioVAD": [
+                  "Models/SmartTurn/README.md",
+                  "Models/Sortformer/README.md",
+              ],
+              "Sources/MLXAudioLID": [
+                  "README.md",
+              ],
+              "Sources/MLXAudioSTS": [
+                  "Models/SAMAudio/README.md",
+                  "Models/LFMAudio/README.md",
+              ],
+              "Sources/Tools/mlx-audio-swift-tts": [
+                  "README.md",
+              ],
+              "Sources/Tools/mlx-audio-swift-codec": [
+                  "README.md",
+              ],
+              "Sources/Tools/mlx-audio-swift-sts": [
+                  "README.md",
+              ],
+              "Sources/Tools/mlx-audio-swift-stt": [
+                  "README.md",
+              ],
+              "Sources/Tools/mlx-audio-swift-lid": [
+                  "README.md",
+              ],
+          }
+
+          updated = False
+          for target_path, files in excludes.items():
+              already_patched = f'path: "{target_path}",\n            exclude: [' in text
+              if already_patched:
+                  continue
+
+              needle = f'            path: "{target_path}"\n'
+              replacement = (
+                  f'            path: "{target_path}",\n'
+                  "            exclude: [\n"
+                  + "".join(f'                "{file}",\n' for file in files)
+                  + "            ]\n"
+              )
+
+              if needle not in text:
+                  raise SystemExit(f"Could not find {target_path} target path in mlx-audio-swift Package.swift")
+
+              text = text.replace(needle, replacement, 1)
+              updated = True
+
+          if updated:
+              path.write_text(text)
+              print(f"Patched {path}")
+          else:
               print("mlx-audio-swift README excludes already present")
-              raise SystemExit(0)
-
-          needle = '            path: "Sources/MLXAudioTTS"\n'
-          replacement = """            path: \"Sources/MLXAudioTTS\",\n            exclude: [\n                \"Models/Llama/README.md\",\n                \"Models/Marvis/README.md\",\n                \"Models/PocketTTS/README.md\",\n                \"Models/Qwen3/README.md\",\n                \"Models/Soprano/README.md\",\n            ]\n"""
-
-          if needle not in text:
-              raise SystemExit("Could not find MLXAudioTTS target path in mlx-audio-swift Package.swift")
-
-          path.write_text(text.replace(needle, replacement, 1))
-          print(f"Patched {path}")
           PY
 
       - name: Show toolchain
