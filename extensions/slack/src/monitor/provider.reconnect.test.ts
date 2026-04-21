@@ -19,6 +19,10 @@ class FakeEmitter {
       listener(...args);
     }
   }
+
+  listenerCount(event: string) {
+    return this.listeners.get(event)?.size ?? 0;
+  }
 }
 
 describe("slack socket reconnect helpers", () => {
@@ -115,6 +119,28 @@ describe("slack socket reconnect helpers", () => {
 
     expect(app.start).toHaveBeenCalledTimes(1);
     expect(onStarted).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels the disconnect waiter when onStarted throws", async () => {
+    const client = new FakeEmitter();
+    const app = {
+      receiver: { client },
+      start: vi.fn().mockResolvedValue(undefined),
+    };
+    const err = new Error("status sink failed");
+
+    await expect(
+      __testing.startSlackSocketAndWaitForDisconnect({
+        app: app as never,
+        onStarted: () => {
+          throw err;
+        },
+      }),
+    ).rejects.toThrow("status sink failed");
+
+    expect(client.listenerCount("disconnected")).toBe(0);
+    expect(client.listenerCount("unable_to_socket_mode_start")).toBe(0);
+    expect(client.listenerCount("error")).toBe(0);
   });
 
   it("preserves error payload from unable_to_socket_mode_start event", async () => {

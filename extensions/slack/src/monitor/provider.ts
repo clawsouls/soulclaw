@@ -245,18 +245,18 @@ async function startSlackSocketAndWaitForDisconnect(params: {
   const disconnectWaiter = createSlackSocketDisconnectWaiter(params.app, params.abortSignal);
   try {
     await Promise.resolve(params.app.start());
+    if (params.abortSignal?.aborted) {
+      disconnectWaiter.cancel();
+      return null;
+    }
+    params.onStarted?.();
+    const disconnect = await disconnectWaiter.promise;
+    disconnectWaiter.complete();
+    return disconnect;
   } catch (err) {
     disconnectWaiter.cancel();
     throw err;
   }
-  if (params.abortSignal?.aborted) {
-    disconnectWaiter.cancel();
-    return null;
-  }
-  params.onStarted?.();
-  const disconnect = await disconnectWaiter.promise;
-  disconnectWaiter.complete();
-  return disconnect;
 }
 
 function resolveSlackSocketShutdownClient(app: unknown): SlackSocketShutdownClient | undefined {
