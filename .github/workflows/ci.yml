@@ -2046,6 +2046,9 @@ jobs:
           path: src/canvas-host/a2ui/
 
       - name: Patch mlx-audio-swift manifest
+        # macOS node tests do not build the Swift package; keep SwiftPM resolution
+        # out of this lane so it stays focused on platform-specific TS tests.
+        if: ${{ false }}
         run: |
           set -euo pipefail
           swift package resolve --package-path apps/macos >/dev/null
