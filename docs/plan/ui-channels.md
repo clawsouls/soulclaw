@@ -20,6 +20,10 @@ Implemented for the shared agent, CLI, plugin capability, and outbound delivery 
 - Discord, Slack, Telegram, Mattermost, MS Teams, and Feishu renderers consume the generic contract.
 - Discord channel control-plane code no longer imports Carbon-backed UI containers.
 
+Canonical docs now live in [Message Presentation](/plugins/message-presentation).
+Keep this plan as historical implementation context; update the canonical guide
+for contract, renderer, or fallback behavior changes.
+
 ## Problem
 
 Channel UI is currently split across several incompatible surfaces:

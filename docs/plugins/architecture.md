@@ -1254,6 +1254,8 @@ Plugins should own channel-specific `describeMessageTool(...)` schema
 contributions for non-message primitives such as reactions, reads, and polls.
 Shared send presentation should use the generic `MessagePresentation` contract
 instead of provider-native button, component, block, or card fields.
+See [Message Presentation](/plugins/message-presentation) for the contract,
+fallback rules, provider mapping, and plugin author checklist.
 
 Send-capable plugins declare what they can render through message capabilities:
 
