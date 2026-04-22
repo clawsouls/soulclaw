@@ -55,6 +55,10 @@ const CORE_SECRET_SURFACE_GUARDS = [
     forbiddenPatterns: [/\btelegram\b/],
   },
   {
+    path: "src/channels/model-overrides.ts",
+    forbiddenPatterns: [/\bfeishu\b/],
+  },
+  {
     path: "src/media-understanding/defaults.ts",
     forbiddenPatterns: [
       /\b(?:openai|anthropic|google|groq|deepgram|mistral|minimax|zai|qwen|moonshot|openrouter)\b/,
