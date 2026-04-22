@@ -420,7 +420,7 @@ jobs:
     permissions: {}
     needs: [security-scm-fast, security-dependency-audit]
     if: always() && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
-    runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-8vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Verify fast security jobs
@@ -722,7 +722,7 @@ jobs:
     name: checks-fast-contracts-channels
     needs: [preflight, checks-fast-channel-contracts-shard]
     if: always() && needs.preflight.outputs.run_checks_fast == 'true'
-    runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-8vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Verify channel contract shards
@@ -879,7 +879,7 @@ jobs:
     name: checks-node-extensions
     needs: [preflight, checks-node-extensions-shard]
     if: always() && needs.preflight.outputs.run_checks_fast == 'true'
-    runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-8vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Verify extension shards
@@ -1357,7 +1357,7 @@ jobs:
     name: checks-node-core
     needs: [preflight, checks-node-core-test-nondist-shard, checks-node-core-test-dist-shard]
     if: always() && needs.preflight.outputs.run_checks == 'true'
-    runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-8vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Verify node test shards
@@ -1568,7 +1568,7 @@ jobs:
     name: "check"
     needs: [preflight, check-shard]
     if: always() && needs.preflight.outputs.run_check == 'true'
-    runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-8vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Verify check shards
@@ -1788,7 +1788,7 @@ jobs:
     name: "check-additional"
     needs: [preflight, check-additional-shard]
     if: always() && needs.preflight.outputs.run_check_additional == 'true'
-    runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-8vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Verify additional check shards
