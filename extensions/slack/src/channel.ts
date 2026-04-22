@@ -54,7 +54,7 @@ import { SLACK_TEXT_LIMIT } from "./limits.js";
 import { slackOutbound } from "./outbound-adapter.js";
 import type { SlackProbe } from "./probe.js";
 import { resolveSlackReplyBlocks } from "./reply-blocks.js";
-import { getOptionalSlackRuntime, getSlackRuntime } from "./runtime.js";
+import { getOptionalSlackRuntime } from "./runtime.js";
 import { fetchSlackScopes } from "./scopes.js";
 import { slackSecurityAdapter } from "./security.js";
 import { slackSetupAdapter } from "./setup-core.js";
@@ -153,9 +153,8 @@ async function resolveSlackSendContext(params: {
     resolveOutboundSendDep<SlackSendFn>(params.deps, "slack") ??
     (await loadSlackSendRuntime()).sendMessageSlack;
   // params.cfg is the scoped channel-dispatch config; channel credentials are
-  // expected to be resolved here (not a raw loadConfig() snapshot). Strict mode
-  // is intentional so boot-time misconfigurations surface loudly. See #68237
-  // for the companion tolerant-mode path in sendMessageSlack itself.
+  // expected to be resolved from this snapshot. Strict mode
+  // is intentional so boot-time misconfigurations surface loudly. See #68237.
   const account = resolveSlackAccount({ cfg: params.cfg, accountId: params.accountId });
   const token = getTokenForOperation(account, "write");
   const botToken = account.botToken?.trim();
@@ -513,23 +512,18 @@ export const slackPlugin: ChannelPlugin<ResolvedSlackAccount, SlackProbe> = crea
       idLabel: "slackUserId",
       message: PAIRING_APPROVED_MESSAGE,
       normalizeAllowEntry: createPairingPrefixStripper(/^(slack|user):/i),
-      notify: async ({ id, message }) => {
-        const cfg = getSlackRuntime().config.loadConfig();
+      notify: async ({ cfg, id, message }) => {
         const account = resolveSlackAccount({
           cfg,
           accountId: resolveDefaultSlackAccountId(cfg),
         });
         const { sendMessageSlack } = await loadSlackSendRuntime();
         const token = getTokenForOperation(account, "write");
-        const botToken = account.botToken?.trim();
-        const tokenOverride = token && token !== botToken ? token : undefined;
-        if (tokenOverride) {
-          await sendMessageSlack(`user:${id}`, message, {
-            token: tokenOverride,
-          });
-        } else {
-          await sendMessageSlack(`user:${id}`, message);
-        }
+        await sendMessageSlack(`user:${id}`, message, {
+          cfg,
+          accountId: account.accountId,
+          ...(token ? { token } : {}),
+        });
       },
     },
   },
