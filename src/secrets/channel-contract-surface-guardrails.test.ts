@@ -23,6 +23,7 @@ const CORE_SECRET_SURFACE_GUARDS = [
       /channels\.bluebubbles\./,
       /channels\.msteams\./,
       /channels\.nextcloud-talk\./,
+      /plugins\.entries\.(?:brave|google|exa|xai|moonshot|perplexity|firecrawl|tavily|minimax)\.config\.web(?:Search|Fetch)\.apiKey/,
     ],
   },
   {
