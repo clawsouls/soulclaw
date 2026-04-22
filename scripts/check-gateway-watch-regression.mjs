@@ -7,9 +7,8 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
-import { resolveGitHead, writeBuildStamp } from "./build-stamp.mjs";
+import { writeBuildStamp } from "./build-stamp.mjs";
 import { resolveBuildRequirement } from "./run-node.mjs";
-import { runRuntimePostBuild } from "./runtime-postbuild.mjs";
 
 const DEFAULTS = {
   outputDir: path.join(process.cwd(), ".local", "gateway-watch-regression"),
@@ -43,9 +42,6 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     const next = argv[i + 1];
-    if (arg === "--") {
-      continue;
-    }
     const readValue = () => {
       if (!next) {
         throw new Error(`Missing value for ${arg}`);
@@ -583,31 +579,6 @@ function buildRunNodeDeps(env) {
   };
 }
 
-function writeRuntimePostBuildStamp(cwd) {
-  const stampPath = path.join(cwd, "dist", ".runtime-postbuildstamp");
-  fs.mkdirSync(path.dirname(stampPath), { recursive: true });
-  const head = resolveGitHead({ cwd, spawnSync });
-  fs.writeFileSync(
-    stampPath,
-    `${JSON.stringify(
-      {
-        syncedAt: Date.now(),
-        ...(head ? { head } : {}),
-      },
-      null,
-      2,
-    )}\n`,
-    "utf8",
-  );
-}
-
-function prepareSkippedBuildRuntimeArtifacts() {
-  const cwd = process.cwd();
-  runRuntimePostBuild({ cwd, env: process.env });
-  writeBuildStamp({ cwd });
-  writeRuntimePostBuildStamp(cwd);
-}
-
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   ensureDir(options.outputDir);
@@ -617,8 +588,6 @@ async function main() {
     // Refresh the build stamp after the CI artifact build finishes so run-node
     // does not spuriously rebuild inside the bounded watch window.
     writeBuildStamp({ cwd: process.cwd() });
-  } else {
-    prepareSkippedBuildRuntimeArtifacts();
   }
 
   const preflightBuildRequirement = resolveBuildRequirement(buildRunNodeDeps(process.env));
