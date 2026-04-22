@@ -60,6 +60,8 @@ function createRuntimeLoader(
     env?: NodeJS.ProcessEnv;
     importBundled?: () => Promise<LanceDbModule>;
     importResolved?: (resolvedPath: string) => Promise<LanceDbModule>;
+    platform?: NodeJS.Platform;
+    arch?: NodeJS.Architecture;
     resolveRuntimeEntry?: (params: {
       runtimeDir: string;
       manifest: RuntimeManifest;
@@ -74,6 +76,8 @@ function createRuntimeLoader(
 ) {
   return createLanceDbRuntimeLoader({
     env: overrides.env ?? ({} as NodeJS.ProcessEnv),
+    platform: overrides.platform,
+    arch: overrides.arch,
     resolveStateDir: () => "/tmp/openclaw-state",
     runtimeManifest: TEST_RUNTIME_MANIFEST,
     importBundled:
@@ -832,6 +836,100 @@ describe("memory plugin e2e", () => {
     }
   });
 
+  test("clears failed database initialization so later tool calls can retry", async () => {
+    const embeddingsCreate = vi.fn(async () => ({
+      data: [{ embedding: [0.1, 0.2, 0.3] }],
+    }));
+    const ensureGlobalUndiciEnvProxyDispatcher = vi.fn();
+    const toArray = vi.fn(async () => []);
+    const limit = vi.fn(() => ({ toArray }));
+    const vectorSearch = vi.fn(() => ({ limit }));
+    const loadLanceDbModule = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("temporary LanceDB install failure"))
+      .mockResolvedValueOnce({
+        connect: vi.fn(async () => ({
+          tableNames: vi.fn(async () => ["memories"]),
+          openTable: vi.fn(async () => ({
+            vectorSearch,
+            countRows: vi.fn(async () => 0),
+            add: vi.fn(async () => undefined),
+            delete: vi.fn(async () => undefined),
+          })),
+        })),
+      });
+
+    vi.resetModules();
+    vi.doMock("openclaw/plugin-sdk/runtime-env", () => ({
+      ensureGlobalUndiciEnvProxyDispatcher,
+    }));
+    vi.doMock("openai", () => ({
+      default: class MockOpenAI {
+        embeddings = { create: embeddingsCreate };
+      },
+    }));
+    vi.doMock("./lancedb-runtime.js", () => ({
+      loadLanceDbModule,
+    }));
+
+    try {
+      const { default: dynamicMemoryPlugin } = await import("./index.js");
+      const registeredTools: any[] = [];
+      const mockApi = {
+        id: "memory-lancedb",
+        name: "Memory (LanceDB)",
+        source: "test",
+        config: {},
+        pluginConfig: {
+          embedding: {
+            apiKey: OPENAI_API_KEY,
+            model: "text-embedding-3-small",
+          },
+          dbPath: getDbPath(),
+          autoCapture: false,
+          autoRecall: false,
+        },
+        runtime: {},
+        logger: {
+          info: vi.fn(),
+          warn: vi.fn(),
+          error: vi.fn(),
+          debug: vi.fn(),
+        },
+        registerTool: (tool: any, opts: any) => {
+          registeredTools.push({ tool, opts });
+        },
+        registerCli: vi.fn(),
+        registerService: vi.fn(),
+        on: vi.fn(),
+        resolvePath: (p: string) => p,
+      };
+
+      dynamicMemoryPlugin.register(mockApi as any);
+      const recallTool = registeredTools.find((t) => t.opts?.name === "memory_recall")?.tool;
+      if (!recallTool) {
+        throw new Error("memory_recall tool was not registered");
+      }
+
+      await expect(recallTool.execute("test-call-retry-1", { query: "hello" })).rejects.toThrow(
+        "temporary LanceDB install failure",
+      );
+      await expect(
+        recallTool.execute("test-call-retry-2", { query: "hello again" }),
+      ).resolves.toMatchObject({
+        details: { count: 0 },
+      });
+
+      expect(loadLanceDbModule).toHaveBeenCalledTimes(2);
+      expect(embeddingsCreate).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.doUnmock("openclaw/plugin-sdk/runtime-env");
+      vi.doUnmock("openai");
+      vi.doUnmock("./lancedb-runtime.js");
+      vi.resetModules();
+    }
+  });
+
   test("config schema accepts storageOptions with string values", async () => {
     const { default: memoryPlugin } = await import("./index.js");
 
@@ -1063,6 +1161,23 @@ describe("lancedb runtime loader", () => {
 
     await expect(loader.load()).rejects.toThrow(
       "memory-lancedb: failed to load LanceDB and Nix mode disables auto-install.",
+    );
+    expect(installRuntime).not.toHaveBeenCalled();
+  });
+
+  test("fails clearly on Intel macOS instead of attempting an unsupported native install", async () => {
+    const installRuntime = vi.fn(
+      async ({ runtimeDir }: { runtimeDir: string }) =>
+        `${runtimeDir}/node_modules/@lancedb/lancedb/index.js`,
+    );
+    const loader = createRuntimeLoader({
+      platform: "darwin",
+      arch: "x64",
+      installRuntime,
+    });
+
+    await expect(loader.load()).rejects.toThrow(
+      "memory-lancedb: LanceDB runtime is unavailable on darwin-x64.",
     );
     expect(installRuntime).not.toHaveBeenCalled();
   });
