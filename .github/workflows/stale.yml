@@ -65,7 +65,7 @@ jobs:
       - name: Check stale state cache
         id: stale-state
         if: always()
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ steps.app-token-fallback.outputs.token || steps.app-token.outputs.token }}
           script: |
@@ -130,7 +130,7 @@ jobs:
           app-id: "2729701"
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
       - name: Lock closed issues after 48h of no comments
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           script: |
