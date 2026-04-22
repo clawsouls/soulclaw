@@ -79,6 +79,20 @@ jobs:
         uses: ./.github/actions/setup-node-env
         with:
           install-bun: "false"
+      - name: Prepare Testbox shell
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --no-tags --depth=50 origin "+refs/heads/main:refs/remotes/origin/main"
+
+          node_bin="$(dirname "$(node -p 'process.execPath')")"
+          pnpm_bin="$(command -v pnpm)"
+          sudo ln -sf "$node_bin/node" /usr/local/bin/node
+          sudo ln -sf "$node_bin/npm" /usr/local/bin/npm
+          sudo ln -sf "$node_bin/npx" /usr/local/bin/npx
+          sudo ln -sf "$node_bin/corepack" /usr/local/bin/corepack
+          sudo ln -sf "$pnpm_bin" /usr/local/bin/pnpm
       - name: Run Testbox
         uses: useblacksmith/run-testbox@v2
         if: always()
