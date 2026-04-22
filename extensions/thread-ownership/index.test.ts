@@ -71,6 +71,16 @@ describe("thread-ownership plugin", () => {
       expect(globalThis.fetch).not.toHaveBeenCalled();
     });
 
+    it("fails open when Slack thread routing has no canonical conversation id", async () => {
+      const result = await hooks.message_sending(
+        { content: "hello", replyToId: "1234.5678", metadata: {}, to: "" },
+        { channelId: "slack", conversationId: "" },
+      );
+
+      expect(result).toBeUndefined();
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
     it("claims ownership successfully", async () => {
       vi.mocked(globalThis.fetch).mockResolvedValue(
         new Response(JSON.stringify({ owner: "test-agent" }), { status: 200 }),

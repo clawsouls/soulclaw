@@ -112,7 +112,7 @@ export default definePluginEntry({
         normalizeOptionalString(event.metadata?.channelId) ||
         normalizeOptionalString(event.to) ||
         "";
-      if (!threadTs) {
+      if (!threadTs || !channelId) {
         return undefined;
       }
       if (abTestChannels.size > 0 && !abTestChannels.has(channelId)) {
