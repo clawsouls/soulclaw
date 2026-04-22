@@ -2188,17 +2188,35 @@ jobs:
         uses: actions/cache@v5
         with:
           path: apps/macos/.build
-          key: ${{ runner.os }}-swift-build-v2-${{ steps.swift-toolchain.outputs.key }}-${{ hashFiles('apps/macos/Package.swift', 'apps/macos/Package.resolved', 'apps/macos/Sources/**', 'apps/macos/Tests/**', 'apps/shared/OpenClawKit/Package.swift', 'apps/shared/OpenClawKit/Sources/**', 'Swabble/Package.swift', 'Swabble/Sources/**') }}
+          key: ${{ runner.os }}-swift-build-v1-${{ steps.swift-toolchain.outputs.key }}-${{ hashFiles('apps/macos/Package.swift', 'apps/macos/Package.resolved', 'apps/shared/OpenClawKit/Package.swift', 'Swabble/Package.swift') }}
           restore-keys: |
-            ${{ runner.os }}-swift-build-v2-${{ steps.swift-toolchain.outputs.key }}-
+            ${{ runner.os }}-swift-build-v1-${{ steps.swift-toolchain.outputs.key }}-
 
-      - name: Preserve exact Swift build cache hit
-        if: steps.swift-build-cache.outputs.cache-hit == 'true'
+      - name: Detect Swift input changes
+        id: swift-inputs
         run: |
           set -euo pipefail
-          # The cache key includes the Swift source/resource surface. On exact
-          # hits, checkout mtimes are the only reason SwiftPM rebuilds cached
-          # products, so normalize inputs older than restored build outputs.
+          if git show --pretty=format: --name-only HEAD -- \
+            apps/macos/Package.swift \
+            apps/macos/Package.resolved \
+            apps/macos/Sources \
+            apps/macos/Tests \
+            apps/shared/OpenClawKit/Package.swift \
+            apps/shared/OpenClawKit/Sources \
+            Swabble/Package.swift \
+            Swabble/Sources | grep -q .; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Preserve Swift build cache hit
+        if: steps.swift-build-cache.outputs.cache-hit == 'true' && steps.swift-inputs.outputs.changed == 'false'
+        run: |
+          set -euo pipefail
+          # When this commit did not touch Swift inputs, checkout mtimes are the
+          # only reason SwiftPM rebuilds cached products. Keep changed Swift
+          # commits on the normal rebuild path so stale objects cannot pass.
           find apps/macos/Sources apps/macos/Tests apps/shared/OpenClawKit/Sources Swabble/Sources \
             -type f -exec touch -t 200001010000 {} +
           touch -t 200001010000 \
