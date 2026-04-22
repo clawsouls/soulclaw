@@ -122,6 +122,30 @@ describe("thread-ownership plugin", () => {
       );
     });
 
+    it("canonicalizes non-canonical Slack targets when shared conversationId is missing", async () => {
+      vi.mocked(globalThis.fetch).mockResolvedValue(
+        new Response(JSON.stringify({ owner: "test-agent" }), { status: 200 }),
+      );
+
+      const result = await hooks.message_sending(
+        {
+          content: "hello",
+          replyToId: "1234.5678",
+          to: "channel:C123",
+        },
+        { channelId: "slack", conversationId: "" },
+      );
+
+      expect(result).toBeUndefined();
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "http://localhost:8750/api/v1/ownership/C123/1234.5678",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ agent_id: "test-agent" }),
+        }),
+      );
+    });
+
     it("cancels when thread owned by another agent", async () => {
       vi.mocked(globalThis.fetch).mockResolvedValue(
         new Response(JSON.stringify({ owner: "other-agent" }), { status: 409 }),
@@ -186,6 +210,29 @@ describe("thread-ownership plugin", () => {
           content: "Sure!",
           replyToId: "9999.0002",
           to: "channel:C456",
+        },
+        { channelId: "slack", conversationId: "C456" },
+      );
+
+      expect(result).toBeUndefined();
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it("canonicalizes inbound non-canonical metadata without shared conversation context", async () => {
+      await hooks.message_received(
+        {
+          content: "Hey @TestBot help me",
+          threadId: "9999.0003",
+          metadata: { channelId: "channel:C456" },
+        },
+        { channelId: "slack", conversationId: "" },
+      );
+
+      const result = await hooks.message_sending(
+        {
+          content: "Sure!",
+          replyToId: "9999.0003",
+          to: "C456",
         },
         { channelId: "slack", conversationId: "C456" },
       );
