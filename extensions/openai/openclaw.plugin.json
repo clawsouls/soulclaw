@@ -34,17 +34,6 @@
       "groupHint": "API key + Codex auth"
     },
     {
-      "provider": "openai-codex",
-      "method": "import-codex-cli",
-      "choiceId": "openai-codex-import",
-      "choiceLabel": "Import Existing Codex Login",
-      "choiceHint": "Import an existing ~/.codex login",
-      "assistantPriority": -20,
-      "groupId": "openai",
-      "groupLabel": "OpenAI",
-      "groupHint": "API key + Codex auth"
-    },
-    {
       "provider": "openai",
       "method": "api-key",
       "choiceId": "openai-api-key",
