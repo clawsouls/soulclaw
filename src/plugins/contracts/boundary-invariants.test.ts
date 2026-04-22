@@ -49,7 +49,8 @@ const BUNDLED_TYPED_HOOK_REGISTRATION_GUARDS = {
 const BUNDLED_LIVE_CONFIG_HOOK_GUARDS = {
   "extensions/active-memory/index.ts": ["resolveLivePluginConfigObject(", '"active-memory"'],
   "extensions/diffs/src/plugin.ts": [
-    'resolvePluginConfigObject(currentConfig, "diffs")',
+    "resolveLivePluginConfigObject(",
+    '"diffs"',
     "api.runtime.config?.loadConfig?.() ?? api.config",
   ],
   "extensions/memory-core/src/dreaming.ts": [
