@@ -1453,7 +1453,7 @@ jobs:
     name: ${{ matrix.check_name }}
     needs: [preflight]
     if: always() && needs.preflight.outputs.run_check == 'true'
-    runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-8vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
+    runs-on: ${{ github.repository == 'openclaw/openclaw' && matrix.runner || 'ubuntu-24.04' }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -1461,16 +1461,22 @@ jobs:
         include:
           - check_name: check-preflight-guards
             task: preflight-guards
+            runner: blacksmith-8vcpu-ubuntu-2404
           - check_name: check-prod-types
             task: prod-types
+            runner: blacksmith-8vcpu-ubuntu-2404
           - check_name: check-lint
             task: lint
+            runner: blacksmith-16vcpu-ubuntu-2404
           - check_name: check-policy-guards
             task: policy-guards
+            runner: blacksmith-8vcpu-ubuntu-2404
           - check_name: check-test-types
             task: test-types
+            runner: blacksmith-8vcpu-ubuntu-2404
           - check_name: check-strict-smoke
             task: strict-smoke
+            runner: blacksmith-8vcpu-ubuntu-2404
     steps:
       - name: Checkout
         shell: bash
@@ -1997,7 +2003,7 @@ jobs:
     name: ${{ matrix.check_name }}
     needs: [preflight]
     if: needs.preflight.outputs.run_checks_windows == 'true'
-    runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-8vcpu-windows-2025' || 'windows-2025' }}
+    runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-16vcpu-windows-2025' || 'windows-2025' }}
     timeout-minutes: 60
     env:
       NODE_OPTIONS: --max-old-space-size=6144
