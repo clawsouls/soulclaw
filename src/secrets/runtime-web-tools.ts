@@ -301,17 +301,17 @@ async function resolveSecretInputWithEnvFallback(params: {
 function setResolvedWebSearchApiKey(params: {
   resolvedConfig: OpenClawConfig;
   provider: PluginWebSearchProviderEntry;
+  path: string;
   value: string;
 }): void {
+  const useLegacySearchConfig = params.path === "tools.web.search.apiKey";
+  if (params.provider.setConfiguredCredentialValue && !useLegacySearchConfig) {
+    params.provider.setConfiguredCredentialValue(params.resolvedConfig, params.value);
+    return;
+  }
   const tools = ensureObject(params.resolvedConfig as Record<string, unknown>, "tools");
   const web = ensureObject(tools, "web");
   const search = ensureObject(web, "search");
-  if (params.provider.setConfiguredCredentialValue) {
-    params.provider.setConfiguredCredentialValue(params.resolvedConfig, params.value);
-    if (params.provider.id !== "brave") {
-      return;
-    }
-  }
   params.provider.setCredentialValue(search, params.value);
 }
 
@@ -432,6 +432,7 @@ function inactivePathsForProvider(provider: PluginWebSearchProviderEntry): strin
 function setResolvedWebFetchApiKey(params: {
   resolvedConfig: OpenClawConfig;
   provider: PluginWebFetchProviderEntry;
+  path: string;
   value: string;
 }): void {
   const tools = ensureObject(params.resolvedConfig as Record<string, unknown>, "tools");
@@ -646,10 +647,16 @@ export async function resolveRuntimeWebTools(params: {
           path,
           envVars,
         }),
-      setResolvedCredential: ({ resolvedConfig, provider, value }) =>
+      setResolvedCredential: ({ resolvedConfig, provider, path, value }) =>
         setResolvedWebSearchApiKey({
           resolvedConfig,
           provider,
+          path:
+            search &&
+            Object.prototype.hasOwnProperty.call(search, "apiKey") &&
+            provider.getConfiguredCredentialValue?.(params.sourceConfig) == null
+              ? "tools.web.search.apiKey"
+              : path,
           value,
         }),
       inactivePathsForProvider,
@@ -740,10 +747,11 @@ export async function resolveRuntimeWebTools(params: {
           envVars,
           restrictEnvRefsToEnvVars: true,
         }),
-      setResolvedCredential: ({ resolvedConfig, provider, value }) =>
+      setResolvedCredential: ({ resolvedConfig, provider, path, value }) =>
         setResolvedWebFetchApiKey({
           resolvedConfig,
           provider,
+          path,
           value,
         }),
       inactivePathsForProvider: inactivePathsForFetchProvider,
