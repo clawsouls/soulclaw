@@ -1,9 +1,10 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+import { createMantleAnthropicStreamFn } from "./mantle-anthropic.runtime.js";
 import {
   mergeImplicitMantleProvider,
   resolveImplicitMantleProvider,
-  resolveMantleRuntimeBearerToken,
   resolveMantleBearerToken,
+  resolveMantleRuntimeBearerToken,
 } from "./discovery.js";
 
 export function registerBedrockMantlePlugin(api: OpenClawPluginApi): void {
@@ -38,13 +39,15 @@ export function registerBedrockMantlePlugin(api: OpenClawPluginApi): void {
         apiKey,
         env,
       }),
+    createStreamFn: ({ model }) =>
+      model.api === "anthropic-messages" ? createMantleAnthropicStreamFn() : undefined,
     matchesContextOverflowError: ({ errorMessage }) =>
       /context_length_exceeded|max.*tokens.*exceeded/i.test(errorMessage),
     classifyFailoverReason: ({ errorMessage }) => {
       if (/rate_limit|too many requests|429/i.test(errorMessage)) {
         return "rate_limit";
       }
-      if (/overloaded|503/i.test(errorMessage)) {
+      if (/overloaded|503|service.*unavailable/i.test(errorMessage)) {
         return "overloaded";
       }
       return undefined;

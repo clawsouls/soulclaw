@@ -43,6 +43,10 @@ function mantleEndpoint(region: string): string {
   return `https://bedrock-mantle.${region}.api.aws`;
 }
 
+function mantleAnthropicBaseUrl(region: string): string {
+  return `https://bedrock-mantle.${region}.api.aws/anthropic`;
+}
+
 function isSupportedRegion(region: string): boolean {
   return (MANTLE_SUPPORTED_REGIONS as readonly string[]).includes(region);
 }
@@ -166,7 +170,6 @@ export async function resolveMantleRuntimeBearerToken(params: {
     expiresAt: refreshed?.expiresAt ?? now + IAM_TOKEN_TTL_MS,
   };
 }
-
 /** Reset the IAM token cache (for testing). */
 export function resetIamTokenCacheForTest(): void {
   iamTokenCache.clear();
@@ -343,12 +346,37 @@ export async function resolveImplicitMantleProvider(params: {
 
   log.debug?.("Mantle provider resolved", { region, modelCount: models.length });
 
+  // Append Claude models available on Mantle's Anthropic Messages endpoint.
+  // Opus 4.7 currently needs the provider-owned bearer-auth path here, but we
+  // keep reasoning off until the underlying Anthropic transport learns Opus 4.7
+  // adaptive thinking semantics.
+  const anthropicBaseUrl = mantleAnthropicBaseUrl(region);
+  const claudeModels: ModelDefinitionConfig[] = [
+    {
+      id: "anthropic.claude-opus-4-7",
+      name: "Claude Opus 4.7",
+      api: "anthropic-messages" as const,
+      baseUrl: anthropicBaseUrl,
+      reasoning: false,
+      input: ["text", "image"],
+      cost: {
+        input: 5,
+        output: 25,
+        cacheRead: 0.5,
+        cacheWrite: 6.25,
+      },
+      contextWindow: 1_000_000,
+      maxTokens: 128_000,
+    },
+  ];
+  const allModels = [...models, ...claudeModels];
+
   return {
     baseUrl: `${mantleEndpoint(region)}/v1`,
     api: "openai-completions",
     auth: "api-key",
     apiKey: explicitBearerToken ? "env:AWS_BEARER_TOKEN_BEDROCK" : MANTLE_IAM_TOKEN_MARKER,
-    models,
+    models: allModels,
   };
 }
 
