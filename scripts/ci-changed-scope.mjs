@@ -5,7 +5,6 @@ import { appendFileSync } from "node:fs";
 
 const DOCS_PATH_RE = /^(docs\/|.*\.mdx?$)/;
 const SKILLS_PYTHON_SCOPE_RE = /^(skills\/|pyproject\.toml$)/;
-const CI_WORKFLOW_SCOPE_RE = /^\.github\/workflows\/ci\.yml$/;
 const INSTALL_SMOKE_WORKFLOW_SCOPE_RE = /^\.github\/workflows\/install-smoke\.yml$/;
 const MACOS_PROTOCOL_GEN_RE =
   /^(apps\/macos\/Sources\/OpenClawProtocol\/|apps\/shared\/OpenClawKit\/Sources\/OpenClawProtocol\/)/;
@@ -63,12 +62,6 @@ export function detectChangedScope(changedPaths) {
     hasNonDocs = true;
 
     if (SKILLS_PYTHON_SCOPE_RE.test(path)) {
-      runSkillsPython = true;
-    }
-
-    if (CI_WORKFLOW_SCOPE_RE.test(path)) {
-      runMacos = true;
-      runAndroid = true;
       runSkillsPython = true;
     }
 
