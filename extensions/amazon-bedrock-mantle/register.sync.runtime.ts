@@ -2,6 +2,7 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 import {
   mergeImplicitMantleProvider,
   resolveImplicitMantleProvider,
+  resolveMantleRuntimeBearerToken,
   resolveMantleBearerToken,
 } from "./discovery.js";
 
@@ -31,7 +32,12 @@ export function registerBedrockMantlePlugin(api: OpenClawPluginApi): void {
       },
     },
     resolveConfigApiKey: ({ env }) =>
-      resolveMantleBearerToken(env) ? "AWS_BEARER_TOKEN_BEDROCK" : undefined,
+      resolveMantleBearerToken(env) ? "env:AWS_BEARER_TOKEN_BEDROCK" : undefined,
+    prepareRuntimeAuth: async ({ apiKey, env }) =>
+      await resolveMantleRuntimeBearerToken({
+        apiKey,
+        env,
+      }),
     matchesContextOverflowError: ({ errorMessage }) =>
       /context_length_exceeded|max.*tokens.*exceeded/i.test(errorMessage),
     classifyFailoverReason: ({ errorMessage }) => {
