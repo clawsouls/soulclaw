@@ -67,6 +67,10 @@ const CORE_SECRET_SURFACE_GUARDS = [
     forbiddenPatterns: [/@g\.us/],
   },
   {
+    path: "src/auto-reply/command-auth.ts",
+    forbiddenPatterns: [/@g\.us/],
+  },
+  {
     path: "src/channels/plugins/setup-promotion-helpers.ts",
     forbiddenPatterns: [/\btelegram\b/],
   },
