@@ -63,6 +63,7 @@ describe("buildQaGatewayConfig", () => {
     expect(cfg.plugins?.entries?.["qa-channel"]).toEqual({ enabled: true });
     expect(cfg.plugins?.entries?.openai).toBeUndefined();
     expect(cfg.gateway?.reload?.deferralTimeoutMs).toBe(1_000);
+    expect(cfg.tools?.profile).toBe("coding");
     expect(cfg.channels?.["qa-channel"]).toMatchObject({
       enabled: true,
       baseUrl: "http://127.0.0.1:43124",

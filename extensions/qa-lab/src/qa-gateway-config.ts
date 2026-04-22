@@ -180,6 +180,12 @@ export function buildQaGatewayConfig(params: {
     memory: {
       backend: "builtin",
     },
+    tools: {
+      // The parity scenarios are code-agent contracts: they must always expose
+      // file, image, memory, and subagent tools even when the surrounding
+      // environment defaults to a messaging-only profile.
+      profile: "coding",
+    },
     ...(gatewayModels
       ? {
           models: {
