@@ -193,6 +193,7 @@ const { defaultRuntime } = await import("../runtime.js");
 const { updateCommand, updateStatusCommand, updateWizardCommand } = await import("./update-cli.js");
 const updateCliShared = await import("./update-cli/shared.js");
 const { resolveGitInstallDir } = updateCliShared;
+const { spawnSync } = await import("node:child_process");
 
 type UpdateCliScenario = {
   name: string;
@@ -456,6 +457,19 @@ describe("update-cli", () => {
     vi.mocked(runGatewayUpdate).mockResolvedValue(makeOkUpdateResult());
     setTty(false);
     setStdoutTty(false);
+  });
+
+  it("bounds completion cache refresh during update follow-up", async () => {
+    const root = createCaseDir("openclaw-completion-timeout");
+    pathExists.mockResolvedValue(true);
+
+    await updateCliShared.tryWriteCompletionCache(root, false);
+
+    expect(spawnSync).toHaveBeenCalledWith(
+      expect.any(String),
+      [path.join(root, "openclaw.mjs"), "completion", "--write-state"],
+      expect.objectContaining({ timeout: 30_000 }),
+    );
   });
 
   it("respawns into the updated package root before running post-update tasks", async () => {
