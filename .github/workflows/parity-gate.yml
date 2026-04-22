@@ -63,6 +63,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build runtime
+        run: pnpm build
+
       - name: Run GPT-5.4 lane
         run: |
           pnpm openclaw qa suite \
