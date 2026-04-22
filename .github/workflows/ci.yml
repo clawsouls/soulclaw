@@ -2188,9 +2188,24 @@ jobs:
         uses: actions/cache@v5
         with:
           path: apps/macos/.build
-          key: ${{ runner.os }}-swift-build-v1-${{ steps.swift-toolchain.outputs.key }}-${{ hashFiles('apps/macos/Package.swift', 'apps/macos/Package.resolved', 'apps/shared/OpenClawKit/Package.swift', 'Swabble/Package.swift') }}
+          key: ${{ runner.os }}-swift-build-v2-${{ steps.swift-toolchain.outputs.key }}-${{ hashFiles('apps/macos/Package.swift', 'apps/macos/Package.resolved', 'apps/macos/Sources/**', 'apps/macos/Tests/**', 'apps/shared/OpenClawKit/Package.swift', 'apps/shared/OpenClawKit/Sources/**', 'Swabble/Package.swift', 'Swabble/Sources/**') }}
           restore-keys: |
-            ${{ runner.os }}-swift-build-v1-${{ steps.swift-toolchain.outputs.key }}-
+            ${{ runner.os }}-swift-build-v2-${{ steps.swift-toolchain.outputs.key }}-
+
+      - name: Preserve exact Swift build cache hit
+        if: steps.swift-build-cache.outputs.cache-hit == 'true'
+        run: |
+          set -euo pipefail
+          # The cache key includes the Swift source/resource surface. On exact
+          # hits, checkout mtimes are the only reason SwiftPM rebuilds cached
+          # products, so normalize inputs older than restored build outputs.
+          find apps/macos/Sources apps/macos/Tests apps/shared/OpenClawKit/Sources Swabble/Sources \
+            -type f -exec touch -t 200001010000 {} +
+          touch -t 200001010000 \
+            apps/macos/Package.swift \
+            apps/macos/Package.resolved \
+            apps/shared/OpenClawKit/Package.swift \
+            Swabble/Package.swift
 
       - name: Patch mlx-audio-swift manifest
         if: steps.swift-build-cache.outputs.cache-hit != 'true'
