@@ -10,6 +10,7 @@ vi.mock("openclaw/plugin-sdk/runtime-env", () => ({
 
 installSlackBlockTestMocks();
 const { sendMessageSlack } = await import("./send.js");
+const SLACK_TEST_CFG = { channels: { slack: { botToken: "xoxb-test" } } };
 
 type SlackMissingScopeError = Error & {
   data?: {
@@ -53,6 +54,7 @@ describe("sendMessageSlack customize-scope fallback", () => {
 
     const result = await sendMessageSlack("channel:C123", "hello", {
       token: "xoxb-test",
+      cfg: SLACK_TEST_CFG,
       client,
       identity: { username: "Bot", iconUrl: "https://example.com/bot.png" },
     });
@@ -85,6 +87,7 @@ describe("sendMessageSlack customize-scope fallback", () => {
 
     await sendMessageSlack("channel:C123", "hello", {
       token: "xoxb-test",
+      cfg: SLACK_TEST_CFG,
       client,
       identity: { iconEmoji: ":robot_face:" },
     });
@@ -105,6 +108,7 @@ describe("sendMessageSlack customize-scope fallback", () => {
 
     await sendMessageSlack("channel:C123", "hello", {
       token: "xoxb-test",
+      cfg: SLACK_TEST_CFG,
       client,
       identity: { username: "Bot" },
     });
@@ -123,6 +127,7 @@ describe("sendMessageSlack customize-scope fallback", () => {
     await expect(
       sendMessageSlack("channel:C123", "hello", {
         token: "xoxb-test",
+        cfg: SLACK_TEST_CFG,
         client,
         identity: { username: "Bot" },
       }),
@@ -140,6 +145,7 @@ describe("sendMessageSlack customize-scope fallback", () => {
     await expect(
       sendMessageSlack("channel:C123", "hello", {
         token: "xoxb-test",
+        cfg: SLACK_TEST_CFG,
         client,
       }),
     ).rejects.toBe(err);
