@@ -33,6 +33,9 @@ Docs: https://docs.openclaw.ai
 - Providers/Amazon Bedrock Mantle: refresh IAM-backed bearer tokens at runtime instead of baking discovery-time tokens into provider config, so long-lived Mantle sessions keep working after the initial token ages out. Thanks @wirjo.
 - Config/includes: write through single-file top-level includes for isolated OpenClaw-owned mutations, so `plugins install` and `plugins update` update an included `plugins.json5` file instead of flattening modular `$include` configs. Fixes #41050 and #66048.
 - Config/reload: plan gateway reloads from source-authored config instead of runtime-materialized snapshots, so plugin update writes no longer trigger false restarts from derived provider/plugin config paths. Fixes #68732.
+- Agents/MCP: keep `mcp.servers` and bundle MCP tools available in Pi embedded
+  `coding` and `messaging` sessions while preserving `minimal` profile and
+  `tools.deny: ["bundle-mcp"]` opt-out behavior. Fixes #68875 and #68818.
 - Codex harness: rotate the shared app-server websocket client when the configured bearer token changes, so auth-token refreshes reconnect with the new `Authorization` header instead of reusing a stale socket. (#70328) Thanks @Lucenx9.
 - Telegram/sandbox: keep Telegram bot DMs on per-account sender session keys even when `session.dmScope=main`, so sandbox/tool policy can distinguish Telegram-originated direct chats from the agent main session.
 - Config/models: merge provider-scoped model allowlist updates and protect model/provider map writes from accidental full replacement, adding `config set --merge` for additive updates and `--replace` for intentional clobbers. Fixes #65920, #68392, and #68653.
