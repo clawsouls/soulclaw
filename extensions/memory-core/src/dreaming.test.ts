@@ -1383,6 +1383,93 @@ describe("gateway startup reconciliation", () => {
       clearInternalHooks();
     }
   });
+
+  it("uses live runtime config for the heartbeat dreaming run payload", async () => {
+    clearInternalHooks();
+    const logger = createLogger();
+    const harness = createCronHarness();
+    const onMock = vi.fn();
+    const workspaceDir = await createTempWorkspace("memory-dreaming-live-config-workspace-");
+    const runtimeLoadConfig = vi.fn(
+      () =>
+        ({
+          agents: {
+            list: [{ id: "main", default: true, workspace: workspaceDir }],
+          },
+          plugins: {
+            entries: {
+              "memory-core": {
+                config: {
+                  dreaming: {
+                    enabled: true,
+                    frequency: "15 4 * * *",
+                    timezone: "UTC",
+                    limit: 0,
+                  },
+                },
+              },
+            },
+          },
+        }) as OpenClawConfig,
+    );
+    const api: DreamingPluginApiTestDouble = {
+      config: {
+        plugins: {
+          entries: {
+            "memory-core": {
+              config: {
+                dreaming: {
+                  enabled: true,
+                  frequency: "15 4 * * *",
+                  timezone: "UTC",
+                  limit: 5,
+                },
+              },
+            },
+          },
+        },
+      } as OpenClawConfig,
+      pluginConfig: {},
+      logger,
+      runtime: {
+        config: {
+          loadConfig: runtimeLoadConfig,
+        },
+      },
+      on: onMock,
+    };
+
+    try {
+      registerShortTermPromotionDreamingForTest(api);
+      await triggerGatewayStart(onMock, {
+        config: api.config,
+        getCron: () => harness.cron,
+      });
+
+      const sessionKey = "agent:main:main";
+      enqueueSystemEvent(constants.DREAMING_SYSTEM_EVENT_TEXT, {
+        sessionKey,
+        contextKey: "cron:memory-dreaming",
+      });
+
+      const beforeAgentReply = getBeforeAgentReplyHandler(onMock);
+      const result = await beforeAgentReply(
+        { cleanedBody: constants.DREAMING_SYSTEM_EVENT_TEXT },
+        { trigger: "heartbeat", sessionKey },
+      );
+
+      expect(result).toEqual({
+        handled: true,
+        reason: "memory-core: short-term dreaming processed",
+      });
+      expect(runtimeLoadConfig).toHaveBeenCalled();
+      expect(logger.warn).not.toHaveBeenCalledWith(
+        "memory-core: dreaming promotion skipped because no memory workspace is available.",
+      );
+    } finally {
+      clearInternalHooks();
+    }
+  });
 });
 
 describe("short-term dreaming trigger", () => {

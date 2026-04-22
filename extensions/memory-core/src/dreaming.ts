@@ -736,6 +736,7 @@ export function registerShortTermPromotionDreaming(api: OpenClawPluginApi): void
       if (ctx.trigger !== "heartbeat") {
         return undefined;
       }
+      const currentConfig = resolveCurrentConfig();
       const config = await reconcileManagedDreamingCron({
         reason: "runtime",
       });
@@ -749,7 +750,7 @@ export function registerShortTermPromotionDreaming(api: OpenClawPluginApi): void
         cleanedBody: event.cleanedBody,
         trigger: ctx.trigger,
         workspaceDir: ctx.workspaceDir,
-        cfg: api.config,
+        cfg: currentConfig,
         config,
         logger: api.logger,
         subagent: config.enabled ? api.runtime?.subagent : undefined,
