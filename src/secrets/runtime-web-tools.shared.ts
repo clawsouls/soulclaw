@@ -72,7 +72,6 @@ export type RuntimeWebProviderSelectionParams<
   setResolvedCredential: (params: {
     resolvedConfig: OpenClawConfig;
     provider: TProvider;
-    path: string;
     value: string;
   }) => void;
   inactivePathsForProvider: (provider: TProvider) => string[];
@@ -373,7 +372,6 @@ export async function resolveRuntimeWebProviderSelection<
           params.setResolvedCredential({
             resolvedConfig: params.resolvedConfig,
             provider,
-            path,
             value: resolution.value,
           });
         }
@@ -386,7 +384,6 @@ export async function resolveRuntimeWebProviderSelection<
         params.setResolvedCredential({
           resolvedConfig: params.resolvedConfig,
           provider,
-          path,
           value: resolution.value,
         });
         break;
