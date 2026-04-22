@@ -47,10 +47,7 @@ const BUNDLED_TYPED_HOOK_REGISTRATION_GUARDS = {
   readonly string[]
 >;
 const BUNDLED_LIVE_CONFIG_HOOK_GUARDS = {
-  "extensions/active-memory/index.ts": [
-    'resolvePluginConfigObject(api.runtime.config.loadConfig(), "active-memory")',
-    "api.runtime.config.loadConfig()",
-  ],
+  "extensions/active-memory/index.ts": ["resolveLivePluginConfigObject(", '"active-memory"'],
   "extensions/diffs/src/plugin.ts": [
     'resolvePluginConfigObject(currentConfig, "diffs")',
     "api.runtime.config?.loadConfig?.() ?? api.config",
