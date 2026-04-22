@@ -853,6 +853,7 @@ export async function compactEmbeddedPiSessionDirect(
       const shouldUseWebSocketTransport = shouldUseOpenAIWebSocketTransport({
         provider,
         modelApi: effectiveModel.api,
+        modelBaseUrl: effectiveModel.baseUrl,
       });
       const wsApiKey = shouldUseWebSocketTransport
         ? await resolveEmbeddedAgentApiKey({
