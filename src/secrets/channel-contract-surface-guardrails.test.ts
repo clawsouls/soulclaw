@@ -63,6 +63,10 @@ const CORE_SECRET_SURFACE_GUARDS = [
     forbiddenPatterns: [/\bwhatsapp\b/, /@g\.us/],
   },
   {
+    path: "src/channels/plugins/setup-promotion-helpers.ts",
+    forbiddenPatterns: [/\btelegram\b/],
+  },
+  {
     path: "src/media-understanding/defaults.ts",
     forbiddenPatterns: [
       /\b(?:openai|anthropic|google|groq|deepgram|mistral|minimax|zai|qwen|moonshot|openrouter)\b/,
