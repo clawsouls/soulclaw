@@ -15,6 +15,7 @@ export async function maybeRepairBundledPluginRuntimeDeps(params: {
   config?: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
   packageRoot?: string | null;
+  includeConfiguredChannels?: boolean;
   installDeps?: (params: { installRoot: string; missingSpecs: string[] }) => void;
 }): Promise<void> {
   const packageRoot =
@@ -31,6 +32,7 @@ export async function maybeRepairBundledPluginRuntimeDeps(params: {
   const { missing, conflicts } = scanBundledPluginRuntimeDeps({
     packageRoot,
     config: params.config,
+    includeConfiguredChannels: params.includeConfiguredChannels,
   });
   if (conflicts.length > 0) {
     const conflictLines = conflicts.flatMap((conflict) =>
@@ -67,6 +69,7 @@ export async function maybeRepairBundledPluginRuntimeDeps(params: {
 
   const shouldRepair =
     params.prompter.shouldRepair ||
+    params.prompter.repairMode.nonInteractive ||
     (await params.prompter.confirmAutoFix({
       message: "Install missing bundled plugin runtime deps now?",
       initialValue: true,
