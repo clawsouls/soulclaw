@@ -91,6 +91,11 @@ jobs:
 
       # Blacksmith's builder owns the Docker layer cache; keep smoke builds off
       # explicit gha cache directives so local tags still load cleanly.
+      - name: Run QR package install smoke
+        env:
+          OPENCLAW_QR_SMOKE_FORCE_INSTALL: "1"
+        run: bash scripts/e2e/qr-import-docker.sh
+
       - name: Build root Dockerfile smoke image
         uses: useblacksmith/build-push-action@cbd1f60d194a98cb3be5523b15134501eaf0fbf3 # v2
         with:

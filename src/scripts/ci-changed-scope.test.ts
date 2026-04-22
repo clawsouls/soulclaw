@@ -210,6 +210,15 @@ describe("detectChangedScope", () => {
       runChangedSmoke: true,
       runControlUiI18n: false,
     });
+    expect(detectChangedScope(["scripts/e2e/qr-import-docker.sh"])).toEqual({
+      runNode: true,
+      runMacos: false,
+      runAndroid: false,
+      runWindows: true,
+      runSkillsPython: false,
+      runChangedSmoke: true,
+      runControlUiI18n: false,
+    });
   });
 
   it("runs control-ui locale check only for control-ui i18n surfaces", () => {
