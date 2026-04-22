@@ -306,5 +306,24 @@ describe("thread-ownership plugin", () => {
       expect(result).toBeUndefined();
       expect(globalThis.fetch).not.toHaveBeenCalled();
     });
+
+    it("tracks agent-name mentions case-insensitively", async () => {
+      await hooks.message_received(
+        {
+          content: "hey @testbot help",
+          threadId: "8888.0002",
+          metadata: { channelId: "C789" },
+        },
+        { channelId: "slack", conversationId: "C789" },
+      );
+
+      const result = await hooks.message_sending(
+        { content: "On it!", replyToId: "8888.0002", metadata: { channelId: "C789" }, to: "C789" },
+        { channelId: "slack", conversationId: "C789" },
+      );
+
+      expect(result).toBeUndefined();
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
   });
 });

@@ -91,6 +91,7 @@ export default definePluginEntry({
       }
 
       const text = event.content ?? "";
+      const normalizedText = text.toLowerCase();
       const threadTs =
         resolveThreadToken(event.threadId) ||
         resolveThreadToken(event.metadata?.threadId) ||
@@ -104,7 +105,7 @@ export default definePluginEntry({
       }
 
       const mentioned =
-        (agentName && text.includes(`@${agentName}`)) ||
+        (agentName && normalizedText.includes(`@${agentName.toLowerCase()}`)) ||
         (botUserId && text.includes(`<@${botUserId}>`));
       if (mentioned) {
         cleanExpiredMentions();
