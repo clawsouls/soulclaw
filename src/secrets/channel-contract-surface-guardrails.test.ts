@@ -63,6 +63,10 @@ const CORE_SECRET_SURFACE_GUARDS = [
     forbiddenPatterns: [/\bwhatsapp\b/, /@g\.us/],
   },
   {
+    path: "src/channels/conversation-label.ts",
+    forbiddenPatterns: [/@g\.us/],
+  },
+  {
     path: "src/channels/plugins/setup-promotion-helpers.ts",
     forbiddenPatterns: [/\btelegram\b/],
   },
