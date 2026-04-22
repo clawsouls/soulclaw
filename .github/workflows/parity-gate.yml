@@ -34,12 +34,12 @@ jobs:
       # leak into the job env, fail hard instead of silently running
       # against a live provider and burning real budget.
       #
-      # The parity pack has 11 isolated scenario workers. Letting qa suite
-      # fan out to its default "all scenarios at once" mode on smaller CI
-      # VMs makes the short strict-agentic scenarios flaky, especially the
-      # approval-turn followthrough gate that expects a fast post-approval
-      # read within a 30s agent.wait timeout.
-      QA_PARITY_CONCURRENCY: "2"
+      # The parity pack has 11 isolated scenario workers. The Blacksmith
+      # runner label can still expose a small 2-vCPU VM, and concurrent
+      # isolated gateway workers make the short strict-agentic scenarios
+      # flaky, especially the approval-turn followthrough gate that expects
+      # a fast post-approval read within a 30s agent.wait timeout.
+      QA_PARITY_CONCURRENCY: "1"
       OPENAI_API_KEY: ""
       ANTHROPIC_API_KEY: ""
       OPENCLAW_LIVE_OPENAI_KEY: ""
