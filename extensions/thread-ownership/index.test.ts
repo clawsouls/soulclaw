@@ -161,6 +161,29 @@ describe("thread-ownership plugin", () => {
       expect(globalThis.fetch).not.toHaveBeenCalled();
     });
 
+    it("tracks mentions under the shared conversationId when inbound metadata is non-canonical", async () => {
+      await hooks.message_received(
+        {
+          content: "Hey @TestBot help me",
+          threadId: "9999.0002",
+          metadata: { channelId: "channel:C456" },
+        },
+        { channelId: "slack", conversationId: "C456" },
+      );
+
+      const result = await hooks.message_sending(
+        {
+          content: "Sure!",
+          replyToId: "9999.0002",
+          to: "channel:C456",
+        },
+        { channelId: "slack", conversationId: "C456" },
+      );
+
+      expect(result).toBeUndefined();
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
     it("ignores @-mentions on non-slack channels", async () => {
       // Use a unique thread key so module-level state from other tests doesn't interfere.
       await hooks.message_received(
