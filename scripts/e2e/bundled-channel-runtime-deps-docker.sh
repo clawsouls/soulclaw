@@ -64,20 +64,11 @@ package_root="$(npm root -g)/openclaw"
 test -d "$package_root/dist/extensions/telegram"
 test -d "$package_root/dist/extensions/discord"
 test -d "$package_root/dist/extensions/slack"
+test -d "$package_root/dist/extensions/feishu"
 
-if [ -d "$package_root/dist/extensions/telegram/node_modules" ]; then
-  echo "telegram runtime deps should not be preinstalled in package" >&2
-  find "$package_root/dist/extensions/telegram/node_modules" -maxdepth 2 -type f | head -20 >&2 || true
-  exit 1
-fi
-if [ -d "$package_root/dist/extensions/discord/node_modules" ]; then
-  echo "discord runtime deps should not be preinstalled in package" >&2
-  find "$package_root/dist/extensions/discord/node_modules" -maxdepth 2 -type f | head -20 >&2 || true
-  exit 1
-fi
-if [ -d "$package_root/dist/extensions/slack/node_modules" ]; then
-  echo "slack runtime deps should not be preinstalled in package" >&2
-  find "$package_root/dist/extensions/slack/node_modules" -maxdepth 2 -type f | head -20 >&2 || true
+if [ -d "$package_root/dist/extensions/$CHANNEL/node_modules" ]; then
+  echo "$CHANNEL runtime deps should not be preinstalled in package" >&2
+  find "$package_root/dist/extensions/$CHANNEL/node_modules" -maxdepth 2 -type f | head -20 >&2 || true
   exit 1
 fi
 
@@ -152,6 +143,15 @@ if (mode === "slack") {
     ...(config.channels || {}),
     slack: {
       ...(config.channels?.slack || {}),
+      enabled: true,
+    },
+  };
+}
+if (mode === "feishu") {
+  config.channels = {
+    ...(config.channels || {}),
+    feishu: {
+      ...(config.channels?.feishu || {}),
       enabled: true,
     },
   };
@@ -239,10 +239,17 @@ NODE
 assert_installed_once() {
   local log_file="$1"
   local channel="$2"
+  local dep_path="$3"
   local count
   count="$(grep -c "\\[plugins\\] $channel installed bundled runtime deps:" "$log_file" || true)"
+  if [ "$count" -eq 1 ]; then
+    return 0
+  fi
+  if [ "$count" -eq 0 ] && [ -f "$package_root/dist/extensions/$channel/node_modules/$dep_path/package.json" ]; then
+    return 0
+  fi
   if [ "$count" -ne 1 ]; then
-    echo "expected exactly one runtime deps install for $channel, got $count" >&2
+    echo "expected exactly one runtime deps install log or installed sentinel for $channel, got $count log lines" >&2
     cat "$log_file" >&2
     exit 1
   fi
@@ -268,17 +275,27 @@ assert_dep_sentinel() {
   fi
 }
 
+assert_no_dep_sentinel() {
+  local channel="$1"
+  local dep_path="$2"
+  if [ -f "$package_root/dist/extensions/$channel/node_modules/$dep_path/package.json" ]; then
+    echo "dependency sentinel should be absent before activation for $channel: $dep_path" >&2
+    exit 1
+  fi
+}
+
 echo "Starting baseline gateway with OpenAI configured..."
 write_config baseline
 start_gateway "/tmp/openclaw-$CHANNEL-baseline.log"
 wait_for_gateway_health
 stop_gateway
+assert_no_dep_sentinel "$CHANNEL" "$DEP_SENTINEL"
 
 echo "Enabling $CHANNEL by config edit, then restarting gateway..."
 write_config "$CHANNEL"
 start_gateway "/tmp/openclaw-$CHANNEL-first.log"
 wait_for_gateway_health
-assert_installed_once "/tmp/openclaw-$CHANNEL-first.log" "$CHANNEL"
+assert_installed_once "/tmp/openclaw-$CHANNEL-first.log" "$CHANNEL" "$DEP_SENTINEL"
 assert_dep_sentinel "$CHANNEL" "$DEP_SENTINEL"
 assert_channel_status "$CHANNEL"
 stop_gateway
@@ -919,6 +936,7 @@ if [ "$RUN_CHANNEL_SCENARIOS" != "0" ]; then
   run_channel_scenario telegram grammy
   run_channel_scenario discord discord-api-types
   run_channel_scenario slack @slack/web-api
+  run_channel_scenario feishu @larksuiteoapi/node-sdk
 fi
 if [ "$RUN_UPDATE_SCENARIO" != "0" ]; then
   run_update_scenario
