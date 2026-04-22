@@ -66,13 +66,8 @@ async function authorizeVoiceCommand(
   }
 
   const channelId = channelOverride?.id ?? channel?.id ?? "";
-  const rawChannelName =
-    channelOverride?.name ?? (channel && "name" in channel ? (channel.name as string) : undefined);
-  const rawParentId =
-    channelOverride?.parentId ??
-    ("parentId" in (channel ?? {})
-      ? ((channel as { parentId?: string }).parentId ?? undefined)
-      : undefined);
+  const rawChannelName = channelOverride?.name ?? resolveDiscordChannelNameSafe(channel);
+  const rawParentId = channelOverride?.parentId ?? resolveDiscordChannelParentIdSafe(channel);
   const channelInfo = channelId
     ? await resolveDiscordChannelInfo(interaction.client, channelId)
     : null;
