@@ -178,7 +178,7 @@ const SPLIT_NODE_SHARDS = new Map([
       {
         shardName: "agentic-plugins",
         configs: ["test/vitest/vitest.plugins.config.ts"],
-        requiresDist: true,
+        requiresDist: false,
       },
     ],
   ],

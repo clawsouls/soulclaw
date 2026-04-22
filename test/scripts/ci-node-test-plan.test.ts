@@ -53,7 +53,7 @@ describe("scripts/lib/ci-node-test-plan.mjs", () => {
       .filter((shard) => shard.requiresDist)
       .map((shard) => shard.shardName);
 
-    expect(requiresDistShardNames).toEqual(["core-support-boundary", "agentic-plugins"]);
+    expect(requiresDistShardNames).toEqual(["core-support-boundary"]);
   });
 
   it("splits core runtime configs into smaller source-only shards", () => {
@@ -152,7 +152,7 @@ describe("scripts/lib/ci-node-test-plan.mjs", () => {
       checkName: "checks-node-agentic-plugins",
       shardName: "agentic-plugins",
       configs: ["test/vitest/vitest.plugins.config.ts"],
-      requiresDist: true,
+      requiresDist: false,
     });
   });
 
