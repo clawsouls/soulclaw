@@ -138,4 +138,10 @@ describe("plugin contract boundary invariants", () => {
     });
     expect(offenders).toEqual([]);
   });
+
+  it("keeps bundled plugin production code off legacy before_agent_start hooks", () => {
+    const files = listTsFiles("extensions", { excludeTests: true });
+    const offenders = files.filter((file) => readRepoSource(file).includes("before_agent_start"));
+    expect(offenders).toEqual([]);
+  });
 });
