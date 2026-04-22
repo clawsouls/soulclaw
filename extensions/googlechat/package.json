@@ -49,7 +49,25 @@
         "groupModel": "route",
         "groupAllowFromFallbackToAllowFrom": false,
         "warnOnEmptyGroupSenderAllowlist": false
-      }
+      },
+      "cliAddOptions": [
+        {
+          "flags": "--webhook-path <path>",
+          "description": "Google Chat webhook path"
+        },
+        {
+          "flags": "--webhook-url <url>",
+          "description": "Google Chat webhook URL"
+        },
+        {
+          "flags": "--audience-type <type>",
+          "description": "Google Chat audience type (app-url|project-number)"
+        },
+        {
+          "flags": "--audience <value>",
+          "description": "Google Chat audience value (app URL or project number)"
+        }
+      ]
     },
     "install": {
       "npmSpec": "@openclaw/googlechat",

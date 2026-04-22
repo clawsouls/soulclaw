@@ -28,7 +28,7 @@ function readPackageManifest(pluginDir: string): PackageManifest | undefined {
   }
 }
 
-function listBundledPackageChannelMetadata(): readonly PluginPackageChannel[] {
+export function listBundledPackageChannelMetadata(): readonly PluginPackageChannel[] {
   if (bundledPackageChannelMetadataCache) {
     return bundledPackageChannelMetadataCache;
   }

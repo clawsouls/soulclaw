@@ -960,6 +960,7 @@ export type PluginPackageChannel = {
     exportName?: string;
   };
   doctorCapabilities?: PluginPackageChannelDoctorCapabilities;
+  cliAddOptions?: readonly PluginPackageChannelCliOption[];
 };
 
 export type PluginPackageChannelDoctorCapabilities = {
@@ -967,6 +968,12 @@ export type PluginPackageChannelDoctorCapabilities = {
   groupModel?: "sender" | "route" | "hybrid";
   groupAllowFromFallbackToAllowFrom?: boolean;
   warnOnEmptyGroupSenderAllowlist?: boolean;
+};
+
+export type PluginPackageChannelCliOption = {
+  flags: string;
+  description: string;
+  defaultValue?: boolean | string;
 };
 
 export type PluginPackageInstall = {
