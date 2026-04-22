@@ -67,7 +67,7 @@ function createAutoReplyReplySplitShards() {
 
   const shardCounts = {
     "auto-reply-reply-agent-runner": 1,
-    "auto-reply-reply-commands": 2,
+    "auto-reply-reply-commands": 1,
     "auto-reply-reply-dispatch": 1,
     "auto-reply-reply-state-routing": 1,
   };

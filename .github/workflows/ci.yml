@@ -1604,10 +1604,8 @@ jobs:
             group: extension-channels
           - check_name: check-additional-extension-bundled
             group: extension-bundled
-          - check_name: check-additional-extension-package-boundary-compile
-            group: extension-package-boundary-compile
-          - check_name: check-additional-extension-package-boundary-canary
-            group: extension-package-boundary-canary
+          - check_name: check-additional-extension-package-boundary
+            group: extension-package-boundary
           - check_name: check-additional-runtime-topology-gateway
             group: runtime-topology-gateway
           - check_name: check-additional-runtime-topology-architecture
@@ -1668,7 +1666,7 @@ jobs:
 
       - name: Cache extension package boundary artifacts
         id: extension-package-boundary-cache
-        if: matrix.group == 'extension-package-boundary-compile'
+        if: matrix.group == 'extension-package-boundary'
         uses: actions/cache@v5
         with:
           path: |
@@ -1681,7 +1679,7 @@ jobs:
             ${{ runner.os }}-extension-package-boundary-v1-
 
       - name: Preserve extension package boundary cache hit
-        if: matrix.group == 'extension-package-boundary-compile' && steps.extension-package-boundary-cache.outputs.cache-hit == 'true'
+        if: matrix.group == 'extension-package-boundary' && steps.extension-package-boundary-cache.outputs.cache-hit == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -1757,10 +1755,8 @@ jobs:
             extension-bundled)
               run_check "lint:extensions:bundled" pnpm run lint:extensions:bundled
               ;;
-            extension-package-boundary-compile)
+            extension-package-boundary)
               run_check "test:extensions:package-boundary:compile" pnpm run test:extensions:package-boundary:compile
-              ;;
-            extension-package-boundary-canary)
               run_check "test:extensions:package-boundary:canary" pnpm run test:extensions:package-boundary:canary
               ;;
             runtime-topology-gateway)

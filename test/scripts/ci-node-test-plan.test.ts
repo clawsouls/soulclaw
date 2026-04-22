@@ -193,12 +193,6 @@ describe("scripts/lib/ci-node-test-plan.mjs", () => {
         shardName: "auto-reply-reply-commands-a",
       },
       {
-        checkName: "checks-node-auto-reply-reply-commands-b",
-        configs: ["test/vitest/vitest.auto-reply-reply.config.ts"],
-        requiresDist: false,
-        shardName: "auto-reply-reply-commands-b",
-      },
-      {
         checkName: "checks-node-auto-reply-reply-dispatch-a",
         configs: ["test/vitest/vitest.auto-reply-reply.config.ts"],
         requiresDist: false,
