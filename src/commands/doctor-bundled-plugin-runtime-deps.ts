@@ -16,7 +16,11 @@ export async function maybeRepairBundledPluginRuntimeDeps(params: {
   env?: NodeJS.ProcessEnv;
   packageRoot?: string | null;
   includeConfiguredChannels?: boolean;
-  installDeps?: (params: { installRoot: string; missingSpecs: string[] }) => void;
+  installDeps?: (params: {
+    installRoot: string;
+    missingSpecs: string[];
+    installSpecs: string[];
+  }) => void;
 }): Promise<void> {
   const packageRoot =
     params.packageRoot ??
@@ -29,7 +33,7 @@ export async function maybeRepairBundledPluginRuntimeDeps(params: {
     return;
   }
 
-  const { missing, conflicts } = scanBundledPluginRuntimeDeps({
+  const { deps, missing, conflicts } = scanBundledPluginRuntimeDeps({
     packageRoot,
     config: params.config,
     includeConfiguredChannels: params.includeConfiguredChannels,
@@ -58,6 +62,7 @@ export async function maybeRepairBundledPluginRuntimeDeps(params: {
   }
 
   const missingSpecs = missing.map((dep) => `${dep.name}@${dep.version}`);
+  const installSpecs = deps.map((dep) => `${dep.name}@${dep.version}`);
   note(
     [
       "Bundled plugin runtime deps are missing.",
@@ -84,11 +89,11 @@ export async function maybeRepairBundledPluginRuntimeDeps(params: {
       ((installParams) =>
         installBundledRuntimeDeps({
           installRoot: installParams.installRoot,
-          missingSpecs: installParams.missingSpecs,
+          missingSpecs: installParams.installSpecs,
           env: params.env ?? process.env,
         }));
-    install({ installRoot: packageRoot, missingSpecs });
-    note(`Installed bundled plugin deps: ${missingSpecs.join(", ")}`, "Bundled plugins");
+    install({ installRoot: packageRoot, missingSpecs, installSpecs });
+    note(`Installed bundled plugin deps: ${installSpecs.join(", ")}`, "Bundled plugins");
   } catch (error) {
     params.runtime.error(`Failed to install bundled plugin runtime deps: ${String(error)}`);
   }

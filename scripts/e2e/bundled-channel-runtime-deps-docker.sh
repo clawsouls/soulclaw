@@ -60,6 +60,7 @@ command -v openclaw >/dev/null
 package_root="$(npm root -g)/openclaw"
 test -d "$package_root/dist/extensions/telegram"
 test -d "$package_root/dist/extensions/discord"
+test -d "$package_root/dist/extensions/slack"
 
 if [ -d "$package_root/dist/extensions/telegram/node_modules" ]; then
   echo "telegram runtime deps should not be preinstalled in package" >&2
@@ -69,6 +70,11 @@ fi
 if [ -d "$package_root/dist/extensions/discord/node_modules" ]; then
   echo "discord runtime deps should not be preinstalled in package" >&2
   find "$package_root/dist/extensions/discord/node_modules" -maxdepth 2 -type f | head -20 >&2 || true
+  exit 1
+fi
+if [ -d "$package_root/dist/extensions/slack/node_modules" ]; then
+  echo "slack runtime deps should not be preinstalled in package" >&2
+  find "$package_root/dist/extensions/slack/node_modules" -maxdepth 2 -type f | head -20 >&2 || true
   exit 1
 fi
 
@@ -135,6 +141,15 @@ if (mode === "discord") {
       enabled: true,
       dmPolicy: "disabled",
       groupPolicy: "disabled",
+    },
+  };
+}
+if (mode === "slack") {
+  config.channels = {
+    ...(config.channels || {}),
+    slack: {
+      ...(config.channels?.slack || {}),
+      enabled: true,
     },
   };
 }
@@ -392,6 +407,12 @@ config.channels = {
     dmPolicy: "disabled",
     groupPolicy: "disabled",
   },
+  slack: {
+    ...(config.channels?.slack || {}),
+    enabled: mode === "slack",
+    botToken: "xoxb-bundled-channel-update-token",
+    appToken: "xapp-bundled-channel-update-token",
+  },
 };
 
 fs.mkdirSync(path.dirname(configPath), { recursive: true });
@@ -542,7 +563,11 @@ assert_dep_available telegram grammy
 echo "Mutating installed package: remove Telegram deps, then update-mode doctor repairs them..."
 remove_runtime_dep telegram grammy
 assert_no_dep_available telegram grammy
-OPENCLAW_UPDATE_IN_PROGRESS=1 openclaw doctor --non-interactive >/tmp/openclaw-update-mode-doctor.log 2>&1
+if ! OPENCLAW_UPDATE_IN_PROGRESS=1 openclaw doctor --non-interactive >/tmp/openclaw-update-mode-doctor.log 2>&1; then
+  echo "update-mode doctor failed while repairing Telegram deps" >&2
+  cat /tmp/openclaw-update-mode-doctor.log >&2
+  exit 1
+fi
 assert_dep_available telegram grammy
 
 echo "Mutating config to Discord and rerunning same-version update path..."
@@ -553,6 +578,15 @@ run_update_and_capture discord /tmp/openclaw-update-discord.json
 cat /tmp/openclaw-update-discord.json
 assert_update_ok /tmp/openclaw-update-discord.json "$candidate_version"
 assert_dep_available discord discord-api-types
+
+echo "Mutating config to Slack and rerunning same-version update path..."
+write_config slack
+remove_runtime_dep slack @slack/web-api
+assert_no_dep_available slack @slack/web-api
+run_update_and_capture slack /tmp/openclaw-update-slack.json
+cat /tmp/openclaw-update-slack.json
+assert_update_ok /tmp/openclaw-update-slack.json "$candidate_version"
+assert_dep_available slack @slack/web-api
 
 echo "bundled channel runtime deps Docker update E2E passed"
 EOF
@@ -568,6 +602,7 @@ EOF
 
 run_channel_scenario telegram grammy
 run_channel_scenario discord discord-api-types
+run_channel_scenario slack @slack/web-api
 if [ "$RUN_UPDATE_SCENARIO" != "0" ]; then
   run_update_scenario
 fi

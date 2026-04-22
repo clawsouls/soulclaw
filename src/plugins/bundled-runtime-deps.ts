@@ -484,15 +484,16 @@ export function scanBundledPluginRuntimeDeps(params: {
   pluginIds?: readonly string[];
   includeConfiguredChannels?: boolean;
 }): {
+  deps: RuntimeDepEntry[];
   missing: RuntimeDepEntry[];
   conflicts: RuntimeDepConflict[];
 } {
   if (isSourceCheckoutRoot(params.packageRoot)) {
-    return { missing: [], conflicts: [] };
+    return { deps: [], missing: [], conflicts: [] };
   }
   const extensionsDir = path.join(params.packageRoot, "dist", "extensions");
   if (!fs.existsSync(extensionsDir)) {
-    return { missing: [], conflicts: [] };
+    return { deps: [], missing: [], conflicts: [] };
   }
   const { deps, conflicts } = collectBundledPluginRuntimeDeps({
     extensionsDir,
@@ -509,7 +510,7 @@ export function scanBundledPluginRuntimeDeps(params: {
           !fs.existsSync(path.join(extensionsDir, pluginId, dependencySentinelPath(dep.name))),
       ),
   );
-  return { missing, conflicts };
+  return { deps, missing, conflicts };
 }
 
 export function resolveBundledRuntimeDependencyInstallRoot(pluginRoot: string): string {

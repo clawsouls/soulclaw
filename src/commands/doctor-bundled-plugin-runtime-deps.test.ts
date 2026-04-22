@@ -172,7 +172,11 @@ describe("doctor bundled plugin runtime deps", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-doctor-bundled-"));
     writeJson(path.join(root, "package.json"), { name: "openclaw" });
     writeBundledChannelPlugin(root, "telegram", { grammy: "1.37.0" });
-    const installed: Array<{ installRoot: string; missingSpecs: string[] }> = [];
+    const installed: Array<{
+      installRoot: string;
+      missingSpecs: string[];
+      installSpecs: string[];
+    }> = [];
     const prompter = {
       shouldRepair: false,
       shouldForce: false,
@@ -207,6 +211,64 @@ describe("doctor bundled plugin runtime deps", () => {
       {
         installRoot: root,
         missingSpecs: ["grammy@1.37.0"],
+        installSpecs: ["grammy@1.37.0"],
+      },
+    ]);
+  });
+
+  it("retains configured bundled deps when repairing a subset", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-doctor-bundled-"));
+    writeJson(path.join(root, "package.json"), { name: "openclaw" });
+    writeBundledChannelPlugin(root, "telegram", { grammy: "1.37.0" });
+    writeBundledChannelPlugin(root, "slack", { "@slack/web-api": "7.15.1" });
+    writeJson(path.join(root, "node_modules", "@slack", "web-api", "package.json"), {
+      name: "@slack/web-api",
+      version: "7.15.1",
+    });
+    const installed: Array<{
+      installRoot: string;
+      missingSpecs: string[];
+      installSpecs: string[];
+    }> = [];
+    const prompter = {
+      shouldRepair: false,
+      shouldForce: false,
+      repairMode: {
+        shouldRepair: false,
+        shouldForce: false,
+        nonInteractive: true,
+        canPrompt: false,
+        updateInProgress: false,
+      },
+      confirm: async () => false,
+      confirmAutoFix: async () => false,
+      confirmAggressiveAutoFix: async () => false,
+      confirmRuntimeRepair: async () => false,
+      select: async (_params: unknown, fallback: unknown) => fallback,
+    } as DoctorPrompter;
+
+    await maybeRepairBundledPluginRuntimeDeps({
+      runtime: { error: () => {} } as never,
+      prompter,
+      packageRoot: root,
+      includeConfiguredChannels: true,
+      config: {
+        plugins: { enabled: true },
+        channels: {
+          telegram: { enabled: true },
+          slack: { enabled: false, botToken: "xoxb-test", appToken: "xapp-test" },
+        },
+      },
+      installDeps: (params) => {
+        installed.push(params);
+      },
+    });
+
+    expect(installed).toEqual([
+      {
+        installRoot: root,
+        missingSpecs: ["grammy@1.37.0"],
+        installSpecs: ["@slack/web-api@7.15.1", "grammy@1.37.0"],
       },
     ]);
   });
