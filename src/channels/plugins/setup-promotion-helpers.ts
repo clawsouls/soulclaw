@@ -51,23 +51,23 @@ type ChannelSetupPromotionSurface = {
 
 const BUNDLED_CHANNELS_WITHOUT_SETUP_PROMOTION_SURFACE = new Set(["whatsapp"]);
 
-function getChannelSetupPromotionSurface(
+function asPromotionSurface(setup: unknown): ChannelSetupPromotionSurface | null {
+  return setup && typeof setup === "object" ? (setup as ChannelSetupPromotionSurface) : null;
+}
+
+function getLoadedChannelSetupPromotionSurface(
   channelKey: string,
-  opts?: { loadBundledFallback?: boolean },
 ): ChannelSetupPromotionSurface | null {
-  if (
-    opts?.loadBundledFallback &&
-    BUNDLED_CHANNELS_WITHOUT_SETUP_PROMOTION_SURFACE.has(channelKey)
-  ) {
-    return getLoadedChannelPlugin(channelKey)?.setup ?? null;
-  }
-  const setup =
-    getLoadedChannelPlugin(channelKey)?.setup ??
-    (opts?.loadBundledFallback ? getBundledChannelPlugin(channelKey)?.setup : undefined);
-  if (!setup || typeof setup !== "object") {
+  return asPromotionSurface(getLoadedChannelPlugin(channelKey)?.setup);
+}
+
+function getBundledChannelSetupPromotionSurface(
+  channelKey: string,
+): ChannelSetupPromotionSurface | null {
+  if (BUNDLED_CHANNELS_WITHOUT_SETUP_PROMOTION_SURFACE.has(channelKey)) {
     return null;
   }
-  return setup as ChannelSetupPromotionSurface;
+  return asPromotionSurface(getBundledChannelPlugin(channelKey)?.setup);
 }
 
 function isStaticSingleAccountPromotionKey(key: string): boolean {
@@ -81,10 +81,16 @@ export function shouldMoveSingleAccountChannelKey(params: {
   if (isStaticSingleAccountPromotionKey(params.key)) {
     return true;
   }
-  const contractKeys = getChannelSetupPromotionSurface(params.channelKey, {
-    loadBundledFallback: true,
-  })?.singleAccountKeysToMove;
-  if (contractKeys?.includes(params.key)) {
+  const loadedContractKeys = getLoadedChannelSetupPromotionSurface(
+    params.channelKey,
+  )?.singleAccountKeysToMove;
+  if (loadedContractKeys?.includes(params.key)) {
+    return true;
+  }
+  const bundledContractKeys = getBundledChannelSetupPromotionSurface(
+    params.channelKey,
+  )?.singleAccountKeysToMove;
+  if (bundledContractKeys?.includes(params.key)) {
     return true;
   }
   return false;
@@ -104,26 +110,33 @@ export function resolveSingleAccountKeysToMove(params: {
     return [];
   }
 
-  let setupSurface: ChannelSetupPromotionSurface | null | undefined;
-  const resolveSetupSurface = () => {
-    setupSurface ??= getChannelSetupPromotionSurface(params.channelKey, {
-      loadBundledFallback: true,
-    });
-    return setupSurface;
+  let loadedSetupSurface: ChannelSetupPromotionSurface | null | undefined;
+  const resolveLoadedSetupSurface = () => {
+    loadedSetupSurface ??= getLoadedChannelSetupPromotionSurface(params.channelKey);
+    return loadedSetupSurface;
+  };
+  let bundledSetupSurface: ChannelSetupPromotionSurface | null | undefined;
+  const resolveBundledSetupSurface = () => {
+    bundledSetupSurface ??= getBundledChannelSetupPromotionSurface(params.channelKey);
+    return bundledSetupSurface;
   };
 
   const keysToMove = entries.filter((key) => {
     if (isStaticSingleAccountPromotionKey(key)) {
       return true;
     }
-    return Boolean(resolveSetupSurface()?.singleAccountKeysToMove?.includes(key));
+    return Boolean(
+      resolveLoadedSetupSurface()?.singleAccountKeysToMove?.includes(key) ||
+      resolveBundledSetupSurface()?.singleAccountKeysToMove?.includes(key),
+    );
   });
   if (!hasNamedAccounts || keysToMove.length === 0) {
     return keysToMove;
   }
 
   const namedAccountPromotionKeys =
-    setupSurface?.namedAccountPromotionKeys ?? resolveSetupSurface()?.namedAccountPromotionKeys;
+    resolveLoadedSetupSurface()?.namedAccountPromotionKeys ??
+    resolveBundledSetupSurface()?.namedAccountPromotionKeys;
   if (!namedAccountPromotionKeys) {
     return keysToMove;
   }
@@ -142,10 +155,14 @@ export function resolveSingleAccountPromotionTarget(params: {
     );
     return matchedAccountId ?? normalizedTargetAccountId;
   };
-  const surface = getChannelSetupPromotionSurface(params.channelKey, {
-    loadBundledFallback: true,
-  });
-  const resolved = surface?.resolveSingleAccountPromotionTarget?.({
+  const loadedSurface = getLoadedChannelSetupPromotionSurface(params.channelKey);
+  const bundledSurface = loadedSurface?.resolveSingleAccountPromotionTarget
+    ? undefined
+    : getBundledChannelSetupPromotionSurface(params.channelKey);
+  const resolvePromotionTarget =
+    loadedSurface?.resolveSingleAccountPromotionTarget ??
+    bundledSurface?.resolveSingleAccountPromotionTarget;
+  const resolved = resolvePromotionTarget?.({
     channel: params.channel,
   });
   const normalizedResolved = normalizeOptionalString(resolved);
