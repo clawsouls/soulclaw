@@ -58,13 +58,6 @@ jobs:
 
           node scripts/ci-changed-scope.mjs --base "$BASE" --head HEAD
 
-      - name: Setup Node environment
-        if: steps.docs_scope.outputs.docs_only != 'true'
-        uses: ./.github/actions/setup-node-env
-        with:
-          install-bun: "false"
-          install-deps: "false"
-
       - name: Build install-smoke CI manifest
         id: manifest
         env:
