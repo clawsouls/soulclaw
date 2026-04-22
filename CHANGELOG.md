@@ -21,6 +21,7 @@ Docs: https://docs.openclaw.ai
 
 - Discord: harden inbound thread metadata handling against partial Carbon channel getters, so non-command thread messages and queued jobs no longer crash when `name`, `parentId`, `parent`, or `ownerId` requires fetched raw data.
 - Discord: let `message` tool reactions resolve `user:<id>` DM targets and preserve `channels.discord.guilds.<guild>.channels.<channel>.requireMention: false` during reply-stage activation fallback. Fixes #70165 and #69441.
+- Plugins/startup: pre-normalize and cache Jiti alias maps before creating plugin loaders, so module-scoped loader filenames do not reintroduce per-plugin alias-normalization startup cost. Fixes #70186.
 - Telegram/webhooks: lower the grammY webhook callback timeout to 5s so Telegram gets an early 200 response instead of retrying long-running updates as read timeouts. (#70146) Thanks @friday-james.
 - Telegram/polling: rebuild the polling HTTP transport after `getUpdates` 409 conflicts, so retries use a fresh TCP connection instead of looping on a Telegram-terminated keep-alive socket. (#69873) Thanks @hclsys.
 - Media delivery: strip persisted base64 audio payloads from webchat history, resolve stored `media://inbound/*` attachments before local-root checks, suppress duplicate Telegram voice/audio sends when TTS emits the same media twice, and support custom image-model IDs that already include their provider prefix.
