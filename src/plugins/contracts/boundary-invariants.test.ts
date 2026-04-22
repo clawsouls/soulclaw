@@ -51,6 +51,11 @@ const BUNDLED_LIVE_CONFIG_HOOK_GUARDS = {
     'resolvePluginConfigObject(api.runtime.config.loadConfig(), "active-memory")',
     "api.runtime.config.loadConfig()",
   ],
+  "extensions/memory-core/src/dreaming.ts": [
+    'params.reason === "runtime"',
+    "resolveMemoryCorePluginConfig(startupCfg)",
+    "api.runtime.config?.loadConfig?.() ?? api.config",
+  ],
   "extensions/memory-lancedb/index.ts": [
     'resolvePluginConfigObject(runtimeConfig, "memory-lancedb")',
     "api.runtime.config?.loadConfig?.()",
