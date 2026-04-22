@@ -284,10 +284,6 @@ describe("slackPlugin actions", () => {
 });
 
 describe("slackPlugin status", () => {
-  it("opts out of the generic stale socket health check", () => {
-    expect(slackPlugin.status?.skipStaleSocketHealthCheck).toBe(true);
-  });
-
   it("uses the direct Slack probe helper when runtime is not initialized", async () => {
     const probeSpy = vi.spyOn(probeModule, "probeSlack").mockResolvedValueOnce({
       ok: true,

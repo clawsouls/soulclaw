@@ -30,6 +30,7 @@ type RuntimeLifecycleSnapshot = {
       }
     | null;
   lastEventAt?: number | null;
+  lastTransportActivityAt?: number | null;
   healthState?: string | null;
   lastStartAt?: number | null;
   lastStopAt?: number | null;
@@ -68,7 +69,6 @@ function buildComputedAccountStatusAdapterBase<ResolvedAccount, Probe, Audit>(
 ): Omit<ChannelStatusAdapter<ResolvedAccount, Probe, Audit>, "buildAccountSnapshot"> {
   return {
     defaultRuntime: options.defaultRuntime,
-    skipStaleSocketHealthCheck: options.skipStaleSocketHealthCheck,
     buildChannelSummary: options.buildChannelSummary,
     probeAccount: options.probeAccount,
     formatCapabilitiesProbe: options.formatCapabilitiesProbe,
@@ -310,6 +310,9 @@ export function buildRuntimeAccountStatusSnapshot<TExtra extends StatusSnapshotE
       : {}),
     ...(runtime?.lastDisconnect ? { lastDisconnect: runtime.lastDisconnect } : {}),
     ...(typeof runtime?.lastEventAt === "number" ? { lastEventAt: runtime.lastEventAt } : {}),
+    ...(typeof runtime?.lastTransportActivityAt === "number"
+      ? { lastTransportActivityAt: runtime.lastTransportActivityAt }
+      : {}),
     ...(typeof runtime?.healthState === "string" ? { healthState: runtime.healthState } : {}),
     ...(extra ?? ({} as TExtra)),
   };

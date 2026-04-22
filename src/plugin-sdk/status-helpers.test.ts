@@ -99,7 +99,6 @@ function createComputedStatusAdapter() {
     { ok: boolean }
   >({
     defaultRuntime: createDefaultChannelRuntimeState("default"),
-    skipStaleSocketHealthCheck: true,
     resolveAccountSnapshot: ({ account, runtime, probe }) => ({
       accountId: account.accountId,
       enabled: account.enabled,
@@ -119,7 +118,6 @@ function createAsyncStatusAdapter() {
     { ok: boolean }
   >({
     defaultRuntime: createDefaultChannelRuntimeState("default"),
-    skipStaleSocketHealthCheck: true,
     resolveAccountSnapshot: async ({ account, runtime, probe }) => ({
       accountId: account.accountId,
       enabled: account.enabled,
@@ -285,7 +283,6 @@ describe("computed account status adapters", () => {
     "builds account snapshots from $name computed account metadata and extras",
     async ({ createStatus }) => {
       const status = createStatus();
-      expect(status.skipStaleSocketHealthCheck).toBe(true);
       await expect(
         Promise.resolve(
           status.buildAccountSnapshot?.({
@@ -331,6 +328,7 @@ describe("buildRuntimeAccountStatusSnapshot", () => {
           lastConnectedAt: 11,
           lastDisconnect: { at: 12, error: "boom" },
           lastEventAt: 13,
+          lastTransportActivityAt: 14,
           healthState: "healthy",
           running: true,
         },
@@ -345,6 +343,7 @@ describe("buildRuntimeAccountStatusSnapshot", () => {
         lastConnectedAt: 11,
         lastDisconnect: { at: 12, error: "boom" },
         lastEventAt: 13,
+        lastTransportActivityAt: 14,
         healthState: "healthy",
         probe: undefined,
       },

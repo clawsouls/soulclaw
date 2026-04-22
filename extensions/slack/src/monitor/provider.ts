@@ -508,9 +508,8 @@ export async function monitorSlackProvider(opts: MonitorSlackOpts = {}) {
     removeAckAfterReply,
   });
 
-  // Wire up event liveness tracking: update lastEventAt on every inbound event
-  // so the health monitor can detect "half-dead" sockets that pass health checks
-  // but silently stop delivering events.
+  // Slack's socket-mode client keeps ping/pong health private and closes on
+  // missed pongs. App events are useful status activity, but not transport proof.
   const trackEvent = opts.setStatus
     ? () => {
         opts.setStatus!({ lastEventAt: Date.now(), lastInboundAt: Date.now() });
