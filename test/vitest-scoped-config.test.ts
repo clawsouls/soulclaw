@@ -120,6 +120,17 @@ describe("createScopedVitestConfig", () => {
     expect(config.test?.include).toEqual(["example.test.ts"]);
   });
 
+  it("keeps scoped cli directory filters aligned with repo-root include patterns", () => {
+    const config = createScopedVitestConfig(["extensions/slack/**/*.test.ts"], {
+      argv: ["vitest", "run", "extensions/slack"],
+      dir: "extensions",
+      env: {},
+      passWithNoTests: true,
+    });
+
+    expect(config.test?.include).toEqual(["slack/**/*.test.*"]);
+  });
+
   it("relativizes scoped include and exclude patterns to the configured dir", () => {
     const config = createScopedVitestConfig([BUNDLED_PLUGIN_TEST_GLOB], {
       dir: "extensions",
