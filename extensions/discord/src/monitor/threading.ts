@@ -388,7 +388,7 @@ export function resolveDiscordAutoThreadContext(params: {
   channel: string;
   messageChannelId: string;
   createdThreadId?: string | null;
-  inheritParent?: boolean;
+  parentInheritanceEnabled?: boolean;
 }): DiscordAutoThreadContext | null {
   const createdThreadId = normalizeOptionalStringifiedId(params.createdThreadId) ?? "";
   if (!createdThreadId) {
@@ -405,7 +405,7 @@ export function resolveDiscordAutoThreadContext(params: {
     peer: { kind: "channel", id: createdThreadId },
   });
   const parentSessionKey =
-    params.inheritParent === true
+    params.parentInheritanceEnabled === true
       ? buildAgentSessionKey({
           agentId: params.agentId,
           channel: params.channel,
@@ -451,7 +451,7 @@ export async function resolveDiscordAutoThreadReplyPlan(
     agentId: string;
     channel: string;
     cfg?: OpenClawConfig;
-    threadInheritParent?: boolean;
+    threadParentInheritanceEnabled?: boolean;
   },
 ): Promise<DiscordAutoThreadReplyPlan> {
   const messageChannelId = resolveTrimmedDiscordMessageChannelId(params);
@@ -487,7 +487,7 @@ export async function resolveDiscordAutoThreadReplyPlan(
         channel: params.channel,
         messageChannelId,
         createdThreadId,
-        inheritParent: params.threadInheritParent,
+        parentInheritanceEnabled: params.threadParentInheritanceEnabled,
       })
     : null;
   return { ...deliveryPlan, createdThreadId, autoThreadContext };
