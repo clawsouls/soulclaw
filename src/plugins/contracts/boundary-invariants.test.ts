@@ -60,10 +60,7 @@ const BUNDLED_LIVE_CONFIG_HOOK_GUARDS = {
     "resolveMemoryCorePluginConfig(startupCfg)",
     "api.runtime.config?.loadConfig?.() ?? api.config",
   ],
-  "extensions/memory-lancedb/index.ts": [
-    'resolvePluginConfigObject(runtimeConfig, "memory-lancedb")',
-    "api.runtime.config?.loadConfig?.()",
-  ],
+  "extensions/memory-lancedb/index.ts": ["resolveLivePluginConfigObject(", '"memory-lancedb"'],
   "extensions/skill-workshop/index.ts": [
     'resolvePluginConfigObject(runtimeConfig, "skill-workshop")',
     'typeof api.runtime.config?.loadConfig === "function"',
