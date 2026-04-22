@@ -25,6 +25,7 @@ describe("thread-ownership plugin", () => {
     for (const key of Object.keys(hooks)) {
       delete hooks[key];
     }
+    api.pluginConfig = {};
 
     process.env.SLACK_FORWARDER_URL = "http://localhost:8750";
     process.env.SLACK_BOT_USER_ID = "U999";
@@ -123,6 +124,32 @@ describe("thread-ownership plugin", () => {
     });
 
     it("canonicalizes non-canonical Slack targets when shared conversationId is missing", async () => {
+      vi.mocked(globalThis.fetch).mockResolvedValue(
+        new Response(JSON.stringify({ owner: "test-agent" }), { status: 200 }),
+      );
+
+      const result = await hooks.message_sending(
+        {
+          content: "hello",
+          replyToId: "1234.5678",
+          to: "channel:C123",
+        },
+        { channelId: "slack", conversationId: "" },
+      );
+
+      expect(result).toBeUndefined();
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "http://localhost:8750/api/v1/ownership/C123/1234.5678",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ agent_id: "test-agent" }),
+        }),
+      );
+    });
+
+    it("canonicalizes configured ab-test channel allowlists before matching", async () => {
+      api.pluginConfig = { abTestChannels: ["channel:C123"] };
+      register.register(api as unknown as OpenClawPluginApi);
       vi.mocked(globalThis.fetch).mockResolvedValue(
         new Response(JSON.stringify({ owner: "test-agent" }), { status: 200 }),
       );

@@ -72,9 +72,13 @@ export default definePluginEntry({
     ).replace(/\/$/, "");
 
     const abTestChannels = new Set(
-      pluginCfg.abTestChannels ??
+      (
+        pluginCfg.abTestChannels ??
         process.env.THREAD_OWNERSHIP_CHANNELS?.split(",").filter(Boolean) ??
-        [],
+        []
+      )
+        .map((entry) => resolveSlackConversationId(entry))
+        .filter(Boolean),
     );
 
     const { id: agentId, name: agentName } = resolveOwnershipAgent(api.config);
