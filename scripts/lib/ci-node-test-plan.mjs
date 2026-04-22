@@ -92,7 +92,6 @@ const SPLIT_NODE_SHARDS = new Map([
         configs: [
           "test/vitest/vitest.infra.config.ts",
           "test/vitest/vitest.hooks.config.ts",
-          "test/vitest/vitest.runtime-config.config.ts",
           "test/vitest/vitest.secrets.config.ts",
           "test/vitest/vitest.logging.config.ts",
           "test/vitest/vitest.process.config.ts",
@@ -115,6 +114,7 @@ const SPLIT_NODE_SHARDS = new Map([
         configs: [
           "test/vitest/vitest.acp.config.ts",
           "test/vitest/vitest.cron.config.ts",
+          "test/vitest/vitest.runtime-config.config.ts",
           "test/vitest/vitest.shared-core.config.ts",
           "test/vitest/vitest.tasks.config.ts",
           "test/vitest/vitest.utils.config.ts",
