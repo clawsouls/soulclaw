@@ -54,6 +54,13 @@ const CORE_SECRET_SURFACE_GUARDS = [
     path: "src/gateway/channel-health-policy.ts",
     forbiddenPatterns: [/\btelegram\b/],
   },
+  {
+    path: "src/media-understanding/defaults.ts",
+    forbiddenPatterns: [
+      /\b(?:openai|anthropic|google|groq|deepgram|mistral|minimax|zai|qwen|moonshot|openrouter)\b/,
+      /\b(?:gpt-|claude-|gemini-|whisper-|nova-|voxtral-|MiniMax-|glm-|qwen-|kimi-)\b/,
+    ],
+  },
 ] as const;
 
 describe("channel secret contract surface guardrails", () => {
