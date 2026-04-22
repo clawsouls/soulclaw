@@ -24,6 +24,10 @@ function resolveThreadToken(value: unknown): string {
   return typeof value === "string" || typeof value === "number" ? String(value) : "";
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function resolveSlackConversationId(value: unknown): string {
   const raw = normalizeOptionalString(value) ?? "";
   if (!raw) {
@@ -42,6 +46,14 @@ function cleanExpiredMentions(): void {
       mentionedThreads.delete(key);
     }
   }
+}
+
+function containsAgentNameMention(text: string, agentName: string): boolean {
+  const trimmedName = agentName.trim();
+  if (!trimmedName) {
+    return false;
+  }
+  return new RegExp(`(^|[^\\w])@${escapeRegExp(trimmedName)}(?=$|[^\\w])`, "i").test(text);
 }
 
 function resolveOwnershipAgent(config: OpenClawConfig): { id: string; name: string } {
@@ -91,7 +103,6 @@ export default definePluginEntry({
       }
 
       const text = event.content ?? "";
-      const normalizedText = text.toLowerCase();
       const threadTs =
         resolveThreadToken(event.threadId) ||
         resolveThreadToken(event.metadata?.threadId) ||
@@ -105,7 +116,7 @@ export default definePluginEntry({
       }
 
       const mentioned =
-        (agentName && normalizedText.includes(`@${agentName.toLowerCase()}`)) ||
+        containsAgentNameMention(text, agentName) ||
         (botUserId && text.includes(`<@${botUserId}>`));
       if (mentioned) {
         cleanExpiredMentions();

@@ -325,5 +325,49 @@ describe("thread-ownership plugin", () => {
       expect(result).toBeUndefined();
       expect(globalThis.fetch).not.toHaveBeenCalled();
     });
+
+    it("does not treat superset handles as agent-name mentions", async () => {
+      await hooks.message_received(
+        {
+          content: "hey @testbot2 help",
+          threadId: "8888.0003",
+          metadata: { channelId: "C789" },
+        },
+        { channelId: "slack", conversationId: "C789" },
+      );
+
+      vi.mocked(globalThis.fetch).mockResolvedValue(
+        new Response(JSON.stringify({ owner: "test-agent" }), { status: 200 }),
+      );
+
+      await hooks.message_sending(
+        { content: "On it!", replyToId: "8888.0003", metadata: { channelId: "C789" }, to: "C789" },
+        { channelId: "slack", conversationId: "C789" },
+      );
+
+      expect(globalThis.fetch).toHaveBeenCalled();
+    });
+
+    it("does not treat email-like text as an agent-name mention", async () => {
+      await hooks.message_received(
+        {
+          content: "send mail to foo@testbot.com",
+          threadId: "8888.0004",
+          metadata: { channelId: "C789" },
+        },
+        { channelId: "slack", conversationId: "C789" },
+      );
+
+      vi.mocked(globalThis.fetch).mockResolvedValue(
+        new Response(JSON.stringify({ owner: "test-agent" }), { status: 200 }),
+      );
+
+      await hooks.message_sending(
+        { content: "On it!", replyToId: "8888.0004", metadata: { channelId: "C789" }, to: "C789" },
+        { channelId: "slack", conversationId: "C789" },
+      );
+
+      expect(globalThis.fetch).toHaveBeenCalled();
+    });
   });
 });
