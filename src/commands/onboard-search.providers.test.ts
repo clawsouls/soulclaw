@@ -138,6 +138,42 @@ describe("onboard-search provider resolution", () => {
     ).toBe("next-key");
   });
 
+  it("uses provider-owned legacy search config readers generically", async () => {
+    const legacyEntry: PluginWebSearchProviderEntry = {
+      ...createCustomProviderEntry(),
+      id: "legacy-search" as never,
+      pluginId: "legacy-search-plugin",
+      credentialPath: "plugins.entries.legacy-search-plugin.config.webSearch.apiKey",
+      getCredentialValue: (searchConfig) =>
+        (searchConfig?.legacySearch &&
+        typeof searchConfig.legacySearch === "object" &&
+        !Array.isArray(searchConfig.legacySearch)
+          ? (searchConfig.legacySearch as Record<string, unknown>)
+          : undefined
+        )?.apiKey,
+      getConfiguredCredentialValue: () => undefined,
+    };
+    mocks.resolvePluginWebSearchProviders.mockImplementation((params) =>
+      params?.config ? [legacyEntry] : [],
+    );
+
+    const cfg: OpenClawConfig = {
+      tools: {
+        web: {
+          search: {
+            provider: "legacy-search" as never,
+            legacySearch: {
+              apiKey: "legacy-key",
+            },
+          } as never,
+        },
+      },
+    };
+
+    expect(mod.hasExistingKey(cfg, "legacy-search" as never)).toBe(true);
+    expect(mod.resolveExistingKey(cfg, "legacy-search" as never)).toBe("legacy-key");
+  });
+
   it("uses config-aware non-bundled providers when building secret refs", async () => {
     const customEntry = createCustomProviderEntry();
     mocks.resolvePluginWebSearchProviders.mockImplementation((params) =>
