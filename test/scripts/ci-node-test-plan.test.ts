@@ -114,13 +114,7 @@ describe("scripts/lib/ci-node-test-plan.mjs", () => {
     expect(controlPlaneShard).toEqual({
       checkName: "checks-node-agentic-control-plane",
       shardName: "agentic-control-plane",
-      configs: [
-        "test/vitest/vitest.gateway-core.config.ts",
-        "test/vitest/vitest.gateway-client.config.ts",
-        "test/vitest/vitest.gateway-methods.config.ts",
-        "test/vitest/vitest.gateway-server.config.ts",
-        "test/vitest/vitest.daemon.config.ts",
-      ],
+      configs: ["test/vitest/vitest.gateway-server.config.ts"],
       requiresDist: false,
     });
     expect(commandsShard).toEqual({
@@ -130,19 +124,25 @@ describe("scripts/lib/ci-node-test-plan.mjs", () => {
         "test/vitest/vitest.cli.config.ts",
         "test/vitest/vitest.commands-light.config.ts",
         "test/vitest/vitest.commands.config.ts",
+        "test/vitest/vitest.daemon.config.ts",
       ],
       requiresDist: false,
     });
     expect(agentShard).toEqual({
       checkName: "checks-node-agentic-agents",
       shardName: "agentic-agents",
-      configs: ["test/vitest/vitest.agents.config.ts"],
+      configs: [
+        "test/vitest/vitest.agents.config.ts",
+        "test/vitest/vitest.gateway-client.config.ts",
+      ],
       requiresDist: false,
     });
     expect(pluginSdkShard).toEqual({
       checkName: "checks-node-agentic-plugin-sdk",
       shardName: "agentic-plugin-sdk",
       configs: [
+        "test/vitest/vitest.gateway-core.config.ts",
+        "test/vitest/vitest.gateway-methods.config.ts",
         "test/vitest/vitest.plugin-sdk-light.config.ts",
         "test/vitest/vitest.plugin-sdk.config.ts",
       ],
