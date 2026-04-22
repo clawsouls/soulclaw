@@ -36,6 +36,7 @@ Docs: https://docs.openclaw.ai
 - Agents/MCP: keep `mcp.servers` and bundle MCP tools available in Pi embedded
   `coding` and `messaging` sessions while preserving `minimal` profile and
   `tools.deny: ["bundle-mcp"]` opt-out behavior. Fixes #68875 and #68818.
+- Plugins/startup: tolerate transient bundled-channel catalog/metadata drift while auto-enabling configured plugins, so CLI and gateway startup no longer crash when a channel id is known but its display metadata is unavailable.
 - CLI/Claude: report CLI-backed reply runs as streaming while Claude/Codex CLI turns are still in flight, so WebChat keeps visible response state until the backend finishes. Fixes #70125.
 - Codex harness: rotate the shared app-server websocket client when the configured bearer token changes, so auth-token refreshes reconnect with the new `Authorization` header instead of reusing a stale socket. (#70328) Thanks @Lucenx9.
 - Telegram/sandbox: keep Telegram bot DMs on per-account sender session keys even when `session.dmScope=main`, so sandbox/tool policy can distinguish Telegram-originated direct chats from the agent main session.
