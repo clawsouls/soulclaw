@@ -40,6 +40,7 @@ Docs: https://docs.openclaw.ai
 - Models/CLI: show bundled provider-owned static catalog rows in `models list --all` before auth is configured, including Kimi K2.6 rows for Moonshot, OpenRouter, and Vercel AI Gateway, while keeping local-only and workspace plugin catalog paths isolated. (#69909) Thanks @shakkernerd.
 - Configure: skip generic CLI startup bootstrap for `openclaw configure` and bound hint-only gateway probes so the onboarding TUI reaches its first prompt faster when the Gateway is unavailable. (#69984) Thanks @obviyus.
 - Agents/harness: surface selected plugin harness failures directly instead of replaying the same turn through embedded PI, preventing misleading secondary PI auth errors and avoiding duplicate side effects.
+- OpenAI Codex: add a ChatGPT device-code auth option beside browser OAuth, so headless or callback-hostile setups can sign in without relying on the localhost browser callback. (#69557) Thanks @vincentkoc.
 
 ## 2026.4.21
 
