@@ -59,6 +59,10 @@ const CORE_SECRET_SURFACE_GUARDS = [
     forbiddenPatterns: [/\bfeishu\b/],
   },
   {
+    path: "src/config/sessions/group.ts",
+    forbiddenPatterns: [/\bwhatsapp\b/, /@g\.us/],
+  },
+  {
     path: "src/media-understanding/defaults.ts",
     forbiddenPatterns: [
       /\b(?:openai|anthropic|google|groq|deepgram|mistral|minimax|zai|qwen|moonshot|openrouter)\b/,
