@@ -38,6 +38,25 @@ describe("setup promotion helpers", () => {
     expect(getBundledChannelPluginMock).not.toHaveBeenCalled();
   });
 
+  it("keeps WhatsApp static promotion cheap even when named accounts already exist", () => {
+    const keys = resolveSingleAccountKeysToMove({
+      channelKey: "whatsapp",
+      channel: {
+        accounts: {
+          work: { enabled: true },
+        },
+        dmPolicy: "allowlist",
+        allowFrom: ["+15551234567"],
+        groupPolicy: "allowlist",
+        groupAllowFrom: ["group-123"],
+      },
+    });
+
+    expect(keys).toEqual(["dmPolicy", "allowFrom", "groupPolicy", "groupAllowFrom"]);
+    expect(getLoadedChannelPluginMock).toHaveBeenCalledWith("whatsapp");
+    expect(getBundledChannelPluginMock).not.toHaveBeenCalled();
+  });
+
   it("loads bundled setup only for non-static migration keys", () => {
     getBundledChannelPluginMock.mockReturnValue({
       setup: {

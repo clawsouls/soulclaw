@@ -49,10 +49,18 @@ type ChannelSetupPromotionSurface = {
   }) => string | undefined;
 };
 
+const BUNDLED_CHANNELS_WITHOUT_SETUP_PROMOTION_SURFACE = new Set(["whatsapp"]);
+
 function getChannelSetupPromotionSurface(
   channelKey: string,
   opts?: { loadBundledFallback?: boolean },
 ): ChannelSetupPromotionSurface | null {
+  if (
+    opts?.loadBundledFallback &&
+    BUNDLED_CHANNELS_WITHOUT_SETUP_PROMOTION_SURFACE.has(channelKey)
+  ) {
+    return getLoadedChannelPlugin(channelKey)?.setup ?? null;
+  }
   const setup =
     getLoadedChannelPlugin(channelKey)?.setup ??
     (opts?.loadBundledFallback ? getBundledChannelPlugin(channelKey)?.setup : undefined);
