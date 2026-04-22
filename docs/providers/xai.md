@@ -68,25 +68,27 @@ current image-capable Grok refs in the bundled catalog.
 The bundled plugin maps xAI's current public API surface onto OpenClaw's shared
 provider and tool contracts where the behavior fits cleanly.
 
-| xAI capability             | OpenClaw surface                       | Status                                                              |
-| -------------------------- | -------------------------------------- | ------------------------------------------------------------------- |
-| Chat / Responses           | `xai/<model>` model provider           | Yes                                                                 |
-| Server-side web search     | `web_search` provider `grok`           | Yes                                                                 |
-| Server-side X search       | `x_search` tool                        | Yes                                                                 |
-| Server-side code execution | `code_execution` tool                  | Yes                                                                 |
-| Images                     | `image_generate`                       | Yes                                                                 |
-| Videos                     | `video_generate`                       | Yes                                                                 |
-| Batch text-to-speech       | `messages.tts.provider: "xai"` / `tts` | Yes                                                                 |
-| Streaming TTS              | —                                      | Not exposed; OpenClaw's TTS contract returns complete audio buffers |
-| Speech-to-text             | —                                      | Not exposed yet; needs a transcription provider surface             |
-| Realtime voice             | —                                      | Not exposed yet; different session/WebSocket contract               |
-| Files / batches            | Generic model API compatibility only   | Not a first-class OpenClaw tool                                     |
+| xAI capability             | OpenClaw surface                          | Status                                                              |
+| -------------------------- | ----------------------------------------- | ------------------------------------------------------------------- |
+| Chat / Responses           | `xai/<model>` model provider              | Yes                                                                 |
+| Server-side web search     | `web_search` provider `grok`              | Yes                                                                 |
+| Server-side X search       | `x_search` tool                           | Yes                                                                 |
+| Server-side code execution | `code_execution` tool                     | Yes                                                                 |
+| Images                     | `image_generate`                          | Yes                                                                 |
+| Videos                     | `video_generate`                          | Yes                                                                 |
+| Batch text-to-speech       | `messages.tts.provider: "xai"` / `tts`    | Yes                                                                 |
+| Streaming TTS              | —                                         | Not exposed; OpenClaw's TTS contract returns complete audio buffers |
+| Batch speech-to-text       | `tools.media.audio` / media understanding | Yes                                                                 |
+| Streaming speech-to-text   | —                                         | Not exposed; needs streaming transcription contract mapping         |
+| Realtime voice             | —                                         | Not exposed yet; different session/WebSocket contract               |
+| Files / batches            | Generic model API compatibility only      | Not a first-class OpenClaw tool                                     |
 
 <Note>
-OpenClaw uses xAI's REST image/video/TTS APIs for media generation and the
-Responses API for model, search, and code-execution tools. Features that need
-new OpenClaw contracts, such as streaming STT or Realtime voice sessions, are
-documented here as upstream capabilities rather than hidden plugin behavior.
+OpenClaw uses xAI's REST image/video/TTS/STT APIs for media generation,
+speech, and transcription, and the Responses API for model, search, and
+code-execution tools. Features that need new OpenClaw contracts, such as
+streaming STT or Realtime voice sessions, are documented here as upstream
+capabilities rather than hidden plugin behavior.
 </Note>
 
 ### Fast-mode mappings
@@ -239,6 +241,50 @@ Legacy aliases still normalize to the canonical bundled ids:
 
   </Accordion>
 
+  <Accordion title="Speech-to-text">
+    The bundled `xai` plugin registers batch speech-to-text through OpenClaw's
+    media-understanding transcription surface.
+
+    - Default model: `grok-stt`
+    - Endpoint: xAI REST `/v1/stt`
+    - Input path: multipart audio file upload
+    - Supported by OpenClaw wherever inbound audio transcription uses
+      `tools.media.audio`, including Discord voice-channel segments and
+      channel audio attachments
+
+    To force xAI for inbound audio transcription:
+
+    ```json5
+    {
+      tools: {
+        media: {
+          audio: {
+            models: [
+              {
+                type: "provider",
+                provider: "xai",
+                model: "grok-stt",
+              },
+            ],
+          },
+        },
+      },
+    }
+    ```
+
+    Language can be supplied through the shared audio media config or per-call
+    transcription request. Prompt hints are accepted by the shared OpenClaw
+    surface, but the xAI REST STT integration only forwards file, model, and
+    language because those map cleanly to the current public xAI endpoint.
+
+    <Note>
+    xAI also offers streaming STT over `wss://api.x.ai/v1/stt`. OpenClaw's
+    bundled xAI plugin does not expose that yet; the current provider is batch
+    STT for file/segment transcription.
+    </Note>
+
+  </Accordion>
+
   <Accordion title="x_search configuration">
     The bundled xAI plugin exposes `x_search` as an OpenClaw tool for searching
     X (formerly Twitter) content via Grok.
@@ -316,9 +362,9 @@ Legacy aliases still normalize to the canonical bundled ids:
     - `grok-4.20-multi-agent-experimental-beta-0304` is not supported on the
       normal xAI provider path because it requires a different upstream API
       surface than the standard OpenClaw xAI transport.
-    - xAI STT and Realtime voice are not registered as OpenClaw providers yet.
-      They require transcription/session contracts rather than the existing
-      batch TTS provider shape.
+    - xAI streaming STT and Realtime voice are not registered as OpenClaw
+      providers yet. Batch xAI STT is registered through media understanding.
+      Streaming STT and Realtime voice need WebSocket/session contract mapping.
     - xAI image `quality`, image `mask`, and extra native-only aspect ratios are
       not exposed until the shared `image_generate` tool has corresponding
       cross-provider controls.
@@ -355,9 +401,10 @@ OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_TEST_QUIET=1 OPENCLAW_LIVE_IMAGE_GENERATION_P
 ```
 
 The provider-specific live file synthesizes normal TTS, telephony-friendly PCM
-TTS, text-to-image generation, and reference-image editing. The shared image
-live file verifies the same xAI provider through OpenClaw's runtime selection,
-fallback, normalization, and media attachment path.
+TTS, transcribes audio through xAI STT, generates text-to-image output, and
+edits a reference image. The shared image live file verifies the same xAI
+provider through OpenClaw's runtime selection, fallback, normalization, and
+media attachment path.
 
 ## Related
 

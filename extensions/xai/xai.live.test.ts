@@ -9,6 +9,7 @@ import {
   requireRegisteredProvider,
 } from "../../test/helpers/plugins/provider-registration.js";
 import plugin from "./index.js";
+import { XAI_DEFAULT_STT_MODEL } from "./stt.js";
 
 const XAI_API_KEY = process.env.XAI_API_KEY ?? "";
 const LIVE_IMAGE_MODEL = process.env.OPENCLAW_LIVE_XAI_IMAGE_MODEL?.trim() || "grok-imagine-image";
@@ -105,6 +106,43 @@ describeLive("xai plugin live", () => {
     expect(telephony?.sampleRate).toBe(24_000);
     expect(telephony?.audioBuffer.byteLength).toBeGreaterThan(512);
   }, 120_000);
+
+  it("transcribes audio through the registered media provider", async () => {
+    const { mediaProviders, speechProviders } = await registerXaiPlugin();
+    const mediaProvider = requireRegisteredProvider(mediaProviders, "xai");
+    const speechProvider = requireRegisteredProvider(speechProviders, "xai");
+    const cfg = createLiveConfig();
+    const phrase = "OpenClaw xAI speech to text integration test OK.";
+
+    const audioFile = await speechProvider.synthesize({
+      text: phrase,
+      cfg,
+      providerConfig: {
+        apiKey: XAI_API_KEY,
+        baseUrl: "https://api.x.ai/v1",
+        voiceId: "eve",
+      },
+      target: "audio-file",
+      timeoutMs: 90_000,
+    });
+
+    const transcript = await mediaProvider.transcribeAudio?.({
+      buffer: audioFile.audioBuffer,
+      fileName: "xai-stt-live.mp3",
+      mime: "audio/mpeg",
+      apiKey: XAI_API_KEY,
+      baseUrl: "https://api.x.ai/v1",
+      model: XAI_DEFAULT_STT_MODEL,
+      timeoutMs: 90_000,
+    });
+
+    const normalized = transcript?.text.toLowerCase() ?? "";
+    expect(transcript?.model).toBe(XAI_DEFAULT_STT_MODEL);
+    expect(normalized).toContain("openclaw");
+    expect(normalized).toContain("speech");
+    expect(normalized).toContain("text");
+    expect(normalized).toContain("integration");
+  }, 180_000);
 
   it("generates and edits images through the registered image provider", async () => {
     const { imageProviders } = await registerXaiPlugin();

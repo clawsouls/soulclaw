@@ -2,6 +2,7 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 import { describe, expect, it } from "vitest";
 import { createTestPluginApi } from "../../test/helpers/plugins/plugin-api.js";
 import { registerSingleProviderPlugin } from "../../test/helpers/plugins/plugin-registration.js";
+import { registerProviderPlugin } from "../../test/helpers/plugins/provider-registration.js";
 import plugin from "./index.js";
 import setupPlugin from "./setup-api.js";
 import {
@@ -49,6 +50,24 @@ function registerXaiAutoEnableProbe(): XaiAutoEnableProbe {
 }
 
 describe("xai provider plugin", () => {
+  it("registers xAI media understanding for batch STT", async () => {
+    const { mediaProviders } = await registerProviderPlugin({
+      plugin,
+      id: "xai",
+      name: "xAI Provider",
+    });
+
+    expect(mediaProviders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "xai",
+          capabilities: ["audio"],
+          defaultModels: { audio: "grok-stt" },
+        }),
+      ]),
+    );
+  });
+
   it("declares setup auto-enable reasons for plugin-owned tool config", () => {
     const probe = registerXaiAutoEnableProbe();
 

@@ -18,6 +18,7 @@ import { buildXaiSpeechProvider } from "./speech-provider.js";
 import { resolveFallbackXaiAuth } from "./src/tool-auth-shared.js";
 import { resolveEffectiveXSearchConfig } from "./src/x-search-config.js";
 import { wrapXaiProviderStream } from "./stream.js";
+import { buildXaiMediaUnderstandingProvider } from "./stt.js";
 import { buildXaiVideoGenerationProvider } from "./video-generation-provider.js";
 import { createXaiWebSearchProvider } from "./web-search.js";
 import {
@@ -204,6 +205,7 @@ export default defineSingleProviderPluginEntry({
   },
   register(api) {
     api.registerWebSearchProvider(createXaiWebSearchProvider());
+    api.registerMediaUnderstandingProvider(buildXaiMediaUnderstandingProvider());
     api.registerVideoGenerationProvider(buildXaiVideoGenerationProvider());
     api.registerImageGenerationProvider(buildXaiImageGenerationProvider());
     api.registerSpeechProvider(buildXaiSpeechProvider());
