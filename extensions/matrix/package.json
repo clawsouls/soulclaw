@@ -42,6 +42,12 @@
       "blurb": "open protocol; install the plugin to enable.",
       "order": 70,
       "quickstartAllowFrom": true,
+      "doctorCapabilities": {
+        "dmAllowFromMode": "nestedOnly",
+        "groupModel": "sender",
+        "groupAllowFromFallbackToAllowFrom": false,
+        "warnOnEmptyGroupSenderAllowlist": true
+      },
       "persistedAuthState": {
         "specifier": "./auth-presence",
         "exportName": "hasAnyMatrixAuth"

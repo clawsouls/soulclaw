@@ -43,7 +43,13 @@
       ],
       "order": 55,
       "systemImage": "message.badge",
-      "markdownCapable": true
+      "markdownCapable": true,
+      "doctorCapabilities": {
+        "dmAllowFromMode": "nestedOnly",
+        "groupModel": "route",
+        "groupAllowFromFallbackToAllowFrom": false,
+        "warnOnEmptyGroupSenderAllowlist": false
+      }
     },
     "install": {
       "npmSpec": "@openclaw/googlechat",
