@@ -1268,13 +1268,22 @@ module.exports = {
     const bundledDir = path.join(packageRoot, "dist-runtime", "extensions");
     const pluginRoot = path.join(bundledDir, "acpx");
     const canonicalPluginRoot = path.join(packageRoot, "dist", "extensions", "acpx");
+    const canonicalEntryImport = path.posix.join(
+      "..",
+      "..",
+      "..",
+      "dist",
+      "extensions",
+      "acpx",
+      "index.js",
+    );
     fs.mkdirSync(pluginRoot, { recursive: true });
     fs.mkdirSync(canonicalPluginRoot, { recursive: true });
     fs.writeFileSync(
       path.join(pluginRoot, "index.js"),
       [
-        `export * from "../../../dist/extensions/acpx/index.js";`,
-        `import defaultModule from "../../../dist/extensions/acpx/index.js";`,
+        `export * from ${JSON.stringify(canonicalEntryImport)};`,
+        `import defaultModule from ${JSON.stringify(canonicalEntryImport)};`,
         `export default defaultModule;`,
         "",
       ].join("\n"),
