@@ -608,11 +608,15 @@ Docker notes:
     thread can resume
   - run `/codex status` and `/codex models` through the same gateway command
     path
+  - optionally run two Guardian-reviewed escalated shell probes: one benign
+    command that should be approved and one fake-secret upload that should be
+    denied so the agent asks back
 - Test: `src/gateway/gateway-codex-harness.live.test.ts`
 - Enable: `OPENCLAW_LIVE_CODEX_HARNESS=1`
 - Default model: `codex/gpt-5.4`
 - Optional image probe: `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=1`
 - Optional MCP/tool probe: `OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=1`
+- Optional Guardian probe: `OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=1`
 - The smoke sets `OPENCLAW_AGENT_HARNESS_FALLBACK=none` so a broken Codex
   harness cannot pass by silently falling back to PI.
 - Auth: `OPENAI_API_KEY` from the shell/profile, plus optional copied
@@ -625,6 +629,7 @@ source ~/.profile
 OPENCLAW_LIVE_CODEX_HARNESS=1 \
   OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=1 \
   OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=1 \
+  OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=1 \
   OPENCLAW_LIVE_CODEX_HARNESS_MODEL=codex/gpt-5.4 \
   pnpm test:live -- src/gateway/gateway-codex-harness.live.test.ts
 ```
@@ -642,9 +647,11 @@ Docker notes:
 - It sources the mounted `~/.profile`, passes `OPENAI_API_KEY`, copies Codex CLI
   auth files when present, installs `@openai/codex` into a writable mounted npm
   prefix, stages the source tree, then runs only the Codex-harness live test.
-- Docker enables the image and MCP/tool probes by default. Set
+- Docker enables the image, MCP/tool, and Guardian probes by default. Set
   `OPENCLAW_LIVE_CODEX_HARNESS_IMAGE_PROBE=0` or
-  `OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=0` when you need a narrower debug run.
+  `OPENCLAW_LIVE_CODEX_HARNESS_MCP_PROBE=0` or
+  `OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=0` when you need a narrower debug
+  run.
 - Docker also exports `OPENCLAW_AGENT_HARNESS_FALLBACK=none`, matching the live
   test config so `openai-codex/*` or PI fallback cannot hide a Codex harness
   regression.

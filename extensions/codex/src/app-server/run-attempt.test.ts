@@ -474,6 +474,7 @@ describe("runCodexAppServerAttempt", () => {
             modelProvider: "openai",
             approvalPolicy: "never",
             sandbox: "danger-full-access",
+            approvalsReviewer: "user",
             developerInstructions: expect.stringContaining(CODEX_GPT5_BEHAVIOR_CONTRACT),
           }),
         },
