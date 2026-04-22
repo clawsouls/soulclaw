@@ -73,7 +73,7 @@ function hasEntryCredential(
     toolConfig: search as Record<string, unknown> | undefined,
     resolveRawValue: ({ provider: currentProvider, config: currentConfig, toolConfig }) =>
       currentProvider.getConfiguredCredentialValue?.(currentConfig) ??
-      (currentProvider.id === "brave" ? currentProvider.getCredentialValue(toolConfig) : undefined),
+      currentProvider.getCredentialValue(toolConfig),
     resolveEnvValue: ({ provider: currentProvider, configuredEnvVarId }) =>
       (configuredEnvVarId ? readWebProviderEnvValue([configuredEnvVarId]) : undefined) ??
       readWebProviderEnvValue(currentProvider.envVars),

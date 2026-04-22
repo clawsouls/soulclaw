@@ -155,6 +155,39 @@ describe("web search runtime", () => {
     });
   });
 
+  it("auto-detects a provider through its legacy search config reader", async () => {
+    const provider = createCustomSearchProvider({
+      getConfiguredCredentialValue: () => undefined,
+      getCredentialValue: (searchConfig) =>
+        (searchConfig?.customLegacy &&
+        typeof searchConfig.customLegacy === "object" &&
+        !Array.isArray(searchConfig.customLegacy)
+          ? (searchConfig.customLegacy as Record<string, unknown>)
+          : undefined
+        )?.apiKey,
+    });
+    resolveRuntimeWebSearchProvidersMock.mockReturnValue([provider]);
+    resolvePluginWebSearchProvidersMock.mockReturnValue([provider]);
+
+    await expect(
+      runWebSearch({
+        config: {
+          tools: {
+            web: {
+              search: {
+                customLegacy: { apiKey: "legacy-key" },
+              } as never,
+            },
+          },
+        },
+        args: { query: "hello" },
+      }),
+    ).resolves.toEqual({
+      provider: "custom",
+      result: { query: "hello", ok: true },
+    });
+  });
+
   it("treats non-env SecretRefs as configured credentials for provider auto-detect", async () => {
     const provider = createCustomSearchProvider();
     resolveRuntimeWebSearchProvidersMock.mockReturnValue([provider]);

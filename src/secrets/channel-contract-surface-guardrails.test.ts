@@ -71,6 +71,10 @@ const CORE_SECRET_SURFACE_GUARDS = [
     forbiddenPatterns: [/\bbrave\b/],
   },
   {
+    path: "src/web-search/runtime.ts",
+    forbiddenPatterns: [/\bbrave\b/],
+  },
+  {
     path: "src/media-understanding/defaults.ts",
     forbiddenPatterns: [
       /\b(?:openai|anthropic|google|groq|deepgram|mistral|minimax|zai|qwen|moonshot|openrouter)\b/,
