@@ -132,7 +132,7 @@ describe("thread-ownership plugin", () => {
         {
           content: "hello",
           replyToId: "1234.5678",
-          to: "channel:C123",
+          to: "channel:c123",
         },
         { channelId: "slack", conversationId: "" },
       );
@@ -148,7 +148,7 @@ describe("thread-ownership plugin", () => {
     });
 
     it("canonicalizes configured ab-test channel allowlists before matching", async () => {
-      api.pluginConfig = { abTestChannels: ["channel:C123"] };
+      api.pluginConfig = { abTestChannels: ["channel:c123"] };
       register.register(api as unknown as OpenClawPluginApi);
       vi.mocked(globalThis.fetch).mockResolvedValue(
         new Response(JSON.stringify({ owner: "test-agent" }), { status: 200 }),
@@ -158,7 +158,7 @@ describe("thread-ownership plugin", () => {
         {
           content: "hello",
           replyToId: "1234.5678",
-          to: "channel:C123",
+          to: "channel:c123",
         },
         { channelId: "slack", conversationId: "" },
       );
@@ -227,7 +227,7 @@ describe("thread-ownership plugin", () => {
         {
           content: "Hey @TestBot help me",
           threadId: "9999.0002",
-          metadata: { channelId: "channel:C456" },
+          metadata: { channelId: "channel:c456" },
         },
         { channelId: "slack", conversationId: "C456" },
       );
@@ -250,7 +250,7 @@ describe("thread-ownership plugin", () => {
         {
           content: "Hey @TestBot help me",
           threadId: "9999.0003",
-          metadata: { channelId: "channel:C456" },
+          metadata: { channelId: "channel:c456" },
         },
         { channelId: "slack", conversationId: "" },
       );
@@ -259,7 +259,7 @@ describe("thread-ownership plugin", () => {
         {
           content: "Sure!",
           replyToId: "9999.0003",
-          to: "C456",
+          to: "c456",
         },
         { channelId: "slack", conversationId: "C456" },
       );

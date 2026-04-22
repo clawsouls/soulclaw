@@ -31,7 +31,8 @@ function resolveSlackConversationId(value: unknown): string {
   }
   const trimmed = raw.trim();
   const match = /^(?:slack:)?channel:(.+)$/i.exec(trimmed);
-  return match?.[1]?.trim() || trimmed;
+  const resolved = match?.[1]?.trim() || trimmed;
+  return /^[CDGUW][A-Z0-9]+$/i.test(resolved) ? resolved.toUpperCase() : resolved;
 }
 
 function cleanExpiredMentions(): void {
