@@ -887,7 +887,7 @@ jobs:
     name: checks-node-extensions
     needs: [preflight, checks-node-extensions-shard]
     if: ${{ !cancelled() && always() && needs.preflight.outputs.run_checks_fast == 'true' }}
-    runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-8vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Verify extension shards
@@ -1371,7 +1371,7 @@ jobs:
     name: checks-node-core
     needs: [preflight, checks-node-core-test-nondist-shard, checks-node-core-test-dist-shard]
     if: ${{ !cancelled() && always() && needs.preflight.outputs.run_checks == 'true' }}
-    runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-8vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Verify node test shards
