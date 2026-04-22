@@ -51,6 +51,21 @@ function createProposal(
 }
 
 describe("skill-workshop", () => {
+  it("does not register hooks or tools when disabled", () => {
+    const on = vi.fn();
+    const registerTool = vi.fn();
+    const api = createTestPluginApi({
+      pluginConfig: { enabled: false },
+      on,
+      registerTool,
+    });
+
+    plugin.register(api);
+
+    expect(registerTool).not.toHaveBeenCalled();
+    expect(on).not.toHaveBeenCalled();
+  });
+
   it("detects user corrections and creates an animated GIF proposal", async () => {
     const workspaceDir = await makeTempDir();
     const proposal = createProposalFromMessages({
@@ -196,6 +211,19 @@ describe("skill-workshop", () => {
     await expect(hook?.({}, {})).resolves.toEqual({
       prependSystemContext: expect.stringContaining("<skill_workshop>"),
     });
+  });
+
+  it("skips agent_end hook wiring when auto-capture is disabled", () => {
+    const on = vi.fn();
+    const api = createTestPluginApi({
+      pluginConfig: { autoCapture: false },
+      on,
+    });
+
+    plugin.register(api);
+
+    expect(on).toHaveBeenCalledWith("before_prompt_build", expect.any(Function));
+    expect(on).not.toHaveBeenCalledWith("agent_end", expect.any(Function));
   });
 
   it("lets explicit tool suggestions stay pending in auto mode", async () => {
