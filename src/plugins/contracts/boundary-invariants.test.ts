@@ -7,6 +7,18 @@ const SRC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const REPO_ROOT = resolve(SRC_ROOT, "..");
 const sourceCache = new Map<string, string>();
 const tsFilesCache = new Map<string, string[]>();
+const BUNDLED_TYPED_HOOK_REGISTRATION_FILES = [
+  "extensions/acpx/index.ts",
+  "extensions/active-memory/index.ts",
+  "extensions/diffs/src/plugin.ts",
+  "extensions/discord/subagent-hooks-api.ts",
+  "extensions/feishu/subagent-hooks-api.ts",
+  "extensions/matrix/subagent-hooks-api.ts",
+  "extensions/memory-core/src/dreaming.ts",
+  "extensions/memory-lancedb/index.ts",
+  "extensions/skill-workshop/index.ts",
+  "extensions/thread-ownership/index.ts",
+] as const;
 
 type FileFilter = {
   excludeTests?: boolean;
@@ -142,6 +154,18 @@ describe("plugin contract boundary invariants", () => {
   it("keeps bundled plugin production code off legacy before_agent_start hooks", () => {
     const files = listTsFiles("extensions", { excludeTests: true });
     const offenders = files.filter((file) => readRepoSource(file).includes("before_agent_start"));
+    expect(offenders).toEqual([]);
+  });
+
+  it("keeps bundled plugin typed hook registrations on an explicit allowlist", () => {
+    const files = listTsFiles("extensions", { excludeTests: true });
+    const hookRegistrationFiles = files.filter((file) => /\bapi\.on\(/u.test(readRepoSource(file)));
+    expect(hookRegistrationFiles).toEqual(BUNDLED_TYPED_HOOK_REGISTRATION_FILES);
+  });
+
+  it("keeps bundled plugin production code off raw registerHook calls", () => {
+    const files = listTsFiles("extensions", { excludeTests: true });
+    const offenders = files.filter((file) => /\bregisterHook\(/u.test(readRepoSource(file)));
     expect(offenders).toEqual([]);
   });
 });
