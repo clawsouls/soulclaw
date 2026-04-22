@@ -70,7 +70,8 @@ const BUNDLED_LIVE_CONFIG_HOOK_GUARDS = {
   ],
   "extensions/thread-ownership/index.ts": [
     'resolvePluginConfigObject(currentConfig, "thread-ownership")',
-    "api.runtime.config?.loadConfig?.() ?? api.config",
+    'typeof api.runtime.config?.loadConfig === "function"',
+    "api.runtime.config.loadConfig() ?? api.config",
   ],
 } as const satisfies Record<string, readonly string[]>;
 
