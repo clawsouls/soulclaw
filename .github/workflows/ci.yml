@@ -528,14 +528,6 @@ jobs:
           path: dist/
           key: ${{ runner.os }}-dist-build-${{ github.sha }}
 
-      - name: Upload dist artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: dist-build
-          path: dist/
-          compression-level: 0
-          retention-days: 1
-
       - name: Upload A2UI bundle artifact
         uses: actions/upload-artifact@v7
         with:
@@ -972,12 +964,19 @@ jobs:
             echo "OPENCLAW_VITEST_MAX_WORKERS=1" >> "$GITHUB_ENV"
           fi
 
-      - name: Download dist artifact
+      - name: Restore dist cache
         if: matrix.task == 'test'
-        uses: actions/download-artifact@v8
+        id: checks-dist-cache
+        uses: actions/cache@v5
         with:
-          name: dist-build
           path: dist/
+          key: ${{ runner.os }}-dist-build-${{ github.sha }}
+
+      - name: Verify dist cache
+        if: matrix.task == 'test' && steps.checks-dist-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "Missing same-run dist cache for ${RUNNER_OS}-dist-build-${GITHUB_SHA}" >&2
+          exit 1
 
       - name: Download A2UI bundle artifact
         if: matrix.task == 'test' || matrix.task == 'channels'
@@ -1284,12 +1283,11 @@ jobs:
           path: dist/
           key: ${{ runner.os }}-dist-build-${{ github.sha }}
 
-      - name: Download dist artifact
+      - name: Verify dist cache
         if: steps.dist-cache.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v8
-        with:
-          name: dist-build
-          path: dist/
+        run: |
+          echo "Missing same-run dist cache for ${RUNNER_OS}-dist-build-${GITHUB_SHA}" >&2
+          exit 1
 
       - name: Download A2UI bundle artifact
         uses: actions/download-artifact@v8
@@ -1856,12 +1854,11 @@ jobs:
           path: dist/
           key: ${{ runner.os }}-dist-build-${{ github.sha }}
 
-      - name: Download dist artifact
+      - name: Verify dist cache
         if: github.event_name == 'push' && steps.build-smoke-dist-cache.outputs.cache-hit != 'true'
-        uses: actions/download-artifact@v8
-        with:
-          name: dist-build
-          path: dist/
+        run: |
+          echo "Missing same-run dist cache for ${RUNNER_OS}-dist-build-${GITHUB_SHA}" >&2
+          exit 1
 
       - name: Build dist
         if: github.event_name != 'push'
@@ -2084,8 +2081,8 @@ jobs:
     permissions:
       contents: read
     name: ${{ matrix.check_name }}
-    needs: [preflight, build-artifacts]
-    if: ${{ !cancelled() && always() && needs.preflight.outputs.run_macos_node == 'true' && needs.build-artifacts.result == 'success' }}
+    needs: [preflight]
+    if: ${{ !cancelled() && always() && needs.preflight.outputs.run_macos_node == 'true' }}
     runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-6vcpu-macos-latest' || 'macos-latest' }}
     timeout-minutes: 20
     strategy:
@@ -2102,18 +2099,6 @@ jobs:
         uses: ./.github/actions/setup-node-env
         with:
           install-bun: "false"
-
-      - name: Download dist artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: dist-build
-          path: dist/
-
-      - name: Download A2UI bundle artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: canvas-a2ui-bundle
-          path: src/canvas-host/a2ui/
 
       - name: TS tests (macOS)
         env:
