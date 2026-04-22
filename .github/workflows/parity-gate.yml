@@ -47,6 +47,10 @@ jobs:
       OPENCLAW_LIVE_ANTHROPIC_KEY: ""
       OPENCLAW_LIVE_GEMINI_KEY: ""
       OPENCLAW_LIVE_SETUP_TOKEN_VALUE: ""
+      # The parity suite is a private QA command. Build that exact runtime up
+      # front so CI never tests a public dist plus a later no-clean QA overlay.
+      OPENCLAW_BUILD_PRIVATE_QA: "1"
+      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
     steps:
       - name: Checkout PR
         uses: actions/checkout@v6
@@ -63,7 +67,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build runtime
+      - name: Build private QA runtime
         run: pnpm build
 
       - name: Run GPT-5.4 lane
