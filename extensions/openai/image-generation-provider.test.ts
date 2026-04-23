@@ -9,7 +9,9 @@ const {
   assertOkOrThrowHttpErrorMock,
   resolveProviderHttpRequestConfigMock,
 } = vi.hoisted(() => ({
-  isProviderApiKeyConfiguredMock: vi.fn(() => false),
+  isProviderApiKeyConfiguredMock: vi.fn<
+    (params: { provider: string; agentDir?: string }) => boolean
+  >(() => false),
   resolveApiKeyForProviderMock: vi.fn(
     async (_params?: {
       provider?: string;
