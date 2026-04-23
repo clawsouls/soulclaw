@@ -8,28 +8,29 @@ title: "CLI Reference"
 
 # CLI reference
 
-`openclaw` is the main CLI entry point. Each subcommand has its own dedicated
-reference page; this index lists the commands, the global flags, and the
-output styling rules that apply across the CLI.
+`openclaw` is the main CLI entry point. Each core command has either a
+dedicated reference page or is documented with the command it aliases; this
+index lists the commands, the global flags, and the output styling rules that
+apply across the CLI.
 
 ## Command pages
 
-| Area                 | Commands                                                                                                                                                                                                |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Setup and onboarding | [`setup`](/cli/setup) · [`onboard`](/cli/onboard) · [`configure`](/cli/configure) · [`config`](/cli/config) · [`completion`](/cli/completion) · [`doctor`](/cli/doctor) · [`dashboard`](/cli/dashboard) |
-| Reset and uninstall  | [`backup`](/cli/backup) · [`reset`](/cli/reset) · [`uninstall`](/cli/uninstall) · [`update`](/cli/update)                                                                                               |
-| Messaging and agents | [`message`](/cli/message) · [`agent`](/cli/agent) · [`agents`](/cli/agents) · [`acp`](/cli/acp) · [`mcp`](/cli/mcp)                                                                                     |
-| Health and sessions  | [`status`](/cli/status) · [`health`](/cli/health) · [`sessions`](/cli/sessions)                                                                                                                         |
-| Gateway and logs     | [`gateway`](/cli/gateway) · [`logs`](/cli/logs) · [`system`](/cli/system)                                                                                                                               |
-| Models and inference | [`models`](/cli/models) · [`infer`](/cli/infer) · [`memory`](/cli/memory) · [`wiki`](/cli/wiki)                                                                                                         |
-| Network and nodes    | [`directory`](/cli/directory) · [`nodes`](/cli/nodes) · [`devices`](/cli/devices) · [`node`](/cli/node)                                                                                                 |
-| Runtime and sandbox  | [`approvals`](/cli/approvals) · [`sandbox`](/cli/sandbox) · [`tui`](/cli/tui) · [`browser`](/cli/browser)                                                                                               |
-| Automation           | [`cron`](/cli/cron) · [`tasks`](/cli/tasks) · [`flows`](/cli/flows) · [`hooks`](/cli/hooks) · [`webhooks`](/cli/webhooks)                                                                               |
-| Discovery and docs   | [`dns`](/cli/dns) · [`docs`](/cli/docs)                                                                                                                                                                 |
-| Pairing and channels | [`pairing`](/cli/pairing) · [`qr`](/cli/qr) · [`channels`](/cli/channels)                                                                                                                               |
-| Security and plugins | [`security`](/cli/security) · [`secrets`](/cli/secrets) · [`skills`](/cli/skills) · [`plugins`](/cli/plugins)                                                                                           |
-| Legacy aliases       | [`daemon`](/cli/daemon) (gateway service) · [`clawbot`](/cli/clawbot) (namespace)                                                                                                                       |
-| Plugins (optional)   | [`voicecall`](/cli/voicecall) (if installed)                                                                                                                                                            |
+| Area                 | Commands                                                                                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Setup and onboarding | [`setup`](/cli/setup) · [`onboard`](/cli/onboard) · [`configure`](/cli/configure) · [`config`](/cli/config) · [`completion`](/cli/completion) · [`doctor`](/cli/doctor) · [`dashboard`](/cli/dashboard)                   |
+| Reset and uninstall  | [`backup`](/cli/backup) · [`reset`](/cli/reset) · [`uninstall`](/cli/uninstall) · [`update`](/cli/update)                                                                                                                 |
+| Messaging and agents | [`message`](/cli/message) · [`agent`](/cli/agent) · [`agents`](/cli/agents) · [`acp`](/cli/acp) · [`mcp`](/cli/mcp)                                                                                                       |
+| Health and sessions  | [`status`](/cli/status) · [`health`](/cli/health) · [`sessions`](/cli/sessions)                                                                                                                                           |
+| Gateway and logs     | [`gateway`](/cli/gateway) · [`logs`](/cli/logs) · [`system`](/cli/system)                                                                                                                                                 |
+| Models and inference | [`models`](/cli/models) · [`infer`](/cli/infer) · `capability` (alias for [`infer`](/cli/infer)) · [`memory`](/cli/memory) · [`wiki`](/cli/wiki)                                                                          |
+| Network and nodes    | [`directory`](/cli/directory) · [`nodes`](/cli/nodes) · [`devices`](/cli/devices) · [`node`](/cli/node)                                                                                                                   |
+| Runtime and sandbox  | [`approvals`](/cli/approvals) · `exec-policy` (see [`approvals`](/cli/approvals)) · [`sandbox`](/cli/sandbox) · [`tui`](/cli/tui) · `chat`/`terminal` (aliases for [`tui --local`](/cli/tui)) · [`browser`](/cli/browser) |
+| Automation           | [`cron`](/cli/cron) · [`tasks`](/cli/tasks) · [`hooks`](/cli/hooks) · [`webhooks`](/cli/webhooks)                                                                                                                         |
+| Discovery and docs   | [`dns`](/cli/dns) · [`docs`](/cli/docs)                                                                                                                                                                                   |
+| Pairing and channels | [`pairing`](/cli/pairing) · [`qr`](/cli/qr) · [`channels`](/cli/channels)                                                                                                                                                 |
+| Security and plugins | [`security`](/cli/security) · [`secrets`](/cli/secrets) · [`skills`](/cli/skills) · [`plugins`](/cli/plugins) · [`proxy`](/cli/proxy)                                                                                     |
+| Legacy aliases       | [`daemon`](/cli/daemon) (gateway service) · [`clawbot`](/cli/clawbot) (namespace)                                                                                                                                         |
+| Plugins (optional)   | [`voicecall`](/cli/voicecall) (if installed)                                                                                                                                                                              |
 
 ## Global flags
 
@@ -282,6 +283,10 @@ openclaw [--dev] [--profile <name>] <command>
     get
     set
     allowlist add|remove
+  exec-policy
+    show
+    preset
+    set
   browser
     status
     start
@@ -321,6 +326,14 @@ openclaw [--dev] [--profile <name>] <command>
     update
   webhooks
     gmail setup|run
+  proxy
+    start
+    run
+    coverage
+    sessions
+    query
+    blob
+    purge
   pairing
     list
     approve
@@ -331,6 +344,8 @@ openclaw [--dev] [--profile <name>] <command>
   dns
     setup
   tui
+  chat (alias: tui --local)
+  terminal (alias: tui --local)
 ```
 
 Plugins can add additional top-level commands (for example `openclaw voicecall`).
