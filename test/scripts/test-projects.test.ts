@@ -97,6 +97,19 @@ describe("scripts/test-projects changed-target routing", () => {
     ]);
   });
 
+  it("routes misc extensions to the misc extension shard", () => {
+    const plans = buildVitestRunPlans(["extensions/thread-ownership"], process.cwd());
+
+    expect(plans).toEqual([
+      {
+        config: "test/vitest/vitest.extension-misc.config.ts",
+        forwardedArgs: [],
+        includePatterns: ["extensions/thread-ownership/**/*.test.ts"],
+        watchMode: false,
+      },
+    ]);
+  });
+
   it("keeps the broad changed run for shared test helpers", () => {
     expect(
       resolveChangedTargetArgs(["--changed", "origin/main"], process.cwd(), () => [
