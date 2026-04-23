@@ -78,10 +78,12 @@ These commands sit beside the main test suites when you need QA-lab realism:
   - Starts the Docker-backed QA site for operator-style QA work.
 - `pnpm test:docker:bundled-channel-deps`
   - Packs and installs the current OpenClaw build in Docker, starts the Gateway
-    with OpenAI configured, then enables Telegram and Discord via config edits.
-  - Verifies the first Gateway restart installs each bundled channel plugin's
-    runtime dependencies on demand, and a second restart does not reinstall
-    dependencies that were already activated.
+    with OpenAI configured, then enables bundled channel/plugins via config
+    edits.
+  - Verifies setup discovery leaves unconfigured plugin runtime dependencies
+    absent, the first configured Gateway or doctor run installs each bundled
+    plugin's runtime dependencies on demand, and a second restart does not
+    reinstall dependencies that were already activated.
   - Also installs a known older npm baseline, enables Telegram before running
     `openclaw update --tag <candidate>`, and verifies the candidate's
     post-update doctor repairs bundled channel runtime dependencies without a
