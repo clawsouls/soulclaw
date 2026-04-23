@@ -162,6 +162,20 @@ What to expect:
   answers.
 - If that is intentional, isolate ports, config/state, and workspace roots per gateway.
 
+Checklist per instance:
+
+- Unique `gateway.port`
+- Unique `OPENCLAW_CONFIG_PATH`
+- Unique `OPENCLAW_STATE_DIR`
+- Unique `agents.defaults.workspace`
+
+Example:
+
+```bash
+OPENCLAW_CONFIG_PATH=~/.openclaw/a.json OPENCLAW_STATE_DIR=~/.openclaw-a openclaw gateway --port 19001
+OPENCLAW_CONFIG_PATH=~/.openclaw/b.json OPENCLAW_STATE_DIR=~/.openclaw-b openclaw gateway --port 19002
+```
+
 Detailed setup: [/gateway/multiple-gateways](/gateway/multiple-gateways).
 
 ## Remote access
@@ -270,28 +284,7 @@ Use the same service body as the user unit, but install it under
   </Tab>
 </Tabs>
 
-## Multiple gateways on one host
-
-Most setups should run **one** Gateway.
-Use multiple only for strict isolation/redundancy (for example a rescue profile).
-
-Checklist per instance:
-
-- Unique `gateway.port`
-- Unique `OPENCLAW_CONFIG_PATH`
-- Unique `OPENCLAW_STATE_DIR`
-- Unique `agents.defaults.workspace`
-
-Example:
-
-```bash
-OPENCLAW_CONFIG_PATH=~/.openclaw/a.json OPENCLAW_STATE_DIR=~/.openclaw-a openclaw gateway --port 19001
-OPENCLAW_CONFIG_PATH=~/.openclaw/b.json OPENCLAW_STATE_DIR=~/.openclaw-b openclaw gateway --port 19002
-```
-
-See: [Multiple gateways](/gateway/multiple-gateways).
-
-### Dev profile quick path
+## Dev profile quick path
 
 ```bash
 openclaw --dev setup
