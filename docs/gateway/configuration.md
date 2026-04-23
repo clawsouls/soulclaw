@@ -586,8 +586,8 @@ openclaw gateway call config.patch --params '{
 ```
 
 Both `config.apply` and `config.patch` accept `raw`, `baseHash`, `sessionKey`,
-`note`, and `restartDelayMs`. `baseHash` is required for `config.patch` and
-recommended for `config.apply` when a config already exists.
+`note`, and `restartDelayMs`. `baseHash` is required for both methods when a
+config already exists.
 
 ## Environment variables
 

@@ -1061,7 +1061,8 @@ barrel when authoring new plugins. Core subpaths:
 | Subpath                             | Purpose                                            |
 | ----------------------------------- | -------------------------------------------------- |
 | `openclaw/plugin-sdk/plugin-entry`  | Plugin registration primitives                     |
-| `openclaw/plugin-sdk/core`          | Generic shared plugin-facing contract              |
+| `openclaw/plugin-sdk/channel-core`  | Channel entry/build helpers                        |
+| `openclaw/plugin-sdk/core`          | Generic shared helpers and umbrella contract       |
 | `openclaw/plugin-sdk/config-schema` | Root `openclaw.json` Zod schema (`OpenClawSchema`) |
 
 Channel plugins pick from a family of narrow seams — `channel-setup`,
