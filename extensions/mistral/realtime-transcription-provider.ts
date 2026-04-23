@@ -1,18 +1,13 @@
-import { randomUUID } from "node:crypto";
 import {
-  captureWsEvent,
-  createDebugProxyWebSocketAgent,
-  resolveDebugProxySettings,
-} from "openclaw/plugin-sdk/proxy-capture";
-import type {
-  RealtimeTranscriptionProviderConfig,
-  RealtimeTranscriptionProviderPlugin,
-  RealtimeTranscriptionSession,
-  RealtimeTranscriptionSessionCreateRequest,
+  createRealtimeTranscriptionWebSocketSession,
+  type RealtimeTranscriptionProviderConfig,
+  type RealtimeTranscriptionProviderPlugin,
+  type RealtimeTranscriptionSession,
+  type RealtimeTranscriptionSessionCreateRequest,
+  type RealtimeTranscriptionWebSocketTransport,
 } from "openclaw/plugin-sdk/realtime-transcription";
 import { normalizeResolvedSecretInputString } from "openclaw/plugin-sdk/secret-input";
 import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
-import WebSocket from "ws";
 
 type MistralRealtimeTranscriptionEncoding =
   | "pcm_s16le"
@@ -155,16 +150,6 @@ function normalizeProviderConfig(
   };
 }
 
-function rawWsDataToBuffer(data: WebSocket.RawData): Buffer {
-  if (Buffer.isBuffer(data)) {
-    return data;
-  }
-  if (Array.isArray(data)) {
-    return Buffer.concat(data);
-  }
-  return Buffer.from(data);
-}
-
 function readErrorDetail(event: MistralRealtimeTranscriptionEvent): string {
   const message = event.error?.message;
   if (typeof message === "string") {
@@ -179,283 +164,84 @@ function readErrorDetail(event: MistralRealtimeTranscriptionEvent): string {
   return "Mistral realtime transcription error";
 }
 
-class MistralRealtimeTranscriptionSession implements RealtimeTranscriptionSession {
-  private ws: WebSocket | null = null;
-  private connected = false;
-  private ready = false;
-  private closed = false;
-  private reconnectAttempts = 0;
-  private queuedAudio: Buffer[] = [];
-  private queuedBytes = 0;
-  private closeTimer: ReturnType<typeof setTimeout> | undefined;
-  private partialText = "";
-  private reconnecting = false;
-  private readonly flowId = randomUUID();
+function createMistralRealtimeTranscriptionSession(
+  config: MistralRealtimeTranscriptionSessionConfig,
+): RealtimeTranscriptionSession {
+  let partialText = "";
 
-  constructor(private readonly config: MistralRealtimeTranscriptionSessionConfig) {}
-
-  async connect(): Promise<void> {
-    this.closed = false;
-    this.reconnectAttempts = 0;
-    await this.doConnect();
-  }
-
-  sendAudio(audio: Buffer): void {
-    if (this.closed || audio.byteLength === 0) {
-      return;
-    }
-    if (this.ws?.readyState === WebSocket.OPEN && this.ready) {
-      this.sendJson({
-        type: "input_audio.append",
-        audio: audio.toString("base64"),
-      });
-      return;
-    }
-    this.queueAudio(audio);
-  }
-
-  close(): void {
-    this.closed = true;
-    this.connected = false;
-    this.queuedAudio = [];
-    this.queuedBytes = 0;
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.forceClose();
-      return;
-    }
-    this.sendJson({ type: "input_audio.flush" });
-    this.sendJson({ type: "input_audio.end" });
-    this.closeTimer = setTimeout(() => this.forceClose(), MISTRAL_REALTIME_CLOSE_TIMEOUT_MS);
-  }
-
-  isConnected(): boolean {
-    return this.connected;
-  }
-
-  private async doConnect(): Promise<void> {
-    await new Promise<void>((resolve, reject) => {
-      const url = toMistralRealtimeWsUrl(this.config);
-      const debugProxy = resolveDebugProxySettings();
-      const proxyAgent = createDebugProxyWebSocketAgent(debugProxy);
-      let settled = false;
-      let opened = false;
-      const finishConnect = () => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        clearTimeout(connectTimeout);
-        this.ready = true;
-        this.flushQueuedAudio();
-        resolve();
-      };
-      const failConnect = (error: Error) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        clearTimeout(connectTimeout);
-        this.config.onError?.(error);
-        this.closed = true;
-        this.forceClose();
-        reject(error);
-      };
-      this.ready = false;
-      this.ws = new WebSocket(url, {
-        headers: {
-          Authorization: `Bearer ${this.config.apiKey}`,
+  const handleEvent = (
+    event: MistralRealtimeTranscriptionEvent,
+    transport: RealtimeTranscriptionWebSocketTransport,
+  ) => {
+    if (event.type === "session.created") {
+      transport.sendJson({
+        type: "session.update",
+        session: {
+          audio_format: {
+            encoding: config.encoding,
+            sample_rate: config.sampleRate,
+          },
         },
-        ...(proxyAgent ? { agent: proxyAgent } : {}),
       });
-
-      const connectTimeout = setTimeout(() => {
-        failConnect(new Error("Mistral realtime transcription connection timeout"));
-      }, MISTRAL_REALTIME_CONNECT_TIMEOUT_MS);
-
-      this.ws.on("open", () => {
-        opened = true;
-        this.connected = true;
-        this.reconnectAttempts = 0;
-        captureWsEvent({
-          url,
-          direction: "local",
-          kind: "ws-open",
-          flowId: this.flowId,
-          meta: { provider: "mistral", capability: "realtime-transcription" },
-        });
-      });
-
-      this.ws.on("message", (data) => {
-        const payload = rawWsDataToBuffer(data);
-        captureWsEvent({
-          url,
-          direction: "inbound",
-          kind: "ws-frame",
-          flowId: this.flowId,
-          payload,
-          meta: { provider: "mistral", capability: "realtime-transcription" },
-        });
-        try {
-          const event = JSON.parse(payload.toString()) as MistralRealtimeTranscriptionEvent;
-          if (event.type === "session.created") {
-            this.sendJson({
-              type: "session.update",
-              session: {
-                audio_format: {
-                  encoding: this.config.encoding,
-                  sample_rate: this.config.sampleRate,
-                },
-              },
-            });
-            finishConnect();
-            return;
-          }
-          if (!this.ready && event.type === "error") {
-            failConnect(new Error(readErrorDetail(event)));
-            return;
-          }
-          this.handleEvent(event);
-        } catch (error) {
-          this.config.onError?.(error instanceof Error ? error : new Error(String(error)));
-        }
-      });
-
-      this.ws.on("error", (error) => {
-        captureWsEvent({
-          url,
-          direction: "local",
-          kind: "error",
-          flowId: this.flowId,
-          errorText: error instanceof Error ? error.message : String(error),
-          meta: { provider: "mistral", capability: "realtime-transcription" },
-        });
-        if (!opened) {
-          failConnect(error instanceof Error ? error : new Error(String(error)));
-          return;
-        }
-        this.config.onError?.(error instanceof Error ? error : new Error(String(error)));
-      });
-
-      this.ws.on("close", () => {
-        clearTimeout(connectTimeout);
-        this.connected = false;
-        this.ready = false;
-        if (this.closeTimer) {
-          clearTimeout(this.closeTimer);
-          this.closeTimer = undefined;
-        }
-        if (this.closed || !opened || !settled) {
-          return;
-        }
-        void this.attemptReconnect();
-      });
-    });
-  }
-
-  private async attemptReconnect(): Promise<void> {
-    if (this.closed || this.reconnecting) {
+      transport.markReady();
       return;
     }
-    if (this.reconnectAttempts >= MISTRAL_REALTIME_MAX_RECONNECT_ATTEMPTS) {
-      this.config.onError?.(new Error("Mistral realtime transcription reconnect limit reached"));
+    if (!transport.isReady() && event.type === "error") {
+      transport.failConnect(new Error(readErrorDetail(event)));
       return;
     }
-    this.reconnectAttempts += 1;
-    const delay = MISTRAL_REALTIME_RECONNECT_DELAY_MS * 2 ** (this.reconnectAttempts - 1);
-    this.reconnecting = true;
-    try {
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      if (!this.closed) {
-        await this.doConnect();
-      }
-    } catch {
-      if (!this.closed) {
-        this.reconnecting = false;
-        await this.attemptReconnect();
-        return;
-      }
-    } finally {
-      this.reconnecting = false;
-    }
-  }
-
-  private handleEvent(event: MistralRealtimeTranscriptionEvent): void {
     switch (event.type) {
       case "transcription.text.delta":
         if (event.text) {
-          this.partialText += event.text;
-          this.config.onPartial?.(this.partialText);
+          partialText += event.text;
+          config.onPartial?.(partialText);
         }
         return;
       case "transcription.segment":
         if (event.text) {
-          this.config.onTranscript?.(event.text);
-          this.partialText = "";
+          config.onTranscript?.(event.text);
+          partialText = "";
         }
         return;
       case "transcription.done":
-        if (this.partialText.trim()) {
-          this.config.onTranscript?.(this.partialText);
-          this.partialText = "";
+        if (partialText.trim()) {
+          config.onTranscript?.(partialText);
+          partialText = "";
         }
-        this.forceClose();
+        transport.closeNow();
         return;
       case "error":
-        this.config.onError?.(new Error(readErrorDetail(event)));
+        config.onError?.(new Error(readErrorDetail(event)));
         return;
       default:
         return;
     }
-  }
+  };
 
-  private queueAudio(audio: Buffer): void {
-    this.queuedAudio.push(Buffer.from(audio));
-    this.queuedBytes += audio.byteLength;
-    while (this.queuedBytes > MISTRAL_REALTIME_MAX_QUEUED_BYTES && this.queuedAudio.length > 0) {
-      const dropped = this.queuedAudio.shift();
-      this.queuedBytes -= dropped?.byteLength ?? 0;
-    }
-  }
-
-  private flushQueuedAudio(): void {
-    for (const audio of this.queuedAudio) {
-      this.sendJson({
+  return createRealtimeTranscriptionWebSocketSession<MistralRealtimeTranscriptionEvent>({
+    providerId: "mistral",
+    callbacks: config,
+    url: () => toMistralRealtimeWsUrl(config),
+    headers: { Authorization: `Bearer ${config.apiKey}` },
+    connectTimeoutMs: MISTRAL_REALTIME_CONNECT_TIMEOUT_MS,
+    closeTimeoutMs: MISTRAL_REALTIME_CLOSE_TIMEOUT_MS,
+    maxReconnectAttempts: MISTRAL_REALTIME_MAX_RECONNECT_ATTEMPTS,
+    reconnectDelayMs: MISTRAL_REALTIME_RECONNECT_DELAY_MS,
+    maxQueuedBytes: MISTRAL_REALTIME_MAX_QUEUED_BYTES,
+    connectTimeoutMessage: "Mistral realtime transcription connection timeout",
+    reconnectLimitMessage: "Mistral realtime transcription reconnect limit reached",
+    sendAudio: (audio, transport) => {
+      transport.sendJson({
         type: "input_audio.append",
         audio: audio.toString("base64"),
       });
-    }
-    this.queuedAudio = [];
-    this.queuedBytes = 0;
-  }
-
-  private sendJson(event: unknown): void {
-    if (this.ws?.readyState !== WebSocket.OPEN) {
-      return;
-    }
-    const payload = JSON.stringify(event);
-    captureWsEvent({
-      url: toMistralRealtimeWsUrl(this.config),
-      direction: "outbound",
-      kind: "ws-frame",
-      flowId: this.flowId,
-      payload,
-      meta: { provider: "mistral", capability: "realtime-transcription" },
-    });
-    this.ws.send(payload);
-  }
-
-  private forceClose(): void {
-    if (this.closeTimer) {
-      clearTimeout(this.closeTimer);
-      this.closeTimer = undefined;
-    }
-    this.connected = false;
-    this.ready = false;
-    if (this.ws) {
-      this.ws.close(1000, "Transcription session closed");
-      this.ws = null;
-    }
-  }
+    },
+    onClose: (transport) => {
+      transport.sendJson({ type: "input_audio.flush" });
+      transport.sendJson({ type: "input_audio.end" });
+    },
+    onMessage: handleEvent,
+  });
 }
 
 export function buildMistralRealtimeTranscriptionProvider(): RealtimeTranscriptionProviderPlugin {
@@ -473,7 +259,7 @@ export function buildMistralRealtimeTranscriptionProvider(): RealtimeTranscripti
       if (!apiKey) {
         throw new Error("Mistral API key missing");
       }
-      return new MistralRealtimeTranscriptionSession({
+      return createMistralRealtimeTranscriptionSession({
         ...req,
         apiKey,
         baseUrl: normalizeMistralRealtimeBaseUrl(config.baseUrl),

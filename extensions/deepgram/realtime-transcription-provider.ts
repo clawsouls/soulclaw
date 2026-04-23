@@ -1,18 +1,12 @@
-import { randomUUID } from "node:crypto";
 import {
-  captureWsEvent,
-  createDebugProxyWebSocketAgent,
-  resolveDebugProxySettings,
-} from "openclaw/plugin-sdk/proxy-capture";
-import type {
-  RealtimeTranscriptionProviderConfig,
-  RealtimeTranscriptionProviderPlugin,
-  RealtimeTranscriptionSession,
-  RealtimeTranscriptionSessionCreateRequest,
+  createRealtimeTranscriptionWebSocketSession,
+  type RealtimeTranscriptionProviderConfig,
+  type RealtimeTranscriptionProviderPlugin,
+  type RealtimeTranscriptionSession,
+  type RealtimeTranscriptionSessionCreateRequest,
 } from "openclaw/plugin-sdk/realtime-transcription";
 import { normalizeResolvedSecretInputString } from "openclaw/plugin-sdk/secret-input";
 import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
-import WebSocket from "ws";
 import { DEFAULT_DEEPGRAM_AUDIO_BASE_URL, DEFAULT_DEEPGRAM_AUDIO_MODEL } from "./audio.js";
 
 type DeepgramRealtimeTranscriptionEncoding = "linear16" | "mulaw" | "alaw";
@@ -164,16 +158,6 @@ function normalizeProviderConfig(
   };
 }
 
-function rawWsDataToBuffer(data: WebSocket.RawData): Buffer {
-  if (Buffer.isBuffer(data)) {
-    return data;
-  }
-  if (Array.isArray(data)) {
-    return Buffer.concat(data);
-  }
-  return Buffer.from(data);
-}
-
 function readErrorDetail(value: unknown): string {
   if (typeof value === "string") {
     return value;
@@ -188,284 +172,75 @@ function readTranscriptText(event: DeepgramRealtimeTranscriptionEvent): string |
   return normalizeOptionalString(event.channel?.alternatives?.[0]?.transcript);
 }
 
-class DeepgramRealtimeTranscriptionSession implements RealtimeTranscriptionSession {
-  private ws: WebSocket | null = null;
-  private connected = false;
-  private closed = false;
-  private reconnectAttempts = 0;
-  private queuedAudio: Buffer[] = [];
-  private queuedBytes = 0;
-  private closeTimer: ReturnType<typeof setTimeout> | undefined;
-  private lastTranscript: string | undefined;
-  private speechStarted = false;
-  private reconnecting = false;
-  private readonly flowId = randomUUID();
+function createDeepgramRealtimeTranscriptionSession(
+  config: DeepgramRealtimeTranscriptionSessionConfig,
+): RealtimeTranscriptionSession {
+  let lastTranscript: string | undefined;
+  let speechStarted = false;
 
-  constructor(private readonly config: DeepgramRealtimeTranscriptionSessionConfig) {}
-
-  async connect(): Promise<void> {
-    this.closed = false;
-    this.reconnectAttempts = 0;
-    await this.doConnect();
-  }
-
-  sendAudio(audio: Buffer): void {
-    if (this.closed || audio.byteLength === 0) {
+  const emitTranscript = (text: string) => {
+    if (text === lastTranscript) {
       return;
     }
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.sendAudioFrame(audio);
-      return;
-    }
-    this.queueAudio(audio);
-  }
+    lastTranscript = text;
+    config.onTranscript?.(text);
+  };
 
-  close(): void {
-    this.closed = true;
-    this.connected = false;
-    this.queuedAudio = [];
-    this.queuedBytes = 0;
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.forceClose();
-      return;
-    }
-    this.sendEvent({ type: "Finalize" });
-    this.closeTimer = setTimeout(() => this.forceClose(), DEEPGRAM_REALTIME_CLOSE_TIMEOUT_MS);
-  }
-
-  isConnected(): boolean {
-    return this.connected;
-  }
-
-  private async doConnect(): Promise<void> {
-    await new Promise<void>((resolve, reject) => {
-      const url = toDeepgramRealtimeWsUrl(this.config);
-      const debugProxy = resolveDebugProxySettings();
-      const proxyAgent = createDebugProxyWebSocketAgent(debugProxy);
-      let settled = false;
-      let opened = false;
-      const finishConnect = () => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        clearTimeout(connectTimeout);
-        this.flushQueuedAudio();
-        resolve();
-      };
-      const failConnect = (error: Error) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        clearTimeout(connectTimeout);
-        this.config.onError?.(error);
-        this.closed = true;
-        this.forceClose();
-        reject(error);
-      };
-      this.ws = new WebSocket(url, {
-        headers: {
-          Authorization: `Token ${this.config.apiKey}`,
-        },
-        ...(proxyAgent ? { agent: proxyAgent } : {}),
-      });
-
-      const connectTimeout = setTimeout(() => {
-        failConnect(new Error("Deepgram realtime transcription connection timeout"));
-      }, DEEPGRAM_REALTIME_CONNECT_TIMEOUT_MS);
-
-      this.ws.on("open", () => {
-        opened = true;
-        this.connected = true;
-        this.reconnectAttempts = 0;
-        captureWsEvent({
-          url,
-          direction: "local",
-          kind: "ws-open",
-          flowId: this.flowId,
-          meta: { provider: "deepgram", capability: "realtime-transcription" },
-        });
-        finishConnect();
-      });
-
-      this.ws.on("message", (data) => {
-        const payload = rawWsDataToBuffer(data);
-        captureWsEvent({
-          url,
-          direction: "inbound",
-          kind: "ws-frame",
-          flowId: this.flowId,
-          payload,
-          meta: { provider: "deepgram", capability: "realtime-transcription" },
-        });
-        try {
-          this.handleEvent(JSON.parse(payload.toString()) as DeepgramRealtimeTranscriptionEvent);
-        } catch (error) {
-          this.config.onError?.(error instanceof Error ? error : new Error(String(error)));
-        }
-      });
-
-      this.ws.on("error", (error) => {
-        captureWsEvent({
-          url,
-          direction: "local",
-          kind: "error",
-          flowId: this.flowId,
-          errorText: error instanceof Error ? error.message : String(error),
-          meta: { provider: "deepgram", capability: "realtime-transcription" },
-        });
-        if (!opened) {
-          failConnect(error instanceof Error ? error : new Error(String(error)));
-          return;
-        }
-        this.config.onError?.(error instanceof Error ? error : new Error(String(error)));
-      });
-
-      this.ws.on("close", () => {
-        clearTimeout(connectTimeout);
-        this.connected = false;
-        if (this.closeTimer) {
-          clearTimeout(this.closeTimer);
-          this.closeTimer = undefined;
-        }
-        if (this.closed || !opened || !settled) {
-          return;
-        }
-        void this.attemptReconnect();
-      });
-    });
-  }
-
-  private async attemptReconnect(): Promise<void> {
-    if (this.closed || this.reconnecting) {
-      return;
-    }
-    if (this.reconnectAttempts >= DEEPGRAM_REALTIME_MAX_RECONNECT_ATTEMPTS) {
-      this.config.onError?.(new Error("Deepgram realtime transcription reconnect limit reached"));
-      return;
-    }
-    this.reconnectAttempts += 1;
-    const delay = DEEPGRAM_REALTIME_RECONNECT_DELAY_MS * 2 ** (this.reconnectAttempts - 1);
-    this.reconnecting = true;
-    try {
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      if (!this.closed) {
-        await this.doConnect();
-      }
-    } catch {
-      if (!this.closed) {
-        this.reconnecting = false;
-        await this.attemptReconnect();
-        return;
-      }
-    } finally {
-      this.reconnecting = false;
-    }
-  }
-
-  private handleEvent(event: DeepgramRealtimeTranscriptionEvent): void {
+  const handleEvent = (event: DeepgramRealtimeTranscriptionEvent) => {
     switch (event.type) {
       case "Results": {
         const text = readTranscriptText(event);
         if (!text) {
           return;
         }
-        if (!this.speechStarted) {
-          this.speechStarted = true;
-          this.config.onSpeechStart?.();
+        if (!speechStarted) {
+          speechStarted = true;
+          config.onSpeechStart?.();
         }
         if (event.is_final || event.speech_final) {
-          this.emitTranscript(text);
+          emitTranscript(text);
           if (event.speech_final) {
-            this.speechStarted = false;
+            speechStarted = false;
           }
           return;
         }
-        this.config.onPartial?.(text);
+        config.onPartial?.(text);
         return;
       }
       case "SpeechStarted":
-        this.speechStarted = true;
-        this.config.onSpeechStart?.();
+        speechStarted = true;
+        config.onSpeechStart?.();
         return;
       case "Error":
       case "error":
-        this.config.onError?.(new Error(readErrorDetail(event.error ?? event.message)));
+        config.onError?.(new Error(readErrorDetail(event.error ?? event.message)));
         return;
       default:
         return;
     }
-  }
+  };
 
-  private emitTranscript(text: string): void {
-    if (text === this.lastTranscript) {
-      return;
-    }
-    this.lastTranscript = text;
-    this.config.onTranscript?.(text);
-  }
-
-  private queueAudio(audio: Buffer): void {
-    this.queuedAudio.push(Buffer.from(audio));
-    this.queuedBytes += audio.byteLength;
-    while (this.queuedBytes > DEEPGRAM_REALTIME_MAX_QUEUED_BYTES && this.queuedAudio.length > 0) {
-      const dropped = this.queuedAudio.shift();
-      this.queuedBytes -= dropped?.byteLength ?? 0;
-    }
-  }
-
-  private flushQueuedAudio(): void {
-    for (const audio of this.queuedAudio) {
-      this.sendAudioFrame(audio);
-    }
-    this.queuedAudio = [];
-    this.queuedBytes = 0;
-  }
-
-  private sendAudioFrame(audio: Buffer): void {
-    if (this.ws?.readyState !== WebSocket.OPEN) {
-      this.queueAudio(audio);
-      return;
-    }
-    captureWsEvent({
-      url: toDeepgramRealtimeWsUrl(this.config),
-      direction: "outbound",
-      kind: "ws-frame",
-      flowId: this.flowId,
-      payload: audio,
-      meta: { provider: "deepgram", capability: "realtime-transcription" },
-    });
-    this.ws.send(audio);
-  }
-
-  private sendEvent(event: unknown): void {
-    if (this.ws?.readyState !== WebSocket.OPEN) {
-      return;
-    }
-    const payload = JSON.stringify(event);
-    captureWsEvent({
-      url: toDeepgramRealtimeWsUrl(this.config),
-      direction: "outbound",
-      kind: "ws-frame",
-      flowId: this.flowId,
-      payload,
-      meta: { provider: "deepgram", capability: "realtime-transcription" },
-    });
-    this.ws.send(payload);
-  }
-
-  private forceClose(): void {
-    if (this.closeTimer) {
-      clearTimeout(this.closeTimer);
-      this.closeTimer = undefined;
-    }
-    this.connected = false;
-    if (this.ws) {
-      this.ws.close(1000, "Transcription session closed");
-      this.ws = null;
-    }
-  }
+  return createRealtimeTranscriptionWebSocketSession<DeepgramRealtimeTranscriptionEvent>({
+    providerId: "deepgram",
+    callbacks: config,
+    url: () => toDeepgramRealtimeWsUrl(config),
+    headers: { Authorization: `Token ${config.apiKey}` },
+    readyOnOpen: true,
+    connectTimeoutMs: DEEPGRAM_REALTIME_CONNECT_TIMEOUT_MS,
+    closeTimeoutMs: DEEPGRAM_REALTIME_CLOSE_TIMEOUT_MS,
+    maxReconnectAttempts: DEEPGRAM_REALTIME_MAX_RECONNECT_ATTEMPTS,
+    reconnectDelayMs: DEEPGRAM_REALTIME_RECONNECT_DELAY_MS,
+    maxQueuedBytes: DEEPGRAM_REALTIME_MAX_QUEUED_BYTES,
+    connectTimeoutMessage: "Deepgram realtime transcription connection timeout",
+    reconnectLimitMessage: "Deepgram realtime transcription reconnect limit reached",
+    sendAudio: (audio, transport) => {
+      transport.sendBinary(audio);
+    },
+    onClose: (transport) => {
+      transport.sendJson({ type: "Finalize" });
+    },
+    onMessage: handleEvent,
+  });
 }
 
 export function buildDeepgramRealtimeTranscriptionProvider(): RealtimeTranscriptionProviderPlugin {
@@ -483,7 +258,7 @@ export function buildDeepgramRealtimeTranscriptionProvider(): RealtimeTranscript
       if (!apiKey) {
         throw new Error("Deepgram API key missing");
       }
-      return new DeepgramRealtimeTranscriptionSession({
+      return createDeepgramRealtimeTranscriptionSession({
         ...req,
         apiKey,
         baseUrl: normalizeDeepgramRealtimeBaseUrl(config.baseUrl),
