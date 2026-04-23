@@ -851,7 +851,7 @@ describe("runCodexAppServerAttempt", () => {
           approvalPolicy: "on-request",
           approvalsReviewer: "guardian_subagent",
           sandbox: "danger-full-access",
-          serviceTier: "priority",
+          serviceTier: "fast",
         },
       },
     });
@@ -866,7 +866,7 @@ describe("runCodexAppServerAttempt", () => {
       approvalPolicy: "on-request",
       approvalsReviewer: "guardian_subagent",
       sandbox: "danger-full-access",
-      serviceTier: "priority",
+      serviceTier: "fast",
       developerInstructions: expect.stringContaining(CODEX_GPT5_BEHAVIOR_CONTRACT),
       persistExtendedHistory: true,
     });
@@ -877,11 +877,40 @@ describe("runCodexAppServerAttempt", () => {
           params: expect.objectContaining({
             approvalPolicy: "on-request",
             approvalsReviewer: "guardian_subagent",
-            serviceTier: "priority",
+            serviceTier: "fast",
             model: "gpt-5.4-codex",
           }),
         },
       ]),
+    );
+  });
+
+  it("drops invalid legacy service tiers before app-server resume and turn requests", async () => {
+    const sessionFile = path.join(tempDir, "session.jsonl");
+    const workspaceDir = path.join(tempDir, "workspace");
+    await writeExistingBinding(sessionFile, workspaceDir, { model: "gpt-5.2" });
+    const { requests, waitForMethod, completeTurn } = createResumeHarness();
+
+    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir), {
+      pluginConfig: {
+        appServer: {
+          approvalPolicy: "on-request",
+          sandbox: "danger-full-access",
+          serviceTier: "priority",
+        },
+      },
+    });
+    await waitForMethod("turn/start");
+    await completeTurn({ threadId: "thread-existing", turnId: "turn-1" });
+    await run;
+
+    const resumeRequest = requests.find((request) => request.method === "thread/resume");
+    expect(resumeRequest?.params).toEqual(
+      expect.not.objectContaining({ serviceTier: expect.anything() }),
+    );
+    const turnRequest = requests.find((request) => request.method === "turn/start");
+    expect(turnRequest?.params).toEqual(
+      expect.not.objectContaining({ serviceTier: expect.anything() }),
     );
   });
 
@@ -898,7 +927,7 @@ describe("runCodexAppServerAttempt", () => {
       approvalPolicy: "on-request" as const,
       approvalsReviewer: "guardian_subagent" as const,
       sandbox: "danger-full-access" as const,
-      serviceTier: "priority",
+      serviceTier: "flex" as const,
     };
 
     expect(buildThreadResumeParams(params, { threadId: "thread-1", appServer })).toEqual({
@@ -908,7 +937,7 @@ describe("runCodexAppServerAttempt", () => {
       approvalPolicy: "on-request",
       approvalsReviewer: "guardian_subagent",
       sandbox: "danger-full-access",
-      serviceTier: "priority",
+      serviceTier: "flex",
       developerInstructions: expect.stringContaining(CODEX_GPT5_BEHAVIOR_CONTRACT),
       persistExtendedHistory: true,
     });
@@ -921,7 +950,7 @@ describe("runCodexAppServerAttempt", () => {
         model: "gpt-5.4-codex",
         approvalPolicy: "on-request",
         approvalsReviewer: "guardian_subagent",
-        serviceTier: "priority",
+        serviceTier: "flex",
       }),
     );
   });
