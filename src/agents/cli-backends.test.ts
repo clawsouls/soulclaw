@@ -46,7 +46,7 @@ function createBackendEntry(params: {
           params.id === "claude-cli"
             ? "claude-cli/claude-sonnet-4-6"
             : params.id === "codex-cli"
-              ? "codex-cli/gpt-5.4"
+              ? "codex-cli/gpt-5.5"
               : params.id === "google-gemini-cli"
                 ? "google-gemini-cli/gemini-3-flash-preview"
                 : undefined,
@@ -385,7 +385,7 @@ describe("resolveCliBackendLiveTest", () => {
 
   it("returns plugin-owned live smoke metadata for codex", () => {
     expect(resolveCliBackendLiveTest("codex-cli")).toEqual({
-      defaultModelRef: "codex-cli/gpt-5.4",
+      defaultModelRef: "codex-cli/gpt-5.5",
       defaultImageProbe: true,
       defaultMcpProbe: true,
       dockerNpmPackage: "@openai/codex",
