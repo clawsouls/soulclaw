@@ -5,6 +5,7 @@ import type {
   ProviderRuntimeModel,
 } from "openclaw/plugin-sdk/plugin-entry";
 import {
+  CODEX_CLI_PROFILE_ID,
   ensureAuthProfileStoreForLocalUpdate,
   listProfilesForProvider,
   type OAuthCredential,
@@ -39,7 +40,6 @@ const OPENAI_WIZARD_GROUP = {
   groupLabel: "OpenAI",
   groupHint: "API key + Codex auth",
 } as const;
-const CODEX_CLI_PROFILE_ID = `${PROVIDER_ID}:codex-cli`;
 const OPENAI_CODEX_LOGIN_ASSISTANT_PRIORITY = -30;
 const OPENAI_CODEX_DEVICE_PAIRING_ASSISTANT_PRIORITY = -10;
 const OPENAI_CODEX_LOGIN_LABEL = "OpenAI Codex Browser Login";
