@@ -61,7 +61,7 @@ Scoped guides:
 - Build: `pnpm build`
 - Smart local gate: `pnpm check:changed` (scoped typecheck/lint/guards + relevant tests)
 - Explain smart gate: `pnpm changed:lanes --json`
-- Pre-commit view: `pnpm check:changed --staged`
+- Staged gate preview: `pnpm check:changed --staged`
 - Normal full prod sweep: `pnpm check` (prod typecheck/lint/guards, no tests)
 - Full tests: `pnpm test`
 - Changed tests only: `pnpm test:changed`
@@ -99,7 +99,7 @@ Scoped guides:
 
 ## Gates
 
-- Pre-commit hook: staged format/lint, then `pnpm check:changed --staged`; docs/markdown-only skips changed-scope check; `FAST_COMMIT=1` / `scripts/committer --fast` skips changed-scope check only.
+- Pre-commit hook: staged formatting only. It does not run lint, typecheck, or tests.
 - Changed lanes:
   - core prod => core prod typecheck + core tests
   - core tests => core test typecheck/tests only
@@ -107,11 +107,11 @@ Scoped guides:
   - extension tests => extension test typecheck/tests only
   - public SDK/plugin contract => extension prod/test validation too
   - unknown root/config => all lanes
-- Local loop: prefer `pnpm check:changed`; use `pnpm test:changed` for tests only; use `pnpm check` for full prod TS/lint sweep without tests.
+- Local loop: run `pnpm check:changed` explicitly before handoff/push; use `pnpm test:changed` for tests only; use `pnpm check` for full prod TS/lint sweep without tests.
 - Landing on `main`: verify touched surface near landing; default bar is `pnpm check` + `pnpm test` when feasible.
 - Hard build gate: run/pass `pnpm build` before push if build output, packaging, lazy/module boundaries, or published surfaces can change.
 - Do not land related failing format/lint/type/build/tests. If failures are unrelated on latest `origin/main`, say so and give scoped proof.
-- Fast commit escape hatch: use `scripts/committer --fast "<msg>" <file...>` only after the exact staged change set was already validated with equal-or-stronger gates, or after rerunning an isolated flaky failure with proof. State the gates/proof in handoff.
+- Commit helper is formatting-only; validation gates are explicit commands, not commit side effects.
 - CI architecture gate: `check-additional`; local equivalent `pnpm check:architecture`.
 - Config docs drift: `pnpm config:docs:gen/check`
 - Plugin SDK API drift: `pnpm plugin-sdk:api:gen/check`
@@ -162,7 +162,7 @@ Scoped guides:
 
 ## Git
 
-- Use `scripts/committer "<msg>" <file...>`; stage only intended files. Use `--fast` only under the Gates escape-hatch rule above.
+- Use `scripts/committer "<msg>" <file...>`; stage only intended files. It formats staged files only; run validation separately.
 - Commits: conventional-ish, concise/action-oriented. Group related changes.
 - No manual stash/autostash unless explicitly requested. No branch/worktree changes unless requested.
 - No merge commits on `main`; rebase on latest `origin/main` before push.
