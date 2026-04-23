@@ -37,6 +37,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Media understanding/audio: prefer configured or key-backed STT providers before auto-detected local Whisper CLIs, so installed local transcription tools no longer shadow API providers such as Groq/OpenAI in `tools.media.audio` auto mode. Fixes #68727.
 - Providers/OpenAI: lock the auth picker wording for OpenAI API key, Codex browser login, and Codex device pairing so the setup choices no longer imply a mixed Codex/API-key auth path. (#67848) Thanks @tmlxrd.
 - Agents/BTW: route `/btw` side questions through provider stream registration with the session workspace, so Ollama provider URL construction and workspace-scoped hooks apply correctly. Fixes #68336. (#70413) Thanks @suboss87.
 - Agents/sessions: make session transcript write locks non-reentrant by default, so same-process transcript writers contend unless a helper explicitly opts into nested lock ownership.
