@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { PluginEnableResult } from "../plugins/enable.js";
 import { withTempDir } from "../test-helpers/temp-dir.js";
 
 const resolveBundledInstallPlanForCatalogEntry = vi.hoisted(() => vi.fn(() => undefined));
@@ -20,7 +22,9 @@ vi.mock("../plugins/install.js", () => ({
   installPluginFromNpmSpec,
 }));
 
-const enablePluginInConfig = vi.hoisted(() => vi.fn((cfg) => ({ config: cfg, enabled: true })));
+const enablePluginInConfig = vi.hoisted(() =>
+  vi.fn((cfg: OpenClawConfig): PluginEnableResult => ({ config: cfg, enabled: true })),
+);
 vi.mock("../plugins/enable.js", () => ({
   enablePluginInConfig,
 }));
