@@ -507,6 +507,8 @@ Notes:
 The `tts` tool converts text to speech and returns an audio attachment for
 reply delivery. When the channel is Feishu, Matrix, Telegram, or WhatsApp,
 the audio is delivered as a voice message rather than a file attachment.
+It accepts optional `channel` and `timeoutMs` fields; `timeoutMs` is a
+per-call provider request timeout in milliseconds.
 
 ## Gateway RPC
 

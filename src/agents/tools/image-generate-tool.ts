@@ -25,6 +25,7 @@ import {
   buildMediaReferenceDetails,
   isCapabilityProviderConfigured,
   normalizeMediaReferenceInputs,
+  readGenerationTimeoutMs,
   resolveCapabilityModelConfigForTool,
   resolveGenerateAction,
   resolveMediaToolLocalRoots,
@@ -106,6 +107,12 @@ const ImageGenerateToolSchema = Type.Object({
       description: `Optional number of images to request (1-${MAX_COUNT}).`,
       minimum: 1,
       maximum: MAX_COUNT,
+    }),
+  ),
+  timeoutMs: Type.Optional(
+    Type.Number({
+      description: "Optional provider request timeout in milliseconds.",
+      minimum: 1,
     }),
   ),
 });
@@ -490,6 +497,7 @@ export function createImageGenerateTool(options?: {
       const size = readStringParam(params, "size");
       const aspectRatio = normalizeAspectRatio(readStringParam(params, "aspectRatio"));
       const explicitResolution = normalizeResolution(readStringParam(params, "resolution"));
+      const timeoutMs = readGenerationTimeoutMs(params);
       const selectedProvider = resolveSelectedImageGenerationProvider({
         config: effectiveCfg,
         imageGenerationModelConfig,
@@ -535,6 +543,7 @@ export function createImageGenerateTool(options?: {
         resolution,
         count,
         inputImages,
+        timeoutMs,
       });
       const ignoredOverrides = result.ignoredOverrides ?? [];
       const displayProvider = sanitizeInlineDirectiveText(result.provider);
@@ -617,6 +626,7 @@ export function createImageGenerateTool(options?: {
             ? { aspectRatio: normalizedAspectRatio ?? aspectRatio }
             : {}),
           ...(filename ? { filename } : {}),
+          ...(timeoutMs !== undefined ? { timeoutMs } : {}),
           attempts: result.attempts,
           ...(result.normalization ? { normalization: result.normalization } : {}),
           metadata: result.metadata,

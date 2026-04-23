@@ -96,6 +96,10 @@ Resolution hint.
 Number of images to generate (1–4).
 </ParamField>
 
+<ParamField path="timeoutMs" type="number">
+Optional provider request timeout in milliseconds.
+</ParamField>
+
 <ParamField path="filename" type="string">
 Output filename hint.
 </ParamField>

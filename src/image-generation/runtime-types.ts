@@ -21,6 +21,8 @@ export type GenerateImageParams = {
   aspectRatio?: string;
   resolution?: ImageGenerationResolution;
   inputImages?: ImageGenerationSourceImage[];
+  /** Optional per-request provider timeout in milliseconds. */
+  timeoutMs?: number;
 };
 
 export type GenerateImageRuntimeResult = {

@@ -26,6 +26,7 @@ describe("image-generation runtime", () => {
   it("generates images through the active image-generation provider", async () => {
     const authStore = { version: 1, profiles: {} } as const;
     let seenAuthStore: unknown;
+    let seenTimeoutMs: number | undefined;
     mocks.resolveAgentModelPrimaryValue.mockReturnValue("image-plugin/img-v1");
     const provider: ImageGenerationProvider = {
       id: "image-plugin",
@@ -33,8 +34,9 @@ describe("image-generation runtime", () => {
         generate: {},
         edit: { enabled: false },
       },
-      async generateImage(req: { authStore?: unknown }) {
+      async generateImage(req: { authStore?: unknown; timeoutMs?: number }) {
         seenAuthStore = req.authStore;
+        seenTimeoutMs = req.timeoutMs;
         return {
           images: [
             {
@@ -60,12 +62,14 @@ describe("image-generation runtime", () => {
       prompt: "draw a cat",
       agentDir: "/tmp/agent",
       authStore,
+      timeoutMs: 12_345,
     });
 
     expect(result.provider).toBe("image-plugin");
     expect(result.model).toBe("img-v1");
     expect(result.attempts).toEqual([]);
     expect(seenAuthStore).toEqual(authStore);
+    expect(seenTimeoutMs).toBe(12_345);
     expect(result.images).toEqual([
       {
         buffer: Buffer.from("png-bytes"),

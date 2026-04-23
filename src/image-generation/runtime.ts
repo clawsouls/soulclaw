@@ -85,6 +85,7 @@ export async function generateImage(
         aspectRatio: sanitized.aspectRatio,
         resolution: sanitized.resolution,
         inputImages: params.inputImages,
+        ...(params.timeoutMs !== undefined ? { timeoutMs: params.timeoutMs } : {}),
       });
       if (!Array.isArray(result.images) || result.images.length === 0) {
         throw new Error("Image generation provider returned no images.");
