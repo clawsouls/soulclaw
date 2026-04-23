@@ -204,6 +204,29 @@ describe("bundled plugin root runtime mirrors", () => {
     ]);
   });
 
+  it("does not derive root mirrors for root chunks sourced from the owning plugin", () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "openclaw-root-mirror-owned-"));
+
+    try {
+      const distDir = join(tempRoot, "dist");
+      mkdirSync(distDir, { recursive: true });
+      writeFileSync(
+        join(distDir, "probe-Cz2PiFtC.js"),
+        `//#region extensions/feishu/client.ts\nimport("@larksuiteoapi/node-sdk");\n`,
+        "utf8",
+      );
+
+      const mirrors = collectRootDistBundledRuntimeMirrors({
+        bundledRuntimeDependencySpecs: makeBundledSpecs(),
+        distDir,
+      });
+
+      expect([...mirrors.keys()]).toEqual([]);
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it("does not compare root mirror versions for plugin manifest deps", () => {
     expect(
       collectBundledPluginRootRuntimeMirrorErrors({
