@@ -17,6 +17,7 @@ import type { PluginKind } from "./plugin-kind.types.js";
 
 export const PLUGIN_MANIFEST_FILENAME = "openclaw.plugin.json";
 export const PLUGIN_MANIFEST_FILENAMES = [PLUGIN_MANIFEST_FILENAME] as const;
+export const MAX_PLUGIN_MANIFEST_BYTES = 256 * 1024;
 
 export type PluginManifestChannelConfig = {
   schema: JsonSchemaObject;
@@ -806,6 +807,7 @@ export function loadPluginManifest(
     absolutePath: manifestPath,
     rootPath: rootDir,
     boundaryLabel: "plugin root",
+    maxBytes: MAX_PLUGIN_MANIFEST_BYTES,
     rejectHardlinks,
   });
   if (!opened.ok) {
@@ -982,6 +984,7 @@ export type PluginPackageInstall = {
   localPath?: string;
   defaultChoice?: "npm" | "local";
   minHostVersion?: string;
+  expectedIntegrity?: string;
   allowInvalidConfigRecovery?: boolean;
 };
 
