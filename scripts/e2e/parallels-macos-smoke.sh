@@ -1625,7 +1625,7 @@ wait_for_discord_host_visibility() {
     if [[ -n "$message_id" ]]; then
       response="$(discord_api_request GET "/channels/$DISCORD_CHANNEL_ID/messages/$message_id")"
       local direct_rc=$?
-      if [[ $direct_rc -eq 0 ]] && [[ -n "$response" ]] && printf '%s' "$response" | json_contains_string "$nonce"; then
+      if [[ $direct_rc -eq 0 ]] && [[ -n "$response" ]] && { [[ "$response" == *"$nonce"* ]] || printf '%s' "$response" | json_contains_string "$nonce"; }; then
         set -e
         return 0
       fi
@@ -1633,7 +1633,7 @@ wait_for_discord_host_visibility() {
     response="$(discord_api_request GET "/channels/$DISCORD_CHANNEL_ID/messages?limit=20")"
     local rc=$?
     set -e
-    if [[ $rc -eq 0 ]] && [[ -n "$response" ]] && printf '%s' "$response" | json_contains_string "$nonce"; then
+    if [[ $rc -eq 0 ]] && [[ -n "$response" ]] && { [[ "$response" == *"$nonce"* ]] || printf '%s' "$response" | json_contains_string "$nonce"; }; then
       return 0
     fi
     sleep 2
@@ -1696,7 +1696,7 @@ wait_for_guest_discord_readback() {
     if [[ -n "$response" ]]; then
       printf '%s' "$response" >"$last_response_path"
     fi
-    if [[ $rc -eq 0 ]] && [[ -n "$response" ]] && printf '%s' "$response" | json_contains_string "$nonce"; then
+    if [[ $rc -eq 0 ]] && [[ -n "$response" ]] && { [[ "$response" == *"$nonce"* ]] || printf '%s' "$response" | json_contains_string "$nonce"; }; then
       return 0
     fi
     sleep 3
