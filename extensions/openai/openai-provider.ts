@@ -275,7 +275,7 @@ export function buildOpenAIProvider(): ProviderPlugin {
       if (ctx.provider !== PROVIDER_ID || ctx.listProfileIds("openai-codex").length === 0) {
         return undefined;
       }
-      return 'No API key found for provider "openai". You are authenticated with OpenAI Codex OAuth. Use openai-codex/gpt-5.5 (OAuth) or set OPENAI_API_KEY to use openai/gpt-5.5.';
+      return 'No API key found for provider "openai". You are authenticated with OpenAI Codex OAuth. Use openai/gpt-5.5 with the Codex OAuth profile, or set OPENAI_API_KEY for direct OpenAI API access.';
     },
     suppressBuiltInModel: (ctx) => {
       if (
