@@ -140,8 +140,18 @@ function checkMintlifyMdxStructure(filePath, raw) {
       accordionStack.push({
         indent: openAccordion[1].length,
         line: index + 1,
+        hasOutdentedListItem: false,
       });
       continue;
+    }
+
+    const listItem = line.match(/^(\s*)[-*+]\s+/u);
+    if (listItem) {
+      for (const accordion of accordionStack) {
+        if (listItem[1].length < accordion.indent) {
+          accordion.hasOutdentedListItem = true;
+        }
+      }
     }
 
     const closeAccordion = line.match(/^(\s*)<\/Accordion>/u);
@@ -150,7 +160,7 @@ function checkMintlifyMdxStructure(filePath, raw) {
     }
 
     const opening = accordionStack.pop();
-    if (opening && closeAccordion[1].length > opening.indent) {
+    if (opening && opening.hasOutdentedListItem && closeAccordion[1].length > opening.indent) {
       errors.push({
         type: "mintlify-mdx",
         file: filePath,
