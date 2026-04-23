@@ -941,6 +941,15 @@ Local device pairing:
   trusted shared-secret helper flows.
 - Tailnet and LAN connects, including same-host tailnet binds, are treated as
   remote for pairing and still need approval.
+- **Forwarded-header evidence disqualifies loopback locality.** If a request
+  arrives on loopback but carries `X-Forwarded-For` / `X-Forwarded-Host` /
+  `X-Forwarded-Proto` headers pointing at a non-local origin, the request is
+  treated as remote for pairing, trusted-proxy auth, and Control UI device
+  identity gating — it no longer qualifies for loopback auto-approval.
+- **Metadata-upgrade auto-approval** applies only to non-sensitive reconnect
+  deltas on already paired devices (display name, client platform hints).
+  Scope upgrades (read to write/admin) and public key changes still require
+  explicit re-approval and are never silently upgraded.
 
 Auth modes:
 
