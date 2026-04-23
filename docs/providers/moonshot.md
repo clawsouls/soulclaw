@@ -383,7 +383,7 @@ Config lives under `plugins.entries.moonshot.config.webSearch`:
   <Card title="Model selection" href="/concepts/model-providers" icon="layers">
     Choosing providers, model refs, and failover behavior.
   </Card>
-  <Card title="Web search" href="/tools/web-search" icon="magnifying-glass">
+  <Card title="Web search" href="/tools/web" icon="magnifying-glass">
     Configuring web search providers including Kimi.
   </Card>
   <Card title="Configuration reference" href="/gateway/configuration-reference" icon="gear">

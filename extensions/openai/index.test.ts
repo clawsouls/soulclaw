@@ -21,6 +21,12 @@ const runtimeMocks = vi.hoisted(() => ({
   refreshOpenAICodexToken: vi.fn(),
 }));
 
+type OpenAIRefreshDelegateGlobal = typeof globalThis & {
+  __OPENCLAW_TEST_REFRESH_OPENAI_CODEX_TOKEN__?: (...args: unknown[]) => unknown;
+};
+
+const openAIRefreshDelegateGlobal = () => globalThis as OpenAIRefreshDelegateGlobal;
+
 vi.mock("openclaw/plugin-sdk/runtime-env", async () => {
   const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/runtime-env")>(
     "openclaw/plugin-sdk/runtime-env",
@@ -31,15 +37,14 @@ vi.mock("openclaw/plugin-sdk/runtime-env", async () => {
   };
 });
 
-vi.mock("@mariozechner/pi-ai/oauth", async () => {
-  const actual = await vi.importActual<typeof import("@mariozechner/pi-ai/oauth")>(
-    "@mariozechner/pi-ai/oauth",
-  );
-  return {
-    ...actual,
-    refreshOpenAICodexToken: runtimeMocks.refreshOpenAICodexToken,
-  };
-});
+vi.mock("@mariozechner/pi-ai/oauth", () => ({
+  getOAuthApiKey: vi.fn(),
+  getOAuthProviders: () => [],
+  loginOpenAICodex: vi.fn(),
+  refreshOpenAICodexToken: vi.fn((...args: unknown[]) =>
+    openAIRefreshDelegateGlobal().__OPENCLAW_TEST_REFRESH_OPENAI_CODEX_TOKEN__?.(...args),
+  ),
+}));
 
 import { refreshOpenAICodexToken } from "./openai-codex-provider.runtime.js";
 
@@ -282,14 +287,19 @@ describe("openai plugin", () => {
       expires: Date.now() + 60_000,
     };
     runtimeMocks.refreshOpenAICodexToken.mockResolvedValue(refreshed);
+    openAIRefreshDelegateGlobal().__OPENCLAW_TEST_REFRESH_OPENAI_CODEX_TOKEN__ =
+      runtimeMocks.refreshOpenAICodexToken;
+    try {
+      await expect(refreshOpenAICodexToken("refresh-token")).resolves.toBe(refreshed);
 
-    await expect(refreshOpenAICodexToken("refresh-token")).resolves.toBe(refreshed);
-
-    expect(runtimeMocks.ensureGlobalUndiciEnvProxyDispatcher).toHaveBeenCalledOnce();
-    expect(runtimeMocks.refreshOpenAICodexToken).toHaveBeenCalledOnce();
-    expect(
-      runtimeMocks.ensureGlobalUndiciEnvProxyDispatcher.mock.invocationCallOrder[0],
-    ).toBeLessThan(runtimeMocks.refreshOpenAICodexToken.mock.invocationCallOrder[0]);
+      expect(runtimeMocks.ensureGlobalUndiciEnvProxyDispatcher).toHaveBeenCalledOnce();
+      expect(runtimeMocks.refreshOpenAICodexToken).toHaveBeenCalledOnce();
+      expect(
+        runtimeMocks.ensureGlobalUndiciEnvProxyDispatcher.mock.invocationCallOrder[0],
+      ).toBeLessThan(runtimeMocks.refreshOpenAICodexToken.mock.invocationCallOrder[0]);
+    } finally {
+      delete openAIRefreshDelegateGlobal().__OPENCLAW_TEST_REFRESH_OPENAI_CODEX_TOKEN__;
+    }
   });
 
   it("registers provider-owned OpenAI tool compat hooks for openai and codex", async () => {

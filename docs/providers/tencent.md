@@ -55,6 +55,6 @@ is available to that process (for example, in `~/.openclaw/.env` or via
 
 ## Related documentation
 
-- [OpenClaw Configuration](/configuration)
+- [OpenClaw Configuration](/gateway/configuration)
 - [Model Providers](/concepts/model-providers)
 - [Tencent TokenHub](https://cloud.tencent.com/document/product/1823/130050)

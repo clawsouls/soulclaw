@@ -445,6 +445,8 @@ Legacy `plugins.entries.openai.config.personality` is still read as a compatibil
 
   </Accordion>
 
+<a id="openai-fast-mode"></a>
+
   <Accordion title="Fast mode">
     OpenClaw exposes a shared fast-mode toggle for both `openai/*` and `openai-codex/*`:
 
