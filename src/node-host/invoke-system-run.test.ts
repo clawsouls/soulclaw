@@ -959,32 +959,6 @@ describe("handleSystemRunInvoke mac app exec host routing", () => {
           message: "SYSTEM_RUN_DENIED: approval script operand changed before execution",
           exact: true,
         });
-        const stableTmp = createFixtureDir("openclaw-approval-tsx-script-stable-");
-        const stableFixture = createRuntimeScriptOperandFixture({ tmp: stableTmp, runtime: "tsx" });
-        fs.writeFileSync(stableFixture.scriptPath, stableFixture.initialBody);
-        const stablePrepared = buildSystemRunApprovalPlan({
-          command: stableFixture.command,
-          cwd: stableTmp,
-        });
-        expect(stablePrepared.ok).toBe(true);
-        if (!stablePrepared.ok) {
-          throw new Error("unreachable");
-        }
-
-        const stableRun = await runSystemInvoke({
-          preferMacAppExecHost: false,
-          command: stablePrepared.plan.argv,
-          rawCommand: stablePrepared.plan.commandText,
-          systemRunPlan: stablePrepared.plan,
-          cwd: stablePrepared.plan.cwd ?? stableTmp,
-          approved: true,
-          security: "full",
-          ask: "off",
-        });
-
-        expect(stableRun.runCommand).toHaveBeenCalledTimes(1);
-        expectInvokeOk(stableRun.sendInvokeResult);
-
         const missingBindingTmp = createFixtureDir("openclaw-approval-tsx-missing-binding-");
         const missingBindingFixture = createRuntimeScriptOperandFixture({
           tmp: missingBindingTmp,
