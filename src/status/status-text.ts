@@ -6,6 +6,7 @@ import {
   resolveAgentModelFallbacksOverride,
 } from "../agents/agent-scope.js";
 import { resolveFastModeState } from "../agents/fast-mode.js";
+import { selectAgentHarness } from "../agents/harness/selection.js";
 import { resolveModelAuthLabel } from "../agents/model-auth-label.js";
 import {
   resolveInternalSessionKey,
@@ -52,6 +53,7 @@ export type BuildStatusTextParams = {
   contextTokens?: number;
   resolvedThinkLevel?: ThinkLevel;
   resolvedFastMode?: boolean;
+  resolvedHarness?: string;
   resolvedVerboseLevel: VerboseLevel;
   resolvedReasoningLevel: ReasoningLevel;
   resolvedElevatedLevel?: ElevatedLevel;
@@ -129,6 +131,30 @@ function formatSessionTaskLine(sessionKey: string): string | undefined {
   const detail = formatTaskStatusDetail(task);
   const parts = [headline, task.runtime, title, detail].filter(Boolean);
   return parts.length ? `📌 Tasks: ${parts.join(" · ")}` : undefined;
+}
+
+function resolveStatusHarnessId(params: {
+  cfg: OpenClawConfig;
+  provider: string;
+  model: string;
+  agentId: string;
+  sessionKey: string;
+  sessionEntry?: SessionEntry;
+}): string | undefined {
+  try {
+    const selected = selectAgentHarness({
+      provider: params.provider,
+      modelId: params.model,
+      config: params.cfg,
+      agentId: params.agentId,
+      sessionKey: params.sessionKey,
+      agentHarnessId: params.sessionEntry?.agentHarnessId,
+    });
+    const id = normalizeOptionalLowercaseString(selected.id);
+    return id && id !== "pi" ? id : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function formatAgentTaskCountsLine(agentId: string): string | undefined {
@@ -286,6 +312,16 @@ export async function buildStatusText(params: BuildStatusTextParams): Promise<st
       agentId: statusAgentId,
       sessionEntry,
     }).enabled;
+  const effectiveHarness =
+    params.resolvedHarness ??
+    resolveStatusHarnessId({
+      cfg,
+      provider,
+      model,
+      agentId: statusAgentId,
+      sessionKey,
+      sessionEntry,
+    });
   const agentFallbacksOverride = resolveAgentModelFallbacksOverride(cfg, statusAgentId);
   const { buildStatusMessage } = await loadStatusMessageRuntime();
   const explicitThinkingDefault =
@@ -319,6 +355,7 @@ export async function buildStatusText(params: BuildStatusTextParams): Promise<st
     resolvedThink:
       resolvedThinkLevel ?? explicitThinkingDefault ?? (await resolveDefaultThinkingLevel()),
     resolvedFast: effectiveFastMode,
+    resolvedHarness: effectiveHarness,
     resolvedVerbose: resolvedVerboseLevel,
     resolvedReasoning: resolvedReasoningLevel,
     resolvedElevated: resolvedElevatedLevel,
