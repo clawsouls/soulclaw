@@ -16,6 +16,18 @@ import {
   selectHighSignalLiveItems,
   shouldExcludeProviderFromDefaultHighSignalLiveSweep,
 } from "./live-model-filter.js";
+import {
+  buildLiveModelFileProbeContext,
+  buildLiveModelImageProbeContext,
+  extractAssistantText,
+  fileProbeTextMatches,
+  imageProbeTextMatches,
+  isLiveModelProbeEnabled,
+  LIVE_MODEL_FILE_PROBE_ENV,
+  LIVE_MODEL_FILE_PROBE_TOKEN,
+  LIVE_MODEL_IMAGE_PROBE_ENV,
+  modelSupportsImageInput,
+} from "./live-model-turn-probes.js";
 import { createLiveTargetMatcher } from "./live-target-matcher.js";
 import { isLiveProfileKeyModeEnabled, isLiveTestEnabled } from "./live-test-helpers.js";
 import { getApiKeyForModel, requireApiKey } from "./model-auth.js";
@@ -37,6 +49,8 @@ const LIVE_SETUP_TIMEOUT_MS = Math.max(
   toInt(process.env.OPENCLAW_LIVE_SETUP_TIMEOUT_MS, 45_000),
 );
 const LIVE_MODELS_JSON_TIMEOUT_MS = resolveLiveModelsJsonTimeoutMs();
+const LIVE_FILE_PROBE_ENABLED = isLiveModelProbeEnabled(process.env, LIVE_MODEL_FILE_PROBE_ENV);
+const LIVE_IMAGE_PROBE_ENABLED = isLiveModelProbeEnabled(process.env, LIVE_MODEL_IMAGE_PROBE_ENV);
 
 const describeLive = LIVE ? describe : describe.skip;
 
@@ -432,6 +446,60 @@ async function completeOkWithRetry(params: {
   return await runOnce(256);
 }
 
+async function runExtraTurnProbes(params: {
+  model: Model<Api>;
+  apiKey: string;
+  timeoutMs: number;
+  progressLabel: string;
+}) {
+  const options = {
+    apiKey: params.apiKey,
+    reasoning: resolveTestReasoning(params.model),
+    maxTokens: 64,
+  };
+  if (LIVE_FILE_PROBE_ENABLED) {
+    logProgress(`${params.progressLabel}: file-read probe`);
+    const file = await completeSimpleWithTimeout(
+      params.model,
+      buildLiveModelFileProbeContext({ systemPrompt: resolveLiveSystemPrompt(params.model) }),
+      options,
+      params.timeoutMs,
+      `${params.progressLabel}: file-read probe`,
+    );
+    if (file.stopReason === "error") {
+      throw new Error(file.errorMessage || "file-read probe returned error with no message");
+    }
+    const fileText = extractAssistantText(file);
+    if (!fileProbeTextMatches(fileText)) {
+      throw new Error(`file-read probe did not return ${LIVE_MODEL_FILE_PROBE_TOKEN}: ${fileText}`);
+    }
+  }
+
+  if (!LIVE_IMAGE_PROBE_ENABLED) {
+    return;
+  }
+  if (!modelSupportsImageInput(params.model)) {
+    logProgress(`${params.progressLabel}: image probe skipped (no image input)`);
+    return;
+  }
+
+  logProgress(`${params.progressLabel}: image probe`);
+  const image = await completeSimpleWithTimeout(
+    params.model,
+    buildLiveModelImageProbeContext({ systemPrompt: resolveLiveSystemPrompt(params.model) }),
+    options,
+    params.timeoutMs,
+    `${params.progressLabel}: image probe`,
+  );
+  if (image.stopReason === "error") {
+    throw new Error(image.errorMessage || "image probe returned error with no message");
+  }
+  const imageText = extractAssistantText(image);
+  if (!imageProbeTextMatches(imageText)) {
+    throw new Error(`image probe did not return ok: ${imageText}`);
+  }
+}
+
 describeLive("live models (profile keys)", () => {
   it(
     "completes across selected models",
@@ -688,6 +756,12 @@ describeLive("live models (profile keys)", () => {
                 .map((b) => b.text.trim())
                 .join(" ");
               expect(secondText.length).toBeGreaterThan(0);
+              await runExtraTurnProbes({
+                model,
+                apiKey,
+                timeoutMs: perModelTimeoutMs,
+                progressLabel,
+              });
               logProgress(`${progressLabel}: done`);
               break;
             }
@@ -761,6 +835,12 @@ describeLive("live models (profile keys)", () => {
               break;
             }
             expect(ok.text.length).toBeGreaterThan(0);
+            await runExtraTurnProbes({
+              model,
+              apiKey,
+              timeoutMs: perModelTimeoutMs,
+              progressLabel,
+            });
             logProgress(`${progressLabel}: done`);
             break;
           } catch (err) {
