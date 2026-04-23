@@ -10,6 +10,7 @@ import {
 import { CHANNEL_APPROVAL_NATIVE_RUNTIME_CONTEXT_CAPABILITY } from "openclaw/plugin-sdk/approval-handler-adapter-runtime";
 import { registerChannelRuntimeContext } from "openclaw/plugin-sdk/channel-runtime-context";
 import type { SessionScope } from "openclaw/plugin-sdk/config-runtime";
+import { resolveTextChunkLimit } from "openclaw/plugin-sdk/reply-chunking";
 import { DEFAULT_GROUP_HISTORY_LIMIT } from "openclaw/plugin-sdk/reply-history";
 import { normalizeMainKey } from "openclaw/plugin-sdk/routing";
 import { warn } from "openclaw/plugin-sdk/runtime-env";
@@ -62,7 +63,6 @@ import {
   SLACK_SOCKET_RECONNECT_POLICY,
   waitForSlackSocketDisconnect,
 } from "./reconnect-policy.js";
-import { resolveTextChunkLimit } from "./reply.runtime.js";
 import { registerSlackMonitorSlashCommands } from "./slash.js";
 import type { MonitorSlackOpts } from "./types.js";
 
