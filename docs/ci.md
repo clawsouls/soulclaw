@@ -12,28 +12,28 @@ The CI runs on every push to `main` and every pull request. It uses smart scopin
 
 ## Job Overview
 
-| Job                              | Purpose                                                                                      | When it runs                        |
-| -------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `preflight`                      | Detect docs-only changes, changed scopes, changed extensions, and build the CI manifest      | Always on non-draft pushes and PRs  |
-| `security-scm-fast`              | Private key detection and workflow audit via `zizmor`                                        | Always on non-draft pushes and PRs  |
-| `security-dependency-audit`      | Dependency-free production lockfile audit against npm advisories                             | Always on non-draft pushes and PRs  |
-| `security-fast`                  | Required aggregate for the fast security jobs                                                | Always on non-draft pushes and PRs  |
-| `build-artifacts`                | Build `dist/` and the Control UI once, upload reusable artifacts for downstream jobs         | Node-relevant changes               |
-| `checks-fast-core`               | Fast Linux correctness lanes such as bundled/plugin-contract/protocol checks                 | Node-relevant changes               |
-| `checks-fast-contracts-channels` | Sharded channel contract checks with a stable aggregate check result                         | Node-relevant changes               |
-| `checks-node-extensions`         | Full bundled-plugin test shards across the extension suite                                   | Node-relevant changes               |
-| `checks-node-core-test`          | Core Node test shards, excluding channel, bundled, contract, and extension lanes             | Node-relevant changes               |
-| `extension-fast`                 | Focused tests for only the changed bundled plugins                                           | When extension changes are detected |
-| `check`                          | Sharded main local gate equivalent: prod types, lint, guards, test types, and strict smoke   | Node-relevant changes               |
-| `check-additional`               | Architecture, boundary, extension-surface guards, package-boundary, and gateway-watch shards | Node-relevant changes               |
-| `build-smoke`                    | Built-CLI smoke tests and startup-memory smoke                                               | Node-relevant changes               |
-| `checks`                         | Remaining Linux Node lanes: channel tests and push-only Node 22 compatibility                | Node-relevant changes               |
-| `check-docs`                     | Docs formatting, lint, and broken-link checks                                                | Docs changed                        |
-| `skills-python`                  | Ruff + pytest for Python-backed skills                                                       | Python-skill-relevant changes       |
-| `checks-windows`                 | Windows-specific test lanes                                                                  | Windows-relevant changes            |
-| `macos-node`                     | macOS TypeScript test lane using the shared built artifacts                                  | macOS-relevant changes              |
-| `macos-swift`                    | Swift lint, build, and tests for the macOS app                                               | macOS-relevant changes              |
-| `android`                        | Android build and test matrix                                                                | Android-relevant changes            |
+| Job                              | Purpose                                                                                      | When it runs                         |
+| -------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `preflight`                      | Detect docs-only changes, changed scopes, changed extensions, and build the CI manifest      | Always on non-draft pushes and PRs   |
+| `security-scm-fast`              | Private key detection and workflow audit via `zizmor`                                        | Always on non-draft pushes and PRs   |
+| `security-dependency-audit`      | Dependency-free production lockfile audit against npm advisories                             | Always on non-draft pushes and PRs   |
+| `security-fast`                  | Required aggregate for the fast security jobs                                                | Always on non-draft pushes and PRs   |
+| `build-artifacts`                | Build `dist/` and the Control UI once, upload reusable artifacts for downstream jobs         | Node-relevant changes                |
+| `checks-fast-core`               | Fast Linux correctness lanes such as bundled/plugin-contract/protocol checks                 | Node-relevant changes                |
+| `checks-fast-contracts-channels` | Sharded channel contract checks with a stable aggregate check result                         | Node-relevant changes                |
+| `checks-node-extensions`         | Full bundled-plugin test shards across the extension suite                                   | Node-relevant changes                |
+| `checks-node-core-test`          | Core Node test shards, excluding channel, bundled, contract, and extension lanes             | Node-relevant changes                |
+| `extension-fast`                 | Focused tests for only the changed bundled plugins                                           | Pull requests with extension changes |
+| `check`                          | Sharded main local gate equivalent: prod types, lint, guards, test types, and strict smoke   | Node-relevant changes                |
+| `check-additional`               | Architecture, boundary, extension-surface guards, package-boundary, and gateway-watch shards | Node-relevant changes                |
+| `build-smoke`                    | Built-CLI smoke tests and startup-memory smoke                                               | Node-relevant changes                |
+| `checks`                         | Remaining Linux Node lanes: channel tests and push-only Node 22 compatibility                | Node-relevant changes                |
+| `check-docs`                     | Docs formatting, lint, and broken-link checks                                                | Docs changed                         |
+| `skills-python`                  | Ruff + pytest for Python-backed skills                                                       | Python-skill-relevant changes        |
+| `checks-windows`                 | Windows-specific test lanes                                                                  | Windows-relevant changes             |
+| `macos-node`                     | macOS TypeScript test lane using the shared built artifacts                                  | macOS-relevant changes               |
+| `macos-swift`                    | Swift lint, build, and tests for the macOS app                                               | macOS-relevant changes               |
+| `android`                        | Android build and test matrix                                                                | Android-relevant changes             |
 
 ## Fail-Fast Order
 
@@ -42,7 +42,7 @@ Jobs are ordered so cheap checks fail before expensive ones run:
 1. `preflight` decides which lanes exist at all. The `docs-scope` and `changed-scope` logic are steps inside this job, not standalone jobs.
 2. `security-scm-fast`, `security-dependency-audit`, `security-fast`, `check`, `check-additional`, `check-docs`, and `skills-python` fail quickly without waiting on the heavier artifact and platform matrix jobs.
 3. `build-artifacts` overlaps with the fast Linux lanes so downstream consumers can start as soon as the shared build is ready.
-4. Heavier platform and runtime lanes fan out after that: `checks-fast-core`, `checks-fast-contracts-channels`, `checks-node-extensions`, `checks-node-core-test`, `extension-fast`, `checks`, `checks-windows`, `macos-node`, `macos-swift`, and `android`.
+4. Heavier platform and runtime lanes fan out after that: `checks-fast-core`, `checks-fast-contracts-channels`, `checks-node-extensions`, `checks-node-core-test`, PR-only `extension-fast`, `checks`, `checks-windows`, `macos-node`, `macos-swift`, and `android`.
 
 Scope logic lives in `scripts/ci-changed-scope.mjs` and is covered by unit tests in `src/scripts/ci-changed-scope.test.ts`.
 CI workflow edits validate the Node CI graph plus workflow linting, but do not force Windows, Android, or macOS native builds by themselves; those platform lanes stay scoped to platform source changes.
@@ -54,6 +54,7 @@ Local changed-lane logic lives in `scripts/changed-lanes.mjs` and is executed by
 On pushes, the `checks` matrix adds the push-only `compat-node22` lane. On pull requests, that lane is skipped and the matrix stays focused on the normal test/channel lanes.
 
 The slowest Node test families are split or balanced so each job stays small: channel contracts split registry and core coverage into six weighted shards total, bundled plugin tests balance across six extension workers, auto-reply runs as three balanced workers instead of six tiny workers, and agentic gateway/plugin configs are spread across the existing source-only agentic Node jobs instead of waiting on built artifacts. Broad browser, QA, media, and miscellaneous plugin tests use their dedicated Vitest configs instead of the shared plugin catch-all. The broad agents lane uses the shared Vitest file-parallel scheduler because it is import/scheduling dominated rather than owned by a single slow test file. `runtime-config` runs with the infra core-runtime shard to keep the shared runtime shard from owning the tail. `check-additional` keeps package-boundary compile/canary work together and separates it from runtime topology gateway/architecture work; the boundary guard shard runs its small independent guards concurrently inside one job, and the gateway watch regression uses the minimal `gatewayWatch` build profile instead of rebuilding the full CI artifact sidecar set.
+`extension-fast` is PR-only because push runs already execute the full bundled plugin shards. That keeps changed-plugin feedback for reviews without reserving an extra Blacksmith worker on `main` for coverage already present in `checks-node-extensions`.
 
 GitHub may mark superseded jobs as `cancelled` when a newer push lands on the same PR or `main` ref. Treat that as CI noise unless the newest run for the same ref is also failing. Aggregate shard checks use `!cancelled() && always()` so they still report normal shard failures but do not queue after the whole workflow has already been superseded.
 The CI concurrency key is versioned (`CI-v6-*`) so a GitHub-side zombie in an old queue group cannot indefinitely block newer main runs.
