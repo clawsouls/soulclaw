@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildTelegramRoutingTarget,
   buildTelegramThreadParams,
@@ -12,6 +12,7 @@ import {
   resolveTelegramDirectPeerId,
   resolveTelegramForumFlag,
   resolveTelegramForumThreadId,
+  resetTelegramForumFlagCacheForTest,
 } from "./helpers.js";
 
 describe("resolveTelegramForumThreadId", () => {
@@ -34,6 +35,10 @@ describe("resolveTelegramForumThreadId", () => {
 });
 
 describe("resolveTelegramForumFlag", () => {
+  beforeEach(() => {
+    resetTelegramForumFlagCacheForTest();
+  });
+
   it("keeps explicit forum metadata when Telegram already provides it", async () => {
     const getChat = vi.fn(async () => ({ is_forum: false }));
     await expect(
