@@ -51,11 +51,11 @@ Tip: when you only need one failing case, prefer narrowing live tests via the al
 
 These commands sit beside the main test suites when you need QA-lab realism:
 
-CI runs QA Lab in dedicated workflows. `Parity gate` runs on matching PRs,
-nightly on `main`, and from manual dispatch with mock providers. `QA-Lab - Live
-Telegram, Live Frontier` runs nightly on `main` and from manual dispatch with
-Convex-managed live Telegram credentials. `OpenClaw Release Checks` runs both
-lanes before release approval.
+CI runs QA Lab in dedicated workflows. `Parity gate` runs on matching PRs and
+from manual dispatch with mock providers. `QA-Lab - All Lanes` runs nightly on
+`main` and from manual dispatch with the mock parity gate, live Matrix lane, and
+Convex-managed live Telegram lane as parallel jobs. `OpenClaw Release Checks`
+runs the same lanes before release approval.
 
 - `pnpm openclaw qa suite`
   - Runs repo-backed QA scenarios directly on the host.
