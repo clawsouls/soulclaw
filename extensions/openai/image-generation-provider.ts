@@ -17,6 +17,7 @@ import {
   postJsonRequest,
   postMultipartRequest,
   resolveProviderHttpRequestConfig,
+  sanitizeConfiguredModelProviderRequest,
 } from "openclaw/plugin-sdk/provider-http";
 import { OPENAI_DEFAULT_IMAGE_MODEL as DEFAULT_OPENAI_IMAGE_MODEL } from "./default-models.js";
 import { resolveConfiguredOpenAIBaseUrl } from "./shared.js";
@@ -344,13 +345,16 @@ async function generateOpenAICodexImage(params: {
 }): Promise<ImageGenerationResult> {
   const { req, apiKey } = params;
   const inputImages = req.inputImages ?? [];
+  const codexProviderConfig = req.cfg?.models?.providers?.["openai-codex"];
   const { baseUrl, allowPrivateNetwork, headers, dispatcherPolicy } =
     resolveProviderHttpRequestConfig({
+      baseUrl: codexProviderConfig?.baseUrl,
       defaultBaseUrl: DEFAULT_OPENAI_CODEX_IMAGE_BASE_URL,
       defaultHeaders: {
         Authorization: `Bearer ${apiKey}`,
         Accept: "text/event-stream",
       },
+      request: sanitizeConfiguredModelProviderRequest(codexProviderConfig?.request),
       provider: "openai-codex",
       api: "openai-codex-responses",
       capability: "image",
