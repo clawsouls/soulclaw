@@ -301,7 +301,14 @@ node --import tsx scripts/openclaw-npm-postpublish-verify.ts <published-version>
   public release assets so the updater feed cannot lag the published binaries.
 - Serialize stable appcast-producing runs across tags so two releases do not
   generate replacement `appcast.xml` files from the same stale seed.
-- For stable releases, confirm the latest beta already passed the broader release workflows before cutting stable.
+- For stable releases, rely primarily on the latest beta's broader release
+  workflow confidence. When promoting the matching non-beta build to npm
+  `latest`, prefer a light time-bounded verification pass: published npm
+  postpublish verify, Docker install/update smoke, macOS-only Parallels
+  install/update smoke, and required QA signal. Do not rerun the full
+  Docker/Parallels matrix unless the beta evidence is stale, the stable build
+  differs materially from beta, or the operator explicitly asks for full
+  retesting.
 - If any required build, packaging step, or release workflow is red, do not say the release is ready.
 
 ## Use the right auth flow
@@ -475,10 +482,14 @@ node --import tsx scripts/openclaw-npm-postpublish-verify.ts <published-version>
     token from `.profile`.
 25. If the operator requested beta only, stop after beta verification and the
     announcement.
-26. If the stable release was published to `beta`, start the private
+26. If the stable release was published to `beta`, use the light stable
+    promotion roster when the matching beta already carried the full confidence
+    pass: published npm postpublish verify, Docker install/update smoke,
+    macOS-only Parallels install/update smoke, and required QA signal.
+    Then start the private
     `openclaw/releases-private/.github/workflows/openclaw-npm-dist-tags.yml`
-    workflow after beta validation passes to promote that stable version from
-    `beta` to `latest`, then verify `latest` now points at that version.
+    workflow to promote that stable version from `beta` to `latest`, then
+    verify `latest` now points at that version.
 27. If the stable release was published directly to `latest` and `beta` should
     follow it, start that same private dist-tag workflow to point `beta` at the
     stable version, then verify both `latest` and `beta` point at that version.
