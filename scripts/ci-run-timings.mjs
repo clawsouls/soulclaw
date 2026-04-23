@@ -173,6 +173,15 @@ async function main() {
   const args = process.argv.slice(2);
   const recentIndex = args.indexOf("--recent");
   const limitIndex = args.indexOf("--limit");
+  const ignoredArgIndexes = new Set();
+  if (limitIndex !== -1) {
+    ignoredArgIndexes.add(limitIndex);
+    ignoredArgIndexes.add(limitIndex + 1);
+  }
+  if (recentIndex !== -1) {
+    ignoredArgIndexes.add(recentIndex);
+    ignoredArgIndexes.add(recentIndex + 1);
+  }
   const limit =
     limitIndex === -1 ? 15 : Math.max(1, Number.parseInt(args[limitIndex + 1] ?? "", 10) || 15);
   if (recentIndex !== -1) {
@@ -196,14 +205,7 @@ async function main() {
     }
     return;
   }
-  const runId =
-    args.find(
-      (arg, index) =>
-        index !== limitIndex &&
-        index !== limitIndex + 1 &&
-        index !== recentIndex &&
-        index !== recentIndex + 1,
-    ) ?? getLatestCiRunId();
+  const runId = args.find((_arg, index) => !ignoredArgIndexes.has(index)) ?? getLatestCiRunId();
   const summary = summarizeRunTimings(loadRun(runId), limit);
 
   console.log(
