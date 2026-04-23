@@ -134,7 +134,9 @@ export async function resolveSandboxContext(params: {
   }
   const { rawSessionKey, cfg, runtime } = resolved;
 
-  await (await import("./prune.js")).maybePruneSandboxes(cfg);
+  if (cfg.prune.idleHours !== 0 || cfg.prune.maxAgeDays !== 0) {
+    await (await import("./prune.js")).maybePruneSandboxes(cfg);
+  }
 
   const { agentWorkspaceDir, scopeKey, workspaceDir } = await ensureSandboxWorkspaceLayout({
     cfg,
