@@ -588,6 +588,10 @@ async function main() {
     // Refresh the build stamp after the gateway build finishes so run-node
     // does not spuriously rebuild inside the bounded watch window.
     writeBuildStamp({ cwd: process.cwd() });
+  } else {
+    // Restored CI artifacts can be older than the fresh checkout mtimes.
+    // Refresh only the stamp so run-node trusts the already-built dist.
+    writeBuildStamp({ cwd: process.cwd() });
   }
 
   const preflightBuildRequirement = resolveBuildRequirement(buildRunNodeDeps(process.env));
