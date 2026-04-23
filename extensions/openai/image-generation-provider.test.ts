@@ -122,9 +122,9 @@ describe("openai image generation provider", () => {
   it("reports configured when either OpenAI API key auth or Codex OAuth auth is available", () => {
     const provider = buildOpenAIImageGenerationProvider();
 
-    isProviderApiKeyConfiguredMock.mockImplementation(
-      (params: { provider: string }) => params.provider === "openai",
-    );
+    isProviderApiKeyConfiguredMock.mockImplementation((params?: { provider?: string }) => {
+      return params?.provider === "openai";
+    });
     expect(provider.isConfigured?.({ agentDir: "/tmp/agent" })).toBe(true);
     expect(isProviderApiKeyConfiguredMock).toHaveBeenCalledWith({
       provider: "openai",
@@ -132,9 +132,9 @@ describe("openai image generation provider", () => {
     });
 
     isProviderApiKeyConfiguredMock.mockClear();
-    isProviderApiKeyConfiguredMock.mockImplementation(
-      (params: { provider: string }) => params.provider === "openai-codex",
-    );
+    isProviderApiKeyConfiguredMock.mockImplementation((params?: { provider?: string }) => {
+      return params?.provider === "openai-codex";
+    });
     expect(provider.isConfigured?.({ agentDir: "/tmp/agent" })).toBe(true);
     expect(isProviderApiKeyConfiguredMock).toHaveBeenCalledWith({
       provider: "openai",
