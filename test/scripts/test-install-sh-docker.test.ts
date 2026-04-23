@@ -132,5 +132,6 @@ describe("bun global install smoke", () => {
     expect(workflow).toContain("format('{0}-manual-{1}', github.workflow, github.run_id)");
     expect(workflow).toContain("OPENCLAW_CI_FORCE_INSTALL_SMOKE");
     expect(workflow).toContain('if [ "$force_install_smoke" = "true" ]; then');
+    expect(workflow).toContain('OPENCLAW_INSTALL_SMOKE_SKIP_NPM_GLOBAL: "1"');
   });
 });
