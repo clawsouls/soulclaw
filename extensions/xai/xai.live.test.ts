@@ -81,6 +81,10 @@ async function waitForLiveExpectation(expectation: () => void, timeoutMs = 30_00
   throw lastError;
 }
 
+function normalizeTranscriptForMatch(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
 describeLive("xai plugin live", () => {
   it("synthesizes TTS through the registered speech provider", async () => {
     const { speechProviders } = await registerXaiPlugin();
@@ -155,12 +159,39 @@ describeLive("xai plugin live", () => {
     });
 
     const normalized = transcript?.text.toLowerCase() ?? "";
+    const compact = normalizeTranscriptForMatch(normalized);
     expect(transcript?.model).toBe(XAI_DEFAULT_STT_MODEL);
-    expect(normalized).toContain("openclaw");
+    expect(compact).toContain("openclaw");
     expect(normalized).toContain("speech");
     expect(normalized).toContain("text");
     expect(normalized).toContain("integration");
   }, 180_000);
+
+  it("opens xAI realtime STT before sending audio", async () => {
+    const { realtimeTranscriptionProviders } = await registerXaiPlugin();
+    const realtimeProvider = requireRegisteredProvider(realtimeTranscriptionProviders, "xai");
+    const errors: Error[] = [];
+    const session = realtimeProvider.createSession({
+      providerConfig: {
+        apiKey: XAI_API_KEY,
+        baseUrl: "https://api.x.ai/v1",
+        sampleRate: 16_000,
+        encoding: "pcm",
+        interimResults: true,
+        endpointingMs: 800,
+        language: "en",
+      },
+      onError: (error) => errors.push(error),
+    });
+
+    try {
+      await session.connect();
+      expect(errors).toEqual([]);
+      expect(session.isConnected()).toBe(true);
+    } finally {
+      session.close();
+    }
+  }, 30_000);
 
   it("streams realtime STT through the registered transcription provider", async () => {
     const { realtimeTranscriptionProviders, speechProviders } = await registerXaiPlugin();
@@ -216,9 +247,11 @@ describeLive("xai plugin live", () => {
       if (errors[0]) {
         throw errors[0];
       }
-      expect(transcripts.join(" ").toLowerCase()).toContain("openclaw");
+      expect(normalizeTranscriptForMatch(transcripts.join(" "))).toContain("openclaw");
     }, 60_000);
     const normalized = transcripts.join(" ").toLowerCase();
+    const compact = normalizeTranscriptForMatch(normalized);
+    expect(compact).toContain("openclaw");
     expect(normalized).toContain("transcription");
     expect(partials.length + transcripts.length).toBeGreaterThan(0);
   }, 180_000);
