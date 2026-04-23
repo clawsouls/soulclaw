@@ -21,5 +21,7 @@ OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:cron-mcp-cleanup
 pnpm test:docker:qr
 OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:doctor-switch
 OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugins
+OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugin-update
+OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:config-reload
 OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:bundled-channel-deps
 pnpm test:docker:cleanup

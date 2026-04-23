@@ -37,9 +37,12 @@ docker_e2e_build_or_reuse() {
   if [ "${OPENCLAW_SKIP_DOCKER_BUILD:-0}" = "1" ] || [ "$skip_build" = "1" ]; then
     echo "Reusing Docker image: $image_name"
     if ! docker image inspect "$image_name" >/dev/null 2>&1; then
-      echo "Docker image not found: $image_name" >&2
-      echo "Build it first or unset OPENCLAW_SKIP_DOCKER_BUILD." >&2
-      return 1
+      echo "Docker image not found locally; pulling: $image_name"
+      if ! docker pull "$image_name"; then
+        echo "Docker image not found: $image_name" >&2
+        echo "Build it first or unset OPENCLAW_SKIP_DOCKER_BUILD." >&2
+        return 1
+      fi
     fi
     return 0
   fi
