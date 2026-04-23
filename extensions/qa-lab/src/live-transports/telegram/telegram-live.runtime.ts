@@ -223,7 +223,7 @@ const TELEGRAM_QA_SCENARIOS: TelegramQaScenarioDefinition[] = [
     buildRun: (sutUsername) => ({
       expectReply: true,
       input: `/commands@${sutUsername}`,
-      expectedTextIncludes: ["/help", "More: /tools for available capabilities"],
+      expectedTextIncludes: ["Commands (1/", "/session", "/verbose"],
     }),
   },
   {
