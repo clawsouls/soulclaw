@@ -1,5 +1,4 @@
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import {
   clearRuntimeConfigSnapshot,
@@ -10,6 +9,7 @@ import {
   loadSessionStore,
   updateSessionStore,
 } from "openclaw/plugin-sdk/config-runtime";
+import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/temp-path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { buildTelegramMessageContextForTest } from "./bot-message-context.test-harness.js";
 
@@ -20,7 +20,7 @@ function createSuiteTempRootTracker(params: { prefix: string }) {
   const children: string[] = [];
   return {
     async setup() {
-      root = await fs.mkdtemp(path.join(os.tmpdir(), params.prefix));
+      root = await fs.mkdtemp(path.join(resolvePreferredOpenClawTmpDir(), params.prefix));
     },
     async make(name: string) {
       if (!root) {
