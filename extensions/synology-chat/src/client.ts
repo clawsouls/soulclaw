@@ -281,7 +281,7 @@ function parseNumericUserId(userId?: string | number): number | undefined {
   if (userId === undefined) {
     return undefined;
   }
-  const numericId = typeof userId === "number" ? userId : parseInt(userId, 10);
+  const numericId = typeof userId === "number" ? userId : Number.parseInt(userId, 10);
   return Number.isNaN(numericId) ? undefined : numericId;
 }
 

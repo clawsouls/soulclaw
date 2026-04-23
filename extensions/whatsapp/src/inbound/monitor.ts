@@ -641,7 +641,7 @@ export async function attachWebInboxToSocket(
       if (upsert.type === "append") {
         const APPEND_RECENT_GRACE_MS = 60_000;
         const msgTsRaw = msg.messageTimestamp;
-        const msgTsNum = msgTsRaw != null ? Number(msgTsRaw) : NaN;
+        const msgTsNum = msgTsRaw != null ? Number(msgTsRaw) : Number.NaN;
         const msgTsMs = Number.isFinite(msgTsNum) ? msgTsNum * 1000 : 0;
         if (msgTsMs < connectedAtMs - APPEND_RECENT_GRACE_MS) {
           continue;
