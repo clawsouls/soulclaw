@@ -309,4 +309,4 @@ published raw file is typically available at:
 ## Related
 
 - [Rich output protocol](/reference/rich-output-protocol)
-- [RPC adapters](/reference/rpc-adapters)
+- [RPC adapters](/reference/rpc)
