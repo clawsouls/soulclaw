@@ -1,5 +1,4 @@
 import type { GetReplyOptions, MsgContext } from "openclaw/plugin-sdk/reply-runtime";
-import { withEnvAsync } from "openclaw/plugin-sdk/testing";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { escapeRegExp, formatEnvelopeTimestamp } from "../../../test/helpers/envelope-timestamp.js";
 const harness = await import("./bot.create-telegram-bot.test-harness.js");
@@ -122,6 +121,29 @@ function installPerKeySequentializer(): void {
 
 function mockTelegramConfigWrites() {
   return vi.spyOn(configRuntime, "writeConfigFile").mockResolvedValue(undefined);
+}
+
+async function withEnvAsync(env: Record<string, string | undefined>, fn: () => Promise<void>) {
+  const previous = new Map<string, string | undefined>();
+  for (const [key, value] of Object.entries(env)) {
+    previous.set(key, process.env[key]);
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+  try {
+    await fn();
+  } finally {
+    for (const [key, value] of previous) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
 }
 
 describe("createTelegramBot", () => {
