@@ -1458,7 +1458,8 @@ jobs:
               pnpm check:test-types
               ;;
             strict-smoke)
-              pnpm build:strict-smoke
+              # build-artifacts already runs the tsdown/runtime build for the same Node-relevant changes.
+              pnpm build:plugin-sdk:strict-smoke
               ;;
             *)
               echo "Unsupported check task: $TASK" >&2
