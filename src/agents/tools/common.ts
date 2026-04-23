@@ -1,5 +1,9 @@
 import fs from "node:fs/promises";
-import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
+import type {
+  AgentTool,
+  AgentToolResult,
+  AgentToolUpdateCallback,
+} from "@mariozechner/pi-agent-core";
 import type { TSchema } from "@sinclair/typebox";
 import { detectMime } from "../../media/mime.js";
 import { readSnakeCaseParamRaw } from "../../param-key.js";
@@ -18,8 +22,26 @@ export type AgentToolWithMeta<TParameters extends TSchema, TResult> = AgentTool<
 // plugin/runtime factories that are effectively existential over params/details.
 // Tightening this alias without a dedicated adapter seam blows up plugin tool
 // factories and embedded-runner tool plumbing.
-// oxlint-disable-next-line typescript/no-explicit-any
-export type AnyAgentTool = AgentToolWithMeta<any, unknown>;
+type AnyAgentToolExecute = (
+  toolCallId: string,
+  // oxlint-disable-next-line typescript/no-explicit-any
+  params: any,
+  signal?: AbortSignal,
+  onUpdate?: AgentToolUpdateCallback,
+) => Promise<AgentToolResult<unknown>>;
+
+export type AnyAgentTool = {
+  name: string;
+  label: string;
+  description: string;
+  // oxlint-disable-next-line typescript/no-explicit-any
+  parameters: any;
+  prepareArguments?: (args: unknown) => unknown;
+  executionMode?: AgentTool["executionMode"];
+  ownerOnly?: boolean;
+  displaySummary?: string;
+  execute: AnyAgentToolExecute;
+};
 
 export type StringParamOptions = {
   required?: boolean;

@@ -95,7 +95,7 @@ describe("production lint suppressions", () => {
       "src/agents/skills-clawhub.ts|no-control-regex|1",
       "src/agents/subagent-attachments.ts|no-control-regex|1",
       "src/agents/subagent-spawn.ts|no-control-regex|1",
-      "src/agents/tools/common.ts|typescript/no-explicit-any|1",
+      "src/agents/tools/common.ts|typescript/no-explicit-any|2",
       "src/channels/plugins/channel-runtime-surface.types.ts|typescript/no-unnecessary-type-parameters|1",
       "src/channels/plugins/contracts/test-helpers.ts|typescript/no-unnecessary-type-parameters|1",
       "src/channels/plugins/types.plugin.ts|typescript/no-explicit-any|1",
@@ -137,6 +137,10 @@ describe("production lint suppressions", () => {
     );
 
     expect(anySuppressions).toEqual([
+      {
+        file: "src/agents/tools/common.ts",
+        rule: "typescript/no-explicit-any",
+      },
       {
         file: "src/agents/tools/common.ts",
         rule: "typescript/no-explicit-any",
