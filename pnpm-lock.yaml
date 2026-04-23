@@ -403,6 +403,10 @@ importers:
         version: link:../../packages/plugin-sdk
 
   extensions/deepgram:
+    dependencies:
+      ws:
+        specifier: ^8.20.0
+        version: 8.20.0
     devDependencies:
       '@openclaw/plugin-sdk':
         specifier: workspace:*
@@ -514,6 +518,10 @@ importers:
         version: link:../../packages/plugin-sdk
 
   extensions/elevenlabs:
+    dependencies:
+      ws:
+        specifier: ^8.20.0
+        version: 8.20.0
     devDependencies:
       '@openclaw/plugin-sdk':
         specifier: workspace:*
@@ -836,6 +844,10 @@ importers:
         version: link:../../packages/plugin-sdk
 
   extensions/mistral:
+    dependencies:
+      ws:
+        specifier: ^8.20.0
+        version: 8.20.0
     devDependencies:
       '@openclaw/plugin-sdk':
         specifier: workspace:*
