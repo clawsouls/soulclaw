@@ -128,12 +128,15 @@ jobs:
             exit 1
           fi
 
-      - name: Restore Node environment
+      - name: Restore Node 24 path
         if: steps.superseded.outputs.run_agent == 'true'
-        uses: ./.github/actions/setup-node-env
-        with:
-          install-bun: "false"
-          install-deps: "false"
+        run: |
+          set -euo pipefail
+          export PATH="${NODE_BIN}:${PATH}"
+          echo "${NODE_BIN}" >> "$GITHUB_PATH"
+          node -v
+          corepack enable
+          pnpm -v
 
       - name: Check docs
         if: steps.superseded.outputs.run_agent == 'true'
