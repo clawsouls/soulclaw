@@ -70,6 +70,11 @@ Use this skill for release and publish-time workflow. Keep ordinary development 
 - Every stable OpenClaw release ships the npm package and macOS app together.
   Beta releases normally ship npm/package artifacts first and skip mac app
   build/sign/notarize unless the operator requests mac beta validation.
+- Do not let the slower macOS signing/notary path block npm publication once
+  the npm preflight has passed. Keep mac validation/publish running in
+  parallel, publish npm from the successful npm preflight, then start published
+  npm install/update, Docker, and Parallels verification while mac artifacts
+  continue.
 - The production Sparkle feed lives at `https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml`, and the canonical published file is `appcast.xml` on `main` in the `openclaw` repo.
 - That shared production Sparkle feed is stable-only. Beta mac releases may
   upload assets to the GitHub prerelease, but they must not replace the shared
