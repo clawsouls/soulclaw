@@ -21,8 +21,8 @@ const auditDreamingArtifacts = vi.hoisted(() => vi.fn());
 const auditShortTermPromotionArtifacts = vi.hoisted(() => vi.fn());
 const repairDreamingArtifacts = vi.hoisted(() => vi.fn());
 const repairShortTermPromotionArtifacts = vi.hoisted(() => vi.fn());
-const detectRootMemoryFiles = vi.hoisted(() => vi.fn());
-const migrateLegacyRootMemoryFile = vi.hoisted(() => vi.fn());
+const noteWorkspaceMemoryHealth = vi.hoisted(() => vi.fn(async () => undefined));
+const maybeRepairWorkspaceMemoryHealth = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock("../terminal/note.js", () => ({
   note,
@@ -89,8 +89,8 @@ vi.mock("./doctor-workspace.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./doctor-workspace.js")>();
   return {
     ...actual,
-    detectRootMemoryFiles,
-    migrateLegacyRootMemoryFile,
+    noteWorkspaceMemoryHealth,
+    maybeRepairWorkspaceMemoryHealth,
   };
 });
 
@@ -137,22 +137,8 @@ function resetMemoryRecallMocks() {
     rewroteStore: false,
     removedStaleLock: false,
   });
-  detectRootMemoryFiles.mockReset();
-  detectRootMemoryFiles.mockResolvedValue({
-    workspaceDir: "/tmp/agent-default/workspace",
-    canonicalPath: "/tmp/agent-default/workspace/MEMORY.md",
-    legacyPath: "/tmp/agent-default/workspace/memory.md",
-    canonicalExists: false,
-    legacyExists: false,
-  });
-  migrateLegacyRootMemoryFile.mockReset();
-  migrateLegacyRootMemoryFile.mockResolvedValue({
-    changed: false,
-    canonicalPath: "/tmp/agent-default/workspace/MEMORY.md",
-    legacyPath: "/tmp/agent-default/workspace/memory.md",
-    removedLegacy: false,
-    mergedLegacy: false,
-  });
+  noteWorkspaceMemoryHealth.mockClear();
+  maybeRepairWorkspaceMemoryHealth.mockClear();
 }
 
 describe("noteMemorySearchHealth", () => {
@@ -569,17 +555,10 @@ describe("noteMemorySearchHealth", () => {
       local: {},
       remote: {},
     });
-    detectRootMemoryFiles.mockResolvedValueOnce({
-      workspaceDir: "/tmp/agent-default/workspace",
-      canonicalPath: "/tmp/agent-default/workspace/MEMORY.md",
-      legacyPath: "/tmp/agent-default/workspace/memory.md",
-      canonicalExists: false,
-      legacyExists: true,
-      legacyBytes: 10,
-    });
 
     await noteMemorySearchHealth(cfg);
 
+    expect(noteWorkspaceMemoryHealth).toHaveBeenCalledWith(cfg);
     const workspaceNote = note.mock.calls.find(([, title]) => title === "Workspace memory");
     expect(workspaceNote).toBeUndefined();
   });
@@ -681,6 +660,7 @@ describe("memory recall doctor integration", () => {
 
     await maybeRepairMemoryRecallHealth({ cfg, prompter });
 
+    expect(maybeRepairWorkspaceMemoryHealth).toHaveBeenCalledWith({ cfg, prompter });
     expect(prompter.confirmRuntimeRepair).toHaveBeenCalled();
     expect(repairShortTermPromotionArtifacts).toHaveBeenCalledWith({
       workspaceDir: "/tmp/agent-default/workspace",
@@ -723,6 +703,7 @@ describe("memory recall doctor integration", () => {
 
     await maybeRepairMemoryRecallHealth({ cfg, prompter });
 
+    expect(maybeRepairWorkspaceMemoryHealth).toHaveBeenCalledWith({ cfg, prompter });
     expect(prompter.confirmRuntimeRepair).toHaveBeenCalled();
     expect(repairDreamingArtifacts).toHaveBeenCalledWith({
       workspaceDir: "/tmp/agent-default/workspace",
@@ -731,60 +712,6 @@ describe("memory recall doctor integration", () => {
     expect(message).toContain("Dreaming artifacts repaired:");
     expect(message).toContain("archived session corpus");
     expect(message).toContain("archived session-ingestion state");
-  });
-
-  it("does not migrate lowercase-only root memory during doctor --fix", async () => {
-    resolveAgentWorkspaceDir.mockReturnValue("/tmp/agent-default/workspace");
-    detectRootMemoryFiles.mockResolvedValueOnce({
-      workspaceDir: "/tmp/agent-default/workspace",
-      canonicalPath: "/tmp/agent-default/workspace/MEMORY.md",
-      legacyPath: "/tmp/agent-default/workspace/memory.md",
-      canonicalExists: false,
-      legacyExists: true,
-      legacyBytes: 24,
-    });
-    const prompter = createPrompter();
-
-    await maybeRepairMemoryRecallHealth({ cfg, prompter });
-
-    expect(migrateLegacyRootMemoryFile).not.toHaveBeenCalled();
-    expect(note).not.toHaveBeenCalled();
-  });
-
-  it("merges split-brain root memory during doctor --fix", async () => {
-    resolveAgentWorkspaceDir.mockReturnValue("/tmp/agent-default/workspace");
-    detectRootMemoryFiles.mockResolvedValueOnce({
-      workspaceDir: "/tmp/agent-default/workspace",
-      canonicalPath: "/tmp/agent-default/workspace/MEMORY.md",
-      legacyPath: "/tmp/agent-default/workspace/memory.md",
-      canonicalExists: true,
-      legacyExists: true,
-      canonicalBytes: 32,
-      legacyBytes: 24,
-    });
-    migrateLegacyRootMemoryFile.mockResolvedValueOnce({
-      changed: true,
-      canonicalPath: "/tmp/agent-default/workspace/MEMORY.md",
-      legacyPath: "/tmp/agent-default/workspace/memory.md",
-      removedLegacy: true,
-      mergedLegacy: true,
-      archivedLegacyPath:
-        "/tmp/agent-default/workspace/.openclaw-repair/root-memory/archive/memory.md",
-      copiedBytes: 24,
-    });
-    const prompter = createPrompter();
-
-    await maybeRepairMemoryRecallHealth({ cfg, prompter });
-
-    expect(prompter.confirmRuntimeRepair).toHaveBeenCalledWith({
-      message: "Merge legacy root memory.md into canonical MEMORY.md and remove the shadowed file?",
-      initialValue: true,
-    });
-    expect(migrateLegacyRootMemoryFile).toHaveBeenCalledWith("/tmp/agent-default/workspace");
-    const message = String(note.mock.calls[0]?.[0] ?? "");
-    expect(message).toContain("Workspace memory root merged:");
-    expect(message).toContain("backup:");
-    expect(message).toContain("merged legacy content from:");
   });
 });
 

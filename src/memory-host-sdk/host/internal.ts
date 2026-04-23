@@ -3,6 +3,11 @@ import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { detectMime } from "../../media/mime.js";
+import {
+  CANONICAL_ROOT_MEMORY_FILENAME,
+  resolveCanonicalRootMemoryFile,
+  shouldSkipRootMemoryAuxiliaryPath,
+} from "../../memory/root-memory-files.js";
 import { CHARS_PER_TOKEN_ESTIMATE, estimateStringChars } from "../../utils/cjk-chars.js";
 import { runTasksWithConcurrency } from "../../utils/run-with-concurrency.js";
 import { estimateStructuredEmbeddingInputBytes } from "./embedding-input-limits.js";
@@ -77,7 +82,7 @@ export function isMemoryPath(relPath: string): boolean {
   if (!normalized) {
     return false;
   }
-  if (normalized === "MEMORY.md" || normalized === "DREAMS.md") {
+  if (normalized === CANONICAL_ROOT_MEMORY_FILENAME || normalized === "DREAMS.md") {
     return true;
   }
   return normalized.startsWith("memory/");
@@ -124,18 +129,6 @@ async function walkDir(
   }
 }
 
-async function resolveCanonicalMemoryRootFile(workspaceDir: string): Promise<string | null> {
-  try {
-    const entries = await fs.readdir(workspaceDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.name === "MEMORY.md" && entry.isFile() && !entry.isSymbolicLink()) {
-        return path.join(workspaceDir, entry.name);
-      }
-    }
-  } catch {}
-  return null;
-}
-
 export async function listMemoryFiles(
   workspaceDir: string,
   extraPaths?: string[],
@@ -144,23 +137,8 @@ export async function listMemoryFiles(
   const result: string[] = [];
   const memoryDir = path.join(workspaceDir, "memory");
 
-  const shouldSkipWorkspaceMemoryPath = (absPath: string): boolean => {
-    const relative = path.relative(workspaceDir, absPath);
-    if (relative.startsWith("..") || path.isAbsolute(relative)) {
-      return false;
-    }
-    const normalized = relative.replace(/\\/g, "/");
-    if (!normalized) {
-      return false;
-    }
-    if (normalized === "memory.md") {
-      return true;
-    }
-    return (
-      normalized === ".openclaw-repair/root-memory" ||
-      normalized.startsWith(".openclaw-repair/root-memory/")
-    );
-  };
+  const shouldSkipWorkspaceMemoryPath = (absPath: string): boolean =>
+    shouldSkipRootMemoryAuxiliaryPath({ workspaceDir, absPath });
 
   const addMarkdownFile = async (absPath: string) => {
     try {
@@ -175,7 +153,7 @@ export async function listMemoryFiles(
     } catch {}
   };
 
-  const memoryFile = await resolveCanonicalMemoryRootFile(workspaceDir);
+  const memoryFile = await resolveCanonicalRootMemoryFile(workspaceDir);
   if (memoryFile) {
     await addMarkdownFile(memoryFile);
   }
