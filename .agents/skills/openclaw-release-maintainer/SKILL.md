@@ -318,6 +318,22 @@ node --import tsx scripts/openclaw-npm-postpublish-verify.ts <published-version>
   `openclaw/releases-private/.github/workflows/openclaw-npm-dist-tags.yml`
   workflow because `npm dist-tag` management needs `NPM_TOKEN`, while the
   public npm release workflow stays OIDC-only.
+- If the private dist-tag workflow cannot promote because `NPM_TOKEN` is absent
+  or stale, use the local tmux + 1Password fallback:
+  - Start or reuse a tmux session so interactive `npm login` and OTP prompts
+    are observable and recoverable.
+  - Use the 1Password item `op://Private/Npmjs` for npm credentials and OTP.
+    Do not print passwords, tokens, or OTPs to the transcript; send them through
+    tmux buffers, env vars scoped to the tmux command, or `expect` with
+    `log_user 0`.
+  - Re-authenticate npm inside that tmux session with
+    `npm login --auth-type=legacy`, then confirm `npm whoami` reports
+    `steipete`.
+  - Promote with a fresh OTP:
+    `npm dist-tag add openclaw@YYYY.M.D latest --otp "$OTP"`.
+  - Verify with a cache-bypassed registry read, for example:
+    `npm view openclaw dist-tags --json --prefer-online --cache /tmp/openclaw-npm-cache-verify-$$`
+    and `npm view openclaw@latest version dist.tarball --json --prefer-online`.
 - Direct stable publishes can also use that private dist-tag workflow to point
   `beta` at the already-published `latest` version when the operator wants both
   tags aligned immediately.
