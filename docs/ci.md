@@ -58,7 +58,7 @@ Android CI runs both `testPlayDebugUnitTest` and `testThirdPartyDebugUnitTest`, 
 `extension-fast` is PR-only because push runs already execute the full bundled plugin shards. That keeps changed-plugin feedback for reviews without reserving an extra Blacksmith worker on `main` for coverage already present in `checks-node-extensions`.
 
 GitHub may mark superseded jobs as `cancelled` when a newer push lands on the same PR or `main` ref. Treat that as CI noise unless the newest run for the same ref is also failing. Aggregate shard checks use `!cancelled() && always()` so they still report normal shard failures but do not queue after the whole workflow has already been superseded.
-The CI concurrency key is versioned (`CI-v6-*`) so a GitHub-side zombie in an old queue group cannot indefinitely block newer main runs.
+The CI concurrency key is versioned (`CI-v7-*`) so a GitHub-side zombie in an old queue group cannot indefinitely block newer main runs.
 
 ## Runners
 
