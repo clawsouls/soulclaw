@@ -436,7 +436,7 @@ describe("telegram live qa runtime", () => {
     ]);
   });
 
-  it("redacts observed message metadata in public mode even when content capture is requested", () => {
+  it("keeps observed message content in public mode when capture is requested", () => {
     const redacted = __testing.buildObservedMessagesArtifact({
       includeContent: true,
       redactMetadata: true,
@@ -463,12 +463,14 @@ describe("telegram live qa runtime", () => {
         senderIsBot: true,
         inlineButtonCount: 1,
         mediaKinds: ["photo"],
+        text: "secret text",
+        caption: "secret caption",
       },
     ]);
     expect(redacted[0]).not.toHaveProperty("timestamp");
     expect(redacted[0]).not.toHaveProperty("inlineButtons");
-    expect(redacted[0]).not.toHaveProperty("text");
-    expect(redacted[0]).not.toHaveProperty("caption");
+    expect(redacted[0]).not.toHaveProperty("senderId");
+    expect(redacted[0]).not.toHaveProperty("senderUsername");
   });
 
   it("keeps raw timestamp and inline button text when metadata redaction is disabled", () => {
@@ -566,6 +568,7 @@ describe("telegram live qa runtime", () => {
     expect(message).toContain("- sutBotId: <redacted>");
     expect(message).toContain("- sutUsername: <redacted>");
     expect(message).toContain("- driverMessageId: <redacted>");
+    expect(message).toContain("timed out");
     expect(message).not.toContain("-100123");
     expect(message).not.toContain("driver_bot");
     expect(message).not.toContain("sut_bot");

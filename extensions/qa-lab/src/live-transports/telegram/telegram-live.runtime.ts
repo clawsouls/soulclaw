@@ -639,7 +639,7 @@ function buildObservedMessagesArtifact(params: {
           senderUsername: message.senderUsername,
           replyToMessageId: message.replyToMessageId,
         };
-    if (!params.includeContent || params.redactMetadata) {
+    if (!params.includeContent) {
       return base;
     }
     return {
@@ -803,9 +803,7 @@ function canaryFailureMessage(params: {
   sutUsername: string;
 }) {
   const error = params.error;
-  const details = params.redactMetadata
-    ? "details redacted (OPENCLAW_QA_REDACT_PUBLIC_METADATA=1)"
-    : formatErrorMessage(error);
+  const details = formatErrorMessage(error);
   const phase = isTelegramQaCanaryError(error) ? error.phase : "unknown";
   const canonicalContext = new Set([
     "groupId",
@@ -906,8 +904,7 @@ export async function runTelegramQaLive(params: {
   const scenarios = findScenario(params.scenarioIds);
   const observedMessages: TelegramObservedMessage[] = [];
   const redactPublicMetadata = isTruthyOptIn(process.env[QA_REDACT_PUBLIC_METADATA_ENV]);
-  const includeObservedMessageContent =
-    !redactPublicMetadata && isTruthyOptIn(process.env[TELEGRAM_QA_CAPTURE_CONTENT_ENV]);
+  const includeObservedMessageContent = isTruthyOptIn(process.env[TELEGRAM_QA_CAPTURE_CONTENT_ENV]);
   const startedAt = new Date().toISOString();
   const scenarioResults: TelegramQaScenarioResult[] = [];
   const cleanupIssues: string[] = [];
@@ -1038,9 +1035,7 @@ export async function runTelegramQaLive(params: {
               id: scenario.id,
               title: scenario.title,
               status: "fail",
-              details: redactPublicMetadata
-                ? "details redacted (OPENCLAW_QA_REDACT_PUBLIC_METADATA=1)"
-                : formatErrorMessage(error),
+              details: formatErrorMessage(error),
             });
           }
           assertLeaseHealthy();
