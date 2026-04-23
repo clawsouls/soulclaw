@@ -2,7 +2,7 @@ import {
   embeddedAgentLog,
   type CompactEmbeddedPiSessionParams,
   type EmbeddedPiCompactResult,
-} from "openclaw/plugin-sdk/agent-harness";
+} from "openclaw/plugin-sdk/agent-harness-runtime";
 import {
   createCodexAppServerClientFactoryTestHooks,
   defaultCodexAppServerClientFactory,
