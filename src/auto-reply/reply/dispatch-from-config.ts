@@ -105,6 +105,33 @@ function loadReplyMediaPathsRuntime() {
   return replyMediaPathsRuntimePromise;
 }
 
+function isSystemEventProvider(provider?: string): boolean {
+  return provider === "heartbeat" || provider === "cron-event" || provider === "exec-event";
+}
+
+function resolveEffectiveReplyRoute(params: {
+  ctx: Pick<FinalizedMsgContext, "Provider" | "OriginatingChannel" | "OriginatingTo" | "AccountId">;
+  entry?: Pick<SessionEntry, "deliveryContext" | "lastChannel" | "lastTo" | "lastAccountId">;
+}): { channel?: string; to?: string; accountId?: string } {
+  if (!isSystemEventProvider(params.ctx.Provider)) {
+    return {
+      channel: params.ctx.OriginatingChannel,
+      to: params.ctx.OriginatingTo,
+      accountId: params.ctx.AccountId,
+    };
+  }
+  const persistedDeliveryContext = params.entry?.deliveryContext;
+  return {
+    channel:
+      params.ctx.OriginatingChannel ??
+      persistedDeliveryContext?.channel ??
+      params.entry?.lastChannel,
+    to: params.ctx.OriginatingTo ?? persistedDeliveryContext?.to ?? params.entry?.lastTo,
+    accountId:
+      params.ctx.AccountId ?? persistedDeliveryContext?.accountId ?? params.entry?.lastAccountId,
+  };
+}
+
 async function maybeApplyTtsToReplyPayload(
   params: Parameters<Awaited<ReturnType<typeof loadTtsRuntime>>["maybeApplyTtsToPayload"]>[0],
 ) {
@@ -287,18 +314,7 @@ export async function dispatchReplyFromConfig(
           "",
       ) ?? "off",
   });
-  const isSystemEventTurn =
-    ctx.Provider === "heartbeat" || ctx.Provider === "cron-event" || ctx.Provider === "exec-event";
-  const persistedDeliveryContext = sessionStoreEntry.entry?.deliveryContext;
-  const fallbackOriginatingChannel = isSystemEventTurn
-    ? (persistedDeliveryContext?.channel ?? sessionStoreEntry.entry?.lastChannel)
-    : undefined;
-  const fallbackOriginatingTo = isSystemEventTurn
-    ? (persistedDeliveryContext?.to ?? sessionStoreEntry.entry?.lastTo)
-    : undefined;
-  const fallbackOriginatingAccountId = isSystemEventTurn
-    ? (persistedDeliveryContext?.accountId ?? sessionStoreEntry.entry?.lastAccountId)
-    : undefined;
+  const effectiveReplyRoute = resolveEffectiveReplyRoute({ ctx, entry: sessionStoreEntry.entry });
   // Restore route thread context only from the active turn or the thread-scoped session key.
   // Do not read thread ids from the normalised session store here: `origin.threadId` can be
   // folded back into lastThreadId/deliveryContext during store normalisation and resurrect a
@@ -331,10 +347,7 @@ export async function dispatchReplyFromConfig(
   //
   // Debug: `pnpm test src/auto-reply/reply/dispatch-from-config.test.ts`
   const suppressAcpChildUserDelivery = isParentOwnedBackgroundAcpSession(sessionStoreEntry.entry);
-  const effectiveOriginatingChannel = ctx.OriginatingChannel ?? fallbackOriginatingChannel;
-  const effectiveOriginatingTo = ctx.OriginatingTo ?? fallbackOriginatingTo;
-  const routeAccountId = ctx.AccountId ?? fallbackOriginatingAccountId;
-  const normalizedOriginatingChannel = normalizeMessageChannel(effectiveOriginatingChannel);
+  const normalizedOriginatingChannel = normalizeMessageChannel(effectiveReplyRoute.channel);
   const normalizedProviderChannel = normalizeMessageChannel(ctx.Provider);
   const normalizedSurfaceChannel = normalizeMessageChannel(ctx.Surface);
   const normalizedCurrentSurface = normalizedProviderChannel ?? normalizedSurfaceChannel;
@@ -346,7 +359,7 @@ export async function dispatchReplyFromConfig(
     !suppressAcpChildUserDelivery &&
     !isInternalWebchatTurn &&
     normalizedOriginatingChannel &&
-    effectiveOriginatingTo &&
+    effectiveReplyRoute.to &&
     normalizedOriginatingChannel !== normalizedCurrentSurface,
   );
   const routeReplyRuntime = hasRouteReplyCandidate ? await loadRouteReplyRuntime() : undefined;
@@ -355,12 +368,12 @@ export async function dispatchReplyFromConfig(
       provider: ctx.Provider,
       surface: ctx.Surface,
       explicitDeliverRoute: ctx.ExplicitDeliverRoute,
-      originatingChannel: effectiveOriginatingChannel,
-      originatingTo: effectiveOriginatingTo,
+      originatingChannel: effectiveReplyRoute.channel,
+      originatingTo: effectiveReplyRoute.to,
       suppressDirectUserDelivery: suppressAcpChildUserDelivery,
       isRoutableChannel: routeReplyRuntime?.isRoutableChannel ?? (() => false),
     });
-  const originatingTo = effectiveOriginatingTo;
+  const originatingTo = effectiveReplyRoute.to;
   const ttsChannel = shouldRouteToOriginating ? originatingChannel : currentSurface;
   const { createReplyMediaPathNormalizer } = await loadReplyMediaPathsRuntime();
   const normalizeReplyMediaPaths = createReplyMediaPathNormalizer({
@@ -368,7 +381,7 @@ export async function dispatchReplyFromConfig(
     sessionKey: acpDispatchSessionKey,
     workspaceDir: resolveAgentWorkspaceDir(cfg, sessionAgentId),
     messageProvider: ttsChannel,
-    accountId: routeAccountId,
+    accountId: effectiveReplyRoute.accountId,
     groupId,
     groupChannel: ctx.GroupChannel,
     groupSpace: ctx.GroupSpace,
@@ -400,7 +413,7 @@ export async function dispatchReplyFromConfig(
         ctx.CommandSource === "native"
           ? (ctx.CommandTargetSessionKey ?? ctx.SessionKey)
           : ctx.SessionKey,
-      accountId: routeAccountId,
+      accountId: effectiveReplyRoute.accountId,
       requesterSenderId: ctx.SenderId,
       requesterSenderName: ctx.SenderName,
       requesterSenderUsername: ctx.SenderUsername,
@@ -487,8 +500,9 @@ export async function dispatchReplyFromConfig(
     entry: sessionStoreEntry.entry,
     sessionKey: sessionStoreEntry.sessionKey ?? sessionKey,
     channel:
+      (shouldRouteToOriginating ? originatingChannel : undefined) ??
       sessionStoreEntry.entry?.channel ??
-      ctx.OriginatingChannel ??
+      effectiveReplyRoute.channel ??
       ctx.Surface ??
       ctx.Provider ??
       undefined,
