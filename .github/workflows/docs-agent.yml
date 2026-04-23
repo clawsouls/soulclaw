@@ -1,7 +1,7 @@
 name: Docs Agent
 
 on:
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers] main-only docs repair after trusted CI; job gates repository, event, branch, actor, conclusion, and exact current main SHA before using write token
     workflows:
       - CI
     types:
