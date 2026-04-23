@@ -170,15 +170,28 @@ NPM_CACHE_DIR="${OPENCLAW_INSTALL_SMOKE_NPM_CACHE_DIR:-}"
 NPM_CACHE_OWNED=0
 NPM_CACHE_DOCKER_ARGS=()
 
+remove_owned_npm_cache() {
+  if [[ "$NPM_CACHE_OWNED" != "1" || -z "$NPM_CACHE_DIR" || ! -d "$NPM_CACHE_DIR" ]]; then
+    return
+  fi
+
+  if rm -rf "$NPM_CACHE_DIR" 2>/dev/null; then
+    return
+  fi
+  if command -v sudo >/dev/null 2>&1 && sudo -n rm -rf "$NPM_CACHE_DIR" 2>/dev/null; then
+    return
+  fi
+
+  echo "WARN: failed to remove temporary npm cache: $NPM_CACHE_DIR" >&2
+}
+
 cleanup() {
   if [[ -n "$UPDATE_SERVER_PID" ]]; then
     kill "$UPDATE_SERVER_PID" >/dev/null 2>&1 || true
     wait "$UPDATE_SERVER_PID" >/dev/null 2>&1 || true
   fi
-  if [[ "$NPM_CACHE_OWNED" == "1" && -n "$NPM_CACHE_DIR" ]]; then
-    rm -rf "$NPM_CACHE_DIR"
-  fi
-  rm -rf "$LATEST_DIR" "$UPDATE_DIR"
+  remove_owned_npm_cache || true
+  rm -rf "$LATEST_DIR" "$UPDATE_DIR" || true
 }
 
 trap cleanup EXIT

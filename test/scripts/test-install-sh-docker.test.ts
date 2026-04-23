@@ -93,6 +93,8 @@ describe("install-sh smoke runner", () => {
     expect(script).toContain('NPM_CACHE_DIR="${OPENCLAW_INSTALL_SMOKE_NPM_CACHE_DIR:-}"');
     expect(script).toContain("-e npm_config_cache=/npm-cache");
     expect(script).toContain('"${NPM_CACHE_DOCKER_ARGS[@]}"');
+    expect(script).toContain("remove_owned_npm_cache");
+    expect(script).toContain('sudo -n rm -rf "$NPM_CACHE_DIR"');
     expect(script).toContain("==> Run direct npm global smoke");
     expect(script).toContain("OPENCLAW_INSTALL_SMOKE_MODE=npm-global");
     expect(runner).toContain("run_npm_global_smoke");
