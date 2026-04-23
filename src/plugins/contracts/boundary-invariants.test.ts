@@ -66,6 +66,13 @@ const BUNDLED_LIVE_CONFIG_HOOK_GUARDS = {
     "api.runtime.config?.loadConfig?.() ?? api.config",
   ],
 } as const satisfies Record<string, readonly string[]>;
+const BUNDLED_STARTUP_GATED_HOOK_FORBIDDEN_SNIPPETS = {
+  "extensions/memory-lancedb/index.ts": ["if (cfg.autoRecall)", "if (cfg.autoCapture)"],
+  "extensions/skill-workshop/index.ts": [
+    "if (!startupConfig.enabled)",
+    'if (startupConfig.autoCapture && startupConfig.reviewMode !== "off")',
+  ],
+} as const satisfies Record<string, readonly string[]>;
 
 type FileFilter = {
   excludeTests?: boolean;
@@ -247,5 +254,17 @@ describe("plugin contract boundary invariants", () => {
       },
     );
     expect(missingGuards).toEqual([]);
+  });
+
+  it("keeps long-lived bundled hook handlers off startup-only registration gates", () => {
+    const offenders = Object.entries(BUNDLED_STARTUP_GATED_HOOK_FORBIDDEN_SNIPPETS).flatMap(
+      ([file, forbiddenSnippets]) => {
+        const source = readRepoSource(file);
+        return forbiddenSnippets
+          .filter((snippet) => source.includes(snippet))
+          .map((snippet) => `${file}: ${snippet}`);
+      },
+    );
+    expect(offenders).toEqual([]);
   });
 });
