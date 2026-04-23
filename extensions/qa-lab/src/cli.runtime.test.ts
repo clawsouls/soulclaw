@@ -1166,7 +1166,7 @@ describe("qa cli runtime", () => {
   it("defaults manual frontier runs onto Codex OAuth when the runtime resolver prefers it", async () => {
     defaultQaRuntimeModelForMode.mockImplementation((mode, options) =>
       mode === "live-frontier"
-        ? "openai-codex/gpt-5.5"
+        ? "openai/gpt-5.5"
         : defaultQaProviderModelForMode(mode as QaProviderModeInput, options),
     );
 
@@ -1179,8 +1179,8 @@ describe("qa cli runtime", () => {
       repoRoot: path.resolve("/tmp/openclaw-repo"),
       transportId: "qa-channel",
       providerMode: "live-frontier",
-      primaryModel: "openai-codex/gpt-5.5",
-      alternateModel: "openai-codex/gpt-5.5",
+      primaryModel: "openai/gpt-5.5",
+      alternateModel: "openai/gpt-5.5",
       fastMode: undefined,
       message: "read qa kickoff and reply short",
       timeoutMs: undefined,
