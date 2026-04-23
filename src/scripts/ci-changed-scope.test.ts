@@ -331,6 +331,15 @@ describe("detectChangedScope", () => {
       runChangedSmoke: true,
       runControlUiI18n: false,
     });
+    expect(detectChangedScope(["scripts/ci-changed-scope.mjs"])).toEqual({
+      runNode: true,
+      runMacos: false,
+      runAndroid: false,
+      runWindows: false,
+      runSkillsPython: false,
+      runChangedSmoke: true,
+      runControlUiI18n: false,
+    });
     expect(detectChangedScope(["src/plugins/bundled-runtime-deps.ts"])).toEqual({
       runNode: true,
       runMacos: false,
