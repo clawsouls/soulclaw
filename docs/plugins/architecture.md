@@ -511,10 +511,9 @@ At startup, OpenClaw does roughly this:
 4. normalize plugin config (`plugins.enabled`, `allow`, `deny`, `entries`,
    `slots`, `load.paths`)
 5. decide enablement for each candidate
-6. load enabled native modules — built `dist/*` bundled modules go through a
-   native loader path, while non-built native plugin modules are loaded via
-   jiti
-7. call native `register(api)` (or `activate(api)` — a legacy alias) hooks and collect registrations into the plugin registry
+6. load enabled native modules: built bundled modules use a native loader;
+   unbuilt native plugins use jiti
+7. call native `register(api)` hooks and collect registrations into the plugin registry
 8. expose the registry to commands/runtime surfaces
 
 <Note>
