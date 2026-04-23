@@ -481,8 +481,8 @@ Common forms:
 
 `/codex resume` writes the same sidecar binding file that the harness uses for
 normal turns. On the next message, OpenClaw resumes that Codex thread, passes the
-currently selected OpenClaw `codex/*` model into app-server, and keeps extended
-history enabled.
+currently selected OpenClaw model into app-server, and keeps extended history
+enabled.
 
 The command surface requires Codex app-server `0.118.0` or newer. Individual
 control methods are reported as `unsupported by this Codex app-server` if a
@@ -518,7 +518,8 @@ understanding continue to use the matching provider/model settings such as
 ## Troubleshooting
 
 **Codex does not appear in `/model`:** enable `plugins.entries.codex.enabled`,
-set a `codex/*` model ref, or check whether `plugins.allow` excludes `codex`.
+select an `openai/gpt-*` model with `embeddedHarness.runtime: "codex"` (or a
+legacy `codex/*` ref), and check whether `plugins.allow` excludes `codex`.
 
 **OpenClaw uses PI instead of Codex:** if no Codex harness claims the run,
 OpenClaw may use PI as the compatibility backend. Set
@@ -536,8 +537,9 @@ or disable discovery.
 **WebSocket transport fails immediately:** check `appServer.url`, `authToken`,
 and that the remote app-server speaks the same Codex app-server protocol version.
 
-**A non-Codex model uses PI:** that is expected. The Codex harness only claims
-`codex/*` model refs.
+**A non-Codex model uses PI:** that is expected unless you forced
+`embeddedHarness.runtime: "codex"` (or selected a legacy `codex/*` ref). Plain
+`openai/gpt-*` and other provider refs stay on their normal provider path.
 
 ## Related
 
