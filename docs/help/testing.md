@@ -516,7 +516,7 @@ Live tests are split into two layers so we can isolate failures:
 - How to select models:
   - `OPENCLAW_LIVE_MODELS=modern` to run the modern allowlist (Opus/Sonnet 4.6+, GPT-5.x + Codex, Gemini 3, GLM 4.7, MiniMax M2.7, Grok 4)
   - `OPENCLAW_LIVE_MODELS=all` is an alias for the modern allowlist
-  - or `OPENCLAW_LIVE_MODELS="openai/gpt-5.5,anthropic/claude-opus-4-6,..."` (comma allowlist)
+  - or `OPENCLAW_LIVE_MODELS="openai/gpt-5.4,openai-codex/gpt-5.5,anthropic/claude-opus-4-6,..."` (comma allowlist)
   - Modern/all sweeps default to a curated high-signal cap; set `OPENCLAW_LIVE_MAX_MODELS=0` for an exhaustive modern sweep or a positive number for a smaller cap.
 - How to select providers:
   - `OPENCLAW_LIVE_PROVIDERS="google,google-antigravity,google-gemini-cli"` (comma allowlist)
@@ -702,8 +702,9 @@ Docker notes:
 - Optional Guardian probe: `OPENCLAW_LIVE_CODEX_HARNESS_GUARDIAN_PROBE=1`
 - The smoke sets `OPENCLAW_AGENT_HARNESS_FALLBACK=none` so a broken Codex
   harness cannot pass by silently falling back to PI.
-- Auth: `OPENAI_API_KEY` from the shell/profile, plus optional copied
-  `~/.codex/auth.json` and `~/.codex/config.toml`
+- Auth: Codex app-server auth from the local Codex subscription login. Docker
+  smokes can also provide `OPENAI_API_KEY` for non-Codex probes when applicable,
+  plus optional copied `~/.codex/auth.json` and `~/.codex/config.toml`.
 
 Local recipe:
 
@@ -744,13 +745,13 @@ Docker notes:
 Narrow, explicit allowlists are fastest and least flaky:
 
 - Single model, direct (no gateway):
-  - `OPENCLAW_LIVE_MODELS="openai/gpt-5.5" pnpm test:live src/agents/models.profiles.live.test.ts`
+  - `OPENCLAW_LIVE_MODELS="openai/gpt-5.4" pnpm test:live src/agents/models.profiles.live.test.ts`
 
 - Single model, gateway smoke:
-  - `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.5" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
+  - `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.4" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
 - Tool calling across several providers:
-  - `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.5,anthropic/claude-opus-4-6,google/gemini-3-flash-preview,zai/glm-4.7,minimax/MiniMax-M2.7" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
+  - `OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.4,openai-codex/gpt-5.5,anthropic/claude-opus-4-6,google/gemini-3-flash-preview,zai/glm-4.7,minimax/MiniMax-M2.7" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
 - Google focus (Gemini API key + Antigravity):
   - Gemini (API key): `OPENCLAW_LIVE_GATEWAY_MODELS="google/gemini-3-flash-preview" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
@@ -773,8 +774,8 @@ There is no fixed “CI model list” (live is opt-in), but these are the **reco
 
 This is the “common models” run we expect to keep working:
 
-- OpenAI (non-Codex): `openai/gpt-5.5` (optional: `openai/gpt-5.4-mini`)
-- OpenAI Codex OAuth: `openai/gpt-5.5` (`openai-codex/gpt-*` remains a legacy alias)
+- OpenAI (non-Codex): `openai/gpt-5.4` (optional: `openai/gpt-5.4-mini`)
+- OpenAI Codex OAuth: `openai-codex/gpt-5.5`
 - Anthropic: `anthropic/claude-opus-4-6` (or `anthropic/claude-sonnet-4-6`)
 - Google (Gemini API): `google/gemini-3.1-pro-preview` and `google/gemini-3-flash-preview` (avoid older Gemini 2.x models)
 - Google (Antigravity): `google-antigravity/claude-opus-4-6-thinking` and `google-antigravity/gemini-3-flash`
@@ -782,13 +783,13 @@ This is the “common models” run we expect to keep working:
 - MiniMax: `minimax/MiniMax-M2.7`
 
 Run gateway smoke with tools + image:
-`OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.5,anthropic/claude-opus-4-6,google/gemini-3.1-pro-preview,google/gemini-3-flash-preview,google-antigravity/claude-opus-4-6-thinking,google-antigravity/gemini-3-flash,zai/glm-4.7,minimax/MiniMax-M2.7" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
+`OPENCLAW_LIVE_GATEWAY_MODELS="openai/gpt-5.4,openai-codex/gpt-5.5,anthropic/claude-opus-4-6,google/gemini-3.1-pro-preview,google/gemini-3-flash-preview,google-antigravity/claude-opus-4-6-thinking,google-antigravity/gemini-3-flash,zai/glm-4.7,minimax/MiniMax-M2.7" pnpm test:live src/gateway/gateway-models.profiles.live.test.ts`
 
 ### Baseline: tool calling (Read + optional Exec)
 
 Pick at least one per provider family:
 
-- OpenAI: `openai/gpt-5.5` (or `openai/gpt-5.4-mini`)
+- OpenAI: `openai/gpt-5.4` (or `openai/gpt-5.4-mini`)
 - Anthropic: `anthropic/claude-opus-4-6` (or `anthropic/claude-sonnet-4-6`)
 - Google: `google/gemini-3-flash-preview` (or `google/gemini-3.1-pro-preview`)
 - Z.AI (GLM): `zai/glm-4.7`

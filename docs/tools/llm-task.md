@@ -53,7 +53,7 @@ without writing custom OpenClaw code for each workflow.
           "defaultProvider": "openai-codex",
           "defaultModel": "gpt-5.5",
           "defaultAuthProfileId": "main",
-          "allowedModels": ["openai/gpt-5.5"],
+          "allowedModels": ["openai/gpt-5.4"],
           "maxTokens": 800,
           "timeoutMs": 30000
         }
