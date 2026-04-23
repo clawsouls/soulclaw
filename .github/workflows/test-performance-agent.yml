@@ -78,7 +78,7 @@ jobs:
 
           day_start="$(date -u +%Y-%m-%dT00:00:00Z)"
           runs_json="$RUNNER_TEMP/test-performance-agent-runs.json"
-          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/test-performance-agent.yml/runs" \
+          gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/test-performance-agent.yml/runs" \
             -f branch=main \
             -f event=workflow_run \
             -f per_page=50 > "$runs_json"
