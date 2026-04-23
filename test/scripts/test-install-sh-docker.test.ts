@@ -90,6 +90,9 @@ describe("install-sh smoke runner", () => {
     const runner = readFileSync(SMOKE_RUNNER_PATH, "utf8");
 
     expect(script).toContain('SKIP_NPM_GLOBAL="${OPENCLAW_INSTALL_SMOKE_SKIP_NPM_GLOBAL:-0}"');
+    expect(script).toContain('NPM_CACHE_DIR="${OPENCLAW_INSTALL_SMOKE_NPM_CACHE_DIR:-}"');
+    expect(script).toContain("-e npm_config_cache=/npm-cache");
+    expect(script).toContain('"${NPM_CACHE_DOCKER_ARGS[@]}"');
     expect(script).toContain("==> Run direct npm global smoke");
     expect(script).toContain("OPENCLAW_INSTALL_SMOKE_MODE=npm-global");
     expect(runner).toContain("run_npm_global_smoke");
