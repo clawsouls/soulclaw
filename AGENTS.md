@@ -95,6 +95,7 @@ Scoped guides:
 - Before closing an issue/PR: add a comment explaining why, usually duplicate/invalid, with the canonical issue/PR when relevant.
 - PR links: `gh pr list --state open --search '<issue-or-terms>' --json number,title,updatedAt,headRefName --limit 20`; use `gh pr view <n> --json number,title,body,closingIssuesReferences,files,statusCheckRollup,reviewDecision` only after shortlist.
 - CI polling: keep full `gh` capability, but request only needed fields. Known run status: `gh api repos/<owner>/<repo>/actions/runs/<id> --jq '{status,conclusion,head_sha,updated_at,name,path}'`.
+- Non-blocking background workflows: `Docs Sync Publish Repo`, `Docs Agent`, and `Test Performance Agent` are service/agent work. Do not wait on, rerun, or fix them during normal push/PR verification unless the user explicitly asks or the task is about those workflows. Report them as background if mentioned.
 - Waiting: poll lightly, usually 30-60s backoff. Fetch jobs/logs/artifacts only after completion/failure or when job detail is needed; avoid repeated workflow + run + jobs loops.
 
 ## Gates
