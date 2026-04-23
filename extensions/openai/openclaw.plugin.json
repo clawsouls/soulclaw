@@ -14,7 +14,7 @@
       "provider": "openai-codex",
       "method": "oauth",
       "choiceId": "openai-codex",
-      "deprecatedChoiceIds": ["codex-cli"],
+      "deprecatedChoiceIds": ["codex-cli", "openai-codex-import"],
       "choiceLabel": "OpenAI Codex Browser Login",
       "choiceHint": "Sign in with OpenAI in your browser",
       "assistantPriority": -30,
