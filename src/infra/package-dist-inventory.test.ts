@@ -18,6 +18,7 @@ describe("package dist inventory", () => {
 
       await expect(writePackageDistInventory(packageRoot)).resolves.toEqual([
         "dist/current-BR6xv1a1.js",
+        "dist/extensions/qa-channel/runtime-api.js",
       ]);
       await expect(collectPackageDistInventoryErrors(packageRoot)).resolves.toEqual([]);
 
@@ -134,7 +135,9 @@ describe("package dist inventory", () => {
       );
       await fs.writeFile(omittedMap, "{}", "utf8");
 
-      await expect(writePackageDistInventory(packageRoot)).resolves.toEqual([]);
+      await expect(writePackageDistInventory(packageRoot)).resolves.toEqual([
+        "dist/extensions/qa-channel/runtime-api.js",
+      ]);
     });
   });
   it("fails closed when the inventory is missing", async () => {

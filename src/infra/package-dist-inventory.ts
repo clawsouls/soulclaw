@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { NPM_UPDATE_COMPAT_SIDECAR_PATHS } from "./npm-update-compat-sidecars.js";
 
 export const PACKAGE_DIST_INVENTORY_RELATIVE_PATH = "dist/postinstall-inventory.json";
+const LEGACY_VERIFIER_COMPAT_INVENTORY_PATHS = ["dist/extensions/qa-channel/runtime-api.js"];
 const LEGACY_QA_LAB_DIR = ["qa", "lab"].join("-");
 const OMITTED_QA_EXTENSION_PREFIXES = [
   "dist/extensions/qa-channel/",
@@ -45,6 +47,9 @@ function isPackagedDistPath(relativePath: string): boolean {
   }
   if (relativePath === "dist/plugin-sdk/.tsbuildinfo") {
     return false;
+  }
+  if (LEGACY_VERIFIER_COMPAT_INVENTORY_PATHS.includes(relativePath)) {
+    return true;
   }
   if (
     OMITTED_PRIVATE_QA_PLUGIN_SDK_PREFIXES.some((prefix) => relativePath.startsWith(prefix)) ||
@@ -106,7 +111,12 @@ export async function collectPackageDistInventory(packageRoot: string): Promise<
 }
 
 export async function writePackageDistInventory(packageRoot: string): Promise<string[]> {
-  const inventory = await collectPackageDistInventory(packageRoot);
+  const inventory = [
+    ...new Set([
+      ...(await collectPackageDistInventory(packageRoot)),
+      ...LEGACY_VERIFIER_COMPAT_INVENTORY_PATHS,
+    ]),
+  ].toSorted((left, right) => left.localeCompare(right));
   const inventoryPath = path.join(packageRoot, PACKAGE_DIST_INVENTORY_RELATIVE_PATH);
   await fs.mkdir(path.dirname(inventoryPath), { recursive: true });
   await fs.writeFile(inventoryPath, `${JSON.stringify(inventory, null, 2)}\n`, "utf8");
@@ -151,6 +161,9 @@ export async function collectPackageDistInventoryErrors(packageRoot: string): Pr
 
   for (const relativePath of expectedFiles) {
     if (!actualSet.has(relativePath)) {
+      if (NPM_UPDATE_COMPAT_SIDECAR_PATHS.has(relativePath)) {
+        continue;
+      }
       errors.push(`missing packaged dist file ${relativePath}`);
     }
   }
