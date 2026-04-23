@@ -104,14 +104,33 @@ live`; keep it clearly beta and avoid implying stable promotion.
 - Lead with user-visible capabilities, then important integrations, then
   reliability/security/install fixes. Compress "lots of fixes" into one
   readable bullet.
+- Read the full changelog section before drafting. Do not lead with coverage,
+  CI, validation, or internal release mechanics unless the release is explicitly
+  about those. Peter prefers concrete user wins: features, integrations,
+  workflow improvements, and practical reliability fixes.
 - Tone: high-signal, slightly cheeky, confident, not corporate. One joke is
   enough. Avoid punching down, insulting users, or promising what was not
   verified.
-- Length: release tweets are always standard tweets under 280 characters. Trim
-  to 3-4 bullets and count the final text before posting.
-- Links/media: include the GitHub release or changelog link at the end. Add a
-  short docs follow-up reply only when there is a standout feature that needs
-  setup instructions.
+- Peter likes dry, compact taglines when they feel earned. Good example:
+  `Big release, tiny release notes... kidding.` Keep the joke short and let the
+  feature bullets carry the tweet; do not turn the punchline into a second
+  paragraph or a forced bit.
+- Length: release tweets are always standard tweets under 280 characters, with
+  room for one URL. Trim to 3-4 bullets and count the final text before posting.
+- Links/media: include the GitHub release or changelog link at the end of the
+  first release tweet.
+- Thread follow-ups: if doing a thread, keep the first release tweet as the
+  compact launch post, then publish one focused feature explainer per reply.
+  Follow-up replies should not repeat "new in VERSION" or the version number
+  when the thread context already makes it obvious.
+- Every follow-up tweet should include a docs URL for that specific feature.
+  Prefer a bare URL over `Docs: <url>` unless the label is needed for clarity.
+  Keep follow-ups concise: around 160-220 raw characters is usually the sweet
+  spot; under 280 is the hard cap. If a URL makes a tweet fail, trim prose
+  before dropping the URL.
+  Prefer explaining diagnostics, trajectory/export, provider setup, model
+  commands, or other setup-heavy features in follow-ups instead of overloading
+  the first release tweet.
 - Hotfix/correction: be direct and accountable. State what slipped, what is
   fixed, and the new version. Keep jokes out of incident-style posts.
 
