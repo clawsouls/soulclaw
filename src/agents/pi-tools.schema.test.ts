@@ -1,4 +1,4 @@
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import { describe, expect, it, vi } from "vitest";
 import {
   cleanToolSchemaForGemini,
@@ -6,6 +6,7 @@ import {
   normalizeToolParameters,
 } from "./pi-tools.schema.js";
 import type { AnyAgentTool } from "./pi-tools.types.js";
+import { asToolParameterSchema } from "./tools/common.js";
 
 describe("normalizeToolParameterSchema", () => {
   it("normalizes truly empty schemas to type:object with properties:{}", () => {
@@ -112,7 +113,7 @@ function makeTool(parameters: unknown): AnyAgentTool {
     name: "test_tool",
     label: "Test Tool",
     description: "test",
-    parameters,
+    parameters: asToolParameterSchema(parameters),
     execute: vi.fn(),
   };
 }

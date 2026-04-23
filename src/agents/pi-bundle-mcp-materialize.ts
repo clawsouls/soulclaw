@@ -11,7 +11,7 @@ import {
   TOOL_NAME_SEPARATOR,
 } from "./pi-bundle-mcp-names.js";
 import type { BundleMcpToolRuntime, SessionMcpRuntime } from "./pi-bundle-mcp-types.js";
-import type { AnyAgentTool } from "./tools/common.js";
+import { asToolParameterSchema, type AnyAgentTool } from "./tools/common.js";
 
 function toAgentToolResult(params: {
   serverName: string;
@@ -102,7 +102,7 @@ export async function materializeBundleMcpToolsForRun(params: {
       name: safeToolName,
       label: tool.title ?? tool.toolName,
       description: tool.description || tool.fallbackDescription,
-      parameters: tool.inputSchema,
+      parameters: asToolParameterSchema(tool.inputSchema),
       execute: async (_toolCallId: string, input: unknown) => {
         const result = await params.runtime.callTool(tool.serverName, tool.toolName, input);
         return toAgentToolResult({

@@ -2,6 +2,7 @@ import {
   cleanSchemaForGemini,
   GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS,
 } from "../agents/schema/clean-for-gemini.js";
+import { asToolParameterSchema } from "../agents/tools/common.js";
 import type { ModelCompatConfig } from "../config/types.models.js";
 import { applyModelCompatPatch } from "../plugins/provider-model-compat.js";
 import type {
@@ -138,7 +139,9 @@ export function normalizeGeminiToolSchemas(
     }
     return {
       ...tool,
-      parameters: cleanSchemaForGemini(tool.parameters as Record<string, unknown>),
+      parameters: asToolParameterSchema(
+        cleanSchemaForGemini(tool.parameters as Record<string, unknown>),
+      ),
     };
   });
 }
@@ -169,7 +172,7 @@ export function normalizeOpenAIToolSchemas(
     if (tool.parameters == null) {
       return {
         ...tool,
-        parameters: normalizeOpenAIStrictCompatSchema({}),
+        parameters: asToolParameterSchema(normalizeOpenAIStrictCompatSchema({})),
       };
     }
     if (typeof tool.parameters !== "object") {
@@ -177,7 +180,7 @@ export function normalizeOpenAIToolSchemas(
     }
     return {
       ...tool,
-      parameters: normalizeOpenAIStrictCompatSchema(tool.parameters),
+      parameters: asToolParameterSchema(normalizeOpenAIStrictCompatSchema(tool.parameters)),
     };
   });
 }

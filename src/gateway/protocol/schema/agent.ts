@@ -1,4 +1,4 @@
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import {
   AGENT_INTERNAL_EVENT_SOURCES,
   AGENT_INTERNAL_EVENT_STATUSES,

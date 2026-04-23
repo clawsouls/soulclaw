@@ -1761,10 +1761,6 @@ export type PluginInteractiveHandlerResult = {
   handled?: boolean;
 } | void;
 
-type BivariantInteractiveHandler<TContext, TResult> = {
-  bivarianceHack: (ctx: TContext) => Promise<TResult> | TResult;
-}["bivarianceHack"];
-
 export type PluginInteractiveRegistration<
   TContext = unknown,
   TChannel extends string = string,
@@ -1772,7 +1768,7 @@ export type PluginInteractiveRegistration<
 > = {
   channel: TChannel;
   namespace: string;
-  handler: BivariantInteractiveHandler<TContext, TResult>;
+  handler: (ctx: TContext) => Promise<TResult> | TResult;
 };
 
 export type PluginInteractiveHandlerRegistration = PluginInteractiveRegistration;

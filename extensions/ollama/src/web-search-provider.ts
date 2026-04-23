@@ -1,4 +1,3 @@
-import { Type } from "@sinclair/typebox";
 import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
 import {
   isNonSecretApiKeyMarker,
@@ -19,6 +18,7 @@ import {
 } from "openclaw/plugin-sdk/provider-web-search";
 import { fetchWithSsrFGuard } from "openclaw/plugin-sdk/ssrf-runtime";
 import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+import { Type } from "typebox";
 import { OLLAMA_CLOUD_BASE_URL, OLLAMA_DEFAULT_BASE_URL } from "./defaults.js";
 import {
   buildOllamaBaseUrlSsrFPolicy,
@@ -231,7 +231,7 @@ export function createOllamaWebSearchProvider(): WebSearchProviderPlugin {
     createTool: (ctx) => ({
       description:
         "Search the web using Ollama's experimental web search API. Returns titles, URLs, and snippets from the configured Ollama host.",
-      parameters: OLLAMA_WEB_SEARCH_SCHEMA,
+      parameters: OLLAMA_WEB_SEARCH_SCHEMA as unknown as Record<string, unknown>,
       execute: async (args) =>
         await runOllamaWebSearch({
           config: ctx.config,
