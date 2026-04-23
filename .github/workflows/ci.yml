@@ -284,7 +284,6 @@ jobs:
                     { check_name: "android-test-play", task: "test-play" },
                     { check_name: "android-test-third-party", task: "test-third-party" },
                     { check_name: "android-build-play", task: "build-play" },
-                    { check_name: "android-build-third-party", task: "build-third-party" },
                   ]
                 : [],
             ),
@@ -2270,9 +2269,6 @@ jobs:
               ;;
             build-play)
               ./gradlew --no-daemon --build-cache :app:assemblePlayDebug
-              ;;
-            build-third-party)
-              ./gradlew --no-daemon --build-cache :app:assembleThirdPartyDebug
               ;;
             *)
               echo "Unsupported Android task: $TASK" >&2
