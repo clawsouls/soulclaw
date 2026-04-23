@@ -529,6 +529,16 @@ jobs:
             dist-runtime/
           key: ${{ runner.os }}-dist-build-${{ github.sha }}
 
+      - name: Pack built runtime artifacts
+        run: tar --posix -cf dist-runtime-build.tar.zst --use-compress-program zstdmt dist dist-runtime
+
+      - name: Upload built runtime artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-runtime-build
+          path: dist-runtime-build.tar.zst
+          retention-days: 1
+
       - name: Upload A2UI bundle artifact
         uses: actions/upload-artifact@v7
         with:
@@ -1833,20 +1843,18 @@ jobs:
         with:
           install-bun: "false"
 
-      - name: Restore dist cache
-        id: dist-cache
-        uses: actions/cache@v5
+      - name: Download built runtime artifacts
+        uses: actions/download-artifact@v8
         with:
-          path: |
-            dist/
-            dist-runtime/
-          key: ${{ runner.os }}-dist-build-${{ github.sha }}
+          name: dist-runtime-build
+          path: .local/dist-runtime-build
 
-      - name: Verify dist cache
-        if: steps.dist-cache.outputs.cache-hit != 'true'
+      - name: Restore built runtime artifacts
         run: |
-          echo "Missing same-run dist cache for ${RUNNER_OS}-dist-build-${GITHUB_SHA}" >&2
-          exit 1
+          tar -xf .local/dist-runtime-build/dist-runtime-build.tar.zst --use-compress-program unzstd
+          test -f dist/entry.js
+          test -f dist/.buildstamp
+          test -d dist-runtime
 
       - name: Check Control UI i18n
         if: needs.preflight.outputs.run_control_ui_i18n == 'true'
