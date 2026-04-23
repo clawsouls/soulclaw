@@ -168,6 +168,7 @@ describe("collectInstalledMirroredRootDependencyManifestErrors", () => {
 
   function writeSlackWebApiProbePackage(params: {
     root: string;
+    importerSource?: string;
     importerPath?: string;
     rootDependencies?: Record<string, string>;
     rootOptionalDependencies?: Record<string, string>;
@@ -184,7 +185,11 @@ describe("collectInstalledMirroredRootDependencyManifestErrors", () => {
     });
     const importerPath = params.importerPath ?? "dist/probe-Cz2PiFtC.js";
     mkdirSync(join(params.root, "dist"), { recursive: true });
-    writeFileSync(join(params.root, importerPath), 'import("@slack/web-api");\n', "utf8");
+    writeFileSync(
+      join(params.root, importerPath),
+      params.importerSource ?? 'import("@slack/web-api");\n',
+      "utf8",
+    );
   }
 
   it("flags bundled plugin deps imported by root dist when root mirrors are missing", () => {
@@ -209,6 +214,47 @@ describe("collectInstalledMirroredRootDependencyManifestErrors", () => {
         root: packageRoot,
         importerPath: "dist/extensions/slack/client-Cz2PiFtC.js",
       });
+
+      expect(collectInstalledMirroredRootDependencyManifestErrors(packageRoot)).toEqual([]);
+    } finally {
+      rmSync(packageRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("allows bundled plugin deps imported from root chunks sourced from their extension", () => {
+    const packageRoot = makeInstalledPackageRoot();
+
+    try {
+      writeSlackWebApiProbePackage({
+        root: packageRoot,
+        importerSource: '//#region extensions/slack/client.ts\nimport("@slack/web-api");\n',
+      });
+
+      expect(collectInstalledMirroredRootDependencyManifestErrors(packageRoot)).toEqual([]);
+    } finally {
+      rmSync(packageRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("does not require root mirrors for extension-only Matrix crypto deps", () => {
+    const packageRoot = makeInstalledPackageRoot();
+
+    try {
+      writePackageFile(packageRoot, "package.json", {
+        version: "2026.4.10",
+        dependencies: {},
+      });
+      writePackageFile(packageRoot, "dist/extensions/matrix/package.json", {
+        dependencies: {
+          "@matrix-org/matrix-sdk-crypto-nodejs": "^0.4.0",
+          "@matrix-org/matrix-sdk-crypto-wasm": "18.1.0",
+        },
+      });
+      writeFileSync(
+        join(packageRoot, "dist/extensions/matrix/crypto-node.runtime.js"),
+        'require("@matrix-org/matrix-sdk-crypto-nodejs");\n',
+        "utf8",
+      );
 
       expect(collectInstalledMirroredRootDependencyManifestErrors(packageRoot)).toEqual([]);
     } finally {
