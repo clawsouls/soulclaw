@@ -8,6 +8,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- QA channel/security: reject non-HTTP(S) inbound attachment URLs before media fetch, and log rejected schemes so suspicious or misconfigured payloads are visible during debugging. (#70708) Thanks @vincentkoc.
 - Teams/security: require shared Bot Framework audience tokens to name the configured Teams app via verified `appid` or `azp`, blocking cross-bot token replay on the global audience. (#70724) Thanks @vincentkoc.
 - Plugins/startup: resolve bundled plugin Jiti loads relative to the target plugin module instead of the central loader, so Bun global installs no longer hang while discovering bundled image providers. (#70073) Thanks @yidianyiko.
 - Anthropic/CLI security: stop Claude CLI backend defaults from forcing `bypassPermissions`, and strip malformed permission-mode overrides instead of silently falling back to a bypass. (#70723) Thanks @vincentkoc.
