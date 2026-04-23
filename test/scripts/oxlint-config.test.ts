@@ -11,6 +11,25 @@ type OxlintTsconfig = {
   exclude?: string[];
 };
 
+const ZERO_BASELINE_RULES = [
+  "eslint/no-div-regex",
+  "eslint/no-extra-label",
+  "eslint/no-lone-blocks",
+  "eslint/no-multi-str",
+  "eslint/no-proto",
+  "eslint/no-regex-spaces",
+  "eslint/no-sequences",
+  "eslint/prefer-exponentiation-operator",
+  "eslint/prefer-numeric-literals",
+  "eslint/unicode-bom",
+  "typescript/no-non-null-asserted-nullish-coalescing",
+  "typescript/prefer-return-this-type",
+  "unicorn/no-useless-error-capture-stack-trace",
+  "unicorn/prefer-optional-catch-binding",
+  "unicorn/require-array-join-separator",
+  "unicorn/throw-new-error",
+];
+
 function readJson(path: string): unknown {
   return JSON.parse(fs.readFileSync(path, "utf8")) as unknown;
 }
@@ -67,5 +86,13 @@ describe("oxlint config", () => {
       "error",
       { allowInterfaces: "with-single-extends" },
     ]);
+  });
+
+  it("enables clean zero-baseline lint rules", () => {
+    const config = readJson(".oxlintrc.json") as OxlintConfig;
+
+    for (const rule of ZERO_BASELINE_RULES) {
+      expect(config.rules?.[rule]).toBe("error");
+    }
   });
 });
