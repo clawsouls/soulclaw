@@ -1711,6 +1711,11 @@ export async function runEmbeddedAttempt(
           onPartialReply: params.onPartialReply,
           onAssistantMessageStart: params.onAssistantMessageStart,
           onAgentEvent: params.onAgentEvent,
+          onBeforeLifecycleTerminal: () => {
+            // Clear embedded-run activity before emitting terminal lifecycle events so
+            // post-completion cleanup does not observe a logically finished run as active.
+            clearActiveEmbeddedRun(params.sessionId, queueHandle, params.sessionKey);
+          },
           enforceFinalTag: params.enforceFinalTag,
           silentExpected: params.silentExpected,
           config: params.config,
