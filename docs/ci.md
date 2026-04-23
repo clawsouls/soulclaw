@@ -96,5 +96,6 @@ pnpm test:channels
 pnpm test:contracts:channels
 pnpm check:docs     # docs format + lint + broken links
 pnpm build          # build dist when CI artifact/build-smoke lanes matter
-node scripts/ci-run-timings.mjs <run-id>  # summarize wall time, queue time, and slowest jobs
+node scripts/ci-run-timings.mjs <run-id>      # summarize wall time, queue time, and slowest jobs
+node scripts/ci-run-timings.mjs --recent 10   # compare recent successful main CI runs
 ```
