@@ -74,7 +74,6 @@
     "unicorn/consistent-date-clone": "error",
     "unicorn/consistent-empty-array-spread": "error",
     "unicorn/consistent-function-scoping": "off",
-    "unicorn/consistent-template-literal-escape": "error",
     "unicorn/no-console-spaces": "error",
     "unicorn/no-length-as-slice-end": "error",
     "unicorn/no-instanceof-array": "error",

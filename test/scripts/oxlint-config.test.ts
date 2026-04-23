@@ -46,7 +46,6 @@ const ZERO_BASELINE_RULES = [
   "typescript/prefer-return-this-type",
   "unicorn/consistent-date-clone",
   "unicorn/consistent-empty-array-spread",
-  "unicorn/consistent-template-literal-escape",
   "unicorn/no-console-spaces",
   "unicorn/no-length-as-slice-end",
   "unicorn/no-instanceof-array",
