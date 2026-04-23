@@ -1,6 +1,8 @@
 name: QA-Lab - Live Telegram, Live Frontier
 
 on:
+  schedule:
+    - cron: "41 4 * * *"
   workflow_dispatch:
     inputs:
       ref:
@@ -18,7 +20,7 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: qa-lab-live-telegram-live-frontier-${{ inputs.ref }}
+  group: qa-lab-live-telegram-live-frontier-${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.sha }}
   cancel-in-progress: false
 
 env:
@@ -37,6 +39,10 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
+            if (context.eventName === "schedule") {
+              core.info("Scheduled default-branch QA run; actor permission check is only required for manual dispatch.");
+              return;
+            }
             const allowed = new Set(["admin", "maintain", "write"]);
             const { owner, repo } = context.repo;
             const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
@@ -63,14 +69,14 @@ jobs:
       - name: Checkout selected ref
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.sha }}
           fetch-depth: 0
 
       - name: Validate selected ref
         id: validate
         env:
           GH_TOKEN: ${{ github.token }}
-          INPUT_REF: ${{ inputs.ref }}
+          INPUT_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -162,7 +168,7 @@ jobs:
           OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
           OPENCLAW_QA_REDACT_PUBLIC_METADATA: "1"
           OPENCLAW_QA_TELEGRAM_CAPTURE_CONTENT: "1"
-          INPUT_SCENARIO: ${{ inputs.scenario }}
+          INPUT_SCENARIO: ${{ github.event_name == 'workflow_dispatch' && inputs.scenario || '' }}
         run: |
           set -euo pipefail
 
