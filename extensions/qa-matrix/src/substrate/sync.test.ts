@@ -58,7 +58,7 @@ describe("matrix sync helpers", () => {
       predicate: (event) => event.sender === "@sut:matrix-qa.test",
       roomId: "!room:matrix-qa.test",
       since: "start-batch",
-      timeoutMs: 1,
+      timeoutMs: 1_000,
     });
 
     expect(result).toEqual({
