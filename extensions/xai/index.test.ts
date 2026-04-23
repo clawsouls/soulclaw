@@ -50,8 +50,8 @@ function registerXaiAutoEnableProbe(): XaiAutoEnableProbe {
 }
 
 describe("xai provider plugin", () => {
-  it("registers xAI media understanding for batch STT", async () => {
-    const { mediaProviders } = await registerProviderPlugin({
+  it("registers xAI speech providers for batch and streaming STT", async () => {
+    const { mediaProviders, realtimeTranscriptionProviders } = await registerProviderPlugin({
       plugin,
       id: "xai",
       name: "xAI Provider",
@@ -63,6 +63,15 @@ describe("xai provider plugin", () => {
           id: "xai",
           capabilities: ["audio"],
           defaultModels: { audio: "grok-stt" },
+        }),
+      ]),
+    );
+    expect(realtimeTranscriptionProviders).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "xai",
+          label: "xAI Realtime Transcription",
+          aliases: expect.arrayContaining(["xai-realtime"]),
         }),
       ]),
     );

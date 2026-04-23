@@ -66,6 +66,21 @@ const registerXaiPlugin = () =>
     name: "xAI Provider",
   });
 
+async function waitForLiveExpectation(expectation: () => void, timeoutMs = 30_000) {
+  const started = Date.now();
+  let lastError: unknown;
+  while (Date.now() - started < timeoutMs) {
+    try {
+      expectation();
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+  throw lastError;
+}
+
 describeLive("xai plugin live", () => {
   it("synthesizes TTS through the registered speech provider", async () => {
     const { speechProviders } = await registerXaiPlugin();
@@ -102,8 +117,11 @@ describeLive("xai plugin live", () => {
       },
       timeoutMs: 90_000,
     });
-    expect(telephony?.outputFormat).toBe("pcm");
-    expect(telephony?.sampleRate).toBe(24_000);
+    if (!telephony) {
+      throw new Error("xAI telephony synthesis did not return audio");
+    }
+    expect(telephony.outputFormat).toBe("pcm");
+    expect(telephony.sampleRate).toBe(24_000);
     expect(telephony?.audioBuffer.byteLength).toBeGreaterThan(512);
   }, 120_000);
 
@@ -142,6 +160,67 @@ describeLive("xai plugin live", () => {
     expect(normalized).toContain("speech");
     expect(normalized).toContain("text");
     expect(normalized).toContain("integration");
+  }, 180_000);
+
+  it("streams realtime STT through the registered transcription provider", async () => {
+    const { realtimeTranscriptionProviders, speechProviders } = await registerXaiPlugin();
+    const realtimeProvider = requireRegisteredProvider(realtimeTranscriptionProviders, "xai");
+    const speechProvider = requireRegisteredProvider(speechProviders, "xai");
+    const cfg = createLiveConfig();
+    const phrase = "OpenClaw xAI realtime transcription integration test OK.";
+
+    const telephony = await speechProvider.synthesizeTelephony?.({
+      text: phrase,
+      cfg,
+      providerConfig: {
+        apiKey: XAI_API_KEY,
+        baseUrl: "https://api.x.ai/v1",
+        voiceId: "eve",
+      },
+      timeoutMs: 90_000,
+    });
+    if (!telephony) {
+      throw new Error("xAI telephony synthesis did not return audio");
+    }
+    expect(telephony.outputFormat).toBe("pcm");
+    expect(telephony.sampleRate).toBe(24_000);
+
+    const transcripts: string[] = [];
+    const partials: string[] = [];
+    const errors: Error[] = [];
+    const session = realtimeProvider.createSession({
+      providerConfig: {
+        apiKey: XAI_API_KEY,
+        baseUrl: "https://api.x.ai/v1",
+        sampleRate: telephony.sampleRate,
+        encoding: "pcm",
+        interimResults: true,
+        endpointingMs: 500,
+        language: "en",
+      },
+      onPartial: (partial) => partials.push(partial),
+      onTranscript: (transcript) => transcripts.push(transcript),
+      onError: (error) => errors.push(error),
+    });
+
+    await session.connect();
+    const audio = telephony.audioBuffer;
+    const chunkSize = Math.max(1, Math.floor(telephony.sampleRate * 2 * 0.1));
+    for (let offset = 0; offset < audio.byteLength; offset += chunkSize) {
+      session.sendAudio(audio.subarray(offset, offset + chunkSize));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    session.close();
+
+    await waitForLiveExpectation(() => {
+      if (errors[0]) {
+        throw errors[0];
+      }
+      expect(transcripts.join(" ").toLowerCase()).toContain("openclaw");
+    }, 60_000);
+    const normalized = transcripts.join(" ").toLowerCase();
+    expect(normalized).toContain("transcription");
+    expect(partials.length + transcripts.length).toBeGreaterThan(0);
   }, 180_000);
 
   it("generates and edits images through the registered image provider", async () => {

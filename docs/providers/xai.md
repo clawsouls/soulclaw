@@ -79,16 +79,17 @@ provider and tool contracts where the behavior fits cleanly.
 | Batch text-to-speech       | `messages.tts.provider: "xai"` / `tts`    | Yes                                                                 |
 | Streaming TTS              | —                                         | Not exposed; OpenClaw's TTS contract returns complete audio buffers |
 | Batch speech-to-text       | `tools.media.audio` / media understanding | Yes                                                                 |
-| Streaming speech-to-text   | —                                         | Not exposed; needs streaming transcription contract mapping         |
+| Streaming speech-to-text   | Voice Call `streaming.provider: "xai"`    | Yes                                                                 |
 | Realtime voice             | —                                         | Not exposed yet; different session/WebSocket contract               |
 | Files / batches            | Generic model API compatibility only      | Not a first-class OpenClaw tool                                     |
 
 <Note>
 OpenClaw uses xAI's REST image/video/TTS/STT APIs for media generation,
-speech, and transcription, and the Responses API for model, search, and
-code-execution tools. Features that need new OpenClaw contracts, such as
-streaming STT or Realtime voice sessions, are documented here as upstream
-capabilities rather than hidden plugin behavior.
+speech, and batch transcription, xAI's streaming STT WebSocket for live
+voice-call transcription, and the Responses API for model, search, and
+code-execution tools. Features that need different OpenClaw contracts, such as
+Realtime voice sessions, are documented here as upstream capabilities rather
+than hidden plugin behavior.
 </Note>
 
 ### Fast-mode mappings
@@ -277,10 +278,54 @@ Legacy aliases still normalize to the canonical bundled ids:
     surface, but the xAI REST STT integration only forwards file, model, and
     language because those map cleanly to the current public xAI endpoint.
 
+  </Accordion>
+
+  <Accordion title="Streaming speech-to-text">
+    The bundled `xai` plugin also registers a realtime transcription provider
+    for live voice-call audio.
+
+    - Endpoint: xAI WebSocket `wss://api.x.ai/v1/stt`
+    - Default encoding: `mulaw`
+    - Default sample rate: `8000`
+    - Default endpointing: `800ms`
+    - Interim transcripts: enabled by default
+
+    Voice Call's Twilio media stream sends G.711 µ-law audio frames, so the
+    xAI provider can forward those frames directly without transcoding:
+
+    ```json5
+    {
+      plugins: {
+        entries: {
+          "voice-call": {
+            config: {
+              streaming: {
+                enabled: true,
+                provider: "xai",
+                providers: {
+                  xai: {
+                    apiKey: "${XAI_API_KEY}",
+                    endpointingMs: 800,
+                    language: "en",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    Provider-owned config lives under
+    `plugins.entries.voice-call.config.streaming.providers.xai`. Supported
+    keys are `apiKey`, `baseUrl`, `sampleRate`, `encoding` (`pcm`, `mulaw`, or
+    `alaw`), `interimResults`, `endpointingMs`, and `language`.
+
     <Note>
-    xAI also offers streaming STT over `wss://api.x.ai/v1/stt`. OpenClaw's
-    bundled xAI plugin does not expose that yet; the current provider is batch
-    STT for file/segment transcription.
+    This streaming provider is for Voice Call's realtime transcription path.
+    Discord voice currently records short segments and uses the batch
+    `tools.media.audio` transcription path instead.
     </Note>
 
   </Accordion>
@@ -362,9 +407,9 @@ Legacy aliases still normalize to the canonical bundled ids:
     - `grok-4.20-multi-agent-experimental-beta-0304` is not supported on the
       normal xAI provider path because it requires a different upstream API
       surface than the standard OpenClaw xAI transport.
-    - xAI streaming STT and Realtime voice are not registered as OpenClaw
-      providers yet. Batch xAI STT is registered through media understanding.
-      Streaming STT and Realtime voice need WebSocket/session contract mapping.
+    - xAI Realtime voice is not registered as an OpenClaw provider yet. It
+      needs a different bidirectional voice session contract than batch STT or
+      streaming transcription.
     - xAI image `quality`, image `mask`, and extra native-only aspect ratios are
       not exposed until the shared `image_generate` tool has corresponding
       cross-provider controls.
@@ -401,10 +446,10 @@ OPENCLAW_LIVE_TEST=1 OPENCLAW_LIVE_TEST_QUIET=1 OPENCLAW_LIVE_IMAGE_GENERATION_P
 ```
 
 The provider-specific live file synthesizes normal TTS, telephony-friendly PCM
-TTS, transcribes audio through xAI STT, generates text-to-image output, and
-edits a reference image. The shared image live file verifies the same xAI
-provider through OpenClaw's runtime selection, fallback, normalization, and
-media attachment path.
+TTS, transcribes audio through xAI batch STT, streams the same PCM through xAI
+realtime STT, generates text-to-image output, and edits a reference image. The
+shared image live file verifies the same xAI provider through OpenClaw's
+runtime selection, fallback, normalization, and media attachment path.
 
 ## Related
 

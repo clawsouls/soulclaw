@@ -87,6 +87,7 @@
     "videoGenerationProviders": ["xai"],
     "mediaUnderstandingProviders": ["xai"],
     "speechProviders": ["xai"],
+    "realtimeTranscriptionProviders": ["xai"],
     "imageGenerationProviders": ["xai"],
     "tools": ["code_execution", "x_search"]
   },
