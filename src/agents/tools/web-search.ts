@@ -7,7 +7,7 @@ import {
   runWebSearch,
 } from "../../web-search/runtime.js";
 import type { AnyAgentTool } from "./common.js";
-import { asToolParameterSchema, asToolParamsRecord, jsonResult } from "./common.js";
+import { asToolParamsRecord, jsonResult } from "./common.js";
 import { SEARCH_CACHE } from "./web-search-provider-common.js";
 
 export function createWebSearchTool(options?: {
@@ -37,7 +37,7 @@ export function createWebSearchTool(options?: {
     label: "Web Search",
     name: "web_search",
     description: resolved.definition.description,
-    parameters: asToolParameterSchema(resolved.definition.parameters),
+    parameters: resolved.definition.parameters,
     execute: async (_toolCallId, args) => {
       const result = await runWebSearch({
         config: options?.config,

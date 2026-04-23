@@ -231,7 +231,7 @@ export function createOllamaWebSearchProvider(): WebSearchProviderPlugin {
     createTool: (ctx) => ({
       description:
         "Search the web using Ollama's experimental web search API. Returns titles, URLs, and snippets from the configured Ollama host.",
-      parameters: OLLAMA_WEB_SEARCH_SCHEMA as unknown as Record<string, unknown>,
+      parameters: OLLAMA_WEB_SEARCH_SCHEMA,
       execute: async (args) =>
         await runOllamaWebSearch({
           config: ctx.config,

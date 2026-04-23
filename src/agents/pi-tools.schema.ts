@@ -5,7 +5,6 @@ import {
   type ToolParameterSchemaOptions,
 } from "./pi-tools-parameter-schema.js";
 import type { AnyAgentTool } from "./pi-tools.types.js";
-import { asToolParameterSchema } from "./tools/common.js";
 
 export { normalizeToolParameterSchema };
 
@@ -27,7 +26,7 @@ export function normalizeToolParameters(
   }
   return preserveToolMeta({
     ...tool,
-    parameters: asToolParameterSchema(normalizeToolParameterSchema(schema, options)),
+    parameters: normalizeToolParameterSchema(schema, options),
   });
 }
 

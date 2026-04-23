@@ -34,10 +34,6 @@ export type AnyAgentTool = Omit<AgentTool<TSchema, unknown>, "execute"> &
     displaySummary?: string;
   };
 
-export function asToolParameterSchema(schema: unknown): TSchema {
-  return schema as TSchema;
-}
-
 export function asToolParamsRecord(params: unknown): Record<string, unknown> {
   return params && typeof params === "object" && !Array.isArray(params)
     ? (params as Record<string, unknown>)

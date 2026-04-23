@@ -1,8 +1,8 @@
+import type { TSchema } from "typebox";
 import {
   cleanSchemaForGemini,
   GEMINI_UNSUPPORTED_SCHEMA_KEYWORDS,
 } from "../agents/schema/clean-for-gemini.js";
-import { asToolParameterSchema } from "../agents/tools/common.js";
 import type { ModelCompatConfig } from "../config/types.models.js";
 import { applyModelCompatPatch } from "../plugins/provider-model-compat.js";
 import type {
@@ -139,9 +139,7 @@ export function normalizeGeminiToolSchemas(
     }
     return {
       ...tool,
-      parameters: asToolParameterSchema(
-        cleanSchemaForGemini(tool.parameters as Record<string, unknown>),
-      ),
+      parameters: cleanSchemaForGemini(tool.parameters),
     };
   });
 }
@@ -172,7 +170,7 @@ export function normalizeOpenAIToolSchemas(
     if (tool.parameters == null) {
       return {
         ...tool,
-        parameters: asToolParameterSchema(normalizeOpenAIStrictCompatSchema({})),
+        parameters: normalizeOpenAIStrictCompatSchema({}),
       };
     }
     if (typeof tool.parameters !== "object") {
@@ -180,13 +178,15 @@ export function normalizeOpenAIToolSchemas(
     }
     return {
       ...tool,
-      parameters: asToolParameterSchema(normalizeOpenAIStrictCompatSchema(tool.parameters)),
+      parameters: normalizeOpenAIStrictCompatSchema(tool.parameters),
     };
   });
 }
 
-function normalizeOpenAIStrictCompatSchema(schema: unknown): unknown {
-  return normalizeOpenAIStrictCompatSchemaRecursive(schema, { promoteEmptyObject: true });
+function normalizeOpenAIStrictCompatSchema(schema: unknown): TSchema {
+  return normalizeOpenAIStrictCompatSchemaRecursive(schema, {
+    promoteEmptyObject: true,
+  }) as TSchema;
 }
 
 function shouldApplyOpenAIToolCompat(ctx: ProviderNormalizeToolSchemasContext): boolean {
