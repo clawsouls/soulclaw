@@ -2,11 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import {
-  buildConfigDocBaseline,
-  flattenConfigDocBaselineEntries,
-  normalizeConfigDocBaselineHelpPath,
-} from "./doc-baseline.js";
 import { FIELD_HELP } from "./schema.help.js";
 import {
   describeTalkSilenceTimeoutDefaults,
@@ -14,18 +9,35 @@ import {
 } from "./talk-defaults.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+type GeneratedConfigBaselineEntry = {
+  path: string;
+  help?: string;
+};
+type GeneratedConfigBaseline = {
+  coreEntries?: GeneratedConfigBaselineEntry[];
+  channelEntries?: GeneratedConfigBaselineEntry[];
+  pluginEntries?: GeneratedConfigBaselineEntry[];
+};
 
 function readRepoFile(relativePath: string): string {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
 
+function readGeneratedConfigBaselineEntry(path: string): GeneratedConfigBaselineEntry | undefined {
+  const baseline = JSON.parse(
+    readRepoFile("docs/.generated/config-baseline.json"),
+  ) as GeneratedConfigBaseline;
+  return [
+    ...(baseline.coreEntries ?? []),
+    ...(baseline.channelEntries ?? []),
+    ...(baseline.pluginEntries ?? []),
+  ].find((entry) => entry.path === path);
+}
+
 describe("talk silence timeout defaults", () => {
-  it("keeps help text and docs aligned with the policy", async () => {
+  it("keeps help text and docs aligned with the policy", () => {
     const defaultsDescription = describeTalkSilenceTimeoutDefaults();
-    const baseline = await buildConfigDocBaseline();
-    const talkEntry = flattenConfigDocBaselineEntries(baseline).find(
-      (entry) => entry.path === normalizeConfigDocBaselineHelpPath("talk.silenceTimeoutMs"),
-    );
+    const talkEntry = readGeneratedConfigBaselineEntry("talk.silenceTimeoutMs");
 
     expect(FIELD_HELP["talk.silenceTimeoutMs"]).toContain(defaultsDescription);
     expect(talkEntry?.help).toContain(defaultsDescription);
