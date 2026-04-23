@@ -1189,6 +1189,7 @@
                   "tools/diffs",
                   "tools/elevated",
                   "tools/exec-approvals",
+                  "tools/exec-approvals-advanced",
                   "tools/exec",
                   "tools/image-generation",
                   "tools/llm-task",
