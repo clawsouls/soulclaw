@@ -35,6 +35,7 @@ Docs: https://docs.openclaw.ai
 - Providers/Amazon Bedrock Mantle: refresh IAM-backed bearer tokens at runtime instead of baking discovery-time tokens into provider config, so long-lived Mantle sessions keep working after the initial token ages out. Thanks @wirjo.
 - Config/includes: write through single-file top-level includes for isolated OpenClaw-owned mutations, so `plugins install` and `plugins update` update an included `plugins.json5` file instead of flattening modular `$include` configs. Fixes #41050 and #66048.
 - Config/reload: plan gateway reloads from source-authored config instead of runtime-materialized snapshots, so plugin update writes no longer trigger false restarts from derived provider/plugin config paths. Fixes #68732.
+- Plugins/update: skip npm plugin reinstall/config rewrites when the installed version and recorded artifact identity already match the registry target, and let bare npm package names resolve back to tracked install records. Fixes #46955 and #67957.
 - Agents/MCP: keep `mcp.servers` and bundle MCP tools available in Pi embedded
   `coding` and `messaging` sessions while preserving `minimal` profile and
   `tools.deny: ["bundle-mcp"]` opt-out behavior. Fixes #68875 and #68818.
