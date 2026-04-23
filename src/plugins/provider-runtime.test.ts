@@ -136,7 +136,8 @@ function createOpenAiCatalogProviderPlugin(
       modelId === "gpt-5.3-codex-spark"
         ? {
             suppress: true,
-            errorMessage: "openai/gpt-5.3-codex-spark with the Codex OAuth profile",
+            errorMessage:
+              "gpt-5.3-codex-spark is no longer exposed by the OpenAI or Codex catalogs. Use openai/gpt-5.5.",
           }
         : undefined,
     augmentModelCatalog: () => [
@@ -147,11 +148,6 @@ function createOpenAiCatalogProviderPlugin(
       { provider: "openai-codex", id: "gpt-5.4", name: "gpt-5.4" },
       { provider: "openai-codex", id: "gpt-5.4-pro", name: "gpt-5.4-pro" },
       { provider: "openai-codex", id: "gpt-5.4-mini", name: "gpt-5.4-mini" },
-      {
-        provider: "openai-codex",
-        id: "gpt-5.3-codex-spark",
-        name: "gpt-5.3-codex-spark",
-      },
     ],
     ...overrides,
   };

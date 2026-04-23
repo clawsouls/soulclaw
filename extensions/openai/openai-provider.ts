@@ -284,7 +284,7 @@ export function buildOpenAIProvider(): ProviderPlugin {
       }
       return {
         suppress: true,
-        errorMessage: `Unknown model: ${ctx.provider}/${OPENAI_DIRECT_SPARK_MODEL_ID}. ${OPENAI_DIRECT_SPARK_MODEL_ID} is only supported through Codex OAuth. Use openai/${OPENAI_DIRECT_SPARK_MODEL_ID} with the Codex OAuth profile.`,
+        errorMessage: `Unknown model: ${ctx.provider}/${OPENAI_DIRECT_SPARK_MODEL_ID}. ${OPENAI_DIRECT_SPARK_MODEL_ID} is no longer exposed by the OpenAI or Codex catalogs. Use openai/gpt-5.5.`,
       };
     },
     augmentModelCatalog: (ctx) => {

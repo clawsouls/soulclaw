@@ -80,7 +80,7 @@ Choose your preferred auth method and follow the setup steps.
     ```
 
     <Warning>
-    OpenClaw does **not** expose `openai/gpt-5.3-codex-spark` on the direct API path. Live OpenAI API requests reject that model. Spark is Codex-only.
+    OpenClaw does **not** expose `openai/gpt-5.3-codex-spark`. Live OpenAI API requests reject that model, and the current Codex catalog does not expose it either.
     </Warning>
 
   </Tab>
@@ -123,7 +123,6 @@ Choose your preferred auth method and follow the setup steps.
     | Model ref | Route | Auth |
     |-----------|-------|------|
     | `openai/gpt-5.5` | ChatGPT/Codex OAuth | Codex sign-in |
-    | `openai/gpt-5.3-codex-spark` | ChatGPT/Codex OAuth | Codex sign-in (entitlement-dependent) |
 
     <Note>
     `openai-codex/*` and `codex/*` model refs are legacy compatibility aliases. Keep using the `openai-codex` provider id for auth/profile commands.
