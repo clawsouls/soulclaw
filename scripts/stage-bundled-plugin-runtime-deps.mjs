@@ -6,6 +6,9 @@ import { pathToFileURL } from "node:url";
 import semverSatisfies from "semver/functions/satisfies.js";
 import { resolveNpmRunner } from "./npm-runner.mjs";
 
+const TRANSIENT_TEMP_REMOVE_ERROR_CODES = new Set(["EBUSY", "ENOTEMPTY", "EPERM"]);
+const TEMP_REMOVE_RETRY_DELAYS_MS = [10, 25, 50];
+
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
@@ -23,6 +26,22 @@ function readOptionalUtf8(filePath) {
 
 function removePathIfExists(targetPath) {
   fs.rmSync(targetPath, { recursive: true, force: true });
+}
+
+function isTransientTempRemoveError(error) {
+  return (
+    !!error &&
+    typeof error === "object" &&
+    typeof error.code === "string" &&
+    TRANSIENT_TEMP_REMOVE_ERROR_CODES.has(error.code)
+  );
+}
+
+function sleepSync(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return;
+  }
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
 function makeTempDir(parentDir, prefix) {
@@ -907,7 +926,22 @@ function removeStaleRuntimeDepsTempDirs(pluginDir) {
   }
   for (const entry of fs.readdirSync(pluginDir, { withFileTypes: true })) {
     if (entry.name.startsWith(".openclaw-runtime-deps-")) {
-      removePathIfExists(path.join(pluginDir, entry.name));
+      const targetPath = path.join(pluginDir, entry.name);
+      for (let attempt = 0; attempt <= TEMP_REMOVE_RETRY_DELAYS_MS.length; attempt += 1) {
+        try {
+          removePathIfExists(targetPath);
+          break;
+        } catch (error) {
+          if (!isTransientTempRemoveError(error)) {
+            throw error;
+          }
+          const delay = TEMP_REMOVE_RETRY_DELAYS_MS[attempt];
+          if (delay === undefined) {
+            break;
+          }
+          sleepSync(delay);
+        }
+      }
     }
   }
 }

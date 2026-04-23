@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   collectRuntimeDependencyInstallManifest,
   collectRuntimeDependencyInstallSpecs,
@@ -16,6 +16,10 @@ type RuntimeDepsStampParams = {
 };
 
 describe("stageBundledPluginRuntimeDeps", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   function createBundledPluginFixture(params: {
     packageJson: Record<string, unknown>;
     pluginId?: string;
@@ -251,6 +255,50 @@ describe("stageBundledPluginRuntimeDeps", () => {
 
     expect(installCount).toBe(2);
     expect(fs.readFileSync(path.join(pluginDir, "node_modules", "marker.txt"), "utf8")).toBe("2\n");
+  });
+
+  it("retries stale temp dir cleanup races before staging runtime deps", () => {
+    const { pluginDir, repoRoot } = createBundledPluginFixture({
+      packageJson: {
+        name: "@openclaw/fixture-plugin",
+        version: "1.0.0",
+        dependencies: { "left-pad": "1.3.0" },
+        openclaw: { bundle: { stageRuntimeDependencies: true } },
+      },
+    });
+    const staleTempDir = path.join(pluginDir, ".openclaw-runtime-deps-copy-stale");
+    fs.mkdirSync(staleTempDir, { recursive: true });
+    fs.writeFileSync(path.join(staleTempDir, "marker.txt"), "stale\n", "utf8");
+    const realRmSync = fs.rmSync.bind(fs);
+    let cleanupAttempts = 0;
+    vi.spyOn(fs, "rmSync").mockImplementation((target, options) => {
+      if (String(target) === staleTempDir && cleanupAttempts === 0) {
+        cleanupAttempts += 1;
+        const error = new Error("Directory not empty") as NodeJS.ErrnoException;
+        error.code = "ENOTEMPTY";
+        throw error;
+      }
+      if (String(target) === staleTempDir) {
+        cleanupAttempts += 1;
+      }
+      return realRmSync(target, options);
+    });
+
+    stageBundledPluginRuntimeDeps({
+      cwd: repoRoot,
+      installPluginRuntimeDepsImpl: ({ fingerprint, stampPath }: RuntimeDepsStampParams) => {
+        const nodeModulesDir = path.join(pluginDir, "node_modules");
+        fs.mkdirSync(nodeModulesDir, { recursive: true });
+        fs.writeFileSync(path.join(nodeModulesDir, "marker.txt"), "installed\n", "utf8");
+        writeRuntimeDepsStamp(stampPath, fingerprint);
+      },
+    });
+
+    expect(cleanupAttempts).toBe(2);
+    expect(fs.existsSync(staleTempDir)).toBe(false);
+    expect(fs.readFileSync(path.join(pluginDir, "node_modules", "marker.txt"), "utf8")).toBe(
+      "installed\n",
+    );
   });
 
   it("restages when installed root runtime dependency contents change", () => {
