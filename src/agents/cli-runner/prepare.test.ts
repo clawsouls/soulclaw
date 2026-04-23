@@ -5,6 +5,7 @@ import { CURRENT_SESSION_VERSION, SessionManager } from "@mariozechner/pi-coding
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
+import { __testing as cliBackendsTesting } from "../cli-backends.js";
 import { buildActiveMusicGenerationTaskPromptContextForSession } from "../music-generation-task-status.js";
 import { buildActiveVideoGenerationTaskPromptContextForSession } from "../video-generation-task-status.js";
 import {
@@ -51,10 +52,11 @@ const mockBuildActiveMusicGenerationTaskPromptContextForSession = vi.mocked(
   buildActiveMusicGenerationTaskPromptContextForSession,
 );
 
-function createCliBackendConfig(): OpenClawConfig {
+function createCliBackendConfig(opts: { systemPromptOverride?: string } = {}): OpenClawConfig {
   return {
     agents: {
       defaults: {
+        ...(opts.systemPromptOverride ? { systemPromptOverride: opts.systemPromptOverride } : {}),
         cliBackends: {
           "test-cli": {
             command: "test-cli",
@@ -98,12 +100,17 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
       })),
       resolveOpenClawDocsPath: vi.fn(async () => null),
     });
+    cliBackendsTesting.setDepsForTest({
+      resolvePluginSetupCliBackend: vi.fn(() => undefined),
+      resolveRuntimeCliBackends: vi.fn(() => []),
+    });
     mockGetGlobalHookRunner.mockReturnValue(null);
     mockBuildActiveVideoGenerationTaskPromptContextForSession.mockReturnValue(undefined);
     mockBuildActiveMusicGenerationTaskPromptContextForSession.mockReturnValue(undefined);
   });
 
   afterEach(() => {
+    cliBackendsTesting.resetDepsForTest();
     mockGetGlobalHookRunner.mockReset();
     mockBuildActiveVideoGenerationTaskPromptContextForSession.mockReset();
     mockBuildActiveMusicGenerationTaskPromptContextForSession.mockReset();
@@ -190,7 +197,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
         messageChannel: "telegram",
         messageProvider: "acp",
         config: {
-          ...createCliBackendConfig(),
+          ...createCliBackendConfig({ systemPromptOverride: "base system" }),
         },
       });
 
@@ -267,7 +274,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
         model: "test-model",
         timeoutMs: 1_000,
         runId: "run-test-legacy-merge",
-        config: createCliBackendConfig(),
+        config: createCliBackendConfig({ systemPromptOverride: "base system" }),
       });
 
       expect(context.params.prompt).toBe("prompt prepend\n\nlegacy prepend\n\nlatest ask");
@@ -302,8 +309,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
         model: "test-model",
         timeoutMs: 1_000,
         runId: "run-test-hook-failure",
-        extraSystemPrompt: "base extra system",
-        config: createCliBackendConfig(),
+        config: createCliBackendConfig({ systemPromptOverride: "base extra system" }),
       });
 
       expect(context.params.prompt).toBe("latest ask");
@@ -342,7 +348,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
         model: "test-model",
         timeoutMs: 1_000,
         runId: "run-test-prepend-helper",
-        config: createCliBackendConfig(),
+        config: createCliBackendConfig({ systemPromptOverride: "base system" }),
       });
 
       expect(context.systemPrompt).toBe("active video task\n\nhook prepend system\n\nhook system");
