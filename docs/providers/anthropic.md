@@ -267,6 +267,13 @@ OpenClaw supports Anthropic's prompt caching feature for API-key auth.
     </Warning>
 
   </Accordion>
+
+  <Accordion title="Claude Opus 4.7 1M context normalization">
+    Claude Opus 4.7 (`anthropic/claude-opus-4.7`) and its `claude-cli` variant are normalized to a 1M context window in resolved runtime metadata and active-agent status/context reporting. You do not need `params.context1m: true` for Opus 4.7; it no longer inherits the stale 200k fallback.
+
+    Compaction and overflow handling use the 1M window automatically. Other Anthropic models keep their published limits.
+
+  </Accordion>
 </AccordionGroup>
 
 ## Troubleshooting

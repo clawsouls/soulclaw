@@ -348,6 +348,26 @@ Config lives under `plugins.entries.moonshot.config.webSearch`:
 
   </Accordion>
 
+  <Accordion title="Tool call id sanitization">
+    Moonshot Kimi serves native tool_call ids shaped like `functions.<name>:<index>` on the OpenAI-compatible transport. OpenClaw no longer strict-sanitizes these ids for Moonshot, so multi-turn agentic flows through Kimi K2.6 keep working past 2-3 tool-calling rounds when the serving layer matches mangled ids against the original tool definitions.
+
+    If a custom OpenAI-compatible provider needs the previous behavior, set `sanitizeToolCallIds: true` on the provider entry. The flag lives on the shared `openai-compatible` replay family; Moonshot is wired to the opt-out by default.
+
+    ```json5
+    {
+      models: {
+        providers: {
+          "my-kimi-proxy": {
+            api: "openai-completions",
+            sanitizeToolCallIds: true,
+          },
+        },
+      },
+    }
+    ```
+
+  </Accordion>
+
   <Accordion title="Streaming usage compatibility">
     Native Moonshot endpoints (`https://api.moonshot.ai/v1` and
     `https://api.moonshot.cn/v1`) advertise streaming usage compatibility on the

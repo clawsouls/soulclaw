@@ -8,8 +8,7 @@ read_when:
 
 # Tencent Cloud (TokenHub)
 
-The Tencent Cloud provider gives access to Tencent Hy models via the TokenHub
-endpoint (`tencent-tokenhub`).
+Tencent Cloud ships as a **bundled provider plugin** in OpenClaw. It gives access to Tencent Hy models via the TokenHub endpoint (`tencent-tokenhub`).
 
 The provider uses an OpenAI-compatible API.
 
@@ -45,6 +44,7 @@ openclaw onboard --non-interactive \
 ## Notes
 
 - TokenHub model refs use `tencent-tokenhub/<modelId>`.
+- The plugin ships with tiered Hy3 pricing metadata built in, so cost estimates are populated without manual pricing overrides.
 - Override pricing and context metadata in `models.providers` if needed.
 
 ## Environment note
