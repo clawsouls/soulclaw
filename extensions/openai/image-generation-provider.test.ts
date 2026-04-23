@@ -2,12 +2,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildOpenAIImageGenerationProvider } from "./image-generation-provider.js";
 
 const {
+  isProviderApiKeyConfiguredMock,
   resolveApiKeyForProviderMock,
   postJsonRequestMock,
   postMultipartRequestMock,
   assertOkOrThrowHttpErrorMock,
   resolveProviderHttpRequestConfigMock,
 } = vi.hoisted(() => ({
+  isProviderApiKeyConfiguredMock: vi.fn(() => false),
   resolveApiKeyForProviderMock: vi.fn(
     async (_params?: {
       provider?: string;
@@ -24,6 +26,10 @@ const {
     headers: new Headers(params.defaultHeaders),
     dispatcherPolicy: undefined,
   })),
+}));
+
+vi.mock("openclaw/plugin-sdk/provider-auth", () => ({
+  isProviderApiKeyConfigured: isProviderApiKeyConfiguredMock,
 }));
 
 vi.mock("openclaw/plugin-sdk/provider-auth-runtime", () => ({
@@ -90,6 +96,8 @@ function mockCodexAuthOnly() {
 
 describe("openai image generation provider", () => {
   afterEach(() => {
+    isProviderApiKeyConfiguredMock.mockReset();
+    isProviderApiKeyConfiguredMock.mockReturnValue(false);
     resolveApiKeyForProviderMock.mockReset();
     resolveApiKeyForProviderMock.mockResolvedValue({ apiKey: "openai-key" });
     postJsonRequestMock.mockReset();
@@ -107,6 +115,36 @@ describe("openai image generation provider", () => {
     expect(provider.capabilities.geometry?.sizes).toEqual(
       expect.arrayContaining(["2048x2048", "3840x2160", "2160x3840"]),
     );
+  });
+
+  it("reports configured when either OpenAI API key auth or Codex OAuth auth is available", () => {
+    const provider = buildOpenAIImageGenerationProvider();
+
+    isProviderApiKeyConfiguredMock.mockImplementation(
+      (params: { provider: string }) => params.provider === "openai",
+    );
+    expect(provider.isConfigured?.({ agentDir: "/tmp/agent" })).toBe(true);
+    expect(isProviderApiKeyConfiguredMock).toHaveBeenCalledWith({
+      provider: "openai",
+      agentDir: "/tmp/agent",
+    });
+
+    isProviderApiKeyConfiguredMock.mockClear();
+    isProviderApiKeyConfiguredMock.mockImplementation(
+      (params: { provider: string }) => params.provider === "openai-codex",
+    );
+    expect(provider.isConfigured?.({ agentDir: "/tmp/agent" })).toBe(true);
+    expect(isProviderApiKeyConfiguredMock).toHaveBeenCalledWith({
+      provider: "openai",
+      agentDir: "/tmp/agent",
+    });
+    expect(isProviderApiKeyConfiguredMock).toHaveBeenCalledWith({
+      provider: "openai-codex",
+      agentDir: "/tmp/agent",
+    });
+
+    isProviderApiKeyConfiguredMock.mockReturnValue(false);
+    expect(provider.isConfigured?.({ agentDir: "/tmp/agent" })).toBe(false);
   });
 
   it("does not auto-allow local baseUrl overrides for image requests", async () => {
