@@ -91,7 +91,13 @@ describe("live model turn probes", () => {
     expect(shouldSkipLiveModelFileProbe({ provider: "google", id: "gemini-3-pro-preview" })).toBe(
       true,
     );
+    expect(shouldSkipLiveModelFileProbe({ provider: "opencode-go", id: "mimo-v2-omni" })).toBe(
+      true,
+    );
     expect(shouldSkipLiveModelFileProbe({ provider: "opencode-go", id: "mimo-v2-pro" })).toBe(true);
+    expect(shouldSkipLiveModelFileProbe({ provider: "opencode-go", id: "minimax-m2.5" })).toBe(
+      true,
+    );
     expect(shouldSkipLiveModelFileProbe({ provider: "opencode-go", id: "kimi-k2.5" })).toBe(false);
   });
 

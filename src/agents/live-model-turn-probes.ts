@@ -14,7 +14,9 @@ const KNOWN_EMPTY_FILE_PROBE_MODELS = new Set([
   "google/gemini-3.1-pro-preview-customtools",
   "opencode-go/glm-5",
   "opencode-go/glm-5.1",
+  "opencode-go/mimo-v2-omni",
   "opencode-go/mimo-v2-pro",
+  "opencode-go/minimax-m2.5",
 ]);
 const KNOWN_EMPTY_IMAGE_PROBE_MODELS = new Set([
   "fireworks/accounts/fireworks/models/kimi-k2p6",
