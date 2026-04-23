@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildLiveModelFileProbeContext,
+  buildLiveModelFileProbeRetryContext,
   buildLiveModelImageProbeContext,
   extractAssistantText,
   fileProbeTextMatches,
@@ -8,6 +9,7 @@ import {
   isLiveModelProbeEnabled,
   LIVE_MODEL_FILE_PROBE_TOKEN,
   modelSupportsImageInput,
+  shouldSkipLiveModelExtraProbes,
 } from "./live-model-turn-probes.js";
 
 describe("live model turn probes", () => {
@@ -27,15 +29,19 @@ describe("live model turn probes", () => {
     ).toBe(true);
   });
 
-  it("builds a text-block file read probe", () => {
+  it("builds a text file read probe", () => {
     const context = buildLiveModelFileProbeContext({ systemPrompt: "sys" });
     expect(context.systemPrompt).toBe("sys");
-    expect(context.messages[0]?.content).toEqual([
-      expect.objectContaining({
-        type: "text",
-        text: expect.stringContaining(`LIVE_FILE_TOKEN=${LIVE_MODEL_FILE_PROBE_TOKEN}`),
-      }),
-    ]);
+    expect(context.messages[0]?.content).toEqual(
+      expect.stringContaining(`LIVE_FILE_TOKEN=${LIVE_MODEL_FILE_PROBE_TOKEN}`),
+    );
+  });
+
+  it("builds a stricter file read retry probe", () => {
+    const context = buildLiveModelFileProbeRetryContext({});
+    expect(context.messages[0]?.content).toEqual(
+      expect.stringContaining(`Reply with exactly ${LIVE_MODEL_FILE_PROBE_TOKEN}`),
+    );
   });
 
   it("builds an image probe with native image content", () => {
@@ -63,9 +69,24 @@ describe("live model turn probes", () => {
     expect(modelSupportsImageInput({ input: ["text"] })).toBe(false);
   });
 
+  it("skips known stale extra probe routes", () => {
+    expect(
+      shouldSkipLiveModelExtraProbes({
+        provider: "openrouter",
+        id: "amazon/nova-2-lite-v1",
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipLiveModelExtraProbes({
+        provider: "openrouter",
+        id: "amazon/nova-lite-v1",
+      }),
+    ).toBe(false);
+  });
+
   it("matches expected probe replies", () => {
     expect(fileProbeTextMatches(`The value is ${LIVE_MODEL_FILE_PROBE_TOKEN}.`)).toBe(true);
-    expect(fileProbeTextMatches("OPAL-731")).toBe(false);
+    expect(fileProbeTextMatches("amber")).toBe(false);
     expect(imageProbeTextMatches("OK")).toBe(true);
     expect(imageProbeTextMatches("blue")).toBe(false);
   });

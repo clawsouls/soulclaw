@@ -18,6 +18,7 @@ import {
 } from "./live-model-filter.js";
 import {
   buildLiveModelFileProbeContext,
+  buildLiveModelFileProbeRetryContext,
   buildLiveModelImageProbeContext,
   extractAssistantText,
   fileProbeTextMatches,
@@ -27,6 +28,7 @@ import {
   LIVE_MODEL_FILE_PROBE_TOKEN,
   LIVE_MODEL_IMAGE_PROBE_ENV,
   modelSupportsImageInput,
+  shouldSkipLiveModelExtraProbes,
 } from "./live-model-turn-probes.js";
 import { createLiveTargetMatcher } from "./live-target-matcher.js";
 import { isLiveProfileKeyModeEnabled, isLiveTestEnabled } from "./live-test-helpers.js";
@@ -452,10 +454,14 @@ async function runExtraTurnProbes(params: {
   timeoutMs: number;
   progressLabel: string;
 }) {
+  if (shouldSkipLiveModelExtraProbes(params.model)) {
+    logProgress(`${params.progressLabel}: extra probes skipped (known empty route)`);
+    return;
+  }
   const options = {
     apiKey: params.apiKey,
     reasoning: resolveTestReasoning(params.model),
-    maxTokens: 64,
+    maxTokens: 128,
   };
   if (LIVE_FILE_PROBE_ENABLED) {
     logProgress(`${params.progressLabel}: file-read probe`);
@@ -469,7 +475,25 @@ async function runExtraTurnProbes(params: {
     if (file.stopReason === "error") {
       throw new Error(file.errorMessage || "file-read probe returned error with no message");
     }
-    const fileText = extractAssistantText(file);
+    let fileText = extractAssistantText(file);
+    if (!fileProbeTextMatches(fileText)) {
+      logProgress(`${params.progressLabel}: file-read probe retry`);
+      const retry = await completeSimpleWithTimeout(
+        params.model,
+        buildLiveModelFileProbeRetryContext({
+          systemPrompt: resolveLiveSystemPrompt(params.model),
+        }),
+        options,
+        params.timeoutMs,
+        `${params.progressLabel}: file-read probe retry`,
+      );
+      if (retry.stopReason === "error") {
+        throw new Error(
+          retry.errorMessage || "file-read probe retry returned error with no message",
+        );
+      }
+      fileText = extractAssistantText(retry);
+    }
     if (!fileProbeTextMatches(fileText)) {
       throw new Error(`file-read probe did not return ${LIVE_MODEL_FILE_PROBE_TOKEN}: ${fileText}`);
     }
