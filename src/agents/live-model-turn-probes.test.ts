@@ -98,7 +98,8 @@ describe("live model turn probes", () => {
     expect(shouldSkipLiveModelFileProbe({ provider: "opencode-go", id: "minimax-m2.5" })).toBe(
       true,
     );
-    expect(shouldSkipLiveModelFileProbe({ provider: "opencode-go", id: "kimi-k2.5" })).toBe(false);
+    expect(shouldSkipLiveModelFileProbe({ provider: "opencode-go", id: "kimi-k2.5" })).toBe(true);
+    expect(shouldSkipLiveModelFileProbe({ provider: "fireworks", id: "glm-5" })).toBe(false);
   });
 
   it("skips known stale image probe routes", () => {
@@ -114,6 +115,9 @@ describe("live model turn probes", () => {
         provider: "google",
         id: "gemini-3.1-pro-preview-customtools",
       }),
+    ).toBe(true);
+    expect(
+      shouldSkipLiveModelImageProbe({ provider: "openrouter", id: "amazon/nova-pro-v1" }),
     ).toBe(true);
     expect(shouldSkipLiveModelImageProbe({ provider: "fireworks", id: "glm-5" })).toBe(false);
   });
