@@ -60,18 +60,45 @@ Use `action: "list"` to inspect available providers and models at runtime:
 
 ## Tool parameters
 
-| Parameter     | Type     | Description                                                                           |
-| ------------- | -------- | ------------------------------------------------------------------------------------- |
-| `prompt`      | string   | Image generation prompt (required for `action: "generate"`)                           |
-| `action`      | string   | `"generate"` (default) or `"list"` to inspect providers                               |
-| `model`       | string   | Provider/model override, e.g. `openai/gpt-image-2`                                    |
-| `image`       | string   | Single reference image path or URL for edit mode                                      |
-| `images`      | string[] | Multiple reference images for edit mode (up to 5)                                     |
-| `size`        | string   | Size hint: `1024x1024`, `1536x1024`, `1024x1536`, `2048x2048`, `3840x2160`            |
-| `aspectRatio` | string   | Aspect ratio: `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9` |
-| `resolution`  | string   | Resolution hint: `1K`, `2K`, or `4K`                                                  |
-| `count`       | number   | Number of images to generate (1–4)                                                    |
-| `filename`    | string   | Output filename hint                                                                  |
+<ParamField path="prompt" type="string" required>
+Image generation prompt. Required for `action: "generate"`.
+</ParamField>
+
+<ParamField path="action" type="'generate' | 'list'" default="generate">
+Use `"list"` to inspect available providers and models at runtime.
+</ParamField>
+
+<ParamField path="model" type="string">
+Provider/model override, e.g. `openai/gpt-image-2`.
+</ParamField>
+
+<ParamField path="image" type="string">
+Single reference image path or URL for edit mode.
+</ParamField>
+
+<ParamField path="images" type="string[]">
+Multiple reference images for edit mode (up to 5).
+</ParamField>
+
+<ParamField path="size" type="string">
+Size hint: `1024x1024`, `1536x1024`, `1024x1536`, `2048x2048`, `3840x2160`.
+</ParamField>
+
+<ParamField path="aspectRatio" type="string">
+Aspect ratio: `1:1`, `2:3`, `3:2`, `3:4`, `4:3`, `4:5`, `5:4`, `9:16`, `16:9`, `21:9`.
+</ParamField>
+
+<ParamField path="resolution" type="'1K' | '2K' | '4K'">
+Resolution hint.
+</ParamField>
+
+<ParamField path="count" type="number">
+Number of images to generate (1–4).
+</ParamField>
+
+<ParamField path="filename" type="string">
+Output filename hint.
+</ParamField>
 
 Not all providers support all parameters. When a fallback provider supports a nearby geometry option instead of the exact requested one, OpenClaw remaps to the closest supported size, aspect ratio, or resolution before submission. Truly unsupported overrides are still reported in the tool result.
 
