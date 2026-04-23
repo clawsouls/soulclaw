@@ -77,7 +77,9 @@ export function expectCodexBuiltInSuppression(
     }),
   ).toMatchObject({
     suppress: true,
-    errorMessage: expect.stringContaining("openai-codex/gpt-5.3-codex-spark"),
+    errorMessage: expect.stringContaining(
+      "openai/gpt-5.3-codex-spark with the Codex OAuth profile",
+    ),
   });
 }
 

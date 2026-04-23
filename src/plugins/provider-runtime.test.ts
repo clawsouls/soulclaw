@@ -134,7 +134,10 @@ function createOpenAiCatalogProviderPlugin(
     suppressBuiltInModel: ({ provider, modelId }) =>
       (provider === "openai" || provider === "azure-openai-responses") &&
       modelId === "gpt-5.3-codex-spark"
-        ? { suppress: true, errorMessage: "openai-codex/gpt-5.3-codex-spark" }
+        ? {
+            suppress: true,
+            errorMessage: "openai/gpt-5.3-codex-spark with the Codex OAuth profile",
+          }
         : undefined,
     augmentModelCatalog: () => [
       { provider: "openai", id: "gpt-5.4", name: "gpt-5.4" },
