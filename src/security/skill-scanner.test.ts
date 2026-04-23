@@ -61,6 +61,19 @@ function writeFixtureFiles(root: string, files: Record<string, string | undefine
   }
 }
 
+function mockStatPermissionDeniedFor(filePath: string) {
+  const realStat = fs.stat;
+  return vi.spyOn(fs, "stat").mockImplementation(async (...args) => {
+    const pathArg = args[0];
+    if (typeof pathArg === "string" && pathArg === filePath) {
+      const err = new Error("EACCES: permission denied") as NodeJS.ErrnoException;
+      err.code = "EACCES";
+      throw err;
+    }
+    return await realStat(...args);
+  });
+}
+
 function expectRulePresence(findings: { ruleId: string }[], ruleId: string, expected: boolean) {
   expect(findings.some((finding) => finding.ruleId === ruleId)).toBe(expected);
 }
@@ -762,16 +775,7 @@ describe("scanDirectoryWithSummary", () => {
     const filePath = path.join(root, "forbidden.js");
     fsSync.writeFileSync(filePath, `export const x = 1;`);
 
-    const realStat = fs.stat;
-    const spy = vi.spyOn(fs, "stat").mockImplementation(async (...args) => {
-      const pathArg = args[0];
-      if (typeof pathArg === "string" && pathArg === filePath) {
-        const err = new Error("EACCES: permission denied") as NodeJS.ErrnoException;
-        err.code = "EACCES";
-        throw err;
-      }
-      return await realStat(...args);
-    });
+    const spy = mockStatPermissionDeniedFor(filePath);
 
     try {
       await expect(scanDirectory(root, { includeFiles: ["forbidden.js"] })).rejects.toMatchObject({
@@ -787,16 +791,7 @@ describe("scanDirectoryWithSummary", () => {
     const filePath = path.join(root, "noperm.js");
     fsSync.writeFileSync(filePath, `export const x = 1;`);
 
-    const realStat = fs.stat;
-    const spy = vi.spyOn(fs, "stat").mockImplementation(async (...args) => {
-      const pathArg = args[0];
-      if (typeof pathArg === "string" && pathArg === filePath) {
-        const err = new Error("EACCES: permission denied") as NodeJS.ErrnoException;
-        err.code = "EACCES";
-        throw err;
-      }
-      return await realStat(...args);
-    });
+    const spy = mockStatPermissionDeniedFor(filePath);
 
     try {
       await expect(scanDirectory(root)).rejects.toMatchObject({ code: "EACCES" });
