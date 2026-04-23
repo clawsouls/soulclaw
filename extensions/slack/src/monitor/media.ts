@@ -95,6 +95,10 @@ function createSlackMediaFetch(): FetchLike {
   };
 }
 
+function resolveSlackFetchForRuntime(): typeof fetch {
+  return isMockedFetch(globalThis.fetch) ? globalThis.fetch : fetchWithRuntimeDispatcher;
+}
+
 /**
  * Fetches a URL with Authorization header while keeping same-origin redirects
  * authenticated and dropping auth once the redirect crosses origins.
@@ -102,8 +106,9 @@ function createSlackMediaFetch(): FetchLike {
 export async function fetchWithSlackAuth(url: string, token: string): Promise<Response> {
   const parsed = assertSlackFileUrl(url);
   const authHeaders = createSlackAuthHeaders(token);
+  const fetchImpl = resolveSlackFetchForRuntime();
 
-  const initialRes = await fetch(parsed.href, {
+  const initialRes = await fetchImpl(parsed.href, {
     headers: authHeaders,
     redirect: "manual",
   });
@@ -122,12 +127,12 @@ export async function fetchWithSlackAuth(url: string, token: string): Promise<Re
     return initialRes;
   }
   if (resolvedUrl.origin === parsed.origin) {
-    return fetch(resolvedUrl.toString(), {
+    return fetchImpl(resolvedUrl.toString(), {
       headers: authHeaders,
       redirect: "follow",
     });
   }
-  return fetch(resolvedUrl.toString(), { redirect: "follow" });
+  return fetchImpl(resolvedUrl.toString(), { redirect: "follow" });
 }
 
 const SLACK_MEDIA_SSRF_POLICY = {
