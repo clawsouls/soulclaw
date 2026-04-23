@@ -75,6 +75,14 @@ Use this skill for release and publish-time workflow. Keep ordinary development 
   parallel, publish npm from the successful npm preflight, then start published
   npm install/update, Docker, and Parallels verification while mac artifacts
   continue.
+- If mac packaging needs release-branch-only fixes after the stable npm package
+  or GitHub tag is already published, do not create a `vYYYY.M.D-N` correction
+  tag just to change the workflow source. Dispatch the private mac workflows for
+  the original `tag=vYYYY.M.D` with `source_ref=release/YYYY.M.D` and
+  `public_release_branch=release/YYYY.M.D`; provenance checks must prove the
+  source SHA descends from the tag and validation/preflight use the same source.
+  Reserve `vYYYY.M.D-N` correction tags for cases where the published mac
+  version/build identity itself must move to a newer Sparkle build.
 - The production Sparkle feed lives at `https://raw.githubusercontent.com/openclaw/openclaw/main/appcast.xml`, and the canonical published file is `appcast.xml` on `main` in the `openclaw` repo.
 - That shared production Sparkle feed is stable-only. Beta mac releases may
   upload assets to the GitHub prerelease, but they must not replace the shared
