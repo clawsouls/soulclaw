@@ -249,15 +249,12 @@ function resolveDiscordGuildNativeCommandAuthorized(params: {
     allowed: policyAuthorizer.allowed,
   };
   const fallbackAuthorizers = [policyFallbackAuthorizer, ownerAuthorizer, memberAuthorizer];
+  const authorizers = params.commandsAllowFromAccess.configured
+    ? [commandAllowlistAuthorizer]
+    : fallbackAuthorizers;
   return resolveCommandAuthorizedFromAuthorizers({
     useAccessGroups: params.useAccessGroups,
-    authorizers: params.useAccessGroups
-      ? params.commandsAllowFromAccess.configured
-        ? [commandAllowlistAuthorizer]
-        : fallbackAuthorizers
-      : params.commandsAllowFromAccess.configured
-        ? [commandAllowlistAuthorizer]
-        : fallbackAuthorizers,
+    authorizers,
     modeWhenAccessGroupsOff: "configured",
   });
 }
