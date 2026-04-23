@@ -8,6 +8,7 @@ const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const DEFAULT_E2E_IMAGE = "openclaw-docker-e2e:local";
 const DEFAULT_PARALLELISM = 4;
 const DEFAULT_FAILURE_TAIL_LINES = 80;
+const DEFAULT_LANE_TIMEOUT_MS = 120 * 60 * 1000;
 
 const lanes = [
   ["live-models", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-models"],
@@ -62,6 +63,13 @@ function parsePositiveInt(raw, fallback, label) {
   return parsed;
 }
 
+function parseBool(raw, fallback) {
+  if (raw === undefined || raw === "") {
+    return fallback;
+  }
+  return !/^(?:0|false|no)$/i.test(raw);
+}
+
 function utcStampForPath() {
   return new Date().toISOString().replaceAll("-", "").replaceAll(":", "").replace(/\..*$/, "Z");
 }
@@ -86,7 +94,7 @@ function commandEnv(extra = {}) {
   };
 }
 
-function runShellCommand({ command, env, label, logFile }) {
+function runShellCommand({ command, env, label, logFile, timeoutMs }) {
   return new Promise((resolve) => {
     const child = spawn("bash", ["-lc", command], {
       cwd: ROOT_DIR,
@@ -94,6 +102,21 @@ function runShellCommand({ command, env, label, logFile }) {
       stdio: logFile ? ["ignore", "pipe", "pipe"] : "inherit",
     });
     activeChildren.add(child);
+    let timedOut = false;
+    let killTimer;
+    const timeoutTimer =
+      timeoutMs > 0
+        ? setTimeout(() => {
+            timedOut = true;
+            if (stream) {
+              stream.write(`\n==> [${label}] timeout after ${timeoutMs}ms; sending SIGTERM\n`);
+            }
+            child.kill("SIGTERM");
+            killTimer = setTimeout(() => child.kill("SIGKILL"), 10_000);
+            killTimer.unref?.();
+          }, timeoutMs)
+        : undefined;
+    timeoutTimer?.unref?.();
 
     let stream;
     if (logFile) {
@@ -105,13 +128,19 @@ function runShellCommand({ command, env, label, logFile }) {
     }
 
     child.on("close", (status, signal) => {
+      if (timeoutTimer) {
+        clearTimeout(timeoutTimer);
+      }
+      if (killTimer) {
+        clearTimeout(killTimer);
+      }
       activeChildren.delete(child);
       const exitCode = typeof status === "number" ? status : signal ? 128 : 1;
       if (stream) {
         stream.write(`\n==> [${label}] finished: ${utcStamp()} status=${exitCode}\n`);
         stream.end();
       }
-      resolve({ status: exitCode, signal });
+      resolve({ signal, status: exitCode, timedOut });
     });
   });
 }
@@ -137,7 +166,7 @@ function laneEnv(name, baseEnv, logDir) {
   return env;
 }
 
-async function runLane(lane, baseEnv, logDir) {
+async function runLane(lane, baseEnv, logDir, timeoutMs) {
   const [name, command] = lane;
   const logFile = path.join(logDir, `${name}.log`);
   const env = laneEnv(name, baseEnv, logDir);
@@ -153,31 +182,41 @@ async function runLane(lane, baseEnv, logDir) {
   );
   console.log(`==> [${name}] start`);
   const startedAt = Date.now();
-  const result = await runShellCommand({ command, env, label: name, logFile });
+  const result = await runShellCommand({ command, env, label: name, logFile, timeoutMs });
   const elapsedSeconds = Math.round((Date.now() - startedAt) / 1000);
   if (result.status === 0) {
     console.log(`==> [${name}] pass ${elapsedSeconds}s`);
   } else {
-    console.error(`==> [${name}] fail status=${result.status} ${elapsedSeconds}s log=${logFile}`);
+    const timeoutLabel = result.timedOut ? " timeout" : "";
+    console.error(
+      `==> [${name}] fail${timeoutLabel} status=${result.status} ${elapsedSeconds}s log=${logFile}`,
+    );
   }
   return {
     command,
     logFile,
     name,
     status: result.status,
+    timedOut: result.timedOut,
   };
 }
 
-async function runLanePool(poolLanes, baseEnv, logDir, parallelism) {
+async function runLanePool(poolLanes, baseEnv, logDir, parallelism, options) {
   const failures = [];
   let nextIndex = 0;
 
   async function worker() {
     while (nextIndex < poolLanes.length) {
+      if (options.failFast && failures.length > 0) {
+        return;
+      }
       const lane = poolLanes[nextIndex++];
-      const result = await runLane(lane, baseEnv, logDir);
+      const result = await runLane(lane, baseEnv, logDir, options.timeoutMs);
       if (result.status !== 0) {
         failures.push(result);
+        if (options.failFast) {
+          return;
+        }
       }
     }
   }
@@ -187,12 +226,15 @@ async function runLanePool(poolLanes, baseEnv, logDir, parallelism) {
   return failures;
 }
 
-async function runLanesSerial(serialLanes, baseEnv, logDir) {
+async function runLanesSerial(serialLanes, baseEnv, logDir, options) {
   const failures = [];
   for (const lane of serialLanes) {
-    const result = await runLane(lane, baseEnv, logDir);
+    const result = await runLane(lane, baseEnv, logDir, options.timeoutMs);
     if (result.status !== 0) {
       failures.push(result);
+      if (options.failFast) {
+        break;
+      }
     }
   }
   return failures;
@@ -242,6 +284,12 @@ async function main() {
     DEFAULT_FAILURE_TAIL_LINES,
     "OPENCLAW_DOCKER_ALL_FAILURE_TAIL_LINES",
   );
+  const laneTimeoutMs = parsePositiveInt(
+    process.env.OPENCLAW_DOCKER_ALL_LANE_TIMEOUT_MS,
+    DEFAULT_LANE_TIMEOUT_MS,
+    "OPENCLAW_DOCKER_ALL_LANE_TIMEOUT_MS",
+  );
+  const failFast = parseBool(process.env.OPENCLAW_DOCKER_ALL_FAIL_FAST, true);
   const runId = process.env.OPENCLAW_DOCKER_ALL_RUN_ID || utcStampForPath();
   const logDir = path.resolve(
     process.env.OPENCLAW_DOCKER_ALL_LOG_DIR ||
@@ -258,6 +306,8 @@ async function main() {
 
   console.log(`==> Docker test logs: ${logDir}`);
   console.log(`==> Parallelism: ${parallelism}`);
+  console.log(`==> Lane timeout: ${laneTimeoutMs}ms`);
+  console.log(`==> Fail fast: ${failFast ? "yes" : "no"}`);
   console.log(`==> Live-test bundled plugin deps: ${baseEnv.OPENCLAW_DOCKER_BUILD_EXTENSIONS}`);
 
   await runForeground("Build shared live-test image once", "pnpm test:docker:live-build", baseEnv);
@@ -267,14 +317,15 @@ async function main() {
     baseEnv,
   );
 
-  const failures = await runLanePool(lanes, baseEnv, logDir, parallelism);
+  const options = { failFast, timeoutMs: laneTimeoutMs };
+  const failures = await runLanePool(lanes, baseEnv, logDir, parallelism, options);
   if (failures.length > 0) {
     await printFailureSummary(failures, tailLines);
     process.exit(1);
   }
 
   console.log("==> Running provider-sensitive Docker lanes exclusively");
-  failures.push(...(await runLanesSerial(exclusiveLanes, baseEnv, logDir)));
+  failures.push(...(await runLanesSerial(exclusiveLanes, baseEnv, logDir, options)));
   if (failures.length > 0) {
     await printFailureSummary(failures, tailLines);
     process.exit(1);
