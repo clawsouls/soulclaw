@@ -42,7 +42,7 @@ export const splitTrailingDirective = (
 
   // 1. Unclosed `[[…` reply/audio directive tail.
   const openIndex = text.lastIndexOf("[[");
-  if (openIndex >= 0 && text.indexOf("]]", openIndex + 2) < 0) {
+  if (openIndex >= 0 && !text.includes("]]", openIndex + 2)) {
     if (openIndex < bufferStart) {
       bufferStart = openIndex;
     }
