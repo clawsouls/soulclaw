@@ -5,7 +5,12 @@ import type {
   ImageGenerationResult,
   ImageGenerationSourceImage,
 } from "openclaw/plugin-sdk/image-generation";
-import { isProviderApiKeyConfigured } from "openclaw/plugin-sdk/provider-auth";
+import {
+  ensureAuthProfileStore,
+  isProviderApiKeyConfigured,
+  listProfilesForProvider,
+  type AuthProfileStore,
+} from "openclaw/plugin-sdk/provider-auth";
 import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runtime";
 import {
   assertOkOrThrowHttpError,
@@ -82,6 +87,74 @@ function shouldAllowPrivateImageEndpoint(req: {
     return false;
   }
   return process.env.OPENCLAW_QA_ALLOW_LOCAL_IMAGE_PROVIDER === "1";
+}
+
+function normalizeProviderId(value: string | undefined): string {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function hasExplicitOpenAIDirectAuthConfig(cfg: OpenClawConfig | undefined): boolean {
+  const profiles = cfg?.auth?.profiles;
+  if (!profiles) {
+    return false;
+  }
+  return Object.values(profiles).some(
+    (profile) => normalizeProviderId(profile.provider) === "openai",
+  );
+}
+
+function hasExplicitOpenAIDirectProviderConfig(cfg: OpenClawConfig | undefined): boolean {
+  if (hasExplicitOpenAIDirectAuthConfig(cfg)) {
+    return true;
+  }
+  const providerConfig = cfg?.models?.providers?.openai;
+  if (!providerConfig) {
+    return false;
+  }
+  if (providerConfig.apiKey !== undefined) {
+    return true;
+  }
+  const configuredBaseUrl = resolveConfiguredOpenAIBaseUrl(cfg);
+  if (
+    configuredBaseUrl.trim() &&
+    configuredBaseUrl.replace(/\/+$/, "") !== DEFAULT_OPENAI_IMAGE_BASE_URL
+  ) {
+    return true;
+  }
+  if (providerConfig.api !== undefined) {
+    return true;
+  }
+  if (providerConfig.headers && Object.keys(providerConfig.headers).length > 0) {
+    return true;
+  }
+  if (providerConfig.authHeader === false || providerConfig.request !== undefined) {
+    return true;
+  }
+  return false;
+}
+
+function resolveRequestAuthStore(req: {
+  authStore?: AuthProfileStore;
+  agentDir?: string;
+}): AuthProfileStore | undefined {
+  if (req.authStore) {
+    return req.authStore;
+  }
+  const agentDir = req.agentDir?.trim();
+  if (!agentDir) {
+    return undefined;
+  }
+  return ensureAuthProfileStore(agentDir, {
+    allowKeychainPrompt: false,
+  });
+}
+
+function hasCodexOAuthProfileConfigured(req: {
+  authStore?: AuthProfileStore;
+  agentDir?: string;
+}): boolean {
+  const store = resolveRequestAuthStore(req);
+  return Boolean(store && listProfilesForProvider(store, "openai-codex").length > 0);
 }
 
 type OpenAIImageApiResponse = {
@@ -369,6 +442,21 @@ export function buildOpenAIImageGenerationProvider(): ImageGenerationProvider {
     async generateImage(req) {
       const inputImages = req.inputImages ?? [];
       const isEdit = inputImages.length > 0;
+      const useCodexOAuthRoute =
+        !hasExplicitOpenAIDirectProviderConfig(req.cfg) && hasCodexOAuthProfileConfigured(req);
+      if (useCodexOAuthRoute) {
+        const codexAuth = await resolveApiKeyForProvider({
+          provider: "openai-codex",
+          cfg: req.cfg,
+          agentDir: req.agentDir,
+          store: req.authStore,
+        });
+        if (!codexAuth.apiKey) {
+          throw new Error("OpenAI Codex OAuth missing");
+        }
+        return generateOpenAICodexImage({ req, apiKey: codexAuth.apiKey });
+      }
+
       const auth = await resolveOptionalApiKeyForProvider({
         provider: "openai",
         cfg: req.cfg,
