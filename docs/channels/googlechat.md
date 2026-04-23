@@ -5,8 +5,6 @@ read_when:
 title: "Google Chat"
 ---
 
-# Google Chat (Chat API)
-
 Status: ready for DMs + spaces via Google Chat API webhooks (HTTP only).
 
 ## Quick setup (beginner)
