@@ -53,13 +53,13 @@ const EXTENSION_TEST_COST_MULTIPLIERS = {
   "test/vitest/vitest.extension-providers.config.ts": 0.5,
   "test/vitest/vitest.extension-qa.config.ts": 0.6,
   "test/vitest/vitest.extension-slack.config.ts": 0.14,
-  "test/vitest/vitest.extension-telegram.config.ts": 0.15,
+  "test/vitest/vitest.extension-telegram.config.ts": 0.5,
   "test/vitest/vitest.extension-voice-call.config.ts": 0.27,
-  "test/vitest/vitest.extension-whatsapp.config.ts": 0.5,
+  "test/vitest/vitest.extension-whatsapp.config.ts": 0.8,
   "test/vitest/vitest.extension-zalo.config.ts": 0.7,
   // This shared config is comparatively cheap per file, so raw file count
   // overstates its real wall-clock cost during CI shard planning.
-  "test/vitest/vitest.extensions.config.ts": 0.45,
+  "test/vitest/vitest.extensions.config.ts": 1.1,
 };
 
 function normalizeRelative(inputPath) {
