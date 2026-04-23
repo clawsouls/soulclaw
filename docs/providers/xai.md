@@ -64,7 +64,9 @@ current image-capable Grok refs in the bundled catalog.
 ## OpenClaw feature coverage
 
 The bundled plugin maps xAI's current public API surface onto OpenClaw's shared
-provider and tool contracts where the behavior fits cleanly.
+provider and tool contracts. Capabilities that don't fit the shared contract
+(for example streaming TTS and realtime voice) are not exposed — see the table
+below.
 
 | xAI capability             | OpenClaw surface                          | Status                                                              |
 | -------------------------- | ----------------------------------------- | ------------------------------------------------------------------- |
