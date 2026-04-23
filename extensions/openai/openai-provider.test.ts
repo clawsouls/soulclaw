@@ -55,7 +55,7 @@ describe("buildOpenAIProvider", () => {
 
     expect(apiKey?.wizard).toMatchObject({
       choiceLabel: "OpenAI API Key",
-      groupHint: "API key + Codex auth",
+      groupHint: "API key or Codex sign-in",
     });
   });
 

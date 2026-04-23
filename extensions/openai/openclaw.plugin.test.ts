@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { buildOpenAICodexProviderPlugin } from "./openai-codex-provider.js";
+import { buildOpenAIProvider } from "./openai-provider.js";
 
 const manifest = JSON.parse(
   readFileSync(new URL("./openclaw.plugin.json", import.meta.url), "utf8"),
@@ -14,6 +16,41 @@ const manifest = JSON.parse(
     groupHint?: string;
   }>;
 };
+
+function manifestComparableWizardFields(choice: {
+  choiceId?: string;
+  choiceLabel?: string;
+  choiceHint?: string;
+  groupId?: string;
+  groupLabel?: string;
+  groupHint?: string;
+}) {
+  return Object.fromEntries(
+    Object.entries({
+      choiceId: choice.choiceId,
+      choiceLabel: choice.choiceLabel,
+      choiceHint: choice.choiceHint,
+      groupId: choice.groupId,
+      groupLabel: choice.groupLabel,
+      groupHint: choice.groupHint,
+    }).filter(([, value]) => value !== undefined),
+  );
+}
+
+function providerWizardByKey() {
+  const providers = [buildOpenAIProvider(), buildOpenAICodexProviderPlugin()];
+  const wizards = new Map<string, Record<string, unknown>>();
+
+  for (const provider of providers) {
+    for (const authMethod of provider.auth ?? []) {
+      if (authMethod.wizard) {
+        wizards.set(`${provider.id}:${authMethod.id}`, authMethod.wizard);
+      }
+    }
+  }
+
+  return wizards;
+}
 
 describe("OpenAI plugin manifest", () => {
   it("keeps removed Codex CLI import auth choice as a deprecated browser-login alias", () => {
@@ -37,20 +74,30 @@ describe("OpenAI plugin manifest", () => {
     expect(codexBrowserLogin).toMatchObject({
       choiceLabel: "OpenAI Codex Browser Login",
       choiceHint: "Sign in with OpenAI in your browser",
-      groupHint: "API key + Codex auth",
+      groupHint: "API key or Codex sign-in",
     });
     expect(codexDeviceCode).toMatchObject({
       choiceLabel: "OpenAI Codex Device Pairing",
       choiceHint: "Pair in browser with a device code",
-      groupHint: "API key + Codex auth",
+      groupHint: "API key or Codex sign-in",
     });
     expect(apiKey).toMatchObject({
       choiceLabel: "OpenAI API Key",
-      groupHint: "API key + Codex auth",
+      groupHint: "API key or Codex sign-in",
     });
     expect(choices.map((choice) => choice.choiceLabel)).not.toContain(
       "OpenAI Codex (ChatGPT OAuth)",
     );
     expect(choices.map((choice) => choice.groupHint)).not.toContain("Codex OAuth + API key");
+  });
+
+  it("keeps auth choice copy aligned with provider wizard metadata", () => {
+    const wizards = providerWizardByKey();
+
+    for (const choice of manifest.providerAuthChoices ?? []) {
+      const key = `${choice.provider}:${choice.method}`;
+
+      expect(wizards.get(key), key).toMatchObject(manifestComparableWizardFields(choice));
+    }
   });
 });

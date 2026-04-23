@@ -117,11 +117,11 @@ describe("openai codex provider", () => {
 
     expect(oauth?.wizard).toMatchObject({
       choiceLabel: "OpenAI Codex Browser Login",
-      groupHint: "API key + Codex auth",
+      groupHint: "API key or Codex sign-in",
     });
     expect(deviceCode?.wizard).toMatchObject({
       choiceLabel: "OpenAI Codex Device Pairing",
-      groupHint: "API key + Codex auth",
+      groupHint: "API key or Codex sign-in",
     });
   });
 
