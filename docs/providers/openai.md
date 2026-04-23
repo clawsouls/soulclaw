@@ -140,6 +140,16 @@ Choose your preferred auth method and follow the setup steps.
     Onboarding no longer imports OAuth material from `~/.codex`. Sign in with browser OAuth (default) or the device-code flow above — OpenClaw manages the resulting credentials in its own agent auth store.
     </Note>
 
+    ### Status indicator
+
+    Chat `/status` shows which embedded harness is active for the current
+    session. The default PI harness appears as `Runner: pi (embedded)` and does
+    not add a separate badge. When the bundled Codex app-server harness is
+    selected, `/status` appends the non-PI harness id next to `Fast`, for example
+    `Fast · codex`. Existing sessions keep their recorded harness id, so use
+    `/new` or `/reset` after changing `embeddedHarness` if you want `/status` to
+    reflect a new PI/Codex choice.
+
     ### Context window cap
 
     OpenClaw treats model metadata and the runtime context cap as separate values.
