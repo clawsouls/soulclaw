@@ -91,6 +91,7 @@ describe("live model turn probes", () => {
     expect(shouldSkipLiveModelFileProbe({ provider: "google", id: "gemini-3-pro-preview" })).toBe(
       true,
     );
+    expect(shouldSkipLiveModelFileProbe({ provider: "opencode-go", id: "mimo-v2-pro" })).toBe(true);
     expect(shouldSkipLiveModelFileProbe({ provider: "opencode-go", id: "kimi-k2.5" })).toBe(false);
   });
 
@@ -102,6 +103,12 @@ describe("live model turn probes", () => {
       }),
     ).toBe(true);
     expect(shouldSkipLiveModelImageProbe({ provider: "opencode-go", id: "kimi-k2.5" })).toBe(true);
+    expect(
+      shouldSkipLiveModelImageProbe({
+        provider: "google",
+        id: "gemini-3.1-pro-preview-customtools",
+      }),
+    ).toBe(true);
     expect(shouldSkipLiveModelImageProbe({ provider: "fireworks", id: "glm-5" })).toBe(false);
   });
 

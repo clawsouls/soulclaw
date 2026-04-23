@@ -14,10 +14,12 @@ const KNOWN_EMPTY_FILE_PROBE_MODELS = new Set([
   "google/gemini-3.1-pro-preview-customtools",
   "opencode-go/glm-5",
   "opencode-go/glm-5.1",
+  "opencode-go/mimo-v2-pro",
 ]);
 const KNOWN_EMPTY_IMAGE_PROBE_MODELS = new Set([
   "fireworks/accounts/fireworks/models/kimi-k2p6",
   "fireworks/accounts/fireworks/routers/kimi-k2p5-turbo",
+  "google/gemini-3.1-pro-preview-customtools",
   "opencode-go/kimi-k2.5",
   "opencode-go/kimi-k2.6",
 ]);
