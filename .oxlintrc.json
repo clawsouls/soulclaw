@@ -14,7 +14,7 @@
     "eslint/no-constructor-return": "error",
     "eslint/no-div-regex": "error",
     "eslint/no-extra-label": "error",
-    "eslint/no-empty-pattern": ["error", { "allowObjectPatternsAsParameters": false }],
+    "eslint/no-empty-pattern": "error",
     "eslint/no-lone-blocks": "error",
     "eslint/no-multi-str": "error",
     "eslint/no-new": "error",
