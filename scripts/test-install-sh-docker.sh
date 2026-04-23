@@ -426,7 +426,6 @@ LATEST_VERSION="${LATEST_VERSION:-}"
 if [[ "$SKIP_NONROOT" == "1" ]]; then
   echo "==> Skip non-root installer smoke (OPENCLAW_INSTALL_SMOKE_SKIP_NONROOT=1)"
 else
-  prepare_npm_cache
   if [[ "$SKIP_NONROOT_IMAGE_BUILD" == "1" ]]; then
     echo "==> Reuse prebuilt non-root image: $NONROOT_IMAGE"
   else
@@ -441,7 +440,6 @@ else
   echo "==> Run installer non-root test: $INSTALL_URL"
   docker run --rm -t \
     --platform "$NONROOT_PLATFORM" \
-    "${NPM_CACHE_DOCKER_ARGS[@]}" \
     -e OPENCLAW_INSTALL_URL="$INSTALL_URL" \
     -e OPENCLAW_INSTALL_PACKAGE="$PACKAGE_NAME" \
     -e OPENCLAW_INSTALL_METHOD=npm \
@@ -466,7 +464,6 @@ echo "==> Run CLI installer non-root test (same image)"
 docker run --rm -t \
   --platform "$NONROOT_PLATFORM" \
   --entrypoint /bin/bash \
-  "${NPM_CACHE_DOCKER_ARGS[@]}" \
   -e OPENCLAW_INSTALL_URL="$INSTALL_URL" \
   -e OPENCLAW_INSTALL_CLI_URL="$CLI_INSTALL_URL" \
   -e OPENCLAW_NO_ONBOARD=1 \
