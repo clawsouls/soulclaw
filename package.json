@@ -29,6 +29,8 @@
     "dist/",
     "!dist/**/*.map",
     "!dist/plugin-sdk/.tsbuildinfo",
+    "!dist/extensions/*/.openclaw-runtime-deps-*/**",
+    "!dist/extensions/*/.openclaw-runtime-deps-stamp.json",
     "!dist/extensions/node_modules/**",
     "!dist/extensions/*/node_modules/**",
     "!dist/extensions/qa-channel/**",

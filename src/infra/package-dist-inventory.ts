@@ -21,6 +21,7 @@ const OMITTED_PRIVATE_QA_DIST_PREFIXES = ["dist/qa-runtime-"];
 const OMITTED_DIST_SUBTREE_PATTERNS = [
   /^dist\/extensions\/node_modules(?:\/|$)/u,
   /^dist\/extensions\/[^/]+\/node_modules(?:\/|$)/u,
+  /^dist\/extensions\/[^/]+\/\.openclaw-runtime-deps-[^/]+(?:\/|$)/u,
   /^dist\/extensions\/qa-matrix(?:\/|$)/u,
   new RegExp(`^dist/plugin-sdk/extensions/${LEGACY_QA_LAB_DIR}(?:/|$)`, "u"),
 ] as const;
@@ -34,6 +35,9 @@ function isPackagedDistPath(relativePath: string): boolean {
     return false;
   }
   if (relativePath === PACKAGE_DIST_INVENTORY_RELATIVE_PATH) {
+    return false;
+  }
+  if (relativePath.endsWith("/.openclaw-runtime-deps-stamp.json")) {
     return false;
   }
   if (relativePath.endsWith(".map")) {
