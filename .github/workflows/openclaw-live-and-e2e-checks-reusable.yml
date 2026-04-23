@@ -28,6 +28,11 @@ on:
         required: false
         default: true
         type: boolean
+      live_models_only:
+        description: Whether to run only the Docker live model matrix when live suites are enabled
+        required: false
+        default: false
+        type: boolean
   workflow_call:
     inputs:
       ref:
@@ -53,6 +58,11 @@ on:
         description: Whether to run live-provider coverage
         required: false
         default: true
+        type: boolean
+      live_models_only:
+        description: Whether to run only the Docker live model matrix when live suites are enabled
+        required: false
+        default: false
         type: boolean
     secrets:
       OPENAI_API_KEY:
@@ -212,7 +222,7 @@ jobs:
 
   validate_release_live_cache:
     needs: validate_selected_ref
-    if: inputs.include_live_suites
+    if: inputs.include_live_suites && !inputs.live_models_only
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 60
     env:
@@ -278,7 +288,7 @@ jobs:
 
   validate_special_e2e:
     needs: validate_selected_ref
-    if: inputs.include_repo_e2e || inputs.include_live_suites
+    if: inputs.include_repo_e2e || (inputs.include_live_suites && !inputs.live_models_only)
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
@@ -745,7 +755,7 @@ jobs:
 
   validate_live_provider_suites:
     needs: validate_selected_ref
-    if: inputs.include_live_suites
+    if: inputs.include_live_suites && !inputs.live_models_only
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
