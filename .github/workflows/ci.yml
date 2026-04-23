@@ -454,6 +454,8 @@ jobs:
     if: needs.preflight.outputs.run_build_artifacts == 'true'
     runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-8vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
     timeout-minutes: 20
+    outputs:
+      gateway-watch-result: ${{ steps.gateway_watch.outcome }}
     steps:
       - name: Checkout
         shell: bash
@@ -521,6 +523,10 @@ jobs:
       - name: Build Control UI
         run: pnpm ui:build
 
+      - name: Check Control UI i18n
+        if: needs.preflight.outputs.run_control_ui_i18n == 'true'
+        run: pnpm ui:i18n:check
+
       - name: Cache dist build
         uses: actions/cache@v5
         with:
@@ -561,6 +567,20 @@ jobs:
 
       - name: Check CLI startup memory
         run: pnpm test:startup:memory
+
+      - name: Run gateway watch regression
+        id: gateway_watch
+        if: needs.preflight.outputs.run_check_additional == 'true'
+        continue-on-error: true
+        run: node scripts/check-gateway-watch-regression.mjs --skip-build
+
+      - name: Upload gateway watch regression artifacts
+        if: always() && needs.preflight.outputs.run_check_additional == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: gateway-watch-regression
+          path: .local/gateway-watch-regression/
+          retention-days: 7
 
   checks-fast-core:
     permissions:
@@ -1781,101 +1801,11 @@ jobs:
 
           exit "$failures"
 
-  check-additional-runtime-topology-gateway:
-    permissions:
-      contents: read
-    name: "check-additional-runtime-topology-gateway"
-    needs: [preflight, build-artifacts]
-    if: ${{ !cancelled() && always() && needs.preflight.outputs.run_check_additional == 'true' && needs.build-artifacts.result == 'success' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        shell: bash
-        env:
-          CHECKOUT_REPO: ${{ github.repository }}
-          CHECKOUT_SHA: ${{ github.sha }}
-          CHECKOUT_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-
-          workdir="$GITHUB_WORKSPACE"
-          auth_header="$(printf 'x-access-token:%s' "$CHECKOUT_TOKEN" | base64 | tr -d '\n')"
-
-          reset_checkout_dir() {
-            mkdir -p "$workdir"
-            find "$workdir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-          }
-
-          checkout_attempt() {
-            local attempt="$1"
-
-            reset_checkout_dir
-            git init "$workdir" >/dev/null
-            git config --global --add safe.directory "$workdir"
-            git -C "$workdir" remote add origin "https://github.com/${CHECKOUT_REPO}"
-            git -C "$workdir" config gc.auto 0
-
-            timeout --signal=TERM 30s git -C "$workdir" \
-              -c protocol.version=2 \
-              -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${auth_header}" \
-              fetch --no-tags --prune --no-recurse-submodules --depth=1 origin \
-              "+${CHECKOUT_SHA}:refs/remotes/origin/ci-target" || return 1
-
-            git -C "$workdir" checkout --force --detach "$CHECKOUT_SHA" || return 1
-            test -f "$workdir/.github/actions/setup-node-env/action.yml" || return 1
-            echo "checkout attempt ${attempt}/2 succeeded"
-          }
-
-          for attempt in 1 2; do
-            if checkout_attempt "$attempt"; then
-              exit 0
-            fi
-            echo "checkout attempt ${attempt}/2 failed"
-            sleep $((attempt * 5))
-          done
-
-          echo "checkout failed after 2 attempts" >&2
-          exit 1
-
-      - name: Setup Node environment
-        uses: ./.github/actions/setup-node-env
-        with:
-          install-bun: "false"
-
-      - name: Download built runtime artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: dist-runtime-build
-          path: .local/dist-runtime-build
-
-      - name: Restore built runtime artifacts
-        run: |
-          tar -xf .local/dist-runtime-build/dist-runtime-build.tar.zst --use-compress-program unzstd
-          test -f dist/entry.js
-          test -f dist/.buildstamp
-          test -d dist-runtime
-
-      - name: Check Control UI i18n
-        if: needs.preflight.outputs.run_control_ui_i18n == 'true'
-        run: pnpm ui:i18n:check
-
-      - name: Run gateway watch regression
-        run: node scripts/check-gateway-watch-regression.mjs --skip-build
-
-      - name: Upload gateway watch regression artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: gateway-watch-regression
-          path: .local/gateway-watch-regression/
-          retention-days: 7
-
   check-additional:
     permissions:
       contents: read
     name: "check-additional"
-    needs: [preflight, check-additional-shard, check-additional-runtime-topology-gateway]
+    needs: [preflight, check-additional-shard, build-artifacts]
     if: ${{ !cancelled() && always() && needs.preflight.outputs.run_check_additional == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -1883,10 +1813,15 @@ jobs:
       - name: Verify additional check shards
         env:
           SHARD_RESULT: ${{ needs.check-additional-shard.result }}
-          GATEWAY_RESULT: ${{ needs.check-additional-runtime-topology-gateway.result }}
+          BUILD_ARTIFACTS_RESULT: ${{ needs.build-artifacts.result }}
+          GATEWAY_RESULT: ${{ needs.build-artifacts.outputs.gateway-watch-result }}
         run: |
           if [ "$SHARD_RESULT" != "success" ]; then
             echo "Additional check shards failed: $SHARD_RESULT" >&2
+            exit 1
+          fi
+          if [ "$BUILD_ARTIFACTS_RESULT" != "success" ]; then
+            echo "Build artifact job failed: $BUILD_ARTIFACTS_RESULT" >&2
             exit 1
           fi
           if [ "$GATEWAY_RESULT" != "success" ]; then
