@@ -217,6 +217,8 @@ const GENERATED_CHANGED_TEST_TARGETS = new Set([
   "src/canvas-host/a2ui/.bundle.hash",
   "src/canvas-host/a2ui/a2ui.bundle.js",
 ]);
+const VITEST_NO_OUTPUT_TIMEOUT_ENV_KEY = "OPENCLAW_VITEST_NO_OUTPUT_TIMEOUT_MS";
+export const DEFAULT_TEST_PROJECTS_VITEST_NO_OUTPUT_TIMEOUT_MS = "180000";
 const VITEST_CONFIG_TARGET_KIND_BY_PATH = new Map(
   Object.entries(VITEST_CONFIG_BY_KIND).map(([kind, config]) => [config, kind]),
 );
@@ -1023,6 +1025,32 @@ export function applyParallelVitestCachePaths(specs, params = {}) {
           ".experimental-vitest-cache",
           cacheSegment,
         ),
+      },
+    };
+  });
+}
+
+export function applyDefaultMultiSpecVitestCachePaths(specs, params = {}) {
+  if (specs.length <= 1 || specs.some((spec) => spec.watchMode)) {
+    return specs;
+  }
+  return applyParallelVitestCachePaths(specs, params);
+}
+
+export function applyDefaultVitestNoOutputTimeout(specs, params = {}) {
+  const baseEnv = params.env ?? process.env;
+  if (Object.hasOwn(baseEnv, VITEST_NO_OUTPUT_TIMEOUT_ENV_KEY)) {
+    return specs;
+  }
+  return specs.map((spec) => {
+    if (spec.watchMode || Object.hasOwn(spec.env ?? {}, VITEST_NO_OUTPUT_TIMEOUT_ENV_KEY)) {
+      return spec;
+    }
+    return {
+      ...spec,
+      env: {
+        ...spec.env,
+        [VITEST_NO_OUTPUT_TIMEOUT_ENV_KEY]: DEFAULT_TEST_PROJECTS_VITEST_NO_OUTPUT_TIMEOUT_MS,
       },
     };
   });
