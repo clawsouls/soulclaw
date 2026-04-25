@@ -17,7 +17,9 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Heartbeat: clamp oversized scheduler delays through the shared safe timer helper, preventing `every` values over Node's timeout cap from becoming a 1 ms crash loop. Fixes #71414. (#71478) Thanks @hclsys.
+- Control UI/chat: collapse assistant token/model context details behind an explicit Context disclosure and show full dates in message footers, making historical transcript timing clear without noisy default metadata. (#71337) Thanks @BunsDev.
 - Telegram: remove the startup persisted-offset `getUpdates` preflight so polling restarts do not self-conflict before the runner starts. Fixes #69304. (#69779) Thanks @chinar-amrutkar.
+- Telegram: keep the polling stall watchdog active even when grammY reports the runner as not running while its task is still pending, so a rebuilt transport cannot leave `getUpdates` silent until a manual gateway restart. Fixes #69064. Thanks @LDLoeb.
 - Browser/Playwright: ignore benign already-handled route races during guarded navigation so browser-page tasks no longer fail when Playwright tears down a route mid-flight. (#68708) Thanks @Steady-ai.
 - Browser/downloads: seed managed Chrome profiles with OpenClaw download prefs and capture unmanaged click-triggered downloads under the guarded downloads directory, while explicit download waiters still own their target file. (#64558) Thanks @Pearcekieser.
 - Browser/Chrome: stop passing redundant `--disable-setuid-sandbox` when `browser.noSandbox` is enabled; `--no-sandbox` remains the effective sandbox opt-out. (#67939) Thanks @sebykrueger.
@@ -50,7 +52,7 @@ Docs: https://docs.openclaw.ai
 
 ### Changes
 
-- CLI/Crestodian: add a configless setup and repair helper for bare `openclaw`, typed config operations, agent handoff, audit logging, docs/source discovery, and guarded message-channel rescue.
+- CLI/Crestodian: add a configless setup and repair helper for bare `openclaw`, typed config operations, local Claude/Codex planner fallback, agent handoff, audit logging, docs/source discovery, and guarded message-channel rescue.
 - Gateway/nodes: add disabled-by-default `gateway.nodes.pairing.autoApproveCidrs` for first-time node pairing from explicit trusted CIDRs, while keeping operator/browser pairing and all upgrade flows manual. Fixes #60800. Thanks @sahilsatralkar.
 - Browser: add viewport coordinate clicks for managed and existing-session automation, plus `openclaw browser click-coords` for CLI use. (#54452) Thanks @dluttz.
 - Browser: add `browser.actionTimeoutMs` and use a 60s default action budget so healthy long browser waits do not fail at the client transport boundary. (#62589) Thanks @andyylin.
