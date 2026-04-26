@@ -197,10 +197,36 @@ function buildLaneRerunCommand(name, baseEnv) {
     ["OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE", baseEnv.OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE],
     ["OPENCLAW_CURRENT_PACKAGE_TGZ", baseEnv.OPENCLAW_CURRENT_PACKAGE_TGZ],
   ];
+  if (baseEnv.OPENCLAW_DOCKER_ALL_PNPM_COMMAND) {
+    env.push(["OPENCLAW_DOCKER_ALL_PNPM_COMMAND", baseEnv.OPENCLAW_DOCKER_ALL_PNPM_COMMAND]);
+  }
   return `${env
     .filter(([, value]) => value !== undefined && value !== "")
     .map(([key, value]) => `${key}=${shellQuote(value)}`)
     .join(" ")} pnpm test:docker:all`;
+}
+
+function withResolvedPnpmCommand(command, env) {
+  const pnpmCommand = env.OPENCLAW_DOCKER_ALL_PNPM_COMMAND?.trim();
+  if (!pnpmCommand) {
+    return command;
+  }
+  return command.replace(/(^|\s)pnpm(?=\s)/g, `$1${shellQuote(pnpmCommand)}`);
+}
+
+function timingSeconds(timingStore, poolLane) {
+  const fromStore = timingStore?.lanes?.[poolLane.name]?.durationSeconds;
+  if (typeof fromStore === "number" && Number.isFinite(fromStore) && fromStore > 0) {
+    return fromStore;
+  }
+  return poolLane.estimateSeconds ?? 0;
+}
+
+function orderLanes(poolLanes, timingStore) {
+  return poolLanes
+    .map((poolLane, index) => ({ index, poolLane, seconds: timingSeconds(timingStore, poolLane) }))
+    .toSorted((a, b) => b.seconds - a.seconds || a.index - b.index)
+    .map(({ poolLane }) => poolLane);
 }
 
 async function loadTimingStore(file, enabled) {
@@ -611,10 +637,11 @@ function laneEnv(poolLane, baseEnv, logDir, cacheKey) {
 }
 
 async function runLane(lane, baseEnv, logDir, fallbackTimeoutMs) {
-  const { command, name } = lane;
+  const { name } = lane;
   const timeoutMs = lane.timeoutMs ?? fallbackTimeoutMs;
   const logFile = path.join(logDir, `${name}.log`);
   const env = laneEnv(lane, baseEnv, logDir, lane.cacheKey);
+  const command = withResolvedPnpmCommand(lane.command, env);
   await mkdir(env.OPENCLAW_DOCKER_CLI_TOOLS_DIR, { recursive: true });
   await mkdir(env.OPENCLAW_DOCKER_CACHE_HOME_DIR, { recursive: true });
   await fs.promises.writeFile(

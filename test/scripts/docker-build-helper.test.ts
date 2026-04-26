@@ -44,5 +44,7 @@ describe("docker build helper", () => {
     expect(scheduler).toContain("env.npm_execpath ? path.dirname(env.npm_execpath)");
     expect(scheduler).toContain("path.dirname(process.execPath)");
     expect(scheduler).toContain("env.PATH = [...new Set(pathEntries)].join(path.delimiter)");
+    expect(scheduler).toContain("withResolvedPnpmCommand");
+    expect(scheduler).toContain("OPENCLAW_DOCKER_ALL_PNPM_COMMAND");
   });
 });
