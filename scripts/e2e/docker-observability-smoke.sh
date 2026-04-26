@@ -42,7 +42,9 @@ for i in $(seq 1 "$loops"); do
   mkdir -p "$iteration_dir"
 
   echo "== docker observability loop $i/$loops: otel =="
-  pnpm qa:otel:smoke \
+  # The functional image has a global tsx runner for mounted harness files; the
+  # published package intentionally does not ship tsx as an app dependency.
+  tsx scripts/qa-otel-smoke.ts \
     --provider-mode mock-openai \
     --output-dir "$iteration_dir/otel"
 
