@@ -214,21 +214,6 @@ function withResolvedPnpmCommand(command, env) {
   return command.replace(/(^|\s)pnpm(?=\s)/g, `$1${shellQuote(pnpmCommand)}`);
 }
 
-function timingSeconds(timingStore, poolLane) {
-  const fromStore = timingStore?.lanes?.[poolLane.name]?.durationSeconds;
-  if (typeof fromStore === "number" && Number.isFinite(fromStore) && fromStore > 0) {
-    return fromStore;
-  }
-  return poolLane.estimateSeconds ?? 0;
-}
-
-function orderLanes(poolLanes, timingStore) {
-  return poolLanes
-    .map((poolLane, index) => ({ index, poolLane, seconds: timingSeconds(timingStore, poolLane) }))
-    .toSorted((a, b) => b.seconds - a.seconds || a.index - b.index)
-    .map(({ poolLane }) => poolLane);
-}
-
 async function loadTimingStore(file, enabled) {
   if (!enabled) {
     return { enabled: false, file, lanes: {}, version: 1 };
