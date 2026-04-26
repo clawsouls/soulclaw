@@ -103,7 +103,6 @@ jobs:
           context: .
           file: ./Dockerfile
           build-args: |
-            OPENCLAW_DOCKER_APT_UPGRADE=0
             OPENCLAW_EXTENSIONS=matrix
           tags: |
             openclaw-dockerfile-smoke:local
@@ -218,7 +217,6 @@ jobs:
           context: .
           file: ./Dockerfile
           build-args: |
-            OPENCLAW_DOCKER_APT_UPGRADE=0
             OPENCLAW_EXTENSIONS=matrix
           tags: |
             openclaw-dockerfile-smoke:local
