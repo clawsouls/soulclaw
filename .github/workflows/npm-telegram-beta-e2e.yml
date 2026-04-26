@@ -79,6 +79,8 @@ jobs:
 
       - name: Set up Blacksmith Docker Builder
         uses: useblacksmith/setup-docker-builder@ac083cc84672d01c60d5e8561d0a939b697de542 # v1
+        with:
+          max-cache-size-mb: 800000
 
       - name: Build Docker E2E image
         uses: useblacksmith/build-push-action@cbd1f60d194a98cb3be5523b15134501eaf0fbf3 # v2
