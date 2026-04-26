@@ -37,14 +37,20 @@
     "!dist/extensions/qa-channel/**",
     "!dist/extensions/qa-lab/**",
     "!dist/extensions/qa-matrix/**",
+    "!dist/plugin-sdk/extensions/qa-channel/**",
     "!dist/plugin-sdk/extensions/qa-lab/**",
+    "!dist/plugin-sdk/qa-channel.*",
+    "!dist/plugin-sdk/qa-channel-protocol.*",
     "!dist/plugin-sdk/qa-lab.*",
     "!dist/plugin-sdk/qa-runtime.*",
+    "!dist/plugin-sdk/src/plugin-sdk/qa-channel.d.ts",
+    "!dist/plugin-sdk/src/plugin-sdk/qa-channel-protocol.d.ts",
     "!dist/plugin-sdk/src/plugin-sdk/qa-lab.d.ts",
     "!dist/plugin-sdk/src/plugin-sdk/qa-runtime.d.ts",
     "!dist/qa-runtime-*.js",
     "docs/",
     "!docs/.generated/**",
+    "!docs/channels/qa-channel.md",
     "patches/",
     "skills/",
     "scripts/npm-runner.mjs",
@@ -1043,14 +1049,6 @@
     "./plugin-sdk/nostr": {
       "types": "./dist/plugin-sdk/nostr.d.ts",
       "default": "./dist/plugin-sdk/nostr.js"
-    },
-    "./plugin-sdk/qa-channel": {
-      "types": "./dist/plugin-sdk/qa-channel.d.ts",
-      "default": "./dist/plugin-sdk/qa-channel.js"
-    },
-    "./plugin-sdk/qa-channel-protocol": {
-      "types": "./dist/plugin-sdk/qa-channel-protocol.d.ts",
-      "default": "./dist/plugin-sdk/qa-channel-protocol.js"
     },
     "./plugin-sdk/provider-auth": {
       "types": "./dist/plugin-sdk/provider-auth.d.ts",

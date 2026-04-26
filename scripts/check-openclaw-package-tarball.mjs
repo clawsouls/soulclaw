@@ -5,8 +5,6 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 
-const INVENTORY_COMPAT_MISSING_ENTRIES = new Set(["dist/extensions/qa-channel/runtime-api.js"]);
-
 function usage() {
   return "Usage: node scripts/check-openclaw-package-tarball.mjs <openclaw.tgz>";
 }
@@ -77,9 +75,6 @@ if (entrySet.has("dist/postinstall-inventory.json")) {
     } else {
       for (const inventoryEntry of inventory) {
         const normalizedEntry = inventoryEntry.replace(/\\/gu, "/");
-        if (INVENTORY_COMPAT_MISSING_ENTRIES.has(normalizedEntry)) {
-          continue;
-        }
         if (!entrySet.has(normalizedEntry)) {
           errors.push(`inventory references missing tar entry ${normalizedEntry}`);
         }
