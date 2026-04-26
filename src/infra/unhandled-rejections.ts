@@ -341,7 +341,7 @@ export function isTransientSqliteError(err: unknown): boolean {
   return false;
 }
 
-export function isKnownBonjourDependencyError(err: unknown): boolean {
+export function isNonFatalBonjourAdvertiserError(err: unknown): boolean {
   if (!err) {
     return false;
   }
@@ -379,7 +379,7 @@ export function isTransientUnhandledRejectionError(err: unknown): boolean {
   return (
     isTransientNetworkError(err) ||
     isTransientSqliteError(err) ||
-    isKnownBonjourDependencyError(err)
+    isNonFatalBonjourAdvertiserError(err)
   );
 }
 

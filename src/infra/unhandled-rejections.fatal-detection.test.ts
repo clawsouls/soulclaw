@@ -196,7 +196,7 @@ describe("installUnhandledRejectionHandler - fatal detection", () => {
       );
     });
 
-    it("does not exit on known Bonjour dependency failures", () => {
+    it("does not exit on known Bonjour advertiser failures", () => {
       const bonjourCases: unknown[] = [
         new Error("CIAO ANNOUNCEMENT CANCELLED"),
         new Error("CIAO PROBING CANCELLED"),
