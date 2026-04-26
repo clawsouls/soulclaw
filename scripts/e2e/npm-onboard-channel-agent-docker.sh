@@ -39,7 +39,7 @@ prepare_package_tgz
 
 docker_e2e_package_mount_args "$PACKAGE_TGZ"
 docker_e2e_harness_mount_args
-run_log="$(mktemp "${TMPDIR:-/tmp}/openclaw-npm-onboard-channel-agent.XXXXXX")"
+run_log="$(docker_e2e_run_log npm-onboard-channel-agent)"
 
 echo "Running npm tarball onboard/channel/agent Docker E2E ($CHANNEL)..."
 if ! docker run --rm \
@@ -289,7 +289,7 @@ NODE
 echo "npm tarball onboard/channel/agent Docker E2E passed for $CHANNEL"
 EOF
 then
-  cat "$run_log"
+  docker_e2e_print_log "$run_log"
   rm -f "$run_log"
   exit 1
 fi

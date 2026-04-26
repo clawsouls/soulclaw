@@ -7,6 +7,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT_DIR/scripts/lib/docker-e2e-image.sh"
 source "$ROOT_DIR/scripts/lib/docker-e2e-package.sh"
+source "$ROOT_DIR/scripts/e2e/lib/bundled-channel-runtime-deps-runner.sh"
 
 IMAGE_NAME="$(docker_e2e_resolve_image "openclaw-bundled-channel-deps-e2e" OPENCLAW_BUNDLED_CHANNEL_DEPS_E2E_IMAGE)"
 UPDATE_BASELINE_VERSION="${OPENCLAW_BUNDLED_CHANNEL_UPDATE_BASELINE_VERSION:-2026.4.20}"
@@ -43,7 +44,7 @@ run_channel_scenario() {
   local channel="$1"
   local dep_sentinel="$2"
   local run_log
-  run_log="$(mktemp "${TMPDIR:-/tmp}/openclaw-bundled-channel-deps-$channel.XXXXXX")"
+  run_log="$(docker_e2e_run_log "bundled-channel-deps-$channel")"
 
   echo "Running bundled $channel runtime deps Docker E2E..."
   if ! timeout "$DOCKER_RUN_TIMEOUT" docker run --rm \
@@ -446,18 +447,18 @@ stop_gateway
 echo "bundled $CHANNEL runtime deps Docker E2E passed"
 EOF
   then
-    cat "$run_log"
+    docker_e2e_print_log "$run_log"
     rm -f "$run_log"
     exit 1
   fi
 
-  cat "$run_log"
+  docker_e2e_print_log "$run_log"
   rm -f "$run_log"
 }
 
 run_root_owned_global_scenario() {
   local run_log
-  run_log="$(mktemp "${TMPDIR:-/tmp}/openclaw-bundled-channel-root-owned.XXXXXX")"
+  run_log="$(docker_e2e_run_log bundled-channel-root-owned)"
 
   echo "Running bundled channel root-owned global install Docker E2E..."
   if ! timeout "$DOCKER_RUN_TIMEOUT" docker run --rm --user root \
@@ -623,18 +624,18 @@ fi
 echo "root-owned global install Docker E2E passed"
 EOF
   then
-    cat "$run_log"
+    docker_e2e_print_log "$run_log"
     rm -f "$run_log"
     exit 1
   fi
 
-  cat "$run_log"
+  docker_e2e_print_log "$run_log"
   rm -f "$run_log"
 }
 
 run_setup_entry_scenario() {
   local run_log
-  run_log="$(mktemp "${TMPDIR:-/tmp}/openclaw-bundled-channel-setup-entry.XXXXXX")"
+  run_log="$(docker_e2e_run_log bundled-channel-setup-entry)"
 
   echo "Running bundled channel setup-entry runtime deps Docker E2E..."
   if ! timeout "$DOCKER_RUN_TIMEOUT" docker run --rm \
@@ -880,18 +881,18 @@ done
 echo "bundled channel setup-entry runtime deps Docker E2E passed"
 EOF
   then
-    cat "$run_log"
+    docker_e2e_print_log "$run_log"
     rm -f "$run_log"
     exit 1
   fi
 
-  cat "$run_log"
+  docker_e2e_print_log "$run_log"
   rm -f "$run_log"
 }
 
 run_disabled_config_scenario() {
   local run_log
-  run_log="$(mktemp "${TMPDIR:-/tmp}/openclaw-bundled-channel-disabled-config.XXXXXX")"
+  run_log="$(docker_e2e_run_log bundled-channel-disabled-config)"
 
   echo "Running bundled channel disabled-config runtime deps Docker E2E..."
   if ! timeout "$DOCKER_RUN_TIMEOUT" docker run --rm \
@@ -1045,18 +1046,18 @@ fi
 echo "bundled channel disabled-config runtime deps Docker E2E passed"
 EOF
   then
-    cat "$run_log"
+    docker_e2e_print_log "$run_log"
     rm -f "$run_log"
     exit 1
   fi
 
-  cat "$run_log"
+  docker_e2e_print_log "$run_log"
   rm -f "$run_log"
 }
 
 run_update_scenario() {
   local run_log
-  run_log="$(mktemp "${TMPDIR:-/tmp}/openclaw-bundled-channel-update.XXXXXX")"
+  run_log="$(docker_e2e_run_log bundled-channel-update)"
 
   echo "Running bundled channel runtime deps Docker update E2E..."
   if ! timeout "$DOCKER_RUN_TIMEOUT" docker run --rm \
@@ -1479,18 +1480,18 @@ fi
 echo "bundled channel runtime deps Docker update E2E passed"
 EOF
   then
-    cat "$run_log"
+    docker_e2e_print_log "$run_log"
     rm -f "$run_log"
     exit 1
   fi
 
-  cat "$run_log"
+  docker_e2e_print_log "$run_log"
   rm -f "$run_log"
 }
 
 run_load_failure_scenario() {
   local run_log
-  run_log="$(mktemp "${TMPDIR:-/tmp}/openclaw-bundled-channel-load-failure.XXXXXX")"
+  run_log="$(docker_e2e_run_log bundled-channel-load-failure)"
 
   echo "Running bundled channel load-failure isolation Docker E2E..."
   if ! timeout "$DOCKER_RUN_TIMEOUT" docker run --rm \
@@ -1634,45 +1635,13 @@ NODE
 echo "bundled channel load-failure isolation Docker E2E passed"
 EOF
   then
-    cat "$run_log"
+    docker_e2e_print_log "$run_log"
     rm -f "$run_log"
     exit 1
   fi
 
-  cat "$run_log"
+  docker_e2e_print_log "$run_log"
   rm -f "$run_log"
 }
 
-if [ "$RUN_CHANNEL_SCENARIOS" != "0" ]; then
-  IFS=',' read -r -a CHANNEL_SCENARIOS <<<"${OPENCLAW_BUNDLED_CHANNELS:-${CHANNEL_ONLY:-telegram,discord,slack,feishu,memory-lancedb}}"
-  for channel_scenario in "${CHANNEL_SCENARIOS[@]}"; do
-    channel_scenario="${channel_scenario//[[:space:]]/}"
-    [ -n "$channel_scenario" ] || continue
-    case "$channel_scenario" in
-      telegram) run_channel_scenario telegram grammy ;;
-      discord) run_channel_scenario discord discord-api-types ;;
-      slack) run_channel_scenario slack @slack/web-api ;;
-      feishu) run_channel_scenario feishu @larksuiteoapi/node-sdk ;;
-      memory-lancedb) run_channel_scenario memory-lancedb @lancedb/lancedb ;;
-      *)
-        echo "Unsupported OPENCLAW_BUNDLED_CHANNELS entry: $channel_scenario" >&2
-        exit 1
-        ;;
-    esac
-  done
-fi
-if [ "$RUN_UPDATE_SCENARIO" != "0" ]; then
-  run_update_scenario
-fi
-if [ "$RUN_ROOT_OWNED_SCENARIO" != "0" ]; then
-  run_root_owned_global_scenario
-fi
-if [ "$RUN_SETUP_ENTRY_SCENARIO" != "0" ]; then
-  run_setup_entry_scenario
-fi
-if [ "$RUN_DISABLED_CONFIG_SCENARIO" != "0" ]; then
-  run_disabled_config_scenario
-fi
-if [ "$RUN_LOAD_FAILURE_SCENARIO" != "0" ]; then
-  run_load_failure_scenario
-fi
+run_bundled_channel_runtime_dep_scenarios
