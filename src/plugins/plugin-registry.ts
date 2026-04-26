@@ -326,12 +326,13 @@ export function loadPluginRegistrySnapshotWithMetadata(
   const disabledByCaller = params.preferPersisted === false;
   const disabledByEnv = hasEnvFlag(env, DISABLE_PERSISTED_PLUGIN_REGISTRY_ENV);
   const persistedReadsEnabled = !disabledByCaller && !disabledByEnv;
+  let persistedIndex: InstalledPluginIndex | null = null;
   if (persistedReadsEnabled) {
-    const persisted = readPersistedInstalledPluginIndexSync(params);
-    if (persisted) {
+    persistedIndex = readPersistedInstalledPluginIndexSync(params);
+    if (persistedIndex) {
       if (
         params.config &&
-        persisted.policyHash !== resolveInstalledPluginIndexPolicyHash(params.config)
+        persistedIndex.policyHash !== resolveInstalledPluginIndexPolicyHash(params.config)
       ) {
         diagnostics.push({
           level: "warn",
@@ -341,7 +342,7 @@ export function loadPluginRegistrySnapshotWithMetadata(
         });
       } else {
         return {
-          snapshot: persisted,
+          snapshot: persistedIndex,
           source: "persisted",
           diagnostics,
         };
@@ -368,9 +369,7 @@ export function loadPluginRegistrySnapshotWithMetadata(
       ...params,
       installRecords:
         params.installRecords ??
-        extractPluginInstallRecordsFromInstalledPluginIndex(
-          persistedReadsEnabled ? readPersistedInstalledPluginIndexSync(params) : null,
-        ),
+        extractPluginInstallRecordsFromInstalledPluginIndex(persistedIndex),
     }),
     source: "derived",
     diagnostics,
