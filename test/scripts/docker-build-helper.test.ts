@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const HELPER_PATH = "scripts/lib/docker-build.sh";
 const DOCKER_ALL_SCHEDULER_PATH = "scripts/test-docker-all.mjs";
+const DOCKER_E2E_SCENARIOS_PATH = "scripts/lib/docker-e2e-scenarios.mjs";
 const CENTRALIZED_BUILD_SCRIPTS = [
   "scripts/docker/setup.sh",
   "scripts/e2e/browser-cdp-snapshot-docker.sh",
@@ -46,5 +47,13 @@ describe("docker build helper", () => {
     expect(scheduler).toContain("env.PATH = [...new Set(pathEntries)].join(path.delimiter)");
     expect(scheduler).toContain("withResolvedPnpmCommand");
     expect(scheduler).toContain("OPENCLAW_DOCKER_ALL_PNPM_COMMAND");
+  });
+
+  it("runs release installer E2E against the npm beta tag", () => {
+    const scenarios = readFileSync(DOCKER_E2E_SCENARIOS_PATH, "utf8");
+
+    expect(scenarios).toContain(
+      '"OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=both pnpm test:install:e2e"',
+    );
   });
 });
