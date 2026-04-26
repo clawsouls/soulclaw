@@ -488,66 +488,50 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export OPENCLAW_DOCKER_ALL_PROFILE=release-path
+          export OPENCLAW_DOCKER_ALL_CHUNK="${DOCKER_E2E_CHUNK}"
+          export OPENCLAW_DOCKER_ALL_BUILD=0
+          export OPENCLAW_DOCKER_ALL_PREFLIGHT=0
+          export OPENCLAW_DOCKER_ALL_FAIL_FAST=0
+          export OPENCLAW_DOCKER_ALL_INCLUDE_OPENWEBUI="${INCLUDE_OPENWEBUI}"
+          export OPENCLAW_DOCKER_ALL_LOG_DIR=".artifacts/docker-tests/release-${DOCKER_E2E_CHUNK}"
+          export OPENCLAW_DOCKER_ALL_TIMINGS_FILE=".artifacts/docker-tests/release-${DOCKER_E2E_CHUNK}-timings.json"
 
-          failures=()
+          pnpm test:docker:all
 
-          run_lane() {
-            local label="$1"
-            shift
-
-            echo "::group::${label}"
-            local status=0
-            "$@" || status=$?
-            echo "::endgroup::"
-
-            if [[ "$status" -ne 0 ]]; then
-              failures+=("${label} exited ${status}")
-            fi
-          }
-
-          run_openwebui_lane() {
-            if [[ "${INCLUDE_OPENWEBUI}" != "true" ]]; then
-              echo "Skipping Open WebUI Docker E2E because include_openwebui=false."
-              return 0
-            fi
-            run_lane "Open WebUI Docker E2E" pnpm test:docker:openwebui
-          }
-
-          case "${DOCKER_E2E_CHUNK}" in
-            core)
-              run_lane "QR Import Docker E2E" pnpm test:docker:qr
-              run_lane "Onboarding Docker E2E" pnpm test:docker:onboard
-              run_lane "Gateway Network Docker E2E" pnpm test:docker:gateway-network
-              run_lane "Config Reload Docker E2E" pnpm test:docker:config-reload
-              run_lane "Session Runtime Context Docker E2E" pnpm test:docker:session-runtime-context
-              run_lane "Pi Bundle MCP Tools Docker E2E" pnpm test:docker:pi-bundle-mcp-tools
-              run_lane "MCP Channels Docker E2E" pnpm test:docker:mcp-channels
-              ;;
-            package-update)
-              run_lane "Installer Docker E2E" env OPENCLAW_E2E_MODELS=both pnpm test:install:e2e
-              run_lane "Npm Onboard Channel Agent Docker E2E" pnpm test:docker:npm-onboard-channel-agent
-              run_lane "Doctor Install Switch Docker E2E" pnpm test:docker:doctor-switch
-              run_lane "Update Channel Switch Docker E2E" pnpm test:docker:update-channel-switch
-              ;;
-            plugins-integrations)
-              run_lane "Plugins Docker E2E" pnpm test:docker:plugins
-              run_lane "Plugin Update Docker E2E" pnpm test:docker:plugin-update
-              run_lane "Bundled Channel Runtime Deps Docker E2E" pnpm test:docker:bundled-channel-deps
-              run_lane "Cron MCP Cleanup Docker E2E" pnpm test:docker:cron-mcp-cleanup
-              run_lane "OpenAI Web Search Minimal Docker E2E" pnpm test:docker:openai-web-search-minimal
-              run_openwebui_lane
-              ;;
-            *)
-              echo "Unknown Docker E2E chunk: ${DOCKER_E2E_CHUNK}" >&2
-              exit 1
-              ;;
-          esac
-
-          if (( ${#failures[@]} > 0 )); then
-            printf 'Docker E2E chunk %s failed:\n' "${DOCKER_E2E_CHUNK}" >&2
-            printf -- '- %s\n' "${failures[@]}" >&2
-            exit 1
+      - name: Summarize Docker E2E chunk
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          summary=".artifacts/docker-tests/release-${DOCKER_E2E_CHUNK}/summary.json"
+          if [[ ! -f "$summary" ]]; then
+            echo "Docker chunk summary missing: \`$summary\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
+          node --input-type=module - "$summary" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          import fs from "node:fs";
+          const summary = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const lanes = Array.isArray(summary.lanes) ? summary.lanes : [];
+          console.log(`### Docker E2E chunk: ${summary.chunk ?? "unknown"}`);
+          console.log("");
+          console.log(`Status: \`${summary.status}\``);
+          console.log("");
+          console.log("| Lane | Status | Seconds | Timed out |");
+          console.log("| --- | ---: | ---: | --- |");
+          for (const lane of lanes) {
+            const status = lane.status === 0 ? "pass" : `fail ${lane.status}`;
+            console.log(`| \`${lane.name}\` | ${status} | ${lane.elapsedSeconds ?? ""} | ${lane.timedOut ? "yes" : "no"} |`);
+          }
+          NODE
+
+      - name: Upload Docker E2E chunk artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-e2e-${{ matrix.chunk_id }}
+          path: .artifacts/docker-tests/
+          if-no-files-found: ignore
 
   validate_docker_openwebui:
     needs: [validate_selected_ref, prepare_docker_e2e_image]
