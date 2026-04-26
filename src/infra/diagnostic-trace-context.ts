@@ -198,6 +198,16 @@ export function createChildDiagnosticTraceContext(
   });
 }
 
+export function createDiagnosticTraceContextFromActiveScope(
+  input: Omit<DiagnosticTraceContextInput, "traceId" | "traceparent"> = {},
+): DiagnosticTraceContext {
+  const active = getActiveDiagnosticTraceContext();
+  if (!active) {
+    return createDiagnosticTraceContext(input);
+  }
+  return createChildDiagnosticTraceContext(active, input);
+}
+
 export function freezeDiagnosticTraceContext(
   context: DiagnosticTraceContext,
 ): DiagnosticTraceContext {

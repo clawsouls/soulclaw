@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   createChildDiagnosticTraceContext,
   createDiagnosticTraceContext,
+  createDiagnosticTraceContextFromActiveScope,
   freezeDiagnosticTraceContext,
   formatDiagnosticTraceparent,
   getActiveDiagnosticTraceContext,
@@ -157,5 +158,32 @@ describe("diagnostic-trace-context", () => {
     });
 
     expect(getActiveDiagnosticTraceContext()).toBeUndefined();
+  });
+
+  it("creates child trace contexts from the active request scope", () => {
+    const requestTrace = createDiagnosticTraceContext({
+      traceId: TRACE_ID,
+      spanId: SPAN_ID,
+      traceFlags: "00",
+    });
+
+    runWithDiagnosticTraceContext(requestTrace, () => {
+      const scoped = createDiagnosticTraceContextFromActiveScope({
+        spanId: CHILD_SPAN_ID,
+      });
+
+      expect(scoped).toEqual({
+        traceId: TRACE_ID,
+        spanId: CHILD_SPAN_ID,
+        parentSpanId: SPAN_ID,
+        traceFlags: "00",
+      });
+    });
+
+    expect(createDiagnosticTraceContextFromActiveScope({ spanId: CHILD_SPAN_ID })).toEqual({
+      traceId: expect.stringMatching(/^[0-9a-f]{32}$/),
+      spanId: CHILD_SPAN_ID,
+      traceFlags: "01",
+    });
   });
 });
