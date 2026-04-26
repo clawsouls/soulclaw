@@ -41,15 +41,31 @@ Prove the touched surface first. Do not reflexively run the whole suite.
 
 ```bash
 pnpm changed:lanes --json
-pnpm check:changed
-pnpm test:changed
-pnpm test:changed:focused
+pnpm check:changed       # changed typecheck/lint/guards; no Vitest
+pnpm test:changed        # cheap smart changed Vitest targets
+OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed
 pnpm test <path-or-filter> -- --reporter=verbose
 OPENCLAW_VITEST_MAX_WORKERS=1 pnpm test <path-or-filter>
 ```
 
 Use targeted file paths whenever possible. Avoid raw `vitest`; use the repo
 `pnpm test` wrapper so project routing, workers, and setup stay correct.
+
+## Command Semantics
+
+- `pnpm check` and `pnpm check:changed` do not run Vitest tests. They are for
+  typecheck, lint, and guard proof.
+- `pnpm test` and `pnpm test:changed` run Vitest tests.
+- `pnpm test:changed` is intentionally cheap by default: direct test edits,
+  sibling tests, explicit source mappings, and import-graph dependents.
+- `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed` is the explicit broad
+  fallback for harness/config/package edits that genuinely need it.
+- Do not run extension sweeps just because core changed. If a core edit is for a
+  specific plugin bug, run that plugin's tests explicitly. If a public SDK or
+  contract change needs consumer proof, choose the smallest representative
+  plugin/contract tests first, then broaden only when the risk justifies it.
+- The test wrapper prints a short `[test] passed|failed|skipped ... in ...`
+  line. Vitest's own duration is still the per-shard detail.
 
 ## CI Debugging
 

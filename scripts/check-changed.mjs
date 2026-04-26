@@ -14,12 +14,7 @@ import {
 } from "./lib/local-heavy-check-runtime.mjs";
 import { runManagedCommand } from "./lib/managed-child-process.mjs";
 import { createSparseTsgoSkipEnv } from "./lib/tsgo-sparse-guard.mjs";
-import { isCiLikeEnv } from "./lib/vitest-local-scheduling.mjs";
-import { resolveChangedTestTargetPlan } from "./test-projects.test-support.mjs";
 
-export const CHANGED_CHECK_VITEST_NO_OUTPUT_TIMEOUT_MS = "600000";
-const VITEST_NO_OUTPUT_TIMEOUT_ENV_KEY = "OPENCLAW_VITEST_NO_OUTPUT_TIMEOUT_MS";
-const VITEST_NO_OUTPUT_RETRY_ENV_KEY = "OPENCLAW_VITEST_NO_OUTPUT_RETRY";
 const LIVE_DOCKER_AUTH_SHELL_TARGETS = [
   "scripts/lib/live-docker-auth.sh",
   "scripts/test-live-acp-bind-docker.sh",
@@ -37,35 +32,6 @@ export function createChangedCheckChildEnv(baseEnv = process.env) {
     OPENCLAW_TEST_HEAVY_CHECK_LOCK_HELD: "1",
     OPENCLAW_TSGO_HEAVY_CHECK_LOCK_HELD: "1",
   };
-}
-
-export function createChangedCheckVitestEnv(baseEnv = process.env) {
-  const resolvedBaseEnv = createChangedCheckChildEnv(baseEnv);
-  const env = {
-    ...resolvedBaseEnv,
-    [VITEST_NO_OUTPUT_TIMEOUT_ENV_KEY]:
-      resolvedBaseEnv[VITEST_NO_OUTPUT_TIMEOUT_ENV_KEY]?.trim() ||
-      CHANGED_CHECK_VITEST_NO_OUTPUT_TIMEOUT_MS,
-    [VITEST_NO_OUTPUT_RETRY_ENV_KEY]:
-      resolvedBaseEnv[VITEST_NO_OUTPUT_RETRY_ENV_KEY]?.trim() || "0",
-  };
-
-  const hasWorkerOverride = Boolean(
-    (resolvedBaseEnv.OPENCLAW_VITEST_MAX_WORKERS ?? resolvedBaseEnv.OPENCLAW_TEST_WORKERS)?.trim(),
-  );
-  const hasParallelOverride = Boolean(resolvedBaseEnv.OPENCLAW_TEST_PROJECTS_PARALLEL?.trim());
-  const serialOverride = resolvedBaseEnv.OPENCLAW_TEST_PROJECTS_SERIAL?.trim();
-  if (
-    !isCiLikeEnv(resolvedBaseEnv) &&
-    !hasWorkerOverride &&
-    !hasParallelOverride &&
-    serialOverride !== "0"
-  ) {
-    env.OPENCLAW_TEST_PROJECTS_SERIAL = serialOverride || "1";
-    env.OPENCLAW_VITEST_MAX_WORKERS = "1";
-  }
-
-  return env;
 }
 
 export function createChangedCheckPlan(result, options = {}) {
@@ -93,10 +59,6 @@ export function createChangedCheckPlan(result, options = {}) {
   if (result.docsOnly) {
     return {
       commands,
-      testTargets: [],
-      runChangedTestsBroad: false,
-      runFullTests: false,
-      runExtensionTests: false,
       summary: "docs-only",
     };
   }
@@ -118,10 +80,6 @@ export function createChangedCheckPlan(result, options = {}) {
     add("root dependency ownership", ["deps:root-ownership:check"]);
     return {
       commands,
-      testTargets: [],
-      runChangedTestsBroad: false,
-      runFullTests: false,
-      runExtensionTests: false,
       summary: "release metadata",
     };
   }
@@ -132,10 +90,6 @@ export function createChangedCheckPlan(result, options = {}) {
     add("runtime import cycles", ["check:import-cycles"]);
     return {
       commands,
-      testTargets: [],
-      runChangedTestsBroad: false,
-      runFullTests: true,
-      runExtensionTests: false,
       summary: "all",
     };
   }
@@ -189,26 +143,10 @@ export function createChangedCheckPlan(result, options = {}) {
       OPENCLAW_DOCKER_ALL_DRY_RUN: "1",
       OPENCLAW_DOCKER_ALL_LIVE_MODE: "only",
     });
-    add(
-      "ACP bind unit tests",
-      ["test", "src/gateway/live-agent-probes.test.ts", "src/agents/acp-spawn.test.ts"],
-      createChangedCheckVitestEnv(baseEnv),
-    );
-    add("ACPX extension tests", ["test:extension", "acpx"], createChangedCheckVitestEnv(baseEnv));
   }
 
-  const testPlan = resolveChangedTestTargetPlan(result.paths);
-  const runExtensionTests = result.extensionImpactFromCore;
-  const testTargets = runExtensionTests
-    ? testPlan.targets.filter((target) => target !== "extensions")
-    : testPlan.targets;
-  const runChangedTestsBroad = testPlan.mode === "broad";
   return {
     commands,
-    testTargets,
-    runChangedTestsBroad,
-    runFullTests: false,
-    runExtensionTests,
     summary: Object.entries(lanes)
       .filter(([, enabled]) => enabled)
       .map(([lane]) => lane)
@@ -244,61 +182,6 @@ export async function runChangedCheck(result, options = {}) {
       }
     }
 
-    if (plan.runFullTests) {
-      const status = await runPnpm(
-        { name: "tests all", args: ["test"], env: createChangedCheckVitestEnv(childEnv) },
-        timings,
-      );
-      if (status !== 0) {
-        printSummary(timings, options);
-        return status;
-      }
-    } else if (plan.runChangedTestsBroad) {
-      const testArgs = options.explicitPaths
-        ? ["test"]
-        : ["test", "--changed", options.base ?? "origin/main"];
-      const status = await runPnpm(
-        {
-          name: options.explicitPaths ? "tests all" : "tests changed broad",
-          args: testArgs,
-          env: createChangedCheckVitestEnv(childEnv),
-        },
-        timings,
-      );
-      if (status !== 0) {
-        printSummary(timings, options);
-        return status;
-      }
-    } else if (plan.testTargets.length > 0) {
-      const status = await runPnpm(
-        {
-          name: "tests changed",
-          args: ["test", ...plan.testTargets],
-          env: createChangedCheckVitestEnv(childEnv),
-        },
-        timings,
-      );
-      if (status !== 0) {
-        printSummary(timings, options);
-        return status;
-      }
-    }
-
-    if (plan.runExtensionTests) {
-      const status = await runPnpm(
-        {
-          name: "tests extensions",
-          args: ["test:extensions"],
-          env: createChangedCheckVitestEnv(childEnv),
-        },
-        timings,
-      );
-      if (status !== 0) {
-        printSummary(timings, options);
-        return status;
-      }
-    }
-
     printSummary(timings, options);
     return 0;
   } finally {
@@ -314,16 +197,10 @@ function printPlan(result, plan, options) {
   const prefix = options.dryRun ? "[check:changed:dry-run]" : "[check:changed]";
   console.error(`${prefix} lanes=${plan.summary || "none"}`);
   if (result.extensionImpactFromCore) {
-    console.error(`${prefix} core contract changed; extension tests included`);
-  }
-  if (plan.runChangedTestsBroad) {
-    console.error(`${prefix} broad changed tests included`);
+    console.error(`${prefix} extension-impacting surface; extension typecheck included`);
   }
   for (const reason of result.reasons) {
     console.error(`${prefix} ${reason}`);
-  }
-  if (plan.testTargets.length > 0) {
-    console.error(`${prefix} test targets=${plan.testTargets.length}`);
   }
 }
 
