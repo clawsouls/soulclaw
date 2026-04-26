@@ -438,6 +438,7 @@ jobs:
       OPENCLAW_DOCKER_E2E_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.image }}
       OPENCLAW_DOCKER_E2E_BARE_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.bare_image }}
       OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.functional_image }}
+      OPENCLAW_CURRENT_PACKAGE_TGZ: .artifacts/docker-e2e-package/openclaw-current.tgz
       OPENCLAW_SKIP_DOCKER_BUILD: "1"
       INCLUDE_OPENWEBUI: ${{ inputs.include_openwebui }}
       DOCKER_E2E_CHUNK: ${{ matrix.chunk_id }}
@@ -464,6 +465,12 @@ jobs:
 
       - name: Hydrate live auth/profile inputs
         run: bash scripts/ci-hydrate-live-auth.sh
+
+      - name: Download OpenClaw Docker E2E package
+        uses: actions/download-artifact@v8
+        with:
+          name: docker-e2e-package
+          path: .artifacts/docker-e2e-package
 
       - name: Pull shared Docker E2E image
         shell: bash
@@ -623,6 +630,7 @@ jobs:
       OPENCLAW_DOCKER_E2E_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.image }}
       OPENCLAW_DOCKER_E2E_BARE_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.bare_image }}
       OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.functional_image }}
+      OPENCLAW_CURRENT_PACKAGE_TGZ: .artifacts/docker-e2e-package/openclaw-current.tgz
       OPENCLAW_SKIP_DOCKER_BUILD: "1"
       INCLUDE_OPENWEBUI: ${{ inputs.include_openwebui }}
       DOCKER_E2E_LANES: ${{ inputs.docker_lanes }}
@@ -650,7 +658,31 @@ jobs:
       - name: Hydrate live auth/profile inputs
         run: bash scripts/ci-hydrate-live-auth.sh
 
+      - name: Detect targeted Docker lane image needs
+        id: lane_class
+        shell: bash
+        run: |
+          set -euo pipefail
+          needs_e2e=0
+          IFS=', ' read -r -a lanes <<< "${DOCKER_E2E_LANES}"
+          for lane in "${lanes[@]}"; do
+            [[ -z "$lane" ]] && continue
+            if [[ "$lane" != live-* ]]; then
+              needs_e2e=1
+              break
+            fi
+          done
+          echo "needs_e2e=${needs_e2e}" >> "$GITHUB_OUTPUT"
+
+      - name: Download OpenClaw Docker E2E package
+        if: steps.lane_class.outputs.needs_e2e == '1'
+        uses: actions/download-artifact@v8
+        with:
+          name: docker-e2e-package
+          path: .artifacts/docker-e2e-package
+
       - name: Pull shared Docker E2E images
+        if: steps.lane_class.outputs.needs_e2e == '1'
         shell: bash
         run: |
           set -euo pipefail
@@ -691,10 +723,9 @@ jobs:
           export OPENCLAW_DOCKER_ALL_LOG_DIR=".artifacts/docker-tests/targeted"
           export OPENCLAW_DOCKER_ALL_TIMINGS_FILE=".artifacts/docker-tests/targeted-timings.json"
           if [[ "$lanes" == *" live-"* ]]; then
-            export OPENCLAW_DOCKER_ALL_BUILD=1
-          else
-            export OPENCLAW_DOCKER_ALL_BUILD=0
+            pnpm test:docker:live-build
           fi
+          export OPENCLAW_DOCKER_ALL_BUILD=0
 
           pnpm test:docker:all
 
@@ -825,7 +856,60 @@ jobs:
           echo "Shared Docker E2E bare image: \`$bare_image\`" >> "$GITHUB_STEP_SUMMARY"
           echo "Shared Docker E2E functional image: \`$functional_image\`" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Classify selected Docker lanes
+        id: lane_class
+        shell: bash
+        env:
+          DOCKER_E2E_LANES: ${{ inputs.docker_lanes }}
+          INCLUDE_RELEASE_PATH_SUITES: ${{ inputs.include_release_path_suites }}
+          INCLUDE_OPENWEBUI: ${{ inputs.include_openwebui }}
+        run: |
+          set -euo pipefail
+          needs_e2e=0
+          if [[ "${INCLUDE_RELEASE_PATH_SUITES}" == "true" || "${INCLUDE_OPENWEBUI}" == "true" ]]; then
+            needs_e2e=1
+          elif [[ -n "${DOCKER_E2E_LANES}" ]]; then
+            IFS=', ' read -r -a lanes <<< "${DOCKER_E2E_LANES}"
+            for lane in "${lanes[@]}"; do
+              [[ -z "$lane" ]] && continue
+              if [[ "$lane" != live-* ]]; then
+                needs_e2e=1
+                break
+              fi
+            done
+          fi
+          echo "needs_e2e=${needs_e2e}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node environment
+        if: steps.lane_class.outputs.needs_e2e == '1'
+        uses: ./.github/actions/setup-node-env
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+          install-bun: "true"
+
+      - name: Pack OpenClaw package for Docker E2E
+        if: steps.lane_class.outputs.needs_e2e == '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/docker-e2e-package
+          pnpm build
+          node --import tsx --input-type=module -e 'const { writePackageDistInventory } = await import("./src/infra/package-dist-inventory.ts"); await writePackageDistInventory(process.cwd());'
+          npm pack --silent --ignore-scripts --pack-destination .artifacts/docker-e2e-package >/tmp/openclaw-docker-e2e-pack.out
+          packed="$(tail -n 1 /tmp/openclaw-docker-e2e-pack.out | tr -d '\r')"
+          mv ".artifacts/docker-e2e-package/$packed" .artifacts/docker-e2e-package/openclaw-current.tgz
+
+      - name: Upload OpenClaw Docker E2E package
+        if: steps.lane_class.outputs.needs_e2e == '1'
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-e2e-package
+          path: .artifacts/docker-e2e-package/openclaw-current.tgz
+          if-no-files-found: error
+
       - name: Log in to GHCR
+        if: steps.lane_class.outputs.needs_e2e == '1'
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ghcr.io
@@ -833,15 +917,16 @@ jobs:
           password: ${{ github.token }}
 
       - name: Setup Docker builder
+        if: steps.lane_class.outputs.needs_e2e == '1'
         uses: useblacksmith/setup-docker-builder@ac083cc84672d01c60d5e8561d0a939b697de542 # v1
 
       - name: Build and push bare Docker E2E image
-        if: inputs.include_release_path_suites || inputs.docker_lanes != ''
+        if: steps.lane_class.outputs.needs_e2e == '1' && (inputs.include_release_path_suites || inputs.docker_lanes != '')
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
           file: ./scripts/e2e/Dockerfile
-          target: build
+          target: bare
           platforms: linux/amd64
           cache-from: type=gha,scope=docker-e2e-bare
           cache-to: type=gha,mode=max,scope=docker-e2e-bare
@@ -851,11 +936,14 @@ jobs:
           push: true
 
       - name: Build and push functional Docker E2E image
+        if: steps.lane_class.outputs.needs_e2e == '1'
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
           file: ./scripts/e2e/Dockerfile
           target: functional
+          build-contexts: |
+            openclaw_package=.artifacts/docker-e2e-package
           platforms: linux/amd64
           cache-from: |
             type=gha,scope=docker-e2e-bare

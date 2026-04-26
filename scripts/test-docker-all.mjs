@@ -1,3 +1,6 @@
+// Docker E2E aggregate scheduler.
+// Builds shared Docker images, prepares one OpenClaw npm tarball, assigns lanes
+// to bare/functional images, and runs lanes through weighted resource pools.
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import { mkdir, readFile } from "node:fs/promises";
@@ -661,8 +664,12 @@ function buildLaneRerunCommand(name, baseEnv) {
     ["OPENCLAW_DOCKER_E2E_IMAGE", image || DEFAULT_E2E_IMAGE],
     ["OPENCLAW_DOCKER_E2E_BARE_IMAGE", baseEnv.OPENCLAW_DOCKER_E2E_BARE_IMAGE],
     ["OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE", baseEnv.OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE],
+    ["OPENCLAW_CURRENT_PACKAGE_TGZ", baseEnv.OPENCLAW_CURRENT_PACKAGE_TGZ],
   ];
-  return `${env.map(([key, value]) => `${key}=${shellQuote(value)}`).join(" ")} pnpm test:docker:all`;
+  return `${env
+    .filter(([, value]) => value !== undefined && value !== "")
+    .map(([key, value]) => `${key}=${shellQuote(value)}`)
+    .join(" ")} pnpm test:docker:all`;
 }
 
 function findLaneByName(name) {
@@ -805,11 +812,8 @@ function printLaneManifest(label, poolLanes, timingStore) {
   }
 }
 
-function lanesNeedBundledPackage(poolLanes) {
-  return poolLanes.some(
-    (poolLane) =>
-      poolLane.name === "npm-onboard-channel-agent" || poolLane.name.startsWith("bundled-channel"),
-  );
+function lanesNeedOpenClawPackage(poolLanes) {
+  return poolLanes.some((poolLane) => poolLane.e2eImageKind);
 }
 
 function dockerPreflightContainerNames(raw) {
@@ -1011,30 +1015,33 @@ async function runDockerPreflight(baseEnv, options) {
   console.log(`==> Docker preflight run: ${elapsedSeconds}s`);
 }
 
-async function prepareBundledChannelPackage(baseEnv, logDir) {
-  if (baseEnv.OPENCLAW_BUNDLED_CHANNEL_PACKAGE_TGZ) {
-    console.log(`==> Bundled channel package: ${baseEnv.OPENCLAW_BUNDLED_CHANNEL_PACKAGE_TGZ}`);
+async function prepareOpenClawPackage(baseEnv, logDir) {
+  const existing =
+    baseEnv.OPENCLAW_CURRENT_PACKAGE_TGZ ||
+    baseEnv.OPENCLAW_BUNDLED_CHANNEL_PACKAGE_TGZ ||
+    baseEnv.OPENCLAW_NPM_ONBOARD_PACKAGE_TGZ;
+  if (existing) {
+    const packageTgz = path.resolve(existing);
+    baseEnv.OPENCLAW_CURRENT_PACKAGE_TGZ = packageTgz;
+    baseEnv.OPENCLAW_BUNDLED_CHANNEL_PACKAGE_TGZ ||= packageTgz;
+    baseEnv.OPENCLAW_NPM_ONBOARD_PACKAGE_TGZ ||= packageTgz;
+    baseEnv.OPENCLAW_BUNDLED_CHANNEL_HOST_BUILD = "0";
+    baseEnv.OPENCLAW_NPM_ONBOARD_HOST_BUILD = "0";
+    console.log(`==> OpenClaw package: ${packageTgz}`);
     return;
   }
 
-  const packDir = path.join(logDir, "bundled-channel-package");
+  const packDir = path.join(logDir, "openclaw-package");
   await mkdir(packDir, { recursive: true });
-  const packScript = [
-    "set -euo pipefail",
-    "node --import tsx --input-type=module -e \"const { writePackageDistInventory } = await import('./src/infra/package-dist-inventory.ts'); await writePackageDistInventory(process.cwd());\"",
-    "npm pack --silent --ignore-scripts --pack-destination /tmp/openclaw-pack >/tmp/openclaw-pack.out",
-    "cat /tmp/openclaw-pack.out",
-  ].join("\n");
+  await runForeground("Build OpenClaw package artifacts once", "pnpm build", baseEnv);
   await runForeground(
-    "Pack bundled channel package once from bare Docker E2E image",
-    [
-      "docker run --rm",
-      "-e COREPACK_ENABLE_DOWNLOAD_PROMPT=0",
-      `-v ${shellQuote(packDir)}:/tmp/openclaw-pack`,
-      shellQuote(baseEnv.OPENCLAW_DOCKER_E2E_BARE_IMAGE),
-      "bash -lc",
-      shellQuote(packScript),
-    ].join(" "),
+    "Write OpenClaw package inventory",
+    "node --import tsx --input-type=module -e \"const { writePackageDistInventory } = await import('./src/infra/package-dist-inventory.ts'); await writePackageDistInventory(process.cwd());\"",
+    baseEnv,
+  );
+  await runForeground(
+    "Pack OpenClaw package once",
+    `npm pack --silent --ignore-scripts --pack-destination ${shellQuote(packDir)}`,
     baseEnv,
   );
 
@@ -1045,11 +1052,12 @@ async function prepareBundledChannelPackage(baseEnv, logDir) {
   if (!packed) {
     throw new Error(`missing packed OpenClaw tarball in ${packDir}`);
   }
-  baseEnv.OPENCLAW_BUNDLED_CHANNEL_PACKAGE_TGZ = path.join(packDir, packed);
+  baseEnv.OPENCLAW_CURRENT_PACKAGE_TGZ = path.join(packDir, packed);
+  baseEnv.OPENCLAW_BUNDLED_CHANNEL_PACKAGE_TGZ = baseEnv.OPENCLAW_CURRENT_PACKAGE_TGZ;
   baseEnv.OPENCLAW_BUNDLED_CHANNEL_HOST_BUILD = "0";
-  baseEnv.OPENCLAW_NPM_ONBOARD_PACKAGE_TGZ = baseEnv.OPENCLAW_BUNDLED_CHANNEL_PACKAGE_TGZ;
+  baseEnv.OPENCLAW_NPM_ONBOARD_PACKAGE_TGZ = baseEnv.OPENCLAW_CURRENT_PACKAGE_TGZ;
   baseEnv.OPENCLAW_NPM_ONBOARD_HOST_BUILD = "0";
-  console.log(`==> Bundled channel package: ${baseEnv.OPENCLAW_BUNDLED_CHANNEL_PACKAGE_TGZ}`);
+  console.log(`==> OpenClaw package: ${baseEnv.OPENCLAW_CURRENT_PACKAGE_TGZ}`);
 }
 
 function laneEnv(poolLane, baseEnv, logDir, cacheKey) {
@@ -1530,10 +1538,17 @@ async function main() {
       });
     },
   );
+  const scheduledLanes = [...orderedLanes, ...orderedTailLanes];
+  if (lanesNeedOpenClawPackage(scheduledLanes)) {
+    await runPhase(phases, "prepare-openclaw-package", {}, async () => {
+      await prepareOpenClawPackage(baseEnv, logDir);
+    });
+  } else {
+    console.log("==> OpenClaw package: not needed for selected lanes");
+  }
 
   if (buildEnabled) {
     const buildEntries = [];
-    const scheduledLanes = [...orderedLanes, ...orderedTailLanes];
     if (scheduledLanes.some((poolLane) => poolLane.live)) {
       buildEntries.push({
         command: "pnpm test:docker:live-build",
@@ -1547,7 +1562,7 @@ async function main() {
         command: "pnpm test:docker:e2e-build",
         env: {
           OPENCLAW_DOCKER_E2E_IMAGE: baseEnv.OPENCLAW_DOCKER_E2E_BARE_IMAGE,
-          OPENCLAW_DOCKER_E2E_TARGET: "build",
+          OPENCLAW_DOCKER_E2E_TARGET: "bare",
         },
         label: `shared bare Docker E2E image once: ${baseEnv.OPENCLAW_DOCKER_E2E_BARE_IMAGE}`,
         phaseDetails: { image: baseEnv.OPENCLAW_DOCKER_E2E_BARE_IMAGE, imageKind: "bare" },
@@ -1572,13 +1587,6 @@ async function main() {
     await runForegroundGroup(buildEntries, baseEnv);
   } else {
     console.log(`==> Shared Docker image builds: skipped`);
-  }
-  if (lanesNeedBundledPackage([...orderedLanes, ...orderedTailLanes])) {
-    await runPhase(phases, "prepare-bundled-channel-package", { imageKind: "bare" }, async () => {
-      await prepareBundledChannelPackage(baseEnv, logDir);
-    });
-  } else {
-    console.log("==> Bundled channel package: not needed for selected lanes");
   }
 
   const options = {
