@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const HELPER_PATH = "scripts/lib/docker-build.sh";
+const DOCKER_ALL_SCHEDULER_PATH = "scripts/test-docker-all.mjs";
 const CENTRALIZED_BUILD_SCRIPTS = [
   "scripts/docker/setup.sh",
   "scripts/e2e/browser-cdp-snapshot-docker.sh",
@@ -34,5 +35,14 @@ describe("docker build helper", () => {
       expect(script, path).not.toMatch(/\bdocker build\b/);
       expect(script, path).not.toMatch(/run_logged\s+\S+\s+docker\s+build/);
     }
+  });
+
+  it("preserves pnpm lookup paths for scheduled Docker child lanes", () => {
+    const scheduler = readFileSync(DOCKER_ALL_SCHEDULER_PATH, "utf8");
+
+    expect(scheduler).toContain("env.PNPM_HOME");
+    expect(scheduler).toContain("env.npm_execpath ? path.dirname(env.npm_execpath)");
+    expect(scheduler).toContain("path.dirname(process.execPath)");
+    expect(scheduler).toContain("env.PATH = [...new Set(pathEntries)].join(path.delimiter)");
   });
 });

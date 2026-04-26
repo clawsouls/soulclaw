@@ -142,10 +142,20 @@ function appendExtension(env, extension) {
 }
 
 function commandEnv(extra = {}) {
-  return {
+  const env = {
     ...process.env,
     ...extra,
   };
+  const pathEntries = [
+    env.PATH,
+    env.PNPM_HOME,
+    env.npm_execpath ? path.dirname(env.npm_execpath) : undefined,
+    path.dirname(process.execPath),
+  ]
+    .flatMap((entry) => (entry ? String(entry).split(path.delimiter) : []))
+    .filter(Boolean);
+  env.PATH = [...new Set(pathEntries)].join(path.delimiter);
+  return env;
 }
 
 function shellQuote(value) {
