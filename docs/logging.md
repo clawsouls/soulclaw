@@ -164,6 +164,19 @@ OpenClaw writes the trace fields as top-level JSON keys (`traceId`, `spanId`,
 `parentSpanId`, `traceFlags`) so external log processors can correlate the line
 with OTEL spans and provider `traceparent` propagation.
 
+### Model call size and timing
+
+Model-call diagnostics record bounded request/response measurements without
+capturing raw prompt or response content:
+
+- `requestPayloadBytes`: UTF-8 byte size of the final model request payload
+- `responseStreamBytes`: UTF-8 byte size of streamed model response events
+- `timeToFirstByteMs`: elapsed time before the first streamed response event
+- `durationMs`: total model-call duration
+
+These fields are available to diagnostic snapshots, model-call plugin hooks, and
+OTEL model-call spans/metrics when diagnostics export is enabled.
+
 ### Console styles
 
 `logging.consoleStyle`:
