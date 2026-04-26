@@ -466,54 +466,13 @@ jobs:
       - name: Hydrate live auth/profile inputs
         run: bash scripts/ci-hydrate-live-auth.sh
 
-      - name: Plan Docker E2E chunk
+      - name: Plan and hydrate Docker E2E chunk
         id: plan
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p .artifacts/docker-tests
-          export OPENCLAW_DOCKER_ALL_PROFILE=release-path
-          export OPENCLAW_DOCKER_ALL_CHUNK="${DOCKER_E2E_CHUNK}"
-          export OPENCLAW_DOCKER_ALL_INCLUDE_OPENWEBUI="${INCLUDE_OPENWEBUI}"
-          node scripts/test-docker-all.mjs --plan-json > ".artifacts/docker-tests/release-${DOCKER_E2E_CHUNK}-plan.json"
-          node scripts/docker-e2e.mjs github-outputs ".artifacts/docker-tests/release-${DOCKER_E2E_CHUNK}-plan.json" >> "$GITHUB_OUTPUT"
-
-      - name: Download OpenClaw Docker E2E package
-        if: steps.plan.outputs.needs_package == '1'
-        uses: actions/download-artifact@v8
+        uses: ./.github/actions/docker-e2e-plan
         with:
-          name: docker-e2e-package
-          path: .artifacts/docker-e2e-package
-
-      - name: Pull shared bare Docker E2E image
-        if: steps.plan.outputs.needs_bare_image == '1'
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker pull "${OPENCLAW_DOCKER_E2E_BARE_IMAGE}"
-
-      - name: Pull shared functional Docker E2E image
-        if: steps.plan.outputs.needs_functional_image == '1'
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker pull "${OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE}"
-
-      - name: Validate chunk credentials
-        shell: bash
-        run: |
-          set -euo pipefail
-          credentials=",${{ steps.plan.outputs.credentials }},"
-          if [[ "$credentials" == *",openai,"* ]]; then
-            [[ -n "${OPENAI_API_KEY:-}" ]] || {
-              echo "OPENAI_API_KEY is required for selected Docker E2E lanes." >&2
-              exit 1
-            }
-          fi
-          if [[ "$credentials" == *",anthropic,"* && -z "${ANTHROPIC_API_TOKEN:-}" && -z "${ANTHROPIC_API_KEY:-}" ]]; then
-            echo "ANTHROPIC_API_TOKEN or ANTHROPIC_API_KEY is required for selected Docker E2E lanes." >&2
-            exit 1
-          fi
+          mode: chunk
+          chunk: ${{ matrix.chunk_id }}
+          include-openwebui: ${{ inputs.include_openwebui }}
 
       - name: Run Docker E2E chunk
         shell: bash
@@ -632,53 +591,13 @@ jobs:
       - name: Hydrate live auth/profile inputs
         run: bash scripts/ci-hydrate-live-auth.sh
 
-      - name: Plan targeted Docker E2E lanes
+      - name: Plan and hydrate targeted Docker E2E lanes
         id: plan
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p .artifacts/docker-tests
-          export OPENCLAW_DOCKER_ALL_LANES="${DOCKER_E2E_LANES}"
-          export OPENCLAW_DOCKER_ALL_INCLUDE_OPENWEBUI="${INCLUDE_OPENWEBUI}"
-          node scripts/test-docker-all.mjs --plan-json > .artifacts/docker-tests/targeted-plan.json
-          node scripts/docker-e2e.mjs github-outputs .artifacts/docker-tests/targeted-plan.json >> "$GITHUB_OUTPUT"
-
-      - name: Download OpenClaw Docker E2E package
-        if: steps.plan.outputs.needs_package == '1'
-        uses: actions/download-artifact@v8
+        uses: ./.github/actions/docker-e2e-plan
         with:
-          name: docker-e2e-package
-          path: .artifacts/docker-e2e-package
-
-      - name: Pull shared bare Docker E2E image
-        if: steps.plan.outputs.needs_bare_image == '1'
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker pull "${OPENCLAW_DOCKER_E2E_BARE_IMAGE}"
-
-      - name: Pull shared functional Docker E2E image
-        if: steps.plan.outputs.needs_functional_image == '1'
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker pull "${OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE}"
-
-      - name: Validate targeted lane credentials
-        shell: bash
-        run: |
-          set -euo pipefail
-          credentials=",${{ steps.plan.outputs.credentials }},"
-          if [[ "$credentials" == *",openai,"* ]]; then
-            [[ -n "${OPENAI_API_KEY:-}" ]] || {
-              echo "OPENAI_API_KEY is required for selected Docker E2E lanes." >&2
-              exit 1
-            }
-          fi
-          if [[ "$credentials" == *",anthropic,"* && -z "${ANTHROPIC_API_TOKEN:-}" && -z "${ANTHROPIC_API_KEY:-}" ]]; then
-            echo "ANTHROPIC_API_TOKEN or ANTHROPIC_API_KEY is required for selected Docker E2E lanes." >&2
-            exit 1
-          fi
+          mode: targeted
+          lanes: ${{ inputs.docker_lanes }}
+          include-openwebui: ${{ inputs.include_openwebui }}
 
       - name: Run targeted Docker E2E lanes
         shell: bash
@@ -807,25 +726,13 @@ jobs:
 
       - name: Plan Docker E2E images
         id: plan
-        shell: bash
-        env:
-          DOCKER_E2E_LANES: ${{ inputs.docker_lanes }}
-          INCLUDE_RELEASE_PATH_SUITES: ${{ inputs.include_release_path_suites }}
-          INCLUDE_OPENWEBUI: ${{ inputs.include_openwebui }}
-        run: |
-          set -euo pipefail
-          mkdir -p .artifacts/docker-tests
-          if [[ "${INCLUDE_RELEASE_PATH_SUITES}" == "true" ]]; then
-            export OPENCLAW_DOCKER_ALL_PROFILE=release-path
-            export OPENCLAW_DOCKER_ALL_PLAN_RELEASE_ALL=1
-          elif [[ -n "${DOCKER_E2E_LANES}" ]]; then
-            export OPENCLAW_DOCKER_ALL_LANES="${DOCKER_E2E_LANES}"
-          elif [[ "${INCLUDE_OPENWEBUI}" == "true" ]]; then
-            export OPENCLAW_DOCKER_ALL_LANES=openwebui
-          fi
-          export OPENCLAW_DOCKER_ALL_INCLUDE_OPENWEBUI="${INCLUDE_OPENWEBUI}"
-          node scripts/test-docker-all.mjs --plan-json > .artifacts/docker-tests/plan.json
-          node scripts/docker-e2e.mjs github-outputs .artifacts/docker-tests/plan.json >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/docker-e2e-plan
+        with:
+          mode: prepare
+          lanes: ${{ inputs.docker_lanes }}
+          include-release-path-suites: ${{ inputs.include_release_path_suites }}
+          include-openwebui: ${{ inputs.include_openwebui }}
+          hydrate-artifacts: "false"
 
       - name: Setup Node environment
         if: steps.plan.outputs.needs_package == '1'
