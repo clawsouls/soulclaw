@@ -23,6 +23,11 @@ on:
         required: false
         default: true
         type: boolean
+      docker_lanes:
+        description: Comma/space separated Docker scheduler lane names to run against the prepared image
+        required: false
+        default: ""
+        type: string
       include_live_suites:
         description: Whether to run live-provider coverage
         required: false
@@ -54,6 +59,11 @@ on:
         required: false
         default: true
         type: boolean
+      docker_lanes:
+        description: Comma/space separated Docker scheduler lane names to run against the prepared image
+        required: false
+        default: ""
+        type: string
       include_live_suites:
         description: Whether to run live-provider coverage
         required: false
@@ -363,7 +373,7 @@ jobs:
 
   validate_docker_e2e:
     needs: [validate_selected_ref, prepare_docker_e2e_image]
-    if: inputs.include_release_path_suites
+    if: inputs.include_release_path_suites && inputs.docker_lanes == ''
     name: Docker E2E (${{ matrix.label }})
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: ${{ matrix.timeout_minutes }}
@@ -517,11 +527,12 @@ jobs:
           console.log("");
           console.log(`Status: \`${summary.status}\``);
           console.log("");
-          console.log("| Lane | Status | Seconds | Timed out |");
-          console.log("| --- | ---: | ---: | --- |");
+          console.log("| Lane | Status | Seconds | Timed out | Rerun |");
+          console.log("| --- | ---: | ---: | --- | --- |");
           for (const lane of lanes) {
             const status = lane.status === 0 ? "pass" : `fail ${lane.status}`;
-            console.log(`| \`${lane.name}\` | ${status} | ${lane.elapsedSeconds ?? ""} | ${lane.timedOut ? "yes" : "no"} |`);
+            const rerun = String(lane.rerunCommand ?? "").replaceAll("`", "\\`");
+            console.log(`| \`${lane.name}\` | ${status} | ${lane.elapsedSeconds ?? ""} | ${lane.timedOut ? "yes" : "no"} | \`${rerun}\` |`);
           }
           NODE
 
@@ -533,9 +544,170 @@ jobs:
           path: .artifacts/docker-tests/
           if-no-files-found: ignore
 
+  validate_docker_lanes:
+    needs: [validate_selected_ref, prepare_docker_e2e_image]
+    if: inputs.docker_lanes != ''
+    name: Docker E2E targeted lanes
+    runs-on: blacksmith-32vcpu-ubuntu-2404
+    timeout-minutes: 180
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ANTHROPIC_API_TOKEN: ${{ secrets.ANTHROPIC_API_TOKEN }}
+      ANTHROPIC_API_KEY_OLD: ${{ secrets.ANTHROPIC_API_KEY_OLD }}
+      BYTEPLUS_API_KEY: ${{ secrets.BYTEPLUS_API_KEY }}
+      CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
+      DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
+      MODELSTUDIO_API_KEY: ${{ secrets.MODELSTUDIO_API_KEY }}
+      MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+      MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+      MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+      OPENCODE_ZEN_API_KEY: ${{ secrets.OPENCODE_ZEN_API_KEY }}
+      OPENCLAW_LIVE_BROWSER_CDP_URL: ${{ secrets.OPENCLAW_LIVE_BROWSER_CDP_URL }}
+      OPENCLAW_LIVE_SETUP_TOKEN: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN }}
+      OPENCLAW_LIVE_SETUP_TOKEN_MODEL: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_MODEL }}
+      OPENCLAW_LIVE_SETUP_TOKEN_PROFILE: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_PROFILE }}
+      OPENCLAW_LIVE_SETUP_TOKEN_VALUE: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_VALUE }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+      FAL_KEY: ${{ secrets.FAL_KEY }}
+      RUNWAY_API_KEY: ${{ secrets.RUNWAY_API_KEY }}
+      DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+      TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+      VYDRA_API_KEY: ${{ secrets.VYDRA_API_KEY }}
+      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+      ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+      Z_AI_API_KEY: ${{ secrets.Z_AI_API_KEY }}
+      BYTEPLUS_ACCESS_KEY_ID: ${{ secrets.BYTEPLUS_ACCESS_KEY_ID }}
+      BYTEPLUS_SECRET_ACCESS_KEY: ${{ secrets.BYTEPLUS_SECRET_ACCESS_KEY }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      OPENCLAW_CODEX_AUTH_JSON: ${{ secrets.OPENCLAW_CODEX_AUTH_JSON }}
+      OPENCLAW_CODEX_CONFIG_TOML: ${{ secrets.OPENCLAW_CODEX_CONFIG_TOML }}
+      OPENCLAW_CLAUDE_JSON: ${{ secrets.OPENCLAW_CLAUDE_JSON }}
+      OPENCLAW_CLAUDE_CREDENTIALS_JSON: ${{ secrets.OPENCLAW_CLAUDE_CREDENTIALS_JSON }}
+      OPENCLAW_CLAUDE_SETTINGS_JSON: ${{ secrets.OPENCLAW_CLAUDE_SETTINGS_JSON }}
+      OPENCLAW_CLAUDE_SETTINGS_LOCAL_JSON: ${{ secrets.OPENCLAW_CLAUDE_SETTINGS_LOCAL_JSON }}
+      OPENCLAW_GEMINI_SETTINGS_JSON: ${{ secrets.OPENCLAW_GEMINI_SETTINGS_JSON }}
+      FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
+      OPENCLAW_DOCKER_E2E_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.image }}
+      OPENCLAW_SKIP_DOCKER_BUILD: "1"
+      INCLUDE_OPENWEBUI: ${{ inputs.include_openwebui }}
+      DOCKER_E2E_LANES: ${{ inputs.docker_lanes }}
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.validate_selected_ref.outputs.selected_sha }}
+          fetch-depth: 1
+
+      - name: Log in to GHCR for shared Docker E2E image
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Setup Node environment
+        uses: ./.github/actions/setup-node-env
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+          install-bun: "true"
+
+      - name: Hydrate live auth/profile inputs
+        run: bash scripts/ci-hydrate-live-auth.sh
+
+      - name: Pull shared Docker E2E image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "${OPENCLAW_DOCKER_E2E_IMAGE}"
+
+      - name: Validate targeted lane credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          lanes=" ${DOCKER_E2E_LANES//,/ } "
+          if [[ "$lanes" == *" install-e2e "* ]]; then
+            [[ -n "${OPENAI_API_KEY:-}" ]] || {
+              echo "OPENAI_API_KEY is required for installer Docker E2E." >&2
+              exit 1
+            }
+            if [[ -z "${ANTHROPIC_API_TOKEN:-}" && -z "${ANTHROPIC_API_KEY:-}" ]]; then
+              echo "ANTHROPIC_API_TOKEN or ANTHROPIC_API_KEY is required for installer Docker E2E." >&2
+              exit 1
+            fi
+          fi
+          if [[ "$lanes" == *" openwebui "* || "$lanes" == *" openai-web-search-minimal "* ]]; then
+            [[ -n "${OPENAI_API_KEY:-}" ]] || {
+              echo "OPENAI_API_KEY is required for selected OpenAI Docker lanes." >&2
+              exit 1
+            }
+          fi
+
+      - name: Run targeted Docker E2E lanes
+        shell: bash
+        run: |
+          set -euo pipefail
+          lanes=" ${DOCKER_E2E_LANES//,/ } "
+          export OPENCLAW_DOCKER_ALL_LANES="${DOCKER_E2E_LANES}"
+          export OPENCLAW_DOCKER_ALL_PREFLIGHT=0
+          export OPENCLAW_DOCKER_ALL_FAIL_FAST=0
+          export OPENCLAW_DOCKER_ALL_INCLUDE_OPENWEBUI="${INCLUDE_OPENWEBUI}"
+          export OPENCLAW_DOCKER_ALL_LOG_DIR=".artifacts/docker-tests/targeted"
+          export OPENCLAW_DOCKER_ALL_TIMINGS_FILE=".artifacts/docker-tests/targeted-timings.json"
+          if [[ "$lanes" == *" live-"* ]]; then
+            export OPENCLAW_DOCKER_ALL_BUILD=1
+          else
+            export OPENCLAW_DOCKER_ALL_BUILD=0
+          fi
+
+          pnpm test:docker:all
+
+      - name: Summarize targeted Docker E2E lanes
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          summary=".artifacts/docker-tests/targeted/summary.json"
+          if [[ ! -f "$summary" ]]; then
+            echo "Docker targeted summary missing: \`$summary\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node --input-type=module - "$summary" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          import fs from "node:fs";
+          const summary = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const lanes = Array.isArray(summary.lanes) ? summary.lanes : [];
+          console.log("### Docker E2E targeted lanes");
+          console.log("");
+          console.log(`Status: \`${summary.status}\``);
+          console.log("");
+          console.log("| Lane | Status | Seconds | Timed out | Rerun |");
+          console.log("| --- | ---: | ---: | --- | --- |");
+          for (const lane of lanes) {
+            const status = lane.status === 0 ? "pass" : `fail ${lane.status}`;
+            const rerun = String(lane.rerunCommand ?? "").replaceAll("`", "\\`");
+            console.log(`| \`${lane.name}\` | ${status} | ${lane.elapsedSeconds ?? ""} | ${lane.timedOut ? "yes" : "no"} | \`${rerun}\` |`);
+          }
+          NODE
+
+      - name: Upload targeted Docker E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-e2e-targeted
+          path: .artifacts/docker-tests/
+          if-no-files-found: ignore
+
   validate_docker_openwebui:
     needs: [validate_selected_ref, prepare_docker_e2e_image]
-    if: inputs.include_openwebui && !inputs.include_release_path_suites
+    if: inputs.include_openwebui && !inputs.include_release_path_suites && inputs.docker_lanes == ''
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: 75
     env:
@@ -578,7 +750,7 @@ jobs:
 
   prepare_docker_e2e_image:
     needs: validate_selected_ref
-    if: inputs.include_release_path_suites || inputs.include_openwebui
+    if: inputs.include_release_path_suites || inputs.include_openwebui || inputs.docker_lanes != ''
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: 90
     permissions:

@@ -458,6 +458,51 @@ function releasePathChunkLanes(chunk, options = {}) {
   ];
 }
 
+function allReleasePathLanes(options = {}) {
+  return Object.keys(releasePathChunks).flatMap((chunk) =>
+    releasePathChunkLanes(chunk, {
+      includeOpenWebUI: chunk === "plugins-integrations" && options.includeOpenWebUI,
+    }),
+  );
+}
+
+function parseLaneSelection(raw) {
+  if (!raw) {
+    return [];
+  }
+  return [
+    ...new Set(
+      String(raw)
+        .split(/[,\s]+/u)
+        .map((token) => token.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+function dedupeLanes(poolLanes) {
+  const byName = new Map();
+  for (const poolLane of poolLanes) {
+    if (!byName.has(poolLane.name)) {
+      byName.set(poolLane.name, poolLane);
+    }
+  }
+  return [...byName.values()];
+}
+
+function selectNamedLanes(poolLanes, selectedNames, label) {
+  const byName = new Map(poolLanes.map((poolLane) => [poolLane.name, poolLane]));
+  const missing = selectedNames.filter((name) => !byName.has(name));
+  if (missing.length > 0) {
+    throw new Error(
+      `${label} unknown lane(s): ${missing.join(", ")}. Available lanes: ${[...byName.keys()]
+        .toSorted((a, b) => a.localeCompare(b))
+        .join(", ")}`,
+    );
+  }
+  return selectedNames.map((name) => byName.get(name));
+}
+
 function parsePositiveInt(raw, fallback, label) {
   if (!raw) {
     return fallback;
@@ -597,6 +642,18 @@ function commandEnv(extra = {}) {
 
 function shellQuote(value) {
   return `'${String(value).replaceAll("'", "'\\''")}'`;
+}
+
+function buildLaneRerunCommand(name, baseEnv) {
+  const build = name.startsWith("live-") ? "1" : "0";
+  const env = [
+    ["OPENCLAW_DOCKER_ALL_LANES", name],
+    ["OPENCLAW_DOCKER_ALL_BUILD", build],
+    ["OPENCLAW_DOCKER_ALL_PREFLIGHT", "0"],
+    ["OPENCLAW_SKIP_DOCKER_BUILD", "1"],
+    ["OPENCLAW_DOCKER_E2E_IMAGE", baseEnv.OPENCLAW_DOCKER_E2E_IMAGE || DEFAULT_E2E_IMAGE],
+  ];
+  return `${env.map(([key, value]) => `${key}=${shellQuote(value)}`).join(" ")} pnpm test:docker:all`;
 }
 
 function timingSeconds(timingStore, poolLane) {
@@ -985,6 +1042,7 @@ async function runLane(lane, baseEnv, logDir, fallbackTimeoutMs) {
     logFile,
     name,
     elapsedSeconds,
+    rerunCommand: buildLaneRerunCommand(name, baseEnv),
     status: result.status,
     timedOut: result.timedOut,
   };
@@ -1244,6 +1302,12 @@ async function main() {
     process.env.OPENCLAW_DOCKER_ALL_INCLUDE_OPENWEBUI ?? process.env.INCLUDE_OPENWEBUI,
     true,
   );
+  const selectedLaneNamesRaw =
+    process.env.OPENCLAW_DOCKER_ALL_LANES || process.env.DOCKER_E2E_LANES || "";
+  const selectedLaneNames = parseLaneSelection(selectedLaneNamesRaw);
+  if (selectedLaneNamesRaw && selectedLaneNames.length === 0) {
+    throw new Error("OPENCLAW_DOCKER_ALL_LANES must include at least one lane name");
+  }
   const liveMode = parseLiveMode(process.env.OPENCLAW_DOCKER_ALL_LIVE_MODE);
   const liveRetries = parseNonNegativeInt(
     process.env.OPENCLAW_DOCKER_ALL_LIVE_RETRIES,
@@ -1271,19 +1335,34 @@ async function main() {
   const retriedMainLanes = applyLiveRetries(lanes, liveRetries);
   const retriedTailLanes = applyLiveRetries(tailLanes, liveRetries);
   const releaseLanes =
-    profile === RELEASE_PATH_PROFILE
+    selectedLaneNames.length === 0 && profile === RELEASE_PATH_PROFILE
       ? releasePathChunkLanes(releaseChunk, { includeOpenWebUI })
       : undefined;
-  const configuredLanes = releaseLanes
-    ? releaseLanes
-    : liveMode === "only"
-      ? applyLiveMode([...retriedMainLanes, ...retriedTailLanes], liveMode)
-      : applyLiveMode(retriedMainLanes, liveMode);
-  const configuredTailLanes = releaseLanes
-    ? []
-    : liveMode === "only"
+  const selectedLanes =
+    selectedLaneNames.length > 0
+      ? selectNamedLanes(
+          dedupeLanes([
+            ...allReleasePathLanes({ includeOpenWebUI }),
+            ...retriedMainLanes,
+            ...retriedTailLanes,
+          ]),
+          selectedLaneNames,
+          "OPENCLAW_DOCKER_ALL_LANES",
+        )
+      : undefined;
+  const configuredLanes = selectedLanes
+    ? selectedLanes
+    : releaseLanes
+      ? releaseLanes
+      : liveMode === "only"
+        ? applyLiveMode([...retriedMainLanes, ...retriedTailLanes], liveMode)
+        : applyLiveMode(retriedMainLanes, liveMode);
+  const configuredTailLanes =
+    selectedLanes || releaseLanes
       ? []
-      : applyLiveMode(retriedTailLanes, liveMode);
+      : liveMode === "only"
+        ? []
+        : applyLiveMode(retriedTailLanes, liveMode);
   const orderedLanes = orderLanes(configuredLanes, timingStore);
   const orderedTailLanes = orderLanes(configuredTailLanes, timingStore);
 
@@ -1306,6 +1385,9 @@ async function main() {
   console.log(`==> Build shared Docker images: ${buildEnabled ? "yes" : "no"}`);
   if (profile === RELEASE_PATH_PROFILE) {
     console.log(`==> Include Open WebUI: ${includeOpenWebUI ? "yes" : "no"}`);
+  }
+  if (selectedLaneNames.length > 0) {
+    console.log(`==> Selected lanes: ${selectedLaneNames.join(", ")}`);
   }
   console.log(`==> Docker lane timings: ${timingStore.enabled ? timingsFile : "disabled"}`);
   console.log(`==> Live-test bundled plugin deps: ${baseEnv.OPENCLAW_DOCKER_BUILD_EXTENSIONS}`);
@@ -1332,13 +1414,16 @@ async function main() {
 
   if (buildEnabled) {
     const buildEntries = [];
-    if ([...orderedLanes, ...orderedTailLanes].some((poolLane) => poolLane.live)) {
+    const scheduledLanes = [...orderedLanes, ...orderedTailLanes];
+    if (scheduledLanes.some((poolLane) => poolLane.live)) {
       buildEntries.push(["Build shared live-test image once", "pnpm test:docker:live-build"]);
     }
-    buildEntries.push([
-      `Build shared Docker E2E image once: ${baseEnv.OPENCLAW_DOCKER_E2E_IMAGE}`,
-      "pnpm test:docker:e2e-build",
-    ]);
+    if (scheduledLanes.some((poolLane) => !poolLane.live)) {
+      buildEntries.push([
+        `Build shared Docker E2E image once: ${baseEnv.OPENCLAW_DOCKER_E2E_IMAGE}`,
+        "pnpm test:docker:e2e-build",
+      ]);
+    }
     await runForegroundGroup(buildEntries, baseEnv);
   } else {
     console.log(`==> Shared Docker image builds: skipped`);
@@ -1368,6 +1453,7 @@ async function main() {
       image: baseEnv.OPENCLAW_DOCKER_E2E_IMAGE,
       lanes: allResults,
       profile,
+      selectedLanes: selectedLaneNames.length > 0 ? selectedLaneNames : undefined,
       startedAt: runStartedAt,
       status: "failed",
     });
@@ -1395,6 +1481,7 @@ async function main() {
       image: baseEnv.OPENCLAW_DOCKER_E2E_IMAGE,
       lanes: allResults,
       profile,
+      selectedLanes: selectedLaneNames.length > 0 ? selectedLaneNames : undefined,
       startedAt: runStartedAt,
       status: "failed",
     });
@@ -1402,14 +1489,14 @@ async function main() {
     process.exit(1);
   }
 
-  if (profile === DEFAULT_PROFILE) {
+  if (profile === DEFAULT_PROFILE && selectedLaneNames.length === 0) {
     await runForeground(
       "Run cleanup smoke after parallel lanes",
       "pnpm test:docker:cleanup",
       baseEnv,
     );
   } else {
-    console.log("==> Cleanup smoke after parallel lanes: skipped for release-path chunk");
+    console.log("==> Cleanup smoke after parallel lanes: skipped for selected/release lanes");
   }
   await writeTimingStore(timingStore, allResults);
   await writeRunSummary(logDir, {
@@ -1418,6 +1505,7 @@ async function main() {
     image: baseEnv.OPENCLAW_DOCKER_E2E_IMAGE,
     lanes: allResults,
     profile,
+    selectedLanes: selectedLaneNames.length > 0 ? selectedLaneNames : undefined,
     startedAt: runStartedAt,
     status: "passed",
   });
