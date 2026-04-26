@@ -35,6 +35,7 @@ const DEFAULT_LANE_START_STAGGER_MS = 2_000;
 const DEFAULT_STATUS_INTERVAL_MS = 30_000;
 const DEFAULT_PREFLIGHT_RUN_TIMEOUT_MS = 60_000;
 const DEFAULT_TIMINGS_FILE = path.join(ROOT_DIR, ".artifacts/docker-tests/lane-timings.json");
+const DEFAULT_GITHUB_WORKFLOW = "openclaw-live-and-e2e-checks-reusable.yml";
 const cliArgs = new Set(process.argv.slice(2));
 for (const arg of cliArgs) {
   if (arg !== "--plan-json") {
@@ -151,6 +152,27 @@ function shellQuote(value) {
   return `'${String(value).replaceAll("'", "'\\''")}'`;
 }
 
+function githubWorkflowRerunCommand(laneNames, ref) {
+  return [
+    "gh workflow run",
+    shellQuote(process.env.OPENCLAW_DOCKER_E2E_WORKFLOW || DEFAULT_GITHUB_WORKFLOW),
+    "-f",
+    `ref=${shellQuote(ref)}`,
+    "-f",
+    "include_repo_e2e=false",
+    "-f",
+    "include_release_path_suites=false",
+    "-f",
+    "include_openwebui=false",
+    "-f",
+    `docker_lanes=${shellQuote(laneNames.join(" "))}`,
+    "-f",
+    "include_live_suites=false",
+    "-f",
+    "live_models_only=false",
+  ].join(" ");
+}
+
 function buildLaneRerunCommand(name, baseEnv) {
   const poolLane = findLaneByName(name);
   const build = name.startsWith("live-") ? "1" : "0";
@@ -228,10 +250,61 @@ async function writeRunSummary(logDir, summary) {
   const payload = {
     ...summary,
     finishedAt: new Date().toISOString(),
+    github: {
+      ref: process.env.GITHUB_REF_NAME || undefined,
+      repository: process.env.GITHUB_REPOSITORY || undefined,
+      runId: process.env.GITHUB_RUN_ID || undefined,
+      runUrl:
+        process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
+          ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+          : undefined,
+      sha: process.env.GITHUB_SHA || undefined,
+      workflow: process.env.GITHUB_WORKFLOW || undefined,
+    },
     version: 1,
   };
   await fs.promises.writeFile(file, `${JSON.stringify(payload, null, 2)}\n`);
+  await writeFailureIndex(logDir, payload);
   console.log(`==> Docker run summary: ${file}`);
+}
+
+async function writeFailureIndex(logDir, summary) {
+  const ref = summary.github?.sha || summary.github?.ref || process.env.GITHUB_SHA || "HEAD";
+  const failures = Array.isArray(summary.failures)
+    ? summary.failures
+    : (summary.lanes ?? []).filter((lane) => lane.status !== 0);
+  const lanes = failures.map((failure) => ({
+    ghWorkflowCommand: githubWorkflowRerunCommand([failure.name], ref),
+    image: failure.image,
+    imageKind: failure.imageKind,
+    lane: failure.name,
+    logFile: failure.logFile,
+    name: failure.name,
+    rerunCommand: failure.rerunCommand,
+    status: failure.status,
+    timedOut: failure.timedOut,
+  }));
+  const failureIndex = {
+    combinedGhWorkflowCommand:
+      lanes.length > 0
+        ? githubWorkflowRerunCommand(
+            lanes.map((lane) => lane.lane),
+            ref,
+          )
+        : undefined,
+    generatedAt: new Date().toISOString(),
+    lanes,
+    note: "Targeted GitHub reruns prepare a fresh OpenClaw npm tarball for the selected ref before lane execution.",
+    ref,
+    runUrl: summary.github?.runUrl,
+    status: summary.status,
+    version: 1,
+    workflow: process.env.OPENCLAW_DOCKER_E2E_WORKFLOW || DEFAULT_GITHUB_WORKFLOW,
+  };
+  await fs.promises.writeFile(
+    path.join(logDir, "failures.json"),
+    `${JSON.stringify(failureIndex, null, 2)}\n`,
+  );
 }
 
 function phaseElapsedSeconds(startedAtMs) {

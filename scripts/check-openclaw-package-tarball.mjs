@@ -38,6 +38,20 @@ const normalized = entries.map((entry) => entry.replace(/^package\//u, ""));
 const entrySet = new Set(normalized);
 const errors = [];
 
+function readTarEntry(entryPath) {
+  const candidates = [entryPath, `package/${entryPath}`];
+  for (const candidate of candidates) {
+    const result = spawnSync("tar", ["-xOf", tarball, candidate], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    if (result.status === 0) {
+      return result.stdout;
+    }
+  }
+  return "";
+}
+
 for (const entry of normalized) {
   if (entry.startsWith("/") || entry.split("/").includes("..")) {
     errors.push(`unsafe tar entry: ${entry}`);
@@ -52,6 +66,27 @@ if (!normalized.some((entry) => entry.startsWith("dist/"))) {
 }
 if (!entrySet.has("dist/postinstall-inventory.json")) {
   errors.push("missing dist/postinstall-inventory.json");
+}
+if (entrySet.has("dist/postinstall-inventory.json")) {
+  try {
+    const inventory = JSON.parse(readTarEntry("dist/postinstall-inventory.json"));
+    if (!Array.isArray(inventory) || inventory.some((entry) => typeof entry !== "string")) {
+      errors.push("invalid dist/postinstall-inventory.json");
+    } else {
+      for (const inventoryEntry of inventory) {
+        const normalizedEntry = inventoryEntry.replace(/\\/gu, "/");
+        if (!entrySet.has(normalizedEntry)) {
+          errors.push(`inventory references missing tar entry ${normalizedEntry}`);
+        }
+      }
+    }
+  } catch (error) {
+    errors.push(
+      `unreadable dist/postinstall-inventory.json: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
 }
 
 if (errors.length > 0) {
