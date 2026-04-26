@@ -23,6 +23,7 @@ import { buildAgentRuntimeAuthPlan } from "../runtime-plan/auth.js";
 import { buildWorkspaceSkillSnapshot } from "../skills.js";
 import { buildUsageWithNoCost } from "../stream-message-shared.js";
 import {
+  buildClaudeCliFallbackContextPrelude,
   claudeCliSessionTranscriptHasContent,
   resolveFallbackRetryPrompt,
 } from "./attempt-execution.helpers.js";
@@ -259,10 +260,24 @@ export function runAgentAttempt(params: {
   allowTransientCooldownProbe?: boolean;
   sessionHasHistory?: boolean;
 }) {
+  // #69973: when a fallback fires from claude-cli to a non-CLI candidate
+  // (or a different CLI backend), the next runner cannot see Claude Code's
+  // local JSONL history. Without a seed, the fallback model starts cold —
+  // even though the original Claude session is still alive on disk.
+  // Harvest a compacted context (Claude's own `/compact` summary plus the
+  // most recent post-boundary turns) and prepend it to the retry prompt.
+  // This mirrors what Claude Code itself replays after compaction.
+  const claudeCliFallbackPrelude =
+    params.isFallbackRetry && !isClaudeCliProvider(params.providerOverride)
+      ? buildClaudeCliFallbackContextPrelude({
+          cliSessionId: getCliSessionBinding(params.sessionEntry, "claude-cli")?.sessionId,
+        })
+      : "";
   const effectivePrompt = resolveFallbackRetryPrompt({
     body: params.body,
     isFallbackRetry: params.isFallbackRetry,
     sessionHasHistory: params.sessionHasHistory,
+    priorContextPrelude: claudeCliFallbackPrelude,
   });
   const bootstrapPromptWarningSignaturesSeen = resolveBootstrapWarningSignaturesSeen(
     params.sessionEntry?.systemPromptReport,
