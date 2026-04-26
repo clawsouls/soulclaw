@@ -162,6 +162,7 @@ describe("telegram live qa runtime", () => {
       sutAccountId: "sut",
     });
 
+    expect(next.agents?.defaults?.skipBootstrap).toBe(true);
     expect(next.plugins?.allow).toContain("telegram");
     expect(next.plugins?.entries?.telegram).toEqual({ enabled: true });
     expect(next.channels?.telegram).toEqual({

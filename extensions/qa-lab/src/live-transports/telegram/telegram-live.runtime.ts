@@ -476,6 +476,13 @@ function buildTelegramQaConfig(
   };
   return {
     ...baseCfg,
+    agents: {
+      ...baseCfg.agents,
+      defaults: {
+        ...baseCfg.agents?.defaults,
+        skipBootstrap: true,
+      },
+    },
     plugins: {
       ...baseCfg.plugins,
       allow: pluginAllow,
