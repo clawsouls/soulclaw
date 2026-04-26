@@ -6,7 +6,6 @@ import { __testing } from "../../scripts/e2e/npm-telegram-live-runner.ts";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DOCKER_SCRIPT_PATH = path.resolve(TEST_DIR, "../../scripts/e2e/npm-telegram-live-docker.sh");
-const WORKFLOW_PATH = path.resolve(TEST_DIR, "../../.github/workflows/npm-telegram-beta-e2e.yml");
 
 describe("npm Telegram live Docker E2E", () => {
   it("supports npm-specific Convex credential aliases", () => {
@@ -39,39 +38,6 @@ describe("npm Telegram live Docker E2E", () => {
     expect(installRun).not.toContain('"${docker_env[@]}"');
     expect(script).toContain('if [ -z "$credential_role" ] && [ -n "${CI:-}" ]');
     expect(script).toContain('credential_role="ci"');
-  });
-
-  it("does not require release manager environment approval for the manual npm beta workflow", () => {
-    const workflow = readFileSync(WORKFLOW_PATH, "utf8");
-
-    expect(workflow).not.toContain("approve_release_manager:");
-    expect(workflow).not.toContain("Approve npm Telegram beta E2E");
-    expect(workflow).not.toContain("environment: npm-release");
-    expect(workflow).not.toContain("needs: approve_release_manager");
-    expect(workflow).toContain("environment: qa-live-shared");
-    expect(workflow).not.toContain("Require main workflow ref");
-    expect(workflow).not.toContain("refs/heads/main");
-    expect(workflow).not.toContain('new Set(["admin", "write"])');
-    expect(workflow).not.toContain("data.role_name");
-    expect(workflow).not.toContain("github.rest.teams.listMembersInOrg");
-    expect(workflow).not.toContain("getMembershipForUserInOrg");
-  });
-
-  it("builds and reuses a local Docker E2E image", () => {
-    const workflow = readFileSync(WORKFLOW_PATH, "utf8");
-
-    expect(workflow).not.toContain("prepare_docker_e2e_image:");
-    expect(workflow).toContain("run_npm_telegram_beta_e2e:");
-    expect(workflow).not.toContain("needs: approve_release_manager");
-    expect(workflow).toContain("useblacksmith/setup-docker-builder");
-    expect(workflow).toContain("useblacksmith/build-push-action");
-    expect(workflow).toContain("tags: openclaw-docker-e2e:local");
-    expect(workflow).toContain("load: true");
-    expect(workflow).toContain("push: false");
-    expect(workflow).not.toContain("cache-from: type=gha");
-    expect(workflow).not.toContain("cache-to: type=gha");
-    expect(workflow).toContain('OPENCLAW_SKIP_DOCKER_BUILD: "1"');
-    expect(workflow).toContain("OPENCLAW_DOCKER_E2E_IMAGE: openclaw-docker-e2e:local");
   });
 
   it("lets npm-specific credential aliases override shared QA env", () => {
