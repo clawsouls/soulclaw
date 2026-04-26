@@ -436,6 +436,8 @@ jobs:
       OPENCLAW_GEMINI_SETTINGS_JSON: ${{ secrets.OPENCLAW_GEMINI_SETTINGS_JSON }}
       FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
       OPENCLAW_DOCKER_E2E_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.image }}
+      OPENCLAW_DOCKER_E2E_BARE_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.bare_image }}
+      OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.functional_image }}
       OPENCLAW_SKIP_DOCKER_BUILD: "1"
       INCLUDE_OPENWEBUI: ${{ inputs.include_openwebui }}
       DOCKER_E2E_CHUNK: ${{ matrix.chunk_id }}
@@ -467,7 +469,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker pull "${OPENCLAW_DOCKER_E2E_IMAGE}"
+          case "${DOCKER_E2E_CHUNK}" in
+            core)
+              docker pull "${OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE}"
+              ;;
+            package-update)
+              docker pull "${OPENCLAW_DOCKER_E2E_BARE_IMAGE}"
+              ;;
+            plugins-integrations)
+              docker pull "${OPENCLAW_DOCKER_E2E_BARE_IMAGE}"
+              docker pull "${OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE}"
+              ;;
+            *)
+              docker pull "${OPENCLAW_DOCKER_E2E_IMAGE}"
+              ;;
+          esac
 
       - name: Validate chunk credentials
         shell: bash
@@ -534,6 +550,15 @@ jobs:
             const rerun = String(lane.rerunCommand ?? "").replaceAll("`", "\\`");
             console.log(`| \`${lane.name}\` | ${status} | ${lane.elapsedSeconds ?? ""} | ${lane.timedOut ? "yes" : "no"} | \`${rerun}\` |`);
           }
+          const phases = Array.isArray(summary.phases) ? summary.phases : [];
+          if (phases.length > 0) {
+            console.log("");
+            console.log("| Phase | Seconds | Status | Image kind |");
+            console.log("| --- | ---: | --- | --- |");
+            for (const phase of phases) {
+              console.log(`| \`${phase.name}\` | ${phase.elapsedSeconds ?? ""} | ${phase.status ?? ""} | ${phase.imageKind ?? ""} |`);
+            }
+          }
           NODE
 
       - name: Upload Docker E2E chunk artifacts
@@ -596,6 +621,8 @@ jobs:
       OPENCLAW_GEMINI_SETTINGS_JSON: ${{ secrets.OPENCLAW_GEMINI_SETTINGS_JSON }}
       FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
       OPENCLAW_DOCKER_E2E_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.image }}
+      OPENCLAW_DOCKER_E2E_BARE_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.bare_image }}
+      OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.functional_image }}
       OPENCLAW_SKIP_DOCKER_BUILD: "1"
       INCLUDE_OPENWEBUI: ${{ inputs.include_openwebui }}
       DOCKER_E2E_LANES: ${{ inputs.docker_lanes }}
@@ -623,11 +650,12 @@ jobs:
       - name: Hydrate live auth/profile inputs
         run: bash scripts/ci-hydrate-live-auth.sh
 
-      - name: Pull shared Docker E2E image
+      - name: Pull shared Docker E2E images
         shell: bash
         run: |
           set -euo pipefail
-          docker pull "${OPENCLAW_DOCKER_E2E_IMAGE}"
+          docker pull "${OPENCLAW_DOCKER_E2E_BARE_IMAGE}"
+          docker pull "${OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE}"
 
       - name: Validate targeted lane credentials
         shell: bash
@@ -695,6 +723,15 @@ jobs:
             const rerun = String(lane.rerunCommand ?? "").replaceAll("`", "\\`");
             console.log(`| \`${lane.name}\` | ${status} | ${lane.elapsedSeconds ?? ""} | ${lane.timedOut ? "yes" : "no"} | \`${rerun}\` |`);
           }
+          const phases = Array.isArray(summary.phases) ? summary.phases : [];
+          if (phases.length > 0) {
+            console.log("");
+            console.log("| Phase | Seconds | Status | Image kind |");
+            console.log("| --- | ---: | --- | --- |");
+            for (const phase of phases) {
+              console.log(`| \`${phase.name}\` | ${phase.elapsedSeconds ?? ""} | ${phase.status ?? ""} | ${phase.imageKind ?? ""} |`);
+            }
+          }
           NODE
 
       - name: Upload targeted Docker E2E artifacts
@@ -714,6 +751,7 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
       OPENCLAW_DOCKER_E2E_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.image }}
+      OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE: ${{ needs.prepare_docker_e2e_image.outputs.functional_image }}
       OPENCLAW_SKIP_DOCKER_BUILD: "1"
     steps:
       - name: Checkout selected ref
@@ -758,6 +796,8 @@ jobs:
       packages: write
     outputs:
       image: ${{ steps.image.outputs.image }}
+      bare_image: ${{ steps.image.outputs.bare_image }}
+      functional_image: ${{ steps.image.outputs.functional_image }}
     env:
       DOCKER_BUILD_SUMMARY: "false"
       DOCKER_BUILD_RECORD_UPLOAD: "false"
@@ -768,7 +808,7 @@ jobs:
           ref: ${{ needs.validate_selected_ref.outputs.selected_sha }}
           fetch-depth: 1
 
-      - name: Resolve shared Docker E2E image tag
+      - name: Resolve shared Docker E2E image tags
         id: image
         shell: bash
         env:
@@ -776,9 +816,14 @@ jobs:
         run: |
           set -euo pipefail
           repository="${GITHUB_REPOSITORY,,}"
-          image="ghcr.io/${repository}-docker-e2e:${SELECTED_SHA}"
+          bare_image="ghcr.io/${repository}-docker-e2e-bare:${SELECTED_SHA}"
+          functional_image="ghcr.io/${repository}-docker-e2e-functional:${SELECTED_SHA}"
+          image="$functional_image"
           echo "image=$image" >> "$GITHUB_OUTPUT"
-          echo "Shared Docker E2E image: \`$image\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "bare_image=$bare_image" >> "$GITHUB_OUTPUT"
+          echo "functional_image=$functional_image" >> "$GITHUB_OUTPUT"
+          echo "Shared Docker E2E bare image: \`$bare_image\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Shared Docker E2E functional image: \`$functional_image\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Log in to GHCR
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
@@ -790,16 +835,33 @@ jobs:
       - name: Setup Docker builder
         uses: useblacksmith/setup-docker-builder@ac083cc84672d01c60d5e8561d0a939b697de542 # v1
 
-      - name: Build and push shared Docker E2E image
+      - name: Build and push bare Docker E2E image
+        if: inputs.include_release_path_suites || inputs.docker_lanes != ''
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
           file: ./scripts/e2e/Dockerfile
           target: build
           platforms: linux/amd64
-          cache-from: type=gha,scope=docker-e2e
-          cache-to: type=gha,mode=max,scope=docker-e2e
-          tags: ${{ steps.image.outputs.image }}
+          cache-from: type=gha,scope=docker-e2e-bare
+          cache-to: type=gha,mode=max,scope=docker-e2e-bare
+          tags: ${{ steps.image.outputs.bare_image }}
+          sbom: true
+          provenance: mode=max
+          push: true
+
+      - name: Build and push functional Docker E2E image
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          file: ./scripts/e2e/Dockerfile
+          target: functional
+          platforms: linux/amd64
+          cache-from: |
+            type=gha,scope=docker-e2e-bare
+            type=gha,scope=docker-e2e-functional
+          cache-to: type=gha,mode=max,scope=docker-e2e-functional
+          tags: ${{ steps.image.outputs.functional_image }}
           sbom: true
           provenance: mode=max
           push: true

@@ -60,3 +60,9 @@ RUN mkdir -p dist/control-ui \
   && printf '%s\n' '<!doctype html><title>OpenClaw Control UI</title>' > dist/control-ui/index.html
 
 CMD ["bash"]
+
+FROM build AS functional
+
+RUN node scripts/stage-bundled-plugin-runtime-deps.mjs
+
+CMD ["bash"]

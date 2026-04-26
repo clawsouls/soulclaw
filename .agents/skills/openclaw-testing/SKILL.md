@@ -82,7 +82,8 @@ OPENCLAW_DOCKER_ALL_LANES=<lane> \
 OPENCLAW_DOCKER_ALL_BUILD=0 \
 OPENCLAW_DOCKER_ALL_PREFLIGHT=0 \
 OPENCLAW_SKIP_DOCKER_BUILD=1 \
-OPENCLAW_DOCKER_E2E_IMAGE='<prepared-image>' \
+OPENCLAW_DOCKER_E2E_BARE_IMAGE='<prepared-bare-image>' \
+OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE='<prepared-functional-image>' \
 pnpm test:docker:all
 ```
 
@@ -99,7 +100,7 @@ docker_lanes: install-e2e bundled-channel-update-acpx
 ```
 
 That skips the three chunk matrix and runs one targeted Docker job against the
-prepared GHCR image. Release-path normal mode remains max three Docker chunk
+prepared GHCR images. Release-path normal mode remains max three Docker chunk
 jobs:
 
 - `core`
@@ -108,7 +109,9 @@ jobs:
 
 Every scheduler run writes `.artifacts/docker-tests/**/summary.json`. Read it
 before rerunning. Lane entries include `command`, `rerunCommand`, status,
-timing, timeout state, and log file path.
+timing, timeout state, image kind, and log file path. The summary also includes
+top-level phase timings for preflight, image build, package prep, lane pools,
+and cleanup.
 
 ## Docker Expected Timings
 
