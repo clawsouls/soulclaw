@@ -47,6 +47,8 @@ describe("npm Telegram live Docker E2E", () => {
     expect(workflow).toContain("approve_release_manager:");
     expect(workflow).toContain("environment: npm-release");
     expect(workflow).toContain("needs: approve_release_manager");
+    expect(workflow).not.toContain("Require main workflow ref");
+    expect(workflow).not.toContain("refs/heads/main");
     expect(workflow).not.toContain('new Set(["admin", "write"])');
     expect(workflow).not.toContain("data.role_name");
     expect(workflow).not.toContain("github.rest.teams.listMembersInOrg");
