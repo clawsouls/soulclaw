@@ -72,6 +72,7 @@ Docker is expensive. First inspect the scheduler without running Docker:
 ```bash
 OPENCLAW_DOCKER_ALL_DRY_RUN=1 pnpm test:docker:all
 OPENCLAW_DOCKER_ALL_DRY_RUN=1 OPENCLAW_DOCKER_ALL_LANES=install-e2e pnpm test:docker:all
+OPENCLAW_DOCKER_ALL_LANES=install-e2e node scripts/test-docker-all.mjs --plan-json
 ```
 
 Run one failed lane locally only when explicitly asked or when GitHub is not
@@ -110,7 +111,13 @@ normal mode remains max three Docker chunk jobs:
 
 Docker E2E images never copy repo sources as the app under test: the bare image
 is a Node/Git runner, and the functional image installs the same prebuilt npm
-tarball that bare lanes mount. Every scheduler run writes
+tarball that bare lanes mount. `scripts/package-openclaw-for-docker.mjs` is the
+single packer for local scripts and CI. `scripts/test-docker-all.mjs
+--plan-json` is the scheduler-owned CI plan for image kind, package, live image,
+lane, and credential needs. Docker lane definitions live in the single scenario
+catalog `scripts/lib/docker-e2e-scenarios.mjs`; planner logic lives in
+`scripts/lib/docker-e2e-plan.mjs`. `scripts/docker-e2e.mjs` converts plan and
+summary JSON into GitHub outputs and step summaries. Every scheduler run writes
 `.artifacts/docker-tests/**/summary.json`. Read it
 before rerunning. Lane entries include `command`, `rerunCommand`, status,
 timing, timeout state, image kind, and log file path. The summary also includes
