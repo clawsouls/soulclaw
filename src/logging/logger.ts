@@ -269,7 +269,7 @@ function stringifyFileLogMessagePart(value: unknown): string | undefined {
   try {
     return JSON.stringify(value);
   } catch {
-    return String(value);
+    return undefined;
   }
 }
 
