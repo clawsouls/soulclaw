@@ -466,56 +466,54 @@ jobs:
       - name: Hydrate live auth/profile inputs
         run: bash scripts/ci-hydrate-live-auth.sh
 
+      - name: Plan Docker E2E chunk
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/docker-tests
+          export OPENCLAW_DOCKER_ALL_PROFILE=release-path
+          export OPENCLAW_DOCKER_ALL_CHUNK="${DOCKER_E2E_CHUNK}"
+          export OPENCLAW_DOCKER_ALL_INCLUDE_OPENWEBUI="${INCLUDE_OPENWEBUI}"
+          node scripts/test-docker-all.mjs --plan-json > ".artifacts/docker-tests/release-${DOCKER_E2E_CHUNK}-plan.json"
+          node scripts/docker-e2e.mjs github-outputs ".artifacts/docker-tests/release-${DOCKER_E2E_CHUNK}-plan.json" >> "$GITHUB_OUTPUT"
+
       - name: Download OpenClaw Docker E2E package
+        if: steps.plan.outputs.needs_package == '1'
         uses: actions/download-artifact@v8
         with:
           name: docker-e2e-package
           path: .artifacts/docker-e2e-package
 
-      - name: Pull shared Docker E2E image
+      - name: Pull shared bare Docker E2E image
+        if: steps.plan.outputs.needs_bare_image == '1'
         shell: bash
         run: |
           set -euo pipefail
-          case "${DOCKER_E2E_CHUNK}" in
-            core)
-              docker pull "${OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE}"
-              ;;
-            package-update)
-              docker pull "${OPENCLAW_DOCKER_E2E_BARE_IMAGE}"
-              ;;
-            plugins-integrations)
-              docker pull "${OPENCLAW_DOCKER_E2E_BARE_IMAGE}"
-              docker pull "${OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE}"
-              ;;
-            *)
-              docker pull "${OPENCLAW_DOCKER_E2E_IMAGE}"
-              ;;
-          esac
+          docker pull "${OPENCLAW_DOCKER_E2E_BARE_IMAGE}"
+
+      - name: Pull shared functional Docker E2E image
+        if: steps.plan.outputs.needs_functional_image == '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "${OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE}"
 
       - name: Validate chunk credentials
         shell: bash
         run: |
           set -euo pipefail
-          case "${DOCKER_E2E_CHUNK}" in
-            package-update)
-              [[ -n "${OPENAI_API_KEY:-}" ]] || {
-                echo "OPENAI_API_KEY is required for installer Docker E2E." >&2
-                exit 1
-              }
-              if [[ -z "${ANTHROPIC_API_TOKEN:-}" && -z "${ANTHROPIC_API_KEY:-}" ]]; then
-                echo "ANTHROPIC_API_TOKEN or ANTHROPIC_API_KEY is required for installer Docker E2E." >&2
-                exit 1
-              fi
-              ;;
-            plugins-integrations)
-              if [[ "${INCLUDE_OPENWEBUI}" == "true" ]]; then
-                [[ -n "${OPENAI_API_KEY:-}" ]] || {
-                  echo "OPENAI_API_KEY is required for the Open WebUI Docker smoke." >&2
-                  exit 1
-                }
-              fi
-              ;;
-          esac
+          credentials=",${{ steps.plan.outputs.credentials }},"
+          if [[ "$credentials" == *",openai,"* ]]; then
+            [[ -n "${OPENAI_API_KEY:-}" ]] || {
+              echo "OPENAI_API_KEY is required for selected Docker E2E lanes." >&2
+              exit 1
+            }
+          fi
+          if [[ "$credentials" == *",anthropic,"* && -z "${ANTHROPIC_API_TOKEN:-}" && -z "${ANTHROPIC_API_KEY:-}" ]]; then
+            echo "ANTHROPIC_API_TOKEN or ANTHROPIC_API_KEY is required for selected Docker E2E lanes." >&2
+            exit 1
+          fi
 
       - name: Run Docker E2E chunk
         shell: bash
@@ -542,31 +540,7 @@ jobs:
             echo "Docker chunk summary missing: \`$summary\`" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          node --input-type=module - "$summary" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-          import fs from "node:fs";
-          const summary = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          const lanes = Array.isArray(summary.lanes) ? summary.lanes : [];
-          console.log(`### Docker E2E chunk: ${summary.chunk ?? "unknown"}`);
-          console.log("");
-          console.log(`Status: \`${summary.status}\``);
-          console.log("");
-          console.log("| Lane | Status | Seconds | Timed out | Rerun |");
-          console.log("| --- | ---: | ---: | --- | --- |");
-          for (const lane of lanes) {
-            const status = lane.status === 0 ? "pass" : `fail ${lane.status}`;
-            const rerun = String(lane.rerunCommand ?? "").replaceAll("`", "\\`");
-            console.log(`| \`${lane.name}\` | ${status} | ${lane.elapsedSeconds ?? ""} | ${lane.timedOut ? "yes" : "no"} | \`${rerun}\` |`);
-          }
-          const phases = Array.isArray(summary.phases) ? summary.phases : [];
-          if (phases.length > 0) {
-            console.log("");
-            console.log("| Phase | Seconds | Status | Image kind |");
-            console.log("| --- | ---: | --- | --- |");
-            for (const phase of phases) {
-              console.log(`| \`${phase.name}\` | ${phase.elapsedSeconds ?? ""} | ${phase.status ?? ""} | ${phase.imageKind ?? ""} |`);
-            }
-          }
-          NODE
+          node scripts/docker-e2e.mjs summary "$summary" "Docker E2E chunk: ${DOCKER_E2E_CHUNK:-unknown}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Docker E2E chunk artifacts
         if: always()
@@ -658,71 +632,65 @@ jobs:
       - name: Hydrate live auth/profile inputs
         run: bash scripts/ci-hydrate-live-auth.sh
 
-      - name: Detect targeted Docker lane image needs
-        id: lane_class
+      - name: Plan targeted Docker E2E lanes
+        id: plan
         shell: bash
         run: |
           set -euo pipefail
-          needs_e2e=0
-          IFS=', ' read -r -a lanes <<< "${DOCKER_E2E_LANES}"
-          for lane in "${lanes[@]}"; do
-            [[ -z "$lane" ]] && continue
-            if [[ "$lane" != live-* ]]; then
-              needs_e2e=1
-              break
-            fi
-          done
-          echo "needs_e2e=${needs_e2e}" >> "$GITHUB_OUTPUT"
+          mkdir -p .artifacts/docker-tests
+          export OPENCLAW_DOCKER_ALL_LANES="${DOCKER_E2E_LANES}"
+          export OPENCLAW_DOCKER_ALL_INCLUDE_OPENWEBUI="${INCLUDE_OPENWEBUI}"
+          node scripts/test-docker-all.mjs --plan-json > .artifacts/docker-tests/targeted-plan.json
+          node scripts/docker-e2e.mjs github-outputs .artifacts/docker-tests/targeted-plan.json >> "$GITHUB_OUTPUT"
 
       - name: Download OpenClaw Docker E2E package
-        if: steps.lane_class.outputs.needs_e2e == '1'
+        if: steps.plan.outputs.needs_package == '1'
         uses: actions/download-artifact@v8
         with:
           name: docker-e2e-package
           path: .artifacts/docker-e2e-package
 
-      - name: Pull shared Docker E2E images
-        if: steps.lane_class.outputs.needs_e2e == '1'
+      - name: Pull shared bare Docker E2E image
+        if: steps.plan.outputs.needs_bare_image == '1'
         shell: bash
         run: |
           set -euo pipefail
           docker pull "${OPENCLAW_DOCKER_E2E_BARE_IMAGE}"
+
+      - name: Pull shared functional Docker E2E image
+        if: steps.plan.outputs.needs_functional_image == '1'
+        shell: bash
+        run: |
+          set -euo pipefail
           docker pull "${OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE}"
 
       - name: Validate targeted lane credentials
         shell: bash
         run: |
           set -euo pipefail
-          lanes=" ${DOCKER_E2E_LANES//,/ } "
-          if [[ "$lanes" == *" install-e2e "* ]]; then
+          credentials=",${{ steps.plan.outputs.credentials }},"
+          if [[ "$credentials" == *",openai,"* ]]; then
             [[ -n "${OPENAI_API_KEY:-}" ]] || {
-              echo "OPENAI_API_KEY is required for installer Docker E2E." >&2
+              echo "OPENAI_API_KEY is required for selected Docker E2E lanes." >&2
               exit 1
             }
-            if [[ -z "${ANTHROPIC_API_TOKEN:-}" && -z "${ANTHROPIC_API_KEY:-}" ]]; then
-              echo "ANTHROPIC_API_TOKEN or ANTHROPIC_API_KEY is required for installer Docker E2E." >&2
-              exit 1
-            fi
           fi
-          if [[ "$lanes" == *" openwebui "* || "$lanes" == *" openai-web-search-minimal "* ]]; then
-            [[ -n "${OPENAI_API_KEY:-}" ]] || {
-              echo "OPENAI_API_KEY is required for selected OpenAI Docker lanes." >&2
-              exit 1
-            }
+          if [[ "$credentials" == *",anthropic,"* && -z "${ANTHROPIC_API_TOKEN:-}" && -z "${ANTHROPIC_API_KEY:-}" ]]; then
+            echo "ANTHROPIC_API_TOKEN or ANTHROPIC_API_KEY is required for selected Docker E2E lanes." >&2
+            exit 1
           fi
 
       - name: Run targeted Docker E2E lanes
         shell: bash
         run: |
           set -euo pipefail
-          lanes=" ${DOCKER_E2E_LANES//,/ } "
           export OPENCLAW_DOCKER_ALL_LANES="${DOCKER_E2E_LANES}"
           export OPENCLAW_DOCKER_ALL_PREFLIGHT=0
           export OPENCLAW_DOCKER_ALL_FAIL_FAST=0
           export OPENCLAW_DOCKER_ALL_INCLUDE_OPENWEBUI="${INCLUDE_OPENWEBUI}"
           export OPENCLAW_DOCKER_ALL_LOG_DIR=".artifacts/docker-tests/targeted"
           export OPENCLAW_DOCKER_ALL_TIMINGS_FILE=".artifacts/docker-tests/targeted-timings.json"
-          if [[ "$lanes" == *" live-"* ]]; then
+          if [[ "${{ steps.plan.outputs.needs_live_image }}" == "1" ]]; then
             pnpm test:docker:live-build
           fi
           export OPENCLAW_DOCKER_ALL_BUILD=0
@@ -739,31 +707,7 @@ jobs:
             echo "Docker targeted summary missing: \`$summary\`" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          node --input-type=module - "$summary" <<'NODE' >> "$GITHUB_STEP_SUMMARY"
-          import fs from "node:fs";
-          const summary = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          const lanes = Array.isArray(summary.lanes) ? summary.lanes : [];
-          console.log("### Docker E2E targeted lanes");
-          console.log("");
-          console.log(`Status: \`${summary.status}\``);
-          console.log("");
-          console.log("| Lane | Status | Seconds | Timed out | Rerun |");
-          console.log("| --- | ---: | ---: | --- | --- |");
-          for (const lane of lanes) {
-            const status = lane.status === 0 ? "pass" : `fail ${lane.status}`;
-            const rerun = String(lane.rerunCommand ?? "").replaceAll("`", "\\`");
-            console.log(`| \`${lane.name}\` | ${status} | ${lane.elapsedSeconds ?? ""} | ${lane.timedOut ? "yes" : "no"} | \`${rerun}\` |`);
-          }
-          const phases = Array.isArray(summary.phases) ? summary.phases : [];
-          if (phases.length > 0) {
-            console.log("");
-            console.log("| Phase | Seconds | Status | Image kind |");
-            console.log("| --- | ---: | --- | --- |");
-            for (const phase of phases) {
-              console.log(`| \`${phase.name}\` | ${phase.elapsedSeconds ?? ""} | ${phase.status ?? ""} | ${phase.imageKind ?? ""} |`);
-            }
-          }
-          NODE
+          node scripts/docker-e2e.mjs summary "$summary" "Docker E2E targeted lanes" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload targeted Docker E2E artifacts
         if: always()
@@ -829,6 +773,11 @@ jobs:
       image: ${{ steps.image.outputs.image }}
       bare_image: ${{ steps.image.outputs.bare_image }}
       functional_image: ${{ steps.image.outputs.functional_image }}
+      needs_bare_image: ${{ steps.plan.outputs.needs_bare_image }}
+      needs_e2e_image: ${{ steps.plan.outputs.needs_e2e_image }}
+      needs_functional_image: ${{ steps.plan.outputs.needs_functional_image }}
+      needs_live_image: ${{ steps.plan.outputs.needs_live_image }}
+      needs_package: ${{ steps.plan.outputs.needs_package }}
     env:
       DOCKER_BUILD_SUMMARY: "false"
       DOCKER_BUILD_RECORD_UPLOAD: "false"
@@ -856,8 +805,8 @@ jobs:
           echo "Shared Docker E2E bare image: \`$bare_image\`" >> "$GITHUB_STEP_SUMMARY"
           echo "Shared Docker E2E functional image: \`$functional_image\`" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Classify selected Docker lanes
-        id: lane_class
+      - name: Plan Docker E2E images
+        id: plan
         shell: bash
         env:
           DOCKER_E2E_LANES: ${{ inputs.docker_lanes }}
@@ -865,23 +814,21 @@ jobs:
           INCLUDE_OPENWEBUI: ${{ inputs.include_openwebui }}
         run: |
           set -euo pipefail
-          needs_e2e=0
-          if [[ "${INCLUDE_RELEASE_PATH_SUITES}" == "true" || "${INCLUDE_OPENWEBUI}" == "true" ]]; then
-            needs_e2e=1
+          mkdir -p .artifacts/docker-tests
+          if [[ "${INCLUDE_RELEASE_PATH_SUITES}" == "true" ]]; then
+            export OPENCLAW_DOCKER_ALL_PROFILE=release-path
+            export OPENCLAW_DOCKER_ALL_PLAN_RELEASE_ALL=1
           elif [[ -n "${DOCKER_E2E_LANES}" ]]; then
-            IFS=', ' read -r -a lanes <<< "${DOCKER_E2E_LANES}"
-            for lane in "${lanes[@]}"; do
-              [[ -z "$lane" ]] && continue
-              if [[ "$lane" != live-* ]]; then
-                needs_e2e=1
-                break
-              fi
-            done
+            export OPENCLAW_DOCKER_ALL_LANES="${DOCKER_E2E_LANES}"
+          elif [[ "${INCLUDE_OPENWEBUI}" == "true" ]]; then
+            export OPENCLAW_DOCKER_ALL_LANES=openwebui
           fi
-          echo "needs_e2e=${needs_e2e}" >> "$GITHUB_OUTPUT"
+          export OPENCLAW_DOCKER_ALL_INCLUDE_OPENWEBUI="${INCLUDE_OPENWEBUI}"
+          node scripts/test-docker-all.mjs --plan-json > .artifacts/docker-tests/plan.json
+          node scripts/docker-e2e.mjs github-outputs .artifacts/docker-tests/plan.json >> "$GITHUB_OUTPUT"
 
       - name: Setup Node environment
-        if: steps.lane_class.outputs.needs_e2e == '1'
+        if: steps.plan.outputs.needs_package == '1'
         uses: ./.github/actions/setup-node-env
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -889,19 +836,17 @@ jobs:
           install-bun: "true"
 
       - name: Pack OpenClaw package for Docker E2E
-        if: steps.lane_class.outputs.needs_e2e == '1'
+        if: steps.plan.outputs.needs_package == '1'
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .artifacts/docker-e2e-package
-          pnpm build
-          node --import tsx --input-type=module -e 'const { writePackageDistInventory } = await import("./src/infra/package-dist-inventory.ts"); await writePackageDistInventory(process.cwd());'
-          npm pack --silent --ignore-scripts --pack-destination .artifacts/docker-e2e-package >/tmp/openclaw-docker-e2e-pack.out
-          packed="$(tail -n 1 /tmp/openclaw-docker-e2e-pack.out | tr -d '\r')"
-          mv ".artifacts/docker-e2e-package/$packed" .artifacts/docker-e2e-package/openclaw-current.tgz
+          node scripts/package-openclaw-for-docker.mjs \
+            --output-dir .artifacts/docker-e2e-package \
+            --output-name openclaw-current.tgz
 
       - name: Upload OpenClaw Docker E2E package
-        if: steps.lane_class.outputs.needs_e2e == '1'
+        if: steps.plan.outputs.needs_package == '1'
         uses: actions/upload-artifact@v7
         with:
           name: docker-e2e-package
@@ -909,7 +854,7 @@ jobs:
           if-no-files-found: error
 
       - name: Log in to GHCR
-        if: steps.lane_class.outputs.needs_e2e == '1'
+        if: steps.plan.outputs.needs_e2e_image == '1'
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ghcr.io
@@ -917,11 +862,11 @@ jobs:
           password: ${{ github.token }}
 
       - name: Setup Docker builder
-        if: steps.lane_class.outputs.needs_e2e == '1'
+        if: steps.plan.outputs.needs_e2e_image == '1'
         uses: useblacksmith/setup-docker-builder@ac083cc84672d01c60d5e8561d0a939b697de542 # v1
 
       - name: Build and push bare Docker E2E image
-        if: steps.lane_class.outputs.needs_e2e == '1' && (inputs.include_release_path_suites || inputs.docker_lanes != '')
+        if: steps.plan.outputs.needs_bare_image == '1'
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
@@ -936,7 +881,7 @@ jobs:
           push: true
 
       - name: Build and push functional Docker E2E image
-        if: steps.lane_class.outputs.needs_e2e == '1'
+        if: steps.plan.outputs.needs_functional_image == '1'
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
