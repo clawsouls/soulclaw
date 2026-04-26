@@ -580,7 +580,7 @@ export const th: TranslationMap = {
       total: "ทั้งหมด {count}",
       avg: "เฉลี่ย",
       all: "ทั้งหมด",
-      recent: "ดูล่าสุด",
+      recent: "ดูล่า��ุด",
       recentShort: "ล่าสุด",
       sort: "เรียงลำดับ",
       ascending: "น้อยไปมาก",
