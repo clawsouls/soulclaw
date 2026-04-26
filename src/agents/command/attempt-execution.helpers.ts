@@ -237,8 +237,9 @@ export function formatClaudeCliFallbackPrelude(
     CLAUDE_CLI_FALLBACK_PRELUDE_MIN_TURN_CHARS,
     options?.charBudget ?? CLAUDE_CLI_FALLBACK_PRELUDE_DEFAULT_CHAR_BUDGET,
   );
-  const sections: string[] = ["## Prior session context (from claude-cli)"];
-  let remaining = charBudget - sections[0]!.length;
+  const heading = "## Prior session context (from claude-cli)";
+  const sections: string[] = [heading];
+  let remaining = charBudget - heading.length;
   if (seed.summaryText) {
     const summarySection = `\nSummary of earlier conversation:\n${seed.summaryText}`;
     if (summarySection.length <= remaining) {
