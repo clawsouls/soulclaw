@@ -204,6 +204,21 @@ export function detectChangedLanes(changedPaths, options = {}) {
 }
 
 /**
+ * @param {{ paths: string[]; base: string; head?: string; staged?: boolean }} params
+ * @returns {ChangedLaneResult}
+ */
+export function detectChangedLanesForPaths(params) {
+  const packageJsonChangeKind = params.paths.includes("package.json")
+    ? classifyPackageJsonChangeFromGit({
+        base: params.base,
+        head: params.head,
+        staged: params.staged,
+      })
+    : null;
+  return detectChangedLanes(params.paths, { packageJsonChangeKind });
+}
+
+/**
  * @param {{ base: string; head?: string; includeWorktree?: boolean; cwd?: string }} params
  * @returns {string[]}
  */
@@ -458,14 +473,12 @@ if (isDirectRun()) {
       : args.staged
         ? listStagedChangedPaths()
         : listChangedPathsFromGit({ base: args.base, head: args.head });
-  const packageJsonChangeKind = paths.includes("package.json")
-    ? classifyPackageJsonChangeFromGit({
-        base: args.base,
-        head: args.head,
-        staged: args.staged,
-      })
-    : null;
-  const result = detectChangedLanes(paths, { packageJsonChangeKind });
+  const result = detectChangedLanesForPaths({
+    paths,
+    base: args.base,
+    head: args.head,
+    staged: args.staged,
+  });
   if (args.githubOutput) {
     writeChangedLaneGitHubOutput(result);
   }

@@ -734,9 +734,6 @@ export function resolveChangedTestTargetPlan(changedPaths, options = {}) {
       targets.push(changedPath);
     }
   }
-  if (useBroadFallback && changedLanes.lanes.all) {
-    return { mode: "broad", targets: [] };
-  }
   if (useBroadFallback && changedLanes.extensionImpactFromCore) {
     targets.push("extensions");
   }

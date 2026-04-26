@@ -1,7 +1,6 @@
 import { performance } from "node:perf_hooks";
 import {
-  classifyPackageJsonChangeFromGit,
-  detectChangedLanes,
+  detectChangedLanesForPaths,
   listChangedPathsFromGit,
   listStagedChangedPaths,
   normalizeChangedPath,
@@ -285,14 +284,12 @@ if (isDirectRun()) {
       : args.staged
         ? listStagedChangedPaths()
         : listChangedPathsFromGit({ base: args.base, head: args.head });
-  const packageJsonChangeKind = paths.includes("package.json")
-    ? classifyPackageJsonChangeFromGit({
-        base: args.base,
-        head: args.head,
-        staged: args.staged,
-      })
-    : null;
-  const result = detectChangedLanes(paths, { packageJsonChangeKind });
+  const result = detectChangedLanesForPaths({
+    paths,
+    base: args.base,
+    head: args.head,
+    staged: args.staged,
+  });
   process.exitCode = await runChangedCheck(result, {
     ...args,
     explicitPaths: args.paths.length > 0,
