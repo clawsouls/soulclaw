@@ -139,6 +139,9 @@ async function main() {
     }
   }
 
+  console.error("==> Checking OpenClaw package tarball");
+  await run("node", ["scripts/check-openclaw-package-tarball.mjs", tarball]);
+
   process.stdout.write(`${tarball}\n`);
 }
 

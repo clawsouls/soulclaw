@@ -8,6 +8,7 @@ function usage() {
     "Usage:",
     "  node scripts/docker-e2e.mjs github-outputs <plan.json>",
     "  node scripts/docker-e2e.mjs summary <summary.json> <title>",
+    "  node scripts/docker-e2e.mjs failed-reruns <summary.json>",
   ].join("\n");
 }
 
@@ -65,7 +66,21 @@ function summaryMarkdown(summary, title) {
       );
     }
   }
+  const failedReruns = failedRerunCommands(summary);
+  if (failedReruns.length > 0) {
+    lines.push("", "Failed lane reruns:", "");
+    for (const command of failedReruns) {
+      lines.push(`- ${inlineCode(command)}`);
+    }
+  }
   return lines.join("\n");
+}
+
+function failedRerunCommands(summary) {
+  const lanes = Array.isArray(summary.lanes) ? summary.lanes : [];
+  return lanes
+    .filter((lane) => lane.status !== 0 && lane.rerunCommand)
+    .map((lane) => lane.rerunCommand);
 }
 
 const [command, file, ...args] = process.argv.slice(2);
@@ -81,6 +96,8 @@ if (command === "github-outputs") {
     throw new Error(usage());
   }
   process.stdout.write(`${summaryMarkdown(readJson(file), title)}\n`);
+} else if (command === "failed-reruns") {
+  process.stdout.write(`${failedRerunCommands(readJson(file)).join("\n")}\n`);
 } else {
   throw new Error(`unknown command: ${command}\n${usage()}`);
 }
