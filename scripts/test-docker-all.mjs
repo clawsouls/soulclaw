@@ -823,7 +823,7 @@ function dockerPreflightContainerNames(raw) {
 
 function runShellCommand({ command, env, label, logFile, timeoutMs }) {
   return new Promise((resolve) => {
-    const child = spawn("bash", ["-lc", command], {
+    const child = spawn("bash", ["-c", command], {
       cwd: ROOT_DIR,
       detached: process.platform !== "win32",
       env,
@@ -875,7 +875,7 @@ function runShellCommand({ command, env, label, logFile, timeoutMs }) {
 
 function runShellCaptureCommand({ command, env, label, timeoutMs }) {
   return new Promise((resolve) => {
-    const child = spawn("bash", ["-lc", command], {
+    const child = spawn("bash", ["-c", command], {
       cwd: ROOT_DIR,
       detached: process.platform !== "win32",
       env,
