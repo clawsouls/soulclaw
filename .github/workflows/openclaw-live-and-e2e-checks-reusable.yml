@@ -768,12 +768,44 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Setup Docker builder
+      - name: Check existing shared Docker E2E images
+        id: image_exists
         if: steps.plan.outputs.needs_e2e_image == '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bare_exists=0
+          functional_exists=0
+          needs_build=0
+
+          if [[ "${{ steps.plan.outputs.needs_bare_image }}" == "1" ]]; then
+            if docker manifest inspect "${{ steps.image.outputs.bare_image }}" >/dev/null 2>&1; then
+              bare_exists=1
+              echo "Shared Docker E2E bare image already exists: ${{ steps.image.outputs.bare_image }}"
+            else
+              needs_build=1
+            fi
+          fi
+
+          if [[ "${{ steps.plan.outputs.needs_functional_image }}" == "1" ]]; then
+            if docker manifest inspect "${{ steps.image.outputs.functional_image }}" >/dev/null 2>&1; then
+              functional_exists=1
+              echo "Shared Docker E2E functional image already exists: ${{ steps.image.outputs.functional_image }}"
+            else
+              needs_build=1
+            fi
+          fi
+
+          echo "bare_exists=$bare_exists" >> "$GITHUB_OUTPUT"
+          echo "functional_exists=$functional_exists" >> "$GITHUB_OUTPUT"
+          echo "needs_build=$needs_build" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Docker builder
+        if: steps.image_exists.outputs.needs_build == '1'
         uses: useblacksmith/setup-docker-builder@ac083cc84672d01c60d5e8561d0a939b697de542 # v1
 
       - name: Build and push bare Docker E2E image
-        if: steps.plan.outputs.needs_bare_image == '1'
+        if: steps.plan.outputs.needs_bare_image == '1' && steps.image_exists.outputs.bare_exists != '1'
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
@@ -788,7 +820,7 @@ jobs:
           push: true
 
       - name: Build and push functional Docker E2E image
-        if: steps.plan.outputs.needs_functional_image == '1'
+        if: steps.plan.outputs.needs_functional_image == '1' && steps.image_exists.outputs.functional_exists != '1'
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
