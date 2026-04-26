@@ -24,7 +24,6 @@ AGENT_TURN_TIMEOUT_SECONDS="${OPENCLAW_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS:-6
 export NPM_CONFIG_PREFIX="${NPM_CONFIG_PREFIX:-$HOME/.npm-global}"
 mkdir -p "$NPM_CONFIG_PREFIX"
 export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
-export OPENCLAW_DISABLE_BONJOUR="${OPENCLAW_DISABLE_BONJOUR:-1}"
 
 if [[ "$MODELS_MODE" != "both" && "$MODELS_MODE" != "openai" && "$MODELS_MODE" != "anthropic" ]]; then
   echo "ERROR: OPENCLAW_E2E_MODELS must be one of: both|openai|anthropic" >&2

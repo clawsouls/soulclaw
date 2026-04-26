@@ -196,6 +196,32 @@ describe("installUnhandledRejectionHandler - fatal detection", () => {
       );
     });
 
+    it("does not exit on known Bonjour dependency failures", () => {
+      const bonjourCases: unknown[] = [
+        new Error("CIAO ANNOUNCEMENT CANCELLED"),
+        new Error("CIAO PROBING CANCELLED"),
+        Object.assign(
+          new Error("Reached illegal state! IPV4 address change from defined to undefined!"),
+          { name: "AssertionError" },
+        ),
+        Object.assign(
+          new Error(
+            "IP address version must match. Netmask cannot have a version different from the address!",
+          ),
+          { name: "AssertionError" },
+        ),
+      ];
+
+      for (const bonjourErr of bonjourCases) {
+        expectExitCodeFromUnhandled(bonjourErr, []);
+      }
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        "[openclaw] Non-fatal unhandled rejection (continuing):",
+        expect.stringContaining("CIAO ANNOUNCEMENT CANCELLED"),
+      );
+    });
+
     it("exits on generic errors without code", () => {
       const genericErr = new Error("Something went wrong");
 

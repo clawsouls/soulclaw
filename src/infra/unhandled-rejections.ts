@@ -116,6 +116,12 @@ const TRANSIENT_SQLITE_MESSAGE_SNIPPETS = [
   "disk i/o error",
 ];
 
+const CIAO_CANCELLATION_MESSAGE_RE = /^CIAO (?:ANNOUNCEMENT|PROBING) CANCELLED\b/u;
+const CIAO_INTERFACE_ASSERTION_MESSAGE_RE =
+  /REACHED ILLEGAL STATE!?\s+IPV4 ADDRESS CHANGE FROM (?:DEFINED TO UNDEFINED|UNDEFINED TO DEFINED)!?/u;
+const CIAO_NETMASK_ASSERTION_MESSAGE_RE =
+  /IP ADDRESS VERSION MUST MATCH\.\s+NETMASK CANNOT HAVE A VERSION DIFFERENT FROM THE ADDRESS!?/u;
+
 function hasSqliteSignal(err: unknown): boolean {
   if (!err || typeof err !== "object") {
     return false;
@@ -335,8 +341,46 @@ export function isTransientSqliteError(err: unknown): boolean {
   return false;
 }
 
+export function isKnownBonjourDependencyError(err: unknown): boolean {
+  if (!err) {
+    return false;
+  }
+
+  for (const candidate of collectNestedUnhandledErrorCandidates(err)) {
+    const rawMessage =
+      candidate && typeof candidate === "object"
+        ? (candidate as { message?: unknown }).message
+        : undefined;
+    const message =
+      typeof candidate === "string"
+        ? candidate
+        : candidate && typeof candidate === "object"
+          ? typeof rawMessage === "string"
+            ? rawMessage
+            : ""
+          : "";
+    const normalized = message.trim().toUpperCase();
+    if (!normalized) {
+      continue;
+    }
+    if (
+      CIAO_CANCELLATION_MESSAGE_RE.test(normalized) ||
+      CIAO_INTERFACE_ASSERTION_MESSAGE_RE.test(normalized) ||
+      CIAO_NETMASK_ASSERTION_MESSAGE_RE.test(normalized)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function isTransientUnhandledRejectionError(err: unknown): boolean {
-  return isTransientNetworkError(err) || isTransientSqliteError(err);
+  return (
+    isTransientNetworkError(err) ||
+    isTransientSqliteError(err) ||
+    isKnownBonjourDependencyError(err)
+  );
 }
 
 export function registerUnhandledRejectionHandler(handler: UnhandledRejectionHandler): () => void {
