@@ -101,9 +101,11 @@ docker_lanes: install-e2e bundled-channel-update-acpx
 ```
 
 That skips the three chunk matrix and runs one targeted Docker job against the
-prepared GHCR images and the prepared OpenClaw npm tarball. Live-only targeted
-reruns skip the E2E images and build only the live-test image. Release-path
-normal mode remains max three Docker chunk jobs:
+prepared GHCR images and a fresh OpenClaw npm tarball for the selected ref.
+Reruns usually need that new tarball because the fix being tested changed the
+package contents even if the SHA-tagged GHCR Docker image can be reused.
+Live-only targeted reruns skip the E2E images and build only the live-test
+image. Release-path normal mode remains max three Docker chunk jobs:
 
 - `core`
 - `package-update`
@@ -112,17 +114,50 @@ normal mode remains max three Docker chunk jobs:
 Docker E2E images never copy repo sources as the app under test: the bare image
 is a Node/Git runner, and the functional image installs the same prebuilt npm
 tarball that bare lanes mount. `scripts/package-openclaw-for-docker.mjs` is the
-single packer for local scripts and CI. `scripts/test-docker-all.mjs
---plan-json` is the scheduler-owned CI plan for image kind, package, live image,
-lane, and credential needs. Docker lane definitions live in the single scenario
-catalog `scripts/lib/docker-e2e-scenarios.mjs`; planner logic lives in
+single packer for local scripts and CI and validates the tarball inventory
+before Docker consumes it. `scripts/test-docker-all.mjs --plan-json` is the
+scheduler-owned CI plan for image kind, package, live image, lane, and
+credential needs. Docker lane definitions live in the single scenario catalog
+`scripts/lib/docker-e2e-scenarios.mjs`; planner logic lives in
 `scripts/lib/docker-e2e-plan.mjs`. `scripts/docker-e2e.mjs` converts plan and
 summary JSON into GitHub outputs and step summaries. Every scheduler run writes
-`.artifacts/docker-tests/**/summary.json`. Read it
+`.artifacts/docker-tests/**/summary.json` plus `failures.json`. Read those
 before rerunning. Lane entries include `command`, `rerunCommand`, status,
 timing, timeout state, image kind, and log file path. The summary also includes
 top-level phase timings for preflight, image build, package prep, lane pools,
-and cleanup.
+and cleanup. Use `pnpm test:docker:timings <summary.json>` to rank slow lanes
+and phases before deciding whether a broader rerun is justified.
+
+## Cheap Docker Reruns
+
+First derive the smallest rerun command from artifacts:
+
+```bash
+pnpm test:docker:rerun <github-run-id>
+pnpm test:docker:rerun .artifacts/docker-tests/<run>/failures.json
+```
+
+The script downloads Docker E2E artifacts for a GitHub run, reads
+`summary.json`/`failures.json`, and prints a combined targeted workflow command
+plus per-lane commands. Prefer the combined targeted command when several lanes
+failed for the same patch:
+
+```bash
+gh workflow run openclaw-live-and-e2e-checks-reusable.yml \
+  -f ref=<sha> \
+  -f include_repo_e2e=false \
+  -f include_release_path_suites=false \
+  -f include_openwebui=false \
+  -f docker_lanes='install-e2e bundled-channel-update-acpx' \
+  -f include_live_suites=false \
+  -f live_models_only=false
+```
+
+That path still runs the prepare job, so it creates a new tarball for `<sha>`.
+If the SHA-tagged GHCR bare/functional image already exists, CI skips rebuilding
+that image and only uploads the fresh package artifact before the targeted lane
+job. Do not rerun the full three-chunk release path unless the failed lane list
+or touched surface really requires it.
 
 ## Docker Expected Timings
 
@@ -158,12 +193,14 @@ lane log/artifacts first, not “run the whole thing again.”
 ## Failure Workflow
 
 1. Identify exact failing job, SHA, lane, and artifact path.
-2. Read `summary.json` and the failed lane log tail.
-3. If the lane has `rerunCommand`, use that command as the starting point.
-4. For Docker release failures, dispatch `docker_lanes=<failed-lane>` on GitHub
-   before considering local Docker.
-5. Patch narrowly, then rerun the failed file/lane only.
-6. Broaden to `pnpm check:changed` or CI only after the isolated proof passes.
+2. Read `failures.json`, `summary.json`, and the failed lane log tail.
+3. Use `pnpm test:docker:rerun <run-id|failures.json>` to generate targeted
+   GitHub rerun commands.
+4. If the lane has `rerunCommand`, use that only as a local starting point.
+5. For Docker release failures, dispatch targeted `docker_lanes=<failed-lane>`
+   on GitHub before considering local Docker.
+6. Patch narrowly, then rerun the failed file/lane only.
+7. Broaden to `pnpm check:changed` or CI only after the isolated proof passes.
 
 ## When To Escalate
 
@@ -171,6 +208,6 @@ lane log/artifacts first, not “run the whole thing again.”
   validation.
 - Build output, lazy imports, package boundaries, or published surfaces:
   include `pnpm build`.
-- Workflow edits: run `actionlint` or equivalent workflow sanity.
+- Workflow edits: run `pnpm check:workflows`.
 - Release branch or tag validation: use release docs and GitHub workflows; avoid
   local Docker unless Peter explicitly asks.
