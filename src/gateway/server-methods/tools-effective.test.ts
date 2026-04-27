@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrorCodes } from "../protocol/index.js";
-import { toolsEffectiveHandlers } from "./tools-effective.js";
+import { __testing, toolsEffectiveHandlers } from "./tools-effective.js";
 
 const runtimeMocks = vi.hoisted(() => ({
   deliveryContextFromSession: vi.fn(() => ({
@@ -29,6 +29,7 @@ const runtimeMocks = vi.hoisted(() => ({
       model: "gpt-4.1",
     },
   })),
+  getActivePluginRegistryVersion: vi.fn(() => 1),
   resolveEffectiveToolInventory: vi.fn(() => ({
     agentId: "main",
     profile: "coding",
@@ -77,6 +78,9 @@ function createInvokeParams(params: Record<string, unknown>) {
 describe("tools.effective handler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __testing.resetToolsEffectiveCacheForTest();
+    __testing.resetToolsEffectiveNowForTest();
+    runtimeMocks.getActivePluginRegistryVersion.mockReturnValue(1);
   });
 
   it("rejects invalid params", async () => {
@@ -165,6 +169,93 @@ describe("tools.effective handler", () => {
         modelId: "gpt-4.1",
       }),
     );
+  });
+
+  it("serves repeated requests from the fresh inventory cache", async () => {
+    const first = createInvokeParams({ sessionKey: "main:abc" });
+    await first.invoke();
+    const second = createInvokeParams({ sessionKey: "main:abc" });
+    await second.invoke();
+
+    expect(runtimeMocks.resolveEffectiveToolInventory).toHaveBeenCalledTimes(1);
+    expect((first.respond.mock.calls[0] as RespondCall | undefined)?.[0]).toBe(true);
+    expect((second.respond.mock.calls[0] as RespondCall | undefined)?.[0]).toBe(true);
+  });
+
+  it("coalesces identical cache misses while inventory resolution is pending", async () => {
+    const first = createInvokeParams({ sessionKey: "main:abc" });
+    const second = createInvokeParams({ sessionKey: "main:abc" });
+
+    await Promise.all([first.invoke(), second.invoke()]);
+
+    expect(runtimeMocks.resolveEffectiveToolInventory).toHaveBeenCalledTimes(1);
+    expect((first.respond.mock.calls[0] as RespondCall | undefined)?.[0]).toBe(true);
+    expect((second.respond.mock.calls[0] as RespondCall | undefined)?.[0]).toBe(true);
+  });
+
+  it("returns stale cached inventory immediately while refreshing in the background", async () => {
+    let now = 1_000;
+    __testing.setToolsEffectiveNowForTest(() => now);
+    const stalePayload = {
+      agentId: "main",
+      profile: "coding",
+      groups: [
+        {
+          id: "core",
+          label: "Built-in tools",
+          source: "core",
+          tools: [
+            {
+              id: "read",
+              label: "Read",
+              description: "Read files",
+              rawDescription: "Read files",
+              source: "core",
+            },
+          ],
+        },
+      ],
+    };
+    const refreshedPayload = {
+      agentId: "main",
+      profile: "coding",
+      groups: [
+        {
+          id: "core",
+          label: "Built-in tools",
+          source: "core",
+          tools: [
+            {
+              id: "exec",
+              label: "Exec",
+              description: "Run shell commands",
+              rawDescription: "Run shell commands",
+              source: "core",
+            },
+          ],
+        },
+      ],
+    };
+    runtimeMocks.resolveEffectiveToolInventory
+      .mockReturnValueOnce(stalePayload)
+      .mockReturnValueOnce(refreshedPayload);
+
+    const initial = createInvokeParams({ sessionKey: "main:abc" });
+    await initial.invoke();
+    now += 11_000;
+
+    const stale = createInvokeParams({ sessionKey: "main:abc" });
+    await stale.invoke();
+
+    expect((stale.respond.mock.calls[0] as RespondCall | undefined)?.[1]).toBe(stalePayload);
+    expect(runtimeMocks.resolveEffectiveToolInventory).toHaveBeenCalledTimes(1);
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(runtimeMocks.resolveEffectiveToolInventory).toHaveBeenCalledTimes(2);
+
+    const fresh = createInvokeParams({ sessionKey: "main:abc" });
+    await fresh.invoke();
+    expect((fresh.respond.mock.calls[0] as RespondCall | undefined)?.[1]).toBe(refreshedPayload);
   });
 
   it("falls back to origin.threadId when delivery context omits thread metadata", async () => {
