@@ -877,13 +877,15 @@ function runNpmInstall(params) {
     npm_config_save: "false",
     npm_config_yes: "true",
   };
-  const result = spawnSync(params.npmRunner.command, params.npmRunner.args, {
+  const runSpawnSync = params.spawnSyncImpl ?? spawnSync;
+  const result = runSpawnSync(params.npmRunner.command, params.npmRunner.args, {
     cwd: params.cwd,
     encoding: "utf8",
     env: npmEnv,
     shell: params.npmRunner.shell,
     stdio: ["ignore", "pipe", "pipe"],
     timeout: params.timeoutMs ?? 5 * 60 * 1000,
+    windowsHide: true,
     windowsVerbatimArguments: params.npmRunner.windowsVerbatimArguments,
   });
   if (result.status === 0) {
@@ -1239,6 +1241,10 @@ export function stageBundledPluginRuntimeDeps(params = {}) {
     }
   }
 }
+
+export const __testing = {
+  runNpmInstall,
+};
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   stageBundledPluginRuntimeDeps();

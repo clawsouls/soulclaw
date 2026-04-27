@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  __testing as stageBundledPluginRuntimeDepsTesting,
   collectRuntimeDependencyInstallManifest,
   collectRuntimeDependencyInstallSpecs,
   stageBundledPluginRuntimeDeps,
@@ -127,6 +128,31 @@ describe("stageBundledPluginRuntimeDeps", () => {
       dependencies: { direct: "1.2.3" },
       optionalDependencies: { optional: "2.0.4" },
     });
+  });
+
+  it("hides npm child windows during fallback runtime installs", () => {
+    const spawnSyncImpl = vi.fn(() => ({ status: 0, stderr: "", stdout: "" }));
+
+    stageBundledPluginRuntimeDepsTesting.runNpmInstall({
+      cwd: "C:\\openclaw\\dist\\extensions\\telegram\\.openclaw-install-stage",
+      npmRunner: {
+        command: "npm.cmd",
+        args: ["install", "--silent"],
+        env: { PATH: "C:\\node" },
+        shell: false,
+        windowsVerbatimArguments: true,
+      },
+      spawnSyncImpl,
+    });
+
+    expect(spawnSyncImpl).toHaveBeenCalledWith(
+      "npm.cmd",
+      ["install", "--silent"],
+      expect.objectContaining({
+        windowsHide: true,
+        windowsVerbatimArguments: true,
+      }),
+    );
   });
 
   it("skips restaging when runtime deps stamp matches the sanitized manifest", () => {

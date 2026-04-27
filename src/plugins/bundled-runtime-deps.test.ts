@@ -1,5 +1,6 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -27,9 +28,11 @@ import {
 
 vi.mock("node:child_process", async (importOriginal) => ({
   ...(await importOriginal<typeof import("node:child_process")>()),
+  spawn: vi.fn(),
   spawnSync: vi.fn(),
 }));
 
+const spawnMock = vi.mocked(spawn);
 const spawnSyncMock = vi.mocked(spawnSync);
 const tempDirs: string[] = [];
 
@@ -91,6 +94,7 @@ function statfsFixture(params: {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  spawnMock.mockReset();
   spawnSyncMock.mockReset();
   bundledRuntimeDepsActivityTesting.resetBundledRuntimeDepsInstallActivity();
   for (const dir of tempDirs.splice(0)) {
@@ -312,6 +316,7 @@ describe("installBundledRuntimeDeps", () => {
       ["C:\\node\\node_modules\\npm\\bin\\npm-cli.js", "install", "--ignore-scripts", "acpx@0.5.3"],
       expect.objectContaining({
         cwd: installRoot,
+        windowsHide: true,
         env: expect.objectContaining({
           npm_config_legacy_peer_deps: "true",
           npm_config_package_lock: "false",
@@ -326,6 +331,36 @@ describe("installBundledRuntimeDeps", () => {
         env: expect.not.objectContaining({
           npm_config_prefix: expect.any(String),
         }),
+      }),
+    );
+  });
+
+  it("hides async npm child windows for startup repair installs", async () => {
+    const installRoot = makeTempDir();
+    spawnMock.mockImplementation((_command, _args, options) => {
+      writeInstalledPackage(String(options?.cwd ?? ""), "acpx", "0.5.3");
+      const child = new EventEmitter() as ReturnType<typeof spawn>;
+      Object.assign(child, {
+        stdout: new EventEmitter(),
+        stderr: new EventEmitter(),
+      });
+      queueMicrotask(() => child.emit("close", 0, null));
+      return child;
+    });
+
+    await repairBundledRuntimeDepsInstallRootAsync({
+      installRoot,
+      missingSpecs: ["acpx@0.5.3"],
+      installSpecs: ["acpx@0.5.3"],
+      env: {},
+    });
+
+    expect(spawnMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(Array),
+      expect.objectContaining({
+        cwd: installRoot,
+        windowsHide: true,
       }),
     );
   });
