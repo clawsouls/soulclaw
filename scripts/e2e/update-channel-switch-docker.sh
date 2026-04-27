@@ -47,12 +47,14 @@ node - <<'"'"'NODE'"'"'
 const fs = require("node:fs");
 const packageJsonPath = "/tmp/openclaw-git/package.json";
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+const fixtureUiBuildSource = `const fs=require("node:fs");fs.mkdirSync("dist/control-ui",{recursive:true});fs.writeFileSync("dist/control-ui/index.html","<!doctype html><title>fixture</title>\\n")`;
+const fixtureUiBuildCommand = `node -e ${JSON.stringify(fixtureUiBuildSource)}`;
 packageJson.pnpm = { ...packageJson.pnpm, allowUnusedPatches: true };
 packageJson.scripts = {
   ...packageJson.scripts,
   build: "node -e \"console.log(\\\"fixture build skipped\\\")\"",
   lint: "node -e \"console.log(\\\"fixture lint skipped\\\")\"",
-  "ui:build": "node -e \"console.log(\\\"fixture ui build skipped\\\")\"",
+  "ui:build": fixtureUiBuildCommand,
 };
 fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 fs.mkdirSync("/tmp/openclaw-git/dist/control-ui", { recursive: true });
