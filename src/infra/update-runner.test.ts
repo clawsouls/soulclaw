@@ -1647,6 +1647,8 @@ describe("runGatewayUpdate", () => {
 
     expect(result.status).toBe("error");
     expect(result.reason).toBe("global-install-failed");
+    expect(result.root).toBe(pkgRoot);
+    expect(result.after?.version).toBe("1.0.0");
     expect(result.steps.at(-1)?.name).toBe("global install swap");
     await expect(fs.readFile(path.join(pkgRoot, "package.json"), "utf-8")).resolves.toContain(
       '"version":"1.0.0"',

@@ -159,12 +159,68 @@ describe("runGlobalPackageUpdateSteps", () => {
       expect(result.steps.at(-1)?.stderrTail).toContain(
         "expected installed version 2.0.0, found 1.5.0",
       );
+      expect(result.verifiedPackageRoot).toBe(packageRoot);
+      expect(result.afterVersion).toBe("1.0.0");
       expect(postVerifyStep).not.toHaveBeenCalled();
       await expect(fs.readFile(path.join(packageRoot, "package.json"), "utf8")).resolves.toContain(
         '"version":"1.0.0"',
       );
     });
   });
+
+  it.runIf(process.platform !== "win32")(
+    "restores the existing bin shim when staged shim replacement fails",
+    async () => {
+      await withTempDir({ prefix: "openclaw-package-update-shim-rollback-" }, async (base) => {
+        const prefix = path.join(base, "prefix");
+        const globalRoot = path.join(prefix, "lib", "node_modules");
+        const packageRoot = path.join(globalRoot, "openclaw");
+        const targetShim = path.join(prefix, "bin", "openclaw");
+        await writePackageRoot(packageRoot, "1.0.0");
+        await fs.mkdir(path.dirname(targetShim), { recursive: true });
+        await fs.writeFile(targetShim, "old shim\n", "utf8");
+
+        const result = await runGlobalPackageUpdateSteps({
+          installTarget: createNpmTarget(globalRoot),
+          installSpec: "openclaw@2.0.0",
+          packageName: "openclaw",
+          packageRoot,
+          runCommand: createRootRunner(globalRoot),
+          runStep: async ({ name, argv, cwd }) => {
+            const prefixIndex = argv.indexOf("--prefix");
+            const stagePrefix = argv[prefixIndex + 1];
+            if (!stagePrefix) {
+              throw new Error("missing staged prefix");
+            }
+            await writePackageRoot(
+              path.join(stagePrefix, "lib", "node_modules", "openclaw"),
+              "2.0.0",
+            );
+            const stagedShim = path.join(stagePrefix, "bin", "openclaw");
+            await fs.mkdir(path.dirname(stagedShim), { recursive: true });
+            await fs.writeFile(stagedShim, "new shim\n", "utf8");
+            await fs.chmod(stagedShim, 0);
+            return {
+              name,
+              command: argv.join(" "),
+              cwd: cwd ?? process.cwd(),
+              durationMs: 1,
+              exitCode: 0,
+            };
+          },
+          timeoutMs: 1000,
+        });
+
+        expect(result.failedStep?.name).toBe("global install swap");
+        expect(result.verifiedPackageRoot).toBe(packageRoot);
+        expect(result.afterVersion).toBe("1.0.0");
+        await expect(
+          fs.readFile(path.join(packageRoot, "package.json"), "utf8"),
+        ).resolves.toContain('"version":"1.0.0"');
+        await expect(fs.readFile(targetShim, "utf8")).resolves.toBe("old shim\n");
+      });
+    },
+  );
 
   it("cleans the staged npm prefix when the install command throws", async () => {
     await withTempDir({ prefix: "openclaw-package-update-cleanup-" }, async (base) => {

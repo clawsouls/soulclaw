@@ -38,6 +38,15 @@ type StagedNpmInstall = {
   packageRoot: string;
 };
 
+type NpmBinShimBackup = {
+  backupDir: string;
+  targetBinDir: string;
+  entries: Array<{
+    name: string;
+    hadExisting: boolean;
+  }>;
+};
+
 function formatError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
@@ -48,6 +57,17 @@ async function pathExists(targetPath: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+async function readPackageVersionIfPresent(packageRoot: string | null): Promise<string | null> {
+  if (!packageRoot) {
+    return null;
+  }
+  try {
+    return await readPackageVersion(packageRoot);
+  } catch {
+    return null;
   }
 }
 
@@ -152,12 +172,47 @@ async function replaceNpmBinShims(params: {
     return;
   }
 
-  await fs.mkdir(params.targetLayout.binDir, { recursive: true });
-  for (const entry of shimEntries) {
-    await copyPathEntry(
-      path.join(params.stageLayout.binDir, entry),
-      path.join(params.targetLayout.binDir, entry),
-    );
+  const backup: NpmBinShimBackup = {
+    backupDir: await fs.mkdtemp(
+      path.join(params.targetLayout.globalRoot, ".openclaw-shim-backup-"),
+    ),
+    targetBinDir: params.targetLayout.binDir,
+    entries: [],
+  };
+
+  try {
+    await fs.mkdir(params.targetLayout.binDir, { recursive: true });
+    for (const entry of shimEntries) {
+      const destination = path.join(params.targetLayout.binDir, entry);
+      const hadExisting = await pathExists(destination);
+      backup.entries.push({ name: entry, hadExisting });
+      if (hadExisting) {
+        await copyPathEntry(destination, path.join(backup.backupDir, entry));
+      }
+    }
+
+    for (const entry of shimEntries) {
+      await copyPathEntry(
+        path.join(params.stageLayout.binDir, entry),
+        path.join(params.targetLayout.binDir, entry),
+      );
+    }
+  } catch (err) {
+    await restoreNpmBinShimBackup(backup);
+    throw err;
+  } finally {
+    await fs.rm(backup.backupDir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+async function restoreNpmBinShimBackup(backup: NpmBinShimBackup): Promise<void> {
+  await fs.mkdir(backup.targetBinDir, { recursive: true });
+  for (const entry of backup.entries) {
+    const destination = path.join(backup.targetBinDir, entry.name);
+    await fs.rm(destination, { recursive: true, force: true }).catch(() => undefined);
+    if (entry.hadExisting) {
+      await copyPathEntry(path.join(backup.backupDir, entry.name), destination);
+    }
   }
 }
 
@@ -318,8 +373,9 @@ export async function runGlobalPackageUpdateSteps(params: {
       }
     }
 
-    let verifiedPackageRoot =
-      stagedInstall?.packageRoot ??
+    const livePackageRoot =
+      params.installTarget.packageRoot ??
+      params.packageRoot ??
       (
         await resolveGlobalInstallTarget({
           manager: params.installTarget,
@@ -327,25 +383,29 @@ export async function runGlobalPackageUpdateSteps(params: {
           timeoutMs: params.timeoutMs,
         })
       ).packageRoot ??
-      params.packageRoot ??
       null;
+    const verificationPackageRoot = stagedInstall?.packageRoot ?? livePackageRoot;
+    let verifiedPackageRoot = livePackageRoot ?? verificationPackageRoot;
 
     let afterVersion: string | null = null;
-    if (finalInstallStep.exitCode === 0 && verifiedPackageRoot) {
-      afterVersion = await readPackageVersion(verifiedPackageRoot);
+    if (finalInstallStep.exitCode === 0 && verificationPackageRoot) {
+      const candidateVersion = await readPackageVersion(verificationPackageRoot);
+      if (!stagedInstall) {
+        afterVersion = candidateVersion;
+      }
       const expectedVersion = resolveExpectedInstalledVersionFromSpec(
         params.packageName,
         params.installSpec,
       );
       const verificationErrors = await collectInstalledGlobalPackageErrors({
-        packageRoot: verifiedPackageRoot,
+        packageRoot: verificationPackageRoot,
         expectedVersion,
       });
       if (verificationErrors.length > 0) {
         steps.push({
           name: "global install verify",
-          command: `verify ${verifiedPackageRoot}`,
-          cwd: verifiedPackageRoot,
+          command: `verify ${verificationPackageRoot}`,
+          cwd: verificationPackageRoot,
           durationMs: 0,
           exitCode: 1,
           stderrTail: verificationErrors.join("\n"),
@@ -362,6 +422,7 @@ export async function runGlobalPackageUpdateSteps(params: {
         steps.push(swapStep);
         if (swapStep.exitCode === 0) {
           verifiedPackageRoot = params.installTarget.packageRoot ?? verifiedPackageRoot;
+          afterVersion = candidateVersion;
         }
       }
 
@@ -372,9 +433,14 @@ export async function runGlobalPackageUpdateSteps(params: {
       );
       const postVerifyStep = failedVerifyOrSwap
         ? null
-        : await params.postVerifyStep?.(verifiedPackageRoot);
+        : verifiedPackageRoot
+          ? await params.postVerifyStep?.(verifiedPackageRoot)
+          : null;
       if (postVerifyStep) {
         steps.push(postVerifyStep);
+      }
+      if (failedVerifyOrSwap && stagedInstall) {
+        afterVersion = await readPackageVersionIfPresent(livePackageRoot);
       }
     }
 
