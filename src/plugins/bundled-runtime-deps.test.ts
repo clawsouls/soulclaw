@@ -17,6 +17,7 @@ import {
   ensureBundledPluginRuntimeDeps,
   installBundledRuntimeDeps,
   isWritableDirectory,
+  materializeBundledRuntimeMirrorDistFile,
   repairBundledRuntimeDepsInstallRootAsync,
   resolveBundledRuntimeDependencyInstallRoot,
   resolveBundledRuntimeDepsNpmRunner,
@@ -219,6 +220,26 @@ describe("resolveBundledRuntimeDepsNpmRunner", () => {
 });
 
 describe("installBundledRuntimeDeps", () => {
+  it("keeps already-materialized mirror chunks when source and target match", () => {
+    const tempDir = makeTempDir();
+    const chunkPath = path.join(tempDir, "dist", "accounts.js");
+    fs.mkdirSync(path.dirname(chunkPath), { recursive: true });
+    fs.writeFileSync(
+      chunkPath,
+      [
+        `//#region extensions/slack/src/accounts.ts`,
+        `export const marker = "same-file";`,
+        `//#endregion`,
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    materializeBundledRuntimeMirrorDistFile(chunkPath, chunkPath);
+
+    expect(fs.readFileSync(chunkPath, "utf8")).toContain("same-file");
+  });
+
   it("uses a real write probe for runtime dependency roots", () => {
     const accessSpy = vi.spyOn(fs, "accessSync").mockImplementation(() => undefined);
     const mkdirSpy = vi.spyOn(fs, "mkdtempSync").mockImplementation(() => {
