@@ -18,13 +18,17 @@ function makeTempDir() {
 
 const mkdirSafe = mkdirSafeDir;
 
+function symlinkDirectory(target: string, linkPath: string): void {
+  fs.symlinkSync(target, linkPath, process.platform === "win32" ? "junction" : "dir");
+}
+
 const canCreateDirectorySymlinks = (() => {
   const probeDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-symlink-probe-"));
   const targetDir = path.join(probeDir, "target");
   const linkDir = path.join(probeDir, "link");
   try {
     fs.mkdirSync(targetDir);
-    fs.symlinkSync(targetDir, linkDir, process.platform === "win32" ? "junction" : "dir");
+    symlinkDirectory(targetDir, linkDir);
     return true;
   } catch {
     return false;
@@ -317,6 +321,72 @@ describe("discoverOpenClawPlugins", () => {
     const { candidates } = await discoverWithStateDir(stateDir, { workspaceDir });
     expectCandidateIds(candidates, { includes: ["alpha", "beta"] });
   });
+
+  it.skipIf(!canCreateDirectorySymlinks)(
+    "discovers symlinked plugin directories in global roots",
+    async () => {
+      const stateDir = makeTempDir();
+      const globalExt = path.join(stateDir, "extensions");
+      mkdirSafe(globalExt);
+
+      const linkedPluginDir = path.join(stateDir, "linked-plugin-src");
+      createPackagePluginWithEntry({
+        packageDir: linkedPluginDir,
+        packageName: "@openclaw/linked-plugin",
+        pluginId: "linked-plugin",
+      });
+
+      symlinkDirectory(linkedPluginDir, path.join(globalExt, "linked-plugin"));
+
+      const { candidates, diagnostics } = await discoverWithStateDir(stateDir, {});
+      expectCandidateIds(candidates, { includes: ["linked-plugin"] });
+      expect(findCandidateById(candidates, "linked-plugin")?.rootDir).toBe(
+        fs.realpathSync(linkedPluginDir),
+      );
+      expect(diagnostics).toEqual([]);
+    },
+  );
+
+  it.skipIf(!canCreateDirectorySymlinks)(
+    "discovers symlinked plugin directories in workspace roots",
+    async () => {
+      const stateDir = makeTempDir();
+      const workspaceDir = path.join(stateDir, "workspace");
+      const workspaceExt = path.join(workspaceDir, ".openclaw", "extensions");
+      mkdirSafe(workspaceExt);
+
+      const linkedPluginDir = path.join(stateDir, "workspace-linked-plugin-src");
+      createPackagePluginWithEntry({
+        packageDir: linkedPluginDir,
+        packageName: "@openclaw/workspace-linked-plugin",
+        pluginId: "workspace-linked-plugin",
+      });
+
+      symlinkDirectory(linkedPluginDir, path.join(workspaceExt, "workspace-linked-plugin"));
+
+      const { candidates, diagnostics } = await discoverWithStateDir(stateDir, { workspaceDir });
+      expectCandidateIds(candidates, { includes: ["workspace-linked-plugin"] });
+      expect(findCandidateById(candidates, "workspace-linked-plugin")?.rootDir).toBe(
+        fs.realpathSync(linkedPluginDir),
+      );
+      expect(diagnostics).toEqual([]);
+    },
+  );
+
+  it.skipIf(process.platform === "win32" || !canCreateDirectorySymlinks)(
+    "ignores broken symlinked plugin directories in scanned roots",
+    async () => {
+      const stateDir = makeTempDir();
+      const globalExt = path.join(stateDir, "extensions");
+      mkdirSafe(globalExt);
+
+      symlinkDirectory(path.join(stateDir, "missing-plugin-src"), path.join(globalExt, "missing"));
+
+      const { candidates, diagnostics } = await discoverWithStateDir(stateDir, {});
+      expectCandidateIds(candidates, { excludes: ["missing"] });
+      expect(diagnostics).toEqual([]);
+    },
+  );
 
   it("does not recurse arbitrary workspace directories for plugin auto-discovery", () => {
     const stateDir = makeTempDir();
@@ -631,11 +701,7 @@ describe("discoverOpenClawPlugins", () => {
       writePluginEntry(path.join(realPackageDir, "src", "index.ts"));
 
       const linkedPackageDir = path.join(stateDir, "linked-pack");
-      fs.symlinkSync(
-        realPackageDir,
-        linkedPackageDir,
-        process.platform === "win32" ? "junction" : "dir",
-      );
+      symlinkDirectory(realPackageDir, linkedPackageDir);
       const canonicalPackageDir = fs.realpathSync(realPackageDir);
 
       const realpathSync = vi.spyOn(fs, "realpathSync");
@@ -1100,7 +1166,7 @@ describe("discoverOpenClawPlugins", () => {
         mkdirSafe(outsideDir);
         fs.writeFileSync(path.join(outsideDir, "escape.ts"), "export default {}", "utf-8");
         try {
-          fs.symlinkSync(outsideDir, linkedDir, process.platform === "win32" ? "junction" : "dir");
+          symlinkDirectory(outsideDir, linkedDir);
         } catch {
           return false;
         }

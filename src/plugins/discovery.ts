@@ -353,6 +353,30 @@ function shouldIgnoreScannedDirectory(dirName: string): boolean {
   return false;
 }
 
+function resolveScannedEntryType(entry: fs.Dirent, fullPath: string): "file" | "directory" | null {
+  if (entry.isFile()) {
+    return "file";
+  }
+  if (entry.isDirectory()) {
+    return "directory";
+  }
+  if (!entry.isSymbolicLink()) {
+    return null;
+  }
+
+  const stat = safeStatSync(fullPath);
+  if (!stat) {
+    return null;
+  }
+  if (stat.isFile()) {
+    return "file";
+  }
+  if (stat.isDirectory()) {
+    return "directory";
+  }
+  return null;
+}
+
 function resolvesToSameDirectory(
   left: string | undefined,
   right: string | undefined,
@@ -621,7 +645,8 @@ function discoverInDirectory(params: {
 
   for (const entry of entries) {
     const fullPath = path.join(params.dir, entry.name);
-    if (entry.isFile()) {
+    const entryType = resolveScannedEntryType(entry, fullPath);
+    if (entryType === "file") {
       if (!isExtensionFile(fullPath)) {
         continue;
       }
@@ -637,8 +662,9 @@ function discoverInDirectory(params: {
         workspaceDir: params.workspaceDir,
         realpathCache: params.realpathCache,
       });
+      continue;
     }
-    if (!entry.isDirectory()) {
+    if (entryType !== "directory") {
       continue;
     }
     if (params.skipDirectories?.has(entry.name)) {
