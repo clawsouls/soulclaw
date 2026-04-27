@@ -133,7 +133,7 @@ describe("recordInboundSession", () => {
     });
   });
 
-  it("skips last-route updates when session creation is disabled", async () => {
+  it("forwards session creation policy to last-route updates", async () => {
     await recordInboundSession({
       storePath: "/tmp/openclaw-session-store.json",
       sessionKey: "agent:main:demo-channel:1234:thread:42",
@@ -152,6 +152,11 @@ describe("recordInboundSession", () => {
         createIfMissing: false,
       }),
     );
-    expect(updateLastRouteMock).not.toHaveBeenCalled();
+    expect(updateLastRouteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionKey: "agent:main:main",
+        createIfMissing: false,
+      }),
+    );
   });
 });

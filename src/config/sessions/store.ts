@@ -757,12 +757,17 @@ export async function updateLastRoute(params: {
   deliveryContext?: DeliveryContext;
   ctx?: MsgContext;
   groupResolution?: import("./types.js").GroupKeyResolution | null;
-}) {
+  createIfMissing?: boolean;
+}): Promise<SessionEntry | null> {
   const { storePath, sessionKey, channel, to, accountId, threadId, ctx } = params;
+  const createIfMissing = params.createIfMissing ?? true;
   return await withSessionStoreLock(storePath, async () => {
     const store = loadSessionStore(storePath);
     const resolved = resolveSessionStoreEntry({ store, sessionKey });
     const existing = resolved.existing;
+    if (!existing && !createIfMissing) {
+      return null;
+    }
     const explicitContext = normalizeDeliveryContext(params.deliveryContext);
     const inlineContext = normalizeDeliveryContext({
       channel,

@@ -51,7 +51,7 @@ export async function recordInboundSession(params: {
     .catch(params.onRecordError);
 
   const update = params.updateLastRoute;
-  if (!update || createIfMissing === false) {
+  if (!update) {
     return;
   }
   if (shouldSkipPinnedMainDmRouteUpdate(update.mainDmOwnerPin)) {
@@ -70,5 +70,6 @@ export async function recordInboundSession(params: {
     // Avoid leaking inbound origin metadata into a different target session.
     ctx: targetSessionKey === canonicalSessionKey ? ctx : undefined,
     groupResolution,
+    createIfMissing,
   });
 }
