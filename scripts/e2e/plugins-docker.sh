@@ -560,8 +560,9 @@ const path = require("node:path");
 
 const indexPath = path.join(process.env.HOME, ".openclaw", "plugins", "installs.json");
 const index = JSON.parse(fs.readFileSync(indexPath, "utf8"));
+const installRecords = index.installRecords ?? index.records ?? {};
 for (const id of ["marketplace-shortcut", "marketplace-direct"]) {
-  const record = index.installRecords?.[id];
+  const record = installRecords[id];
   if (!record) throw new Error(`missing install record for ${id}`);
   if (record.source !== "marketplace") {
     throw new Error(`unexpected source for ${id}: ${record.source}`);
@@ -845,7 +846,8 @@ if (inspect.plugin?.id !== pluginId) {
 
 const indexPath = path.join(process.env.HOME, ".openclaw", "plugins", "installs.json");
 const index = JSON.parse(fs.readFileSync(indexPath, "utf8"));
-const record = index.installRecords?.[pluginId];
+const installRecords = index.installRecords ?? index.records ?? {};
+const record = installRecords[pluginId];
 if (!record) throw new Error(`missing ClawHub install record for ${pluginId}`);
 if (record.source !== "clawhub") {
   throw new Error(`unexpected ClawHub install source for ${pluginId}: ${record.source}`);
@@ -890,7 +892,8 @@ if ((list.plugins || []).some((entry) => entry.id === pluginId)) {
 
 const indexPath = path.join(process.env.HOME, ".openclaw", "plugins", "installs.json");
 const index = fs.existsSync(indexPath) ? JSON.parse(fs.readFileSync(indexPath, "utf8")) : {};
-if (index.installRecords?.[pluginId]) {
+const installRecords = index.installRecords ?? index.records ?? {};
+if (installRecords[pluginId]) {
   throw new Error(`ClawHub install record still present after uninstall: ${pluginId}`);
 }
 

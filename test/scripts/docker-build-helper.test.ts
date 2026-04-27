@@ -60,6 +60,13 @@ describe("docker build helper", () => {
     );
   });
 
+  it("keeps package acceptance plugin coverage offline-capable", () => {
+    const scenarios = readFileSync(DOCKER_E2E_SCENARIOS_PATH, "utf8");
+
+    expect(scenarios).toContain('"plugins-offline"');
+    expect(scenarios).toContain("OPENCLAW_PLUGINS_E2E_CLAWHUB=0");
+  });
+
   it("passes installer tag env to bash, not curl", () => {
     const runner = readFileSync(INSTALL_E2E_RUNNER_PATH, "utf8");
 
