@@ -400,11 +400,19 @@ const releasePathChunks = {
   ],
   "package-update": [
     npmLane(
-      "install-e2e",
-      "OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=both pnpm test:install:e2e",
+      "install-e2e-openai",
+      "OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=openai OPENCLAW_INSTALL_E2E_IMAGE=openclaw-install-e2e-openai:local pnpm test:install:e2e",
       {
         resources: ["service"],
-        weight: 4,
+        weight: 3,
+      },
+    ),
+    npmLane(
+      "install-e2e-anthropic",
+      "OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=anthropic OPENCLAW_INSTALL_E2E_IMAGE=openclaw-install-e2e-anthropic:local pnpm test:install:e2e",
+      {
+        resources: ["service"],
+        weight: 3,
       },
     ),
     npmLane(

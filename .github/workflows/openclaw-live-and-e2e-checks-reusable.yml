@@ -1425,30 +1425,59 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - suite_id: live-all
-            label: pnpm test:live
-            command: pnpm test:live
-            timeout_minutes: 180
+          - suite_id: native-live-src-agents
+            label: Native live agents
+            command: node scripts/test-live-shard.mjs native-live-src-agents
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-src-gateway
+            label: Native live gateway
+            command: node scripts/test-live-shard.mjs native-live-src-gateway
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-test
+            label: Native live test harnesses
+            command: node scripts/test-live-shard.mjs native-live-test
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-extensions-a-k
+            label: Native live plugins A-K
+            command: node scripts/test-live-shard.mjs native-live-extensions-a-k
+            timeout_minutes: 90
+            needs_ffmpeg: true
+            profile_env_only: false
+          - suite_id: native-live-extensions-l-z
+            label: Native live plugins L-Z
+            command: node scripts/test-live-shard.mjs native-live-extensions-l-z
+            timeout_minutes: 90
+            needs_ffmpeg: true
             profile_env_only: false
           - suite_id: live-gateway-docker
             label: Docker live gateway
             command: pnpm test:docker:live-gateway
             timeout_minutes: 120
+            needs_ffmpeg: false
             profile_env_only: false
           - suite_id: live-cli-backend-docker
             label: Docker live CLI backend
             command: pnpm test:docker:live-cli-backend
             timeout_minutes: 120
+            needs_ffmpeg: false
             profile_env_only: false
           - suite_id: live-acp-bind-docker
             label: Docker live ACP bind
             command: pnpm test:docker:live-acp-bind
             timeout_minutes: 120
+            needs_ffmpeg: false
             profile_env_only: false
           - suite_id: live-codex-harness-docker
             label: Docker live Codex harness
             command: pnpm test:docker:live-codex-harness
             timeout_minutes: 120
+            needs_ffmpeg: false
             profile_env_only: false
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -1516,7 +1545,7 @@ jobs:
         run: bash scripts/ci-hydrate-live-auth.sh
 
       - name: Install live media dependencies
-        if: matrix.suite_id == 'live-all'
+        if: matrix.needs_ffmpeg
         shell: bash
         run: |
           set -euo pipefail

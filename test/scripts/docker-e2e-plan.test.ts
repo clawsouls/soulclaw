@@ -41,7 +41,8 @@ describe("scripts/lib/docker-e2e-plan", () => {
       package: true,
     });
     expect(plan.credentials).toEqual(["anthropic", "openai"]);
-    expect(plan.lanes.map((lane) => lane.name)).toContain("install-e2e");
+    expect(plan.lanes.map((lane) => lane.name)).toContain("install-e2e-openai");
+    expect(plan.lanes.map((lane) => lane.name)).toContain("install-e2e-anthropic");
     expect(plan.lanes.map((lane) => lane.name)).toContain("mcp-channels");
     expect(plan.lanes.map((lane) => lane.name)).toContain("bundled-channel-feishu");
     expect(plan.lanes.map((lane) => lane.name)).toContain("bundled-channel-update-acpx");
@@ -164,6 +165,24 @@ describe("scripts/lib/docker-e2e-plan", () => {
         name: "bundled-channel-deps-compat",
       }),
     ]);
+  });
+
+  it("maps installer E2E to provider-specific package install lanes", () => {
+    const selectedLaneNames = parseLaneSelection("install-e2e");
+    const plan = planFor({ selectedLaneNames });
+
+    expect(selectedLaneNames).toEqual(["install-e2e-openai", "install-e2e-anthropic"]);
+    expect(plan.lanes).toEqual([
+      expect.objectContaining({
+        command: expect.stringContaining("OPENCLAW_E2E_MODELS=openai"),
+        name: "install-e2e-openai",
+      }),
+      expect.objectContaining({
+        command: expect.stringContaining("OPENCLAW_E2E_MODELS=anthropic"),
+        name: "install-e2e-anthropic",
+      }),
+    ]);
+    expect(plan.credentials).toEqual(["anthropic", "openai"]);
   });
 
   it("maps bundled plugin install/uninstall to package-backed shards", () => {

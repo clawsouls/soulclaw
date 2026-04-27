@@ -90,6 +90,19 @@ describe("package artifact reuse", () => {
     expect(workflow).not.toContain("cache-to: type=gha,mode=max,scope=docker-e2e");
   });
 
+  it("shards broad native live tests instead of one serial live-all job", () => {
+    const workflow = readFileSync(LIVE_E2E_WORKFLOW, "utf8");
+
+    expect(workflow).not.toContain("suite_id: live-all");
+    expect(workflow).not.toContain("command: pnpm test:live\n");
+    expect(workflow).toContain("suite_id: native-live-src-agents");
+    expect(workflow).toContain("command: node scripts/test-live-shard.mjs native-live-src-agents");
+    expect(workflow).toContain("suite_id: native-live-src-gateway");
+    expect(workflow).toContain("suite_id: native-live-extensions-a-k");
+    expect(workflow).toContain("suite_id: native-live-extensions-l-z");
+    expect(workflow).toContain("if: matrix.needs_ffmpeg");
+  });
+
   it("allows the Telegram lane to run from reusable package acceptance artifacts", () => {
     const workflow = readFileSync(NPM_TELEGRAM_WORKFLOW, "utf8");
 

@@ -244,6 +244,19 @@ Useful knobs:
   targeted Docker live model job instead of the full provider matrix.
 - blank `live_model_providers`: run the full live-model provider matrix.
 
+When live suites are enabled, the workflow shards broad native `pnpm test:live`
+coverage through `scripts/test-live-shard.mjs` instead of one serial `live-all`
+job:
+
+- `native-live-src-agents`
+- `native-live-src-gateway`
+- `native-live-test`
+- `native-live-extensions-a-k`
+- `native-live-extensions-l-z`
+
+Use `node scripts/test-live-shard.mjs <shard> --list` to see the exact files
+before rerunning a failed native live shard.
+
 For model-list or provider-selection fixes, use `live_models_only=true` plus the
 specific `live_model_providers` allowlist. Confirm logs show the expected
 `OPENCLAW_LIVE_PROVIDERS` and selected model ids before declaring proof.
