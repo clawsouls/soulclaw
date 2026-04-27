@@ -62,11 +62,18 @@ const log = createSubsystemLogger("sessions/store");
 let sessionArchiveRuntimePromise: Promise<
   typeof import("../../gateway/session-archive.runtime.js")
 > | null = null;
+let trajectoryCleanupRuntimePromise: Promise<typeof import("../../trajectory/cleanup.js")> | null =
+  null;
 let sessionWriteLockAcquirerForTests: typeof acquireSessionWriteLock | null = null;
 
 function loadSessionArchiveRuntime() {
   sessionArchiveRuntimePromise ??= import("../../gateway/session-archive.runtime.js");
   return sessionArchiveRuntimePromise;
+}
+
+function loadTrajectoryCleanupRuntime() {
+  trajectoryCleanupRuntimePromise ??= import("../../trajectory/cleanup.js");
+  return trajectoryCleanupRuntimePromise;
 }
 
 function removeThreadFromDeliveryContext(context?: DeliveryContext): DeliveryContext | undefined {
@@ -327,6 +334,15 @@ async function saveSessionStoreUnlocked(
         reason: "deleted",
         restrictToStoreDir: true,
       });
+      if (removedSessionFiles.size > 0) {
+        const { removeRemovedSessionTrajectoryArtifacts } = await loadTrajectoryCleanupRuntime();
+        await removeRemovedSessionTrajectoryArtifacts({
+          removedSessionFiles,
+          referencedSessionIds,
+          storePath,
+          restrictToStoreDir: true,
+        });
+      }
       for (const archivedDir of archivedForDeletedSessions) {
         archivedDirs.add(archivedDir);
       }

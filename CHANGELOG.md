@@ -20,6 +20,7 @@ Docs: https://docs.openclaw.ai
 - CLI/models: keep route-first `models status --json` stdout reserved for the JSON payload by routing auth-profile and startup diagnostics to stderr. Fixes #72962. Thanks @vishutdhar.
 - Sessions: ignore future-dated session activity timestamps during reset freshness checks and cap future `updatedAt` values at the merge boundary so clock-skewed messages cannot keep stale sessions alive forever. Fixes #72989. Thanks @martingarramon.
 - Sessions: apply search, activity filters, and limits before gateway row enrichment so bounded session lists avoid scanning discarded transcripts. Carries forward #72978. Thanks @yeager.
+- Sessions: remove trajectory runtime and pointer sidecars when session maintenance prunes, caps, or disk-evicts their owning session, while preserving sidecars still referenced by live rows. Fixes #73000. Thanks @jared-rebel.
 - Plugins/CLI: allow managed plugin installs when the active extensions root is a symlink to a real state directory, while keeping nested target symlinks blocked and suppressing misleading hook-pack fallback errors for install-boundary failures. Fixes #72946. Thanks @mayank6136.
 - Providers/Ollama: mark discovered Ollama catalog models as supporting streaming usage metadata so token accounting stays enabled for local models. (#72976) Thanks @sdeyang.
 - Gateway/startup: keep hot Gateway boot paths on leaf config imports and add max-RSS reporting to the gateway startup bench so low-memory startup regressions are visible before release. Thanks @vincentkoc.
