@@ -15,6 +15,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Channels/sessions: skip last-route writes when inbound session recording explicitly disables creation, so plugin-owned guarded inbound paths cannot create route-only phantom sessions. Carries forward #73009. Thanks @jzakirov.
 - Channels/Telegram: skip the optional webhook-info API call during polling-mode status checks and startup bot-label probes so long-polling setups avoid an unnecessary Telegram round trip. Carries forward #72990. Thanks @danielgruneberg.
 - CLI/message: load only the selected channel plugin for targeted `openclaw message` actions, and fall back to configured channel plugins when the channel must be inferred, so scripted sends avoid full bundled plugin registry scans. Fixes #73006. Thanks @jasonftl.
 - CLI/models: keep route-first `models status --json` stdout reserved for the JSON payload by routing auth-profile and startup diagnostics to stderr. Fixes #72962. Thanks @vishutdhar.
