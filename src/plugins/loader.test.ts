@@ -153,6 +153,44 @@ async function waitForFilesystemTimestampTick(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 50));
 }
 
+function snapshotRuntimeMirrorTree(root: string): Record<string, unknown> {
+  const snapshot: Record<string, unknown> = {};
+  const visit = (directory: string) => {
+    for (const entry of fs
+      .readdirSync(directory, { withFileTypes: true })
+      .toSorted((left, right) => left.name.localeCompare(right.name))) {
+      const entryPath = path.join(directory, entry.name);
+      const relativePath = path.relative(root, entryPath).replaceAll(path.sep, "/");
+      const stat = fs.lstatSync(entryPath);
+      if (entry.isDirectory()) {
+        snapshot[relativePath] = {
+          kind: "directory",
+          mtimeMs: stat.mtimeMs,
+        };
+        visit(entryPath);
+        continue;
+      }
+      if (entry.isSymbolicLink()) {
+        snapshot[relativePath] = {
+          kind: "symlink",
+          link: fs.readlinkSync(entryPath),
+          mtimeMs: stat.mtimeMs,
+        };
+        continue;
+      }
+      if (entry.isFile()) {
+        snapshot[relativePath] = {
+          kind: "file",
+          mtimeMs: stat.mtimeMs,
+          size: stat.size,
+        };
+      }
+    }
+  };
+  visit(root);
+  return snapshot;
+}
+
 function writeBundledPlugin(params: {
   id: string;
   body?: string;
@@ -2033,7 +2071,7 @@ module.exports = {
     expect(registry.plugins.find((entry) => entry.id === "discord")?.status).toBe("loaded");
   });
 
-  it("loads dist-runtime wrappers from an external stage dir", async () => {
+  it("loads dist-runtime wrappers from an external stage dir without rewriting mirrors on reload", async () => {
     const packageRoot = makeTempDir();
     const stageDir = makeTempDir();
     const bundledDir = path.join(packageRoot, "dist-runtime", "extensions");
@@ -2156,22 +2194,12 @@ module.exports = {
       false,
     );
 
-    const runtimeMirrorEntry = path.join(
-      actualInstallRoot,
-      "dist-runtime",
-      "extensions",
-      "acpx",
-      "index.js",
-    );
-    const canonicalMirrorEntry = path.join(
-      actualInstallRoot,
-      "dist",
-      "extensions",
-      "acpx",
-      "index.js",
-    );
-    const runtimeMirrorStat = fs.statSync(runtimeMirrorEntry);
-    const canonicalMirrorStat = fs.statSync(canonicalMirrorEntry);
+    const runtimeMirrorRoot = path.join(actualInstallRoot, "dist-runtime", "extensions", "acpx");
+    const canonicalMirrorRoot = path.join(actualInstallRoot, "dist", "extensions", "acpx");
+    const mirrorSnapshot = {
+      runtime: snapshotRuntimeMirrorTree(runtimeMirrorRoot),
+      canonical: snapshotRuntimeMirrorTree(canonicalMirrorRoot),
+    };
 
     await waitForFilesystemTimestampTick();
 
@@ -2187,8 +2215,10 @@ module.exports = {
     const reloadedRecord = reloadedRegistry.plugins.find((entry) => entry.id === "acpx");
     expect(reloadedRecord?.error).toBeUndefined();
     expect(reloadedRecord?.status).toBe("loaded");
-    expect(fs.statSync(runtimeMirrorEntry).mtimeMs).toBe(runtimeMirrorStat.mtimeMs);
-    expect(fs.statSync(canonicalMirrorEntry).mtimeMs).toBe(canonicalMirrorStat.mtimeMs);
+    expect({
+      runtime: snapshotRuntimeMirrorTree(runtimeMirrorRoot),
+      canonical: snapshotRuntimeMirrorTree(canonicalMirrorRoot),
+    }).toEqual(mirrorSnapshot);
   });
 
   it("loads native ESM deps from a layered baseline stage dir", () => {
