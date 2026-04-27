@@ -98,7 +98,7 @@ describe("loadPluginLookUpTable", () => {
       createManifestRecord({
         id: "openai",
         origin: "bundled",
-        providers: ["openai"],
+        providers: ["openai", "openai-codex"],
         cliBackends: ["codex-cli"],
         setup: {
           providers: [{ id: "openai" }],
@@ -128,6 +128,7 @@ describe("loadPluginLookUpTable", () => {
 
     expect(table.manifestRegistry).toBe(manifestRegistry);
     expect(table.byPluginId.get("telegram")?.id).toBe("telegram");
+    expect(table.normalizePluginId("openai-codex")).toBe("openai");
     expect(table.owners.channels.get("telegram")).toEqual(["telegram"]);
     expect(table.owners.providers.get("openai")).toEqual(["openai"]);
     expect(table.owners.cliBackends.get("codex-cli")).toEqual(["openai"]);

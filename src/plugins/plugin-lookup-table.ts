@@ -9,6 +9,7 @@ import { loadPluginManifestRegistryForInstalledIndex } from "./manifest-registry
 import type { PluginManifestRecord, PluginManifestRegistry } from "./manifest-registry.js";
 import type { PluginDiagnostic } from "./manifest-types.js";
 import {
+  createPluginRegistryIdNormalizer,
   loadPluginRegistrySnapshotWithMetadata,
   type PluginRegistrySnapshot,
   type PluginRegistrySnapshotDiagnostic,
@@ -35,6 +36,7 @@ export type PluginLookUpTable = {
   plugins: readonly PluginManifestRecord[];
   diagnostics: readonly PluginDiagnostic[];
   byPluginId: ReadonlyMap<string, PluginManifestRecord>;
+  normalizePluginId: (pluginId: string) => string;
   owners: PluginLookUpTableOwnerMaps;
   startup: PluginLookUpTableStartupPlan;
 };
@@ -122,6 +124,7 @@ export function loadPluginLookUpTable(params: LoadPluginLookUpTableParams): Plug
     index,
     manifestRegistry,
   });
+  const normalizePluginId = createPluginRegistryIdNormalizer(index, { manifestRegistry });
   const byPluginId = new Map(manifestRegistry.plugins.map((plugin) => [plugin.id, plugin]));
   const owners = buildOwnerMaps(manifestRegistry.plugins);
   const startup = {
@@ -147,6 +150,7 @@ export function loadPluginLookUpTable(params: LoadPluginLookUpTableParams): Plug
     plugins: manifestRegistry.plugins,
     diagnostics: [...index.diagnostics, ...manifestRegistry.diagnostics],
     byPluginId,
+    normalizePluginId,
     owners,
     startup,
   };
