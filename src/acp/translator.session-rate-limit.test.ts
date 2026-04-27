@@ -13,6 +13,10 @@ import { createInMemorySessionStore } from "./session.js";
 import { AcpGatewayAgent } from "./translator.js";
 import { createAcpConnection, createAcpGateway } from "./translator.test-helpers.js";
 
+vi.mock("./commands.js", () => ({
+  getAvailableCommands: () => [],
+}));
+
 function createNewSessionRequest(cwd = "/tmp"): NewSessionRequest {
   return {
     cwd,

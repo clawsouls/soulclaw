@@ -1,4 +1,4 @@
-import fs from "node:fs/promises";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -9,22 +9,22 @@ const isWindows = process.platform === "win32";
 
 describe("security audit config include permissions", () => {
   it("flags group/world-readable config include files", async () => {
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-include-perms-"));
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-include-perms-"));
     const stateDir = path.join(tmp, "state");
-    await fs.mkdir(stateDir, { recursive: true, mode: 0o700 });
+    fs.mkdirSync(stateDir, { recursive: true, mode: 0o700 });
 
     const includePath = path.join(stateDir, "extra.json5");
-    await fs.writeFile(includePath, "{ logging: { redactSensitive: 'off' } }\n", "utf-8");
+    fs.writeFileSync(includePath, "{ logging: { redactSensitive: 'off' } }\n", "utf-8");
     if (isWindows) {
       const { execSync } = await import("node:child_process");
       execSync(`icacls "${includePath}" /grant Everyone:W`, { stdio: "ignore" });
     } else {
-      await fs.chmod(includePath, 0o644);
+      fs.chmodSync(includePath, 0o644);
     }
 
     const configPath = path.join(stateDir, "openclaw.json");
-    await fs.writeFile(configPath, `{ "$include": "./extra.json5" }\n`, "utf-8");
-    await fs.chmod(configPath, 0o600);
+    fs.writeFileSync(configPath, `{ "$include": "./extra.json5" }\n`, "utf-8");
+    fs.chmodSync(configPath, 0o600);
 
     const user = "DESKTOP-TEST\\Tester";
     const execIcacls = isWindows
