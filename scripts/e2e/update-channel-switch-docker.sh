@@ -62,6 +62,11 @@ NODE
   cd "$git_root"
   npm install --omit=optional --no-fund --no-audit >/tmp/openclaw-git-install.log 2>&1
 )
+node - <<'"'"'NODE'"'"'
+const fs = require("node:fs");
+fs.mkdirSync("/tmp/openclaw-git/dist/control-ui", { recursive: true });
+fs.writeFileSync("/tmp/openclaw-git/dist/control-ui/index.html", "<!doctype html><title>fixture</title>\n");
+NODE
 
 git config --global user.email "docker-e2e@openclaw.local"
 git config --global user.name "OpenClaw Docker E2E"
