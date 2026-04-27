@@ -564,13 +564,46 @@ describe("doctor bundled plugin runtime deps", () => {
         }),
     });
 
-    await Promise.resolve();
-    expect(logs).toEqual([expect.stringContaining("Installing bundled plugin runtime deps")]);
+    await vi.waitFor(() =>
+      expect(logs).toEqual([expect.stringContaining("Installing bundled plugin runtime deps")]),
+    );
     await vi.advanceTimersByTimeAsync(15_000);
     expect(logs).toContain("Still installing bundled plugin runtime deps after 15s...");
 
     finishInstall();
     await repair;
+  });
+
+  it("awaits async runtime-deps repairs before reporting completion", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-doctor-bundled-"));
+    writeJson(path.join(root, "package.json"), { name: "openclaw" });
+    writeBundledChannelPlugin(root, "telegram", { grammy: "1.37.0" });
+    const installed = createInstalledRuntimeDeps();
+    const notes: string[] = [];
+    let finishInstall!: () => void;
+
+    const repair = maybeRepairBundledPluginRuntimeDeps({
+      runtime: { error: () => {}, log: () => {} } as never,
+      prompter: createNonInteractivePrompter(),
+      packageRoot: root,
+      config: {
+        plugins: { enabled: true },
+        channels: { telegram: { enabled: true } },
+      },
+      installDeps: async (params) => {
+        installed.push(params);
+        await new Promise<void>((resolve) => {
+          finishInstall = resolve;
+        });
+      },
+    }).then(() => notes.push("done"));
+
+    await vi.waitFor(() => expect(installed).toHaveLength(1));
+    expect(notes).toEqual([]);
+
+    finishInstall();
+    await repair;
+    expect(notes).toEqual(["done"]);
   });
 
   it("repairs deps for configured channel owner plugins", async () => {

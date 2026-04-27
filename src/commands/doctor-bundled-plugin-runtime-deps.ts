@@ -124,7 +124,14 @@ export async function maybeRepairBundledPluginRuntimeDeps(params: {
   }
 
   let heartbeat: NodeJS.Timeout | undefined;
+  let progress: { setLabel: (label: string) => void; done: () => void } | undefined;
   try {
+    const { createCliProgress } = await import("../cli/progress.js");
+    progress = createCliProgress({
+      label: `Installing bundled plugin runtime deps (${missingSpecs.length})`,
+      indeterminate: true,
+      enabled: process.env.VITEST !== "true" || process.env.OPENCLAW_TEST_RUNTIME_LOG === "1",
+    });
     const installStartedAt = Date.now();
     logRuntimeDepsInstallProgress(
       params.runtime,
@@ -148,6 +155,7 @@ export async function maybeRepairBundledPluginRuntimeDeps(params: {
           }
         : undefined,
       warn: (message) => logRuntimeDepsInstallProgress(params.runtime, message),
+      onProgress: (message) => progress?.setLabel(message),
     });
     logRuntimeDepsInstallProgress(
       params.runtime,
@@ -161,5 +169,6 @@ export async function maybeRepairBundledPluginRuntimeDeps(params: {
     if (heartbeat) {
       clearInterval(heartbeat);
     }
+    progress?.done();
   }
 }
