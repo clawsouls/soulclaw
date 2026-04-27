@@ -22,6 +22,7 @@ import type {
   GatewayServiceControlArgs,
   GatewayServiceEnv,
   GatewayServiceEnvArgs,
+  GatewayServiceEnvironmentValueSource,
   GatewayServiceInstallArgs,
   GatewayServiceManageArgs,
   GatewayServiceRestartResult,
@@ -114,10 +115,10 @@ export async function readSystemdServiceExecStart(
       ...inlineEnvironment,
       ...environmentFromFiles.environment,
     };
-    const mergedEnvironmentSources = {
-      ...buildEnvironmentValueSources(inlineEnvironment, "inline"),
-      ...buildEnvironmentValueSources(environmentFromFiles.environment, "file"),
-    };
+    const mergedEnvironmentSources = mergeEnvironmentValueSources(
+      inlineEnvironment,
+      environmentFromFiles.environment,
+    );
     const programArguments = parseSystemdExecStart(execStart);
     return {
       programArguments,
@@ -136,8 +137,19 @@ export async function readSystemdServiceExecStart(
 function buildEnvironmentValueSources(
   environment: Record<string, string>,
   source: "inline" | "file",
-): Record<string, "inline" | "file"> {
+): Record<string, GatewayServiceEnvironmentValueSource> {
   return Object.fromEntries(Object.keys(environment).map((key) => [key, source]));
+}
+
+function mergeEnvironmentValueSources(
+  inlineEnvironment: Record<string, string>,
+  fileEnvironment: Record<string, string>,
+): Record<string, GatewayServiceEnvironmentValueSource> {
+  const sources = buildEnvironmentValueSources(inlineEnvironment, "inline");
+  for (const key of Object.keys(fileEnvironment)) {
+    sources[key] = Object.hasOwn(inlineEnvironment, key) ? "inline-and-file" : "file";
+  }
+  return sources;
 }
 
 function expandSystemdSpecifier(input: string, env: GatewayServiceEnv): string {

@@ -68,6 +68,8 @@ vi.mock("../daemon/service-audit.js", () => ({
   readEmbeddedGatewayToken: readEmbeddedGatewayTokenForTest,
   SERVICE_AUDIT_CODES: {
     gatewayEntrypointMismatch: testServiceAuditCodes.gatewayEntrypointMismatch,
+    gatewayManagedEnvEmbedded: testServiceAuditCodes.gatewayManagedEnvEmbedded,
+    gatewayTokenMismatch: testServiceAuditCodes.gatewayTokenMismatch,
   },
 }));
 
@@ -279,6 +281,43 @@ describe("maybeRepairGatewayServiceConfig", () => {
     );
     expect(mocks.writeConfigFile).not.toHaveBeenCalled();
     expect(mocks.stage).not.toHaveBeenCalled();
+    expect(mocks.install).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes planned managed env keys into service audit for legacy inline secret detection", async () => {
+    mocks.readCommand.mockResolvedValue({
+      programArguments: gatewayProgramArguments,
+      environment: {
+        TAVILY_API_KEY: "old-inline-value",
+      },
+    });
+    mocks.buildGatewayInstallPlan.mockResolvedValue({
+      programArguments: gatewayProgramArguments,
+      workingDirectory: "/tmp",
+      environment: {
+        OPENCLAW_SERVICE_MANAGED_ENV_KEYS: "TAVILY_API_KEY",
+      },
+    });
+    mocks.auditGatewayServiceConfig.mockResolvedValue({
+      ok: false,
+      issues: [
+        {
+          code: "gateway-managed-env-embedded",
+          message: "Gateway service embeds managed environment values that should load at runtime.",
+          detail: "inline keys: TAVILY_API_KEY",
+          level: "recommended",
+        },
+      ],
+    });
+    mocks.install.mockResolvedValue(undefined);
+
+    await runRepair({ gateway: {} });
+
+    expect(mocks.auditGatewayServiceConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedManagedServiceEnvKeys: new Set(["TAVILY_API_KEY"]),
+      }),
+    );
     expect(mocks.install).toHaveBeenCalledTimes(1);
   });
 
