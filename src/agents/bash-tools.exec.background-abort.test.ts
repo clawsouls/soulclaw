@@ -246,6 +246,26 @@ test("background exec without explicit timeout applies default timeout", async (
   });
 });
 
+test("background exec with timeout zero bypasses default timeout", async () => {
+  const tool = createTestExecTool({
+    allowBackground: true,
+    backgroundMs: 0,
+    timeoutSec: BACKGROUND_TIMEOUT_SEC,
+  });
+  const result = await tool.execute("toolcall", {
+    command: BACKGROUND_HOLD_CMD,
+    background: true,
+    timeout: 0,
+  });
+  expect(result.details.status).toBe("running");
+  const sessionId = (result.details as { sessionId: string }).sessionId;
+  expect(supervisorMockState.spawnInputs.at(-1)?.timeoutMs).toBeUndefined();
+  expect(getFinishedSession(sessionId)).toBeUndefined();
+  expect(getSession(sessionId)?.exited).toBe(false);
+
+  cleanupRunningSession(sessionId);
+});
+
 test("yielded background exec still times out", async () => {
   const tool = createTestExecTool({ allowBackground: true, backgroundMs: 10 });
   await expectBackgroundSessionTimesOut({
