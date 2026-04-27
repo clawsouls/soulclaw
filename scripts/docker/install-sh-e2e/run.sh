@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# Official installer E2E harness for Docker.
+#
+# Installs OpenClaw through the public one-liner, verifies the resolved npm
+# version, then exercises onboard + local embedded agent tool turns for the
+# configured model providers. Keep this script package-install based: it should
+# validate the installed npm artifact, not repo sources.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -496,6 +502,10 @@ run_profile() {
   test -f "$workspace/USER.md"
   test -f "$workspace/SOUL.md"
   test -f "$workspace/TOOLS.md"
+  # The remaining checks are deterministic tool smokes, not the interactive
+  # first-run identity ritual. Drop BOOTSTRAP.md so provider prompts stay focused
+  # on the fixture task and do not spend turns following onboarding copy.
+  rm -f "$workspace/BOOTSTRAP.md"
 
   echo "==> Configure models ($profile)"
   local agent_model

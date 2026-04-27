@@ -68,4 +68,13 @@ describe("docker build helper", () => {
       'OPENCLAW_VERSION="$INSTALL_TAG" curl -fsSL "$INSTALL_URL" | bash',
     );
   });
+
+  it("keeps installer E2E agent turns out of the interactive bootstrap ritual", () => {
+    const runner = readFileSync(INSTALL_E2E_RUNNER_PATH, "utf8");
+
+    expect(runner).toContain('rm -f "$workspace/BOOTSTRAP.md"');
+    expect(runner.indexOf('rm -f "$workspace/BOOTSTRAP.md"')).toBeLessThan(
+      runner.indexOf('echo "==> Agent turns ($profile)"'),
+    );
+  });
 });
