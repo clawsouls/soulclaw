@@ -104,8 +104,14 @@ export function isExpectedCodexStatusCommandText(text: string): boolean {
     normalized.includes(" openai/") ||
     normalized.includes("`codex/") ||
     normalized.includes(" codex/");
+  const isCurrentSessionStatus =
+    normalized.includes("current session status:") &&
+    normalized.includes("runtime: `openai codex`") &&
+    mentionsModel;
 
-  return mentionsOpenClawStatus && mentionsHarnessSession && mentionsModel;
+  return (
+    isCurrentSessionStatus || (mentionsOpenClawStatus && mentionsHarnessSession && mentionsModel)
+  );
 }
 
 export function isExpectedCodexModelsCommandText(text: string): boolean {
