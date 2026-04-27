@@ -500,9 +500,8 @@ describe("openai transport stream", () => {
         maxTokens: 256,
         requestTimeoutMs: 900_000,
       } satisfies Model<"openai-completions"> & { requestTimeoutMs: number };
-      const model = attachModelProviderRequestTransport(baseModel, { allowPrivateNetwork: true });
       const stream = createOpenAICompletionsTransportStreamFn()(
-        model,
+        baseModel,
         {
           systemPrompt: "system",
           messages: [{ role: "user", content: "Reply OK", timestamp: Date.now() }],

@@ -41,6 +41,7 @@ vi.mock("./openrouter-model-capabilities.js", () => ({
 }));
 
 import type { OpenClawConfig } from "../../config/config.js";
+import { getModelProviderRequestTransport } from "../provider-request-config.js";
 import { buildForwardCompatTemplate } from "./model.forward-compat.test-support.js";
 import { buildInlineProviderModels, resolveModel, resolveModelAsync } from "./model.js";
 import {
@@ -162,6 +163,36 @@ describe("resolveModel", () => {
     expect(result.model?.baseUrl).toBe("http://localhost:9000");
     expect(result.model?.provider).toBe("custom");
     expect(result.model?.id).toBe("missing-model");
+    expect(result.model?.api).toBe("openai-completions");
+  });
+
+  it("defaults baseUrl-only local custom fallback models to chat completions", () => {
+    const cfg = {
+      agents: {
+        defaults: {
+          model: { primary: "local-agent-proxy/gpt-5.2" },
+        },
+      },
+      models: {
+        providers: {
+          "local-agent-proxy": {
+            baseUrl: "http://127.0.0.1:3000/v1",
+            models: [],
+          },
+        },
+      },
+    } as unknown as OpenClawConfig;
+
+    const result = resolveModelForTest("local-agent-proxy", "gpt-5.2", "/tmp/agent", cfg);
+
+    expect(result.error).toBeUndefined();
+    expect(result.model).toMatchObject({
+      provider: "local-agent-proxy",
+      id: "gpt-5.2",
+      api: "openai-completions",
+      baseUrl: "http://127.0.0.1:3000/v1",
+    });
+    expect(getModelProviderRequestTransport(result.model ?? {})).toBeUndefined();
   });
 
   it("normalizes Google fallback baseUrls for custom providers", () => {
