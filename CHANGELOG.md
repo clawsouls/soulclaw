@@ -21,6 +21,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Plugins/Windows: normalize Windows absolute paths before handing bundled plugin modules to Jiti, so Feishu/Lark message sending no longer fails with unsupported `c:` ESM loader URLs. Fixes #72783. Thanks @jackychen-png.
 - CLI/doctor: run bundled plugin runtime-dependency repairs through the async npm installer with spinner/line progress and heartbeat updates, so long `openclaw doctor --fix` installs no longer look hung in TTY or piped output. Fixes #72775. Thanks @dfpalhano.
 - Feishu/Windows: normalize bundled channel sidecar loads before Jiti evaluates them, so Feishu outbound sends no longer fail with raw `C:` ESM loader errors on Windows. Fixes #72783. Thanks @jackychen-png.
 - Agents/tools: ignore volatile `exec` runtime metadata when comparing tool-loop outcomes, so enabled loop detection can stop repeated identical shell-command results instead of resetting on duration, PID, session, or cwd changes. Fixes #34574; supersedes #41502. Thanks @gucasbrg and @Zcg2021.
