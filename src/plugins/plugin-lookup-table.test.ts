@@ -106,11 +106,27 @@ describe("loadPluginLookUpTable", () => {
         id: "telegram",
         origin: "bundled",
         channels: ["telegram"],
+        channelConfigs: {
+          telegram: {
+            schema: { type: "object" },
+          },
+        },
+        commandAliases: [{ name: "telegram-send" }],
+        contracts: {
+          tools: ["telegram.send"],
+        },
       }),
       createManifestRecord({
         id: "openai",
         origin: "bundled",
         providers: ["openai", "openai-codex"],
+        modelCatalog: {
+          providers: {
+            openai: {
+              models: [{ id: "gpt-test" }],
+            },
+          },
+        },
         cliBackends: ["codex-cli"],
         setup: {
           providers: [{ id: "openai" }],
@@ -146,9 +162,13 @@ describe("loadPluginLookUpTable", () => {
     expect(table.byPluginId.get("telegram")?.id).toBe("telegram");
     expect(table.normalizePluginId("openai-codex")).toBe("openai");
     expect(table.owners.channels.get("telegram")).toEqual(["telegram"]);
+    expect(table.owners.channelConfigs.get("telegram")).toEqual(["telegram"]);
     expect(table.owners.providers.get("openai")).toEqual(["openai"]);
+    expect(table.owners.modelCatalogProviders.get("openai")).toEqual(["openai"]);
     expect(table.owners.cliBackends.get("codex-cli")).toEqual(["openai"]);
     expect(table.owners.setupProviders.get("openai")).toEqual(["openai"]);
+    expect(table.owners.commandAliases.get("telegram-send")).toEqual(["telegram"]);
+    expect(table.owners.contracts.get("tools")).toEqual(["telegram"]);
     expect(table.startup.channelPluginIds).toEqual(["telegram"]);
     expect(table.startup.configuredDeferredChannelPluginIds).toEqual([]);
     expect(table.startup.pluginIds).toEqual(["telegram"]);

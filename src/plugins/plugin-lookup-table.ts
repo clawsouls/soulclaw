@@ -17,9 +17,13 @@ import {
 
 export type PluginLookUpTableOwnerMaps = {
   channels: ReadonlyMap<string, readonly string[]>;
+  channelConfigs: ReadonlyMap<string, readonly string[]>;
   providers: ReadonlyMap<string, readonly string[]>;
+  modelCatalogProviders: ReadonlyMap<string, readonly string[]>;
   cliBackends: ReadonlyMap<string, readonly string[]>;
   setupProviders: ReadonlyMap<string, readonly string[]>;
+  commandAliases: ReadonlyMap<string, readonly string[]>;
+  contracts: ReadonlyMap<string, readonly string[]>;
 };
 
 export type PluginLookUpTableStartupPlan = {
@@ -66,16 +70,26 @@ function freezeOwnerMap(owners: Map<string, string[]>): ReadonlyMap<string, read
 
 function buildOwnerMaps(plugins: readonly PluginManifestRecord[]): PluginLookUpTableOwnerMaps {
   const channels = new Map<string, string[]>();
+  const channelConfigs = new Map<string, string[]>();
   const providers = new Map<string, string[]>();
+  const modelCatalogProviders = new Map<string, string[]>();
   const cliBackends = new Map<string, string[]>();
   const setupProviders = new Map<string, string[]>();
+  const commandAliases = new Map<string, string[]>();
+  const contracts = new Map<string, string[]>();
 
   for (const plugin of plugins) {
     for (const channelId of plugin.channels) {
       appendOwner(channels, channelId, plugin.id);
     }
+    for (const channelId of Object.keys(plugin.channelConfigs ?? {})) {
+      appendOwner(channelConfigs, channelId, plugin.id);
+    }
     for (const providerId of plugin.providers) {
       appendOwner(providers, providerId, plugin.id);
+    }
+    for (const providerId of Object.keys(plugin.modelCatalog?.providers ?? {})) {
+      appendOwner(modelCatalogProviders, providerId, plugin.id);
     }
     for (const cliBackendId of plugin.cliBackends) {
       appendOwner(cliBackends, cliBackendId, plugin.id);
@@ -83,13 +97,25 @@ function buildOwnerMaps(plugins: readonly PluginManifestRecord[]): PluginLookUpT
     for (const setupProvider of plugin.setup?.providers ?? []) {
       appendOwner(setupProviders, setupProvider.id, plugin.id);
     }
+    for (const commandAlias of plugin.commandAliases ?? []) {
+      appendOwner(commandAliases, commandAlias.name, plugin.id);
+    }
+    for (const [contract, values] of Object.entries(plugin.contracts ?? {})) {
+      if (Array.isArray(values) && values.length > 0) {
+        appendOwner(contracts, contract, plugin.id);
+      }
+    }
   }
 
   return {
     channels: freezeOwnerMap(channels),
+    channelConfigs: freezeOwnerMap(channelConfigs),
     providers: freezeOwnerMap(providers),
+    modelCatalogProviders: freezeOwnerMap(modelCatalogProviders),
     cliBackends: freezeOwnerMap(cliBackends),
     setupProviders: freezeOwnerMap(setupProviders),
+    commandAliases: freezeOwnerMap(commandAliases),
+    contracts: freezeOwnerMap(contracts),
   };
 }
 
