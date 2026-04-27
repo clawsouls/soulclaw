@@ -157,6 +157,14 @@ short release-manager notes there. Do not store raw logs, provider
 prompts/responses, channel transcripts, signing material, or secret-bearing
 config in git; raw logs stay in Actions artifacts.
 
+When `Full Release Validation` completes and
+`OPENCLAW_RELEASES_PRIVATE_DISPATCH_TOKEN` is configured in the public repo, it
+requests the private `OpenClaw Release Evidence From Full Validation` workflow.
+That private workflow reads the parent full-validation run, extracts the child
+CI/release-checks/Telegram run ids from the parent logs, and opens the evidence
+PR automatically. If the token is absent or the run predates this wiring, trigger
+that private workflow manually with the full-validation run id.
+
 ### Release Checks
 
 `OpenClaw Release Checks` (`openclaw-release-checks.yml`) is the release child
