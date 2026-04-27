@@ -10,7 +10,7 @@ const runtimeMocks = vi.hoisted(() => ({
     threadId: "thread-2",
   })),
   listAgentIds: vi.fn(() => ["main"]),
-  loadConfig: vi.fn(() => ({})),
+  getRuntimeConfig: vi.fn(() => ({})),
   loadSessionEntry: vi.fn(() => ({
     cfg: {},
     canonicalKey: "main:abc",
@@ -68,7 +68,7 @@ function createInvokeParams(params: Record<string, unknown>) {
       await toolsEffectiveHandlers["tools.effective"]({
         params,
         respond: respond as never,
-        context: {} as never,
+        context: { getRuntimeConfig: () => ({}) } as never,
         client: null,
         req: { type: "req", id: "req-1", method: "tools.effective" },
         isWebchatConnect: () => false,
@@ -318,7 +318,7 @@ describe("tools.effective handler", () => {
     await toolsEffectiveHandlers["tools.effective"]({
       params: { sessionKey: "main:abc" },
       respond: respond as never,
-      context: {} as never,
+      context: { getRuntimeConfig: () => ({}) } as never,
       client: {
         connect: { scopes: ["operator.admin"] },
       } as never,

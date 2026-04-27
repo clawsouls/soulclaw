@@ -26,6 +26,8 @@ export {
   setRuntimeConfigSnapshot,
   writeConfigFile,
 } from "./io.js";
+export { resolveConfigWriteAfterWrite, resolveConfigWriteFollowUp } from "./runtime-snapshot.js";
+export type { ConfigWriteAfterWrite, ConfigWriteFollowUp } from "./runtime-snapshot.js";
 export type { ConfigWriteNotification } from "./io.js";
 export { ConfigMutationConflictError, mutateConfigFile, replaceConfigFile } from "./mutate.js";
 export * from "./paths.js";

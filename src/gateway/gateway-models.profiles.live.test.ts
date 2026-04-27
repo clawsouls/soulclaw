@@ -32,7 +32,7 @@ import { ensureOpenClawModelsJson } from "../agents/models-config.js";
 import { isRateLimitErrorMessage } from "../agents/pi-embedded-helpers/errors.js";
 import { discoverAuthStorage, discoverModels } from "../agents/pi-model-discovery.js";
 import { STREAM_ERROR_FALLBACK_TEXT } from "../agents/stream-message-shared.js";
-import { clearRuntimeConfigSnapshot, loadConfig } from "../config/io.js";
+import { clearRuntimeConfigSnapshot, getRuntimeConfig } from "../config/io.js";
 import type { ModelsConfig, ModelProviderConfig, OpenClawConfig } from "../config/types.js";
 import { isTruthyEnvValue } from "../infra/env.js";
 import { normalizeGoogleModelId } from "../plugin-sdk/google-model-id.js";
@@ -2131,7 +2131,7 @@ describeLive("gateway live (dev agent, profile keys)", () => {
     async () =>
       await withSuppressedGatewayLiveWarnings(async () => {
         clearRuntimeConfigSnapshot();
-        const cfg = loadConfig();
+        const cfg = getRuntimeConfig();
         await ensureOpenClawModelsJson(cfg);
 
         const agentDir = resolveOpenClawAgentDir();
@@ -2281,7 +2281,7 @@ describeLive("gateway live (dev agent, profile keys)", () => {
     const token = `test-${randomUUID()}`;
     process.env.OPENCLAW_GATEWAY_TOKEN = token;
 
-    const cfg = loadConfig();
+    const cfg = getRuntimeConfig();
     await ensureOpenClawModelsJson(cfg);
 
     const agentDir = resolveOpenClawAgentDir();

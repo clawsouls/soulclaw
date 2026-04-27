@@ -1,7 +1,7 @@
 import type { IncomingMessage } from "node:http";
 import os from "node:os";
 import type { RawData, WebSocket } from "ws";
-import { loadConfig } from "../../../config/config.js";
+import { getRuntimeConfig } from "../../../config/config.js";
 import {
   getBoundDeviceBootstrapProfile,
   getDeviceBootstrapTokenProfile,
@@ -260,7 +260,7 @@ export function attachGatewayWsMessageHandler(params: {
       });
     });
 
-  const configSnapshot = loadConfig();
+  const configSnapshot = getRuntimeConfig();
   const trustedProxies = configSnapshot.gateway?.trustedProxies ?? [];
   const allowRealIpFallback = configSnapshot.gateway?.allowRealIpFallback === true;
   const clientIp = resolveClientIp({
@@ -1246,7 +1246,7 @@ export function attachGatewayWsMessageHandler(params: {
 
         if (role === "node") {
           const reconciliation = await reconcileNodePairingOnConnect({
-            cfg: loadConfig(),
+            cfg: getRuntimeConfig(),
             connectParams,
             pairedNode: await getPairedNode(connectParams.device?.id ?? connectParams.client.id),
             reportedClientIp,
@@ -1400,7 +1400,7 @@ export function attachGatewayWsMessageHandler(params: {
             platform: nodeSession.platform,
             deviceFamily: nodeSession.deviceFamily,
             commands: nodeSession.commands,
-            cfg: loadConfig(),
+            cfg: getRuntimeConfig(),
           }).catch((err) =>
             logGateway.warn(
               `remote bin probe failed for ${nodeSession.nodeId}: ${formatForLog(err)}`,

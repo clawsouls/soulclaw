@@ -94,6 +94,7 @@ import {
   setRuntimeConfigSnapshot as setRuntimeConfigSnapshotState,
   getRuntimeConfigSnapshotRefreshHandler as getRuntimeConfigSnapshotRefreshHandlerState,
   setRuntimeConfigSnapshotRefreshHandler as setRuntimeConfigSnapshotRefreshHandlerState,
+  type ConfigWriteAfterWrite,
   type RuntimeConfigWriteNotification,
 } from "./runtime-snapshot.js";
 import { resolveShellEnvExpectedKeys } from "./shell-env-expected-keys.js";
@@ -208,6 +209,11 @@ export type ConfigWriteOptions = {
    * Useful when the caller wants machine-readable output only (--json mode).
    */
   skipOutputLogs?: boolean;
+  /**
+   * Runtime reload intent for observers that react to committed config writes.
+   * Omitted means the observer should use its normal reload plan.
+   */
+  afterWrite?: ConfigWriteAfterWrite;
 };
 
 export type ReadConfigFileSnapshotForWriteResult = {
@@ -2371,6 +2377,7 @@ export async function writeConfigFile(
       runtimeConfig: currentRuntimeConfig,
       persistedHash: writeResult.persistedHash,
       writtenAtMs: Date.now(),
+      afterWrite: options.afterWrite,
     });
   };
   // Keep the last-known-good runtime snapshot active until the specialized refresh path

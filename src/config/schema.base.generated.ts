@@ -4412,7 +4412,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
                     minLength: 1,
                     title: "Memory Search Input Type",
                     description:
-                      "Use this optional provider-specific `input_type` value when the same label should apply to both query and document embedding requests. For asymmetric providers, prefer queryInputType and documentInputType.",
+                      "Use this optional provider-specific `input_type` value only when the same label should apply to both query and document embedding requests. For asymmetric providers, prefer queryInputType and documentInputType.",
                   },
                   queryInputType: {
                     type: "string",
@@ -26095,7 +26095,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
     },
     "agents.defaults.memorySearch.inputType": {
       label: "Memory Search Input Type",
-      help: "Use this optional provider-specific `input_type` value when the same label should apply to both query and document embedding requests. For asymmetric providers, prefer queryInputType and documentInputType.",
+      help: "Use this optional provider-specific `input_type` value only when the same label should apply to both query and document embedding requests. For asymmetric providers, prefer queryInputType and documentInputType.",
       tags: ["advanced"],
     },
     "agents.defaults.memorySearch.queryInputType": {

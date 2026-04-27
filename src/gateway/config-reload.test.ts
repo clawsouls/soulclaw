@@ -930,6 +930,57 @@ describe("startGatewayConfigReloader", () => {
     await harness.reloader.stop();
   });
 
+  it("honors in-process write intent to skip reload", async () => {
+    const readSnapshot = vi
+      .fn<() => Promise<ConfigFileSnapshot>>()
+      .mockResolvedValueOnce(makeZeroDebounceHookSnapshot("internal-none"));
+    const promoteSnapshot = vi.fn(async () => true);
+    const harness = createReloaderHarness(readSnapshot, { promoteSnapshot });
+
+    harness.emitWrite({
+      ...makeZeroDebounceHookWrite("internal-none"),
+      afterWrite: { mode: "none", reason: "caller handles follow-up" },
+    });
+    await vi.runOnlyPendingTimersAsync();
+
+    expect(harness.onHotReload).not.toHaveBeenCalled();
+    expect(harness.onRestart).not.toHaveBeenCalled();
+    expect(harness.log.info).toHaveBeenCalledWith(
+      "config reload skipped by writer intent (caller handles follow-up)",
+    );
+    expect(promoteSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({ hash: "internal-none" }),
+      "in-process-write",
+    );
+
+    await harness.reloader.stop();
+  });
+
+  it("honors in-process write intent to force restart", async () => {
+    const readSnapshot = vi
+      .fn<() => Promise<ConfigFileSnapshot>>()
+      .mockResolvedValueOnce(makeZeroDebounceHookSnapshot("internal-restart"));
+    const harness = createReloaderHarness(readSnapshot);
+
+    harness.emitWrite({
+      ...makeZeroDebounceHookWrite("internal-restart"),
+      afterWrite: { mode: "restart", reason: "plugin runtime contract changed" },
+    });
+    await vi.runOnlyPendingTimersAsync();
+
+    expect(harness.onHotReload).not.toHaveBeenCalled();
+    expect(harness.onRestart).toHaveBeenCalledTimes(1);
+    expect(harness.onRestart).toHaveBeenCalledWith(
+      expect.objectContaining({
+        restartGateway: true,
+        restartReasons: expect.arrayContaining(["plugin runtime contract changed"]),
+      }),
+      expect.any(Object),
+    );
+
+    await harness.reloader.stop();
+  });
+
   it("plans in-process reloads from source config and ignores runtime materialized paths", async () => {
     const baseInstall = {
       source: "npm" as const,

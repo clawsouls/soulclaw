@@ -4,6 +4,57 @@ export type RuntimeConfigSnapshotRefreshParams = {
   sourceConfig: OpenClawConfig;
 };
 
+export type ConfigWriteAfterWrite =
+  | { mode: "auto" }
+  | { mode: "restart"; reason: string }
+  | { mode: "none"; reason: string };
+
+export type ConfigWriteFollowUp =
+  | {
+      mode: "auto";
+      requiresRestart: false;
+    }
+  | {
+      mode: "none";
+      reason: string;
+      requiresRestart: false;
+    }
+  | {
+      mode: "restart";
+      reason: string;
+      requiresRestart: true;
+    };
+
+export function resolveConfigWriteAfterWrite(
+  afterWrite?: ConfigWriteAfterWrite,
+): ConfigWriteAfterWrite {
+  return afterWrite ?? { mode: "auto" };
+}
+
+export function resolveConfigWriteFollowUp(
+  afterWrite?: ConfigWriteAfterWrite,
+): ConfigWriteFollowUp {
+  const resolved = resolveConfigWriteAfterWrite(afterWrite);
+  if (resolved.mode === "restart") {
+    return {
+      mode: "restart",
+      reason: resolved.reason,
+      requiresRestart: true,
+    };
+  }
+  if (resolved.mode === "none") {
+    return {
+      mode: "none",
+      reason: resolved.reason,
+      requiresRestart: false,
+    };
+  }
+  return {
+    mode: "auto",
+    requiresRestart: false,
+  };
+}
+
 export type RuntimeConfigSnapshotRefreshHandler = {
   refresh: (params: RuntimeConfigSnapshotRefreshParams) => boolean | Promise<boolean>;
   clearOnRefreshFailure?: () => void;
@@ -15,6 +66,7 @@ export type RuntimeConfigWriteNotification = {
   runtimeConfig: OpenClawConfig;
   persistedHash: string;
   writtenAtMs: number;
+  afterWrite?: ConfigWriteAfterWrite;
 };
 
 let runtimeConfigSnapshot: OpenClawConfig | null = null;

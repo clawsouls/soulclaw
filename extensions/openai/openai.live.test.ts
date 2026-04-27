@@ -5,8 +5,7 @@ import { getModel, type Api, type Model } from "@mariozechner/pi-ai";
 import { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 import OpenAI from "openai";
 import type { ResolvedTtsConfig } from "openclaw/plugin-sdk/agent-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { loadConfig } from "openclaw/plugin-sdk/config-runtime";
+import { getRuntimeConfig, type OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
 import { encodePngRgba, fillPixel } from "openclaw/plugin-sdk/media-runtime";
 import { describe, expect, it } from "vitest";
 import {
@@ -100,7 +99,7 @@ function createReferencePng(): Buffer {
 }
 
 function createLiveConfig(): OpenClawConfig {
-  const cfg = loadConfig();
+  const cfg = getRuntimeConfig();
   return {
     ...cfg,
     models: {

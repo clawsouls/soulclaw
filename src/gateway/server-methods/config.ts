@@ -5,9 +5,9 @@ import {
   parseConfigJson5,
   readConfigFileSnapshot,
   readConfigFileSnapshotForWrite,
+  replaceConfigFile,
   resolveConfigSnapshotHash,
   validateConfigObjectWithPlugins,
-  writeConfigFile,
 } from "../../config/config.js";
 import { formatConfigIssueLines } from "../../config/issue-format.js";
 import { applyMergePatch } from "../../config/merge-patch.js";
@@ -387,7 +387,7 @@ async function tryWriteRestartSentinelPayload(
 
 function loadSchemaWithPlugins(): ConfigSchemaResponse {
   // Note: We can't easily cache this, as there are no callback that can invalidate
-  // our cache. However, loadConfig() and loadOpenClawPlugins() (called inside
+  // our cache. However, getRuntimeConfig() and loadOpenClawPlugins() (called inside
   // loadGatewayRuntimeConfigSchema) already cache their results, and buildConfigSchema()
   // is just a cheap transformation.
   return loadGatewayRuntimeConfigSchema();
@@ -456,7 +456,11 @@ export const configHandlers: GatewayRequestHandlers = {
     if (!(await ensureResolvableSecretRefsOrRespond({ config: parsed.config, respond }))) {
       return;
     }
-    await writeConfigFile(parsed.config, writeOptions);
+    await replaceConfigFile({
+      nextConfig: parsed.config,
+      writeOptions,
+      afterWrite: { mode: "auto" },
+    });
     respond(
       true,
       {
@@ -576,7 +580,11 @@ export const configHandlers: GatewayRequestHandlers = {
       snapshot.config,
       validated.config,
     );
-    await writeConfigFile(validated.config, writeOptions);
+    await replaceConfigFile({
+      nextConfig: validated.config,
+      writeOptions,
+      afterWrite: { mode: "auto" },
+    });
 
     const { sessionKey, note, restartDelayMs, deliveryContext, threadId } =
       resolveConfigRestartRequest(params);
@@ -649,7 +657,11 @@ export const configHandlers: GatewayRequestHandlers = {
     // Compare before the write so we invalidate clients authenticated against the
     // previous shared secret immediately after the config update succeeds.
     const disconnectSharedAuthClients = didSharedGatewayAuthChange(snapshot.config, parsed.config);
-    await writeConfigFile(parsed.config, writeOptions);
+    await replaceConfigFile({
+      nextConfig: parsed.config,
+      writeOptions,
+      afterWrite: { mode: "auto" },
+    });
 
     const { sessionKey, note, restartDelayMs, deliveryContext, threadId } =
       resolveConfigRestartRequest(params);

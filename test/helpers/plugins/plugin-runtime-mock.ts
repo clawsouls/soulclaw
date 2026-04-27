@@ -75,6 +75,24 @@ export function createPluginRuntimeMock(overrides: DeepPartial<PluginRuntime> = 
   const base: PluginRuntime = {
     version: "1.0.0-test",
     config: {
+      current: vi.fn(() => ({})) as unknown as PluginRuntime["config"]["current"],
+      mutateConfigFile: vi.fn(async () => ({
+        path: "/tmp/openclaw.json",
+        previousHash: null,
+        snapshot: {} as never,
+        nextConfig: {},
+        afterWrite: { mode: "auto" },
+        followUp: { mode: "auto", requiresRestart: false },
+        result: undefined,
+      })) as unknown as PluginRuntime["config"]["mutateConfigFile"],
+      replaceConfigFile: vi.fn(async ({ nextConfig }) => ({
+        path: "/tmp/openclaw.json",
+        previousHash: null,
+        snapshot: {} as never,
+        nextConfig,
+        afterWrite: { mode: "auto" },
+        followUp: { mode: "auto", requiresRestart: false },
+      })) as unknown as PluginRuntime["config"]["replaceConfigFile"],
       loadConfig: vi.fn(() => ({})) as unknown as PluginRuntime["config"]["loadConfig"],
       writeConfigFile: vi.fn() as unknown as PluginRuntime["config"]["writeConfigFile"],
     },

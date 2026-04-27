@@ -275,10 +275,12 @@ describe("subagent announce formatting", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     resetAnnounceQueuesForTests();
   });
 
   beforeEach(() => {
+    vi.useRealTimers();
     resetAnnounceQueuesForTests();
     // OPENCLAW_TEST_FAST is set in beforeAll before module import
     // to ensure the module-level constant picks it up.
@@ -316,7 +318,7 @@ describe("subagent announce formatting", () => {
       callGateway: async <T = Record<string, unknown>>(
         req: Parameters<typeof gatewayCall.callGateway>[0],
       ) => (await callGatewaySpy(req)) as T,
-      loadConfig: () => configOverride,
+      getRuntimeConfig: () => configOverride,
       getRequesterSessionActivity: (requesterSessionKey: string) => {
         const entry = loadSessionStoreFixture()[requesterSessionKey];
         const sessionId = entry?.sessionId;
@@ -332,7 +334,7 @@ describe("subagent announce formatting", () => {
       callGateway: async <T = Record<string, unknown>>(
         req: Parameters<typeof gatewayCall.callGateway>[0],
       ) => (await callGatewaySpy(req)) as T,
-      loadConfig: () => configOverride,
+      getRuntimeConfig: () => configOverride,
     });
     loadSessionStoreSpy.mockReset().mockImplementation(() => loadSessionStoreFixture());
     resolveAgentIdFromSessionKeySpy.mockReset().mockImplementation(() => "main");

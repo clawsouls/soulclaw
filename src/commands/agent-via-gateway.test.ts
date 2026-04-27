@@ -78,7 +78,7 @@ function mockLocalAgentReply(text = "local") {
   });
 }
 
-vi.mock("../config/config.js", () => ({ loadConfig }));
+vi.mock("../config/config.js", () => ({ getRuntimeConfig: loadConfig, loadConfig }));
 vi.mock("../gateway/call.js", () => ({
   callGateway,
   randomIdempotencyKey: () => "idem-1",
