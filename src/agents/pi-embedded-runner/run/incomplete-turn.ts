@@ -109,6 +109,7 @@ const GEMINI_INCOMPLETE_TURN_PROVIDER_IDS = new Set([
   "google-gemini-cli",
 ]);
 const GEMINI_INCOMPLETE_TURN_MODEL_ID_PATTERN = /^gemini(?:[.-]|$)/;
+const OLLAMA_INCOMPLETE_TURN_PROVIDER_ID_PATTERN = /^ollama(?:-|$)/;
 const DEFAULT_PLANNING_ONLY_RETRY_LIMIT = 1;
 const STRICT_AGENTIC_PLANNING_ONLY_RETRY_LIMIT = 2;
 // Allow one immediate continuation plus one follow-up continuation before
@@ -498,7 +499,7 @@ export function resolveReasoningOnlyRetryInstruction(params: {
   }
 
   if (
-    !shouldApplyPlanningOnlyRetryGuard({
+    !shouldApplyNonVisibleTurnRetryGuard({
       provider: params.provider,
       modelId: params.modelId,
       executionContract: params.executionContract,
@@ -544,7 +545,7 @@ export function resolveEmptyResponseRetryInstruction(params: {
   }
 
   if (
-    shouldApplyPlanningOnlyRetryGuard({
+    shouldApplyNonVisibleTurnRetryGuard({
       provider: params.provider,
       modelId: params.modelId,
       executionContract: params.executionContract,
@@ -571,6 +572,19 @@ function shouldApplyPlanningOnlyRetryGuard(params: {
     provider: params.provider,
     modelId: params.modelId,
   });
+}
+
+function shouldApplyNonVisibleTurnRetryGuard(params: {
+  provider?: string;
+  modelId?: string;
+  executionContract?: string;
+}): boolean {
+  if (shouldApplyPlanningOnlyRetryGuard(params)) {
+    return true;
+  }
+  return OLLAMA_INCOMPLETE_TURN_PROVIDER_ID_PATTERN.test(
+    normalizeLowercaseStringOrEmpty(params.provider ?? ""),
+  );
 }
 
 function isIncompleteTurnRecoverySupportedProviderModel(params: {
