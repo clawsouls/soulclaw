@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import type { PluginLookUpTable } from "../plugins/plugin-lookup-table.js";
 import type { PluginRegistry } from "../plugins/registry.js";
 import type { PluginRuntimeGatewayRequestScope } from "../plugins/runtime/gateway-request-scope.js";
 import type { PluginRuntime } from "../plugins/runtime/types.js";
@@ -107,6 +108,47 @@ const createRegistry = (diagnostics: PluginDiagnostic[]): PluginRegistry => ({
   conversationBindingResolvedHandlers: [],
   diagnostics,
 });
+
+function createLookUpTableForTest(params: {
+  manifestRegistry?: PluginLookUpTable["manifestRegistry"];
+  pluginIds?: readonly string[];
+}): PluginLookUpTable {
+  return {
+    key: "test",
+    index: {
+      version: 1,
+      hostContractVersion: "test",
+      compatRegistryVersion: "test",
+      migrationVersion: 1,
+      policyHash: "test",
+      generatedAtMs: 1,
+      installRecords: {},
+      plugins: [],
+      diagnostics: [],
+    },
+    registryDiagnostics: [],
+    manifestRegistry: params.manifestRegistry ?? { plugins: [], diagnostics: [] },
+    plugins: [],
+    diagnostics: [],
+    byPluginId: new Map(),
+    normalizePluginId: (pluginId) => pluginId,
+    owners: {
+      channels: new Map(),
+      channelConfigs: new Map(),
+      providers: new Map(),
+      modelCatalogProviders: new Map(),
+      cliBackends: new Map(),
+      setupProviders: new Map(),
+      commandAliases: new Map(),
+      contracts: new Map(),
+    },
+    startup: {
+      channelPluginIds: [],
+      configuredDeferredChannelPluginIds: [],
+      pluginIds: params.pluginIds ?? [],
+    },
+  };
+}
 
 type ServerPluginsModule = typeof import("./server-plugins.js");
 type ServerPluginBootstrapModule = typeof import("./server-plugin-bootstrap.js");
@@ -368,6 +410,30 @@ describe("loadGatewayPlugins", () => {
     expect(loadOpenClawPlugins).toHaveBeenCalledWith(
       expect.objectContaining({
         onlyPluginIds: ["browser"],
+      }),
+    );
+  });
+
+  test("reuses a provided lookup table for startup scope and auto-enable manifests", async () => {
+    loadOpenClawPlugins.mockReturnValue(createRegistry([]));
+    const manifestRegistry = { plugins: [], diagnostics: [] };
+
+    loadGatewayPluginsForTest({
+      pluginLookUpTable: createLookUpTableForTest({
+        manifestRegistry,
+        pluginIds: ["telegram"],
+      }),
+    });
+
+    expect(loadPluginLookUpTable).not.toHaveBeenCalled();
+    expect(applyPluginAutoEnable).toHaveBeenCalledWith({
+      config: {},
+      env: process.env,
+      manifestRegistry,
+    });
+    expect(loadOpenClawPlugins).toHaveBeenCalledWith(
+      expect.objectContaining({
+        onlyPluginIds: ["telegram"],
       }),
     );
   });

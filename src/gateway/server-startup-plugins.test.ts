@@ -20,8 +20,10 @@ const repairBundledRuntimeDepsInstallRootAsync = vi.hoisted(() =>
 const resolveBundledRuntimeDependencyPackageInstallRoot = vi.hoisted(() =>
   vi.fn((_packageRoot: string, _params: unknown) => "/runtime"),
 );
+const pluginManifestRegistry = vi.hoisted(() => ({ plugins: [], diagnostics: [] }));
 const loadPluginLookUpTable = vi.hoisted(() =>
   vi.fn((_params: unknown) => ({
+    manifestRegistry: pluginManifestRegistry,
     startup: {
       configuredDeferredChannelPluginIds: [],
       pluginIds: ["telegram"],
@@ -117,6 +119,7 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
     repairBundledRuntimeDepsInstallRootAsync.mockReset().mockResolvedValue({});
     resolveBundledRuntimeDependencyPackageInstallRoot.mockClear();
     loadPluginLookUpTable.mockClear().mockReturnValue({
+      manifestRegistry: pluginManifestRegistry,
       startup: {
         configuredDeferredChannelPluginIds: [],
         pluginIds: ["telegram"],
@@ -152,6 +155,13 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
 
     expect(loadGatewayStartupPlugins).toHaveBeenCalledOnce();
     expect(loadPluginLookUpTable).toHaveBeenCalledOnce();
+    expect(loadGatewayStartupPlugins).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pluginLookUpTable: expect.objectContaining({
+          manifestRegistry: pluginManifestRegistry,
+        }),
+      }),
+    );
     expect(scanBundledPluginRuntimeDeps).toHaveBeenCalledWith(
       expect.objectContaining({
         selectedPluginIds: ["telegram"],

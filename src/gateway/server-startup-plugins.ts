@@ -168,6 +168,7 @@ export async function prepareGatewayPluginBootstrap(params: {
       coreGatewayMethodNames: baseMethods,
       baseMethods,
       pluginIds: startupPluginIds,
+      pluginLookUpTable,
       preferSetupRuntimeForChannelPlugins: deferredConfiguredChannelPluginIds.length > 0,
       suppressPluginInfoLogs: deferredConfiguredChannelPluginIds.length > 0,
     }));
