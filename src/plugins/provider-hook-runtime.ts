@@ -34,39 +34,24 @@ function matchesProviderLiteralId(provider: ProviderPlugin, providerId: string):
   return !!normalized && normalizeLowercaseStringOrEmpty(provider.id) === normalized;
 }
 
-let cachedHookProvidersWithoutConfig = new WeakMap<
-  NodeJS.ProcessEnv,
-  Map<string, ProviderPlugin[]>
->();
-let cachedHookProvidersByConfig = new WeakMap<
-  OpenClawConfig,
-  WeakMap<NodeJS.ProcessEnv, Map<string, ProviderPlugin[]>>
->();
+let cachedHookProviders = new WeakMap<NodeJS.ProcessEnv, Map<string, ProviderPlugin[]>>();
 
-function resolveHookProviderCacheBucket(params: {
-  config?: OpenClawConfig;
-  env: NodeJS.ProcessEnv;
-}) {
-  if (!params.config) {
-    let bucket = cachedHookProvidersWithoutConfig.get(params.env);
-    if (!bucket) {
-      bucket = new Map<string, ProviderPlugin[]>();
-      cachedHookProvidersWithoutConfig.set(params.env, bucket);
-    }
-    return bucket;
-  }
-
-  let envBuckets = cachedHookProvidersByConfig.get(params.config);
-  if (!envBuckets) {
-    envBuckets = new WeakMap<NodeJS.ProcessEnv, Map<string, ProviderPlugin[]>>();
-    cachedHookProvidersByConfig.set(params.config, envBuckets);
-  }
-  let bucket = envBuckets.get(params.env);
+function resolveHookProviderCacheBucket(env: NodeJS.ProcessEnv) {
+  let bucket = cachedHookProviders.get(env);
   if (!bucket) {
     bucket = new Map<string, ProviderPlugin[]>();
-    envBuckets.set(params.env, bucket);
+    cachedHookProviders.set(env, bucket);
   }
   return bucket;
+}
+
+function resolveHookProviderConfigCacheShape(config: OpenClawConfig | undefined): unknown {
+  if (!config) {
+    return null;
+  }
+  return {
+    plugins: config.plugins,
+  };
 }
 
 function buildHookProviderCacheKey(params: {
@@ -81,18 +66,11 @@ function buildHookProviderCacheKey(params: {
     env: params.env,
   });
   const onlyPluginIds = normalizePluginIdScope(params.onlyPluginIds);
-  return `${roots.workspace ?? ""}::${roots.global}::${roots.stock ?? ""}::${JSON.stringify(params.config ?? null)}::${serializePluginIdScope(onlyPluginIds)}::${JSON.stringify(params.providerRefs ?? [])}`;
+  return `${roots.workspace ?? ""}::${roots.global}::${roots.stock ?? ""}::${JSON.stringify(resolveHookProviderConfigCacheShape(params.config))}::${serializePluginIdScope(onlyPluginIds)}::${JSON.stringify(params.providerRefs ?? [])}`;
 }
 
 export function clearProviderRuntimeHookCache(): void {
-  cachedHookProvidersWithoutConfig = new WeakMap<
-    NodeJS.ProcessEnv,
-    Map<string, ProviderPlugin[]>
-  >();
-  cachedHookProvidersByConfig = new WeakMap<
-    OpenClawConfig,
-    WeakMap<NodeJS.ProcessEnv, Map<string, ProviderPlugin[]>>
-  >();
+  cachedHookProviders = new WeakMap<NodeJS.ProcessEnv, Map<string, ProviderPlugin[]>>();
 }
 
 export function resetProviderRuntimeHookCacheForTest(): void {
@@ -116,10 +94,7 @@ export function resolveProviderPluginsForHooks(params: {
 }): ProviderPlugin[] {
   const env = params.env ?? process.env;
   const workspaceDir = params.workspaceDir ?? getActivePluginRegistryWorkspaceDirFromState();
-  const cacheBucket = resolveHookProviderCacheBucket({
-    config: params.config,
-    env,
-  });
+  const cacheBucket = resolveHookProviderCacheBucket(env);
   const cacheKey = buildHookProviderCacheKey({
     config: params.config,
     workspaceDir,

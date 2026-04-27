@@ -176,7 +176,7 @@ export async function ensureOpenClawModelsJson(
     getCurrentPluginMetadataSnapshot({
       config: cfg,
       ...(workspaceDir ? { workspaceDir } : {}),
-  });
+    });
   const agentDir = agentDirOverride?.trim() ? agentDirOverride.trim() : resolveOpenClawAgentDir();
   const targetPath = path.join(agentDir, "models.json");
   const fingerprint = await buildModelsJsonFingerprint({

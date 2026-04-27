@@ -1,6 +1,6 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ModelProviderConfig } from "../config/types.js";
+import type { ModelProviderConfig, OpenClawConfig } from "../config/types.js";
 import type { ProviderRuntimeModel } from "./provider-runtime-model.types.js";
 import {
   expectAugmentedCodexCatalog,
@@ -501,6 +501,50 @@ describe("provider-runtime", () => {
       }),
     ]);
     expect(providerRuntimeWarnMock).not.toHaveBeenCalled();
+  });
+
+  it("reuses catalog hook provider loads when only non-plugin config changes", () => {
+    resolveCatalogHookProviderPluginIdsMock.mockReturnValue(["demo"]);
+    resolvePluginProvidersMock.mockReturnValue([
+      {
+        id: "demo",
+        label: "Demo",
+        auth: [],
+        suppressBuiltInModel: () => ({ suppress: true, errorMessage: "suppressed" }),
+      },
+    ]);
+    const baseConfig = {
+      plugins: {
+        entries: {
+          demo: { enabled: true },
+        },
+      },
+    } as OpenClawConfig;
+    const firstConfig = {
+      ...baseConfig,
+      agents: { defaults: { model: "openai/gpt-5.4" } },
+    } as OpenClawConfig;
+    const secondConfig = {
+      ...baseConfig,
+      agents: { defaults: { model: "anthropic/claude-sonnet-4-5" } },
+    } as OpenClawConfig;
+
+    expect(
+      resolveProviderBuiltInModelSuppression({
+        config: firstConfig,
+        env: process.env,
+        context: { config: firstConfig, env: process.env, provider: "openai", modelId: "demo" },
+      })?.suppress,
+    ).toBe(true);
+    expect(
+      resolveProviderBuiltInModelSuppression({
+        config: secondConfig,
+        env: process.env,
+        context: { config: secondConfig, env: process.env, provider: "openai", modelId: "demo" },
+      })?.suppress,
+    ).toBe(true);
+
+    expect(resolvePluginProvidersMock).toHaveBeenCalledTimes(1);
   });
 
   it("returns provider-prepared runtime auth for the matched provider", async () => {
