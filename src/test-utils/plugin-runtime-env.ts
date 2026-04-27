@@ -5,7 +5,7 @@ type RuntimeEnvOptions = {
   throwOnExit?: boolean;
 };
 
-type TypedRuntimeEnvOptions<TRuntime extends OutputRuntimeEnv> = RuntimeEnvOptions & {
+type TypedRuntimeEnvOptions<TRuntime> = RuntimeEnvOptions & {
   readonly __runtimeShape?: (runtime: TRuntime) => void;
 };
 
@@ -24,7 +24,7 @@ export function createRuntimeEnv(options?: RuntimeEnvOptions): OutputRuntimeEnv 
   };
 }
 
-export function createTypedRuntimeEnv<TRuntime extends OutputRuntimeEnv>(
+export function createTypedRuntimeEnv<TRuntime>(
   options?: TypedRuntimeEnvOptions<TRuntime>,
 ): TRuntime {
   return createRuntimeEnv(options) as TRuntime;
@@ -34,7 +34,7 @@ export function createNonExitingRuntimeEnv(): OutputRuntimeEnv {
   return createRuntimeEnv({ throwOnExit: false });
 }
 
-export function createNonExitingTypedRuntimeEnv<TRuntime extends OutputRuntimeEnv>(
+export function createNonExitingTypedRuntimeEnv<TRuntime>(
   runtimeShape?: (runtime: TRuntime) => void,
 ): TRuntime {
   return createTypedRuntimeEnv<TRuntime>({ throwOnExit: false, __runtimeShape: runtimeShape });
