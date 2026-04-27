@@ -53,13 +53,23 @@ const unitFastCandidateGlobs = [
   "test/**/*.test.ts",
 ];
 export const forcedUnitFastTestFiles = [
+  "packages/memory-host-sdk/src/host/post-json.test.ts",
+  "src/acp/server.startup.test.ts",
+  "src/browser-lifecycle-cleanup.test.ts",
   "src/crestodian/overview.test.ts",
   "src/flows/channel-setup.test.ts",
+  "src/i18n/registry.test.ts",
+  "src/install-sh-version.test.ts",
+  "src/memory-host-sdk/host/internal.test.ts",
+  "src/memory-host-sdk/host/post-json.test.ts",
   "src/memory-host-sdk/host/session-files.test.ts",
   "src/node-host/invoke-system-run-plan.test.ts",
   "src/node-host/invoke-system-run.test.ts",
   "src/pairing/pairing-store.test.ts",
   "src/plugin-sdk/memory-host-events.test.ts",
+  "src/security/skill-scanner.test.ts",
+  "src/trajectory/export.test.ts",
+  "src/tts/provider-registry.test.ts",
 ];
 const forcedUnitFastTestFileSet = new Set(forcedUnitFastTestFiles);
 const unitFastCandidateExactFiles = [...pluginSdkLightTestFiles, ...commandsLightTestFiles];
