@@ -63,6 +63,7 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain("package_artifact_run_id:");
     expect(workflow).toContain("docker_e2e_bare_image:");
     expect(workflow).toContain("docker_e2e_functional_image:");
+    expect(workflow).toContain("OPENCLAW_DOCKER_E2E_SELECTED_SHA:");
     expect(workflow).toContain("Download current-run OpenClaw Docker E2E package");
     expect(workflow).toContain("Download previous-run OpenClaw Docker E2E package");
     expect(workflow).toContain("inputs.package_artifact_name != ''");
