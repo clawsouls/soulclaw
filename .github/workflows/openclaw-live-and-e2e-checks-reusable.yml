@@ -231,10 +231,9 @@ jobs:
       selected_sha: ${{ steps.validate.outputs.selected_sha }}
       trusted_reason: ${{ steps.validate.outputs.trusted_reason }}
     steps:
-      - name: Checkout selected ref
+      - name: Checkout workflow repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref }}
           fetch-depth: 0
 
       - name: Validate selected ref
@@ -244,11 +243,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          selected_sha="$(git rev-parse HEAD)"
           trusted_reason=""
 
           git fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*'
           git fetch --tags origin '+refs/tags/*:refs/tags/*'
+
+          # Resolve here instead of in actions/checkout so short SHAs work too.
+          if ! selected_sha="$(git rev-parse --verify "${INPUT_REF}^{commit}")"; then
+            echo "Ref '${INPUT_REF}' could not be resolved to a commit." >&2
+            exit 1
+          fi
 
           if git merge-base --is-ancestor "$selected_sha" refs/remotes/origin/main; then
             trusted_reason="main-ancestor"
