@@ -852,6 +852,34 @@ describe("openai transport stream", () => {
     });
   });
 
+  it("does not build OpenRouter reasoning params for Hunter Alpha when reasoning is disabled", () => {
+    const params = buildOpenAICompletionsParams(
+      {
+        id: "openrouter/hunter-alpha",
+        name: "Hunter Alpha",
+        api: "openai-completions",
+        provider: "openrouter",
+        baseUrl: "https://openrouter.ai/api/v1",
+        reasoning: false,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 1_048_576,
+        maxTokens: 65_536,
+      } satisfies Model<"openai-completions">,
+      {
+        systemPrompt: "system",
+        messages: [],
+        tools: [],
+      } as never,
+      {
+        reasoningEffort: "high",
+      } as never,
+    ) as { reasoning?: unknown; reasoning_effort?: unknown };
+
+    expect(params).not.toHaveProperty("reasoning");
+    expect(params).not.toHaveProperty("reasoning_effort");
+  });
+
   it("uses system role instead of developer for responses providers that disable developer role", () => {
     const params = buildOpenAIResponsesParams(
       {

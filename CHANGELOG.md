@@ -25,6 +25,7 @@ Docs: https://docs.openclaw.ai
 
 - Nodes/CLI: add `openclaw nodes remove --node <id|name|ip>` and `node.pair.remove` so stale gateway-owned node pairing records can be cleaned without hand-editing state files. Thanks @openclaw.
 - Docker: install the CA certificate bundle in the slim runtime image so HTTPS calls from containerized gateways no longer fail TLS setup after the `bookworm-slim` base switch. Fixes #72787. Thanks @ryuhaneul.
+- Providers/OpenRouter: remove retired Hunter Alpha and Healer Alpha static catalog rows and disable proxy reasoning injection for stale Hunter Alpha configs, so replies are not hidden when OpenRouter returns answer text in reasoning fields. Fixes #43942. Thanks @EvanDataForge.
 - Providers/reasoning: let Groq and LM Studio declare provider-native reasoning effort values, so Qwen thinking models receive `none`/`default` or `off`/`on` instead of OpenAI-only `low`/`medium` values. Fixes #32638. Thanks @Aqu1bp, @mgoulart, @Norpps, and @BSTail.
 - Local models: default custom providers with only `baseUrl` to the Chat Completions adapter and trust loopback model requests automatically, so local OpenAI-compatible proxies receive `/v1/chat/completions` without timing out. Fixes #40024. Thanks @parachuteshe.
 - Channels/message tool: surface Discord, Slack, and Mattermost `user:`/`channel:` target syntax in the shared message target schema and Discord ambiguity errors, so DM sends by numeric id stop burning retries before finding `user:<id>`. Fixes #72401. Thanks @garyd9, @hclsys, and @praveen9354.
