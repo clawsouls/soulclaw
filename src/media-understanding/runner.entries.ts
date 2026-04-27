@@ -407,15 +407,6 @@ function resolveAudioRequestOverrides(config: MediaUnderstandingConfig | undefin
   };
 }
 
-function applyCliArgTemplate(part: string, ctx: MsgContext): string {
-  const templated = applyTemplate(part, ctx);
-  const mediaPath = ctx.MediaPath;
-  if (!mediaPath || !templated.includes("{input}")) {
-    return templated;
-  }
-  return templated.replace(/\{input\}/g, mediaPath);
-}
-
 async function resolveProviderExecutionAuth(params: {
   providerId: string;
   cfg: OpenClawConfig;
@@ -783,7 +774,7 @@ export async function runCliEntry(params: {
     MaxChars: maxChars,
   };
   const argv = [command, ...args].map((part, index) =>
-    index === 0 ? part : applyCliArgTemplate(part, templCtx),
+    index === 0 ? part : applyTemplate(part, templCtx),
   );
   try {
     if (shouldLogVerbose()) {
