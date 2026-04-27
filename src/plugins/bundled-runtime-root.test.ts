@@ -94,5 +94,17 @@ describe("prepareBundledPluginRuntimeRoot", () => {
     expect(prepared.pluginRoot).toBe(path.join(installRoot, "dist", "extensions", "browser"));
     expect(prepared.modulePath).toBe(path.join(prepared.pluginRoot, "index.js"));
     expect(fs.lstatSync(staleMirrorChunk).isSymbolicLink()).toBe(false);
+
+    const preparedAgain = prepareBundledPluginRuntimeRoot({
+      pluginId: "browser",
+      pluginRoot: prepared.pluginRoot,
+      modulePath: prepared.modulePath,
+      env,
+    });
+
+    expect(preparedAgain).toEqual(prepared);
+    expect(fs.existsSync(staleMirrorChunk)).toBe(true);
+    expect(fs.lstatSync(staleMirrorChunk).isSymbolicLink()).toBe(false);
+    expect(fs.readFileSync(staleMirrorChunk, "utf8")).toContain("playwright-core");
   });
 });

@@ -722,6 +722,9 @@ function mirrorBundledPluginRuntimeRoot(params: {
         // Best-effort only: the access check below will surface non-writable dirs.
       }
       fs.accessSync(mirrorParent, fs.constants.W_OK);
+      if (path.resolve(mirrorRoot) === path.resolve(params.pluginRoot)) {
+        return mirrorRoot;
+      }
       const tempDir = fs.mkdtempSync(path.join(mirrorParent, `.plugin-${params.pluginId}-`));
       const stagedRoot = path.join(tempDir, "plugin");
       try {
