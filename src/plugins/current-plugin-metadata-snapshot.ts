@@ -63,6 +63,9 @@ export function getCurrentPluginMetadataSnapshot(
   ) {
     return undefined;
   }
+  if (snapshot.workspaceDir !== undefined && params.workspaceDir === undefined) {
+    return undefined;
+  }
   if (
     params.workspaceDir !== undefined &&
     (snapshot.workspaceDir ?? "") !== (params.workspaceDir ?? "")

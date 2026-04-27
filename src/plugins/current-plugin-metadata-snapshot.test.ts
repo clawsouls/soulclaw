@@ -67,7 +67,7 @@ describe("current plugin metadata snapshot", () => {
     expect(getCurrentPluginMetadataSnapshot({ config, workspaceDir: "/workspace/a" })).toBe(
       snapshot,
     );
-    expect(getCurrentPluginMetadataSnapshot({ config })).toBe(snapshot);
+    expect(getCurrentPluginMetadataSnapshot({ config })).toBeUndefined();
     expect(
       getCurrentPluginMetadataSnapshot({
         config: { plugins: { allow: ["other"] } },
@@ -77,6 +77,14 @@ describe("current plugin metadata snapshot", () => {
     expect(
       getCurrentPluginMetadataSnapshot({ config, workspaceDir: "/workspace/b" }),
     ).toBeUndefined();
+  });
+
+  it("rejects a workspace-scoped snapshot when the caller does not provide workspace scope", () => {
+    const config = { plugins: { allow: ["demo"] } };
+    const snapshot = createSnapshot({ config, workspaceDir: "/workspace/a" });
+    setCurrentPluginMetadataSnapshot(snapshot, { config });
+
+    expect(getCurrentPluginMetadataSnapshot({ config })).toBeUndefined();
   });
 
   it("rejects a current snapshot when plugin load paths change", () => {
