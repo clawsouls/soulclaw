@@ -85,6 +85,11 @@ export type ResolveManifestContractPluginIdsByCompatibilityRuntimePathParams =
     origin?: PluginOrigin;
   };
 
+export type PluginRegistryIdNormalizerOptions = {
+  manifestRegistry?: PluginManifestRegistry;
+  lookUpTable?: PluginLookUpTable;
+};
+
 function normalizeContributionId(value: string): string {
   return value.trim();
 }
@@ -235,6 +240,7 @@ export function loadPluginManifestRegistryForPluginRegistry(
 
 export function createPluginRegistryIdNormalizer(
   index: PluginRegistrySnapshot,
+  options: PluginRegistryIdNormalizerOptions = {},
 ): (pluginId: string) => string {
   const aliases = new Map<string, string>();
   for (const plugin of index.plugins) {
@@ -243,10 +249,13 @@ export function createPluginRegistryIdNormalizer(
       aliases.set(normalizePluginRegistryAliasKey(pluginId), plugin.pluginId);
     }
   }
-  const registry = loadPluginManifestRegistryForInstalledIndex({
-    index,
-    includeDisabled: true,
-  });
+  const registry =
+    options.lookUpTable?.manifestRegistry ??
+    options.manifestRegistry ??
+    loadPluginManifestRegistryForInstalledIndex({
+      index,
+      includeDisabled: true,
+    });
   for (const plugin of [...registry.plugins].toSorted((left, right) =>
     left.id.localeCompare(right.id),
   )) {
@@ -280,8 +289,12 @@ export function createPluginRegistryIdNormalizer(
 export function normalizePluginsConfigWithRegistry(
   config: OpenClawConfig["plugins"] | undefined,
   index: PluginRegistrySnapshot,
+  options: PluginRegistryIdNormalizerOptions = {},
 ): NormalizedPluginsConfig {
-  return normalizePluginsConfigWithResolver(config, createPluginRegistryIdNormalizer(index));
+  return normalizePluginsConfigWithResolver(
+    config,
+    createPluginRegistryIdNormalizer(index, options),
+  );
 }
 
 export function listPluginContributionIds(

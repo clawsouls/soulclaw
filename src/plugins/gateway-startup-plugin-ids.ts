@@ -212,7 +212,9 @@ export function resolveConfiguredDeferredChannelPluginIdsFromRegistry(params: {
   if (configuredChannelIds.size === 0) {
     return [];
   }
-  const pluginsConfig = normalizePluginsConfigWithRegistry(params.config.plugins, params.index);
+  const pluginsConfig = normalizePluginsConfigWithRegistry(params.config.plugins, params.index, {
+    manifestRegistry: params.manifestRegistry,
+  });
   const activationSource = {
     plugins: pluginsConfig,
     rootConfig: params.config,
@@ -270,7 +272,9 @@ export function resolveGatewayStartupPluginIdsFromRegistry(params: {
   manifestRegistry: PluginManifestRegistry;
 }): string[] {
   const configuredChannelIds = new Set(listPotentialEnabledChannelIds(params.config, params.env));
-  const pluginsConfig = normalizePluginsConfigWithRegistry(params.config.plugins, params.index);
+  const pluginsConfig = normalizePluginsConfigWithRegistry(params.config.plugins, params.index, {
+    manifestRegistry: params.manifestRegistry,
+  });
   // Startup must classify allowlist exceptions against the raw config snapshot,
   // not the auto-enabled effective snapshot, or configured-only channels can be
   // misclassified as explicit enablement.
@@ -278,6 +282,7 @@ export function resolveGatewayStartupPluginIdsFromRegistry(params: {
   const activationSourcePlugins = normalizePluginsConfigWithRegistry(
     activationSourceConfig.plugins,
     params.index,
+    { manifestRegistry: params.manifestRegistry },
   );
   const activationSource = {
     plugins: activationSourcePlugins,
@@ -290,7 +295,9 @@ export function resolveGatewayStartupPluginIdsFromRegistry(params: {
   const memorySlotStartupPluginId = resolveMemorySlotStartupPluginId({
     activationSourceConfig,
     activationSourcePlugins,
-    normalizePluginId: createPluginRegistryIdNormalizer(params.index),
+    normalizePluginId: createPluginRegistryIdNormalizer(params.index, {
+      manifestRegistry: params.manifestRegistry,
+    }),
   });
   return params.index.plugins
     .filter((plugin) => {

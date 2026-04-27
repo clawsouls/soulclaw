@@ -300,6 +300,40 @@ describe("plugin registry facade", () => {
     });
   });
 
+  it("normalizes plugin config ids from a provided manifest registry without rereading manifests", () => {
+    const rootDir = makeTempDir();
+    const candidate = createCandidate(rootDir);
+    const env = hermeticEnv();
+    const index = loadPluginRegistrySnapshot({
+      candidates: [candidate],
+      env,
+      preferPersisted: false,
+    });
+    const lookUpTable = loadPluginLookUpTable({
+      config: {},
+      env,
+      index,
+    });
+    fs.unlinkSync(path.join(rootDir, "openclaw.plugin.json"));
+
+    const normalizePluginId = createPluginRegistryIdNormalizer(index, {
+      manifestRegistry: lookUpTable.manifestRegistry,
+    });
+
+    expect(normalizePluginId("demo-chat")).toBe("demo");
+    expect(
+      normalizePluginsConfigWithRegistry(
+        {
+          allow: ["demo-chat"],
+        },
+        index,
+        { manifestRegistry: lookUpTable.manifestRegistry },
+      ),
+    ).toMatchObject({
+      allow: ["demo"],
+    });
+  });
+
   it("reads the persisted registry before deriving from discovered candidates", async () => {
     const stateDir = makeTempDir();
     const rootDir = makeTempDir();
