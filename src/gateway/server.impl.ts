@@ -30,6 +30,7 @@ import { enqueueSystemEvent } from "../infra/system-events.js";
 import type { VoiceWakeRoutingConfig } from "../infra/voicewake-routing.js";
 import { startDiagnosticHeartbeat, stopDiagnosticHeartbeat } from "../logging/diagnostic.js";
 import { createSubsystemLogger, runtimeForLogger } from "../logging/subsystem.js";
+import { getActiveBundledRuntimeDepsInstallCount } from "../plugins/bundled-runtime-deps-activity.js";
 import { runGlobalGatewayStopSafely } from "../plugins/hook-runner-global.js";
 import { createRuntimeChannel } from "../plugins/runtime/runtime-channel.js";
 import type { PluginRuntime } from "../plugins/runtime/types.js";
@@ -328,6 +329,7 @@ export async function startGatewayServer(
       getTotalQueueSize() +
       getTotalPendingReplies() +
       getActiveEmbeddedRunCount() +
+      getActiveBundledRuntimeDepsInstallCount() +
       getInspectableTaskRegistrySummary().active,
   );
   // Unconditional startup migration: seed gateway.controlUi.allowedOrigins for existing
