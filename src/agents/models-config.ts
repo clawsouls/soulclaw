@@ -71,6 +71,10 @@ async function buildModelsJsonFingerprint(params: {
   });
 }
 
+function modelsJsonReadyCacheKey(targetPath: string, fingerprint: string): string {
+  return `${targetPath}\0${fingerprint}`;
+}
+
 async function readExistingModelsFile(pathname: string): Promise<{
   raw: string;
   parsed: unknown;
@@ -172,7 +176,7 @@ export async function ensureOpenClawModelsJson(
     getCurrentPluginMetadataSnapshot({
       config: cfg,
       ...(workspaceDir ? { workspaceDir } : {}),
-    });
+  });
   const agentDir = agentDirOverride?.trim() ? agentDirOverride.trim() : resolveOpenClawAgentDir();
   const targetPath = path.join(agentDir, "models.json");
   const fingerprint = await buildModelsJsonFingerprint({
@@ -188,13 +192,12 @@ export async function ensureOpenClawModelsJson(
       ? { providerDiscoveryTimeoutMs: options.providerDiscoveryTimeoutMs }
       : {}),
   });
-  const cached = MODELS_JSON_STATE.readyCache.get(targetPath);
+  const cacheKey = modelsJsonReadyCacheKey(targetPath, fingerprint);
+  const cached = MODELS_JSON_STATE.readyCache.get(cacheKey);
   if (cached) {
     const settled = await cached;
-    if (settled.fingerprint === fingerprint) {
-      await ensureModelsFileModeForModelsJson(targetPath);
-      return settled.result;
-    }
+    await ensureModelsFileModeForModelsJson(targetPath);
+    return settled.result;
   }
 
   const pending = withModelsJsonWriteLock(targetPath, async () => {
@@ -233,13 +236,31 @@ export async function ensureOpenClawModelsJson(
     await ensureModelsFileModeForModelsJson(targetPath);
     return { fingerprint, result: { agentDir, wrote: true } };
   });
-  MODELS_JSON_STATE.readyCache.set(targetPath, pending);
+  MODELS_JSON_STATE.readyCache.set(cacheKey, pending);
   try {
     const settled = await pending;
+    const refreshedFingerprint = await buildModelsJsonFingerprint({
+      config: cfg,
+      sourceConfigForSecrets: resolved.sourceConfigForSecrets,
+      agentDir,
+      ...(workspaceDir ? { workspaceDir } : {}),
+      ...(pluginMetadataSnapshot ? { pluginMetadataSnapshot } : {}),
+      ...(options.providerDiscoveryProviderIds
+        ? { providerDiscoveryProviderIds: options.providerDiscoveryProviderIds }
+        : {}),
+      ...(options.providerDiscoveryTimeoutMs !== undefined
+        ? { providerDiscoveryTimeoutMs: options.providerDiscoveryTimeoutMs }
+        : {}),
+    });
+    const refreshedCacheKey = modelsJsonReadyCacheKey(targetPath, refreshedFingerprint);
+    if (refreshedCacheKey !== cacheKey) {
+      MODELS_JSON_STATE.readyCache.delete(cacheKey);
+      MODELS_JSON_STATE.readyCache.set(refreshedCacheKey, Promise.resolve(settled));
+    }
     return settled.result;
   } catch (error) {
-    if (MODELS_JSON_STATE.readyCache.get(targetPath) === pending) {
-      MODELS_JSON_STATE.readyCache.delete(targetPath);
+    if (MODELS_JSON_STATE.readyCache.get(cacheKey) === pending) {
+      MODELS_JSON_STATE.readyCache.delete(cacheKey);
     }
     throw error;
   }
