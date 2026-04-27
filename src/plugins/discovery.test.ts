@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { bundledDistPluginFile } from "../../test/helpers/bundled-plugin-paths.js";
@@ -16,6 +17,21 @@ function makeTempDir() {
 }
 
 const mkdirSafe = mkdirSafeDir;
+
+const canCreateDirectorySymlinks = (() => {
+  const probeDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-symlink-probe-"));
+  const targetDir = path.join(probeDir, "target");
+  const linkDir = path.join(probeDir, "link");
+  try {
+    fs.mkdirSync(targetDir);
+    fs.symlinkSync(targetDir, linkDir, process.platform === "win32" ? "junction" : "dir");
+    return true;
+  } catch {
+    return false;
+  } finally {
+    fs.rmSync(probeDir, { recursive: true, force: true });
+  }
+})();
 
 function normalizePathForAssertion(value: string | undefined): string | undefined {
   if (!value) {
@@ -572,6 +588,75 @@ describe("discoverOpenClawPlugins", () => {
     const { candidates } = await discoverWithStateDir(stateDir, {});
     expectCandidateIds(candidates, { includes: ["pack/one", "pack/two"] });
   });
+
+  it("reuses one filesystem realpath lookup per package root within a discovery run", () => {
+    const stateDir = makeTempDir();
+    const packageDir = path.join(stateDir, "extensions", "pack");
+    mkdirSafe(path.join(packageDir, "src"));
+
+    writePluginPackageManifest({
+      packageDir,
+      packageName: "pack",
+      extensions: ["./src/one.ts", "./src/two.ts"],
+    });
+    writePluginEntry(path.join(packageDir, "src", "one.ts"));
+    writePluginEntry(path.join(packageDir, "src", "two.ts"));
+
+    const realpathSync = vi.spyOn(fs, "realpathSync");
+    const { candidates } = discoverOpenClawPlugins({
+      env: buildDiscoveryEnv(stateDir),
+      cache: false,
+    });
+
+    expectCandidateIds(candidates, { includes: ["pack/one", "pack/two"] });
+    expect(
+      realpathSync.mock.calls.filter(
+        ([targetPath]) => path.resolve(String(targetPath)) === path.resolve(packageDir),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it.skipIf(!canCreateDirectorySymlinks)(
+    "reuses the canonical realpath cache entry for symlinked package roots",
+    () => {
+      const stateDir = makeTempDir();
+      const realPackageDir = path.join(stateDir, "real-pack");
+      mkdirSafe(path.join(realPackageDir, "src"));
+
+      writePluginPackageManifest({
+        packageDir: realPackageDir,
+        packageName: "pack",
+        extensions: ["./src/index.ts"],
+      });
+      writePluginEntry(path.join(realPackageDir, "src", "index.ts"));
+
+      const linkedPackageDir = path.join(stateDir, "linked-pack");
+      fs.symlinkSync(
+        realPackageDir,
+        linkedPackageDir,
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      const canonicalPackageDir = fs.realpathSync(realPackageDir);
+
+      const realpathSync = vi.spyOn(fs, "realpathSync");
+      const { candidates } = discoverOpenClawPlugins({
+        extraPaths: [linkedPackageDir, canonicalPackageDir],
+        env: buildDiscoveryEnv(stateDir),
+        cache: false,
+      });
+
+      expectCandidateIds(candidates, { includes: ["pack"] });
+      expect(
+        realpathSync.mock.calls.filter(([targetPath]) => {
+          const resolved = path.resolve(String(targetPath));
+          return (
+            resolved === path.resolve(linkedPackageDir) ||
+            resolved === path.resolve(canonicalPackageDir)
+          );
+        }),
+      ).toHaveLength(1);
+    },
+  );
 
   it("uses explicit runtime extension entries for installed package plugins", async () => {
     const stateDir = makeTempDir();
