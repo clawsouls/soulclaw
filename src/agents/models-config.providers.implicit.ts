@@ -126,6 +126,25 @@ function resolveProviderDiscoveryFilter(params: {
     : undefined;
 }
 
+function resolvePluginMetadataProviderOwners(
+  pluginMetadataSnapshot: Pick<PluginMetadataSnapshot, "owners"> | undefined,
+  provider: string,
+): readonly string[] | undefined {
+  if (!pluginMetadataSnapshot) {
+    return undefined;
+  }
+  const owners = new Set<string>();
+  for (const owner of pluginMetadataSnapshot.owners.providers.get(provider) ?? []) {
+    owners.add(owner);
+  }
+  for (const owner of pluginMetadataSnapshot.owners.cliBackends.get(provider) ?? []) {
+    owners.add(owner);
+  }
+  return owners.size > 0
+    ? [...owners].toSorted((left, right) => left.localeCompare(right))
+    : undefined;
+}
+
 export function resolveProviderDiscoveryFilterForTest(params: {
   config?: OpenClawConfig;
   workspaceDir?: string;
@@ -133,6 +152,13 @@ export function resolveProviderDiscoveryFilterForTest(params: {
   resolveOwners?: (provider: string) => readonly string[] | undefined;
 }): string[] | undefined {
   return resolveProviderDiscoveryFilter(params);
+}
+
+export function resolvePluginMetadataProviderOwnersForTest(
+  pluginMetadataSnapshot: Pick<PluginMetadataSnapshot, "owners"> | undefined,
+  provider: string,
+): readonly string[] | undefined {
+  return resolvePluginMetadataProviderOwners(pluginMetadataSnapshot, provider);
 }
 
 function mergeImplicitProviderSet(
@@ -370,7 +396,7 @@ export async function resolveImplicitProviders(
       workspaceDir: params.workspaceDir,
       env,
       resolveOwners: params.pluginMetadataSnapshot
-        ? (provider) => params.pluginMetadataSnapshot?.owners.providers.get(provider)
+        ? (provider) => resolvePluginMetadataProviderOwners(params.pluginMetadataSnapshot, provider)
         : undefined,
     }),
     ...(params.pluginMetadataSnapshot
