@@ -7,6 +7,7 @@ Docs: https://docs.openclaw.ai
 ### Changes
 
 - Providers: add Cerebras as a bundled plugin with onboarding, static model catalog, docs, and manifest-owned endpoint metadata. Thanks @codex.
+- Ollama/memory: add model-specific retrieval query prefixes for `nomic-embed-text`, `qwen3-embedding`, and `mxbai-embed-large` memory-search queries while leaving document batches unchanged. Carries forward #45013. Thanks @laolin5564.
 - Plugins/providers: move pre-runtime model-id normalization, provider endpoint host metadata, and OpenAI-compatible request-family hints into plugin manifests so core no longer carries bundled-provider routing tables. Thanks @codex.
 - Plugins/install: allow `OPENCLAW_PLUGIN_STAGE_DIR` to contain layered runtime-dependency roots, resolving read-only preinstalled deps before installing missing deps into the final writable root. Fixes #72396. Thanks @liorb-mountapps.
 - Control UI: add a raw config pending-changes diff panel that parses JSON5, redacts sensitive values until reveal, and avoids fake raw-edit callbacks when opening the panel. Refs #39831; supersedes #48621 and #46654. Thanks @JiajunBernoulli and @BunsDev.
