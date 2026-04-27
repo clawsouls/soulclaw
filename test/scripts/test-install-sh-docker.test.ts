@@ -46,7 +46,9 @@ describe("test-install-sh-docker", () => {
     );
     expect(runner).toContain("resolve_update_baseline_version");
     expect(runner).toContain('quiet_npm view "${PACKAGE_NAME}@${UPDATE_BASELINE_VERSION}" version');
-    expect(workflow).toContain("OPENCLAW_INSTALL_SMOKE_UPDATE_BASELINE: latest");
+    expect(workflow).toContain(
+      "OPENCLAW_INSTALL_SMOKE_UPDATE_BASELINE: ${{ inputs.update_baseline_version || 'latest' }}",
+    );
   });
 
   it("can reuse dist from the already-built root Docker smoke image", () => {
