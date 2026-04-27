@@ -9,6 +9,7 @@ import {
   setGatewayNodesRuntime,
   setGatewaySubagentRuntime,
 } from "../plugins/runtime/gateway-bindings.js";
+import { mergeActivationSectionsIntoRuntimeConfig } from "./plugin-activation-runtime-config.js";
 import type { GatewayRequestHandler } from "./server-methods/types.js";
 import {
   createGatewayNodesRuntime,
@@ -47,21 +48,6 @@ function installGatewayPluginRuntimeEnvironment(cfg: OpenClawConfig) {
   setGatewayNodesRuntime(createGatewayNodesRuntime());
 }
 
-function applyActivationSectionsToRuntimeConfig(params: {
-  runtimeConfig: OpenClawConfig;
-  activationConfig: OpenClawConfig;
-}): OpenClawConfig {
-  return {
-    ...params.runtimeConfig,
-    ...(params.activationConfig.channels !== undefined
-      ? { channels: params.activationConfig.channels }
-      : {}),
-    ...(params.activationConfig.plugins !== undefined
-      ? { plugins: params.activationConfig.plugins }
-      : {}),
-  };
-}
-
 function logGatewayPluginDiagnostics(params: {
   diagnostics: PluginRegistry["diagnostics"];
   log: Pick<GatewayPluginBootstrapLog, "error" | "info">;
@@ -96,7 +82,7 @@ export function prepareGatewayPluginLoad(params: GatewayPluginBootstrapParams) {
   const resolvedConfig =
     activationSourceConfig === params.cfg
       ? autoEnabled.config
-      : applyActivationSectionsToRuntimeConfig({
+      : mergeActivationSectionsIntoRuntimeConfig({
           runtimeConfig: params.cfg,
           activationConfig: autoEnabled.config,
         });

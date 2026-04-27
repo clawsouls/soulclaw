@@ -12,6 +12,7 @@ import {
 import { loadPluginLookUpTable } from "../plugins/plugin-lookup-table.js";
 import { createEmptyPluginRegistry } from "../plugins/registry.js";
 import { getActivePluginRegistry, setActivePluginRegistry } from "../plugins/runtime.js";
+import { mergeActivationSectionsIntoRuntimeConfig } from "./plugin-activation-runtime-config.js";
 import { listGatewayMethods } from "./server-methods-list.js";
 import { loadGatewayStartupPlugins } from "./server-plugin-bootstrap.js";
 import { runStartupSessionMigration } from "./server-startup-session-migration.js";
@@ -22,21 +23,6 @@ type GatewayPluginBootstrapLog = {
   error: (message: string) => void;
   debug: (message: string) => void;
 };
-
-function applyActivationSectionsToRuntimeConfig(params: {
-  runtimeConfig: OpenClawConfig;
-  activationConfig: OpenClawConfig;
-}): OpenClawConfig {
-  return {
-    ...params.runtimeConfig,
-    ...(params.activationConfig.channels !== undefined
-      ? { channels: params.activationConfig.channels }
-      : {}),
-    ...(params.activationConfig.plugins !== undefined
-      ? { plugins: params.activationConfig.plugins }
-      : {}),
-  };
-}
 
 async function prestageGatewayBundledRuntimeDeps(params: {
   cfg: OpenClawConfig;
@@ -147,7 +133,7 @@ export async function prepareGatewayPluginBootstrap(params: {
 
   const gatewayPluginConfig = params.minimalTestGateway
     ? params.cfgAtStart
-    : applyActivationSectionsToRuntimeConfig({
+    : mergeActivationSectionsIntoRuntimeConfig({
         runtimeConfig: params.cfgAtStart,
         activationConfig: applyPluginAutoEnable({
           config: activationSourceConfig,

@@ -196,14 +196,47 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
 
   it("derives startup activation from source config instead of runtime plugin defaults", async () => {
     const sourceConfig = {
+      channels: {
+        telegram: {
+          botToken: "token",
+        },
+      },
       plugins: {
         allow: ["bench-plugin"],
       },
     } as OpenClawConfig;
-    const runtimeConfig = {
+    const activationConfig = {
+      channels: {
+        telegram: {
+          botToken: "token",
+          enabled: true,
+        },
+      },
       plugins: {
         allow: ["bench-plugin"],
         entries: {
+          "bench-plugin": {
+            enabled: true,
+          },
+        },
+      },
+    } as OpenClawConfig;
+    const runtimeConfig = {
+      channels: {
+        telegram: {
+          botToken: "token",
+          dmPolicy: "pairing",
+          groupPolicy: "allowlist",
+        },
+      },
+      plugins: {
+        allow: ["bench-plugin", "memory-core"],
+        entries: {
+          "bench-plugin": {
+            config: {
+              runtimeDefault: true,
+            },
+          },
           "memory-core": {
             config: {
               dreaming: {
@@ -214,6 +247,11 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
         },
       },
     } as OpenClawConfig;
+    applyPluginAutoEnable.mockReturnValueOnce({
+      config: activationConfig,
+      changes: [],
+      autoEnabledReasons: {},
+    });
     const log = createLog();
     const { prepareGatewayPluginBootstrap } = await import("./server-startup-plugins.js");
 
@@ -233,7 +271,31 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
       expect.objectContaining({
         activationSourceConfig: sourceConfig,
         config: expect.objectContaining({
-          plugins: sourceConfig.plugins,
+          channels: expect.objectContaining({
+            telegram: expect.objectContaining({
+              enabled: true,
+              dmPolicy: "pairing",
+              groupPolicy: "allowlist",
+            }),
+          }),
+          plugins: expect.objectContaining({
+            allow: ["bench-plugin"],
+            entries: expect.objectContaining({
+              "bench-plugin": expect.objectContaining({
+                enabled: true,
+                config: {
+                  runtimeDefault: true,
+                },
+              }),
+              "memory-core": {
+                config: {
+                  dreaming: {
+                    enabled: false,
+                  },
+                },
+              },
+            }),
+          }),
         }),
       }),
     );
@@ -241,7 +303,31 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
       expect.objectContaining({
         activationSourceConfig: sourceConfig,
         cfg: expect.objectContaining({
-          plugins: sourceConfig.plugins,
+          channels: expect.objectContaining({
+            telegram: expect.objectContaining({
+              enabled: true,
+              dmPolicy: "pairing",
+              groupPolicy: "allowlist",
+            }),
+          }),
+          plugins: expect.objectContaining({
+            allow: ["bench-plugin"],
+            entries: expect.objectContaining({
+              "bench-plugin": expect.objectContaining({
+                enabled: true,
+                config: {
+                  runtimeDefault: true,
+                },
+              }),
+              "memory-core": {
+                config: {
+                  dreaming: {
+                    enabled: false,
+                  },
+                },
+              },
+            }),
+          }),
         }),
       }),
     );
