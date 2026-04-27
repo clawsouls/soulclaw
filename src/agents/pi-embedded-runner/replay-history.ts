@@ -240,6 +240,39 @@ function stripStaleAssistantUsageBeforeLatestCompaction(messages: AgentMessage[]
 const TRANSCRIPT_ONLY_OPENCLAW_MODELS = new Set<string>(["delivery-mirror", "gateway-injected"]);
 const OMITTED_INBOUND_METADATA_TEXT = "[assistant copied inbound metadata omitted]";
 
+function sanitizeUserReplayContent(message: AgentMessage): AgentMessage | null {
+  if (!message || message.role !== "user") {
+    return message;
+  }
+  const replayContent = (message as { content?: unknown }).content;
+  if (typeof replayContent === "string") {
+    return replayContent.trim() ? message : null;
+  }
+  if (!Array.isArray(replayContent)) {
+    return message;
+  }
+
+  let touched = false;
+  const sanitizedContent = replayContent.filter((block) => {
+    if (!block || typeof block !== "object") {
+      return true;
+    }
+    if ((block as { type?: unknown }).type !== "text") {
+      return true;
+    }
+    const text = (block as { text?: unknown }).text;
+    if (typeof text !== "string" || text.trim().length > 0) {
+      return true;
+    }
+    touched = true;
+    return false;
+  });
+  if (sanitizedContent.length === 0) {
+    return null;
+  }
+  return touched ? ({ ...message, content: sanitizedContent } as AgentMessage) : message;
+}
+
 function isTranscriptOnlyOpenclawAssistant(message: AgentMessage): boolean {
   if (!message || message.role !== "assistant") {
     return false;
@@ -257,6 +290,16 @@ export function normalizeAssistantReplayContent(messages: AgentMessage[]): Agent
   let touched = false;
   const out: AgentMessage[] = [];
   for (const message of messages) {
+    if (message?.role === "user") {
+      const sanitizedUserMessage = sanitizeUserReplayContent(message);
+      if (sanitizedUserMessage) {
+        out.push(sanitizedUserMessage);
+      }
+      if (sanitizedUserMessage !== message) {
+        touched = true;
+      }
+      continue;
+    }
     if (!message || message.role !== "assistant") {
       out.push(message);
       continue;
