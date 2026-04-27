@@ -356,7 +356,7 @@ const releasePathChunks = {
       weight: 3,
     }),
   ],
-  "package-install": [
+  "package-update": [
     npmLane(
       "install-e2e",
       "OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=both pnpm test:install:e2e",
@@ -370,8 +370,6 @@ const releasePathChunks = {
       "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:npm-onboard-channel-agent",
       { resources: ["service"], weight: 3 },
     ),
-  ],
-  "package-update": [
     npmLane("doctor-switch", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:doctor-switch", {
       weight: 3,
     }),
@@ -384,21 +382,17 @@ const releasePathChunks = {
       },
     ),
   ],
-  plugins: [
+  "plugins-integrations": [
     lane("plugins", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugins", {
       resources: ["npm", "service"],
       weight: 6,
     }),
     npmLane("plugin-update", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugin-update"),
-  ],
-  "bundled-channel-deps": [
     npmLane(
       "bundled-channel-deps",
       "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:bundled-channel-deps",
       { resources: ["service"], weight: 3 },
     ),
-  ],
-  "service-integrations": [
     serviceLane(
       "cron-mcp-cleanup",
       "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:cron-mcp-cleanup",
@@ -413,13 +407,15 @@ const releasePathChunks = {
       { timeoutMs: 8 * 60 * 1000 },
     ),
   ],
-  openwebui: [
-    serviceLane("openwebui", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openwebui", {
-      timeoutMs: OPENWEBUI_TIMEOUT_MS,
-      weight: 5,
-    }),
-  ],
+  openwebui: [],
 };
+
+function openWebUILane() {
+  return serviceLane("openwebui", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openwebui", {
+    timeoutMs: OPENWEBUI_TIMEOUT_MS,
+    weight: 5,
+  });
+}
 
 export function releasePathChunkLanes(chunk, options = {}) {
   const base = releasePathChunks[chunk];
@@ -428,16 +424,21 @@ export function releasePathChunkLanes(chunk, options = {}) {
       `OPENCLAW_DOCKER_ALL_CHUNK must be one of: ${Object.keys(releasePathChunks).join(", ")}. Got: ${JSON.stringify(chunk)}`,
     );
   }
-  if (chunk === "openwebui" && !options.includeOpenWebUI) {
-    return [];
+  if (chunk === "openwebui") {
+    return options.includeOpenWebUI ? [openWebUILane()] : [];
   }
-  return base;
+  if (chunk !== "plugins-integrations" || !options.includeOpenWebUI) {
+    return base;
+  }
+  return [...base, openWebUILane()];
 }
 
 export function allReleasePathLanes(options = {}) {
-  return Object.keys(releasePathChunks).flatMap((chunk) =>
-    releasePathChunkLanes(chunk, {
-      includeOpenWebUI: options.includeOpenWebUI,
-    }),
-  );
+  return Object.keys(releasePathChunks)
+    .filter((chunk) => chunk !== "openwebui")
+    .flatMap((chunk) =>
+      releasePathChunkLanes(chunk, {
+        includeOpenWebUI: options.includeOpenWebUI,
+      }),
+    );
 }

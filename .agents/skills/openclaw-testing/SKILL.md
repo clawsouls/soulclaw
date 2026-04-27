@@ -278,15 +278,14 @@ generated inside GitHub artifacts include `package_artifact_run_id`,
 exact tarball and prepared images from the failed run. When the fix changes
 package contents, omit those reuse inputs so the workflow packs a new tarball.
 Live-only targeted reruns skip the E2E images and build only the live-test
-image. Release-path normal mode is split into these Docker chunks:
+image. Release-path normal mode remains max three Docker chunk jobs:
 
 - `core`
-- `package-install`
 - `package-update`
-- `plugins`
-- `bundled-channel-deps`
-- `service-integrations`
-- `openwebui` when OpenWebUI coverage is requested
+- `plugins-integrations`
+
+OpenWebUI is folded into `plugins-integrations` for full release-path coverage
+and keeps a standalone `openwebui` chunk only for OpenWebUI-only dispatches.
 
 ## Package Acceptance
 

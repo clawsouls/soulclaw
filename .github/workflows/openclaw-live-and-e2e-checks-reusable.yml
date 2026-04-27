@@ -428,21 +428,12 @@ jobs:
           - chunk_id: core
             label: core
             timeout_minutes: 120
-          - chunk_id: package-install
-            label: package/install
-            timeout_minutes: 180
           - chunk_id: package-update
             label: package/update
-            timeout_minutes: 90
-          - chunk_id: plugins
-            label: plugins
-            timeout_minutes: 90
-          - chunk_id: bundled-channel-deps
-            label: bundled/channel deps
-            timeout_minutes: 120
-          - chunk_id: service-integrations
-            label: service integrations
-            timeout_minutes: 90
+            timeout_minutes: 180
+          - chunk_id: plugins-integrations
+            label: plugins/integrations
+            timeout_minutes: 180
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
@@ -697,7 +688,7 @@ jobs:
 
   validate_docker_openwebui:
     needs: [validate_selected_ref, prepare_docker_e2e_image]
-    if: inputs.include_openwebui && inputs.docker_lanes == ''
+    if: inputs.include_openwebui && !inputs.include_release_path_suites && inputs.docker_lanes == ''
     name: Docker E2E (openwebui)
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: 75
