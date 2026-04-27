@@ -41,8 +41,8 @@ const OLLAMA_WEB_SEARCH_SCHEMA = Type.Object(
   { additionalProperties: false },
 );
 
-const OLLAMA_WEB_SEARCH_PATH = "/api/web_search";
-const OLLAMA_LEGACY_WEB_SEARCH_PATH = "/api/experimental/web_search";
+const OLLAMA_HOSTED_WEB_SEARCH_PATH = "/api/web_search";
+const OLLAMA_LOCAL_WEB_SEARCH_PROXY_PATH = "/api/experimental/web_search";
 const OLLAMA_CLOUD_BASE_URL = "https://ollama.com";
 const DEFAULT_OLLAMA_WEB_SEARCH_COUNT = 5;
 const DEFAULT_OLLAMA_WEB_SEARCH_TIMEOUT_MS = 15_000;
@@ -56,6 +56,12 @@ type OllamaWebSearchResult = {
 
 type OllamaWebSearchResponse = {
   results?: OllamaWebSearchResult[];
+};
+
+type OllamaWebSearchAttempt = {
+  baseUrl: string;
+  path: string;
+  apiKey?: string;
 };
 
 function isOllamaCloudBaseUrl(baseUrl: string): boolean {
@@ -111,6 +117,43 @@ function normalizeOllamaWebSearchResult(
   };
 }
 
+function buildOllamaWebSearchAttempts(params: {
+  baseUrl: string;
+  configuredApiKey?: string;
+  envApiKey?: string;
+}): OllamaWebSearchAttempt[] {
+  if (isOllamaCloudBaseUrl(params.baseUrl)) {
+    return [
+      {
+        baseUrl: params.baseUrl,
+        path: OLLAMA_HOSTED_WEB_SEARCH_PATH,
+        apiKey: params.configuredApiKey ?? params.envApiKey,
+      },
+    ];
+  }
+
+  const attempts: OllamaWebSearchAttempt[] = [
+    {
+      baseUrl: params.baseUrl,
+      path: OLLAMA_LOCAL_WEB_SEARCH_PROXY_PATH,
+      apiKey: params.configuredApiKey,
+    },
+    {
+      baseUrl: params.baseUrl,
+      path: OLLAMA_HOSTED_WEB_SEARCH_PATH,
+      apiKey: params.configuredApiKey,
+    },
+  ];
+  if (params.envApiKey) {
+    attempts.push({
+      baseUrl: OLLAMA_CLOUD_BASE_URL,
+      path: OLLAMA_HOSTED_WEB_SEARCH_PATH,
+      apiKey: params.envApiKey,
+    });
+  }
+  return attempts;
+}
+
 export async function runOllamaWebSearch(params: {
   config?: OpenClawConfig;
   query: string;
@@ -127,27 +170,7 @@ export async function runOllamaWebSearch(params: {
   const count = resolveSearchCount(params.count, DEFAULT_OLLAMA_WEB_SEARCH_COUNT);
   const startedAt = Date.now();
   const body = JSON.stringify({ query, max_results: count });
-  const attempts = [
-    {
-      baseUrl,
-      path: OLLAMA_WEB_SEARCH_PATH,
-      apiKey: isOllamaCloudBaseUrl(baseUrl) ? (configuredApiKey ?? envApiKey) : configuredApiKey,
-    },
-    {
-      baseUrl,
-      path: OLLAMA_LEGACY_WEB_SEARCH_PATH,
-      apiKey: isOllamaCloudBaseUrl(baseUrl) ? (configuredApiKey ?? envApiKey) : configuredApiKey,
-    },
-    ...(!isOllamaCloudBaseUrl(baseUrl) && envApiKey
-      ? [
-          {
-            baseUrl: OLLAMA_CLOUD_BASE_URL,
-            path: OLLAMA_WEB_SEARCH_PATH,
-            apiKey: envApiKey,
-          },
-        ]
-      : []),
-  ];
+  const attempts = buildOllamaWebSearchAttempts({ baseUrl, configuredApiKey, envApiKey });
 
   let payload: OllamaWebSearchResponse | undefined;
   let lastError: Error | undefined;
@@ -305,6 +328,7 @@ export function createOllamaWebSearchProvider(): WebSearchProviderPlugin {
 }
 
 export const __testing = {
+  buildOllamaWebSearchAttempts,
   normalizeOllamaWebSearchResult,
   resolveConfiguredOllamaWebSearchApiKey,
   resolveEnvOllamaWebSearchApiKey,
