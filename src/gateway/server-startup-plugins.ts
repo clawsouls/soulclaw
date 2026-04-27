@@ -140,6 +140,9 @@ export async function prepareGatewayPluginBootstrap(params: {
         activationConfig: applyPluginAutoEnable({
           config: activationSourceConfig,
           env: process.env,
+          ...(params.pluginMetadataSnapshot?.manifestRegistry
+            ? { manifestRegistry: params.pluginMetadataSnapshot.manifestRegistry }
+            : {}),
         }).config,
       });
   const defaultAgentId = resolveDefaultAgentId(gatewayPluginConfig);

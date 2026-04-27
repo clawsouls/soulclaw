@@ -308,6 +308,7 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
     expect(applyPluginAutoEnable).toHaveBeenCalledWith({
       config: sourceConfig,
       env: process.env,
+      manifestRegistry: pluginManifestRegistry,
     });
     expect(loadPluginLookUpTable).toHaveBeenCalledWith(
       expect.objectContaining({
