@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../../config/config.js";
 import { makeAttemptResult } from "./run.overflow-compaction.fixture.js";
 import {
@@ -654,7 +654,7 @@ describe("runEmbeddedPiAgent incomplete-turn safety", () => {
       },
       error: null,
       authStorage: {
-        setRuntimeApiKey: () => undefined,
+        setRuntimeApiKey: vi.fn(),
       },
       modelRegistry: {},
     });
