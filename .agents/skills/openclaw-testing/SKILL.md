@@ -195,10 +195,10 @@ default is the fast release path. Use explicit profiles:
   window when paired with fast or sharded gates
 
 `QA-Lab - All Lanes` uses explicit fast Matrix on scheduled runs; manual
-dispatch keeps `matrix_profile=all` as the default and can shard full Matrix
-with `matrix_profile=all` and `matrix_shards=true`. `OpenClaw Release Checks`
-uses explicit fast Matrix; run the sharded all-lanes workflow when release
-investigation needs full Matrix media/E2EE inventory.
+dispatch keeps `matrix_profile=all` as the default and always shards that full
+Matrix selection. `OpenClaw Release Checks` uses explicit fast Matrix; run the
+all-lanes workflow when release investigation needs full Matrix media/E2EE
+inventory.
 
 ### Reusable Live/E2E Checks
 
