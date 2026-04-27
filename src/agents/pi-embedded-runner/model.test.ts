@@ -674,6 +674,43 @@ describe("resolveModel", () => {
     expect(result.model?.input).toEqual(["text"]);
   });
 
+  it("resolves custom MLX-style Hugging Face ids without adding the provider prefix", () => {
+    const modelId = "mlx-community/Qwen3-30B-A3B-6bit";
+    const cfg = {
+      agents: {
+        defaults: {
+          model: { primary: `mlx/${modelId}` },
+        },
+      },
+      models: {
+        providers: {
+          mlx: {
+            baseUrl: "http://127.0.0.1:8080/v1",
+            apiKey: "mlx-local",
+            api: "openai-completions",
+            models: [
+              {
+                ...makeModel(modelId),
+                contextWindow: 131072,
+                maxTokens: 8192,
+              },
+            ],
+          },
+        },
+      },
+    } as unknown as OpenClawConfig;
+
+    const result = resolveModelForTest("mlx", modelId, "/tmp/agent", cfg);
+
+    expect(result.error).toBeUndefined();
+    expect(result.model).toMatchObject({
+      provider: "mlx",
+      id: modelId,
+      api: "openai-completions",
+      baseUrl: "http://127.0.0.1:8080/v1",
+    });
+  });
+
   it("prefers provider-prefixed configured metadata over discovered text-only models", () => {
     mockDiscoveredModel(discoverModels, {
       provider: "custom",

@@ -217,6 +217,12 @@ describe("model-selection", () => {
         expected: { provider: "nvidia", model: "moonshotai/kimi-k2.5" },
       },
       {
+        name: "preserves nested MLX model ids after the provider prefix",
+        variants: ["mlx/mlx-community/Qwen3-30B-A3B-6bit"],
+        defaultProvider: "anthropic",
+        expected: { provider: "mlx", model: "mlx-community/Qwen3-30B-A3B-6bit" },
+      },
+      {
         name: "normalizes anthropic shorthand aliases",
         variants: ["anthropic/opus-4.6", "opus-4.6", " anthropic / opus-4.6 "],
         defaultProvider: "anthropic",
