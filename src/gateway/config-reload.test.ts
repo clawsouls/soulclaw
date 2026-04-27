@@ -519,6 +519,9 @@ function makeZeroDebounceHookWrite(persistedHash: string): ConfigWriteNotificati
       hooks: { enabled: true },
     },
     persistedHash,
+    revision: 1,
+    fingerprint: `runtime-${persistedHash}`,
+    sourceFingerprint: `source-${persistedHash}`,
     writtenAtMs: Date.now(),
   };
 }
@@ -1052,6 +1055,9 @@ describe("startGatewayConfigReloader", () => {
         },
       },
       persistedHash: "plugin-timestamps-1",
+      revision: 1,
+      fingerprint: "runtime-plugin-timestamps-1",
+      sourceFingerprint: "source-plugin-timestamps-1",
       writtenAtMs: Date.now(),
     });
     await vi.runOnlyPendingTimersAsync();
@@ -1106,6 +1112,9 @@ describe("startGatewayConfigReloader", () => {
       sourceConfig: nextSourceConfig,
       runtimeConfig: nextSourceConfig,
       persistedHash: "plugin-collision-1",
+      revision: 1,
+      fingerprint: "runtime-plugin-collision-1",
+      sourceFingerprint: "source-plugin-collision-1",
       writtenAtMs: Date.now(),
     });
     await vi.runOnlyPendingTimersAsync();

@@ -17,6 +17,7 @@ import {
   loadSessionEntry,
   resolveEffectiveToolInventory,
   resolveReplyToMode,
+  resolveRuntimeConfigCacheKey,
   resolveSessionAgentId,
   resolveSessionModelRef,
 } from "./tools-effective.runtime.js";
@@ -28,7 +29,6 @@ const TOOLS_EFFECTIVE_SLOW_LOG_MS = 250;
 const TOOLS_EFFECTIVE_CACHE_LIMIT = 128;
 
 let nowForToolsEffectiveCache = () => Date.now();
-let configFingerprintCache = new WeakMap<OpenClawConfig, string>();
 
 type TrustedToolsEffectiveContext = {
   cfg: OpenClawConfig;
@@ -76,25 +76,6 @@ function resolveRequestedAgentIdOrRespondError(params: {
   return requestedAgentId;
 }
 
-function hashCacheString(value: string): string {
-  let hash = 5381;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash * 33) ^ value.charCodeAt(i);
-  }
-  return `${value.length}:${(hash >>> 0).toString(36)}`;
-}
-
-function configFingerprint(cfg: OpenClawConfig): string {
-  const existing = configFingerprintCache.get(cfg);
-  if (existing) {
-    return existing;
-  }
-  const serialized = JSON.stringify(cfg);
-  const fingerprint = hashCacheString(serialized);
-  configFingerprintCache.set(cfg, fingerprint);
-  return fingerprint;
-}
-
 function optionalCacheString(value: string | undefined | null): string {
   return value?.trim() ?? "";
 }
@@ -106,7 +87,7 @@ function buildToolsEffectiveCacheKey(params: {
   const context = params.context;
   return JSON.stringify({
     v: 1,
-    config: configFingerprint(context.cfg),
+    config: resolveRuntimeConfigCacheKey(context.cfg),
     pluginRegistry: getActivePluginRegistryVersion(),
     channelRegistry: getActivePluginChannelRegistryVersion(),
     sessionKey: params.sessionKey,
@@ -344,7 +325,6 @@ export const __testing = {
   resetToolsEffectiveCacheForTest() {
     toolsEffectiveCache.clear();
     toolsEffectiveInflight.clear();
-    configFingerprintCache = new WeakMap<OpenClawConfig, string>();
   },
   setToolsEffectiveNowForTest(now: () => number) {
     nowForToolsEffectiveCache = now;

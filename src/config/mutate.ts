@@ -16,6 +16,7 @@ import {
 } from "./io.js";
 import { applyUnsetPathsForWrite, resolveManagedUnsetPathsForWrite } from "./io.write-prepare.js";
 import {
+  createRuntimeConfigWriteNotification,
   finalizeRuntimeSnapshotWrite,
   getRuntimeConfigSnapshot,
   getRuntimeConfigSnapshotRefreshHandler,
@@ -194,14 +195,15 @@ async function tryWriteSingleTopLevelIncludeMutation(params: {
     if (!currentRuntimeConfig) {
       return;
     }
-    notifyRuntimeConfigWriteListeners({
-      configPath: params.snapshot.path,
-      sourceConfig: refreshedSnapshot.sourceConfig,
-      runtimeConfig: currentRuntimeConfig,
-      persistedHash,
-      writtenAtMs: Date.now(),
-      afterWrite: params.afterWrite ?? params.writeOptions?.afterWrite,
-    });
+    notifyRuntimeConfigWriteListeners(
+      createRuntimeConfigWriteNotification({
+        configPath: params.snapshot.path,
+        sourceConfig: refreshedSnapshot.sourceConfig,
+        runtimeConfig: currentRuntimeConfig,
+        persistedHash,
+        afterWrite: params.afterWrite ?? params.writeOptions?.afterWrite,
+      }),
+    );
   };
   await finalizeRuntimeSnapshotWrite({
     nextSourceConfig: refreshedSnapshot.sourceConfig,

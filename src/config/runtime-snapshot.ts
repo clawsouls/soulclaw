@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { OpenClawConfig } from "./types.js";
 
 export type RuntimeConfigSnapshotRefreshParams = {
@@ -65,12 +66,24 @@ export type RuntimeConfigWriteNotification = {
   sourceConfig: OpenClawConfig;
   runtimeConfig: OpenClawConfig;
   persistedHash: string;
+  revision: number;
+  fingerprint: string;
+  sourceFingerprint: string | null;
   writtenAtMs: number;
   afterWrite?: ConfigWriteAfterWrite;
 };
 
+export type RuntimeConfigSnapshotMetadata = {
+  revision: number;
+  fingerprint: string;
+  sourceFingerprint: string | null;
+  updatedAtMs: number;
+};
+
 let runtimeConfigSnapshot: OpenClawConfig | null = null;
 let runtimeConfigSourceSnapshot: OpenClawConfig | null = null;
+let runtimeConfigSnapshotMetadata: RuntimeConfigSnapshotMetadata | null = null;
+let runtimeConfigSnapshotRevision = 0;
 let runtimeConfigSnapshotRefreshHandler: RuntimeConfigSnapshotRefreshHandler | null = null;
 const runtimeConfigWriteListeners = new Set<(event: RuntimeConfigWriteNotification) => void>();
 
@@ -99,17 +112,37 @@ function configSnapshotsMatch(left: OpenClawConfig, right: OpenClawConfig): bool
   }
 }
 
+export function hashRuntimeConfigValue(value: OpenClawConfig): string {
+  return createHash("sha256").update(stableConfigStringify(value)).digest("base64url");
+}
+
+function createRuntimeConfigSnapshotMetadata(
+  config: OpenClawConfig,
+  sourceConfig?: OpenClawConfig,
+): RuntimeConfigSnapshotMetadata {
+  runtimeConfigSnapshotRevision += 1;
+  return {
+    revision: runtimeConfigSnapshotRevision,
+    fingerprint: hashRuntimeConfigValue(config),
+    sourceFingerprint: sourceConfig ? hashRuntimeConfigValue(sourceConfig) : null,
+    updatedAtMs: Date.now(),
+  };
+}
+
 export function setRuntimeConfigSnapshot(
   config: OpenClawConfig,
   sourceConfig?: OpenClawConfig,
 ): void {
   runtimeConfigSnapshot = config;
   runtimeConfigSourceSnapshot = sourceConfig ?? null;
+  runtimeConfigSnapshotMetadata = createRuntimeConfigSnapshotMetadata(config, sourceConfig);
 }
 
 export function resetConfigRuntimeState(): void {
   runtimeConfigSnapshot = null;
   runtimeConfigSourceSnapshot = null;
+  runtimeConfigSnapshotMetadata = null;
+  runtimeConfigSnapshotRevision = 0;
 }
 
 export function clearRuntimeConfigSnapshot(): void {
@@ -122,6 +155,48 @@ export function getRuntimeConfigSnapshot(): OpenClawConfig | null {
 
 export function getRuntimeConfigSourceSnapshot(): OpenClawConfig | null {
   return runtimeConfigSourceSnapshot;
+}
+
+export function getRuntimeConfigSnapshotMetadata(): RuntimeConfigSnapshotMetadata | null {
+  return runtimeConfigSnapshotMetadata;
+}
+
+export function resolveRuntimeConfigCacheKey(config: OpenClawConfig): string {
+  const metadata = runtimeConfigSnapshotMetadata;
+  if (metadata && config === runtimeConfigSnapshot) {
+    return `runtime:${metadata.revision}:${metadata.fingerprint}`;
+  }
+  return `config:${hashRuntimeConfigValue(config)}`;
+}
+
+export function createRuntimeConfigWriteNotification(params: {
+  configPath: string;
+  sourceConfig: OpenClawConfig;
+  runtimeConfig: OpenClawConfig;
+  persistedHash: string;
+  writtenAtMs?: number;
+  afterWrite?: ConfigWriteAfterWrite;
+}): RuntimeConfigWriteNotification {
+  const metadata =
+    params.runtimeConfig === runtimeConfigSnapshot && runtimeConfigSnapshotMetadata
+      ? runtimeConfigSnapshotMetadata
+      : {
+          revision: runtimeConfigSnapshotRevision,
+          fingerprint: hashRuntimeConfigValue(params.runtimeConfig),
+          sourceFingerprint: hashRuntimeConfigValue(params.sourceConfig),
+          updatedAtMs: Date.now(),
+        };
+  return {
+    configPath: params.configPath,
+    sourceConfig: params.sourceConfig,
+    runtimeConfig: params.runtimeConfig,
+    persistedHash: params.persistedHash,
+    revision: metadata.revision,
+    fingerprint: metadata.fingerprint,
+    sourceFingerprint: metadata.sourceFingerprint,
+    writtenAtMs: params.writtenAtMs ?? Date.now(),
+    afterWrite: params.afterWrite,
+  };
 }
 
 export function selectApplicableRuntimeConfig(params: {

@@ -83,13 +83,16 @@ import {
 import { applyConfigOverrides } from "./runtime-overrides.js";
 import {
   clearRuntimeConfigSnapshot as clearRuntimeConfigSnapshotState,
+  createRuntimeConfigWriteNotification,
   finalizeRuntimeSnapshotWrite,
+  getRuntimeConfigSnapshotMetadata as getRuntimeConfigSnapshotMetadataState,
   getRuntimeConfigSnapshot as getRuntimeConfigSnapshotState,
   getRuntimeConfigSourceSnapshot as getRuntimeConfigSourceSnapshotState,
   loadPinnedRuntimeConfig,
   notifyRuntimeConfigWriteListeners,
   registerRuntimeConfigWriteListener,
   resetConfigRuntimeState as resetConfigRuntimeStateState,
+  resolveRuntimeConfigCacheKey,
   selectApplicableRuntimeConfig,
   setRuntimeConfigSnapshot as setRuntimeConfigSnapshotState,
   getRuntimeConfigSnapshotRefreshHandler as getRuntimeConfigSnapshotRefreshHandlerState,
@@ -107,9 +110,11 @@ import { shouldWarnOnTouchedVersion } from "./version.js";
 
 export {
   clearRuntimeConfigSnapshotState as clearRuntimeConfigSnapshot,
+  getRuntimeConfigSnapshotMetadataState as getRuntimeConfigSnapshotMetadata,
   getRuntimeConfigSnapshotState as getRuntimeConfigSnapshot,
   getRuntimeConfigSourceSnapshotState as getRuntimeConfigSourceSnapshot,
   resetConfigRuntimeStateState as resetConfigRuntimeState,
+  resolveRuntimeConfigCacheKey,
   selectApplicableRuntimeConfig,
   setRuntimeConfigSnapshotState as setRuntimeConfigSnapshot,
   setRuntimeConfigSnapshotRefreshHandlerState as setRuntimeConfigSnapshotRefreshHandler,
@@ -2371,14 +2376,15 @@ export async function writeConfigFile(
     if (!currentRuntimeConfig) {
       return;
     }
-    notifyRuntimeConfigWriteListeners({
-      configPath: io.configPath,
-      sourceConfig: nextCfg,
-      runtimeConfig: currentRuntimeConfig,
-      persistedHash: writeResult.persistedHash,
-      writtenAtMs: Date.now(),
-      afterWrite: options.afterWrite,
-    });
+    notifyRuntimeConfigWriteListeners(
+      createRuntimeConfigWriteNotification({
+        configPath: io.configPath,
+        sourceConfig: nextCfg,
+        runtimeConfig: currentRuntimeConfig,
+        persistedHash: writeResult.persistedHash,
+        afterWrite: options.afterWrite,
+      }),
+    );
   };
   // Keep the last-known-good runtime snapshot active until the specialized refresh path
   // succeeds, so concurrent readers do not observe unresolved SecretRefs mid-refresh.

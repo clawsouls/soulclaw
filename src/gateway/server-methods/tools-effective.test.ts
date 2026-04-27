@@ -31,6 +31,7 @@ const runtimeMocks = vi.hoisted(() => ({
   })),
   getActivePluginChannelRegistryVersion: vi.fn(() => 1),
   getActivePluginRegistryVersion: vi.fn(() => 1),
+  resolveRuntimeConfigCacheKey: vi.fn(() => "runtime:1:test"),
   resolveEffectiveToolInventory: vi.fn(() => ({
     agentId: "main",
     profile: "coding",
