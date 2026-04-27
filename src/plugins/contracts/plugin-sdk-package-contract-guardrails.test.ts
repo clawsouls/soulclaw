@@ -4,12 +4,14 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   pluginSdkEntrypoints,
+  publicPluginOwnedSdkEntrypoints,
   reservedBundledPluginSdkEntrypoints,
   supportedBundledFacadeSdkEntrypoints,
 } from "../../plugin-sdk/entrypoints.js";
 
 const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const REPO_ROOT = resolve(ROOT_DIR, "..");
+const SDK_SUBPATH_DOC_FILE = "docs/plugins/sdk-subpaths.md";
 const PUBLIC_CONTRACT_REFERENCE_FILES = [
   "docs/plugins/architecture.md",
   "src/plugins/contracts/plugin-sdk-subpaths.test.ts",
@@ -55,6 +57,48 @@ function collectPluginSdkSubpathReferences() {
     }
   }
   return references;
+}
+
+function collectDocumentedSdkSubpaths(): Set<string> {
+  const source = readFileSync(resolve(REPO_ROOT, SDK_SUBPATH_DOC_FILE), "utf8");
+  return new Set(
+    [...source.matchAll(/`plugin-sdk\/([a-z0-9][a-z0-9-]*)`/g)]
+      .map((match) => match[1])
+      .filter((subpath): subpath is string => Boolean(subpath)),
+  );
+}
+
+function collectBundledPluginIds(): string[] {
+  return readdirSync(resolve(REPO_ROOT, "extensions"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .toSorted((a, b) => b.length - a.length || a.localeCompare(b));
+}
+
+function collectPluginOwnedSdkEntrypoints(): string[] {
+  const pluginIds = collectBundledPluginIds();
+  return pluginSdkEntrypoints
+    .filter((entrypoint) =>
+      pluginIds.some(
+        (pluginId) => entrypoint === pluginId || entrypoint.startsWith(`${pluginId}-`),
+      ),
+    )
+    .toSorted();
+}
+
+function collectClassificationOverlaps(classifications: Record<string, readonly string[]>) {
+  const seen = new Map<string, string[]>();
+  for (const [classification, entrypoints] of Object.entries(classifications)) {
+    for (const entrypoint of entrypoints) {
+      const current = seen.get(entrypoint) ?? [];
+      current.push(classification);
+      seen.set(entrypoint, current);
+    }
+  }
+  return [...seen.entries()]
+    .filter(([, matches]) => matches.length > 1)
+    .map(([entrypoint, matches]) => `${entrypoint}: ${matches.toSorted().join(", ")}`)
+    .toSorted();
 }
 
 function collectBundledFacadeSdkEntrypoints(): string[] {
@@ -221,6 +265,43 @@ describe("plugin-sdk package contract guardrails", () => {
       unknownSupported: [],
       unclassifiedBundledFacades: [],
       unreservedPrivateSurfaces: [],
+    });
+  });
+
+  it("keeps plugin-owned SDK subpaths explicitly classified and documented", () => {
+    const entrypoints = new Set(pluginSdkEntrypoints);
+    const reserved = new Set<string>(reservedBundledPluginSdkEntrypoints);
+    const supported = new Set<string>(supportedBundledFacadeSdkEntrypoints);
+    const publicOwned = new Set<string>(publicPluginOwnedSdkEntrypoints);
+    const documented = collectDocumentedSdkSubpaths();
+    const pluginOwnedEntrypoints = collectPluginOwnedSdkEntrypoints();
+    const classified = new Set([...reserved, ...supported, ...publicOwned]);
+
+    const unknownPublicOwned = [...publicOwned].filter(
+      (entrypoint) => !entrypoints.has(entrypoint),
+    );
+    const classificationOverlaps = collectClassificationOverlaps({
+      reserved: reservedBundledPluginSdkEntrypoints,
+      supported: supportedBundledFacadeSdkEntrypoints,
+      publicOwned: publicPluginOwnedSdkEntrypoints,
+    });
+    const unclassifiedPluginOwned = pluginOwnedEntrypoints.filter(
+      (entrypoint) => !classified.has(entrypoint),
+    );
+    const undocumentedPluginOwned = pluginOwnedEntrypoints.filter(
+      (entrypoint) => !documented.has(entrypoint),
+    );
+
+    expect({
+      unknownPublicOwned,
+      classificationOverlaps,
+      unclassifiedPluginOwned,
+      undocumentedPluginOwned,
+    }).toEqual({
+      unknownPublicOwned: [],
+      classificationOverlaps: [],
+      unclassifiedPluginOwned: [],
+      undocumentedPluginOwned: [],
     });
   });
 

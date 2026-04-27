@@ -1,7 +1,7 @@
 import { Command } from "commander";
-import { formatZonedTimestamp } from "openclaw/plugin-sdk/matrix-runtime-shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { registerMatrixCli, resetMatrixCliStateForTests } from "./cli.js";
+import { formatZonedTimestamp } from "./runtime-api.js";
 import type { CoreConfig } from "./types.js";
 
 const bootstrapMatrixVerificationMock = vi.fn();

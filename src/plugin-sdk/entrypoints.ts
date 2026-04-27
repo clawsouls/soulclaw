@@ -47,6 +47,8 @@ export const reservedBundledPluginSdkEntrypoints = [
   "msteams",
   "nextcloud-talk",
   "nostr",
+  "opencode",
+  "telegram-command-ui",
   "thread-ownership",
   "tlon",
   "twitch",
@@ -62,6 +64,32 @@ export const supportedBundledFacadeSdkEntrypoints = [
   "memory-core-engine-runtime",
   "qa-runner-runtime",
   "tts-runtime",
+] as const;
+
+export const publicPluginOwnedSdkEntrypoints = [
+  "browser-config",
+  "image-generation-core",
+  "memory-core-host-engine-embeddings",
+  "memory-core-host-engine-foundation",
+  "memory-core-host-engine-qmd",
+  "memory-core-host-engine-storage",
+  "memory-core-host-events",
+  "memory-core-host-multimodal",
+  "memory-core-host-query",
+  "memory-core-host-runtime-cli",
+  "memory-core-host-runtime-core",
+  "memory-core-host-runtime-files",
+  "memory-core-host-secret",
+  "memory-core-host-status",
+  "memory-host-core",
+  "memory-host-events",
+  "memory-host-files",
+  "memory-host-markdown",
+  "memory-host-search",
+  "memory-host-status",
+  "speech-core",
+  "telegram-command-config",
+  "video-generation-core",
 ] as const;
 
 /** Map every SDK entrypoint name to its source file path inside the repo. */
