@@ -893,6 +893,20 @@ public struct NodePairRejectParams: Codable, Sendable {
     }
 }
 
+public struct NodePairRemoveParams: Codable, Sendable {
+    public let nodeid: String
+
+    public init(
+        nodeid: String)
+    {
+        self.nodeid = nodeid
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case nodeid = "nodeId"
+    }
+}
+
 public struct NodePairVerifyParams: Codable, Sendable {
     public let nodeid: String
     public let token: String
