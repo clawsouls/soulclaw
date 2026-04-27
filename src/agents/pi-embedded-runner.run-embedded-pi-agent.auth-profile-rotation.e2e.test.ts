@@ -36,6 +36,82 @@ const installRunEmbeddedMocks = () => {
   vi.doMock("./runtime-plugins.js", () => ({
     ensureRuntimePluginsLoaded: vi.fn(),
   }));
+  vi.doMock("./harness/selection.js", () => ({
+    selectAgentHarness: vi.fn((params: { provider?: string }) => ({
+      id: params.provider === "codex-cli" ? "codex" : "pi",
+      label: "Mock agent harness",
+      supports: vi.fn(() => ({ supported: false })),
+      runAttempt: vi.fn(),
+    })),
+    runAgentHarnessAttemptWithFallback: (params: unknown) => runEmbeddedAttemptMock(params),
+  }));
+  vi.doMock("./runtime-plan/build.js", () => ({
+    buildAgentRuntimePlan: vi.fn(
+      (params: {
+        provider: string;
+        modelId: string;
+        modelApi?: string | null;
+        harnessId?: string;
+        sessionAuthProfileId?: string;
+      }) => ({
+        resolvedRef: {
+          provider: params.provider,
+          modelId: params.modelId,
+          ...(params.modelApi ? { modelApi: params.modelApi } : {}),
+          ...(params.harnessId ? { harnessId: params.harnessId } : {}),
+        },
+        auth: {
+          providerForAuth: params.provider,
+          authProfileProviderForAuth: params.sessionAuthProfileId?.split(":", 1)[0] ?? "",
+          forwardedAuthProfileId: params.sessionAuthProfileId,
+        },
+        prompt: {
+          provider: params.provider,
+          modelId: params.modelId,
+          resolveSystemPromptContribution: vi.fn(() => undefined),
+        },
+        tools: {
+          normalize: vi.fn((tools: unknown[]) => tools),
+          logDiagnostics: vi.fn(),
+        },
+        transcript: {
+          policy: {
+            sanitizeMode: "full",
+            sanitizeToolCallIds: true,
+            preserveNativeAnthropicToolUseIds: false,
+            repairToolUseResultPairing: true,
+            preserveSignatures: false,
+            sanitizeThinkingSignatures: true,
+            dropThinkingBlocks: false,
+            applyGoogleTurnOrdering: false,
+            validateGeminiTurns: false,
+            validateAnthropicTurns: false,
+            allowSyntheticToolResults: true,
+          },
+          resolvePolicy: vi.fn(() => undefined),
+        },
+        delivery: {
+          isSilentPayload: vi.fn(() => false),
+          resolveFollowupRoute: vi.fn(() => undefined),
+        },
+        outcome: {
+          classifyRunResult: vi.fn(() => undefined),
+        },
+        transport: {
+          extraParams: {},
+          resolveExtraParams: vi.fn(() => ({})),
+        },
+        observability: {
+          resolvedRef: `${params.provider}/${params.modelId}`,
+          provider: params.provider,
+          modelId: params.modelId,
+          ...(params.modelApi ? { modelApi: params.modelApi } : {}),
+          ...(params.harnessId ? { harnessId: params.harnessId } : {}),
+          ...(params.sessionAuthProfileId ? { authProfileId: params.sessionAuthProfileId } : {}),
+        },
+      }),
+    ),
+  }));
   vi.doMock("./pi-embedded-runner/model.js", () => ({
     resolveModelAsync: async (provider: string, modelId: string) => ({
       model: {
@@ -61,29 +137,28 @@ const installRunEmbeddedMocks = () => {
   vi.doMock("./pi-embedded-runner/run/attempt.js", () => ({
     runEmbeddedAttempt: (params: unknown) => runEmbeddedAttemptMock(params),
   }));
-  vi.doMock("../plugins/provider-runtime.js", async () => {
-    const actual = await vi.importActual<typeof import("../plugins/provider-runtime.js")>(
-      "../plugins/provider-runtime.js",
-    );
-    return {
-      ...actual,
-      prepareProviderRuntimeAuth: async (params: {
-        provider: string;
-        context: { apiKey: string };
-      }) => {
-        if (params.provider !== "github-copilot") {
-          return undefined;
-        }
-        const token = await resolveCopilotApiTokenMock(params.context.apiKey);
-        return {
-          apiKey: token.token,
-          baseUrl: token.baseUrl,
-          expiresAt: token.expiresAt,
-        };
-      },
-      resolveProviderCapabilitiesWithPlugin: vi.fn(() => undefined),
-    };
-  });
+  vi.doMock("../plugins/provider-runtime.js", () => ({
+    buildProviderMissingAuthMessageWithPlugin: vi.fn(() => undefined),
+    prepareProviderRuntimeAuth: async (params: {
+      provider: string;
+      context: { apiKey: string };
+    }) => {
+      if (params.provider !== "github-copilot") {
+        return undefined;
+      }
+      const token = await resolveCopilotApiTokenMock(params.context.apiKey);
+      return {
+        apiKey: token.token,
+        baseUrl: token.baseUrl,
+        expiresAt: token.expiresAt,
+      };
+    },
+    resolveProviderAuthProfileId: vi.fn(() => undefined),
+    resolveProviderCapabilitiesWithPlugin: vi.fn(() => undefined),
+    resolveExternalAuthProfilesWithPlugins: vi.fn(() => []),
+    resolveProviderSyntheticAuthWithPlugin: vi.fn(() => undefined),
+    shouldDeferProviderSyntheticProfileAuthWithPlugin: vi.fn(() => false),
+  }));
   vi.doMock("../infra/backoff.js", () => ({
     computeBackoff: (
       policy: { initialMs: number; maxMs: number; factor: number; jitter: number },
