@@ -184,4 +184,49 @@ describe("loadPluginLookUpTable", () => {
     expect(table.startup.configuredDeferredChannelPluginIds).toEqual([]);
     expect(table.startup.pluginIds).toEqual(["telegram"]);
   });
+
+  it("derives startup ids from a provided metadata snapshot without reloading manifests", async () => {
+    const plugins = [
+      createManifestRecord({
+        id: "telegram",
+        origin: "bundled",
+        channels: ["telegram"],
+      }),
+    ];
+    const index = createIndex(plugins);
+    const manifestRegistry: PluginManifestRegistry = {
+      plugins,
+      diagnostics: [],
+    };
+    loadPluginManifestRegistryForInstalledIndex.mockReturnValue(manifestRegistry);
+    const { loadPluginMetadataSnapshot } = await import("./plugin-metadata-snapshot.js");
+    const { loadPluginLookUpTable } = await import("./plugin-lookup-table.js");
+
+    const metadataSnapshot = loadPluginMetadataSnapshot({
+      config: {
+        channels: {
+          telegram: { token: "configured" },
+        },
+      } as OpenClawConfig,
+      env: {},
+      index,
+    });
+    loadPluginManifestRegistryForInstalledIndex.mockClear();
+
+    const table = loadPluginLookUpTable({
+      config: {
+        channels: {
+          telegram: { token: "configured" },
+        },
+      } as OpenClawConfig,
+      env: {},
+      metadataSnapshot,
+    });
+
+    expect(loadPluginManifestRegistryForInstalledIndex).not.toHaveBeenCalled();
+    expect(table.manifestRegistry).toBe(manifestRegistry);
+    expect(table.startup.pluginIds).toEqual(["telegram"]);
+    expect(table.metrics.indexPluginCount).toBe(1);
+    expect(table.metrics.manifestPluginCount).toBe(1);
+  });
 });
