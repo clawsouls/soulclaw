@@ -529,6 +529,7 @@ async function scanDirectoryTarget(params: {
 }): Promise<BuiltinInstallScan> {
   try {
     const scanSummary = await scanDirectoryWithSummary(params.path, {
+      excludeTestFiles: true,
       includeFiles: params.includeFiles,
     });
     const builtinScan = buildBuiltinScanFromSummary(scanSummary);
