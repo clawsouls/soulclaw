@@ -888,7 +888,7 @@ describe("resolveApiKeyForProvider – synthetic local auth for custom providers
     ).rejects.toThrow("No API key found");
   });
 
-  it("resolves custom named Ollama providers with explicit local marker auth", async () => {
+  it("resolves custom named Ollama providers with explicit local marker auth as a local models marker", async () => {
     const auth = await resolveApiKeyForProvider({
       provider: "ollama-remote",
       cfg: {
@@ -917,8 +917,8 @@ describe("resolveApiKeyForProvider – synthetic local auth for custom providers
     });
 
     expect(auth).toMatchObject({
-      apiKey: "ollama-local",
-      source: "models.providers.ollama-remote (synthetic local key)",
+      apiKey: "custom-local",
+      source: "models.json (local marker)",
       mode: "api-key",
     });
   });
