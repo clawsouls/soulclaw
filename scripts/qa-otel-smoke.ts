@@ -1,6 +1,7 @@
 #!/usr/bin/env -S node --import tsx
 
 import { spawn, type ChildProcess } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { createRequire } from "node:module";
@@ -285,15 +286,19 @@ function startLocalOtlpTraceReceiver() {
   };
 }
 
-function spawnPnpm(args: string[], env: NodeJS.ProcessEnv): ChildProcess {
-  const npmExecPath = process.env.npm_execpath?.trim();
-  if (npmExecPath) {
-    return spawn(process.execPath, [npmExecPath, ...args], {
-      env,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+function openClawEntryArgs(): string[] {
+  if (
+    existsSync(path.join(process.cwd(), "openclaw.mjs")) &&
+    (existsSync(path.join(process.cwd(), "dist", "entry.js")) ||
+      existsSync(path.join(process.cwd(), "dist", "entry.mjs")))
+  ) {
+    return ["openclaw.mjs"];
   }
-  return spawn(process.platform === "win32" ? "pnpm.cmd" : "pnpm", args, {
+  return ["scripts/run-node.mjs"];
+}
+
+function spawnOpenClaw(args: string[], env: NodeJS.ProcessEnv): ChildProcess {
+  return spawn(process.execPath, [...openClawEntryArgs(), ...args], {
     env,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -321,7 +326,6 @@ function buildQaEnv(port: number): NodeJS.ProcessEnv {
 
 function buildQaArgs(options: CliOptions): string[] {
   const args = [
-    "openclaw",
     "qa",
     "suite",
     "--provider-mode",
@@ -434,7 +438,7 @@ async function main() {
 
   let childExitCode = 1;
   try {
-    const child = spawnPnpm(buildQaArgs(options), buildQaEnv(port));
+    const child = spawnOpenClaw(buildQaArgs(options), buildQaEnv(port));
     child.stdout?.on("data", (chunk) => process.stdout.write(chunk));
     child.stderr?.on("data", (chunk) => process.stderr.write(chunk));
     childExitCode = await waitForChild(child);

@@ -49,7 +49,7 @@ for i in $(seq 1 "$loops"); do
     --output-dir "$iteration_dir/otel"
 
   echo "== docker observability loop $i/$loops: prometheus =="
-  pnpm openclaw qa suite \
+  node openclaw.mjs qa suite \
     --provider-mode mock-openai \
     --scenario docker-prometheus-smoke \
     --concurrency 1 \
