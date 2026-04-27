@@ -1444,6 +1444,45 @@ export function attachGatewayWsMessageHandler(params: {
             );
         }
 
+        const snapshot = buildGatewaySnapshot({
+          includeSensitive: scopes.includes(ADMIN_SCOPE),
+        });
+        const cachedHealth = getHealthCache();
+        if (cachedHealth) {
+          snapshot.health = cachedHealth;
+          snapshot.stateVersion.health = getHealthVersion();
+        }
+        const helloOkAuthScopes = deviceToken ? deviceToken.scopes : scopes;
+        const helloOk = {
+          type: "hello-ok",
+          protocol: PROTOCOL_VERSION,
+          server: {
+            version: resolveRuntimeServiceVersion(process.env),
+            connId,
+          },
+          features: { methods: gatewayMethods, events },
+          snapshot,
+          canvasHostUrl: scopedCanvasHostUrl,
+          auth: {
+            role,
+            scopes: helloOkAuthScopes,
+            ...(deviceToken
+              ? {
+                  deviceToken: deviceToken.token,
+                  issuedAtMs: deviceToken.rotatedAtMs ?? deviceToken.createdAtMs,
+                  ...(bootstrapDeviceTokens.length > 1
+                    ? { deviceTokens: bootstrapDeviceTokens.slice(1) }
+                    : {}),
+                }
+              : {}),
+          },
+          policy: {
+            maxPayload: MAX_PAYLOAD_BYTES,
+            maxBufferedBytes: MAX_BUFFERED_BYTES,
+            tickIntervalMs: TICK_INTERVAL_MS,
+          },
+        };
+
         try {
           await sendFrame({ type: "res", id: frame.id, ok: true, payload: helloOk });
         } catch (err) {
