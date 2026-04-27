@@ -919,6 +919,7 @@ async function createOllamaTestStream(params: {
   options?: {
     apiKey?: string;
     maxTokens?: number;
+    temperature?: number;
     signal?: AbortSignal;
     headers?: Record<string, string>;
   };
@@ -1205,7 +1206,17 @@ describe("createOllamaStreamFn", () => {
       async (fetchMock) => {
         const stream = await createOllamaTestStream({
           baseUrl: "http://ollama-host:11434",
-          model: { params: { num_ctx: 32768 }, contextWindow: 131072 },
+          model: {
+            params: {
+              num_ctx: 32768,
+              temperature: 0.2,
+              top_p: 0.9,
+              thinking: false,
+              streaming: false,
+            },
+            contextWindow: 131072,
+          },
+          options: { temperature: 0.7, maxTokens: 55 },
         });
 
         const events = await collectStreamEvents(stream);
@@ -1216,9 +1227,21 @@ describe("createOllamaStreamFn", () => {
           throw new Error("Expected string request body");
         }
         const requestBody = JSON.parse(requestInit.body) as {
-          options: { num_ctx?: number };
+          think?: boolean;
+          options: {
+            num_ctx?: number;
+            num_predict?: number;
+            temperature?: number;
+            top_p?: number;
+            streaming?: boolean;
+          };
         };
         expect(requestBody.options.num_ctx).toBe(32768);
+        expect(requestBody.options.num_predict).toBe(55);
+        expect(requestBody.options.temperature).toBe(0.7);
+        expect(requestBody.options.top_p).toBe(0.9);
+        expect(requestBody.options.streaming).toBeUndefined();
+        expect(requestBody.think).toBe(false);
       },
     );
   });

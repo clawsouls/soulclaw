@@ -26,7 +26,8 @@ describe.skipIf(!LIVE)("ollama live", () => {
     let payload:
       | {
           model?: string;
-          options?: { num_ctx?: number };
+          think?: boolean;
+          options?: { num_ctx?: number; top_p?: number };
           tools?: Array<{
             function?: {
               parameters?: {
@@ -43,7 +44,7 @@ describe.skipIf(!LIVE)("ollama live", () => {
         api: "ollama",
         provider: PROVIDER_ID,
         contextWindow: 8192,
-        params: { num_ctx: 4096 },
+        params: { num_ctx: 4096, top_p: 0.9, thinking: false },
       } as never,
       {
         messages: [{ role: "user", content: "Reply exactly OK." }],
@@ -82,6 +83,8 @@ describe.skipIf(!LIVE)("ollama live", () => {
     expect(events.some((event) => (event as { type?: string }).type === "done")).toBe(true);
     expect(payload?.model).toBe(CHAT_MODEL);
     expect(payload?.options?.num_ctx).toBe(4096);
+    expect(payload?.options?.top_p).toBe(0.9);
+    expect(payload?.think).toBe(false);
     const properties = payload?.tools?.[0]?.function?.parameters?.properties;
     expect(properties?.city?.type).toBe("string");
     expect(properties?.units?.type).toBe("string");
