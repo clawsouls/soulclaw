@@ -70,10 +70,16 @@ describe("matrixApprovalNativeRuntime", () => {
       },
       request: {} as never,
       approvalKind: "exec",
+      plannedTarget: {
+        surface: "approver-dm",
+        target: { to: "room:!room:example.org" },
+        reason: "preferred",
+      } as never,
       preparedTarget: {
         to: "room:!room:example.org",
         roomId: "!room:example.org",
       },
+      view: {} as never,
       pendingPayload,
     });
 
@@ -216,10 +222,16 @@ describe("matrixApprovalNativeRuntime", () => {
       },
       request: {} as never,
       approvalKind: "exec",
+      plannedTarget: {
+        surface: "approver-dm",
+        target: { to: "room:!room:example.org" },
+        reason: "preferred",
+      } as never,
       preparedTarget: {
         to: "room:!room:example.org",
         roomId: "!room:example.org",
       },
+      view: {} as never,
       pendingPayload,
     });
 
