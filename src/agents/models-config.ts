@@ -151,21 +151,29 @@ export async function ensureOpenClawModelsJson(
   agentDirOverride?: string,
   options: {
     pluginMetadataSnapshot?: Pick<PluginMetadataSnapshot, "index" | "manifestRegistry" | "owners">;
+    workspaceDir?: string;
   } = {},
 ): Promise<{ agentDir: string; wrote: boolean }> {
   const resolved = resolveModelsConfigInput(config);
   const cfg = resolved.config;
-  const workspaceDir = resolveAgentWorkspaceDir(cfg, resolveDefaultAgentId(cfg));
+  const workspaceDir =
+    options.workspaceDir ??
+    (agentDirOverride?.trim()
+      ? undefined
+      : resolveAgentWorkspaceDir(cfg, resolveDefaultAgentId(cfg)));
   const pluginMetadataSnapshot =
     options.pluginMetadataSnapshot ??
-    getCurrentPluginMetadataSnapshot({ config: cfg, workspaceDir });
+    getCurrentPluginMetadataSnapshot({
+      config: cfg,
+      ...(workspaceDir ? { workspaceDir } : {}),
+    });
   const agentDir = agentDirOverride?.trim() ? agentDirOverride.trim() : resolveOpenClawAgentDir();
   const targetPath = path.join(agentDir, "models.json");
   const fingerprint = await buildModelsJsonFingerprint({
     config: cfg,
     sourceConfigForSecrets: resolved.sourceConfigForSecrets,
     agentDir,
-    workspaceDir,
+    ...(workspaceDir ? { workspaceDir } : {}),
     ...(pluginMetadataSnapshot ? { pluginMetadataSnapshot } : {}),
   });
   const cached = MODELS_JSON_STATE.readyCache.get(targetPath);
@@ -187,7 +195,7 @@ export async function ensureOpenClawModelsJson(
       sourceConfigForSecrets: resolved.sourceConfigForSecrets,
       agentDir,
       env,
-      workspaceDir,
+      ...(workspaceDir ? { workspaceDir } : {}),
       existingRaw: existingModelsFile.raw,
       existingParsed: existingModelsFile.parsed,
       ...(pluginMetadataSnapshot ? { pluginMetadataSnapshot } : {}),
