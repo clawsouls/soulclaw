@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import type { ProviderRuntimeModel } from "openclaw/plugin-sdk/plugin-entry";
+import type { ProviderPlugin } from "openclaw/plugin-sdk/provider-model-shared";
 import {
   createProviderUsageFetch,
   makeResponse,
@@ -8,7 +10,6 @@ import {
   requireRegisteredProvider,
 } from "openclaw/plugin-sdk/testing";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ProviderPlugin, ProviderRuntimeModel } from "../../../src/plugins/types.js";
 
 const CONTRACT_SETUP_TIMEOUT_MS = 300_000;
 
