@@ -20,6 +20,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Memory/LanceDB: bound memory recall embedding queries with a new `recallMaxChars` setting, prefer the latest user message over channel prompt metadata during auto-recall, and document the knob so small Ollama embedding models avoid context-length failures. Fixes #56780. Thanks @rungmc357 and @zak-collaborator.
 - Plugin SDK: fall back from partial bundled plugin directory overrides to package source public surfaces while preserving `OPENCLAW_DISABLE_BUNDLED_PLUGINS` as a hard disable. (#72817) Thanks @serkonyc.
 - Agents/ACPX: stop forwarding Codex ACP timeout config controls that Codex rejects while preserving OpenClaw's run-timeout watchdog for ACP subagents. Fixes #73052. Thanks @pfrederiksen and @richa65.
 - Memory/Ollama: add `memorySearch.remote.nonBatchConcurrency` for inline embedding indexing, default Ollama non-batch indexing to one request at a time, and keep batch concurrency separate from non-batch concurrency so local embedding backfills avoid timeout storms on smaller hosts. Carries forward #57733. Thanks @itilys.
