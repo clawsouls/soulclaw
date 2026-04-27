@@ -144,6 +144,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - CLI/models: skip duplicate catalog supplement resolution during broad `models list --all` output so already-listed registry rows do not pay a second registry lookup pass. Thanks @shakkernerd.
+- CLI/models: keep broad unfiltered `models list --all` on raw registry rows instead of loading every provider runtime normalization hook, while preserving full normalization for provider-filtered and configured model paths. Thanks @shakkernerd.
 
 ## 2026.4.26
 
