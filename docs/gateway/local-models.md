@@ -169,6 +169,11 @@ Compatibility notes for stricter OpenAI-compatible backends:
   those into real tool calls only when the name exactly matches a registered
   tool for the turn; otherwise the block is treated as unsupported text and is
   hidden from user-visible replies.
+- If a model emits JSON, XML, or ReAct-style text that looks like a tool call
+  but the provider did not emit a structured invocation, OpenClaw leaves it as
+  text and logs a warning with the run id, provider/model, detected pattern, and
+  tool name when available. Treat that as provider/model tool-call
+  incompatibility, not a completed tool run.
 - Some smaller or stricter local backends are unstable with OpenClaw's full
   agent-runtime prompt shape, especially when tool schemas are included. If the
   backend works for tiny direct `/v1/chat/completions` calls but fails on normal
