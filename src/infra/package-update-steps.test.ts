@@ -164,4 +164,33 @@ describe("runGlobalPackageUpdateSteps", () => {
       );
     });
   });
+
+  it("cleans the staged npm prefix when the install command throws", async () => {
+    await withTempDir({ prefix: "openclaw-package-update-cleanup-" }, async (base) => {
+      const prefix = path.join(base, "prefix");
+      const globalRoot = path.join(prefix, "lib", "node_modules");
+      const packageRoot = path.join(globalRoot, "openclaw");
+      await writePackageRoot(packageRoot, "1.0.0");
+
+      let stagePrefix: string | undefined;
+      await expect(
+        runGlobalPackageUpdateSteps({
+          installTarget: createNpmTarget(globalRoot),
+          installSpec: "openclaw@2.0.0",
+          packageName: "openclaw",
+          packageRoot,
+          runCommand: createRootRunner(globalRoot),
+          runStep: async ({ argv }) => {
+            const prefixIndex = argv.indexOf("--prefix");
+            stagePrefix = argv[prefixIndex + 1];
+            throw new Error("install crashed");
+          },
+          timeoutMs: 1000,
+        }),
+      ).rejects.toThrow("install crashed");
+
+      expect(stagePrefix).toBeDefined();
+      await expect(fs.access(stagePrefix ?? "")).rejects.toMatchObject({ code: "ENOENT" });
+    });
+  });
 });

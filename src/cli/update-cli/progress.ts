@@ -30,6 +30,9 @@ const STEP_LABELS: Record<string, string> = {
   "git rev-parse HEAD (after)": "Verifying update",
   "global update": "Updating via package manager",
   "global update (omit optional)": "Retrying update without optional deps",
+  "global install stage": "Preparing staged package install",
+  "global install verify": "Verifying global package",
+  "global install swap": "Activating global package",
   "global install": "Installing global package",
 };
 

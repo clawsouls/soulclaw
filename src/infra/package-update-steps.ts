@@ -71,6 +71,39 @@ async function createStagedNpmInstall(
   };
 }
 
+async function prepareStagedNpmInstall(
+  installTarget: ResolvedGlobalInstallTarget,
+  packageName: string,
+): Promise<{
+  stagedInstall: StagedNpmInstall | null;
+  failedStep: PackageUpdateStepResult | null;
+}> {
+  const startedAt = Date.now();
+  try {
+    return {
+      stagedInstall: await createStagedNpmInstall(installTarget, packageName),
+      failedStep: null,
+    };
+  } catch (err) {
+    const targetLayout =
+      installTarget.manager === "npm"
+        ? resolveNpmGlobalPrefixLayoutFromGlobalRoot(installTarget.globalRoot)
+        : null;
+    return {
+      stagedInstall: null,
+      failedStep: {
+        name: "global install stage",
+        command: "prepare staged npm install",
+        cwd: targetLayout?.prefix ?? installTarget.globalRoot ?? process.cwd(),
+        durationMs: Date.now() - startedAt,
+        exitCode: 1,
+        stdoutTail: null,
+        stderrTail: formatError(err),
+      },
+    };
+  }
+}
+
 async function cleanupStagedNpmInstall(stage: StagedNpmInstall | null): Promise<void> {
   if (!stage) {
     return;
@@ -215,118 +248,147 @@ export async function runGlobalPackageUpdateSteps(params: {
 }> {
   const installCwd = params.installCwd === undefined ? {} : { cwd: params.installCwd };
   const installEnv = params.env === undefined ? {} : { env: params.env };
-  let stagedInstall = await createStagedNpmInstall(params.installTarget, params.packageName);
-  const updateStep = await params.runStep({
-    name: "global update",
-    argv: globalInstallArgs(
-      params.installTarget,
-      params.installSpec,
-      undefined,
-      stagedInstall?.prefix,
-    ),
-    ...installCwd,
-    ...installEnv,
-    timeoutMs: params.timeoutMs,
-  });
+  let stagedInstall: StagedNpmInstall | null = null;
 
-  const steps = [updateStep];
-  let finalInstallStep = updateStep;
-  if (updateStep.exitCode !== 0) {
-    await cleanupStagedNpmInstall(stagedInstall);
-    stagedInstall = await createStagedNpmInstall(params.installTarget, params.packageName);
-    const fallbackArgv = globalInstallFallbackArgs(
-      params.installTarget,
-      params.installSpec,
-      undefined,
-      stagedInstall?.prefix,
-    );
-    if (fallbackArgv) {
-      const fallbackStep = await params.runStep({
-        name: "global update (omit optional)",
-        argv: fallbackArgv,
-        ...installCwd,
-        ...installEnv,
-        timeoutMs: params.timeoutMs,
-      });
-      steps.push(fallbackStep);
-      finalInstallStep = fallbackStep;
-    } else {
+  try {
+    const preparedInstall = await prepareStagedNpmInstall(params.installTarget, params.packageName);
+    stagedInstall = preparedInstall.stagedInstall;
+    if (preparedInstall.failedStep) {
+      return {
+        steps: [preparedInstall.failedStep],
+        verifiedPackageRoot: params.packageRoot ?? null,
+        afterVersion: null,
+        failedStep: preparedInstall.failedStep,
+      };
+    }
+
+    const updateStep = await params.runStep({
+      name: "global update",
+      argv: globalInstallArgs(
+        params.installTarget,
+        params.installSpec,
+        undefined,
+        stagedInstall?.prefix,
+      ),
+      ...installCwd,
+      ...installEnv,
+      timeoutMs: params.timeoutMs,
+    });
+
+    const steps = [updateStep];
+    let finalInstallStep = updateStep;
+    if (updateStep.exitCode !== 0) {
       await cleanupStagedNpmInstall(stagedInstall);
       stagedInstall = null;
-    }
-  }
+      const preparedFallbackInstall = await prepareStagedNpmInstall(
+        params.installTarget,
+        params.packageName,
+      );
+      stagedInstall = preparedFallbackInstall.stagedInstall;
+      if (preparedFallbackInstall.failedStep) {
+        steps.push(preparedFallbackInstall.failedStep);
+        return {
+          steps,
+          verifiedPackageRoot: params.packageRoot ?? null,
+          afterVersion: null,
+          failedStep: preparedFallbackInstall.failedStep,
+        };
+      }
 
-  let verifiedPackageRoot =
-    stagedInstall?.packageRoot ??
-    (
-      await resolveGlobalInstallTarget({
-        manager: params.installTarget,
-        runCommand: params.runCommand,
-        timeoutMs: params.timeoutMs,
-      })
-    ).packageRoot ??
-    params.packageRoot ??
-    null;
-
-  let afterVersion: string | null = null;
-  if (finalInstallStep.exitCode === 0 && verifiedPackageRoot) {
-    afterVersion = await readPackageVersion(verifiedPackageRoot);
-    const expectedVersion = resolveExpectedInstalledVersionFromSpec(
-      params.packageName,
-      params.installSpec,
-    );
-    const verificationErrors = await collectInstalledGlobalPackageErrors({
-      packageRoot: verifiedPackageRoot,
-      expectedVersion,
-    });
-    if (verificationErrors.length > 0) {
-      steps.push({
-        name: "global install verify",
-        command: `verify ${verifiedPackageRoot}`,
-        cwd: verifiedPackageRoot,
-        durationMs: 0,
-        exitCode: 1,
-        stderrTail: verificationErrors.join("\n"),
-        stdoutTail: null,
-      });
-    }
-
-    if (stagedInstall && verificationErrors.length === 0) {
-      const swapStep = await swapStagedNpmInstall({
-        stage: stagedInstall,
-        installTarget: params.installTarget,
-        packageName: params.packageName,
-      });
-      steps.push(swapStep);
-      if (swapStep.exitCode === 0) {
-        verifiedPackageRoot = params.installTarget.packageRoot ?? verifiedPackageRoot;
+      const fallbackArgv = globalInstallFallbackArgs(
+        params.installTarget,
+        params.installSpec,
+        undefined,
+        stagedInstall?.prefix,
+      );
+      if (fallbackArgv) {
+        const fallbackStep = await params.runStep({
+          name: "global update (omit optional)",
+          argv: fallbackArgv,
+          ...installCwd,
+          ...installEnv,
+          timeoutMs: params.timeoutMs,
+        });
+        steps.push(fallbackStep);
+        finalInstallStep = fallbackStep;
+      } else {
+        await cleanupStagedNpmInstall(stagedInstall);
+        stagedInstall = null;
       }
     }
 
-    const failedVerifyOrSwap = steps.find(
-      (step) =>
-        (step.name === "global install verify" || step.name === "global install swap") &&
-        step.exitCode !== 0,
-    );
-    const postVerifyStep = failedVerifyOrSwap
-      ? null
-      : await params.postVerifyStep?.(verifiedPackageRoot);
-    if (postVerifyStep) {
-      steps.push(postVerifyStep);
+    let verifiedPackageRoot =
+      stagedInstall?.packageRoot ??
+      (
+        await resolveGlobalInstallTarget({
+          manager: params.installTarget,
+          runCommand: params.runCommand,
+          timeoutMs: params.timeoutMs,
+        })
+      ).packageRoot ??
+      params.packageRoot ??
+      null;
+
+    let afterVersion: string | null = null;
+    if (finalInstallStep.exitCode === 0 && verifiedPackageRoot) {
+      afterVersion = await readPackageVersion(verifiedPackageRoot);
+      const expectedVersion = resolveExpectedInstalledVersionFromSpec(
+        params.packageName,
+        params.installSpec,
+      );
+      const verificationErrors = await collectInstalledGlobalPackageErrors({
+        packageRoot: verifiedPackageRoot,
+        expectedVersion,
+      });
+      if (verificationErrors.length > 0) {
+        steps.push({
+          name: "global install verify",
+          command: `verify ${verifiedPackageRoot}`,
+          cwd: verifiedPackageRoot,
+          durationMs: 0,
+          exitCode: 1,
+          stderrTail: verificationErrors.join("\n"),
+          stdoutTail: null,
+        });
+      }
+
+      if (stagedInstall && verificationErrors.length === 0) {
+        const swapStep = await swapStagedNpmInstall({
+          stage: stagedInstall,
+          installTarget: params.installTarget,
+          packageName: params.packageName,
+        });
+        steps.push(swapStep);
+        if (swapStep.exitCode === 0) {
+          verifiedPackageRoot = params.installTarget.packageRoot ?? verifiedPackageRoot;
+        }
+      }
+
+      const failedVerifyOrSwap = steps.find(
+        (step) =>
+          (step.name === "global install verify" || step.name === "global install swap") &&
+          step.exitCode !== 0,
+      );
+      const postVerifyStep = failedVerifyOrSwap
+        ? null
+        : await params.postVerifyStep?.(verifiedPackageRoot);
+      if (postVerifyStep) {
+        steps.push(postVerifyStep);
+      }
     }
+
+    const failedStep =
+      finalInstallStep.exitCode !== 0
+        ? finalInstallStep
+        : (steps.find((step) => step !== updateStep && step.exitCode !== 0) ?? null);
+
+    return {
+      steps,
+      verifiedPackageRoot,
+      afterVersion,
+      failedStep,
+    };
+  } finally {
+    await cleanupStagedNpmInstall(stagedInstall);
   }
-
-  await cleanupStagedNpmInstall(stagedInstall);
-
-  const failedStep =
-    finalInstallStep.exitCode !== 0
-      ? finalInstallStep
-      : (steps.find((step) => step !== updateStep && step.exitCode !== 0) ?? null);
-
-  return {
-    steps,
-    verifiedPackageRoot,
-    afterVersion,
-    failedStep,
-  };
 }
