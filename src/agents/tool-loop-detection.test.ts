@@ -254,6 +254,16 @@ describe("tool-loop-detection", () => {
       expect(timestamp).toBeLessThanOrEqual(after);
     });
 
+    it("records run id when provided", () => {
+      const state = createState();
+
+      recordToolCall(state, "tool", { arg: 1 }, "call-run", enabledLoopDetectionConfig, {
+        runId: "run-1",
+      });
+
+      expect(state.toolCallHistory?.[0]?.runId).toBe("run-1");
+    });
+
     it("respects configured historySize", () => {
       const state = createState();
 
@@ -291,6 +301,59 @@ describe("tool-loop-detection", () => {
         { path: "/new-file.txt" },
         enabledLoopDetectionConfig,
       );
+      expect(result.stuck).toBe(false);
+    });
+
+    it("ignores repeated history from other runs", () => {
+      const state = createState();
+      const params = { path: "/same.txt" };
+
+      for (let i = 0; i < WARNING_THRESHOLD; i += 1) {
+        recordToolCall(state, "read", params, `old-run-${i}`, enabledLoopDetectionConfig, {
+          runId: "heartbeat-1",
+        });
+      }
+
+      const result = detectToolCallLoop(state, "read", params, enabledLoopDetectionConfig, {
+        runId: "heartbeat-2",
+      });
+
+      expect(result.stuck).toBe(false);
+    });
+
+    it("detects repeated history within the same run", () => {
+      const state = createState();
+      const params = { path: "/same.txt" };
+
+      for (let i = 0; i < WARNING_THRESHOLD; i += 1) {
+        recordToolCall(state, "read", params, `same-run-${i}`, enabledLoopDetectionConfig, {
+          runId: "run-1",
+        });
+      }
+
+      const result = detectToolCallLoop(state, "read", params, enabledLoopDetectionConfig, {
+        runId: "run-1",
+      });
+
+      expect(result.stuck).toBe(true);
+      if (result.stuck) {
+        expect(result.detector).toBe("generic_repeat");
+        expect(result.count).toBe(WARNING_THRESHOLD);
+      }
+    });
+
+    it("keeps scoped and unscoped history isolated", () => {
+      const state = createState();
+      const params = { path: "/same.txt" };
+
+      for (let i = 0; i < WARNING_THRESHOLD; i += 1) {
+        recordToolCall(state, "read", params, `scoped-${i}`, enabledLoopDetectionConfig, {
+          runId: "run-1",
+        });
+      }
+
+      const result = detectToolCallLoop(state, "read", params, enabledLoopDetectionConfig);
+
       expect(result.stuck).toBe(false);
     });
 
@@ -746,6 +809,28 @@ describe("tool-loop-detection", () => {
       const entry = state.toolCallHistory?.find((call) => call.toolCallId === toolCallId);
       expect(typeof entry?.resultHash).toBe("string");
       expect(entry?.resultHash?.length).toBe(64);
+    });
+
+    it("does not attach outcomes to matching calls from other runs", () => {
+      const state = createState();
+      const params = { path: "/same.txt" };
+      recordToolCall(state, "read", params, "call-1", enabledLoopDetectionConfig, {
+        runId: "run-1",
+      });
+
+      recordToolCallOutcome(state, {
+        toolName: "read",
+        toolParams: params,
+        toolCallId: "call-1",
+        result: { content: [{ type: "text", text: "same output" }] },
+        config: enabledLoopDetectionConfig,
+        runId: "run-2",
+      });
+
+      expect(state.toolCallHistory).toHaveLength(2);
+      expect(state.toolCallHistory?.[0]?.resultHash).toBeUndefined();
+      expect(state.toolCallHistory?.[1]?.runId).toBe("run-2");
+      expect(state.toolCallHistory?.[1]?.resultHash).toBeTypeOf("string");
     });
 
     it("handles empty history", () => {
