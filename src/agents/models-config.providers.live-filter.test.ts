@@ -90,4 +90,46 @@ describe("resolveProviderDiscoveryFilterForTest", () => {
       }),
     ).toEqual(["anthropic"]);
   });
+
+  it("normalizes mixed-case backend ids through plugin metadata owners", () => {
+    const snapshot = {
+      owners: metadataOwners({
+        cliBackends: new Map([["claude-cli", ["anthropic"]]]),
+      }),
+    };
+
+    expect(resolvePluginMetadataProviderOwnersForTest(snapshot, "Claude-CLI")).toEqual([
+      "anthropic",
+    ]);
+    expect(
+      resolveProviderDiscoveryFilterForTest({
+        env: liveFilterEnv({
+          OPENCLAW_LIVE_TEST: "1",
+          OPENCLAW_LIVE_PROVIDERS: "Claude-CLI",
+        }),
+        resolveOwners: (provider) => resolvePluginMetadataProviderOwnersForTest(snapshot, provider),
+      }),
+    ).toEqual(["anthropic"]);
+  });
+
+  it("normalizes provider aliases through plugin metadata owners", () => {
+    const snapshot = {
+      owners: metadataOwners({
+        providers: new Map([["volcengine", ["volcengine"]]]),
+      }),
+    };
+
+    expect(resolvePluginMetadataProviderOwnersForTest(snapshot, "bytedance")).toEqual([
+      "volcengine",
+    ]);
+    expect(
+      resolveProviderDiscoveryFilterForTest({
+        env: liveFilterEnv({
+          OPENCLAW_LIVE_TEST: "1",
+          OPENCLAW_LIVE_PROVIDERS: "bytedance",
+        }),
+        resolveOwners: (provider) => resolvePluginMetadataProviderOwnersForTest(snapshot, provider),
+      }),
+    ).toEqual(["volcengine"]);
+  });
 });

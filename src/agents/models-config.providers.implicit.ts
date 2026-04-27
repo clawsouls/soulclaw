@@ -23,7 +23,7 @@ import {
   createProviderApiKeyResolver,
   createProviderAuthResolver,
 } from "./models-config.providers.secrets.js";
-import { findNormalizedProviderValue } from "./provider-id.js";
+import { findNormalizedProviderValue, normalizeProviderId } from "./provider-id.js";
 
 const log = createSubsystemLogger("agents/model-providers");
 
@@ -133,16 +133,53 @@ function resolvePluginMetadataProviderOwners(
   if (!pluginMetadataSnapshot) {
     return undefined;
   }
+  const normalizedProvider = normalizeProviderId(provider);
+  if (!normalizedProvider) {
+    return undefined;
+  }
   const owners = new Set<string>();
-  for (const owner of pluginMetadataSnapshot.owners.providers.get(provider) ?? []) {
-    owners.add(owner);
-  }
-  for (const owner of pluginMetadataSnapshot.owners.cliBackends.get(provider) ?? []) {
-    owners.add(owner);
-  }
+  appendNormalizedPluginMetadataOwners(
+    owners,
+    pluginMetadataSnapshot.owners.providers,
+    provider,
+    normalizedProvider,
+  );
+  appendNormalizedPluginMetadataOwners(
+    owners,
+    pluginMetadataSnapshot.owners.cliBackends,
+    provider,
+    normalizedProvider,
+  );
   return owners.size > 0
     ? [...owners].toSorted((left, right) => left.localeCompare(right))
     : undefined;
+}
+
+function appendNormalizedPluginMetadataOwners(
+  target: Set<string>,
+  ownerMap: ReadonlyMap<string, readonly string[]>,
+  provider: string,
+  normalizedProvider: string,
+): void {
+  for (const owner of ownerMap.get(provider) ?? []) {
+    target.add(owner);
+  }
+  if (normalizedProvider !== provider) {
+    for (const owner of ownerMap.get(normalizedProvider) ?? []) {
+      target.add(owner);
+    }
+  }
+  for (const [ownedId, owners] of ownerMap.entries()) {
+    if (
+      ownedId !== provider &&
+      ownedId !== normalizedProvider &&
+      normalizeProviderId(ownedId) === normalizedProvider
+    ) {
+      for (const owner of owners) {
+        target.add(owner);
+      }
+    }
+  }
 }
 
 export function resolveProviderDiscoveryFilterForTest(params: {
