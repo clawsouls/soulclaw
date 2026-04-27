@@ -12,6 +12,7 @@ import type {
   PluginManifestRecord,
   PluginManifestRegistry,
 } from "./manifest-registry.js";
+import type { PluginLookUpTable } from "./plugin-lookup-table.js";
 import type { PluginOrigin } from "./plugin-origin.types.js";
 import {
   loadPluginRegistrySnapshot,
@@ -21,6 +22,7 @@ import {
 
 export type PluginRegistryContributionOptions = LoadPluginRegistryParams & {
   includeDisabled?: boolean;
+  lookUpTable?: PluginLookUpTable;
 };
 
 export type LoadPluginRegistryManifestParams = LoadPluginRegistryParams & {
@@ -192,6 +194,28 @@ function loadContributionManifestRegistry(
   });
 }
 
+function listContributionManifestPlugins(
+  params: PluginRegistryContributionOptions & {
+    index: PluginRegistrySnapshot;
+  },
+): readonly PluginManifestRecord[] {
+  const plugins = params.lookUpTable?.plugins;
+  if (plugins) {
+    const enabledPluginIds = new Set(
+      resolveContributionPluginIds({
+        index: params.index,
+        includeDisabled: params.includeDisabled,
+        config: params.config,
+      }),
+    );
+    return plugins.filter((plugin) => enabledPluginIds.has(plugin.id));
+  }
+  return loadContributionManifestRegistry({
+    ...params,
+    index: params.index,
+  }).plugins;
+}
+
 export function loadPluginManifestRegistryForPluginRegistry(
   params: LoadPluginRegistryManifestParams = {},
 ): PluginManifestRegistry {
@@ -263,13 +287,10 @@ export function normalizePluginsConfigWithRegistry(
 export function listPluginContributionIds(
   params: ListPluginContributionIdsParams,
 ): readonly string[] {
-  const index = loadPluginRegistrySnapshot(params);
-  const registry = loadContributionManifestRegistry({
-    ...params,
-    index,
-  });
+  const index = params.lookUpTable?.index ?? loadPluginRegistrySnapshot(params);
+  const plugins = listContributionManifestPlugins({ ...params, index });
   return sortUnique(
-    registry.plugins.flatMap((plugin) => listManifestContributionIds(plugin, params.contribution)),
+    plugins.flatMap((plugin) => listManifestContributionIds(plugin, params.contribution)),
   );
 }
 
@@ -280,13 +301,10 @@ export function resolvePluginContributionOwners(
     typeof params.matches === "string"
       ? (contributionId: string) => contributionId === params.matches
       : params.matches;
-  const index = loadPluginRegistrySnapshot(params);
-  const registry = loadContributionManifestRegistry({
-    ...params,
-    index,
-  });
+  const index = params.lookUpTable?.index ?? loadPluginRegistrySnapshot(params);
+  const plugins = listContributionManifestPlugins({ ...params, index });
   return sortUnique(
-    registry.plugins.flatMap((plugin) =>
+    plugins.flatMap((plugin) =>
       listManifestContributionIds(plugin, params.contribution).some(matcher) ? [plugin.id] : [],
     ),
   );

@@ -10,6 +10,7 @@ import {
   resolveInstalledPluginIndexPolicyHash,
   type InstalledPluginIndex,
 } from "./installed-plugin-index.js";
+import { loadPluginLookUpTable } from "./plugin-lookup-table.js";
 import {
   DISABLE_PERSISTED_PLUGIN_REGISTRY_ENV,
   createPluginRegistryIdNormalizer,
@@ -221,6 +222,31 @@ describe("plugin registry facade", () => {
     expect(
       resolveProviderOwners({ index, providerId: "demo", config, includeDisabled: true }),
     ).toEqual(["demo"]);
+  });
+
+  it("resolves contribution owners from a plugin lookup table without rereading manifests", () => {
+    const rootDir = makeTempDir();
+    const candidate = createCandidate(rootDir);
+    const env = hermeticEnv();
+    const index = loadPluginRegistrySnapshot({
+      candidates: [candidate],
+      env,
+      preferPersisted: false,
+    });
+    const lookUpTable = loadPluginLookUpTable({
+      config: {},
+      env,
+      index,
+    });
+    fs.unlinkSync(path.join(rootDir, "openclaw.plugin.json"));
+
+    expect(listPluginContributionIds({ lookUpTable, contribution: "providers" })).toEqual(["demo"]);
+    expect(resolveProviderOwners({ lookUpTable, providerId: "demo" })).toEqual(["demo"]);
+    expect(resolveChannelOwners({ lookUpTable, channelId: "demo-chat" })).toEqual(["demo"]);
+    expect(resolveCliBackendOwners({ lookUpTable, cliBackendId: "demo-cli" })).toEqual(["demo"]);
+    expect(resolveSetupProviderOwners({ lookUpTable, setupProviderId: "demo-setup" })).toEqual([
+      "demo",
+    ]);
   });
 
   it("normalizes plugin config ids through registry contribution aliases", () => {
