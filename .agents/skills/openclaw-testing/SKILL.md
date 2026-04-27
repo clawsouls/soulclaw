@@ -96,6 +96,92 @@ gh run view <run-id> --job <job-id> --log
 - For cancelled same-branch runs, confirm whether a newer run superseded it.
 - Fetch full logs only for failed or relevant jobs.
 
+## GitHub Release Workflows
+
+Use the smallest workflow that proves the current risk. The full umbrella is
+available, but it is usually the last step after narrower proof, not the first
+rerun after a focused patch.
+
+### Full Release Validation
+
+`Full Release Validation` (`.github/workflows/full-release-validation.yml`) is
+the manual "everything before release" umbrella. It resolves a target ref, then
+dispatches:
+
+- manual `CI` for the full normal CI graph
+- `OpenClaw Release Checks` for install smoke, cross-OS release checks, live and
+  E2E checks, Docker release-path suites, OpenWebUI, QA Lab, Matrix, and
+  Telegram release lanes
+- optional post-publish Telegram E2E when a package spec is supplied
+
+Run it only when validating an actual release candidate, after broad shared CI
+or release orchestration changes, or when explicitly asked:
+
+```bash
+gh workflow run full-release-validation.yml \
+  --repo openclaw/openclaw \
+  --ref main \
+  -f ref=<branch-or-sha> \
+  -f workflow_ref=main \
+  -f provider=openai \
+  -f mode=both
+```
+
+If a full run is already active on a newer `origin/main`, prefer watching that
+run over dispatching a duplicate. If you accidentally dispatch a stale duplicate,
+cancel it and monitor the current run.
+
+### Release Checks
+
+`OpenClaw Release Checks` (`openclaw-release-checks.yml`) is the release child
+workflow. It is broader than normal CI but narrower than the umbrella because it
+does not dispatch the separate full normal CI child. Use it when release-path
+validation is needed without rerunning the entire umbrella.
+
+```bash
+gh workflow run openclaw-release-checks.yml \
+  --repo openclaw/openclaw \
+  --ref main \
+  -f ref=<branch-or-sha> \
+  -f provider=openai \
+  -f mode=both
+```
+
+### Reusable Live/E2E Checks
+
+`OpenClaw Live And E2E Checks (Reusable)`
+(`openclaw-live-and-e2e-checks-reusable.yml`) is the preferred entry point for
+targeted live, Docker, model, and E2E proof. Inputs let you turn off unrelated
+lanes:
+
+```bash
+gh workflow run openclaw-live-and-e2e-checks-reusable.yml \
+  --repo openclaw/openclaw \
+  --ref main \
+  -f ref=<sha> \
+  -f include_repo_e2e=false \
+  -f include_release_path_suites=false \
+  -f include_openwebui=false \
+  -f include_live_suites=true \
+  -f live_models_only=true \
+  -f live_model_providers=fireworks
+```
+
+Useful knobs:
+
+- `docker_lanes='<lane[,lane]>'`: run selected Docker scheduler lanes against
+  prepared artifacts instead of the three release chunks.
+- `include_live_suites=false`: skip live/provider suites when testing Docker
+  scheduler or release packaging only.
+- `live_models_only=true`: run only Docker live model coverage.
+- `live_model_providers=fireworks` (or comma/space separated providers): run one
+  targeted Docker live model job instead of the full provider matrix.
+- blank `live_model_providers`: run the full live-model provider matrix.
+
+For model-list or provider-selection fixes, use `live_models_only=true` plus the
+specific `live_model_providers` allowlist. Confirm logs show the expected
+`OPENCLAW_LIVE_PROVIDERS` and selected model ids before declaring proof.
+
 ## Docker
 
 Docker is expensive. First inspect the scheduler without running Docker:
