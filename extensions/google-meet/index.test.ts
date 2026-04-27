@@ -24,7 +24,7 @@ import {
 import { handleGoogleMeetNodeHostCommand } from "./src/node-host.js";
 import { startNodeRealtimeAudioBridge } from "./src/realtime-node.js";
 import { startCommandRealtimeAudioBridge } from "./src/realtime.js";
-import { normalizeMeetUrl } from "./src/runtime.js";
+import { GoogleMeetRuntime, normalizeMeetUrl } from "./src/runtime.js";
 import {
   invokeGoogleMeetGatewayMethodForTest,
   noopLogger,
@@ -32,6 +32,7 @@ import {
 } from "./src/test-support/plugin-harness.js";
 import { __testing as chromeTransportTesting } from "./src/transports/chrome.js";
 import { buildMeetDtmfSequence, normalizeDialInNumber } from "./src/transports/twilio.js";
+import type { GoogleMeetSession } from "./src/transports/types.js";
 
 const voiceCallMocks = vi.hoisted(() => ({
   joinMeetViaVoiceCallGateway: vi.fn(async () => ({ callId: "call-1", dtmfSent: true })),
@@ -1835,6 +1836,39 @@ describe("google-meet plugin", () => {
       }),
     );
     expect(result.details).toMatchObject({ createdSession: true });
+  });
+
+  it("does not start a second realtime response for test speech", async () => {
+    const runtime = new GoogleMeetRuntime({
+      config: resolveGoogleMeetConfig({}),
+      fullConfig: {} as never,
+      runtime: {} as never,
+      logger: noopLogger,
+    });
+    const session: GoogleMeetSession = {
+      id: "meet_1",
+      url: "https://meet.google.com/abc-defg-hij",
+      transport: "chrome",
+      mode: "realtime",
+      state: "active",
+      createdAt: "2026-04-27T00:00:00.000Z",
+      updatedAt: "2026-04-27T00:00:00.000Z",
+      participantIdentity: "signed-in Google Chrome profile",
+      realtime: { enabled: true, provider: "openai", toolPolicy: "safe-read-only" },
+      chrome: { audioBackend: "blackhole-2ch", launched: true },
+      notes: [],
+    };
+    const join = vi.spyOn(runtime, "join").mockResolvedValue({ session, spoken: true });
+    const speak = vi.spyOn(runtime, "speak");
+
+    const result = await runtime.testSpeech({
+      url: "https://meet.google.com/abc-defg-hij",
+      message: "Say exactly: hello.",
+    });
+
+    expect(join).toHaveBeenCalledWith(expect.objectContaining({ message: "Say exactly: hello." }));
+    expect(speak).not.toHaveBeenCalled();
+    expect(result.spoken).toBe(true);
   });
 
   it("reports manual action when the browser profile needs Google login", async () => {
