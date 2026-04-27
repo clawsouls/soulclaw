@@ -71,6 +71,9 @@ const BUNDLED_RUNTIME_MIRROR_MATERIALIZED_EXTENSIONS = new Set([".cjs", ".js", "
 const BUNDLED_EXTENSION_DIST_DIR = "extensions";
 const MIRRORED_CORE_RUNTIME_DEP_NAMES = ["tslog"] as const;
 const MIRRORED_PACKAGE_RUNTIME_DEP_PLUGIN_ID = "openclaw-core";
+const BUNDLED_RUNTIME_MIRROR_PLUGIN_REGION_RE = /(?:^|\n)\/\/#region extensions\/[^/\s]+(?:\/|$)/u;
+const BUNDLED_RUNTIME_MIRROR_IMPORT_SPECIFIER_RE =
+  /(?:^|[;\n])\s*(?:import|export)\s+(?:[^'"()]+?\s+from\s+)?["']([^"']+)["']|\bimport\(\s*["']([^"']+)["']\s*\)|\brequire\(\s*["']([^"']+)["']\s*\)/g;
 
 const registeredBundledRuntimeDepNodePaths = new Set<string>();
 
@@ -81,7 +84,31 @@ export type BundledRuntimeDepsNpmRunner = {
 };
 
 export function shouldMaterializeBundledRuntimeMirrorDistFile(sourcePath: string): boolean {
-  return BUNDLED_RUNTIME_MIRROR_MATERIALIZED_EXTENSIONS.has(path.extname(sourcePath));
+  if (!BUNDLED_RUNTIME_MIRROR_MATERIALIZED_EXTENSIONS.has(path.extname(sourcePath))) {
+    return false;
+  }
+  let source: string;
+  try {
+    source = fs.readFileSync(sourcePath, "utf8");
+  } catch {
+    return false;
+  }
+  if (BUNDLED_RUNTIME_MIRROR_PLUGIN_REGION_RE.test(source)) {
+    return true;
+  }
+  for (const match of source.matchAll(BUNDLED_RUNTIME_MIRROR_IMPORT_SPECIFIER_RE)) {
+    const specifier = match[1] ?? match[2] ?? match[3] ?? "";
+    if (
+      specifier !== "" &&
+      !specifier.startsWith(".") &&
+      !specifier.startsWith("/") &&
+      !specifier.startsWith("node:") &&
+      !specifier.includes(":")
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function materializeBundledRuntimeMirrorDistFile(

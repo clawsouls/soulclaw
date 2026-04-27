@@ -52,6 +52,11 @@ describe("prepareBundledPluginRuntimeRoot", () => {
       "utf8",
     );
     fs.writeFileSync(
+      path.join(packageRoot, "dist", "config-runtime.js"),
+      "import JSON5 from 'json5'; export const parse = JSON5.parse;\n",
+      "utf8",
+    );
+    fs.writeFileSync(
       path.join(pluginRoot, "index.js"),
       `import { marker } from "../../pw-ai.js"; export default { id: "browser", marker };\n`,
       "utf8",
@@ -117,6 +122,9 @@ describe("prepareBundledPluginRuntimeRoot", () => {
     expect(fs.readFileSync(staleMirrorChunk, "utf8")).toContain("playwright-core");
     expect(fs.lstatSync(path.join(installRoot, "dist", "shared-runtime.js")).isSymbolicLink()).toBe(
       false,
+    );
+    expect(fs.lstatSync(path.join(installRoot, "dist", "config-runtime.js")).isSymbolicLink()).toBe(
+      true,
     );
   });
 

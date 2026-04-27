@@ -1746,6 +1746,11 @@ module.exports = {
       "utf-8",
     );
     fs.writeFileSync(
+      path.join(packageRoot, "dist", "config-runtime.js"),
+      "import JSON5 from 'json5'; export const parse = JSON5.parse;\n",
+      "utf-8",
+    );
+    fs.writeFileSync(
       path.join(pluginRoot, "index.js"),
       [
         `import { marker } from "../../pw-ai.js";`,
@@ -1841,6 +1846,9 @@ module.exports = {
     expect(
       fs.lstatSync(path.join(actualInstallRoot, "dist", "shared-runtime.js")).isSymbolicLink(),
     ).toBe(false);
+    expect(
+      fs.lstatSync(path.join(actualInstallRoot, "dist", "config-runtime.js")).isSymbolicLink(),
+    ).toBe(true);
   });
 
   it("loads bundled plugins with plugin-sdk imports from an external stage dir", () => {
