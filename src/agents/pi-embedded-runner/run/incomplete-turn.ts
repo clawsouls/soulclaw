@@ -615,7 +615,7 @@ function shouldApplyNonVisibleTurnRetryGuard(params: {
   if (shouldApplyPlanningOnlyRetryGuard(params)) {
     return true;
   }
-  if (params.modelApi === "openai-completions") {
+  if (normalizeLowercaseStringOrEmpty(params.modelApi ?? "") === "openai-completions") {
     return true;
   }
   // Non-visible final turns are narrower than planning-only turns: there is no

@@ -642,6 +642,62 @@ describe("runEmbeddedPiAgent incomplete-turn safety", () => {
     expect(mockedLog.warn).toHaveBeenCalledWith(expect.stringContaining("empty response detected"));
   });
 
+  it("retries empty openai-compatible stop turns even when the backend reports output tokens", async () => {
+    mockedClassifyFailoverReason.mockReturnValue(null);
+    mockedRunEmbeddedAttempt.mockResolvedValueOnce(
+      makeAttemptResult({
+        assistantTexts: [],
+        lastAssistant: {
+          role: "assistant",
+          api: "openai-completions",
+          stopReason: "stop",
+          provider: "llamacpp",
+          model: "qwen3.6-27b",
+          content: [],
+          usage: {
+            input: 512,
+            output: 103,
+            cacheRead: 0,
+            cacheWrite: 0,
+            totalTokens: 615,
+          },
+        } as unknown as EmbeddedRunAttemptResult["lastAssistant"],
+      }),
+    );
+    mockedRunEmbeddedAttempt.mockResolvedValueOnce(
+      makeAttemptResult({
+        assistantTexts: ["Visible local answer."],
+        lastAssistant: {
+          role: "assistant",
+          api: "openai-completions",
+          stopReason: "stop",
+          provider: "llamacpp",
+          model: "qwen3.6-27b",
+          content: [{ type: "text", text: "Visible local answer." }],
+          usage: {
+            input: 640,
+            output: 5,
+            cacheRead: 0,
+            cacheWrite: 0,
+            totalTokens: 645,
+          },
+        } as unknown as EmbeddedRunAttemptResult["lastAssistant"],
+      }),
+    );
+
+    await runEmbeddedPiAgent({
+      ...overflowBaseRunParams,
+      provider: "llamacpp",
+      model: "qwen3.6-27b",
+      runId: "run-empty-openai-compatible-stop-continuation",
+    });
+
+    expect(mockedRunEmbeddedAttempt).toHaveBeenCalledTimes(2);
+    const secondCall = mockedRunEmbeddedAttempt.mock.calls[1]?.[0] as { prompt?: string };
+    expect(secondCall.prompt).toContain(EMPTY_RESPONSE_RETRY_INSTRUCTION);
+    expect(mockedLog.warn).toHaveBeenCalledWith(expect.stringContaining("empty response detected"));
+  });
+
   it("surfaces an error after exhausting empty-response retries", async () => {
     mockedClassifyFailoverReason.mockReturnValue(null);
     mockedRunEmbeddedAttempt.mockResolvedValue(
@@ -1424,6 +1480,30 @@ describe("runEmbeddedPiAgent incomplete-turn safety", () => {
     });
 
     expect(retryInstruction).toBeNull();
+  });
+
+  it("detects empty openai-compatible stop turns with non-zero output usage", () => {
+    const retryInstruction = resolveEmptyResponseRetryInstruction({
+      provider: "llamacpp",
+      modelId: "qwen3.6-27b",
+      modelApi: "openai-completions",
+      payloadCount: 0,
+      aborted: false,
+      timedOut: false,
+      attempt: makeAttemptResult({
+        assistantTexts: [],
+        lastAssistant: {
+          role: "assistant",
+          stopReason: "stop",
+          provider: "llamacpp",
+          model: "qwen3.6-27b",
+          content: [],
+          usage: { input: 512, output: 103, totalTokens: 615 },
+        } as unknown as EmbeddedRunAttemptResult["lastAssistant"],
+      }),
+    });
+
+    expect(retryInstruction).toBe(EMPTY_RESPONSE_RETRY_INSTRUCTION);
   });
 
   it("detects generic empty GPT turns without visible text", () => {
