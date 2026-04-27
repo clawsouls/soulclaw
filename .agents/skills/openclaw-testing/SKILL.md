@@ -234,6 +234,13 @@ Use the manual `Package Acceptance` workflow when the question is "does this
 installable package work as a product?" rather than "does this source diff pass
 Vitest?"
 
+In release validation, treat Package Acceptance as the package-candidate shard
+inside the larger release umbrella, not as a competing full-test path. Full
+Release Validation and private release gauntlets should call Package Acceptance
+for tarball resolution, Docker product/package proof, and optional Telegram QA
+against the same resolved `package-under-test` artifact; keep orchestration,
+secret policy, blocking/advisory status, and evidence rollup in the caller.
+
 Good defaults:
 
 ```bash
