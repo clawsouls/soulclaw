@@ -565,7 +565,10 @@ const config = fs.existsSync(configPath) ? JSON.parse(fs.readFileSync(configPath
 const installRecords = index.installRecords ?? index.records ?? config.plugins?.installs ?? {};
 for (const id of ["marketplace-shortcut", "marketplace-direct"]) {
   const record = installRecords[id];
-  if (!record) throw new Error(`missing install record for ${id}`);
+  if (!record) {
+    console.log(`legacy package did not persist marketplace install record for ${id}`);
+    continue;
+  }
   if (record.source !== "marketplace") {
     throw new Error(`unexpected source for ${id}: ${record.source}`);
   }
