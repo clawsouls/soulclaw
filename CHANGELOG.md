@@ -24,6 +24,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Reply/link understanding: keep media and link preprocessing on stable runtime entrypoints and continue with raw message content if optional enrichment fails, so URL-bearing messages are no longer dropped after stale runtime chunk upgrades. Fixes #68466. Thanks @songshikang0111.
+- Discord: persist routed model-picker overrides when the hidden `/model` dispatch succeeds but the bound thread session store is still stale, including LM Studio suffixed model ids. Carries forward #61473. Thanks @Nanako0129.
 - Nodes/CLI: add `openclaw nodes remove --node <id|name|ip>` and `node.pair.remove` so stale gateway-owned node pairing records can be cleaned without hand-editing state files. Thanks @openclaw.
 - Docker: install the CA certificate bundle in the slim runtime image so HTTPS calls from containerized gateways no longer fail TLS setup after the `bookworm-slim` base switch. Fixes #72787. Thanks @ryuhaneul.
 - Providers/OpenRouter: remove retired Hunter Alpha and Healer Alpha static catalog rows and disable proxy reasoning injection for stale Hunter Alpha configs, so replies are not hidden when OpenRouter returns answer text in reasoning fields. Fixes #43942. Thanks @EvanDataForge.
