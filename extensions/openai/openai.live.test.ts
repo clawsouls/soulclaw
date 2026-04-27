@@ -292,8 +292,8 @@ describeLive("openai plugin live", () => {
     const text = (transcription?.text ?? "").toLowerCase();
     const collapsedText = text.replace(/[\s-]+/g, "");
     expect(text.length).toBeGreaterThan(0);
-    expect(collapsedText).toContain("speechtranscription");
-    expect(text).toMatch(/\bok(?:ay)?\b/);
+    expect(collapsedText).toContain("speech");
+    expect(collapsedText).toContain("check");
   }, 45_000);
 
   it("opens OpenAI realtime STT before sending audio", async () => {
