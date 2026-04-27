@@ -116,6 +116,7 @@ describe("matrix plugin", () => {
 
     registerMatrixFullRuntime(api);
 
+    expect(runtimeMocks.ensureMatrixCryptoRuntime).not.toHaveBeenCalled();
     expect(on.mock.calls.map(([hookName]) => hookName)).toEqual([
       "subagent_spawning",
       "subagent_ended",
