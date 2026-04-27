@@ -16,6 +16,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Docs/tools: clarify that `tools.profile: "messaging"` is intentionally narrow and that `tools.profile: "full"` is the unrestricted baseline for broader command/control access. Carries forward #39954. Thanks @posigit.
 - Control UI/Agents: redact tool-call args, partial/final results, derived exec output, and configured custom secret patterns before streaming tool events to the Control UI, so tool output cannot expose provider or channel credentials. Fixes #72283. (#72319) Thanks @volcano303 and @BunsDev.
 - Providers/Codex: pass agent and workspace directories into provider stream wrappers so Codex native `web_search` activation can evaluate the correct auth context, and smoke-test the built status-message runtime by resolving the emitted bundle name. Carries forward #67843; refs #65909. Thanks @neilofneils404.
 - Models/fallbacks: treat user-selected session models as exact choices, so `/model ollama/...` and model-picker switches fail visibly when the selected provider is unreachable instead of answering from an unrelated configured fallback. Fixes #73023. Thanks @pavelyortho-cyber.
