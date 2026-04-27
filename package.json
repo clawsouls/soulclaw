@@ -358,6 +358,10 @@
       "types": "./dist/plugin-sdk/channel-secret-tts-runtime.d.ts",
       "default": "./dist/plugin-sdk/channel-secret-tts-runtime.js"
     },
+    "./plugin-sdk/tts-runtime": {
+      "types": "./dist/plugin-sdk/tts-runtime.d.ts",
+      "default": "./dist/plugin-sdk/tts-runtime.js"
+    },
     "./plugin-sdk/secret-ref-runtime": {
       "types": "./dist/plugin-sdk/secret-ref-runtime.d.ts",
       "default": "./dist/plugin-sdk/secret-ref-runtime.js"
