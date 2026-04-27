@@ -721,7 +721,10 @@ describe("generateAndAppendDreamNarrative", () => {
     expect(content).toContain("API endpoints need authentication");
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("request-scoped"));
     expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining(workspaceDir));
-    expect(subagent.deleteSession).toHaveBeenCalledOnce();
+    expect(logger.warn).not.toHaveBeenCalledWith(
+      expect.stringContaining("narrative session cleanup failed"),
+    );
+    expect(subagent.deleteSession).not.toHaveBeenCalled();
   });
 
   it("falls back when the request-scoped runtime error is detected by stable code", async () => {
@@ -746,6 +749,7 @@ describe("generateAndAppendDreamNarrative", () => {
 
     const content = await fs.readFile(path.join(workspaceDir, "DREAMS.md"), "utf-8");
     expect(content).toContain("A durable candidate surfaced.");
+    expect(subagent.deleteSession).not.toHaveBeenCalled();
   });
 
   it("does not fall back for non-Error objects that only spoof the stable code", async () => {
