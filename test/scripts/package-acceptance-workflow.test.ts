@@ -19,6 +19,7 @@ describe("package acceptance workflow", () => {
     expect(workflow).toContain("scripts/resolve-openclaw-package-candidate.mjs");
     expect(workflow).toContain('gh run download "$ARTIFACT_RUN_ID"');
     expect(workflow).toContain("name: ${{ env.PACKAGE_ARTIFACT_NAME }}");
+    expect(workflow).toContain("pull-requests: read");
     expect(workflow).toContain(
       "uses: ./.github/workflows/openclaw-live-and-e2e-checks-reusable.yml",
     );

@@ -73,6 +73,7 @@ permissions:
   actions: read
   contents: read
   packages: write
+  pull-requests: read
 
 concurrency:
   group: package-acceptance-${{ github.run_id }}
