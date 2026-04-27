@@ -109,6 +109,8 @@ const GEMINI_INCOMPLETE_TURN_PROVIDER_IDS = new Set([
   "google-gemini-cli",
 ]);
 const GEMINI_INCOMPLETE_TURN_MODEL_ID_PATTERN = /^gemini(?:[.-]|$)/;
+// Ollama native `/api/chat` can finish with only thinking/internal blocks when
+// constrained, but it should not inherit the stricter planning-only/ack prompts.
 const OLLAMA_INCOMPLETE_TURN_PROVIDER_ID_PATTERN = /^ollama(?:-|$)/;
 const DEFAULT_PLANNING_ONLY_RETRY_LIMIT = 1;
 const STRICT_AGENTIC_PLANNING_ONLY_RETRY_LIMIT = 2;
@@ -550,6 +552,9 @@ export function resolveEmptyResponseRetryInstruction(params: {
       modelId: params.modelId,
       executionContract: params.executionContract,
     }) ||
+    // Keep the generic zero-usage stop retry for providers that expose a
+    // provider-neutral "nothing was generated" signal, even outside the
+    // provider allowlist above.
     isZeroUsageEmptyStopAssistantTurn(
       params.attempt.currentAttemptAssistant ?? params.attempt.lastAssistant ?? null,
     )
@@ -582,6 +587,10 @@ function shouldApplyNonVisibleTurnRetryGuard(params: {
   if (shouldApplyPlanningOnlyRetryGuard(params)) {
     return true;
   }
+  // Non-visible final turns are narrower than planning-only turns: there is no
+  // user text to classify, just a replay-safe empty/thinking-only result. Ollama
+  // gets this continuation guard without getting the planning-only or ack
+  // fast-path wording, which would be too opinionated for local models.
   return OLLAMA_INCOMPLETE_TURN_PROVIDER_ID_PATTERN.test(
     normalizeLowercaseStringOrEmpty(params.provider ?? ""),
   );
