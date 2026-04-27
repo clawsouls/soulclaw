@@ -161,6 +161,7 @@ async function appendVisibleRow(params: {
   context: RowBuilderContext;
   seenKeys?: Set<string>;
   allowProviderAvailabilityFallback?: boolean;
+  skipSuppression?: boolean;
 }): Promise<boolean> {
   if (params.seenKeys?.has(params.key)) {
     return false;
@@ -168,7 +169,10 @@ async function appendVisibleRow(params: {
   if (!matchesRowFilter(params.context.filter, params.model)) {
     return false;
   }
-  if (shouldSuppressListModel({ model: params.model, context: params.context })) {
+  if (
+    !params.skipSuppression &&
+    shouldSuppressListModel({ model: params.model, context: params.context })
+  ) {
     return false;
   }
   params.rows.push(
@@ -267,6 +271,7 @@ export async function appendDiscoveredRows(params: {
   modelRegistry?: ModelRegistry;
   context: RowBuilderContext;
   resolveWithRegistry?: boolean;
+  skipSuppression?: boolean;
 }): Promise<Set<string>> {
   const seenKeys = new Set<string>();
   const modelResolver =
@@ -303,6 +308,7 @@ export async function appendDiscoveredRows(params: {
       key,
       context: params.context,
       seenKeys,
+      skipSuppression: params.skipSuppression,
     });
   }
 
