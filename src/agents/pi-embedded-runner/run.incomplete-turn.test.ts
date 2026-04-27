@@ -1080,6 +1080,30 @@ describe("runEmbeddedPiAgent incomplete-turn safety", () => {
     expect(retryInstruction).toBe(EMPTY_RESPONSE_RETRY_INSTRUCTION);
   });
 
+  it("retries generic empty OpenAI-compatible turns from custom endpoints", () => {
+    const retryInstruction = resolveEmptyResponseRetryInstruction({
+      provider: "llama-cpp-local",
+      modelId: "qwen3.6-27b",
+      modelApi: "openai-completions",
+      payloadCount: 0,
+      aborted: false,
+      timedOut: false,
+      attempt: makeAttemptResult({
+        assistantTexts: [],
+        lastAssistant: {
+          role: "assistant",
+          stopReason: "stop",
+          provider: "llama-cpp-local",
+          model: "qwen3.6-27b",
+          content: [],
+          usage: { input: 950, output: 103, totalTokens: 1053 },
+        } as unknown as EmbeddedRunAttemptResult["lastAssistant"],
+      }),
+    });
+
+    expect(retryInstruction).toBe(EMPTY_RESPONSE_RETRY_INSTRUCTION);
+  });
+
   it("does not retry clean zero-token Ollama stop turns", () => {
     const retryInstruction = resolveEmptyResponseRetryInstruction({
       provider: "ollama",
