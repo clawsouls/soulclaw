@@ -24,6 +24,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Gateway/device tokens: stop echoing rotated bearer tokens from shared/admin `device.token.rotate` responses while preserving the same-device token handoff needed by token-only clients before reconnect. (#66773) Thanks @MoerAI.
 - Agents/subagents: enforce `subagents.allowAgents` for explicit same-agent `sessions_spawn(agentId=...)` calls instead of auto-allowing requester self-targets. Fixes #72827. Thanks @oiGaDio.
 - ACP/sessions_spawn: let explicit `sessions_spawn(runtime="acp")` bootstrap turns run while `acp.dispatch.enabled=false` still blocks automatic ACP thread dispatch. Fixes #63591. Thanks @moeedahmed.
 - Gateway: skip CLI startup self-respawn for foreground gateway runs so low-memory Linux/Node 24 hosts start through the same path as direct `dist/index.js` without hanging before logs. Fixes #72720. Thanks @sign-2025.
