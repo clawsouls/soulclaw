@@ -234,4 +234,31 @@ describe("validateConfigObjectWithPlugins bundled allowlist compatibility", () =
     expect(result.ok).toBe(true);
     expect(mockLoadPluginManifestRegistry).toHaveBeenCalledOnce();
   });
+
+  it("uses a provided plugin metadata snapshot during plugin validation", () => {
+    const result = validateConfigObjectWithPlugins(
+      {
+        plugins: {
+          entries: {
+            opik: {
+              enabled: true,
+            },
+          },
+        },
+      },
+      {
+        pluginMetadataSnapshot: {
+          manifestRegistry: createPluginConfigSchemaRegistry(),
+        },
+      },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(mockLoadPluginManifestRegistry).not.toHaveBeenCalled();
+    if (result.ok) {
+      expect(result.config.plugins?.entries?.opik?.config).toEqual({
+        workspace: "default-workspace",
+      });
+    }
+  });
 });
