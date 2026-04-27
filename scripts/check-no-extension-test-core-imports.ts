@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { collectFilesSync, relativeToCwd } from "./check-file-utils.js";
+import { collectFilesSync, isCodeFile, relativeToCwd } from "./check-file-utils.js";
 
 type Offender = { file: string; hint: string; line?: number; specifier?: string };
 
@@ -49,6 +49,7 @@ const RETIRED_EXTENSION_TEST_HELPER_BRIDGE_FILES = [
   "test/helpers/plugins/frozen-time.ts",
   "test/helpers/plugins/media-understanding.ts",
   "test/helpers/plugins/mock-http-response.ts",
+  "test/helpers/plugins/plugin-api.ts",
   "test/helpers/plugins/plugin-registration.ts",
   "test/helpers/plugins/plugin-registry.ts",
   "test/helpers/plugins/provider-registration.ts",
@@ -77,6 +78,12 @@ function collectExtensionTestFiles(rootDir: string): string[] {
   return collectFilesSync(rootDir, {
     includeFile: (filePath) =>
       isExtensionTestFile(filePath) || isExtensionTestSupportFile(filePath),
+  });
+}
+
+function collectPluginHelperFiles(rootDir: string): string[] {
+  return collectFilesSync(rootDir, {
+    includeFile: isCodeFile,
   });
 }
 
@@ -127,7 +134,9 @@ function collectRelativeCoreImportOffenders(
 
 function main() {
   const extensionsDir = path.join(process.cwd(), "extensions");
+  const pluginHelpersDir = path.join(process.cwd(), "test/helpers/plugins");
   const files = collectExtensionTestFiles(extensionsDir);
+  const pluginHelperFiles = collectPluginHelperFiles(pluginHelpersDir);
   const offenders: Offender[] = [];
 
   for (const file of RETIRED_EXTENSION_TEST_HELPER_BRIDGE_FILES) {
@@ -137,7 +146,7 @@ function main() {
     }
     offenders.push({
       file: filePath,
-      hint: "Import the helper directly from openclaw/plugin-sdk/testing instead of recreating this bridge.",
+      hint: "Import the helper directly from a documented openclaw/plugin-sdk testing subpath instead of recreating this bridge.",
     });
   }
 
@@ -157,8 +166,19 @@ function main() {
     );
   }
 
+  for (const file of pluginHelperFiles) {
+    const content = fs.readFileSync(file, "utf8");
+    offenders.push(
+      ...collectRelativeCoreImportOffenders(file, content, {
+        includeDynamic: true,
+      }),
+    );
+  }
+
   if (offenders.length > 0) {
-    console.error("Extension test files must stay on public plugin-sdk surfaces.");
+    console.error(
+      "Extension test files and plugin test helpers must stay on public plugin-sdk surfaces.",
+    );
     for (const offender of offenders.toSorted((a, b) => a.file.localeCompare(b.file))) {
       const location = offender.line
         ? `${relativeToCwd(offender.file)}:${offender.line}`
@@ -170,7 +190,7 @@ function main() {
   }
 
   console.log(
-    `OK: extension test files and support helpers avoid direct core test/internal imports (${files.length} checked).`,
+    `OK: extension test files, support helpers, and plugin test helpers avoid direct core test/internal imports (${files.length} extension files, ${pluginHelperFiles.length} plugin helpers checked).`,
   );
 }
 
