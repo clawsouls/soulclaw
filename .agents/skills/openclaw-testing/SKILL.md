@@ -122,10 +122,14 @@ gh workflow run full-release-validation.yml \
   --repo openclaw/openclaw \
   --ref main \
   -f ref=<branch-or-sha> \
-  -f workflow_ref=main \
   -f provider=openai \
   -f mode=both
 ```
+
+Run the workflow itself from the trusted current ref, normally `--ref main`;
+child workflows are dispatched from that same ref even when `ref` points at an
+older release branch or tag. Full Release Validation has no separate child
+workflow ref input; choose the trusted harness by choosing the workflow run ref.
 
 If a full run is already active on a newer `origin/main`, prefer watching that
 run over dispatching a duplicate. If you accidentally dispatch a stale duplicate,

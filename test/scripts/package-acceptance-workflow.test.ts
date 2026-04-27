@@ -6,6 +6,7 @@ const LIVE_E2E_WORKFLOW = ".github/workflows/openclaw-live-and-e2e-checks-reusab
 const DOCKER_E2E_PLAN_ACTION = ".github/actions/docker-e2e-plan/action.yml";
 const NPM_TELEGRAM_WORKFLOW = ".github/workflows/npm-telegram-beta-e2e.yml";
 const RELEASE_CHECKS_WORKFLOW = ".github/workflows/openclaw-release-checks.yml";
+const FULL_RELEASE_VALIDATION_WORKFLOW = ".github/workflows/full-release-validation.yml";
 
 describe("package acceptance workflow", () => {
   it("resolves candidate package sources before reusing Docker E2E lanes", () => {
@@ -131,5 +132,17 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain("PACKAGE_TELEGRAM_RESULT:");
     expect(workflow).toContain("package_telegram=${PACKAGE_TELEGRAM_RESULT}");
     expect(workflow).not.toContain("npm_telegram:");
+  });
+
+  it("runs full release children from the trusted workflow ref", () => {
+    const workflow = readFileSync(FULL_RELEASE_VALIDATION_WORKFLOW, "utf8");
+
+    expect(workflow).toContain("CHILD_WORKFLOW_REF: ${{ github.ref_name }}");
+    expect(workflow).toContain('gh workflow run "$workflow" --ref "$CHILD_WORKFLOW_REF" "$@"');
+    expect(workflow).toContain(
+      'gh workflow run npm-telegram-beta-e2e.yml --ref "$CHILD_WORKFLOW_REF" "${args[@]}"',
+    );
+    expect(workflow).not.toContain("workflow_ref:");
+    expect(workflow).not.toContain("inputs.workflow_ref");
   });
 });
