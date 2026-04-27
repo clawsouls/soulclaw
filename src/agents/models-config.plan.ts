@@ -19,6 +19,7 @@ export type ResolveImplicitProvidersForModelsJson = (params: {
   agentDir: string;
   config: OpenClawConfig;
   env: NodeJS.ProcessEnv;
+  workspaceDir?: string;
   explicitProviders: Record<string, ProviderConfig>;
   pluginMetadataSnapshot?: Pick<PluginMetadataSnapshot, "index" | "manifestRegistry" | "owners">;
 }) => Promise<Record<string, ProviderConfig>>;
@@ -40,6 +41,7 @@ export async function resolveProvidersForModelsJsonWithDeps(
     cfg: OpenClawConfig;
     agentDir: string;
     env: NodeJS.ProcessEnv;
+    workspaceDir?: string;
     pluginMetadataSnapshot?: Pick<PluginMetadataSnapshot, "index" | "manifestRegistry" | "owners">;
   },
   deps?: {
@@ -53,6 +55,7 @@ export async function resolveProvidersForModelsJsonWithDeps(
     agentDir,
     config: cfg,
     env,
+    ...(params.workspaceDir ? { workspaceDir: params.workspaceDir } : {}),
     explicitProviders,
     ...(params.pluginMetadataSnapshot
       ? { pluginMetadataSnapshot: params.pluginMetadataSnapshot }
@@ -94,6 +97,7 @@ export async function planOpenClawModelsJsonWithDeps(
     sourceConfigForSecrets?: OpenClawConfig;
     agentDir: string;
     env: NodeJS.ProcessEnv;
+    workspaceDir?: string;
     existingRaw: string;
     existingParsed: unknown;
     pluginMetadataSnapshot?: Pick<PluginMetadataSnapshot, "index" | "manifestRegistry" | "owners">;
@@ -108,6 +112,7 @@ export async function planOpenClawModelsJsonWithDeps(
       cfg,
       agentDir,
       env,
+      ...(params.workspaceDir ? { workspaceDir: params.workspaceDir } : {}),
       ...(params.pluginMetadataSnapshot
         ? { pluginMetadataSnapshot: params.pluginMetadataSnapshot }
         : {}),

@@ -11,6 +11,7 @@ import { getCurrentPluginMetadataSnapshot } from "../plugins/current-plugin-meta
 import { resolveInstalledManifestRegistryIndexFingerprint } from "../plugins/manifest-registry-installed.js";
 import type { PluginMetadataSnapshot } from "../plugins/plugin-metadata-snapshot.js";
 import { resolveOpenClawAgentDir } from "./agent-paths.js";
+import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "./agent-scope.js";
 import { MODELS_JSON_STATE } from "./models-config-state.js";
 import { planOpenClawModelsJson } from "./models-config.plan.js";
 
@@ -44,6 +45,7 @@ async function buildModelsJsonFingerprint(params: {
   config: OpenClawConfig;
   sourceConfigForSecrets: OpenClawConfig;
   agentDir: string;
+  workspaceDir?: string;
   pluginMetadataSnapshot?: Pick<PluginMetadataSnapshot, "index">;
 }): Promise<string> {
   const authProfilesMtimeMs = await readFileMtimeMs(
@@ -60,6 +62,7 @@ async function buildModelsJsonFingerprint(params: {
     envShape,
     authProfilesMtimeMs,
     modelsFileMtimeMs,
+    workspaceDir: params.workspaceDir,
     pluginMetadataSnapshotIndexFingerprint,
   });
 }
@@ -152,14 +155,17 @@ export async function ensureOpenClawModelsJson(
 ): Promise<{ agentDir: string; wrote: boolean }> {
   const resolved = resolveModelsConfigInput(config);
   const cfg = resolved.config;
+  const workspaceDir = resolveAgentWorkspaceDir(cfg, resolveDefaultAgentId(cfg));
   const pluginMetadataSnapshot =
-    options.pluginMetadataSnapshot ?? getCurrentPluginMetadataSnapshot({ config: cfg });
+    options.pluginMetadataSnapshot ??
+    getCurrentPluginMetadataSnapshot({ config: cfg, workspaceDir });
   const agentDir = agentDirOverride?.trim() ? agentDirOverride.trim() : resolveOpenClawAgentDir();
   const targetPath = path.join(agentDir, "models.json");
   const fingerprint = await buildModelsJsonFingerprint({
     config: cfg,
     sourceConfigForSecrets: resolved.sourceConfigForSecrets,
     agentDir,
+    workspaceDir,
     ...(pluginMetadataSnapshot ? { pluginMetadataSnapshot } : {}),
   });
   const cached = MODELS_JSON_STATE.readyCache.get(targetPath);
@@ -181,6 +187,7 @@ export async function ensureOpenClawModelsJson(
       sourceConfigForSecrets: resolved.sourceConfigForSecrets,
       agentDir,
       env,
+      workspaceDir,
       existingRaw: existingModelsFile.raw,
       existingParsed: existingModelsFile.parsed,
       ...(pluginMetadataSnapshot ? { pluginMetadataSnapshot } : {}),

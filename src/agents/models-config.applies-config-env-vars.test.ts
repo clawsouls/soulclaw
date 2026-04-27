@@ -104,6 +104,27 @@ describe("models-config", () => {
     expect(observedSnapshot).toBe(pluginMetadataSnapshot);
   });
 
+  it("threads workspace scope into implicit provider discovery", async () => {
+    let observedWorkspaceDir: string | undefined;
+
+    await resolveProvidersForModelsJsonWithDeps(
+      {
+        cfg: { models: { providers: {} } },
+        agentDir: "/tmp/openclaw-models-config-env-vars-test",
+        env: {},
+        workspaceDir: "/tmp/openclaw-workspace",
+      },
+      {
+        resolveImplicitProviders: async ({ workspaceDir }) => {
+          observedWorkspaceDir = workspaceDir;
+          return {};
+        },
+      },
+    );
+
+    expect(observedWorkspaceDir).toBe("/tmp/openclaw-workspace");
+  });
+
   it("threads plugin metadata snapshots through models.json planning", async () => {
     const pluginMetadataSnapshot = {
       index: { plugins: [] },
