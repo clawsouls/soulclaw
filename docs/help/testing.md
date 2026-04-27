@@ -84,7 +84,9 @@ When debugging real providers/models (requires real creds):
   against `moonshot/kimi-k2.6`. Verify the JSON reports Moonshot/K2.6 and the
   assistant transcript stores normalized `usage.cost`.
 
-Tip: when you only need one failing case, prefer narrowing live tests via the allowlist env vars described below.
+<Tip>
+When you only need one failing case, prefer narrowing live tests via the allowlist env vars described below.
+</Tip>
 
 ## QA-specific runners
 
