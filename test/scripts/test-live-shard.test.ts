@@ -41,6 +41,7 @@ describe("scripts/test-live-shard", () => {
     expect(selectLiveShardFiles("native-live-extensions-media", allFiles)).toEqual(
       expect.arrayContaining([
         "extensions/openai/openai-tts.live.test.ts",
+        "extensions/minimax/minimax.live.test.ts",
         "extensions/music-generation-providers.live.test.ts",
         "extensions/video-generation-providers.live.test.ts",
         "extensions/volcengine/tts.live.test.ts",

@@ -86,6 +86,7 @@ function isGatewayBackendLiveTest(file) {
 function isExtensionMediaLiveTest(file) {
   return (
     file === "extensions/music-generation-providers.live.test.ts" ||
+    file === "extensions/minimax/minimax.live.test.ts" ||
     file === "extensions/openai/openai-tts.live.test.ts" ||
     file === "extensions/video-generation-providers.live.test.ts" ||
     file === "extensions/volcengine/tts.live.test.ts" ||
