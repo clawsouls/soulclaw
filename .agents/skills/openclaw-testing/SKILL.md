@@ -270,16 +270,23 @@ Multiple lanes are allowed:
 docker_lanes: install-e2e bundled-channel-update-acpx
 ```
 
-That skips the three chunk matrix and runs one targeted Docker job against the
-prepared GHCR images and a fresh OpenClaw npm tarball for the selected ref.
-Reruns usually need that new tarball because the fix being tested changed the
-package contents even if the SHA-tagged GHCR Docker image can be reused.
+That skips the release chunk matrix and runs one targeted Docker job against the
+prepared GHCR images and the selected package artifact. Rerun commands
+generated inside GitHub artifacts include `package_artifact_run_id`,
+`package_artifact_name`, `docker_e2e_bare_image`, and
+`docker_e2e_functional_image` when available, so failed lanes can reuse the
+exact tarball and prepared images from the failed run. When the fix changes
+package contents, omit those reuse inputs so the workflow packs a new tarball.
 Live-only targeted reruns skip the E2E images and build only the live-test
-image. Release-path normal mode remains max three Docker chunk jobs:
+image. Release-path normal mode is split into these Docker chunks:
 
 - `core`
+- `package-install`
 - `package-update`
-- `plugins-integrations`
+- `plugins`
+- `bundled-channel-deps`
+- `service-integrations`
+- `openwebui` when OpenWebUI coverage is requested
 
 ## Package Acceptance
 
@@ -340,7 +347,7 @@ Profiles:
   package/update coverage.
 - `product`: package profile plus broader product surfaces: MCP channels,
   cron/subagent cleanup, OpenAI web search, and OpenWebUI.
-- `full`: Docker release-path chunks with OpenWebUI.
+- `full`: split Docker release-path chunks with OpenWebUI.
 - `custom`: exact `docker_lanes` list for a focused rerun.
 
 Candidate sources:

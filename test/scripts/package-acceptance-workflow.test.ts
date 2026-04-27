@@ -60,14 +60,32 @@ describe("package artifact reuse", () => {
     const action = readFileSync(DOCKER_E2E_PLAN_ACTION, "utf8");
 
     expect(workflow).toContain("package_artifact_name:");
-    expect(workflow).toContain("Download provided OpenClaw Docker E2E package");
+    expect(workflow).toContain("package_artifact_run_id:");
+    expect(workflow).toContain("docker_e2e_bare_image:");
+    expect(workflow).toContain("docker_e2e_functional_image:");
+    expect(workflow).toContain("Download current-run OpenClaw Docker E2E package");
+    expect(workflow).toContain("Download previous-run OpenClaw Docker E2E package");
     expect(workflow).toContain("inputs.package_artifact_name != ''");
-    expect(workflow).toContain('image_tag="${PACKAGE_TAG:-$SELECTED_SHA}"');
+    expect(workflow).toContain(
+      'bare_image="${PROVIDED_BARE_IMAGE:-ghcr.io/${repository}-docker-e2e-bare:${image_tag}}"',
+    );
+    expect(workflow).toContain(
+      'functional_image="${PROVIDED_FUNCTIONAL_IMAGE:-ghcr.io/${repository}-docker-e2e-functional:${image_tag}}"',
+    );
     expect(workflow).toContain(
       "package-artifact-name: ${{ inputs.package_artifact_name || 'docker-e2e-package' }}",
     );
     expect(action).toContain("package-artifact-name:");
     expect(action).toContain("name: ${{ inputs.package-artifact-name }}");
+  });
+
+  it("uses Blacksmith Docker build caching for prepared E2E images", () => {
+    const workflow = readFileSync(LIVE_E2E_WORKFLOW, "utf8");
+
+    expect(workflow).toContain("uses: useblacksmith/setup-docker-builder@");
+    expect(workflow).toContain("uses: useblacksmith/build-push-action@");
+    expect(workflow).not.toContain("cache-from: type=gha,scope=docker-e2e");
+    expect(workflow).not.toContain("cache-to: type=gha,mode=max,scope=docker-e2e");
   });
 
   it("allows the Telegram lane to run from reusable package acceptance artifacts", () => {
