@@ -6,7 +6,7 @@ import { spawnPnpmRunner } from "./pnpm-runner.mjs";
 
 const LIVE_TEST_SUFFIX = ".live.test.ts";
 
-export const LIVE_TEST_SHARDS = Object.freeze([
+export const RELEASE_LIVE_TEST_SHARDS = Object.freeze([
   "native-live-src-agents",
   "native-live-src-gateway-core",
   "native-live-src-gateway-profiles",
@@ -15,13 +15,17 @@ export const LIVE_TEST_SHARDS = Object.freeze([
   "native-live-extensions-a-k",
   "native-live-extensions-l-n",
   "native-live-extensions-openai",
-  "native-live-extensions-o-z",
   "native-live-extensions-o-z-other",
   "native-live-extensions-xai",
-  "native-live-extensions-media",
   "native-live-extensions-media-audio",
   "native-live-extensions-media-music",
   "native-live-extensions-media-video",
+]);
+
+export const LIVE_TEST_SHARDS = Object.freeze([
+  ...RELEASE_LIVE_TEST_SHARDS,
+  "native-live-extensions-o-z",
+  "native-live-extensions-media",
 ]);
 
 function walkFiles(rootDir) {
