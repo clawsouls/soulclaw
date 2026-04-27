@@ -312,6 +312,7 @@ export function createFollowupRunner(params: {
                 prompt: queued.prompt,
                 transcriptPrompt: queued.transcriptPrompt,
                 extraSystemPrompt: run.extraSystemPrompt,
+                silentReplyPromptMode: run.silentReplyPromptMode,
                 ownerNumbers: run.ownerNumbers,
                 enforceFinalTag: run.enforceFinalTag,
                 allowEmptyAssistantReplyAsSilent: run.allowEmptyAssistantReplyAsSilent,
