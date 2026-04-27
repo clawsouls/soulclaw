@@ -51,6 +51,9 @@ describe("package acceptance workflow", () => {
     expect(workflow).toContain(
       "package_label: openclaw@${{ needs.resolve_package.outputs.package_version }}",
     );
+    expect(workflow).toContain(
+      "harness_ref: ${{ inputs.source == 'ref' && inputs.package_ref || inputs.workflow_ref }}",
+    );
   });
 });
 
@@ -93,6 +96,8 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain("workflow_call:");
     expect(workflow).toContain("package_artifact_name:");
     expect(workflow).toContain("Download package-under-test artifact");
+    expect(workflow).toContain("harness_ref:");
+    expect(workflow).toContain("ref: ${{ inputs.harness_ref || github.sha }}");
     expect(workflow).toContain("OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ");
     expect(workflow).toContain("provider_mode:");
     expect(workflow).toContain("provider_mode must be mock-openai or live-frontier");
@@ -154,6 +159,7 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain(
       'gh workflow run npm-telegram-beta-e2e.yml --ref "$CHILD_WORKFLOW_REF" "${args[@]}"',
     );
+    expect(workflow).toContain('-f harness_ref="$TARGET_SHA"');
     expect(workflow).not.toContain("workflow_ref:");
     expect(workflow).not.toContain("inputs.workflow_ref");
   });

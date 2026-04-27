@@ -272,6 +272,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CHILD_WORKFLOW_REF: ${{ github.ref_name }}
+          TARGET_SHA: ${{ needs.resolve_target.outputs.sha }}
           PACKAGE_SPEC: ${{ inputs.npm_telegram_package_spec }}
           PROVIDER_MODE: ${{ inputs.npm_telegram_provider_mode }}
           SCENARIO: ${{ inputs.npm_telegram_scenario }}
@@ -280,7 +281,7 @@ jobs:
 
           before_json="$(gh run list --workflow npm-telegram-beta-e2e.yml --event workflow_dispatch --limit 100 --json databaseId --jq '[.[].databaseId]')"
 
-          args=(-f package_spec="$PACKAGE_SPEC" -f provider_mode="$PROVIDER_MODE")
+          args=(-f package_spec="$PACKAGE_SPEC" -f harness_ref="$TARGET_SHA" -f provider_mode="$PROVIDER_MODE")
           if [[ -n "${SCENARIO// }" ]]; then
             args+=(-f scenario="$SCENARIO")
           fi
