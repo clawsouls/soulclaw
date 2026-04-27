@@ -53,6 +53,7 @@ Docs: https://docs.openclaw.ai
 - Gateway/startup: move chat run/subscriber registries onto a lightweight state module and defer chat/session event projection until the first event so Gateway boot skips session IO imports. Thanks @vincentkoc.
 - Gateway/startup: keep node session runtime on a lightweight JSON parser instead of importing gateway method validation helpers during boot. Thanks @vincentkoc.
 - Gateway/startup: read embedded-run activity from a lightweight shared state module so restart deferral no longer imports the embedded runner during Gateway boot. Thanks @vincentkoc.
+- Gateway/startup: defer MCP loopback server imports until Gateway shutdown so normal boot no longer loads the loopback HTTP/tool schema stack just to register close handlers. Thanks @vincentkoc.
 - CLI/Gateway: use a parse-only config snapshot for plain `gateway status` reads and reuse same-path service config context so status no longer spends tens of seconds in full config validation before printing. Thanks @vincentkoc.
 - Lobster/Gateway: memoize repeated Ajv schema compilation before loading the embedded Lobster runtime so scheduled workflows and `llm.invoke` loops stop growing gateway heap on content-identical schemas. Fixes #71148. Thanks @cmi525, @vsolaz, and @vincentkoc.
 - Codex harness: normalize cached input tokens before session/context accounting so prompt cache reads are not double-counted in `/status`, `session_status`, or persisted `sessionEntry.totalTokens`. Fixes #69298. Thanks @richardmqq.

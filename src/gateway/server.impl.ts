@@ -46,7 +46,6 @@ import {
 } from "../tasks/task-registry.maintenance.js";
 import { createAuthRateLimiter, type AuthRateLimiter } from "./auth-rate-limit.js";
 import { resolveGatewayAuth } from "./auth.js";
-import { closeMcpLoopbackServer } from "./mcp-http.js";
 import { createGatewayAuxHandlers } from "./server-aux-handlers.js";
 import { createChannelManager } from "./server-channels.js";
 import { createGatewayCloseHandler, runGatewayClosePrelude } from "./server-close.js";
@@ -123,6 +122,11 @@ let cachedChannelRuntime: PluginRuntime["channel"] | null = null;
 function getChannelRuntime() {
   cachedChannelRuntime ??= createRuntimeChannel();
   return cachedChannelRuntime;
+}
+
+async function closeMcpLoopbackServerOnDemand(): Promise<void> {
+  const { closeMcpLoopbackServer } = await import("./mcp-http.js");
+  await closeMcpLoopbackServer();
 }
 
 const logHealth = log.child("health");
@@ -593,7 +597,7 @@ export async function startGatewayServer(
       stopModelPricingRefresh: runtimeState.stopModelPricingRefresh,
       stopChannelHealthMonitor: () => runtimeState?.channelHealthMonitor?.stop(),
       clearSecretsRuntimeSnapshot,
-      closeMcpServer: async () => await closeMcpLoopbackServer(),
+      closeMcpServer: closeMcpLoopbackServerOnDemand,
     });
   const { getRuntimeSnapshot, startChannels, startChannel, stopChannel, markChannelLoggedOut } =
     channelManager;
