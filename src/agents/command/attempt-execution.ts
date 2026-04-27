@@ -240,9 +240,13 @@ export function runAgentAttempt(params: {
    * fallback context seeding to chains that actually started on claude-cli;
    * a stale `cliSessionBindings["claude-cli"]` from an unrelated past run
    * must not contaminate fallbacks that started on another provider
-   * (Codex review #72069 P1).
+   * (Codex review #72069 P1). Optional for callers that don't drive
+   * a fallback chain (tests, ad-hoc invocations); when omitted, the
+   * claude-cli fallback seed is skipped — that's a no-op for non-fallback
+   * paths and a defensive default for fallback paths that didn't plumb
+   * the original provider through.
    */
-  originalProvider: string;
+  originalProvider?: string;
   cfg: OpenClawConfig;
   sessionEntry: SessionEntry | undefined;
   sessionId: string;
@@ -283,6 +287,7 @@ export function runAgentAttempt(params: {
   // must not bleed into this fallback chain.
   const claudeCliFallbackPrelude =
     params.isFallbackRetry &&
+    typeof params.originalProvider === "string" &&
     isClaudeCliProvider(params.originalProvider) &&
     !isClaudeCliProvider(params.providerOverride)
       ? buildClaudeCliFallbackContextPrelude({
