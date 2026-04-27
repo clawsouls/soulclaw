@@ -1409,6 +1409,7 @@ async function spawnBundledRuntimeDepsInstall(params: {
       cwd: params.cwd,
       env: params.env,
       stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
     });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
@@ -1480,6 +1481,7 @@ export function installBundledRuntimeDeps(params: {
       encoding: "utf8",
       env: npmRunner.env ?? installEnv,
       stdio: "pipe",
+      windowsHide: true,
     });
     if (result.status !== 0 || result.error) {
       throw new Error(formatBundledRuntimeDepsInstallError(result));

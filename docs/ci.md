@@ -93,7 +93,9 @@ GitHub-native replacement for most Parallels package/update validation, with
 Telegram proving the same package artifact through the QA live transport.
 Cross-OS release checks still cover OS-specific onboarding, installer, and
 platform behavior; package/update product validation should start with Package
-Acceptance.
+Acceptance. The Windows packaged and installer fresh lanes also verify that an
+installed package can import a browser-control override from a raw absolute
+Windows path.
 
 Package Acceptance has a bounded legacy-compatibility window for already
 published packages through `2026.4.25`, including `2026.4.25-beta.*`. Those
