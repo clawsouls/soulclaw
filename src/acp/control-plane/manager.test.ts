@@ -1,6 +1,6 @@
 import { setTimeout as scheduleNativeTimeout } from "node:timers";
 import { setTimeout as sleep } from "node:timers/promises";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../../config/config.js";
 import type { AcpSessionRuntimeOptions, SessionAcpMeta } from "../../config/sessions/types.js";
 import { resetHeartbeatWakeStateForTests } from "../../infra/heartbeat-wake.js";
@@ -33,14 +33,17 @@ vi.mock("../runtime/registry.js", () => ({
   requireAcpRuntimeBackend: (backendId?: string) => hoisted.requireAcpRuntimeBackendMock(backendId),
 }));
 
-let AcpSessionManager: typeof import("./manager.js").AcpSessionManager;
-let AcpRuntimeError: typeof import("../runtime/errors.js").AcpRuntimeError;
-let resetAcpSessionManagerForTests: typeof import("./manager.js").__testing.resetAcpSessionManagerForTests;
-let findTaskByRunId: typeof import("../../tasks/task-registry.js").findTaskByRunId;
-let resetTaskRegistryForTests: typeof import("../../tasks/task-registry.js").resetTaskRegistryForTests;
-let resetTaskFlowRegistryForTests: typeof import("../../tasks/task-flow-registry.js").resetTaskFlowRegistryForTests;
-let installInMemoryTaskRegistryRuntime: typeof import("../../test-utils/task-registry-runtime.js").installInMemoryTaskRegistryRuntime;
-let configureTaskFlowRegistryRuntime: typeof import("../../tasks/task-flow-registry.store.js").configureTaskFlowRegistryRuntime;
+const {
+  AcpSessionManager,
+  __testing: { resetAcpSessionManagerForTests },
+} = await import("./manager.js");
+const { AcpRuntimeError } = await import("../runtime/errors.js");
+const { findTaskByRunId, resetTaskRegistryForTests } = await import("../../tasks/task-registry.js");
+const { resetTaskFlowRegistryForTests } = await import("../../tasks/task-flow-registry.js");
+const { configureTaskFlowRegistryRuntime } =
+  await import("../../tasks/task-flow-registry.store.js");
+const { installInMemoryTaskRegistryRuntime } =
+  await import("../../test-utils/task-registry-runtime.js");
 
 const baseCfg = {
   acp: {
@@ -208,20 +211,6 @@ function extractRuntimeOptionsFromUpserts(): Array<AcpSessionRuntimeOptions | un
 }
 
 describe("AcpSessionManager", () => {
-  beforeAll(async () => {
-    ({
-      AcpSessionManager,
-      __testing: { resetAcpSessionManagerForTests },
-    } = await import("./manager.js"));
-    ({ AcpRuntimeError } = await import("../runtime/errors.js"));
-    ({ findTaskByRunId, resetTaskRegistryForTests } = await import("../../tasks/task-registry.js"));
-    ({ resetTaskFlowRegistryForTests } = await import("../../tasks/task-flow-registry.js"));
-    ({ configureTaskFlowRegistryRuntime } =
-      await import("../../tasks/task-flow-registry.store.js"));
-    ({ installInMemoryTaskRegistryRuntime } =
-      await import("../../test-utils/task-registry-runtime.js"));
-  });
-
   beforeEach(() => {
     resetAcpSessionManagerForTests();
     vi.useRealTimers();

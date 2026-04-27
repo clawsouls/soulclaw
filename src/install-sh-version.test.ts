@@ -26,7 +26,7 @@ OPENCLAW_BIN=fake_openclaw_decorated resolve_openclaw_version
 OPENCLAW_BIN=fake_openclaw_raw resolve_openclaw_version
 (
   cd "$1"
-  bash -s <<'OPENCLAW_STDIN_INSTALLER'
+  source /dev/stdin <<'OPENCLAW_STDIN_INSTALLER'
 ${versionHelperSource}
 fake_openclaw_stdin() { printf '%s\\n' 'OpenClaw 2026.3.10 (abcdef0)'; }
 OPENCLAW_BIN=fake_openclaw_stdin
