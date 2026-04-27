@@ -1,6 +1,9 @@
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { resolveInstalledPluginIndexPolicyHash } from "./installed-plugin-index-policy.js";
-import { loadPluginManifestRegistryForInstalledIndex } from "./manifest-registry-installed.js";
+import {
+  loadPluginManifestRegistryForInstalledIndex,
+  resolveInstalledManifestRegistryIndexFingerprint,
+} from "./manifest-registry-installed.js";
 import type { PluginManifestRecord, PluginManifestRegistry } from "./manifest-registry.js";
 import type { PluginDiagnostic } from "./manifest-types.js";
 import { createPluginRegistryIdNormalizer } from "./plugin-registry-contributions.js";
@@ -58,29 +61,10 @@ function indexesMatch(
   if (!left || !right) {
     return true;
   }
-  if (
-    left.version !== right.version ||
-    left.hostContractVersion !== right.hostContractVersion ||
-    left.compatRegistryVersion !== right.compatRegistryVersion ||
-    left.migrationVersion !== right.migrationVersion ||
-    left.policyHash !== right.policyHash ||
-    left.plugins.length !== right.plugins.length
-  ) {
-    return false;
-  }
-  for (let index = 0; index < left.plugins.length; index += 1) {
-    const leftPlugin = left.plugins[index];
-    const rightPlugin = right.plugins[index];
-    if (
-      !rightPlugin ||
-      leftPlugin.pluginId !== rightPlugin.pluginId ||
-      leftPlugin.manifestHash !== rightPlugin.manifestHash ||
-      leftPlugin.installRecordHash !== rightPlugin.installRecordHash
-    ) {
-      return false;
-    }
-  }
-  return true;
+  return (
+    resolveInstalledManifestRegistryIndexFingerprint(left) ===
+    resolveInstalledManifestRegistryIndexFingerprint(right)
+  );
 }
 
 export function isPluginMetadataSnapshotCompatible(params: {
