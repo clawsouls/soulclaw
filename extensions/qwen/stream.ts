@@ -1,7 +1,10 @@
 import type { StreamFn } from "@mariozechner/pi-agent-core";
 import type { ProviderWrapStreamFnContext } from "openclaw/plugin-sdk/plugin-entry";
 import { normalizeProviderId } from "openclaw/plugin-sdk/provider-model-shared";
-import { createPayloadPatchStreamWrapper } from "openclaw/plugin-sdk/provider-stream-shared";
+import {
+  createPayloadPatchStreamWrapper,
+  isOpenAICompatibleThinkingEnabled,
+} from "openclaw/plugin-sdk/provider-stream-shared";
 
 type QwenThinkingLevel = ProviderWrapStreamFnContext["thinkingLevel"];
 
@@ -15,19 +18,6 @@ function isQwenProviderId(providerId: string): boolean {
   );
 }
 
-function resolveOpenAICompatibleThinkingEnabled(params: {
-  thinkingLevel: QwenThinkingLevel;
-  options: Parameters<StreamFn>[2];
-}): boolean {
-  const options = (params.options ?? {}) as { reasoningEffort?: unknown; reasoning?: unknown };
-  const raw = options.reasoningEffort ?? options.reasoning ?? params.thinkingLevel ?? "high";
-  if (typeof raw !== "string") {
-    return true;
-  }
-  const normalized = raw.trim().toLowerCase();
-  return normalized !== "off" && normalized !== "none";
-}
-
 export function createQwenThinkingWrapper(
   baseStreamFn: StreamFn | undefined,
   thinkingLevel: QwenThinkingLevel,
@@ -35,7 +25,7 @@ export function createQwenThinkingWrapper(
   return createPayloadPatchStreamWrapper(
     baseStreamFn,
     ({ payload: payloadObj, options }) => {
-      const enableThinking = resolveOpenAICompatibleThinkingEnabled({ thinkingLevel, options });
+      const enableThinking = isOpenAICompatibleThinkingEnabled({ thinkingLevel, options });
       payloadObj.enable_thinking = enableThinking;
       delete payloadObj.reasoning_effort;
       delete payloadObj.reasoningEffort;

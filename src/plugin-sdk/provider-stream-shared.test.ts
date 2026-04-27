@@ -7,6 +7,7 @@ import {
   defaultToolStreamExtraParams,
   decodeHtmlEntitiesInObject,
   hasCopilotVisionInput,
+  isOpenAICompatibleThinkingEnabled,
 } from "./provider-stream-shared.js";
 
 type FakeWrappedStream = {
@@ -61,6 +62,43 @@ describe("defaultToolStreamExtraParams", () => {
 
     expect(defaultToolStreamExtraParams(enabled)).toBe(enabled);
     expect(defaultToolStreamExtraParams(disabled)).toBe(disabled);
+  });
+});
+
+describe("isOpenAICompatibleThinkingEnabled", () => {
+  it("uses explicit request reasoning before session thinking level", () => {
+    expect(
+      isOpenAICompatibleThinkingEnabled({
+        thinkingLevel: "high",
+        options: { reasoning: "none" } as never,
+      }),
+    ).toBe(false);
+    expect(
+      isOpenAICompatibleThinkingEnabled({
+        thinkingLevel: "off",
+        options: { reasoningEffort: "medium" } as never,
+      }),
+    ).toBe(true);
+  });
+
+  it("treats off and none as disabled", () => {
+    expect(isOpenAICompatibleThinkingEnabled({ thinkingLevel: "off", options: {} })).toBe(false);
+    expect(
+      isOpenAICompatibleThinkingEnabled({
+        thinkingLevel: "high",
+        options: { reasoning: "none" } as never,
+      }),
+    ).toBe(false);
+  });
+
+  it("defaults to enabled for missing or non-string values", () => {
+    expect(isOpenAICompatibleThinkingEnabled({ thinkingLevel: undefined, options: {} })).toBe(true);
+    expect(
+      isOpenAICompatibleThinkingEnabled({
+        thinkingLevel: "off",
+        options: { reasoning: { effort: "off" } } as never,
+      }),
+    ).toBe(true);
   });
 });
 

@@ -154,6 +154,21 @@ export function createPayloadPatchStreamWrapper(
   };
 }
 
+export type OpenAICompatibleThinkingLevel = ProviderWrapStreamFnContext["thinkingLevel"];
+
+export function isOpenAICompatibleThinkingEnabled(params: {
+  thinkingLevel: OpenAICompatibleThinkingLevel;
+  options: Parameters<StreamFn>[2];
+}): boolean {
+  const options = (params.options ?? {}) as { reasoningEffort?: unknown; reasoning?: unknown };
+  const raw = options.reasoningEffort ?? options.reasoning ?? params.thinkingLevel ?? "high";
+  if (typeof raw !== "string") {
+    return true;
+  }
+  const normalized = raw.trim().toLowerCase();
+  return normalized !== "off" && normalized !== "none";
+}
+
 export type DeepSeekV4ThinkingLevel = ProviderWrapStreamFnContext["thinkingLevel"];
 
 function isDisabledDeepSeekV4ThinkingLevel(thinkingLevel: DeepSeekV4ThinkingLevel): boolean {
