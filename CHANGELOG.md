@@ -20,6 +20,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Agents/ACPX: stop forwarding Codex ACP timeout config controls that Codex rejects while preserving OpenClaw's run-timeout watchdog for ACP subagents. Fixes #73052. Thanks @pfrederiksen and @richa65.
+- Memory/Ollama: add `memorySearch.remote.nonBatchConcurrency` for inline embedding indexing, default Ollama non-batch indexing to one request at a time, and keep batch concurrency separate from non-batch concurrency so local embedding backfills avoid timeout storms on smaller hosts. Carries forward #57733. Thanks @itilys.
 - Docs/tools: clarify that `tools.profile: "messaging"` is intentionally narrow and that `tools.profile: "full"` is the unrestricted baseline for broader command/control access. Carries forward #39954. Thanks @posigit.
 - Control UI/Agents: redact tool-call args, partial/final results, derived exec output, and configured custom secret patterns before streaming tool events to the Control UI, so tool output cannot expose provider or channel credentials. Fixes #72283. (#72319) Thanks @volcano303 and @BunsDev.
 - Agents/sessions: keep `sessions_history` recall redaction enabled even when general log redaction is disabled, and clarify that safety-boundary UI/tool/diagnostic payloads still redact independently of `logging.redactSensitive`. Carries forward #72319. Thanks @volcano303 and @BunsDev.

@@ -4368,6 +4368,14 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
                         description:
                           "Adds custom HTTP headers to remote embedding requests, merged with provider defaults. Use this for proxy auth and tenant routing headers, and keep values minimal to avoid leaking sensitive metadata.",
                       },
+                      nonBatchConcurrency: {
+                        type: "integer",
+                        exclusiveMinimum: 0,
+                        maximum: 9007199254740991,
+                        title: "Remote Non-Batch Embedding Concurrency",
+                        description:
+                          "Limits concurrent inline embedding requests during non-batch memory indexing. Lower this for local or small self-hosted providers such as Ollama; batch embedding concurrency is configured separately under remote.batch.",
+                      },
                       batch: {
                         type: "object",
                         properties: {
@@ -6357,6 +6365,11 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
                           additionalProperties: {
                             type: "string",
                           },
+                        },
+                        nonBatchConcurrency: {
+                          type: "integer",
+                          exclusiveMinimum: 0,
+                          maximum: 9007199254740991,
                         },
                         batch: {
                           type: "object",
@@ -26080,6 +26093,11 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
       label: "Remote Embedding Headers",
       help: "Adds custom HTTP headers to remote embedding requests, merged with provider defaults. Use this for proxy auth and tenant routing headers, and keep values minimal to avoid leaking sensitive metadata.",
       tags: ["advanced"],
+    },
+    "agents.defaults.memorySearch.remote.nonBatchConcurrency": {
+      label: "Remote Non-Batch Embedding Concurrency",
+      help: "Limits concurrent inline embedding requests during non-batch memory indexing. Lower this for local or small self-hosted providers such as Ollama; batch embedding concurrency is configured separately under remote.batch.",
+      tags: ["performance"],
     },
     "agents.defaults.memorySearch.remote.batch.enabled": {
       label: "Remote Batch Embedding Enabled",

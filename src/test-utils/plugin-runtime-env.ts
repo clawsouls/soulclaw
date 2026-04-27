@@ -27,7 +27,7 @@ export function createRuntimeEnv(options?: RuntimeEnvOptions): OutputRuntimeEnv 
 export function createTypedRuntimeEnv<TRuntime>(
   options?: TypedRuntimeEnvOptions<TRuntime>,
 ): TRuntime {
-  return createRuntimeEnv(options) as TRuntime;
+  return createRuntimeEnv(options) as unknown as TRuntime;
 }
 
 export function createNonExitingRuntimeEnv(): OutputRuntimeEnv {
