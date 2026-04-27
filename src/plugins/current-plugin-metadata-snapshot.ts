@@ -1,6 +1,6 @@
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { resolveInstalledPluginIndexPolicyHash } from "./installed-plugin-index-policy.js";
-import type { PluginMetadataSnapshot } from "./plugin-metadata-snapshot.js";
+import type { PluginMetadataSnapshot } from "./plugin-metadata-snapshot.types.js";
 
 let currentPluginMetadataSnapshot: PluginMetadataSnapshot | undefined;
 let currentPluginMetadataSnapshotConfigFingerprint: string | undefined;
