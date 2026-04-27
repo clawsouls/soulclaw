@@ -417,6 +417,9 @@ describe("ollama setup", () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(fetchMock.mock.calls[1][0]).toContain("/api/pull");
+      const pullInit = fetchMock.mock.calls[1][1];
+      expect(pullInit?.signal).toBeInstanceOf(AbortSignal);
+      expect(pullInit?.signal?.aborted).toBe(false);
     });
 
     it("skips pull when model is already available", async () => {
