@@ -1246,6 +1246,35 @@ describe("createOllamaStreamFn", () => {
     );
   });
 
+  it("maps configured native Ollama params.thinking=max to the stable top-level think value", async () => {
+    await withMockNdjsonFetch(
+      [
+        '{"model":"m","created_at":"t","message":{"role":"assistant","content":"ok"},"done":false}',
+        '{"model":"m","created_at":"t","message":{"role":"assistant","content":""},"done":true,"prompt_eval_count":1,"eval_count":1}',
+      ],
+      async (fetchMock) => {
+        const stream = await createOllamaTestStream({
+          baseUrl: "http://ollama-host:11434",
+          model: { params: { thinking: "max" } },
+        });
+
+        const events = await collectStreamEvents(stream);
+        expect(events.at(-1)?.type).toBe("done");
+
+        const requestInit = getGuardedFetchCall(fetchMock).init ?? {};
+        if (typeof requestInit.body !== "string") {
+          throw new Error("Expected string request body");
+        }
+        const requestBody = JSON.parse(requestInit.body) as {
+          think?: string;
+          options?: { think?: string };
+        };
+        expect(requestBody.think).toBe("high");
+        expect(requestBody.options?.think).toBeUndefined();
+      },
+    );
+  });
+
   it("uses the default loopback policy when baseUrl is empty", async () => {
     await withMockNdjsonFetch(
       [

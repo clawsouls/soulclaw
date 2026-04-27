@@ -152,7 +152,7 @@ export function wrapOllamaCompatNumCtx(baseFn: StreamFn | undefined, numCtx: num
     });
 }
 
-type OllamaThinkValue = boolean | "low" | "medium" | "high" | "max";
+type OllamaThinkValue = boolean | "low" | "medium" | "high";
 
 const OLLAMA_OPTION_PARAM_KEYS = new Set([
   "num_keep",
@@ -215,8 +215,14 @@ function resolveOllamaThinkParamValue(
   if (raw === "off") {
     return false;
   }
-  if (raw === "low" || raw === "medium" || raw === "high" || raw === "max") {
+  if (raw === "low" || raw === "medium" || raw === "high") {
     return raw;
+  }
+  if (raw === "minimal") {
+    return "low";
+  }
+  if (raw === "xhigh" || raw === "adaptive" || raw === "max") {
+    return "high";
   }
   return undefined;
 }
