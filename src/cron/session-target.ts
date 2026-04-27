@@ -36,3 +36,23 @@ export function resolveCronDeliverySessionKey(job: {
     ? job.sessionKey.trim()
     : undefined;
 }
+
+export function resolveCronNotificationSessionKey(params: {
+  jobId: string;
+  sessionKey?: string | null;
+}): string {
+  return typeof params.sessionKey === "string" && params.sessionKey.trim()
+    ? params.sessionKey.trim()
+    : `cron:${params.jobId}:failure`;
+}
+
+export function resolveCronFailureNotificationSessionKey(job: {
+  id: string;
+  sessionTarget?: string | null;
+  sessionKey?: string | null;
+}): string {
+  return resolveCronNotificationSessionKey({
+    jobId: job.id,
+    sessionKey: resolveCronDeliverySessionKey(job),
+  });
+}
