@@ -421,7 +421,7 @@ describe("createEmbeddedLobsterRunner", () => {
     await loadEmbeddedToolRuntimeFromPackage();
 
     const corePath = requireForTest.resolve("@clawdbot/lobster/core");
-    const validationPath = corePath.replace(/\/core\/index\.js$/, "/validation.js");
+    const validationPath = path.join(path.dirname(path.dirname(corePath)), "validation.js");
     const validationModule = (await import(pathToFileURL(validationPath).href)) as {
       sharedAjv: import("ajv").default;
     };
