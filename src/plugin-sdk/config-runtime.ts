@@ -128,6 +128,8 @@ export type {
   DiscordSlashCommandConfig,
   DmConfig,
   DmPolicy,
+  GoogleChatAccountConfig,
+  GoogleChatConfig,
   ContextVisibilityMode,
   GroupPolicy,
   GroupToolPolicyBySenderConfig,
