@@ -34,14 +34,14 @@ async function runPluginStopHooks(): Promise<void> {
 
 function resolveMessagePluginLoadOptions(
   opts: Record<string, unknown>,
-): { scope: PluginRegistryScope; onlyPluginIds?: string[] } | undefined {
+): { scope: PluginRegistryScope; onlyChannelIds?: string[] } | undefined {
   const scopedChannel = resolveMessageSecretScope({
     channel: opts.channel,
     target: opts.target,
     targets: opts.targets,
   }).channel;
   if (scopedChannel) {
-    return { scope: "configured-channels", onlyPluginIds: [scopedChannel] };
+    return { scope: "configured-channels", onlyChannelIds: [scopedChannel] };
   }
   return { scope: "configured-channels" };
 }

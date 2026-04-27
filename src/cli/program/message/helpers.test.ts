@@ -98,7 +98,7 @@ describe("runMessageAction", () => {
 
     expect(ensurePluginRegistryLoaded).toHaveBeenCalledWith({
       scope: "configured-channels",
-      onlyPluginIds: ["discord"],
+      onlyChannelIds: ["discord"],
     });
     expect(exitMock).toHaveBeenCalledOnce();
     expect(exitMock).toHaveBeenCalledWith(0);
@@ -117,7 +117,7 @@ describe("runMessageAction", () => {
 
     expect(ensurePluginRegistryLoaded).toHaveBeenCalledWith({
       scope: "configured-channels",
-      onlyPluginIds: ["telegram"],
+      onlyChannelIds: ["telegram"],
     });
   });
 
