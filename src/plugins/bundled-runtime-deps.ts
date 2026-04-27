@@ -68,6 +68,7 @@ const BUNDLED_RUNTIME_DEPS_LOCK_STALE_MS = 10 * 60_000;
 const BUNDLED_RUNTIME_DEPS_OWNERLESS_LOCK_STALE_MS = 30_000;
 const BUNDLED_RUNTIME_DEPS_INSTALL_PROGRESS_INTERVAL_MS = 5_000;
 const BUNDLED_RUNTIME_MIRROR_MATERIALIZED_EXTENSIONS = new Set([".cjs", ".js", ".mjs"]);
+const BUNDLED_EXTENSION_DIST_DIR = "extensions";
 const BUNDLED_RUNTIME_MIRROR_PLUGIN_REGION_RE = /(?:^|\n)\/\/#region extensions\/[^/\s]+(?:\/|$)/u;
 const MIRRORED_CORE_RUNTIME_DEP_NAMES = ["tslog"] as const;
 const MIRRORED_PACKAGE_RUNTIME_DEP_PLUGIN_ID = "openclaw-core";
@@ -569,11 +570,13 @@ function isPluginOwnedDistImporter(params: {
   source: string;
   pluginIds: readonly string[];
 }): boolean {
-  return params.pluginIds.some(
-    (pluginId) =>
-      params.relativePath.startsWith(`extensions/${pluginId}/`) ||
-      params.source.includes(`//#region extensions/${pluginId}/`),
-  );
+  return params.pluginIds.some((pluginId) => {
+    const pluginPathPrefix = `${BUNDLED_EXTENSION_DIST_DIR}/${pluginId}/`;
+    return (
+      params.relativePath.startsWith(pluginPathPrefix) ||
+      params.source.includes(`//#region ${pluginPathPrefix}`)
+    );
+  });
 }
 
 function collectBundledRuntimeDependencyOwners(packageRoot: string): Map<
