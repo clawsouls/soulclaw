@@ -51,14 +51,48 @@ export type LoadPluginMetadataSnapshotParams = {
   index?: PluginRegistrySnapshot;
 };
 
+function indexesMatch(
+  left: PluginRegistrySnapshot | undefined,
+  right: PluginRegistrySnapshot | undefined,
+): boolean {
+  if (!left || !right) {
+    return true;
+  }
+  if (
+    left.version !== right.version ||
+    left.hostContractVersion !== right.hostContractVersion ||
+    left.compatRegistryVersion !== right.compatRegistryVersion ||
+    left.migrationVersion !== right.migrationVersion ||
+    left.policyHash !== right.policyHash ||
+    left.plugins.length !== right.plugins.length
+  ) {
+    return false;
+  }
+  for (let index = 0; index < left.plugins.length; index += 1) {
+    const leftPlugin = left.plugins[index];
+    const rightPlugin = right.plugins[index];
+    if (
+      !rightPlugin ||
+      leftPlugin.pluginId !== rightPlugin.pluginId ||
+      leftPlugin.manifestHash !== rightPlugin.manifestHash ||
+      leftPlugin.installRecordHash !== rightPlugin.installRecordHash
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function isPluginMetadataSnapshotCompatible(params: {
-  snapshot: Pick<PluginMetadataSnapshot, "policyHash" | "workspaceDir">;
+  snapshot: Pick<PluginMetadataSnapshot, "index" | "policyHash" | "workspaceDir">;
   config: OpenClawConfig;
   workspaceDir?: string;
+  index?: PluginRegistrySnapshot;
 }): boolean {
   return (
     params.snapshot.policyHash === resolveInstalledPluginIndexPolicyHash(params.config) &&
-    (params.snapshot.workspaceDir ?? "") === (params.workspaceDir ?? "")
+    (params.snapshot.workspaceDir ?? "") === (params.workspaceDir ?? "") &&
+    indexesMatch(params.snapshot.index, params.index)
   );
 }
 

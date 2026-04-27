@@ -60,6 +60,7 @@ export function loadPluginLookUpTable(params: LoadPluginLookUpTableParams): Plug
       snapshot: params.metadataSnapshot,
       config: requestedSnapshotConfig,
       workspaceDir: params.workspaceDir,
+      index: params.index,
     })
       ? params.metadataSnapshot
       : loadPluginMetadataSnapshot({

@@ -289,4 +289,70 @@ describe("loadPluginLookUpTable", () => {
       }),
     );
   });
+
+  it("rebuilds when a provided metadata snapshot has stale plugin inventory", async () => {
+    const snapshotPlugins = [
+      createManifestRecord({
+        id: "telegram",
+        origin: "bundled",
+        channels: ["telegram"],
+      }),
+    ];
+    const requestedPlugins = [
+      createManifestRecord({
+        id: "telegram",
+        origin: "bundled",
+        channels: ["telegram"],
+      }),
+      createManifestRecord({
+        id: "discord",
+        origin: "bundled",
+        channels: ["discord"],
+      }),
+    ];
+    const config = {
+      channels: {
+        telegram: { token: "configured" },
+      },
+    } as OpenClawConfig;
+    const policyHash = resolveInstalledPluginIndexPolicyHash(config);
+    const snapshotIndex = createIndex(snapshotPlugins, { policyHash });
+    const requestedIndex = createIndex(requestedPlugins, { policyHash });
+    const snapshotRegistry: PluginManifestRegistry = {
+      plugins: snapshotPlugins,
+      diagnostics: [],
+    };
+    const requestedRegistry: PluginManifestRegistry = {
+      plugins: requestedPlugins,
+      diagnostics: [],
+    };
+    loadPluginManifestRegistryForInstalledIndex
+      .mockReturnValueOnce(snapshotRegistry)
+      .mockReturnValueOnce(requestedRegistry);
+    const { loadPluginMetadataSnapshot } = await import("./plugin-metadata-snapshot.js");
+    const { loadPluginLookUpTable } = await import("./plugin-lookup-table.js");
+
+    const metadataSnapshot = loadPluginMetadataSnapshot({
+      config,
+      env: {},
+      index: snapshotIndex,
+    });
+    loadPluginManifestRegistryForInstalledIndex.mockClear();
+
+    const table = loadPluginLookUpTable({
+      config,
+      env: {},
+      index: requestedIndex,
+      metadataSnapshot,
+    });
+
+    expect(loadPluginManifestRegistryForInstalledIndex).toHaveBeenCalledOnce();
+    expect(loadPluginManifestRegistryForInstalledIndex).toHaveBeenCalledWith(
+      expect.objectContaining({
+        index: requestedIndex,
+        config,
+      }),
+    );
+    expect(table.manifestRegistry).toBe(requestedRegistry);
+  });
 });
