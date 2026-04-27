@@ -126,12 +126,11 @@ describe("acp session creation rate limit", () => {
     const agent = new AcpGatewayAgent(createAcpConnection(), createAcpGateway(), {
       sessionStore,
       sessionCreateRateLimit: {
-        maxRequests: 2,
+        maxRequests: 1,
         windowMs: 60_000,
       },
     });
 
-    await agent.newSession(createNewSessionRequest());
     await agent.newSession(createNewSessionRequest());
     await expect(agent.newSession(createNewSessionRequest())).rejects.toThrow(
       /session creation rate limit exceeded/i,
