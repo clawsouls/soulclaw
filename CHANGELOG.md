@@ -16,6 +16,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- CLI/plugins: preserve unversioned ClawHub install specs so `plugins update` can follow newer ClawHub releases instead of pinning to the initially resolved version. Fixes #63010; supersedes #58426. Thanks @kangsen1234 and @robinspt.
 - Gateway/models: move local-provider pricing opt-outs, OpenRouter/LiteLLM aliases, and proxy passthrough pricing lookup into plugin manifest metadata so core no longer carries extension-specific pricing tables. Thanks @codex.
 - CLI/update: honor `OPENCLAW_NO_AUTO_UPDATE=1` as a gateway startup kill-switch for configured background package auto-updates, so operators can hold a deliberate downgrade during incident recovery without editing config first. Fixes #72715. Thanks @Xivi08.
 - Agents/Claude CLI: force live-session launches to include `--output-format stream-json` whenever OpenClaw adds `--input-format stream-json`, so new Claude CLI sessions no longer fail immediately while reusable sessions keep working. Fixes #72206. Thanks @kwangwonkoh and @Xivi08.
