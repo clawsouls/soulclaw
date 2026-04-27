@@ -175,6 +175,7 @@ export function resolveUsableCustomProviderApiKey(params: {
   if (
     customProviderConfig &&
     isCustomLocalProviderConfig(customProviderConfig) &&
+    customProviderConfig.api === "openai-completions" &&
     customProviderConfig.baseUrl &&
     isLocalBaseUrl(customProviderConfig.baseUrl)
   ) {
