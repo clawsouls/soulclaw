@@ -56,8 +56,10 @@ export const forcedUnitFastTestFiles = [
   "packages/memory-host-sdk/src/host/batch-http.test.ts",
   "packages/memory-host-sdk/src/host/backend-config.test.ts",
   "packages/memory-host-sdk/src/host/embeddings-remote-fetch.test.ts",
+  "packages/memory-host-sdk/src/host/internal.test.ts",
   "packages/memory-host-sdk/src/host/post-json.test.ts",
   "packages/memory-host-sdk/src/host/qmd-process.test.ts",
+  "packages/memory-host-sdk/src/host/session-files.test.ts",
   "src/acp/client.test.ts",
   "src/acp/control-plane/manager.test.ts",
   "src/acp/persistent-bindings.test.ts",
@@ -95,6 +97,7 @@ export const forcedUnitFastTestFiles = [
   "src/trajectory/export.test.ts",
   "src/tts/provider-registry.test.ts",
   "src/tts/status-config.test.ts",
+  "src/terminal/table.test.ts",
   "src/version.test.ts",
 ];
 const forcedUnitFastTestFileSet = new Set(forcedUnitFastTestFiles);
