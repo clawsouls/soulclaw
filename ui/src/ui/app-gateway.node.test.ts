@@ -1025,6 +1025,33 @@ describe("resolveControlUiClientVersion", () => {
     ).toBe("2026.3.7");
   });
 
+  it("returns serverVersion for loopback aliases on the same port", () => {
+    expect(
+      resolveControlUiClientVersion({
+        gatewayUrl: "ws://127.0.0.1:18789",
+        serverVersion: "2026.4.24",
+        pageUrl: "http://localhost:18789/chat",
+      }),
+    ).toBe("2026.4.24");
+    expect(
+      resolveControlUiClientVersion({
+        gatewayUrl: "ws://[::1]:18789",
+        serverVersion: "2026.4.24",
+        pageUrl: "http://127.0.0.1:18789/chat",
+      }),
+    ).toBe("2026.4.24");
+  });
+
+  it("omits serverVersion for loopback aliases on different ports", () => {
+    expect(
+      resolveControlUiClientVersion({
+        gatewayUrl: "ws://127.0.0.1:18789",
+        serverVersion: "2026.4.24",
+        pageUrl: "http://localhost:19889/chat",
+      }),
+    ).toBeUndefined();
+  });
+
   it("omits serverVersion for cross-origin targets", () => {
     expect(
       resolveControlUiClientVersion({
