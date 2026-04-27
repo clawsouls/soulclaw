@@ -229,7 +229,6 @@ jobs:
       package_ref: ${{ needs.resolve_target.outputs.ref }}
       suite_profile: package
       telegram_mode: none
-    secrets: inherit
 
   qa_lab_parity_release_checks:
     name: Run QA Lab parity gate

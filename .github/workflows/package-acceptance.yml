@@ -129,6 +129,99 @@ on:
         required: false
         default: none
         type: string
+    secrets:
+      OPENAI_API_KEY:
+        required: false
+      OPENAI_BASE_URL:
+        required: false
+      ANTHROPIC_API_KEY:
+        required: false
+      ANTHROPIC_API_KEY_OLD:
+        required: false
+      ANTHROPIC_API_TOKEN:
+        required: false
+      BYTEPLUS_API_KEY:
+        required: false
+      CEREBRAS_API_KEY:
+        required: false
+      DASHSCOPE_API_KEY:
+        required: false
+      GROQ_API_KEY:
+        required: false
+      KIMI_API_KEY:
+        required: false
+      MODELSTUDIO_API_KEY:
+        required: false
+      MOONSHOT_API_KEY:
+        required: false
+      MISTRAL_API_KEY:
+        required: false
+      MINIMAX_API_KEY:
+        required: false
+      OPENCODE_API_KEY:
+        required: false
+      OPENCODE_ZEN_API_KEY:
+        required: false
+      OPENCLAW_LIVE_BROWSER_CDP_URL:
+        required: false
+      OPENCLAW_LIVE_SETUP_TOKEN:
+        required: false
+      OPENCLAW_LIVE_SETUP_TOKEN_MODEL:
+        required: false
+      OPENCLAW_LIVE_SETUP_TOKEN_PROFILE:
+        required: false
+      OPENCLAW_LIVE_SETUP_TOKEN_VALUE:
+        required: false
+      GEMINI_API_KEY:
+        required: false
+      GOOGLE_API_KEY:
+        required: false
+      OPENROUTER_API_KEY:
+        required: false
+      QWEN_API_KEY:
+        required: false
+      FAL_KEY:
+        required: false
+      RUNWAY_API_KEY:
+        required: false
+      DEEPGRAM_API_KEY:
+        required: false
+      TOGETHER_API_KEY:
+        required: false
+      VYDRA_API_KEY:
+        required: false
+      XAI_API_KEY:
+        required: false
+      ZAI_API_KEY:
+        required: false
+      Z_AI_API_KEY:
+        required: false
+      BYTEPLUS_ACCESS_KEY_ID:
+        required: false
+      BYTEPLUS_SECRET_ACCESS_KEY:
+        required: false
+      CLAUDE_CODE_OAUTH_TOKEN:
+        required: false
+      OPENCLAW_CODEX_AUTH_JSON:
+        required: false
+      OPENCLAW_CODEX_CONFIG_TOML:
+        required: false
+      OPENCLAW_CLAUDE_JSON:
+        required: false
+      OPENCLAW_CLAUDE_CREDENTIALS_JSON:
+        required: false
+      OPENCLAW_CLAUDE_SETTINGS_JSON:
+        required: false
+      OPENCLAW_CLAUDE_SETTINGS_LOCAL_JSON:
+        required: false
+      OPENCLAW_GEMINI_SETTINGS_JSON:
+        required: false
+      FIREWORKS_API_KEY:
+        required: false
+      OPENCLAW_QA_CONVEX_SITE_URL:
+        required: false
+      OPENCLAW_QA_CONVEX_SECRET_CI:
+        required: false
 
 permissions:
   actions: read
@@ -336,7 +429,51 @@ jobs:
       package_artifact_name: ${{ needs.resolve_package.outputs.package_artifact_name }}
       include_live_suites: ${{ needs.resolve_package.outputs.include_live_suites == 'true' }}
       live_models_only: false
-    secrets: inherit
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ANTHROPIC_API_KEY_OLD: ${{ secrets.ANTHROPIC_API_KEY_OLD }}
+      ANTHROPIC_API_TOKEN: ${{ secrets.ANTHROPIC_API_TOKEN }}
+      BYTEPLUS_API_KEY: ${{ secrets.BYTEPLUS_API_KEY }}
+      CEREBRAS_API_KEY: ${{ secrets.CEREBRAS_API_KEY }}
+      DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
+      MODELSTUDIO_API_KEY: ${{ secrets.MODELSTUDIO_API_KEY }}
+      MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+      MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+      MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+      OPENCODE_ZEN_API_KEY: ${{ secrets.OPENCODE_ZEN_API_KEY }}
+      OPENCLAW_LIVE_BROWSER_CDP_URL: ${{ secrets.OPENCLAW_LIVE_BROWSER_CDP_URL }}
+      OPENCLAW_LIVE_SETUP_TOKEN: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN }}
+      OPENCLAW_LIVE_SETUP_TOKEN_MODEL: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_MODEL }}
+      OPENCLAW_LIVE_SETUP_TOKEN_PROFILE: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_PROFILE }}
+      OPENCLAW_LIVE_SETUP_TOKEN_VALUE: ${{ secrets.OPENCLAW_LIVE_SETUP_TOKEN_VALUE }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+      FAL_KEY: ${{ secrets.FAL_KEY }}
+      RUNWAY_API_KEY: ${{ secrets.RUNWAY_API_KEY }}
+      DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+      TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+      VYDRA_API_KEY: ${{ secrets.VYDRA_API_KEY }}
+      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+      ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+      Z_AI_API_KEY: ${{ secrets.Z_AI_API_KEY }}
+      BYTEPLUS_ACCESS_KEY_ID: ${{ secrets.BYTEPLUS_ACCESS_KEY_ID }}
+      BYTEPLUS_SECRET_ACCESS_KEY: ${{ secrets.BYTEPLUS_SECRET_ACCESS_KEY }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      OPENCLAW_CODEX_AUTH_JSON: ${{ secrets.OPENCLAW_CODEX_AUTH_JSON }}
+      OPENCLAW_CODEX_CONFIG_TOML: ${{ secrets.OPENCLAW_CODEX_CONFIG_TOML }}
+      OPENCLAW_CLAUDE_JSON: ${{ secrets.OPENCLAW_CLAUDE_JSON }}
+      OPENCLAW_CLAUDE_CREDENTIALS_JSON: ${{ secrets.OPENCLAW_CLAUDE_CREDENTIALS_JSON }}
+      OPENCLAW_CLAUDE_SETTINGS_JSON: ${{ secrets.OPENCLAW_CLAUDE_SETTINGS_JSON }}
+      OPENCLAW_CLAUDE_SETTINGS_LOCAL_JSON: ${{ secrets.OPENCLAW_CLAUDE_SETTINGS_LOCAL_JSON }}
+      OPENCLAW_GEMINI_SETTINGS_JSON: ${{ secrets.OPENCLAW_GEMINI_SETTINGS_JSON }}
+      FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
 
   npm_telegram:
     name: Published npm Telegram acceptance
@@ -346,7 +483,10 @@ jobs:
     with:
       package_spec: ${{ inputs.package_spec }}
       provider_mode: ${{ needs.resolve_package.outputs.telegram_mode }}
-    secrets: inherit
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
+      OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
 
   summary:
     name: Verify package acceptance
