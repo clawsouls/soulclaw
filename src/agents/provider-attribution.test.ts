@@ -7,6 +7,7 @@ const providerEndpointPlugins = vi.hoisted(() => [
       { endpointClass: "openai-codex", hosts: ["chatgpt.com"] },
       { endpointClass: "azure-openai", hostSuffixes: [".openai.azure.com"] },
       { endpointClass: "anthropic-public", hosts: ["api.anthropic.com"] },
+      { endpointClass: "cerebras-native", hosts: ["api.cerebras.ai"] },
       { endpointClass: "mistral-public", hosts: ["api.mistral.ai"] },
       { endpointClass: "chutes-native", hosts: ["llm.chutes.ai"] },
       { endpointClass: "deepseek-native", hosts: ["api.deepseek.com"] },
@@ -47,6 +48,7 @@ const providerEndpointPlugins = vi.hoisted(() => [
     providerRequest: {
       providers: {
         anthropic: { family: "anthropic" },
+        cerebras: { family: "cerebras" },
         chutes: { family: "chutes" },
         deepseek: { family: "deepseek" },
         "github-copilot": { family: "github-copilot" },

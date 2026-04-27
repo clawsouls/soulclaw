@@ -355,9 +355,6 @@ export function resolveProviderEndpoint(
   if (manifestEndpoint) {
     return manifestEndpoint;
   }
-  if (host === "api.cerebras.ai") {
-    return { endpointClass: "cerebras-native", hostname: host };
-  }
   if (isLocalEndpointHost(host)) {
     return { endpointClass: "local", hostname: host };
   }
