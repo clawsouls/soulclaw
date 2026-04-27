@@ -33,6 +33,24 @@ export async function writeFile(filePath: string, content: string) {
   await fs.writeFile(filePath, content, "utf8");
 }
 
+export function makeConfigRuntime(
+  config: OpenClawConfig,
+  onWrite?: (next: OpenClawConfig) => void,
+): NonNullable<MigrationProviderContext["runtime"]> {
+  return {
+    config: {
+      loadConfig: () => config,
+      writeConfigFile: async (next: OpenClawConfig) => {
+        for (const key of Object.keys(config) as Array<keyof OpenClawConfig>) {
+          delete config[key];
+        }
+        Object.assign(config, next);
+        onWrite?.(next);
+      },
+    },
+  } as NonNullable<MigrationProviderContext["runtime"]>;
+}
+
 export function makeContext(params: {
   source: string;
   stateDir: string;
