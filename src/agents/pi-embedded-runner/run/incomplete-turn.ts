@@ -1,7 +1,12 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
-import { isSilentReplyPayloadText, SILENT_REPLY_TOKEN } from "../../../auto-reply/tokens.js";
+import {
+  isSilentReplyPayloadText,
+  isSilentReplyText,
+  SILENT_REPLY_TOKEN,
+} from "../../../auto-reply/tokens.js";
 import type { EmbeddedPiExecutionContract } from "../../../config/types.agent-defaults.js";
 import { normalizeLowercaseStringOrEmpty } from "../../../shared/string-coerce.js";
+import { collectTextContentBlocks } from "../../content-blocks.js";
 import {
   isStrictAgenticSupportedProviderModel,
   stripProviderPrefix,
@@ -49,6 +54,16 @@ type PlanningOnlyAttempt = Pick<
   | "lastAssistant"
   | "itemLifecycle"
   | "replayMetadata"
+  | "toolMetas"
+>;
+
+type SilentToolResultAttempt = Pick<
+  EmbeddedRunAttemptResult,
+  | "clientToolCall"
+  | "yieldDetected"
+  | "didSendDeterministicApprovalPrompt"
+  | "lastToolError"
+  | "messagesSnapshot"
   | "toolMetas"
 >;
 
@@ -251,6 +266,81 @@ function hasOnlySilentAssistantReply(assistantTexts: readonly string[]): boolean
     nonEmptyTexts.length > 0 &&
     nonEmptyTexts.every((text) => isSilentReplyPayloadText(text, SILENT_REPLY_TOKEN))
   );
+}
+
+function isToolResultRole(role: string): boolean {
+  return role === "toolresult" || role === "tool_result" || role === "tool";
+}
+
+function readMessageTextContent(message: AgentMessage): string | undefined {
+  const content = (message as { content?: unknown }).content;
+  if (typeof content === "string") {
+    const trimmed = content.trim();
+    return trimmed || undefined;
+  }
+  const text = collectTextContentBlocks(content)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .join("\n");
+  return text || undefined;
+}
+
+function readToolResultAggregatedText(message: AgentMessage): string | undefined {
+  const aggregated = (message as { details?: { aggregated?: unknown } }).details?.aggregated;
+  if (typeof aggregated !== "string") {
+    return undefined;
+  }
+  const trimmed = aggregated.trim();
+  return trimmed || undefined;
+}
+
+function hasTrailingSilentToolResult(messages: readonly AgentMessage[]): boolean {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (!message) {
+      continue;
+    }
+    const role = normalizeLowercaseStringOrEmpty(message?.role);
+    if (isToolResultRole(role)) {
+      if ((message as { isError?: boolean }).isError === true) {
+        return false;
+      }
+      const text = readMessageTextContent(message) ?? readToolResultAggregatedText(message);
+      return isSilentReplyText(text, SILENT_REPLY_TOKEN);
+    }
+    if (role === "assistant" && !readMessageTextContent(message)) {
+      continue;
+    }
+    return false;
+  }
+  return false;
+}
+
+export function resolveSilentToolResultReplyPayload(params: {
+  isCronTrigger: boolean;
+  payloadCount: number;
+  aborted: boolean;
+  timedOut: boolean;
+  attempt: SilentToolResultAttempt;
+}): { text: typeof SILENT_REPLY_TOKEN } | null {
+  if (
+    !params.isCronTrigger ||
+    params.payloadCount !== 0 ||
+    params.aborted ||
+    params.timedOut ||
+    params.attempt.toolMetas.length === 0 ||
+    params.attempt.clientToolCall ||
+    params.attempt.yieldDetected ||
+    params.attempt.didSendDeterministicApprovalPrompt ||
+    params.attempt.lastToolError ||
+    params.attempt.messagesSnapshot.length === 0
+  ) {
+    return null;
+  }
+
+  return hasTrailingSilentToolResult(params.attempt.messagesSnapshot)
+    ? { text: SILENT_REPLY_TOKEN }
+    : null;
 }
 
 export function resolveReplayInvalidFlag(params: {
