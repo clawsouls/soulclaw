@@ -69,6 +69,7 @@ git config --global gc.auto 0
 git -C "$git_root" init -q
 git -C "$git_root" config gc.auto 0
 git -C "$git_root" add -A
+git -C "$git_root" add -f dist/control-ui/index.html
 git -C "$git_root" commit -qm "test fixture"
 fixture_sha="$(git -C "$git_root" rev-parse HEAD)"
 
