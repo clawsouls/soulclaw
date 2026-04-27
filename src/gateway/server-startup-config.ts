@@ -271,7 +271,13 @@ export async function loadGatewayStartupConfigSnapshot(params: {
     params.minimalTestGateway || degradedStartupConfig || degradedPluginConfig
       ? { config: configSnapshot.config, changes: [] as string[] }
       : await measure("config.snapshot.auto-enable", () =>
-          applyPluginAutoEnable({ config: configSnapshot.sourceConfig, env: process.env }),
+          applyPluginAutoEnable({
+            config: configSnapshot.sourceConfig,
+            env: process.env,
+            ...(configSnapshot.pluginMetadataSnapshot?.manifestRegistry
+              ? { manifestRegistry: configSnapshot.pluginMetadataSnapshot.manifestRegistry }
+              : {}),
+          }),
         );
   if (autoEnable.changes.length === 0) {
     return {
