@@ -108,6 +108,8 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain("package_ref: ${{ needs.resolve_target.outputs.ref }}");
     expect(workflow).toContain("suite_profile: package");
     expect(workflow).toContain("telegram_mode: mock-openai");
+    expect(workflow).toContain("ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}");
+    expect(workflow).toContain("ANTHROPIC_API_TOKEN: ${{ secrets.ANTHROPIC_API_TOKEN }}");
     expect(workflow).toContain(
       "OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}",
     );
