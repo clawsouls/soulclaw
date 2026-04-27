@@ -36,6 +36,7 @@ Docs: https://docs.openclaw.ai
 - Providers/Ollama: route local web search through Ollama's signed `/api/experimental/web_search` daemon proxy, use hosted `/api/web_search` directly for `ollama.com`, and keep `OLLAMA_API_KEY` scoped to cloud fallback auth. Fixes #69132. Thanks @yoon1012 and @hyspacex.
 - Memory/doctor: treat Ollama memory embeddings as key-optional so `openclaw doctor` no longer warns about a missing API key when the gateway reports embeddings are ready. Fixes #46584. Thanks @fengly78.
 - Agents/Ollama: apply provider-owned replay turn normalization to native Ollama chat so Cloud models no longer reject non-alternating replay history in agent/Gateway runs. Fixes #71697. Thanks @ismael-81.
+- Control UI/Ollama: show the resolved configured thinking default in chat and session thinking dropdowns so inherited `adaptive`/per-model thinking config no longer appears as `Default (off)` or a generic inherit value. Fixes #72407. Thanks @NotecAG.
 - Agents/Ollama: validate explicit `--thinking max` against catalog-discovered Ollama reasoning metadata so local agent runs accept the same native thinking levels shown in the model catalog. Fixes #71584. Thanks @g0st1n.
 - CLI/models: include explicitly configured provider models in `openclaw models list --provider <id>` without requiring the full catalog path, so configured Ollama models are visible. Fixes #65207. Thanks @drzeast-png.
 - Docker/QA: add observability coverage to the normal Docker aggregate so QA-lab OTEL and Prometheus diagnostics run inside Docker. Thanks @vincentkoc.
