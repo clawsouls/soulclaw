@@ -53,6 +53,7 @@ function createCompactionContext(params: {
     },
     getCompactionCount: () => compactionCount,
     noteCompactionTokensAfter: vi.fn(),
+    getLastCompactionTokensAfter: vi.fn(() => undefined),
   } as unknown as EmbeddedPiSubscribeContext;
 }
 
@@ -144,5 +145,6 @@ describe("handleCompactionEnd", () => {
     });
 
     expect(await readCompactionCount(storePath, sessionKey)).toBe(2);
+    expect(ctx.noteCompactionTokensAfter).toHaveBeenCalledWith(undefined);
   });
 });
