@@ -173,4 +173,23 @@ describe("parseExplicitTargetForChannel", () => {
       }),
     ).toBe(true);
   });
+
+  it("compares numeric and string thread ids through the shared route contract", () => {
+    const numericThread = resolveComparableTargetForChannel({
+      channel: "mock-threaded",
+      rawTarget: "threaded:room-a:topic:77",
+    });
+    const stringThread = resolveComparableTargetForChannel({
+      channel: "mock-threaded",
+      rawTarget: "room-a",
+      fallbackThreadId: "77",
+    });
+
+    expect(
+      comparableChannelTargetsMatch({
+        left: numericThread,
+        right: stringThread,
+      }),
+    ).toBe(true);
+  });
 });

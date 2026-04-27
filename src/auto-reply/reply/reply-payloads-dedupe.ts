@@ -2,6 +2,7 @@ import { isMessagingToolDuplicate } from "../../agents/pi-embedded-helpers.js";
 import type { MessagingToolSend } from "../../agents/pi-embedded-messaging.types.js";
 import { getChannelPlugin } from "../../channels/plugins/index.js";
 import { normalizeAnyChannelId } from "../../channels/registry.js";
+import { stringifyRouteThreadId } from "../../channels/route/ref.js";
 import { normalizeTargetForProvider } from "../../infra/outbound/target-normalization.js";
 import { normalizeOptionalAccountId } from "../../routing/account-id.js";
 import {
@@ -83,14 +84,11 @@ function normalizeProviderForComparison(value?: string): string | undefined {
 }
 
 function normalizeThreadIdForComparison(value?: string): string | undefined {
-  const trimmed = normalizeOptionalString(value);
-  if (!trimmed) {
+  const normalized = stringifyRouteThreadId(value);
+  if (!normalized) {
     return undefined;
   }
-  if (/^-?\d+$/.test(trimmed)) {
-    return String(Number.parseInt(trimmed, 10));
-  }
-  return normalizeLowercaseStringOrEmpty(trimmed);
+  return /^-?\d+$/.test(normalized) ? String(Number.parseInt(normalized, 10)) : normalized;
 }
 
 function resolveTargetProviderForComparison(params: {

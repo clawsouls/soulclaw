@@ -3,6 +3,11 @@ import {
   normalizeOptionalThreadValue,
 } from "../../shared/string-coerce.js";
 import type { ChatType } from "../chat-type.js";
+import {
+  channelRoutesMatchExact,
+  channelRoutesShareConversation,
+  normalizeChannelRouteRef,
+} from "../route/ref.js";
 import { getLoadedChannelPluginForRead } from "./registry-loaded-read.js";
 
 export type ParsedChannelExplicitTarget = {
@@ -56,28 +61,29 @@ export function comparableChannelTargetsMatch(params: {
   left?: ComparableChannelTarget | null;
   right?: ComparableChannelTarget | null;
 }): boolean {
-  const left = params.left;
-  const right = params.right;
-  if (!left || !right) {
-    return false;
-  }
-  return left.to === right.to && left.threadId === right.threadId;
+  return channelRoutesMatchExact({
+    left: targetToRoute(params.left),
+    right: targetToRoute(params.right),
+  });
 }
 
 export function comparableChannelTargetsShareRoute(params: {
   left?: ComparableChannelTarget | null;
   right?: ComparableChannelTarget | null;
 }): boolean {
-  const left = params.left;
-  const right = params.right;
-  if (!left || !right) {
-    return false;
-  }
-  if (left.to !== right.to) {
-    return false;
-  }
-  if (left.threadId == null || right.threadId == null) {
-    return true;
-  }
-  return left.threadId === right.threadId;
+  return channelRoutesShareConversation({
+    left: targetToRoute(params.left),
+    right: targetToRoute(params.right),
+  });
+}
+
+function targetToRoute(target?: ComparableChannelTarget | null) {
+  return target
+    ? normalizeChannelRouteRef({
+        to: target.to,
+        rawTo: target.rawTo,
+        threadId: target.threadId,
+        chatType: target.chatType,
+      })
+    : undefined;
 }
