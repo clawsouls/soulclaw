@@ -27,6 +27,12 @@ Docs: https://docs.openclaw.ai
 - Providers/Ollama: mark discovered Ollama catalog models as supporting streaming usage metadata so token accounting stays enabled for local models. (#72976) Thanks @sdeyang.
 - Media understanding: reject malformed MIME values with trailing junk while preserving standard parameter tails before enrichment uses them. (#72914) Thanks @volcano303.
 - WebChat: keep bare `/new` and `/reset` prompts from producing empty transcript text by inserting the hidden session marker when the visible tail is blank. (#72863) Thanks @mahopan.
+- CLI/update: explain completion-cache refresh timeouts with manual refresh guidance instead of surfacing a raw low-level timeout. Fixes #72842. (#72850) Thanks @iot2edge.
+- Memory-core/dreaming: give narrative generation a 60-second timeout so slower local or remote models can finish instead of timing out at 15 seconds. Fixes #72837. (#72852) Thanks @RayWoo.
+- Plugins/hooks: inject each plugin's resolved config into internal hook event context without mutating the shared event object. (#72888) Thanks @jalapeno777.
+- Agents/ACP: pass the resolved ACP agent directory into media understanding so per-agent media caches and config are used for ACP-dispatched image turns. (#72832) Thanks @luyao618.
+- Gateway/Bonjour: truncate mDNS service names and host labels to the 63-byte DNS label limit without splitting multibyte characters. (#72809) Thanks @luyao618.
+- Feishu: treat groups explicitly configured under channels.feishu.groups as admitted even when groupAllowFrom is empty, so per-group mention overrides work with the default allowlist policy. Fixes #67687. (#72789) Thanks @MoerAI.
 - Gateway/startup: keep hot Gateway boot paths on leaf config imports and add max-RSS reporting to the gateway startup bench so low-memory startup regressions are visible before release. Thanks @vincentkoc.
 - WebChat: read `chat.history` from active transcript branches, drop stale streamed assistant tails once final history catches up, and coalesce duplicate in-flight Control UI submits, so rewritten prompts, completed replies, and rapid send events no longer render or process twice. Fixes #72975, #72963, and #72974. Thanks @dmagdici, @lhtpluto, and @Benjamin5281999.
 - WebChat/TTS: persist automatic final-mode TTS audio as a supplemental audio-only transcript update instead of adding a second assistant message with the same visible text. Fixes #72830. Thanks @lhtpluto.
