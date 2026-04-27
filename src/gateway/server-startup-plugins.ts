@@ -182,6 +182,7 @@ export async function prepareGatewayPluginBootstrap(params: {
     defaultWorkspaceDir,
     deferredConfiguredChannelPluginIds,
     startupPluginIds,
+    pluginLookUpTable,
     baseMethods,
     pluginRegistry,
     baseGatewayMethods,

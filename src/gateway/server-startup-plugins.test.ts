@@ -151,6 +151,9 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
     ).resolves.toMatchObject({
       baseGatewayMethods: ["ping"],
       startupPluginIds: ["telegram"],
+      pluginLookUpTable: expect.objectContaining({
+        manifestRegistry: pluginManifestRegistry,
+      }),
     });
 
     expect(loadGatewayStartupPlugins).toHaveBeenCalledOnce();
@@ -194,6 +197,9 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
     ).resolves.toMatchObject({
       baseGatewayMethods: ["ping"],
       startupPluginIds: ["telegram"],
+      pluginLookUpTable: expect.objectContaining({
+        manifestRegistry: pluginManifestRegistry,
+      }),
     });
 
     expect(repairBundledRuntimeDepsInstallRootAsync).not.toHaveBeenCalled();

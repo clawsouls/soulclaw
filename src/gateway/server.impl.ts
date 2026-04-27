@@ -378,6 +378,7 @@ export async function startGatewayServer(
     defaultWorkspaceDir,
     deferredConfiguredChannelPluginIds,
     startupPluginIds,
+    pluginLookUpTable,
     baseMethods,
   } = pluginBootstrap;
   let { pluginRegistry, baseGatewayMethods } = pluginBootstrap;
@@ -804,6 +805,7 @@ export async function startGatewayServer(
           coreGatewayMethodNames: baseMethods,
           baseMethods,
           pluginIds: startupPluginIds,
+          pluginLookUpTable,
           logDiagnostics: false,
         }));
         runtimeState.gatewayMethods = listActiveGatewayMethods(baseGatewayMethods);

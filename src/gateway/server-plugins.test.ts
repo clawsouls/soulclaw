@@ -1052,6 +1052,7 @@ describe("loadGatewayPlugins", () => {
   test("reuses the initial startup plugin scope during deferred reloads", async () => {
     const { reloadDeferredGatewayPlugins } = serverPluginBootstrapModule;
     loadOpenClawPlugins.mockReturnValue(createRegistry([]));
+    const manifestRegistry = { plugins: [], diagnostics: [] };
 
     reloadDeferredGatewayPlugins({
       cfg: {},
@@ -1060,10 +1061,19 @@ describe("loadGatewayPlugins", () => {
       coreGatewayHandlers: {},
       baseMethods: [],
       pluginIds: ["discord"],
+      pluginLookUpTable: createLookUpTableForTest({
+        manifestRegistry,
+        pluginIds: ["discord"],
+      }),
       logDiagnostics: false,
     });
 
     expect(loadPluginLookUpTable).not.toHaveBeenCalled();
+    expect(applyPluginAutoEnable).toHaveBeenCalledWith({
+      config: {},
+      env: process.env,
+      manifestRegistry,
+    });
     expect(loadOpenClawPlugins).toHaveBeenCalledWith(
       expect.objectContaining({
         onlyPluginIds: ["discord"],
