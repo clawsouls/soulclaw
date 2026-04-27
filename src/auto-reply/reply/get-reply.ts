@@ -328,7 +328,7 @@ export async function getReplyFromConfig(
         groupChannel:
           sessionEntry.groupChannel ?? sessionCtx.GroupChannel ?? finalized.GroupChannel,
         groupSubject: sessionEntry.subject ?? sessionCtx.GroupSubject ?? finalized.GroupSubject,
-        parentSessionKey: sessionCtx.ParentSessionKey,
+        parentSessionKey: sessionCtx.ModelParentSessionKey ?? sessionCtx.ParentSessionKey,
       })
     : null;
   const hasSessionModelOverride = Boolean(
@@ -339,7 +339,10 @@ export async function getReplyFromConfig(
     sessionEntry,
     sessionStore,
     sessionKey,
-    parentSessionKey: sessionEntry.parentSessionKey ?? sessionCtx.ParentSessionKey,
+    parentSessionKey:
+      sessionEntry.parentSessionKey ??
+      sessionCtx.ModelParentSessionKey ??
+      sessionCtx.ParentSessionKey,
     defaultProvider,
   });
   if (storedModelOverride?.model && !hasResolvedHeartbeatModelOverride) {
