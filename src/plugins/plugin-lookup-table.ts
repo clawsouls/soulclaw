@@ -110,6 +110,7 @@ export function loadPluginLookUpTable(params: LoadPluginLookUpTableParams): Plug
     metrics: {
       ...metadataSnapshot.metrics,
       startupPlanMs,
+      totalMs: metadataSnapshot.metrics.totalMs + startupPlanMs,
       startupPluginCount: pluginIds.length,
       deferredChannelPluginCount: configuredDeferredChannelPluginIds.length,
     },

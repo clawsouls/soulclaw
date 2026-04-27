@@ -233,6 +233,9 @@ describe("loadPluginLookUpTable", () => {
     expect(table.startup.pluginIds).toEqual(["telegram"]);
     expect(table.metrics.indexPluginCount).toBe(1);
     expect(table.metrics.manifestPluginCount).toBe(1);
+    expect(table.metrics.totalMs).toBe(
+      metadataSnapshot.metrics.totalMs + table.metrics.startupPlanMs,
+    );
   });
 
   it("rebuilds when a provided metadata snapshot has a stale plugin policy", async () => {
