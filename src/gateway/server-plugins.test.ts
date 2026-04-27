@@ -147,6 +147,17 @@ function createLookUpTableForTest(params: {
       configuredDeferredChannelPluginIds: [],
       pluginIds: params.pluginIds ?? [],
     },
+    metrics: {
+      registrySnapshotMs: 0,
+      manifestRegistryMs: 0,
+      startupPlanMs: 0,
+      ownerMapsMs: 0,
+      totalMs: 0,
+      indexPluginCount: 0,
+      manifestPluginCount: 0,
+      startupPluginCount: params.pluginIds?.length ?? 0,
+      deferredChannelPluginCount: 0,
+    },
   };
 }
 

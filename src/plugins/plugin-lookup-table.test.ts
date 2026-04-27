@@ -159,6 +159,17 @@ describe("loadPluginLookUpTable", () => {
 
     expect(table.manifestRegistry).toBe(manifestRegistry);
     expect(table.diagnostics).toEqual([indexDiagnostic, manifestDiagnostic]);
+    expect(table.metrics).toMatchObject({
+      registrySnapshotMs: expect.any(Number),
+      manifestRegistryMs: expect.any(Number),
+      startupPlanMs: expect.any(Number),
+      ownerMapsMs: expect.any(Number),
+      totalMs: expect.any(Number),
+      indexPluginCount: 2,
+      manifestPluginCount: 2,
+      startupPluginCount: 1,
+      deferredChannelPluginCount: 0,
+    });
     expect(table.byPluginId.get("telegram")?.id).toBe("telegram");
     expect(table.normalizePluginId("openai-codex")).toBe("openai");
     expect(table.owners.channels.get("telegram")).toEqual(["telegram"]);

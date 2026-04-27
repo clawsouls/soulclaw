@@ -32,6 +32,18 @@ export type PluginLookUpTableStartupPlan = {
   pluginIds: readonly string[];
 };
 
+export type PluginLookUpTableMetrics = {
+  registrySnapshotMs: number;
+  manifestRegistryMs: number;
+  startupPlanMs: number;
+  ownerMapsMs: number;
+  totalMs: number;
+  indexPluginCount: number;
+  manifestPluginCount: number;
+  startupPluginCount: number;
+  deferredChannelPluginCount: number;
+};
+
 export type PluginLookUpTable = {
   key: string;
   index: PluginRegistrySnapshot;
@@ -43,6 +55,7 @@ export type PluginLookUpTable = {
   normalizePluginId: (pluginId: string) => string;
   owners: PluginLookUpTableOwnerMaps;
   startup: PluginLookUpTableStartupPlan;
+  metrics: PluginLookUpTableMetrics;
 };
 
 export type LoadPluginLookUpTableParams = {
@@ -123,13 +136,17 @@ function buildOwnerMaps(plugins: readonly PluginManifestRecord[]): PluginLookUpT
 }
 
 export function loadPluginLookUpTable(params: LoadPluginLookUpTableParams): PluginLookUpTable {
+  const totalStartedAt = performance.now();
+  const registryStartedAt = performance.now();
   const registryResult = loadPluginRegistrySnapshotWithMetadata({
     config: params.config,
     workspaceDir: params.workspaceDir,
     env: params.env,
     ...(params.index ? { index: params.index } : {}),
   });
+  const registrySnapshotMs = performance.now() - registryStartedAt;
   const index = registryResult.snapshot;
+  const manifestStartedAt = performance.now();
   const manifestRegistry = loadPluginManifestRegistryForInstalledIndex({
     index,
     config: params.config,
@@ -137,6 +154,8 @@ export function loadPluginLookUpTable(params: LoadPluginLookUpTableParams): Plug
     env: params.env,
     includeDisabled: true,
   });
+  const manifestRegistryMs = performance.now() - manifestStartedAt;
+  const startupPlanStartedAt = performance.now();
   const channelPluginIds = resolveChannelPluginIdsFromRegistry({ manifestRegistry });
   const configuredDeferredChannelPluginIds = resolveConfiguredDeferredChannelPluginIdsFromRegistry({
     config: params.config,
@@ -153,14 +172,18 @@ export function loadPluginLookUpTable(params: LoadPluginLookUpTableParams): Plug
     index,
     manifestRegistry,
   });
+  const startupPlanMs = performance.now() - startupPlanStartedAt;
   const normalizePluginId = createPluginRegistryIdNormalizer(index, { manifestRegistry });
   const byPluginId = new Map(manifestRegistry.plugins.map((plugin) => [plugin.id, plugin]));
+  const ownerMapsStartedAt = performance.now();
   const owners = buildOwnerMaps(manifestRegistry.plugins);
+  const ownerMapsMs = performance.now() - ownerMapsStartedAt;
   const startup = {
     channelPluginIds,
     configuredDeferredChannelPluginIds,
     pluginIds,
   };
+  const totalMs = performance.now() - totalStartedAt;
 
   return {
     key: hashJson({
@@ -182,5 +205,16 @@ export function loadPluginLookUpTable(params: LoadPluginLookUpTableParams): Plug
     normalizePluginId,
     owners,
     startup,
+    metrics: {
+      registrySnapshotMs,
+      manifestRegistryMs,
+      startupPlanMs,
+      ownerMapsMs,
+      totalMs,
+      indexPluginCount: index.plugins.length,
+      manifestPluginCount: manifestRegistry.plugins.length,
+      startupPluginCount: pluginIds.length,
+      deferredChannelPluginCount: configuredDeferredChannelPluginIds.length,
+    },
   };
 }

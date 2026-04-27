@@ -21,6 +21,17 @@ const resolveBundledRuntimeDependencyPackageInstallRoot = vi.hoisted(() =>
   vi.fn((_packageRoot: string, _params: unknown) => "/runtime"),
 );
 const pluginManifestRegistry = vi.hoisted(() => ({ plugins: [], diagnostics: [] }));
+const pluginLookUpTableMetrics = vi.hoisted(() => ({
+  registrySnapshotMs: 0,
+  manifestRegistryMs: 0,
+  startupPlanMs: 0,
+  ownerMapsMs: 0,
+  totalMs: 0,
+  indexPluginCount: 0,
+  manifestPluginCount: 0,
+  startupPluginCount: 1,
+  deferredChannelPluginCount: 0,
+}));
 const loadPluginLookUpTable = vi.hoisted(() =>
   vi.fn((_params: unknown) => ({
     manifestRegistry: pluginManifestRegistry,
@@ -28,6 +39,7 @@ const loadPluginLookUpTable = vi.hoisted(() =>
       configuredDeferredChannelPluginIds: [],
       pluginIds: ["telegram"],
     },
+    metrics: pluginLookUpTableMetrics,
   })),
 );
 const resolveOpenClawPackageRootSync = vi.hoisted(() => vi.fn((_params: unknown) => "/package"));
@@ -124,6 +136,7 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
         configuredDeferredChannelPluginIds: [],
         pluginIds: ["telegram"],
       },
+      metrics: pluginLookUpTableMetrics,
     });
     resolveOpenClawPackageRootSync.mockClear().mockReturnValue("/package");
     runChannelPluginStartupMaintenance.mockClear();
