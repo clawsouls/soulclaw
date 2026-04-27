@@ -56,6 +56,7 @@ vi.mock("../config/config.js", () => ({
   applyConfigOverrides: vi.fn((config: OpenClawConfig) => config),
   isNixMode: false,
   readConfigFileSnapshot: vi.fn(),
+  readConfigFileSnapshotWithPluginMetadata: vi.fn(),
   recoverConfigFromLastKnownGood: vi.fn(),
   recoverConfigFromJsonRootSuffix: vi.fn(),
   isPluginLocalInvalidConfigSnapshot: vi.fn((snapshot: ConfigFileSnapshot) => {
@@ -128,6 +129,9 @@ describe("gateway startup config recovery", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(configIo.readConfigFileSnapshotWithPluginMetadata).mockImplementation(async () => ({
+      snapshot: await vi.mocked(configIo.readConfigFileSnapshot)(),
+    }));
   });
 
   it("runs startup plugin auto-enable against source config without persisting runtime defaults", async () => {
@@ -172,9 +176,11 @@ describe("gateway startup config recovery", () => {
       resolved: sourceConfig,
       runtimeConfig,
       config: runtimeConfig,
-      pluginMetadataSnapshot,
     } satisfies ConfigFileSnapshot;
-    vi.mocked(configIo.readConfigFileSnapshot).mockResolvedValueOnce(snapshot);
+    vi.mocked(configIo.readConfigFileSnapshotWithPluginMetadata).mockResolvedValueOnce({
+      snapshot,
+      pluginMetadataSnapshot,
+    });
     const log = { info: vi.fn(), warn: vi.fn() };
 
     await expect(
@@ -185,9 +191,10 @@ describe("gateway startup config recovery", () => {
     ).resolves.toEqual({
       snapshot,
       wroteConfig: false,
+      pluginMetadataSnapshot,
     });
 
-    expect(configIo.readConfigFileSnapshot).toHaveBeenCalledTimes(1);
+    expect(configIo.readConfigFileSnapshotWithPluginMetadata).toHaveBeenCalledTimes(1);
     expect(applyPluginAutoEnable).toHaveBeenCalledWith({
       config: sourceConfig,
       env: process.env,
