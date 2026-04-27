@@ -112,8 +112,20 @@ vi.mock("./embeddings.js", () => {
   };
 });
 
-describe("memory index", () => {
+describe("memory embedding provider registration", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    clearRegistry();
+  });
+
   it("registers the builtin local embedding provider", () => {
+    clearRegistry();
+    registerBuiltInMemoryEmbeddingProviders({ registerMemoryEmbeddingProvider: registerAdapter });
+
     const adapter = listRegisteredAdapters().find((entry) => entry.id === "local");
 
     expect(adapter).toBeDefined();
@@ -124,7 +136,9 @@ describe("memory index", () => {
       }),
     );
   });
+});
 
+describe("memory index", () => {
   let fixtureRoot = "";
   let workspaceDir = "";
   let memoryDir = "";
@@ -149,12 +163,14 @@ describe("memory index", () => {
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     await closeAllMemorySearchManagers();
     clearRegistry();
     managersForCleanup.clear();
   });
 
   beforeEach(async () => {
+    vi.useRealTimers();
     // Perf: most suites don't need atomic swap behavior for full reindexes.
     // Keep atomic reindex tests on the safe path.
     vi.stubEnv("OPENCLAW_TEST_MEMORY_UNSAFE_REINDEX", "1");
