@@ -1559,29 +1559,12 @@ async function ensureDevUpdateGitInstall(params) {
 
 async function runOnboardWithInstalledCli(params) {
   await withAllocatedGatewayPort(params.lane, async () => {
-    const args = [
-      "onboard",
-      "--non-interactive",
-      "--mode",
-      "local",
-      "--auth-choice",
-      params.providerConfig.authChoice,
-      "--secret-input-mode",
-      "ref",
-      "--gateway-port",
-      String(params.lane.gatewayPort),
-      "--gateway-bind",
-      "loopback",
-      "--skip-skills",
-      "--accept-risk",
-      "--json",
-    ];
-    if (params.installDaemon) {
-      args.push("--install-daemon");
-    }
-    if (!params.installDaemon || shouldSkipInstallerDaemonHealthCheck()) {
-      args.push("--skip-health");
-    }
+    const args = buildReleaseOnboardArgs({
+      authChoice: params.providerConfig.authChoice,
+      gatewayPort: params.lane.gatewayPort,
+      installDaemon: params.installDaemon,
+      skipHealth: !params.installDaemon || shouldSkipInstallerDaemonHealthCheck(),
+    });
     await runInstalledCli({
       cliPath: params.cliPath,
       args,
@@ -1591,6 +1574,34 @@ async function runOnboardWithInstalledCli(params) {
       timeoutMs: 10 * 60 * 1000,
     });
   });
+}
+
+export function buildReleaseOnboardArgs(params) {
+  const args = [
+    "onboard",
+    "--non-interactive",
+    "--mode",
+    "local",
+    "--auth-choice",
+    params.authChoice,
+    "--secret-input-mode",
+    "ref",
+    "--gateway-port",
+    String(params.gatewayPort),
+    "--gateway-bind",
+    "loopback",
+    "--skip-skills",
+    "--skip-bootstrap",
+    "--accept-risk",
+    "--json",
+  ];
+  if (params.installDaemon) {
+    args.push("--install-daemon");
+  }
+  if (params.skipHealth) {
+    args.push("--skip-health");
+  }
+  return args;
 }
 
 async function startManualGatewayFromInstalledCli(params) {
@@ -2360,24 +2371,11 @@ async function runOnboard(params) {
     await runOpenClaw({
       lane: params.lane,
       env: params.env,
-      args: [
-        "onboard",
-        "--non-interactive",
-        "--mode",
-        "local",
-        "--auth-choice",
-        params.providerConfig.authChoice,
-        "--secret-input-mode",
-        "ref",
-        "--gateway-port",
-        String(params.lane.gatewayPort),
-        "--gateway-bind",
-        "loopback",
-        "--skip-skills",
-        "--skip-health",
-        "--accept-risk",
-        "--json",
-      ],
+      args: buildReleaseOnboardArgs({
+        authChoice: params.providerConfig.authChoice,
+        gatewayPort: params.lane.gatewayPort,
+        skipHealth: true,
+      }),
       logPath: params.logPath,
       timeoutMs: 10 * 60 * 1000,
     });
