@@ -859,6 +859,101 @@ describe("scanBundledPluginRuntimeDeps config policy", () => {
       readFileSyncSpy.mock.calls.filter((call) => path.resolve(String(call[0])) === manifestPath),
     ).toHaveLength(1);
   });
+
+  it("reports missing mirrored core runtime deps for doctor repair", () => {
+    const packageRoot = makeTempDir();
+    const stageDir = makeTempDir();
+    fs.writeFileSync(
+      path.join(packageRoot, "package.json"),
+      JSON.stringify({
+        name: "openclaw",
+        version: "2026.4.25",
+        dependencies: { tslog: "^4.10.2" },
+      }),
+    );
+    writeBundledPluginPackage({
+      packageRoot,
+      pluginId: "discord",
+      deps: { "discord-runtime": "1.0.0" },
+      enabledByDefault: true,
+    });
+
+    const result = scanBundledPluginRuntimeDeps({
+      packageRoot,
+      config: {},
+      env: { OPENCLAW_PLUGIN_STAGE_DIR: stageDir },
+    });
+
+    expect(result.deps.map((dep) => `${dep.name}@${dep.version}`)).toEqual([
+      "discord-runtime@1.0.0",
+      "tslog@^4.10.2",
+    ]);
+    expect(result.missing.map((dep) => `${dep.name}@${dep.version}`)).toEqual([
+      "discord-runtime@1.0.0",
+      "tslog@^4.10.2",
+    ]);
+  });
+
+  it("reports missing mirrored core runtime deps for startup plugins without own deps", () => {
+    const packageRoot = makeTempDir();
+    const stageDir = makeTempDir();
+    fs.writeFileSync(
+      path.join(packageRoot, "package.json"),
+      JSON.stringify({
+        name: "openclaw",
+        version: "2026.4.25",
+        dependencies: { tslog: "^4.10.2" },
+      }),
+    );
+    writeBundledPluginPackage({
+      packageRoot,
+      pluginId: "slack",
+      deps: {},
+      channels: ["slack"],
+    });
+
+    const result = scanBundledPluginRuntimeDeps({
+      packageRoot,
+      selectedPluginIds: ["slack"],
+      config: {
+        channels: { slack: { botToken: "xoxb-token" } },
+      },
+      env: { OPENCLAW_PLUGIN_STAGE_DIR: stageDir },
+    });
+
+    expect(result.deps.map((dep) => `${dep.name}@${dep.version}`)).toEqual(["tslog@^4.10.2"]);
+    expect(result.deps[0]?.pluginIds).toEqual(["openclaw-core"]);
+    expect(result.missing.map((dep) => `${dep.name}@${dep.version}`)).toEqual(["tslog@^4.10.2"]);
+  });
+
+  it("deduplicates mirrored core runtime deps already declared by a plugin", () => {
+    const packageRoot = makeTempDir();
+    const stageDir = makeTempDir();
+    fs.writeFileSync(
+      path.join(packageRoot, "package.json"),
+      JSON.stringify({
+        name: "openclaw",
+        version: "2026.4.25",
+        dependencies: { tslog: "^4.10.2" },
+      }),
+    );
+    writeBundledPluginPackage({
+      packageRoot,
+      pluginId: "logger-plugin",
+      deps: { tslog: "^4.10.2" },
+      enabledByDefault: true,
+    });
+
+    const result = scanBundledPluginRuntimeDeps({
+      packageRoot,
+      config: {},
+      env: { OPENCLAW_PLUGIN_STAGE_DIR: stageDir },
+    });
+
+    expect(result.deps.map((dep) => `${dep.name}@${dep.version}`)).toEqual(["tslog@^4.10.2"]);
+    expect(result.deps[0]?.pluginIds).toEqual(["logger-plugin", "openclaw-core"]);
+    expect(result.missing.map((dep) => `${dep.name}@${dep.version}`)).toEqual(["tslog@^4.10.2"]);
+  });
 });
 
 describe("ensureBundledPluginRuntimeDeps", () => {
@@ -955,6 +1050,47 @@ describe("ensureBundledPluginRuntimeDeps", () => {
       },
     ]);
     expect(installRoot).not.toBe(pluginRoot);
+  });
+
+  it("installs mirrored core logger deps even when the plugin has no external deps", () => {
+    const packageRoot = makeTempDir();
+    const stageDir = makeTempDir();
+    fs.writeFileSync(
+      path.join(packageRoot, "package.json"),
+      JSON.stringify({
+        name: "openclaw",
+        version: "2026.4.25",
+        dependencies: { tslog: "^4.10.2" },
+      }),
+    );
+    const pluginRoot = path.join(packageRoot, "dist", "extensions", "slack");
+    fs.mkdirSync(pluginRoot, { recursive: true });
+    fs.writeFileSync(path.join(pluginRoot, "package.json"), JSON.stringify({ dependencies: {} }));
+
+    const calls: BundledRuntimeDepsInstallParams[] = [];
+    const result = ensureBundledPluginRuntimeDeps({
+      env: { OPENCLAW_PLUGIN_STAGE_DIR: stageDir },
+      installDeps: (params) => {
+        calls.push(params);
+      },
+      pluginId: "slack",
+      pluginRoot,
+    });
+
+    const installRoot = resolveBundledRuntimeDependencyInstallRoot(pluginRoot, {
+      env: { OPENCLAW_PLUGIN_STAGE_DIR: stageDir },
+    });
+    expect(result).toEqual({
+      installedSpecs: ["tslog@^4.10.2"],
+      retainSpecs: ["tslog@^4.10.2"],
+    });
+    expect(calls).toEqual([
+      {
+        installRoot,
+        missingSpecs: ["tslog@^4.10.2"],
+        installSpecs: ["tslog@^4.10.2"],
+      },
+    ]);
   });
 
   it("uses external staging when a packaged plugin declares workspace:* deps", () => {
