@@ -149,6 +149,10 @@ const RESERVED_ADMIN_PLUGIN_METHOD = "config.plugin.inspect";
 const RESERVED_ADMIN_SCOPE_WARNING =
   "gateway method scope coerced to operator.admin for reserved core namespace";
 
+async function waitForFilesystemTimestampTick(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 50));
+}
+
 function writeBundledPlugin(params: {
   id: string;
   body?: string;
@@ -2021,7 +2025,7 @@ module.exports = {
     expect(registry.plugins.find((entry) => entry.id === "discord")?.status).toBe("loaded");
   });
 
-  it("loads dist-runtime wrappers from an external stage dir", () => {
+  it("loads dist-runtime wrappers from an external stage dir", async () => {
     const packageRoot = makeTempDir();
     const stageDir = makeTempDir();
     const bundledDir = path.join(packageRoot, "dist-runtime", "extensions");
@@ -2143,6 +2147,40 @@ module.exports = {
     expect(fs.lstatSync(path.join(actualInstallRoot, "dist", "pw-ai.js")).isSymbolicLink()).toBe(
       false,
     );
+
+    const runtimeMirrorEntry = path.join(
+      actualInstallRoot,
+      "dist-runtime",
+      "extensions",
+      "acpx",
+      "index.js",
+    );
+    const canonicalMirrorEntry = path.join(
+      actualInstallRoot,
+      "dist",
+      "extensions",
+      "acpx",
+      "index.js",
+    );
+    const runtimeMirrorStat = fs.statSync(runtimeMirrorEntry);
+    const canonicalMirrorStat = fs.statSync(canonicalMirrorEntry);
+
+    await waitForFilesystemTimestampTick();
+
+    const reloadedRegistry = loadOpenClawPlugins({
+      cache: false,
+      config: {
+        plugins: {
+          enabled: true,
+        },
+      },
+    });
+
+    const reloadedRecord = reloadedRegistry.plugins.find((entry) => entry.id === "acpx");
+    expect(reloadedRecord?.error).toBeUndefined();
+    expect(reloadedRecord?.status).toBe("loaded");
+    expect(fs.statSync(runtimeMirrorEntry).mtimeMs).toBe(runtimeMirrorStat.mtimeMs);
+    expect(fs.statSync(canonicalMirrorEntry).mtimeMs).toBe(canonicalMirrorStat.mtimeMs);
   });
 
   it("loads native ESM deps from a layered baseline stage dir", () => {

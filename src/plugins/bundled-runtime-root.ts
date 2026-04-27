@@ -9,6 +9,10 @@ import {
   shouldMaterializeBundledRuntimeMirrorDistFile,
   withBundledRuntimeDepsFilesystemLock,
 } from "./bundled-runtime-deps.js";
+import {
+  copyBundledPluginRuntimeRoot,
+  refreshBundledPluginRuntimeMirrorRoot,
+} from "./bundled-runtime-mirror.js";
 
 const bundledRuntimeDepsRetainSpecsByInstallRoot = new Map<string, readonly string[]>();
 const BUNDLED_RUNTIME_MIRROR_LOCK_DIR = ".openclaw-runtime-mirror.lock";
@@ -117,15 +121,12 @@ function mirrorBundledPluginRuntimeRoot(params: {
       if (path.resolve(mirrorRoot) === path.resolve(params.pluginRoot)) {
         return mirrorRoot;
       }
-      const tempDir = fs.mkdtempSync(path.join(mirrorParent, `.plugin-${params.pluginId}-`));
-      const stagedRoot = path.join(tempDir, "plugin");
-      try {
-        copyBundledPluginRuntimeRoot(params.pluginRoot, stagedRoot);
-        fs.rmSync(mirrorRoot, { recursive: true, force: true });
-        fs.renameSync(stagedRoot, mirrorRoot);
-      } finally {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-      }
+      refreshBundledPluginRuntimeMirrorRoot({
+        pluginId: params.pluginId,
+        sourceRoot: params.pluginRoot,
+        targetRoot: mirrorRoot,
+        tempDirParent: mirrorParent,
+      });
       return mirrorRoot;
     },
   );
@@ -180,38 +181,6 @@ function ensureBundledRuntimeDistPackageJson(mirrorDistRoot: string): void {
     return;
   }
   writeRuntimeJsonFile(packageJsonPath, { type: "module" });
-}
-
-function copyBundledPluginRuntimeRoot(sourceRoot: string, targetRoot: string): void {
-  if (path.resolve(sourceRoot) === path.resolve(targetRoot)) {
-    return;
-  }
-  fs.mkdirSync(targetRoot, { recursive: true, mode: 0o755 });
-  for (const entry of fs.readdirSync(sourceRoot, { withFileTypes: true })) {
-    if (entry.name === "node_modules") {
-      continue;
-    }
-    const sourcePath = path.join(sourceRoot, entry.name);
-    const targetPath = path.join(targetRoot, entry.name);
-    if (entry.isDirectory()) {
-      copyBundledPluginRuntimeRoot(sourcePath, targetPath);
-      continue;
-    }
-    if (entry.isSymbolicLink()) {
-      fs.symlinkSync(fs.readlinkSync(sourcePath), targetPath);
-      continue;
-    }
-    if (!entry.isFile()) {
-      continue;
-    }
-    fs.copyFileSync(sourcePath, targetPath);
-    try {
-      const sourceMode = fs.statSync(sourcePath).mode;
-      fs.chmodSync(targetPath, sourceMode | 0o600);
-    } catch {
-      // Readable copied files are enough for plugin loading.
-    }
-  }
 }
 
 function writeRuntimeJsonFile(targetPath: string, value: unknown): void {

@@ -19,6 +19,10 @@ afterEach(() => {
   }
 });
 
+async function waitForFilesystemTimestampTick(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 50));
+}
+
 describe("prepareBundledPluginRuntimeRoot", () => {
   it("materializes root JavaScript chunks in external mirrors", () => {
     const packageRoot = makeTempRoot();
@@ -166,5 +170,123 @@ describe("prepareBundledPluginRuntimeRoot", () => {
     expect(prepared.pluginRoot).toBe(pluginRoot);
     expect(prepared.modulePath).toBe(path.join(pluginRoot, "index.js"));
     expect(fs.readFileSync(distChunk, "utf8")).toContain("same-root");
+  });
+
+  it("reuses unchanged external runtime mirrors from the original plugin root", async () => {
+    const packageRoot = makeTempRoot();
+    const stageDir = makeTempRoot();
+    const pluginRoot = path.join(packageRoot, "dist", "extensions", "whatsapp");
+    const env = { ...process.env, OPENCLAW_PLUGIN_STAGE_DIR: stageDir };
+    fs.mkdirSync(pluginRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(packageRoot, "package.json"),
+      JSON.stringify({ name: "openclaw", version: "2026.4.27", type: "module" }),
+      "utf8",
+    );
+    fs.writeFileSync(path.join(pluginRoot, "index.js"), "export const marker = 'v1';\n", "utf8");
+    fs.writeFileSync(
+      path.join(pluginRoot, "package.json"),
+      JSON.stringify(
+        {
+          name: "@openclaw/whatsapp",
+          version: "1.0.0",
+          type: "module",
+          dependencies: { "whatsapp-runtime": "1.0.0" },
+          openclaw: { extensions: ["./index.js"] },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    const installRoot = resolveBundledRuntimeDependencyInstallRoot(pluginRoot, { env });
+    fs.mkdirSync(path.join(installRoot, "node_modules", "whatsapp-runtime"), { recursive: true });
+    fs.writeFileSync(
+      path.join(installRoot, "node_modules", "whatsapp-runtime", "package.json"),
+      JSON.stringify({ name: "whatsapp-runtime", version: "1.0.0", type: "module" }),
+      "utf8",
+    );
+
+    const prepared = prepareBundledPluginRuntimeRoot({
+      pluginId: "whatsapp",
+      pluginRoot,
+      modulePath: path.join(pluginRoot, "index.js"),
+      env,
+    });
+    const mirrorEntry = path.join(prepared.pluginRoot, "index.js");
+    const initialStat = fs.statSync(mirrorEntry);
+
+    await waitForFilesystemTimestampTick();
+
+    const preparedAgain = prepareBundledPluginRuntimeRoot({
+      pluginId: "whatsapp",
+      pluginRoot,
+      modulePath: path.join(pluginRoot, "index.js"),
+      env,
+    });
+    const reusedStat = fs.statSync(mirrorEntry);
+
+    expect(preparedAgain).toEqual(prepared);
+    expect(reusedStat.mtimeMs).toBe(initialStat.mtimeMs);
+    expect(fs.readFileSync(mirrorEntry, "utf8")).toContain("v1");
+  });
+
+  it("refreshes external runtime mirrors when source files change", async () => {
+    const packageRoot = makeTempRoot();
+    const stageDir = makeTempRoot();
+    const pluginRoot = path.join(packageRoot, "dist", "extensions", "whatsapp");
+    const env = { ...process.env, OPENCLAW_PLUGIN_STAGE_DIR: stageDir };
+    fs.mkdirSync(pluginRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(packageRoot, "package.json"),
+      JSON.stringify({ name: "openclaw", version: "2026.4.27", type: "module" }),
+      "utf8",
+    );
+    fs.writeFileSync(path.join(pluginRoot, "index.js"), "export const marker = 'v1';\n", "utf8");
+    fs.writeFileSync(
+      path.join(pluginRoot, "package.json"),
+      JSON.stringify(
+        {
+          name: "@openclaw/whatsapp",
+          version: "1.0.0",
+          type: "module",
+          dependencies: { "whatsapp-runtime": "1.0.0" },
+          openclaw: { extensions: ["./index.js"] },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    const installRoot = resolveBundledRuntimeDependencyInstallRoot(pluginRoot, { env });
+    fs.mkdirSync(path.join(installRoot, "node_modules", "whatsapp-runtime"), { recursive: true });
+    fs.writeFileSync(
+      path.join(installRoot, "node_modules", "whatsapp-runtime", "package.json"),
+      JSON.stringify({ name: "whatsapp-runtime", version: "1.0.0", type: "module" }),
+      "utf8",
+    );
+
+    const prepared = prepareBundledPluginRuntimeRoot({
+      pluginId: "whatsapp",
+      pluginRoot,
+      modulePath: path.join(pluginRoot, "index.js"),
+      env,
+    });
+    const mirrorEntry = path.join(prepared.pluginRoot, "index.js");
+    const initialStat = fs.statSync(mirrorEntry);
+
+    await waitForFilesystemTimestampTick();
+    fs.writeFileSync(path.join(pluginRoot, "index.js"), "export const marker = 'v2';\n", "utf8");
+
+    prepareBundledPluginRuntimeRoot({
+      pluginId: "whatsapp",
+      pluginRoot,
+      modulePath: path.join(pluginRoot, "index.js"),
+      env,
+    });
+    const refreshedStat = fs.statSync(mirrorEntry);
+
+    expect(refreshedStat.mtimeMs).toBeGreaterThan(initialStat.mtimeMs);
+    expect(fs.readFileSync(mirrorEntry, "utf8")).toContain("v2");
   });
 });
