@@ -60,6 +60,7 @@ describe("package Telegram live Docker E2E", () => {
 
     expect(script).toContain('ln -sfnT "$openclaw_package_dir/dist" /app/dist');
     expect(script).toContain('cp "$openclaw_package_dir/package.json" /app/package.json');
+    expect(script).toContain('ln -sfnT /app/extensions "$openclaw_package_dir/extensions"');
     expect(script).toContain('"/app/node_modules/openclaw/package.json"');
     expect(script).toContain('pkg.exports["./plugin-sdk/qa-channel"]');
     expect(script).toContain('"./extensions/qa-channel/api.ts"');

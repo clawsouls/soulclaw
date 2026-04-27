@@ -230,6 +230,8 @@ ln -sfnT "$openclaw_package_dir" /app/node_modules/openclaw
 rm -rf /app/dist
 ln -sfnT "$openclaw_package_dir/dist" /app/dist
 cp "$openclaw_package_dir/package.json" /app/package.json
+rm -rf "$openclaw_package_dir/extensions"
+ln -sfnT /app/extensions "$openclaw_package_dir/extensions"
 node --input-type=module <<'NODE'
 import fs from "node:fs";
 
