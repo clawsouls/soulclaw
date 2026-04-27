@@ -22,6 +22,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Agents/reasoning: recover fully wrapped unclosed `<think>` replies that would otherwise sanitize to empty text while keeping strict stripping for closed reasoning blocks and unclosed tails after visible text. Fixes #37696; supersedes #51915. Thanks @druide67 and @okuyam2y.
+- Control UI/Gateway: bind WebChat handshakes to their active socket and reject post-close server registrations, so aborted connects no longer leave zombie clients or misleading duplicate WebSocket connection logs. Fixes #72753. Thanks @LumenFromTheFuture.
 - Plugins/Windows: normalize Windows absolute paths before handing bundled plugin modules to Jiti, so Feishu/Lark message sending no longer fails with unsupported `c:` ESM loader URLs. Fixes #72783. Thanks @jackychen-png.
 - CLI/doctor: run bundled plugin runtime-dependency repairs through the async npm installer with spinner/line progress and heartbeat updates, so long `openclaw doctor --fix` installs no longer look hung in TTY or piped output. Fixes #72775. Thanks @dfpalhano.
 - Feishu/Windows: normalize bundled channel sidecar loads before Jiti evaluates them, so Feishu outbound sends no longer fail with raw `C:` ESM loader errors on Windows. Fixes #72783. Thanks @jackychen-png.

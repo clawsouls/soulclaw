@@ -201,7 +201,7 @@ export function attachGatewayWsMessageHandler(params: {
   isClosed: () => boolean;
   clearHandshakeTimer: () => void;
   getClient: () => GatewayWsClient | null;
-  setClient: (next: GatewayWsClient) => void;
+  setClient: (next: GatewayWsClient) => boolean;
   setHandshakeState: (state: "pending" | "connected" | "failed") => void;
   setCloseCause: (cause: string, meta?: Record<string, unknown>) => void;
   setLastFrameMeta: (meta: { type?: string; method?: string; id?: string }) => void;
@@ -1266,39 +1266,12 @@ export function attachGatewayWsMessageHandler(params: {
         const instanceId = connectParams.client.instanceId;
         const presenceKey = shouldTrackPresence ? (device?.id ?? instanceId ?? connId) : undefined;
 
-        logWs("in", "connect", {
-          connId,
-          client: connectParams.client.id,
-          clientDisplayName: connectParams.client.displayName,
-          version: connectParams.client.version,
-          mode: connectParams.client.mode,
-          clientId,
-          platform: connectParams.client.platform,
-          auth: authMethod,
-        });
-
-        if (isWebchatConnect(connectParams)) {
-          logWsControl.info(
-            `webchat connected conn=${connId} remote=${remoteAddr ?? "?"} client=${clientLabel} ${connectParams.client.mode} v${connectParams.client.version}`,
-          );
-        }
-
-        if (presenceKey) {
-          upsertPresence(presenceKey, {
-            host: connectParams.client.displayName ?? connectParams.client.id ?? os.hostname(),
-            ip: isLocalClient ? undefined : reportedClientIp,
-            version: connectParams.client.version,
-            platform: connectParams.client.platform,
-            deviceFamily: connectParams.client.deviceFamily,
-            modelIdentifier: connectParams.client.modelIdentifier,
-            mode: connectParams.client.mode,
-            deviceId: device?.id,
-            roles: [role],
-            scopes,
-            instanceId: device?.id ?? instanceId,
-            reason: "connect",
+        if (isClosed()) {
+          setCloseCause("connect-aborted-before-register", {
+            ...clientMeta,
+            auth: authMethod,
           });
-          incrementPresenceVersion();
+          return;
         }
 
         const snapshot = buildGatewaySnapshot({
@@ -1367,8 +1340,48 @@ export function attachGatewayWsMessageHandler(params: {
           canvasCapabilityExpiresAtMs,
         };
         setSocketMaxPayload(socket, MAX_PAYLOAD_BYTES);
-        setClient(nextClient);
+        if (!setClient(nextClient)) {
+          setCloseCause("connect-aborted-before-register", {
+            ...clientMeta,
+            auth: authMethod,
+          });
+          return;
+        }
         setHandshakeState("connected");
+        logWs("in", "connect", {
+          connId,
+          client: connectParams.client.id,
+          clientDisplayName: connectParams.client.displayName,
+          version: connectParams.client.version,
+          mode: connectParams.client.mode,
+          clientId,
+          platform: connectParams.client.platform,
+          auth: authMethod,
+        });
+
+        if (isWebchatConnect(connectParams)) {
+          logWsControl.info(
+            `webchat connected conn=${connId} remote=${remoteAddr ?? "?"} client=${clientLabel} ${connectParams.client.mode} v${connectParams.client.version}`,
+          );
+        }
+
+        if (presenceKey) {
+          upsertPresence(presenceKey, {
+            host: connectParams.client.displayName ?? connectParams.client.id ?? os.hostname(),
+            ip: isLocalClient ? undefined : reportedClientIp,
+            version: connectParams.client.version,
+            platform: connectParams.client.platform,
+            deviceFamily: connectParams.client.deviceFamily,
+            modelIdentifier: connectParams.client.modelIdentifier,
+            mode: connectParams.client.mode,
+            deviceId: device?.id,
+            roles: [role],
+            scopes,
+            instanceId: device?.id ?? instanceId,
+            reason: "connect",
+          });
+          incrementPresenceVersion();
+        }
         if (role === "node") {
           const context = buildRequestContext();
           const nodeSession = context.nodeRegistry.register(nextClient, {
