@@ -78,8 +78,10 @@ export function inferUpdateFailureHints(result: UpdateRunResult): string[] {
 
   const stderr = normalizeLowercaseStringOrEmpty(failedStep.stderrTail);
   const hints: string[] = [];
+  const isGlobalPackageInstallStep =
+    failedStep.name.startsWith("global update") || failedStep.name.startsWith("global install");
 
-  if (failedStep.name.startsWith("global update") && stderr.includes("eacces")) {
+  if (isGlobalPackageInstallStep && stderr.includes("eacces")) {
     hints.push(
       "Detected permission failure (EACCES). Re-run with a writable global prefix or sudo (for system-managed Node installs).",
     );

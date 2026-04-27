@@ -66,6 +66,7 @@ describe("runGlobalPackageUpdateSteps", () => {
           if (!stagePrefix) {
             throw new Error("missing staged prefix");
           }
+          expect(path.dirname(stagePrefix)).toBe(globalRoot);
           await writePackageRoot(
             path.join(stagePrefix, "lib", "node_modules", "openclaw"),
             "2.0.0",

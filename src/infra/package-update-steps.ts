@@ -62,7 +62,8 @@ async function createStagedNpmInstall(
   if (!targetLayout) {
     return null;
   }
-  const prefix = await fs.mkdtemp(path.join(targetLayout.prefix, ".openclaw-update-stage-"));
+  await fs.mkdir(targetLayout.globalRoot, { recursive: true });
+  const prefix = await fs.mkdtemp(path.join(targetLayout.globalRoot, ".openclaw-update-stage-"));
   const layout = resolveNpmGlobalPrefixLayoutFromPrefix(prefix);
   return {
     prefix,
