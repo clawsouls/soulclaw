@@ -344,13 +344,13 @@ export const th: TranslationMap = {
       off: "ปิดการฝัน",
     },
     restartConfirmation: {
-      title: "Restart Gateway to Apply Change",
-      subtitle: "Changing Dreaming mode restarts the gateway.",
+      title: "รีสตาร์ท Gateway เพื่อใช้การเปลี่ยนแปลง",
+      subtitle: "การเปลี่ยนโหมด Dreaming จะรีสตาร์ท Gateway",
       warning:
-        "This action will restart the Gateway and may temporarily interrupt chats, automations, and connected channels.",
-      confirm: "Confirm Restart",
-      restarting: "Restarting…",
-      failed: "Could not apply change. Check your connection and try again.",
+        "การดำเนินการนี้จะรีสตาร์ท Gateway และอาจทำให้แชต ระบบอัตโนมัติ และช่องทางที่เชื่อมต่อหยุดชะงักชั่วคราว",
+      confirm: "ยืนยันการรีสตาร์ท",
+      restarting: "กำลังรีสตาร์ท…",
+      failed: "ไม่สามารถใช้การเปลี่ยนแปลงได้ ตรวจสอบการเชื่อมต่อของคุณแล้วลองอีกครั้ง",
     },
     status: {
       active: "การฝันกำลังทำงาน",

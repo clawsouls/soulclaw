@@ -1,18 +1,11 @@
 {
-  "fallbackKeys": [
-    "dreaming.restartConfirmation.confirm",
-    "dreaming.restartConfirmation.failed",
-    "dreaming.restartConfirmation.restarting",
-    "dreaming.restartConfirmation.subtitle",
-    "dreaming.restartConfirmation.title",
-    "dreaming.restartConfirmation.warning"
-  ],
-  "generatedAt": "2026-04-27T07:37:23.707Z",
+  "fallbackKeys": [],
+  "generatedAt": "2026-04-27T08:12:09.551Z",
   "locale": "th",
   "model": "gpt-5.5",
   "provider": "openai",
   "sourceHash": "802e1bbb6a0e64584ec06cab4c61b65808c23669206a3a216646cf1a558ba657",
   "totalKeys": 758,
-  "translatedKeys": 752,
+  "translatedKeys": 758,
   "workflow": 1
 }
