@@ -61,6 +61,8 @@ const BUNDLED_RUNTIME_DEPS_LOCK_WAIT_MS = 100;
 const BUNDLED_RUNTIME_DEPS_LOCK_TIMEOUT_MS = 5 * 60_000;
 const BUNDLED_RUNTIME_DEPS_LOCK_STALE_MS = 10 * 60_000;
 const BUNDLED_RUNTIME_DEPS_OWNERLESS_LOCK_STALE_MS = 30_000;
+const BUNDLED_RUNTIME_MIRROR_MATERIALIZED_EXTENSIONS = new Set([".cjs", ".js", ".mjs"]);
+const BUNDLED_RUNTIME_MIRROR_PLUGIN_REGION_RE = /(?:^|\n)\/\/#region extensions\/[^/\s]+(?:\/|$)/u;
 
 const registeredBundledRuntimeDepNodePaths = new Set<string>();
 
@@ -69,6 +71,37 @@ export type BundledRuntimeDepsNpmRunner = {
   args: string[];
   env?: NodeJS.ProcessEnv;
 };
+
+export function shouldMaterializeBundledRuntimeMirrorDistFile(sourcePath: string): boolean {
+  if (!BUNDLED_RUNTIME_MIRROR_MATERIALIZED_EXTENSIONS.has(path.extname(sourcePath))) {
+    return false;
+  }
+  try {
+    return BUNDLED_RUNTIME_MIRROR_PLUGIN_REGION_RE.test(fs.readFileSync(sourcePath, "utf8"));
+  } catch {
+    return false;
+  }
+}
+
+export function materializeBundledRuntimeMirrorDistFile(
+  sourcePath: string,
+  targetPath: string,
+): void {
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true, mode: 0o755 });
+  fs.rmSync(targetPath, { recursive: true, force: true });
+  try {
+    fs.linkSync(sourcePath, targetPath);
+    return;
+  } catch {
+    fs.copyFileSync(sourcePath, targetPath);
+  }
+  try {
+    const sourceMode = fs.statSync(sourcePath).mode;
+    fs.chmodSync(targetPath, sourceMode | 0o600);
+  } catch {
+    // Readable materialized chunks are enough for ESM loading.
+  }
+}
 
 const BUNDLED_RUNTIME_DEP_SEGMENT_RE = /^[a-z0-9][a-z0-9._-]*$/;
 
