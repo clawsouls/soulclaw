@@ -220,7 +220,11 @@ describe("prepareBundledPluginRuntimeRoot", () => {
     );
     fs.writeFileSync(
       path.join(runtimePluginRoot, "index.js"),
-      `export { default } from "../../../dist/extensions/qqbot/index.js";\n`,
+      [
+        "export { default } from ",
+        JSON.stringify("../../../dist/extensions/qqbot/index.js"),
+        ";\n",
+      ].join(""),
       "utf8",
     );
     fs.writeFileSync(

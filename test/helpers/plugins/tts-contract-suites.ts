@@ -3,12 +3,12 @@ import type { ResolvedTtsConfig, SpeechProviderPlugin } from "openclaw/plugin-sd
 import type { OpenClawConfig } from "openclaw/plugin-sdk/testing";
 import {
   createEmptyPluginRegistry,
+  pluginRegistrationContractRegistry,
   setActivePluginRegistry,
   withEnv,
   withEnvAsync,
 } from "openclaw/plugin-sdk/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BUNDLED_PLUGIN_CONTRACT_SNAPSHOTS } from "../../../src/plugins/contracts/inventory/bundled-capability-metadata.js";
 import { resolveWorkspacePackagePublicModuleUrl } from "./public-surface-loader.js";
 
 type TtsRuntimeModule = typeof import("openclaw/plugin-sdk/tts-runtime");
@@ -42,7 +42,7 @@ let sanitizeTtsErrorForLog: TtsRuntimeModule["_test"]["sanitizeTtsErrorForLog"];
 
 const SPEECH_PROVIDER_ENV_KEYS = [
   ...new Set(
-    BUNDLED_PLUGIN_CONTRACT_SNAPSHOTS.flatMap((entry) =>
+    pluginRegistrationContractRegistry.flatMap((entry) =>
       entry.speechProviderIds.flatMap((providerId) => entry.providerAuthEnvVars[providerId] ?? []),
     ),
   ),
