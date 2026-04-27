@@ -620,6 +620,7 @@ describe("modelsListCommand forward-compat", () => {
         providerFilter: undefined,
       });
       expect(mocks.loadProviderCatalogModelsForList).not.toHaveBeenCalled();
+      expect(mocks.resolveModelWithRegistry).not.toHaveBeenCalled();
       expect(lastPrintedRows<{ key: string }>()).toEqual([
         expect.objectContaining({
           key: "openai-codex/gpt-5.4",

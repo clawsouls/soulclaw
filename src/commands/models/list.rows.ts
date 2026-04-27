@@ -266,11 +266,13 @@ export async function appendDiscoveredRows(params: {
   models: Model<Api>[];
   modelRegistry?: ModelRegistry;
   context: RowBuilderContext;
+  resolveWithRegistry?: boolean;
 }): Promise<Set<string>> {
   const seenKeys = new Set<string>();
-  const modelResolver = params.modelRegistry
-    ? (await loadModelResolverModule()).resolveModelWithRegistry
-    : undefined;
+  const modelResolver =
+    params.modelRegistry && params.resolveWithRegistry !== false
+      ? (await loadModelResolverModule()).resolveModelWithRegistry
+      : undefined;
   const sorted = [...params.models].toSorted((a, b) => {
     const providerCompare = a.provider.localeCompare(b.provider);
     if (providerCompare !== 0) {

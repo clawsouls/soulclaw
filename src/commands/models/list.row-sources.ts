@@ -81,6 +81,7 @@ export async function appendAllModelRowSources(
     models: params.modelRegistry?.getAll() ?? [],
     modelRegistry: params.modelRegistry,
     context: params.context,
+    resolveWithRegistry: Boolean(params.context.filter.provider),
   });
 
   await appendConfiguredProviderRows({
