@@ -206,7 +206,7 @@ node --input-type=module <<'NODE'
     shasum: record.shasum
   };
   if (JSON.stringify(before) !== JSON.stringify(after)) {
-    throw new Error("plugin install record changed unexpectedly: " + JSON.stringify({ before, after }));
+    throw new Error(\"plugin install record changed unexpectedly: \" + JSON.stringify({ before, after }));
   }
 NODE
 if grep -q 'Downloading @example/lossless-claw' /tmp/plugin-update-output.log; then
