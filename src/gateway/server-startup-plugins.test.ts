@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../config/types.openclaw.js";
 
 const applyPluginAutoEnable = vi.hoisted(() =>
   vi.fn((params: { config: unknown }) => ({
@@ -190,6 +191,59 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
     );
     expect(loadGatewayStartupPlugins.mock.calls[0]?.[0]).not.toHaveProperty(
       "bundledRuntimeDepsInstaller",
+    );
+  });
+
+  it("derives startup activation from source config instead of runtime plugin defaults", async () => {
+    const sourceConfig = {
+      plugins: {
+        allow: ["bench-plugin"],
+      },
+    } as OpenClawConfig;
+    const runtimeConfig = {
+      plugins: {
+        allow: ["bench-plugin"],
+        entries: {
+          "memory-core": {
+            config: {
+              dreaming: {
+                enabled: false,
+              },
+            },
+          },
+        },
+      },
+    } as OpenClawConfig;
+    const log = createLog();
+    const { prepareGatewayPluginBootstrap } = await import("./server-startup-plugins.js");
+
+    await prepareGatewayPluginBootstrap({
+      cfgAtStart: runtimeConfig,
+      activationSourceConfig: sourceConfig,
+      startupRuntimeConfig: runtimeConfig,
+      minimalTestGateway: false,
+      log,
+    });
+
+    expect(applyPluginAutoEnable).toHaveBeenCalledWith({
+      config: sourceConfig,
+      env: process.env,
+    });
+    expect(loadPluginLookUpTable).toHaveBeenCalledWith(
+      expect.objectContaining({
+        activationSourceConfig: sourceConfig,
+        config: expect.objectContaining({
+          plugins: sourceConfig.plugins,
+        }),
+      }),
+    );
+    expect(loadGatewayStartupPlugins).toHaveBeenCalledWith(
+      expect.objectContaining({
+        activationSourceConfig: sourceConfig,
+        cfg: expect.objectContaining({
+          plugins: sourceConfig.plugins,
+        }),
+      }),
     );
   });
 

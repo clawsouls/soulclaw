@@ -351,7 +351,7 @@ function collectConfiguredPluginEntryIds(cfg: OpenClawConfig): string[] {
   }
   return Object.keys(entries)
     .map((pluginId) => pluginId.trim())
-    .filter(Boolean);
+    .filter((pluginId) => pluginId && !isPluginEntryExplicitlyDisabled(cfg, pluginId));
 }
 
 function hasOwnPluginEntry(cfg: OpenClawConfig, pluginId: string): boolean {
@@ -359,16 +359,22 @@ function hasOwnPluginEntry(cfg: OpenClawConfig, pluginId: string): boolean {
   return !!entries && typeof entries === "object" && Object.hasOwn(entries, pluginId);
 }
 
+function isPluginEntryExplicitlyDisabled(cfg: OpenClawConfig, pluginId: string): boolean {
+  return cfg.plugins?.entries?.[pluginId]?.enabled === false;
+}
+
 function hasNonDisabledPluginEntry(cfg: OpenClawConfig, pluginId: string): boolean {
   if (!hasOwnPluginEntry(cfg, pluginId)) {
     return false;
   }
-  const entry = cfg.plugins?.entries?.[pluginId];
-  return !isRecord(entry) || entry.enabled !== false;
+  return !isPluginEntryExplicitlyDisabled(cfg, pluginId);
 }
 
 function hasBrowserSetupAutoEnableRelevantConfig(cfg: OpenClawConfig): boolean {
-  if (isRecord(cfg.browser) && cfg.browser.enabled !== false) {
+  if (cfg.browser?.enabled === false || isPluginEntryExplicitlyDisabled(cfg, "browser")) {
+    return false;
+  }
+  if (isRecord(cfg.browser)) {
     return true;
   }
   if (hasNonDisabledPluginEntry(cfg, "browser")) {
@@ -378,6 +384,9 @@ function hasBrowserSetupAutoEnableRelevantConfig(cfg: OpenClawConfig): boolean {
 }
 
 function hasAcpxSetupAutoEnableRelevantConfig(cfg: OpenClawConfig): boolean {
+  if (isPluginEntryExplicitlyDisabled(cfg, "acpx")) {
+    return false;
+  }
   if (!isRecord(cfg.acp)) {
     return false;
   }
@@ -390,6 +399,9 @@ function hasAcpxSetupAutoEnableRelevantConfig(cfg: OpenClawConfig): boolean {
 }
 
 function hasXaiSetupAutoEnableRelevantConfig(cfg: OpenClawConfig): boolean {
+  if (isPluginEntryExplicitlyDisabled(cfg, "xai")) {
+    return false;
+  }
   const pluginConfig = cfg.plugins?.entries?.xai?.config;
   return (
     (isRecord(pluginConfig) &&

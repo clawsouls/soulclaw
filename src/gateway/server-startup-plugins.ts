@@ -23,6 +23,21 @@ type GatewayPluginBootstrapLog = {
   debug: (message: string) => void;
 };
 
+function applyActivationSectionsToRuntimeConfig(params: {
+  runtimeConfig: OpenClawConfig;
+  activationConfig: OpenClawConfig;
+}): OpenClawConfig {
+  return {
+    ...params.runtimeConfig,
+    ...(params.activationConfig.channels !== undefined
+      ? { channels: params.activationConfig.channels }
+      : {}),
+    ...(params.activationConfig.plugins !== undefined
+      ? { plugins: params.activationConfig.plugins }
+      : {}),
+  };
+}
+
 async function prestageGatewayBundledRuntimeDeps(params: {
   cfg: OpenClawConfig;
   pluginIds: readonly string[];
@@ -92,10 +107,12 @@ async function prestageGatewayBundledRuntimeDeps(params: {
 
 export async function prepareGatewayPluginBootstrap(params: {
   cfgAtStart: OpenClawConfig;
+  activationSourceConfig?: OpenClawConfig;
   startupRuntimeConfig: OpenClawConfig;
   minimalTestGateway: boolean;
   log: GatewayPluginBootstrapLog;
 }) {
+  const activationSourceConfig = params.activationSourceConfig ?? params.cfgAtStart;
   const startupMaintenanceConfig =
     params.cfgAtStart.channels === undefined && params.startupRuntimeConfig.channels !== undefined
       ? {
@@ -130,10 +147,13 @@ export async function prepareGatewayPluginBootstrap(params: {
 
   const gatewayPluginConfig = params.minimalTestGateway
     ? params.cfgAtStart
-    : applyPluginAutoEnable({
-        config: params.cfgAtStart,
-        env: process.env,
-      }).config;
+    : applyActivationSectionsToRuntimeConfig({
+        runtimeConfig: params.cfgAtStart,
+        activationConfig: applyPluginAutoEnable({
+          config: activationSourceConfig,
+          env: process.env,
+        }).config,
+      });
   const defaultAgentId = resolveDefaultAgentId(gatewayPluginConfig);
   const defaultWorkspaceDir = resolveAgentWorkspaceDir(gatewayPluginConfig, defaultAgentId);
   const pluginLookUpTable = params.minimalTestGateway
@@ -142,7 +162,7 @@ export async function prepareGatewayPluginBootstrap(params: {
         config: gatewayPluginConfig,
         workspaceDir: defaultWorkspaceDir,
         env: process.env,
-        activationSourceConfig: params.cfgAtStart,
+        activationSourceConfig,
       });
   const deferredConfiguredChannelPluginIds = [
     ...(pluginLookUpTable?.startup.configuredDeferredChannelPluginIds ?? []),
@@ -162,7 +182,7 @@ export async function prepareGatewayPluginBootstrap(params: {
     });
     ({ pluginRegistry, gatewayMethods: baseGatewayMethods } = loadGatewayStartupPlugins({
       cfg: gatewayPluginConfig,
-      activationSourceConfig: params.cfgAtStart,
+      activationSourceConfig,
       workspaceDir: defaultWorkspaceDir,
       log: params.log,
       coreGatewayMethodNames: baseMethods,

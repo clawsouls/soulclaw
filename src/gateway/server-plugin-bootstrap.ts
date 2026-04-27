@@ -47,6 +47,21 @@ function installGatewayPluginRuntimeEnvironment(cfg: OpenClawConfig) {
   setGatewayNodesRuntime(createGatewayNodesRuntime());
 }
 
+function applyActivationSectionsToRuntimeConfig(params: {
+  runtimeConfig: OpenClawConfig;
+  activationConfig: OpenClawConfig;
+}): OpenClawConfig {
+  return {
+    ...params.runtimeConfig,
+    ...(params.activationConfig.channels !== undefined
+      ? { channels: params.activationConfig.channels }
+      : {}),
+    ...(params.activationConfig.plugins !== undefined
+      ? { plugins: params.activationConfig.plugins }
+      : {}),
+  };
+}
+
 function logGatewayPluginDiagnostics(params: {
   diagnostics: PluginRegistry["diagnostics"];
   log: Pick<GatewayPluginBootstrapLog, "error" | "info">;
@@ -78,7 +93,13 @@ export function prepareGatewayPluginLoad(params: GatewayPluginBootstrapParams) {
       ? { manifestRegistry: params.pluginLookUpTable.manifestRegistry }
       : {}),
   });
-  const resolvedConfig = autoEnabled.config;
+  const resolvedConfig =
+    activationSourceConfig === params.cfg
+      ? autoEnabled.config
+      : applyActivationSectionsToRuntimeConfig({
+          runtimeConfig: params.cfg,
+          activationConfig: autoEnabled.config,
+        });
   installGatewayPluginRuntimeEnvironment(resolvedConfig);
   const loaded = loadGatewayPlugins({
     cfg: resolvedConfig,
