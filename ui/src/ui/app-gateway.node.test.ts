@@ -649,7 +649,7 @@ describe("connectGateway", () => {
     client.emitHello();
 
     expect(loadControlUiBootstrapConfigMock).toHaveBeenCalledTimes(1);
-    expect(loadControlUiBootstrapConfigMock).toHaveBeenCalledWith(host);
+    expect(loadControlUiBootstrapConfigMock).toHaveBeenCalledWith(host, { applyIdentity: false });
   });
 
   it("sends queued chat aborts after reconnect before clearing pending state", async () => {

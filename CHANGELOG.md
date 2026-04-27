@@ -20,6 +20,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Control UI: keep session-specific assistant identity loads authoritative after WebSocket connect, so non-main agent chat sessions do not show the main agent name in the header after bootstrap refreshes. Fixes #72776. Thanks @rockytian-top.
 - Media-understanding/audio: migrate deprecated `{input}` placeholders in legacy `audio.transcription.command` configs to `{{MediaPath}}`, so custom audio transcribers no longer receive the literal placeholder after doctor repair. Fixes #72760. Thanks @krisfanue3-hash.
 - Ollama/onboarding: de-dupe suggested bare local models against installed `:latest` tags and skip redundant pulls, so setup shows the installed model once and no longer says it is downloading an already available model. Fixes #68952. Thanks @tleyden.
 - Control UI/Gateway: preserve WebChat client version labels across localhost, 127.0.0.1, and IPv6 loopback aliases on the same port, avoiding misleading `vcontrol-ui` connection logs while investigating duplicate-message reports. Refs #72753 and #72742. Thanks @LumenFromTheFuture and @allesgutefy.

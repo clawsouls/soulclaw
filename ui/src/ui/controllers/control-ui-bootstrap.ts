@@ -25,7 +25,10 @@ export type ControlUiBootstrapState = {
   password?: string | null;
 };
 
-export async function loadControlUiBootstrapConfig(state: ControlUiBootstrapState) {
+export async function loadControlUiBootstrapConfig(
+  state: ControlUiBootstrapState,
+  opts?: { applyIdentity?: boolean },
+) {
   if (typeof window === "undefined") {
     return;
   }
@@ -66,27 +69,29 @@ export async function loadControlUiBootstrapConfig(state: ControlUiBootstrapStat
       return;
     }
     const parsed = (await res.json()) as ControlUiBootstrapConfig;
-    const normalized = normalizeAssistantIdentity({
-      agentId: parsed.assistantAgentId ?? null,
-      name: parsed.assistantName,
-      avatar: parsed.assistantAvatar ?? null,
-      avatarSource: parsed.assistantAvatarSource ?? null,
-      avatarStatus: parsed.assistantAvatarStatus ?? null,
-      avatarReason: parsed.assistantAvatarReason ?? null,
-    });
-    state.assistantName = normalized.name;
-    state.assistantAvatar = normalized.avatar;
-    state.assistantAvatarSource = normalized.avatarSource ?? null;
-    state.assistantAvatarStatus = normalized.avatarStatus ?? null;
-    state.assistantAvatarReason = normalized.avatarReason ?? null;
-    state.assistantAgentId = normalized.agentId ?? null;
-    // Local override always wins — same pattern as the user avatar.
-    const localAvatar = loadLocalAssistantIdentity().avatar;
-    if (localAvatar) {
-      state.assistantAvatar = localAvatar;
-      state.assistantAvatarSource = localAvatar;
-      state.assistantAvatarStatus = "data";
-      state.assistantAvatarReason = null;
+    if (opts?.applyIdentity !== false) {
+      const normalized = normalizeAssistantIdentity({
+        agentId: parsed.assistantAgentId ?? null,
+        name: parsed.assistantName,
+        avatar: parsed.assistantAvatar ?? null,
+        avatarSource: parsed.assistantAvatarSource ?? null,
+        avatarStatus: parsed.assistantAvatarStatus ?? null,
+        avatarReason: parsed.assistantAvatarReason ?? null,
+      });
+      state.assistantName = normalized.name;
+      state.assistantAvatar = normalized.avatar;
+      state.assistantAvatarSource = normalized.avatarSource ?? null;
+      state.assistantAvatarStatus = normalized.avatarStatus ?? null;
+      state.assistantAvatarReason = normalized.avatarReason ?? null;
+      state.assistantAgentId = normalized.agentId ?? null;
+      // Local override always wins — same pattern as the user avatar.
+      const localAvatar = loadLocalAssistantIdentity().avatar;
+      if (localAvatar) {
+        state.assistantAvatar = localAvatar;
+        state.assistantAvatarSource = localAvatar;
+        state.assistantAvatarStatus = "data";
+        state.assistantAvatarReason = null;
+      }
     }
     state.serverVersion = parsed.serverVersion ?? null;
     state.localMediaPreviewRoots = Array.isArray(parsed.localMediaPreviewRoots)

@@ -58,6 +58,49 @@ describe("loadControlUiBootstrapConfig", () => {
     vi.unstubAllGlobals();
   });
 
+  it("can refresh runtime bootstrap settings without clobbering session identity", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        basePath: "",
+        assistantName: "Main",
+        assistantAvatar: "M",
+        assistantAgentId: "main",
+        serverVersion: "2026.4.27",
+        localMediaPreviewRoots: ["/tmp/openclaw"],
+        embedSandbox: "trusted",
+        allowExternalEmbedUrls: true,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    const state = {
+      basePath: "",
+      assistantName: "Worker",
+      assistantAvatar: "W",
+      assistantAvatarSource: null,
+      assistantAvatarStatus: null,
+      assistantAvatarReason: null,
+      assistantAgentId: "worker",
+      localMediaPreviewRoots: [],
+      embedSandboxMode: "scripts" as const,
+      allowExternalEmbedUrls: false,
+      serverVersion: null,
+    };
+
+    await loadControlUiBootstrapConfig(state, { applyIdentity: false });
+
+    expect(state.assistantName).toBe("Worker");
+    expect(state.assistantAvatar).toBe("W");
+    expect(state.assistantAgentId).toBe("worker");
+    expect(state.serverVersion).toBe("2026.4.27");
+    expect(state.localMediaPreviewRoots).toEqual(["/tmp/openclaw"]);
+    expect(state.embedSandboxMode).toBe("trusted");
+    expect(state.allowExternalEmbedUrls).toBe(true);
+
+    vi.unstubAllGlobals();
+  });
+
   it("ignores failures", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: false });
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
