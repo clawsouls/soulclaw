@@ -23,13 +23,12 @@ const STATIC_MODEL_TARGET_IDS = [
   "models.providers.*.request.tls.key",
   "models.providers.*.request.tls.passphrase",
 ] as const;
-const STATIC_TTS_TARGET_IDS = ["messages.tts.providers.*.apiKey"] as const;
 const STATIC_AGENT_RUNTIME_BASE_TARGET_IDS = [
   ...STATIC_MODEL_TARGET_IDS,
   "agents.defaults.memorySearch.remote.apiKey",
   "agents.list[].memorySearch.remote.apiKey",
   "agents.list[].tts.providers.*.apiKey",
-  ...STATIC_TTS_TARGET_IDS,
+  "messages.tts.providers.*.apiKey",
   "skills.entries.*.apiKey",
   "tools.web.search.apiKey",
 ] as const;
@@ -220,10 +219,6 @@ export function getConfiguredChannelsCommandSecretTargetIds(
 
 export function getModelsCommandSecretTargetIds(): Set<string> {
   return toTargetIdSet(STATIC_MODEL_TARGET_IDS);
-}
-
-export function getTtsCommandSecretTargetIds(): Set<string> {
-  return toTargetIdSet(STATIC_TTS_TARGET_IDS);
 }
 
 export function getAgentRuntimeCommandSecretTargetIds(params?: {

@@ -79,8 +79,6 @@ import {
   runWebSearch,
 } from "../web-search/runtime.js";
 import { runCommandWithRuntime } from "./cli-utils.js";
-import { resolveCommandSecretRefsViaGateway } from "./command-secret-gateway.js";
-import { getTtsCommandSecretTargetIds } from "./command-secret-targets.js";
 import { createDefaultDeps } from "./deps.js";
 import { removeCommandByName } from "./program/command-tree.js";
 import { collectOption } from "./program/helpers.js";
@@ -1113,12 +1111,7 @@ async function runTtsConvert(params: {
     } satisfies CapabilityEnvelope;
   }
 
-  const { resolvedConfig: cfg } = await resolveCommandSecretRefsViaGateway({
-    config: loadConfig(),
-    commandName: "infer tts convert",
-    targetIds: getTtsCommandSecretTargetIds(),
-    mode: "enforce_resolved",
-  });
+  const cfg = loadConfig();
   const overrides = resolveExplicitTtsOverrides({
     cfg,
     provider: params.provider,
