@@ -560,6 +560,36 @@ describe("tool-loop-detection", () => {
       }
     });
 
+    it("keeps changing empty-output exec failures below the global no-progress breaker", () => {
+      const state = createState();
+      const params = { command: "openclaw flaky-helper" };
+
+      for (let index = 0; index < GLOBAL_CIRCUIT_BREAKER_THRESHOLD; index += 1) {
+        recordSuccessfulCall(
+          state,
+          "exec",
+          params,
+          {
+            content: [{ type: "text", text: `Runtime failed before spawn: attempt ${index}` }],
+            details: {
+              status: "failed",
+              exitCode: null,
+              durationMs: 100 + index,
+              aggregated: "",
+            },
+          },
+          index,
+        );
+      }
+
+      const loopResult = detectToolCallLoop(state, "exec", params, enabledLoopDetectionConfig);
+      expect(loopResult.stuck).toBe(true);
+      if (loopResult.stuck) {
+        expect(loopResult.level).toBe("warning");
+        expect(loopResult.detector).toBe("generic_repeat");
+      }
+    });
+
     it("does not block repeated unknown-tool failures before the unknown-tool threshold", () => {
       const state = createState();
       const toolName = "exec";

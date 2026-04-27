@@ -206,6 +206,14 @@ function stringField(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
+function nonEmptyStringField(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
 function hashExecToolOutcome(details: Record<string, unknown>, text: string): string | undefined {
   const status = stringField(details.status);
   if (!status) {
@@ -224,7 +232,7 @@ function hashExecToolOutcome(details: Record<string, unknown>, text: string): st
       status,
       exitCode: typeof details.exitCode === "number" ? details.exitCode : null,
       timedOut: details.timedOut === true,
-      output: stringField(details.aggregated) ?? text,
+      output: nonEmptyStringField(details.aggregated) ?? text,
     });
   }
 
