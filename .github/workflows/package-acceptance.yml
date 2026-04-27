@@ -471,7 +471,7 @@ jobs:
       OPENCLAW_GEMINI_SETTINGS_JSON: ${{ secrets.OPENCLAW_GEMINI_SETTINGS_JSON }}
       FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
 
-  npm_telegram:
+  package_telegram:
     name: Telegram package acceptance
     needs: resolve_package
     if: needs.resolve_package.outputs.telegram_enabled == 'true'
@@ -488,7 +488,7 @@ jobs:
 
   summary:
     name: Verify package acceptance
-    needs: [resolve_package, docker_acceptance, npm_telegram]
+    needs: [resolve_package, docker_acceptance, package_telegram]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -496,7 +496,7 @@ jobs:
       - name: Verify package acceptance results
         env:
           DOCKER_RESULT: ${{ needs.docker_acceptance.result }}
-          NPM_TELEGRAM_RESULT: ${{ needs.npm_telegram.result }}
+          PACKAGE_TELEGRAM_RESULT: ${{ needs.package_telegram.result }}
           RESOLVE_RESULT: ${{ needs.resolve_package.result }}
         shell: bash
         run: |
@@ -505,7 +505,7 @@ jobs:
           for item in \
             "resolve_package=${RESOLVE_RESULT}" \
             "docker_acceptance=${DOCKER_RESULT}" \
-            "npm_telegram=${NPM_TELEGRAM_RESULT}"
+            "package_telegram=${PACKAGE_TELEGRAM_RESULT}"
           do
             name="${item%%=*}"
             result="${item#*=}"

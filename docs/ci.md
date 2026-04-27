@@ -47,9 +47,10 @@ The workflow has four jobs:
    that artifact, validates the tarball inventory, prepares package-digest
    Docker images when needed, and runs the selected Docker lanes against that
    package instead of packing the workflow checkout.
-3. `npm_telegram` optionally calls `NPM Telegram Beta E2E`. It runs only when
-   `telegram_mode` is not `none`, and only for `source=npm`, because that lane
-   installs a published package spec.
+3. `package_telegram` optionally calls `NPM Telegram Beta E2E`. It runs when
+   `telegram_mode` is not `none` and installs the same `package-under-test`
+   artifact when Package Acceptance resolved one; standalone Telegram dispatch
+   can still install a published npm spec.
 4. `summary` fails the workflow if package resolution, Docker acceptance, or
    the optional Telegram lane failed.
 
@@ -83,11 +84,13 @@ Profiles map to Docker coverage:
 - `custom`: exact `docker_lanes`; required when `suite_profile=custom`
 
 Release checks call Package Acceptance with `source=ref`,
-`package_ref=<release-ref>`, `workflow_ref=<release workflow ref>`, and
-`suite_profile=package`. That profile is the GitHub-native replacement for most
-Parallels package/update validation. Cross-OS release checks still cover
-OS-specific onboarding, installer, and platform behavior; package/update
-product validation should start with Package Acceptance.
+`package_ref=<release-ref>`, `workflow_ref=<release workflow ref>`,
+`suite_profile=package`, and `telegram_mode=mock-openai`. That profile is the
+GitHub-native replacement for most Parallels package/update validation, with
+Telegram proving the same package artifact through the QA live transport.
+Cross-OS release checks still cover OS-specific onboarding, installer, and
+platform behavior; package/update product validation should start with Package
+Acceptance.
 
 Examples:
 
@@ -98,7 +101,8 @@ gh workflow run package-acceptance.yml \
   -f workflow_ref=main \
   -f source=npm \
   -f package_spec=openclaw@beta \
-  -f suite_profile=product
+  -f suite_profile=product \
+  -f telegram_mode=mock-openai
 
 # Pack and validate a release branch with the current harness.
 gh workflow run package-acceptance.yml \
@@ -106,7 +110,8 @@ gh workflow run package-acceptance.yml \
   -f workflow_ref=main \
   -f source=ref \
   -f package_ref=release/YYYY.M.D \
-  -f suite_profile=package
+  -f suite_profile=package \
+  -f telegram_mode=mock-openai
 
 # Validate a tarball URL. SHA-256 is mandatory for source=url.
 gh workflow run package-acceptance.yml \

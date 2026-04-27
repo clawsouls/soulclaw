@@ -77,7 +77,7 @@ env:
   PNPM_VERSION: "10.33.0"
 
 jobs:
-  run_npm_telegram_beta_e2e:
+  run_package_telegram_e2e:
     name: Run package Telegram E2E
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: 60

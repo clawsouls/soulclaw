@@ -135,8 +135,10 @@ cancel it and monitor the current run.
 
 `OpenClaw Release Checks` (`openclaw-release-checks.yml`) is the release child
 workflow. It is broader than normal CI but narrower than the umbrella because it
-does not dispatch the separate full normal CI child. Use it when release-path
-validation is needed without rerunning the entire umbrella.
+does not dispatch the separate full normal CI child. It runs Package Acceptance
+with `telegram_mode=mock-openai`, so the release package tarball also goes
+through Telegram package QA. Use it when release-path validation is needed
+without rerunning the entire umbrella.
 
 ```bash
 gh workflow run openclaw-release-checks.yml \
@@ -248,7 +250,8 @@ gh workflow run package-acceptance.yml --ref main \
   -f source=npm \
   -f workflow_ref=main \
   -f package_spec=openclaw@beta \
-  -f suite_profile=product
+  -f suite_profile=product \
+  -f telegram_mode=mock-openai
 ```
 
 Npm candidate selection:
@@ -315,7 +318,7 @@ gh workflow run package-acceptance.yml --ref main \
   -f source=ref \
   -f package_ref=<branch-or-sha> \
   -f suite_profile=package \
-  -f telegram_mode=none
+  -f telegram_mode=mock-openai
 ```
 
 Use `telegram_mode=mock-openai` or `telegram_mode=live-frontier` when the same
@@ -323,7 +326,8 @@ resolved `package-under-test` tarball should also run through the Telegram QA
 workflow in the `qa-live-shared` environment. The standalone Telegram workflow
 still accepts a published npm spec for post-publish checks, but Package
 Acceptance passes the resolved artifact for `source=npm`, `ref`, `url`, and
-`artifact`.
+`artifact`. Use `telegram_mode=none` only when intentionally skipping Telegram
+credentialed package proof for a focused rerun.
 
 Docker E2E images never copy repo sources as the app under test: the bare image
 is a Node/Git runner, and the functional image installs the same prebuilt npm

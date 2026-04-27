@@ -82,10 +82,11 @@ the maintainer-only release runbook.
     preflight artifact via `preflight_run_id`; stable macOS release readiness
     also requires the packaged `.zip`, `.dmg`, `.dSYM.zip`, and updated
     `appcast.xml` on `main`.
-11. After publish, run the npm post-publish verifier, optional published-npm
-    Telegram E2E, dist-tag promotion when needed, GitHub release/prerelease
-    notes from the complete matching `CHANGELOG.md` section, and the release
-    announcement steps.
+11. After publish, run the npm post-publish verifier, optional standalone
+    published-npm Telegram E2E when you need post-publish channel proof,
+    dist-tag promotion when needed, GitHub release/prerelease notes from the
+    complete matching `CHANGELOG.md` section, and the release announcement
+    steps.
 
 ## Release preflight
 
@@ -112,8 +113,9 @@ the maintainer-only release runbook.
   SHA-256; or `source=artifact` for a tarball uploaded by another GitHub
   Actions run. The workflow resolves the candidate to
   `package-under-test`, reuses the Docker E2E release scheduler against that
-  tarball, and can optionally run Telegram QA against the same tarball.
-  Example: `gh workflow run package-acceptance.yml --ref main -f workflow_ref=main -f source=npm -f package_spec=openclaw@beta -f suite_profile=product`
+  tarball, and can run Telegram QA against the same tarball with
+  `telegram_mode=mock-openai` or `telegram_mode=live-frontier`.
+  Example: `gh workflow run package-acceptance.yml --ref main -f workflow_ref=main -f source=npm -f package_spec=openclaw@beta -f suite_profile=product -f telegram_mode=mock-openai`
   Common profiles:
   - `smoke`: install/channel/agent, gateway network, and config reload lanes
   - `package`: package/update/plugin lanes without OpenWebUI
@@ -235,13 +237,13 @@ gh workflow run full-release-validation.yml \
 
 The workflow resolves the target ref, dispatches manual `CI` with
 `target_ref=<release-ref>`, dispatches `OpenClaw Release Checks`, and
-optionally dispatches post-publish Telegram E2E when
+optionally dispatches standalone post-publish Telegram E2E when
 `npm_telegram_package_spec` is set. `OpenClaw Release Checks` then fans out
 install smoke, cross-OS release checks, live/E2E Docker release-path coverage,
-Package Acceptance, QA Lab parity, live Matrix, and live Telegram. A full run is
-only acceptable when the `Full Release Validation` summary shows `normal_ci` and
-`release_checks` as successful, and any optional `npm_telegram` child is either
-successful or intentionally skipped.
+Package Acceptance with Telegram package QA, QA Lab parity, live Matrix, and
+live Telegram. A full run is only acceptable when the `Full Release Validation`
+summary shows `normal_ci` and `release_checks` as successful, and any optional
+`npm_telegram` child is either successful or intentionally skipped.
 
 Use these variants depending on release stage:
 
@@ -363,12 +365,13 @@ Supported candidate sources:
 - `source=artifact`: reuse a `.tgz` uploaded by another GitHub Actions run
 
 `OpenClaw Release Checks` runs Package Acceptance with `source=ref`,
-`package_ref=<release-ref>`, and `suite_profile=package`. That profile covers
-install, update, and plugin package contracts and is the GitHub-native
-replacement for most of the package/update coverage that previously required
-Parallels. Cross-OS release checks still matter for OS-specific onboarding,
-installer, and platform behavior, but package/update product validation should
-prefer Package Acceptance.
+`package_ref=<release-ref>`, `suite_profile=package`, and
+`telegram_mode=mock-openai`. That profile covers install, update, plugin
+package contracts, and Telegram package QA against the same resolved tarball,
+and is the GitHub-native replacement for most of the package/update coverage
+that previously required Parallels. Cross-OS release checks still matter for
+OS-specific onboarding, installer, and platform behavior, but package/update
+product validation should prefer Package Acceptance.
 
 Use broader Package Acceptance profiles when the release question is about an
 actual installable package:
