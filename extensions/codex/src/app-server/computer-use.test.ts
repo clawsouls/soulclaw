@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  CodexComputerUseSetupError,
   ensureCodexComputerUse,
   installCodexComputerUse,
   readCodexComputerUseStatus,
@@ -19,6 +18,7 @@ describe("Codex Computer Use setup", () => {
       expect.objectContaining({
         enabled: false,
         ready: false,
+        reason: "disabled",
         message: "Computer Use is disabled.",
       }),
     );
@@ -36,6 +36,7 @@ describe("Codex Computer Use setup", () => {
       expect.objectContaining({
         enabled: true,
         ready: true,
+        reason: "ready",
         installed: true,
         pluginEnabled: true,
         mcpServerAvailable: true,
@@ -63,6 +64,7 @@ describe("Codex Computer Use setup", () => {
     ).resolves.toEqual(
       expect.objectContaining({
         ready: false,
+        reason: "plugin_disabled",
         installed: true,
         pluginEnabled: false,
         mcpServerAvailable: false,
@@ -89,6 +91,7 @@ describe("Codex Computer Use setup", () => {
     ).resolves.toEqual(
       expect.objectContaining({
         ready: true,
+        reason: "ready",
         message: "Computer Use is ready.",
       }),
     );
@@ -110,6 +113,7 @@ describe("Codex Computer Use setup", () => {
     ).resolves.toEqual(
       expect.objectContaining({
         ready: false,
+        reason: "marketplace_missing",
         message:
           "Multiple Codex marketplaces contain computer-use. Configure computerUse.marketplaceName or computerUse.marketplacePath to choose one.",
       }),
@@ -132,6 +136,7 @@ describe("Codex Computer Use setup", () => {
     ).resolves.toEqual(
       expect.objectContaining({
         ready: true,
+        reason: "ready",
         installed: true,
         pluginEnabled: true,
         tools: ["list_apps"],
@@ -161,6 +166,7 @@ describe("Codex Computer Use setup", () => {
     ).resolves.toEqual(
       expect.objectContaining({
         ready: true,
+        reason: "ready",
         installed: true,
         pluginEnabled: true,
         message: "Computer Use is ready.",
@@ -180,7 +186,11 @@ describe("Codex Computer Use setup", () => {
         pluginConfig: { computerUse: { enabled: true, marketplaceName: "desktop-tools" } },
         request,
       }),
-    ).rejects.toThrow(CodexComputerUseSetupError);
+    ).rejects.toMatchObject({
+      status: expect.objectContaining({
+        reason: "plugin_not_installed",
+      }),
+    });
     expect(request).not.toHaveBeenCalledWith("plugin/install", expect.anything());
   });
 
@@ -201,6 +211,7 @@ describe("Codex Computer Use setup", () => {
     ).resolves.toEqual(
       expect.objectContaining({
         ready: true,
+        reason: "ready",
         message: "Computer Use is ready.",
       }),
     );
@@ -228,6 +239,7 @@ describe("Codex Computer Use setup", () => {
     ).resolves.toEqual(
       expect.objectContaining({
         ready: true,
+        reason: "ready",
         message: "Computer Use is ready.",
       }),
     );
@@ -255,7 +267,11 @@ describe("Codex Computer Use setup", () => {
         },
         request,
       }),
-    ).rejects.toThrow(CodexComputerUseSetupError);
+    ).rejects.toMatchObject({
+      status: expect.objectContaining({
+        reason: "auto_install_blocked",
+      }),
+    });
     expect(request).not.toHaveBeenCalledWith("marketplace/add", expect.anything());
     expect(request).not.toHaveBeenCalledWith("plugin/install", expect.anything());
   });
@@ -276,6 +292,7 @@ describe("Codex Computer Use setup", () => {
     ).resolves.toEqual(
       expect.objectContaining({
         ready: false,
+        reason: "marketplace_missing",
         message:
           "Configured Codex marketplace missing-marketplace was not found or does not contain computer-use. Run /codex computer-use install with a source or path to install from a new marketplace.",
       }),
@@ -294,6 +311,7 @@ describe("Codex Computer Use setup", () => {
     ).rejects.toMatchObject({
       status: expect.objectContaining({
         ready: false,
+        reason: "remote_install_unsupported",
         installed: false,
         pluginEnabled: false,
         marketplaceName: "openai-curated",
@@ -320,6 +338,7 @@ describe("Codex Computer Use setup", () => {
     await expect(installed).resolves.toEqual(
       expect.objectContaining({
         ready: true,
+        reason: "ready",
         message: "Computer Use is ready.",
       }),
     );
@@ -343,6 +362,7 @@ describe("Codex Computer Use setup", () => {
     ).resolves.toEqual(
       expect.objectContaining({
         ready: true,
+        reason: "ready",
         marketplaceName: "openai-curated",
       }),
     );
