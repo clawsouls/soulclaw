@@ -2,13 +2,13 @@ import type { AssistantMessage } from "@mariozechner/pi-ai";
 import type { ResolvedTtsConfig, SpeechProviderPlugin } from "openclaw/plugin-sdk/speech-core";
 import type { OpenClawConfig } from "openclaw/plugin-sdk/testing";
 import {
-  BUNDLED_PLUGIN_CONTRACT_SNAPSHOTS,
   createEmptyPluginRegistry,
   setActivePluginRegistry,
   withEnv,
   withEnvAsync,
 } from "openclaw/plugin-sdk/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { BUNDLED_PLUGIN_CONTRACT_SNAPSHOTS } from "../../../src/plugins/contracts/inventory/bundled-capability-metadata.js";
 import { resolveWorkspacePackagePublicModuleUrl } from "./public-surface-loader.js";
 
 type TtsRuntimeModule = typeof import("openclaw/plugin-sdk/tts-runtime");

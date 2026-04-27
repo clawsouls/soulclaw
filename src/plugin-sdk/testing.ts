@@ -43,7 +43,6 @@ export {
   resolveWebFetchProviderContractEntriesForPluginId,
   resolveWebSearchProviderContractEntriesForPluginId,
 } from "../plugins/contracts/registry.js";
-export { BUNDLED_PLUGIN_CONTRACT_SNAPSHOTS } from "../plugins/contracts/inventory/bundled-capability-metadata.js";
 export { loadPluginManifestRegistry } from "../plugins/manifest-registry.js";
 export { parseMinHostVersionRequirement } from "../plugins/min-host-version.js";
 export { resolveBundledExplicitProviderContractsFromPublicArtifacts } from "../plugins/provider-contract-public-artifacts.js";
