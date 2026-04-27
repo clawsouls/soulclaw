@@ -76,14 +76,19 @@ const googleMeetConfigSchema = {
       help: "Waits for Chrome to report that the Meet tab is in-call before the realtime intro speaks.",
       advanced: true,
     },
+    "chrome.audioFormat": {
+      label: "Audio Format",
+      help: "Command-pair audio format. PCM16 24 kHz is the default Chrome/Meet path; G.711 mu-law 8 kHz remains available for legacy command pairs.",
+      advanced: true,
+    },
     "chrome.audioInputCommand": {
       label: "Audio Input Command",
-      help: "Command that writes 8 kHz G.711 mu-law meeting audio to stdout.",
+      help: "Command that writes meeting audio to stdout in chrome.audioFormat.",
       advanced: true,
     },
     "chrome.audioOutputCommand": {
       label: "Audio Output Command",
-      help: "Command that reads 8 kHz G.711 mu-law assistant audio from stdin.",
+      help: "Command that reads assistant audio from stdin in chrome.audioFormat.",
       advanced: true,
     },
     "chrome.audioBridgeCommand": { label: "Audio Bridge Command", advanced: true },
