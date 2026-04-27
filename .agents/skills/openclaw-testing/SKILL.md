@@ -149,7 +149,7 @@ Use one run per line:
 ```text
 full-release-validation openclaw/openclaw <run-id> blocking
 package-acceptance openclaw/openclaw <run-id> blocking
-private-cross-os openclaw/releases-private <run-id> advisory
+release-checks openclaw/openclaw <run-id> blocking
 ```
 
 Store summaries, run URLs, artifact metadata, timings, pass/fail state, and
