@@ -462,6 +462,104 @@ describe("tool-loop-detection", () => {
       }
     });
 
+    it("blocks repeated completed exec calls despite volatile runtime details", () => {
+      const state = createState();
+      const params = { command: "grafana-api.sh datasources" };
+
+      for (let index = 0; index < GLOBAL_CIRCUIT_BREAKER_THRESHOLD; index += 1) {
+        recordSuccessfulCall(
+          state,
+          "exec",
+          params,
+          {
+            content: [{ type: "text", text: "Loki\nPrometheus" }],
+            details: {
+              status: "completed",
+              exitCode: 0,
+              durationMs: 100 + index,
+              cwd: `/tmp/run-${index}`,
+              aggregated: "Loki\nPrometheus",
+            },
+          },
+          index,
+        );
+      }
+
+      const loopResult = detectToolCallLoop(state, "exec", params, enabledLoopDetectionConfig);
+      expect(loopResult.stuck).toBe(true);
+      if (loopResult.stuck) {
+        expect(loopResult.level).toBe("critical");
+        expect(loopResult.detector).toBe("global_circuit_breaker");
+      }
+    });
+
+    it("blocks repeated running exec calls despite volatile session details and text", () => {
+      const state = createState();
+      const params = { command: "tail -f /var/log/app.log", yieldMs: 1000 };
+
+      for (let index = 0; index < GLOBAL_CIRCUIT_BREAKER_THRESHOLD; index += 1) {
+        recordSuccessfulCall(
+          state,
+          "exec",
+          params,
+          {
+            content: [
+              {
+                type: "text",
+                text: `Command still running (session sess-${index}, pid ${1000 + index})`,
+              },
+            ],
+            details: {
+              status: "running",
+              sessionId: `sess-${index}`,
+              pid: 1000 + index,
+              startedAt: Date.now() + index,
+              cwd: `/tmp/run-${index}`,
+              tail: "(no new output)",
+            },
+          },
+          index,
+        );
+      }
+
+      const loopResult = detectToolCallLoop(state, "exec", params, enabledLoopDetectionConfig);
+      expect(loopResult.stuck).toBe(true);
+      if (loopResult.stuck) {
+        expect(loopResult.level).toBe("critical");
+        expect(loopResult.detector).toBe("global_circuit_breaker");
+      }
+    });
+
+    it("keeps changing exec output below the global no-progress breaker", () => {
+      const state = createState();
+      const params = { command: "date" };
+
+      for (let index = 0; index < GLOBAL_CIRCUIT_BREAKER_THRESHOLD; index += 1) {
+        recordSuccessfulCall(
+          state,
+          "exec",
+          params,
+          {
+            content: [{ type: "text", text: `tick ${index}` }],
+            details: {
+              status: "completed",
+              exitCode: 0,
+              durationMs: 100 + index,
+              aggregated: `tick ${index}`,
+            },
+          },
+          index,
+        );
+      }
+
+      const loopResult = detectToolCallLoop(state, "exec", params, enabledLoopDetectionConfig);
+      expect(loopResult.stuck).toBe(true);
+      if (loopResult.stuck) {
+        expect(loopResult.level).toBe("warning");
+        expect(loopResult.detector).toBe("generic_repeat");
+      }
+    });
+
     it("does not block repeated unknown-tool failures before the unknown-tool threshold", () => {
       const state = createState();
       const toolName = "exec";

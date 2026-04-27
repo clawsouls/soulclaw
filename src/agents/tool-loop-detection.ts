@@ -202,6 +202,45 @@ function extractUnknownToolName(error: unknown): string | undefined {
   return toolName ? toolName.toLowerCase() : undefined;
 }
 
+function stringField(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function hashExecToolOutcome(details: Record<string, unknown>, text: string): string | undefined {
+  const status = stringField(details.status);
+  if (!status) {
+    return undefined;
+  }
+
+  if (status === "running") {
+    return digestStable({
+      status,
+      tail: stringField(details.tail) ?? "",
+    });
+  }
+
+  if (status === "completed" || status === "failed") {
+    return digestStable({
+      status,
+      exitCode: typeof details.exitCode === "number" ? details.exitCode : null,
+      timedOut: details.timedOut === true,
+      output: stringField(details.aggregated) ?? text,
+    });
+  }
+
+  if (status === "approval-pending" || status === "approval-unavailable") {
+    return digestStable({
+      status,
+      reason: stringField(details.reason),
+      host: stringField(details.host),
+      command: stringField(details.command) ?? "",
+      warningText: stringField(details.warningText) ?? "",
+    });
+  }
+
+  return undefined;
+}
+
 function hashToolOutcome(
   toolName: string,
   params: unknown,
@@ -221,6 +260,12 @@ function hashToolOutcome(
 
   const details = isPlainObject(result.details) ? result.details : {};
   const text = extractTextContent(result);
+  if (toolName === "exec") {
+    const execHash = hashExecToolOutcome(details, text);
+    if (execHash) {
+      return { resultHash: execHash };
+    }
+  }
   if (isKnownPollToolCall(toolName, params) && toolName === "process" && isPlainObject(params)) {
     const action = params.action;
     if (action === "poll") {
