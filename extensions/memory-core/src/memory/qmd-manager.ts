@@ -87,6 +87,10 @@ const IGNORED_MEMORY_WATCH_DIR_NAMES = new Set([
   "__pycache__",
 ]);
 
+function qmdUsesVectors(searchMode: ResolvedQmdConfig["searchMode"]): boolean {
+  return searchMode !== "search";
+}
+
 function isDefaultMemoryPath(relPath: string): boolean {
   const normalized = relPath.trim().replace(/^\.\//, "").replace(/\\/g, "/");
   if (!normalized) {
@@ -1326,7 +1330,7 @@ export class QmdMemoryManager implements MemorySearchManager {
       sources: Array.from(this.sources),
       sourceCounts: counts.sourceCounts,
       vector: {
-        enabled: true,
+        enabled: qmdUsesVectors(this.qmd.searchMode),
         available: this.vectorAvailable ?? undefined,
         loadError: this.vectorStatusDetail ?? undefined,
       },
@@ -1357,6 +1361,11 @@ export class QmdMemoryManager implements MemorySearchManager {
   }
 
   async probeVectorAvailability(): Promise<boolean> {
+    if (!qmdUsesVectors(this.qmd.searchMode)) {
+      this.vectorAvailable = false;
+      this.vectorStatusDetail = null;
+      return false;
+    }
     try {
       const result = await this.runQmd(["status"], {
         timeoutMs: Math.min(this.qmd.limits.timeoutMs, 5_000),
@@ -1597,9 +1606,9 @@ export class QmdMemoryManager implements MemorySearchManager {
   }
 
   private shouldRunEmbed(force?: boolean): boolean {
-    // Keep embeddings current regardless of the active retrieval mode.
-    // Search-mode indexing still needs vectors so later mode switches and
-    // hybrid flows do not inherit an incomplete QMD index.
+    if (!qmdUsesVectors(this.qmd.searchMode)) {
+      return false;
+    }
     const now = Date.now();
     if (this.embedBackoffUntil !== null && now < this.embedBackoffUntil) {
       return false;
@@ -1613,6 +1622,9 @@ export class QmdMemoryManager implements MemorySearchManager {
   }
 
   private shouldScheduleEmbedTimer(): boolean {
+    if (!qmdUsesVectors(this.qmd.searchMode)) {
+      return false;
+    }
     const embedIntervalMs = this.qmd.update.embedIntervalMs;
     if (embedIntervalMs <= 0) {
       return false;

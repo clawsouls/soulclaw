@@ -288,16 +288,16 @@ describe("QmdMemoryManager", () => {
     const baselineCalls = spawnMock.mock.calls.length;
 
     await manager.sync({ reason: "manual" });
-    expect(spawnMock.mock.calls.length).toBe(baselineCalls + 2);
+    expect(spawnMock.mock.calls.length).toBe(baselineCalls + 1);
 
     await manager.sync({ reason: "manual-again" });
-    expect(spawnMock.mock.calls.length).toBe(baselineCalls + 2);
+    expect(spawnMock.mock.calls.length).toBe(baselineCalls + 1);
 
     (manager as unknown as { lastUpdateAt: number | null }).lastUpdateAt =
       Date.now() - (resolved.qmd?.update.debounceMs ?? 0) - 10;
 
     await manager.sync({ reason: "after-wait" });
-    expect(spawnMock.mock.calls.length).toBe(baselineCalls + 3);
+    expect(spawnMock.mock.calls.length).toBe(baselineCalls + 2);
 
     await manager.close();
   });
@@ -1975,6 +1975,7 @@ describe("QmdMemoryManager", () => {
         backend: "qmd",
         qmd: {
           includeDefaultMemory: false,
+          searchMode: "query",
           update: {
             interval: "0s",
             debounceMs: 0,
@@ -3418,7 +3419,7 @@ describe("QmdMemoryManager", () => {
     await manager.close();
   });
 
-  it("arms periodic embed maintenance in search mode", async () => {
+  it("skips periodic embed maintenance in lexical search mode", async () => {
     vi.useFakeTimers();
     cfg = {
       ...cfg,
@@ -3445,7 +3446,7 @@ describe("QmdMemoryManager", () => {
     const commandCalls = spawnMock.mock.calls
       .map((call: unknown[]) => call[1] as string[])
       .filter((args: string[]) => args[0] === "update" || args[0] === "embed");
-    expect(commandCalls).toEqual([["update"], ["embed"]]);
+    expect(commandCalls).toEqual([]);
 
     await manager.close();
   });
@@ -3498,6 +3499,18 @@ describe("QmdMemoryManager", () => {
 
   it("serializes qmd embeds within a process before taking the shared file lock", async () => {
     vi.useFakeTimers();
+    cfg = {
+      ...cfg,
+      memory: {
+        backend: "qmd",
+        qmd: {
+          includeDefaultMemory: false,
+          searchMode: "query",
+          update: { interval: "0s", debounceMs: 0, onBoot: false },
+          paths: [{ path: workspaceDir, pattern: "**/*.md", name: "workspace" }],
+        },
+      },
+    } as OpenClawConfig;
     const embedChildren: MockChild[] = [];
     spawnMock.mockImplementation((_cmd: string, args: string[]) => {
       if (args[0] === "embed") {
@@ -3682,7 +3695,7 @@ describe("QmdMemoryManager", () => {
     }
   });
 
-  it("runs qmd embed in search mode for forced sync", async () => {
+  it("skips qmd embed in lexical search mode for forced sync", async () => {
     cfg = {
       ...cfg,
       memory: {
@@ -3702,7 +3715,7 @@ describe("QmdMemoryManager", () => {
     const commandCalls = spawnMock.mock.calls
       .map((call: unknown[]) => call[1] as string[])
       .filter((args: string[]) => args[0] === "update" || args[0] === "embed");
-    expect(commandCalls).toEqual([["update"], ["embed"]]);
+    expect(commandCalls).toEqual([["update"]]);
     await manager.close();
   });
 
@@ -4617,7 +4630,15 @@ describe("QmdMemoryManager", () => {
       return createMockChild();
     });
 
-    const { manager } = await createManager();
+    const { manager } = await createManager({
+      cfg: {
+        ...cfg,
+        memory: {
+          ...cfg.memory,
+          qmd: { ...cfg.memory?.qmd, searchMode: "query" },
+        },
+      } as OpenClawConfig,
+    });
 
     await expect(manager.probeVectorAvailability()).resolves.toBe(false);
     await expect(manager.probeEmbeddingAvailability()).resolves.toEqual({
@@ -4642,7 +4663,15 @@ describe("QmdMemoryManager", () => {
       return createMockChild();
     });
 
-    const { manager } = await createManager();
+    const { manager } = await createManager({
+      cfg: {
+        ...cfg,
+        memory: {
+          ...cfg.memory,
+          qmd: { ...cfg.memory?.qmd, searchMode: "query" },
+        },
+      } as OpenClawConfig,
+    });
 
     await expect(manager.probeVectorAvailability()).resolves.toBe(true);
     await expect(manager.probeEmbeddingAvailability()).resolves.toEqual({
@@ -4652,6 +4681,32 @@ describe("QmdMemoryManager", () => {
     expect(manager.status().vector).toEqual({
       enabled: true,
       available: true,
+      loadError: undefined,
+    });
+    await manager.close();
+  });
+
+  it("skips qmd status vector probes for lexical search mode", async () => {
+    const { manager } = await createManager({
+      cfg: {
+        ...cfg,
+        memory: {
+          ...cfg.memory,
+          qmd: { ...cfg.memory?.qmd, searchMode: "search" },
+        },
+      } as OpenClawConfig,
+    });
+    const baselineCalls = spawnMock.mock.calls.length;
+
+    await expect(manager.probeVectorAvailability()).resolves.toBe(false);
+    await expect(manager.probeEmbeddingAvailability()).resolves.toEqual({
+      ok: false,
+      error: "QMD semantic vectors are unavailable",
+    });
+    expect(spawnMock.mock.calls.length).toBe(baselineCalls);
+    expect(manager.status().vector).toEqual({
+      enabled: false,
+      available: false,
       loadError: undefined,
     });
     await manager.close();
