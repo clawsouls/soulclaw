@@ -36,6 +36,7 @@ const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; hint: string }> = [
 ];
 
 const STATIC_RELATIVE_MODULE_PATTERN = /\b(?:import|export)\b[\s\S]*?\bfrom\s*["']([^"']+)["']/g;
+const DYNAMIC_RELATIVE_MODULE_PATTERN = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
 
 const RELATIVE_CORE_HINT =
   "Use openclaw/plugin-sdk/testing or a focused plugin-sdk test/runtime subpath instead of core internals.";
@@ -45,7 +46,11 @@ function isExtensionTestFile(filePath: string): boolean {
 }
 
 function isExtensionTestSupportFile(filePath: string): boolean {
-  return /(?:^|[/\\])test-support(?:[/\\]|$)/u.test(filePath) && /\.[cm]?[jt]sx?$/u.test(filePath);
+  return (
+    (/(?:^|[/\\])test-support(?:[/\\]|$)/u.test(filePath) ||
+      /(?:\.|-|_)test-support\.[cm]?[jt]sx?$/u.test(filePath)) &&
+    /\.[cm]?[jt]sx?$/u.test(filePath)
+  );
 }
 
 function collectExtensionTestFiles(rootDir: string): string[] {
@@ -74,9 +79,17 @@ function resolvesToRepoSrc(filePath: string, specifier: string): boolean {
   return repoRelative === "src" || repoRelative.startsWith("src/");
 }
 
-function collectRelativeCoreImportOffenders(filePath: string, content: string): Offender[] {
+function collectRelativeCoreImportOffenders(
+  filePath: string,
+  content: string,
+  opts: { includeDynamic: boolean },
+): Offender[] {
   const offenders: Offender[] = [];
-  for (const match of content.matchAll(STATIC_RELATIVE_MODULE_PATTERN)) {
+  const matches = [
+    ...content.matchAll(STATIC_RELATIVE_MODULE_PATTERN),
+    ...(opts.includeDynamic ? [...content.matchAll(DYNAMIC_RELATIVE_MODULE_PATTERN)] : []),
+  ];
+  for (const match of matches) {
     const specifier = match[1];
     if (!specifier || !resolvesToRepoSrc(filePath, specifier)) {
       continue;
@@ -105,7 +118,11 @@ function main() {
       offenders.push({ file, hint: rule.hint });
       break;
     }
-    offenders.push(...collectRelativeCoreImportOffenders(file, content));
+    offenders.push(
+      ...collectRelativeCoreImportOffenders(file, content, {
+        includeDynamic: true,
+      }),
+    );
   }
 
   if (offenders.length > 0) {
