@@ -7,6 +7,7 @@ import {
   mockedGlobalHookRunner,
   mockedLog,
   mockedRunEmbeddedAttempt,
+  mockedResolveModelAsync,
   overflowBaseRunParams,
   resetRunOverflowCompactionHarnessMocks,
 } from "./run.overflow-compaction.harness.js";
@@ -644,6 +645,19 @@ describe("runEmbeddedPiAgent incomplete-turn safety", () => {
 
   it("retries empty openai-compatible stop turns even when the backend reports output tokens", async () => {
     mockedClassifyFailoverReason.mockReturnValue(null);
+    mockedResolveModelAsync.mockResolvedValue({
+      model: {
+        id: "qwen3.6-27b",
+        provider: "llamacpp",
+        contextWindow: 200000,
+        api: "openai-completions",
+      },
+      error: null,
+      authStorage: {
+        setRuntimeApiKey: () => undefined,
+      },
+      modelRegistry: {},
+    });
     mockedRunEmbeddedAttempt.mockResolvedValueOnce(
       makeAttemptResult({
         assistantTexts: [],
