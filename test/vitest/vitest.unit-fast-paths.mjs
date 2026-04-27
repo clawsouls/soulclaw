@@ -79,7 +79,6 @@ export const forcedUnitFastTestFiles = [
   "src/security/skill-scanner.test.ts",
   "src/security/windows-acl.test.ts",
   "src/trajectory/export.test.ts",
-  "src/tts/provider-registry.test.ts",
   "src/version.test.ts",
 ];
 const forcedUnitFastTestFileSet = new Set(forcedUnitFastTestFiles);
