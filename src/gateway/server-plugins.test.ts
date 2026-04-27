@@ -6,7 +6,13 @@ import type { PluginDiagnostic } from "../plugins/types.js";
 import type { GatewayRequestContext, GatewayRequestOptions } from "./server-methods/types.js";
 
 const loadOpenClawPlugins = vi.hoisted(() => vi.fn());
-const resolveGatewayStartupPluginIds = vi.hoisted(() => vi.fn(() => ["discord", "telegram"]));
+const loadPluginLookUpTable = vi.hoisted(() =>
+  vi.fn(() => ({
+    startup: {
+      pluginIds: ["discord", "telegram"],
+    },
+  })),
+);
 const applyPluginAutoEnable = vi.hoisted(() =>
   vi.fn(({ config }) => ({ config, changes: [], autoEnabledReasons: {} })),
 );
@@ -34,8 +40,8 @@ vi.mock("../plugins/runtime/load-context.js", () => ({
   createPluginRuntimeLoaderLogger: () => pluginRuntimeLoaderLogger,
 }));
 
-vi.mock("../plugins/channel-plugin-ids.js", () => ({
-  resolveGatewayStartupPluginIds,
+vi.mock("../plugins/plugin-lookup-table.js", () => ({
+  loadPluginLookUpTable,
 }));
 
 vi.mock("../config/plugin-auto-enable.js", () => ({
@@ -243,7 +249,11 @@ beforeAll(async () => {
 
 beforeEach(() => {
   loadOpenClawPlugins.mockReset();
-  resolveGatewayStartupPluginIds.mockReset().mockReturnValue(["discord", "telegram"]);
+  loadPluginLookUpTable.mockReset().mockReturnValue({
+    startup: {
+      pluginIds: ["discord", "telegram"],
+    },
+  });
   applyPluginAutoEnable
     .mockReset()
     .mockImplementation(({ config }) => ({ config, changes: [], autoEnabledReasons: {} }));
@@ -306,7 +316,7 @@ describe("loadGatewayPlugins", () => {
       config: {},
       env: process.env,
     });
-    expect(resolveGatewayStartupPluginIds).toHaveBeenCalledWith({
+    expect(loadPluginLookUpTable).toHaveBeenCalledWith({
       config: {},
       activationSourceConfig: undefined,
       workspaceDir: "/tmp",
@@ -354,7 +364,7 @@ describe("loadGatewayPlugins", () => {
       pluginIds: ["browser"],
     });
 
-    expect(resolveGatewayStartupPluginIds).not.toHaveBeenCalled();
+    expect(loadPluginLookUpTable).not.toHaveBeenCalled();
     expect(loadOpenClawPlugins).toHaveBeenCalledWith(
       expect.objectContaining({
         onlyPluginIds: ["browser"],
@@ -397,7 +407,7 @@ describe("loadGatewayPlugins", () => {
       pluginIds: ["slack"],
     });
 
-    expect(resolveGatewayStartupPluginIds).not.toHaveBeenCalled();
+    expect(loadPluginLookUpTable).not.toHaveBeenCalled();
     expect(applyPluginAutoEnable).toHaveBeenCalledWith({
       config: rawConfig,
       env: process.env,
@@ -415,7 +425,11 @@ describe("loadGatewayPlugins", () => {
   });
 
   test("treats an empty startup scope as no plugin load instead of an unscoped load", async () => {
-    resolveGatewayStartupPluginIds.mockReturnValue([]);
+    loadPluginLookUpTable.mockReturnValue({
+      startup: {
+        pluginIds: [],
+      },
+    });
 
     const result = serverPluginsModule.loadGatewayPlugins({
       cfg: {},
@@ -431,7 +445,11 @@ describe("loadGatewayPlugins", () => {
   });
 
   test("stores workspaceDir on the active registry when startup scope is empty", () => {
-    resolveGatewayStartupPluginIds.mockReturnValue([]);
+    loadPluginLookUpTable.mockReturnValue({
+      startup: {
+        pluginIds: [],
+      },
+    });
 
     serverPluginsModule.loadGatewayPlugins({
       cfg: {},
@@ -457,7 +475,7 @@ describe("loadGatewayPlugins", () => {
 
     loadGatewayPluginsForTest();
 
-    expect(resolveGatewayStartupPluginIds).toHaveBeenCalledWith({
+    expect(loadPluginLookUpTable).toHaveBeenCalledWith({
       config: autoEnabledConfig,
       activationSourceConfig: undefined,
       workspaceDir: "/tmp",
@@ -495,7 +513,7 @@ describe("loadGatewayPlugins", () => {
       config: rawConfig,
       env: process.env,
     });
-    expect(resolveGatewayStartupPluginIds).toHaveBeenCalledWith({
+    expect(loadPluginLookUpTable).toHaveBeenCalledWith({
       config: resolvedConfig,
       activationSourceConfig: rawConfig,
       workspaceDir: "/tmp",
@@ -979,7 +997,7 @@ describe("loadGatewayPlugins", () => {
       logDiagnostics: false,
     });
 
-    expect(resolveGatewayStartupPluginIds).not.toHaveBeenCalled();
+    expect(loadPluginLookUpTable).not.toHaveBeenCalled();
     expect(loadOpenClawPlugins).toHaveBeenCalledWith(
       expect.objectContaining({
         onlyPluginIds: ["discord"],

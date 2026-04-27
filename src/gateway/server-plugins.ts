@@ -3,9 +3,9 @@ import { normalizeModelRef, parseModelRef } from "../agents/model-selection.js";
 import { applyPluginAutoEnable } from "../config/plugin-auto-enable.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import type { BundledRuntimeDepsInstallParams } from "../plugins/bundled-runtime-deps.js";
-import { resolveGatewayStartupPluginIds } from "../plugins/channel-plugin-ids.js";
 import { normalizePluginsConfig } from "../plugins/config-state.js";
 import { loadOpenClawPlugins } from "../plugins/loader.js";
+import { loadPluginLookUpTable } from "../plugins/plugin-lookup-table.js";
 import { createEmptyPluginRegistry } from "../plugins/registry-empty.js";
 import { setActivePluginRegistry } from "../plugins/runtime.js";
 import { getPluginRuntimeGatewayRequestScope } from "../plugins/runtime/gateway-request-scope.js";
@@ -479,12 +479,12 @@ export function loadGatewayPlugins(params: {
   const resolvedConfig = autoEnabled.config;
   const pluginIds =
     params.pluginIds ??
-    resolveGatewayStartupPluginIds({
+    loadPluginLookUpTable({
       config: resolvedConfig,
       activationSourceConfig: params.activationSourceConfig,
       workspaceDir: params.workspaceDir,
       env: process.env,
-    });
+    }).startup.pluginIds;
   if (pluginIds.length === 0) {
     const pluginRegistry = createEmptyPluginRegistry();
     setActivePluginRegistry(pluginRegistry, undefined, "gateway-bindable", params.workspaceDir);
