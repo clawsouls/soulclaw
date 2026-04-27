@@ -55,6 +55,8 @@ packageJson.scripts = {
   "ui:build": "node -e \"console.log(\\\"fixture ui build skipped\\\")\"",
 };
 fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+fs.mkdirSync("/tmp/openclaw-git/dist/control-ui", { recursive: true });
+fs.writeFileSync("/tmp/openclaw-git/dist/control-ui/index.html", "<!doctype html><title>fixture</title>\n");
 NODE
 (
   cd "$git_root"
