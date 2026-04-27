@@ -180,7 +180,15 @@ async function inspectCodexComputerUse(params: {
         config: params.config,
         plugin,
         tools: [],
-        message: `Computer Use is available but not installed. Run /codex computer-use install or enable computerUse.autoInstall.`,
+        message: pluginSetupMessage(params.config, plugin, marketplace.marketplace),
+      });
+    }
+    if (!marketplace.marketplace.path) {
+      return statusFromPlugin({
+        config: params.config,
+        plugin,
+        tools: [],
+        message: remoteInstallUnsupportedMessage(plugin, marketplace.marketplace),
       });
     }
     await request<v2.PluginInstallResponse>(
@@ -196,6 +204,14 @@ async function inspectCodexComputerUse(params: {
       marketplace.marketplace,
       params.config.pluginName,
     );
+  }
+  if (!plugin.summary.installed || !plugin.summary.enabled) {
+    return statusFromPlugin({
+      config: params.config,
+      plugin,
+      tools: [],
+      message: pluginSetupMessage(params.config, plugin, marketplace.marketplace),
+    });
   }
 
   let server = await readMcpServerStatus(request, params.config.mcpServerName);
@@ -416,6 +432,29 @@ function pluginRequestParams(marketplace: MarketplaceRef, pluginName: string) {
       : {}),
     pluginName,
   };
+}
+
+function pluginSetupMessage(
+  config: ResolvedCodexComputerUseConfig,
+  plugin: v2.PluginDetail,
+  marketplace: MarketplaceRef,
+): string {
+  if (!marketplace.path) {
+    return remoteInstallUnsupportedMessage(plugin, marketplace);
+  }
+  if (!plugin.summary.installed) {
+    return "Computer Use is available but not installed. Run /codex computer-use install or enable computerUse.autoInstall.";
+  }
+  return `Computer Use is installed, but the ${config.pluginName} plugin is disabled. Run /codex computer-use install or enable computerUse.autoInstall to re-enable it.`;
+}
+
+function remoteInstallUnsupportedMessage(
+  plugin: v2.PluginDetail,
+  marketplace: MarketplaceRef,
+): string {
+  const marketplaceName = marketplace.name ?? plugin.marketplaceName;
+  const state = plugin.summary.installed ? "installed but disabled" : "available";
+  return `Computer Use is ${state} in remote Codex marketplace ${marketplaceName}, but Codex app-server does not support remote plugin install yet. Configure computerUse.marketplaceSource or computerUse.marketplacePath for a local marketplace, then run /codex computer-use install.`;
 }
 
 function statusFromPlugin(params: {

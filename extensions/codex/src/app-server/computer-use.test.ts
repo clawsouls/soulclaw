@@ -52,6 +52,27 @@ describe("Codex Computer Use setup", () => {
     expect(request).not.toHaveBeenCalledWith("plugin/install", expect.anything());
   });
 
+  it("reports an installed but disabled Computer Use plugin separately", async () => {
+    const request = createComputerUseRequest({ installed: true, enabled: false });
+
+    await expect(
+      readCodexComputerUseStatus({
+        pluginConfig: { computerUse: { enabled: true, marketplaceName: "desktop-tools" } },
+        request,
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        ready: false,
+        installed: true,
+        pluginEnabled: false,
+        mcpServerAvailable: false,
+        message:
+          "Computer Use is installed, but the computer-use plugin is disabled. Run /codex computer-use install or enable computerUse.autoInstall to re-enable it.",
+      }),
+    );
+    expect(request).not.toHaveBeenCalledWith("plugin/install", expect.anything());
+  });
+
   it("does not register marketplace sources during status checks", async () => {
     const request = createComputerUseRequest({ installed: true });
 
@@ -127,6 +148,28 @@ describe("Codex Computer Use setup", () => {
       pluginName: "computer-use",
     });
     expect(request).toHaveBeenCalledWith("config/mcpServer/reload", undefined);
+  });
+
+  it("re-enables an installed but disabled Computer Use plugin during install", async () => {
+    const request = createComputerUseRequest({ installed: true, enabled: false });
+
+    await expect(
+      installCodexComputerUse({
+        pluginConfig: { computerUse: { marketplaceName: "desktop-tools" } },
+        request,
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        ready: true,
+        installed: true,
+        pluginEnabled: true,
+        message: "Computer Use is ready.",
+      }),
+    );
+    expect(request).toHaveBeenCalledWith("plugin/install", {
+      marketplacePath: "/marketplaces/desktop-tools/.agents/plugins/marketplace.json",
+      pluginName: "computer-use",
+    });
   });
 
   it("fails closed when Computer Use is required but not installed", async () => {
@@ -240,6 +283,27 @@ describe("Codex Computer Use setup", () => {
     expect(request).not.toHaveBeenCalledWith("plugin/read", expect.anything());
   });
 
+  it("fails closed instead of installing from a remote-only Codex marketplace", async () => {
+    const request = createRemoteOnlyComputerUseRequest();
+
+    await expect(
+      installCodexComputerUse({
+        pluginConfig: { computerUse: { marketplaceName: "openai-curated" } },
+        request,
+      }),
+    ).rejects.toMatchObject({
+      status: expect.objectContaining({
+        ready: false,
+        installed: false,
+        pluginEnabled: false,
+        marketplaceName: "openai-curated",
+        message:
+          "Computer Use is available in remote Codex marketplace openai-curated, but Codex app-server does not support remote plugin install yet. Configure computerUse.marketplaceSource or computerUse.marketplacePath for a local marketplace, then run /codex computer-use install.",
+      }),
+    });
+    expect(request).not.toHaveBeenCalledWith("plugin/install", expect.anything());
+  });
+
   it("waits for the default Codex marketplace during install", async () => {
     vi.useFakeTimers();
     const request = createComputerUseRequest({
@@ -291,9 +355,11 @@ describe("Codex Computer Use setup", () => {
 
 function createComputerUseRequest(params: {
   installed: boolean;
+  enabled?: boolean;
   marketplaceAvailableAfterListCalls?: number;
 }): CodexComputerUseRequest {
   let installed = params.installed;
+  let enabled = params.enabled ?? installed;
   let pluginListCalls = 0;
   return vi.fn(async (method: string, requestParams?: unknown) => {
     if (method === "experimentalFeature/enablement/set") {
@@ -317,7 +383,7 @@ function createComputerUseRequest(params: {
                 name: "desktop-tools",
                 path: "/marketplaces/desktop-tools/.agents/plugins/marketplace.json",
                 interface: null,
-                plugins: [pluginSummary(installed)],
+                plugins: [pluginSummary(installed, "desktop-tools", enabled)],
               },
             ]
           : [],
@@ -335,7 +401,7 @@ function createComputerUseRequest(params: {
         plugin: {
           marketplaceName: "desktop-tools",
           marketplacePath: "/marketplaces/desktop-tools/.agents/plugins/marketplace.json",
-          summary: pluginSummary(installed),
+          summary: pluginSummary(installed, "desktop-tools", enabled),
           description: "Control desktop apps.",
           skills: [],
           apps: [],
@@ -345,6 +411,7 @@ function createComputerUseRequest(params: {
     }
     if (method === "plugin/install") {
       installed = true;
+      enabled = true;
       return { authPolicy: "ON_INSTALL", appsNeedingAuth: [] };
     }
     if (method === "config/mcpServer/reload") {
@@ -352,23 +419,64 @@ function createComputerUseRequest(params: {
     }
     if (method === "mcpServerStatus/list") {
       return {
-        data: installed
-          ? [
-              {
-                name: "computer-use",
-                tools: {
-                  list_apps: {
-                    name: "list_apps",
-                    inputSchema: { type: "object" },
+        data:
+          installed && enabled
+            ? [
+                {
+                  name: "computer-use",
+                  tools: {
+                    list_apps: {
+                      name: "list_apps",
+                      inputSchema: { type: "object" },
+                    },
                   },
+                  resources: [],
+                  resourceTemplates: [],
+                  authStatus: "unsupported",
                 },
-                resources: [],
-                resourceTemplates: [],
-                authStatus: "unsupported",
-              },
-            ]
-          : [],
+              ]
+            : [],
         nextCursor: null,
+      };
+    }
+    throw new Error(`unexpected request ${method}`);
+  }) as CodexComputerUseRequest;
+}
+
+function createRemoteOnlyComputerUseRequest(): CodexComputerUseRequest {
+  return vi.fn(async (method: string, requestParams?: unknown) => {
+    if (method === "experimentalFeature/enablement/set") {
+      return { enablement: { plugins: true } };
+    }
+    if (method === "plugin/list") {
+      return {
+        marketplaces: [
+          {
+            name: "openai-curated",
+            path: null,
+            interface: null,
+            plugins: [pluginSummary(false, "openai-curated", false, "remote")],
+          },
+        ],
+        marketplaceLoadErrors: [],
+        featuredPluginIds: [],
+      };
+    }
+    if (method === "plugin/read") {
+      expect(requestParams).toEqual({
+        remoteMarketplaceName: "openai-curated",
+        pluginName: "computer-use",
+      });
+      return {
+        plugin: {
+          marketplaceName: "openai-curated",
+          marketplacePath: null,
+          summary: pluginSummary(false, "openai-curated", false, "remote"),
+          description: "Control desktop apps.",
+          skills: [],
+          apps: [],
+          mcpServers: ["computer-use"],
+        },
       };
     }
     throw new Error(`unexpected request ${method}`);
@@ -488,13 +596,21 @@ function marketplaceEntry(marketplaceName: string, installed: boolean) {
   };
 }
 
-function pluginSummary(installed: boolean, marketplaceName = "desktop-tools") {
+function pluginSummary(
+  installed: boolean,
+  marketplaceName = "desktop-tools",
+  enabled = installed,
+  source: "local" | "remote" = "local",
+) {
   return {
     id: `computer-use@${marketplaceName}`,
     name: "computer-use",
-    source: { type: "local", path: `/marketplaces/${marketplaceName}/plugins/computer-use` },
+    source:
+      source === "local"
+        ? { type: "local", path: `/marketplaces/${marketplaceName}/plugins/computer-use` }
+        : { type: "remote" },
     installed,
-    enabled: installed,
+    enabled,
     installPolicy: "AVAILABLE",
     authPolicy: "ON_INSTALL",
     interface: null,
