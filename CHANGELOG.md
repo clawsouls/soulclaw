@@ -24,6 +24,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- ACP/sessions_spawn: let explicit `sessions_spawn(runtime="acp")` bootstrap turns run while `acp.dispatch.enabled=false` still blocks automatic ACP thread dispatch. Fixes #63591. Thanks @moeedahmed.
 - Google Meet: route local Chrome joins through OpenClaw browser control instead of raw default Chrome, so agents use the configured OpenClaw browser profile when opening Meet.
 - Plugins/discovery: follow symlinked plugin directories in global and workspace plugin roots while keeping broken links ignored and existing package safety checks in place. Fixes #36754; carries forward #72695 and #63206. Thanks @Quackstro, @ming1523, and @xsfX20.
 - Plugins/install: allow exact package-manager peer links back to the trusted OpenClaw host package during install security scans while continuing to block spoofed or nested escaping `node_modules` symlinks. Carries forward #70819. Thanks @fgabelmannjr.

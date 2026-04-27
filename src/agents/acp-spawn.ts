@@ -1318,6 +1318,7 @@ export async function spawnAcpDirect(
         idempotencyKey: childIdem,
         deliver: deliveryPlan.useInlineDelivery,
         lane: AGENT_LANE_SUBAGENT,
+        acpTurnSource: "manual_spawn",
         ...(params.runTimeoutSeconds != null ? { timeout: params.runTimeoutSeconds } : {}),
         label: params.label || undefined,
       },
