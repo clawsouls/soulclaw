@@ -134,6 +134,24 @@ describe("redactSensitiveText", () => {
     expect(output).toBe(input);
   });
 
+  it("masks sensitive URL query params while preserving non-sensitive params", () => {
+    const input = "GET /_matrix/client/v3/sync?access_token=abcdef1234567890ghij&since=123";
+    const output = redactSensitiveText(input, {
+      mode: "tools",
+      patterns: defaults,
+    });
+    expect(output).toBe("GET /_matrix/client/v3/sync?access_token=abcdef…ghij&since=123");
+  });
+
+  it("treats sensitive URL query param names case-insensitively", () => {
+    const input = "connect https://gateway.example/ws?Access-Token=short-token&ok=1";
+    const output = redactSensitiveText(input, {
+      mode: "tools",
+      patterns: defaults,
+    });
+    expect(output).toBe("connect https://gateway.example/ws?Access-Token=***&ok=1");
+  });
+
   it("redacts private key blocks", () => {
     const input = [
       "-----BEGIN PRIVATE KEY-----",
