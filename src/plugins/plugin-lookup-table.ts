@@ -148,7 +148,7 @@ export function loadPluginLookUpTable(params: LoadPluginLookUpTableParams): Plug
     registryDiagnostics: registryResult.diagnostics,
     manifestRegistry,
     plugins: manifestRegistry.plugins,
-    diagnostics: [...index.diagnostics, ...manifestRegistry.diagnostics],
+    diagnostics: manifestRegistry.diagnostics,
     byPluginId,
     normalizePluginId,
     owners,

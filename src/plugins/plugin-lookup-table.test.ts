@@ -80,6 +80,18 @@ function createIndex(plugins: readonly PluginManifestRecord[]): PluginRegistrySn
   };
 }
 
+const indexDiagnostic = {
+  level: "warn",
+  source: "/plugins/demo/openclaw.plugin.json",
+  message: "indexed warning",
+} as const;
+
+const manifestDiagnostic = {
+  level: "warn",
+  source: "/plugins/demo/openclaw.plugin.json",
+  message: "manifest warning",
+} as const;
+
 describe("loadPluginLookUpTable", () => {
   beforeEach(() => {
     listPotentialConfiguredChannelIds
@@ -105,10 +117,13 @@ describe("loadPluginLookUpTable", () => {
         },
       }),
     ];
-    const index = createIndex(plugins);
+    const index = {
+      ...createIndex(plugins),
+      diagnostics: [indexDiagnostic],
+    };
     const manifestRegistry: PluginManifestRegistry = {
       plugins,
-      diagnostics: [],
+      diagnostics: [indexDiagnostic, manifestDiagnostic],
     };
     loadPluginManifestRegistryForInstalledIndex.mockReturnValue(manifestRegistry);
     const { loadPluginLookUpTable } = await import("./plugin-lookup-table.js");
@@ -127,6 +142,7 @@ describe("loadPluginLookUpTable", () => {
     });
 
     expect(table.manifestRegistry).toBe(manifestRegistry);
+    expect(table.diagnostics).toEqual([indexDiagnostic, manifestDiagnostic]);
     expect(table.byPluginId.get("telegram")?.id).toBe("telegram");
     expect(table.normalizePluginId("openai-codex")).toBe("openai");
     expect(table.owners.channels.get("telegram")).toEqual(["telegram"]);
