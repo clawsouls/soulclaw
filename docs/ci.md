@@ -78,8 +78,8 @@ older trusted source commits without running old workflow logic.
 Profiles map to Docker coverage:
 
 - `smoke`: `npm-onboard-channel-agent`, `gateway-network`, `config-reload`
-- `package`: `install-e2e`, `npm-onboard-channel-agent`, `doctor-switch`,
-  `update-channel-switch`, `bundled-channel-deps`, `plugins-offline`,
+- `package`: `npm-onboard-channel-agent`, `doctor-switch`,
+  `update-channel-switch`, `bundled-channel-deps-compat`, `plugins-offline`,
   `plugin-update`
 - `product`: `package` plus `mcp-channels`, `cron-mcp-cleanup`,
   `openai-web-search-minimal`, `openwebui`

@@ -39,7 +39,20 @@ cat > \"\$HOME/.openclaw/extensions/lossless-claw/package.json\" <<'JSON'
 JSON
 cat > \"\$HOME/.openclaw/openclaw.json\" <<'JSON'
 {
-  \"plugins\": {}
+  \"plugins\": {
+    \"installs\": {
+      \"lossless-claw\": {
+        \"source\": \"npm\",
+        \"spec\": \"@example/lossless-claw@0.9.0\",
+        \"installPath\": \"~/.openclaw/extensions/lossless-claw\",
+        \"resolvedName\": \"@example/lossless-claw\",
+        \"resolvedVersion\": \"0.9.0\",
+        \"resolvedSpec\": \"@example/lossless-claw@0.9.0\",
+        \"integrity\": \"sha512-same\",
+        \"shasum\": \"same\"
+      }
+    }
+  }
 }
 JSON
 mkdir -p \"\$HOME/.openclaw/plugins\"

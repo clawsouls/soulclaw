@@ -118,7 +118,7 @@ the maintainer-only release runbook.
   Example: `gh workflow run package-acceptance.yml --ref main -f workflow_ref=main -f source=npm -f package_spec=openclaw@beta -f suite_profile=product -f telegram_mode=mock-openai`
   Common profiles:
   - `smoke`: install/channel/agent, gateway network, and config reload lanes
-  - `package`: package/update/plugin lanes without OpenWebUI or live ClawHub
+  - `package`: artifact-native package/update/plugin lanes without OpenWebUI or live ClawHub
   - `product`: package profile plus MCP channels, cron/subagent cleanup,
     OpenAI web search, and OpenWebUI
   - `full`: Docker release-path chunks with OpenWebUI

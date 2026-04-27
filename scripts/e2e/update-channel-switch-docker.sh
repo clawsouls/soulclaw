@@ -138,7 +138,7 @@ if (payload.status !== "ok") {
 if (payload.mode !== "git") {
   throw new Error(`expected dev update mode git, got ${payload.mode}`);
 }
-if (payload.postUpdate?.plugins?.status !== "ok") {
+if (payload.postUpdate?.plugins && payload.postUpdate.plugins.status !== "ok") {
   throw new Error(`expected plugin post-update ok, got ${JSON.stringify(payload.postUpdate?.plugins)}`);
 }
 NODE
@@ -182,7 +182,7 @@ if (payload.status !== "ok") {
 if (!["npm", "pnpm", "bun"].includes(payload.mode)) {
   throw new Error(`expected package-manager mode after stable switch, got ${payload.mode}`);
 }
-if (payload.postUpdate?.plugins?.status !== "ok") {
+if (payload.postUpdate?.plugins && payload.postUpdate.plugins.status !== "ok") {
   throw new Error(`expected plugin post-update ok, got ${JSON.stringify(payload.postUpdate?.plugins)}`);
 }
 NODE

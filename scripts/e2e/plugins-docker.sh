@@ -560,7 +560,9 @@ const path = require("node:path");
 
 const indexPath = path.join(process.env.HOME, ".openclaw", "plugins", "installs.json");
 const index = JSON.parse(fs.readFileSync(indexPath, "utf8"));
-const installRecords = index.installRecords ?? index.records ?? {};
+const configPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+const config = fs.existsSync(configPath) ? JSON.parse(fs.readFileSync(configPath, "utf8")) : {};
+const installRecords = index.installRecords ?? index.records ?? config.plugins?.installs ?? {};
 for (const id of ["marketplace-shortcut", "marketplace-direct"]) {
   const record = installRecords[id];
   if (!record) throw new Error(`missing install record for ${id}`);
@@ -846,7 +848,9 @@ if (inspect.plugin?.id !== pluginId) {
 
 const indexPath = path.join(process.env.HOME, ".openclaw", "plugins", "installs.json");
 const index = JSON.parse(fs.readFileSync(indexPath, "utf8"));
-const installRecords = index.installRecords ?? index.records ?? {};
+const configPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+const config = fs.existsSync(configPath) ? JSON.parse(fs.readFileSync(configPath, "utf8")) : {};
+const installRecords = index.installRecords ?? index.records ?? config.plugins?.installs ?? {};
 const record = installRecords[pluginId];
 if (!record) throw new Error(`missing ClawHub install record for ${pluginId}`);
 if (record.source !== "clawhub") {
@@ -892,7 +896,9 @@ if ((list.plugins || []).some((entry) => entry.id === pluginId)) {
 
 const indexPath = path.join(process.env.HOME, ".openclaw", "plugins", "installs.json");
 const index = fs.existsSync(indexPath) ? JSON.parse(fs.readFileSync(indexPath, "utf8")) : {};
-const installRecords = index.installRecords ?? index.records ?? {};
+const configPath = path.join(process.env.HOME, ".openclaw", "openclaw.json");
+const config = fs.existsSync(configPath) ? JSON.parse(fs.readFileSync(configPath, "utf8")) : {};
+const installRecords = index.installRecords ?? index.records ?? config.plugins?.installs ?? {};
 if (installRecords[pluginId]) {
   throw new Error(`ClawHub install record still present after uninstall: ${pluginId}`);
 }

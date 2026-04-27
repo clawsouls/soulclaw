@@ -223,6 +223,11 @@ export const mainLanes = [
       weight: 6,
     },
   ),
+  npmLane(
+    "bundled-channel-deps-compat",
+    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:bundled-channel-deps:fast",
+    { resources: ["service"], weight: 3 },
+  ),
   npmLane("plugin-update", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugin-update"),
   serviceLane("config-reload", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:config-reload"),
   ...bundledScenarioLanes,

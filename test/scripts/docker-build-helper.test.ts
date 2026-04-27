@@ -65,6 +65,8 @@ describe("docker build helper", () => {
 
     expect(scenarios).toContain('"plugins-offline"');
     expect(scenarios).toContain("OPENCLAW_PLUGINS_E2E_CLAWHUB=0");
+    expect(scenarios).toContain('"bundled-channel-deps-compat"');
+    expect(scenarios).toContain("test:docker:bundled-channel-deps:fast");
   });
 
   it("passes installer tag env to bash, not curl", () => {
