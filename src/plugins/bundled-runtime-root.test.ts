@@ -180,6 +180,86 @@ describe("prepareBundledPluginRuntimeRoot", () => {
     expect(fs.readFileSync(distChunk, "utf8")).toContain("same-root");
   });
 
+  it("mirrors canonical dist chunks when loading from dist-runtime", () => {
+    const packageRoot = makeTempRoot();
+    const stageDir = makeTempRoot();
+    const canonicalPluginRoot = path.join(packageRoot, "dist", "extensions", "qqbot");
+    const runtimePluginRoot = path.join(packageRoot, "dist-runtime", "extensions", "qqbot");
+    const env = { ...process.env, OPENCLAW_PLUGIN_STAGE_DIR: stageDir };
+    fs.mkdirSync(canonicalPluginRoot, { recursive: true });
+    fs.mkdirSync(runtimePluginRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(packageRoot, "package.json"),
+      JSON.stringify({ name: "openclaw", version: "2026.4.27", type: "module" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(packageRoot, "dist", "onboard-abc123.js"),
+      "export const setup = 'canonical-setup';\n",
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(canonicalPluginRoot, "index.js"),
+      `import { setup } from "../../onboard-abc123.js"; export default { id: "qqbot", setup };\n`,
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(canonicalPluginRoot, "package.json"),
+      JSON.stringify(
+        {
+          name: "@openclaw/qqbot",
+          version: "1.0.0",
+          type: "module",
+          dependencies: { "qqbot-runtime": "1.0.0" },
+          openclaw: { extensions: ["./index.js"] },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(runtimePluginRoot, "index.js"),
+      `export { default } from "../../../dist/extensions/qqbot/index.js";\n`,
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(runtimePluginRoot, "package.json"),
+      JSON.stringify(
+        {
+          name: "@openclaw/qqbot",
+          version: "1.0.0",
+          type: "module",
+          dependencies: { "qqbot-runtime": "1.0.0" },
+          openclaw: { extensions: ["./index.js"] },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    const installRoot = resolveBundledRuntimeDependencyInstallRoot(runtimePluginRoot, { env });
+    fs.mkdirSync(path.join(installRoot, "node_modules", "qqbot-runtime"), { recursive: true });
+    fs.writeFileSync(
+      path.join(installRoot, "node_modules", "qqbot-runtime", "package.json"),
+      JSON.stringify({ name: "qqbot-runtime", version: "1.0.0", type: "module" }),
+      "utf8",
+    );
+
+    const prepared = prepareBundledPluginRuntimeRoot({
+      pluginId: "qqbot",
+      pluginRoot: runtimePluginRoot,
+      modulePath: path.join(runtimePluginRoot, "index.js"),
+      env,
+    });
+
+    expect(prepared.pluginRoot).toBe(path.join(installRoot, "dist-runtime", "extensions", "qqbot"));
+    expect(fs.existsSync(path.join(installRoot, "dist", "onboard-abc123.js"))).toBe(true);
+    expect(
+      fs.readFileSync(path.join(installRoot, "dist", "extensions", "qqbot", "index.js"), "utf8"),
+    ).toContain("onboard-abc123");
+  });
+
   it("reuses unchanged external runtime mirrors from the original plugin root", async () => {
     const packageRoot = makeTempRoot();
     const stageDir = makeTempRoot();

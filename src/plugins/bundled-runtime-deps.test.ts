@@ -1072,7 +1072,7 @@ describe("scanBundledPluginRuntimeDeps config policy", () => {
       JSON.stringify({
         name: "openclaw",
         version: "2026.4.25",
-        dependencies: { tslog: "^4.10.2" },
+        dependencies: { semver: "7.7.4", tslog: "^4.10.2" },
       }),
     );
     writeBundledPluginPackage({
@@ -1090,10 +1090,12 @@ describe("scanBundledPluginRuntimeDeps config policy", () => {
 
     expect(result.deps.map((dep) => `${dep.name}@${dep.version}`)).toEqual([
       "discord-runtime@1.0.0",
+      "semver@7.7.4",
       "tslog@^4.10.2",
     ]);
     expect(result.missing.map((dep) => `${dep.name}@${dep.version}`)).toEqual([
       "discord-runtime@1.0.0",
+      "semver@7.7.4",
       "tslog@^4.10.2",
     ]);
   });
