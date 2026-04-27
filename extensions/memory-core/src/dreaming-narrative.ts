@@ -26,6 +26,7 @@ type SubagentSurface = {
     idempotencyKey: string;
     sessionKey: string;
     message: string;
+    model?: string;
     extraSystemPrompt?: string;
     lane?: string;
     lightContext?: boolean;
@@ -147,6 +148,7 @@ async function startNarrativeRunOrFallback(params: {
   workspaceDir: string;
   nowMs: number;
   timezone?: string;
+  model?: string;
   logger: Logger;
 }): Promise<string | null> {
   try {
@@ -154,6 +156,7 @@ async function startNarrativeRunOrFallback(params: {
       idempotencyKey: params.sessionKey,
       sessionKey: params.sessionKey,
       message: params.message,
+      ...(params.model ? { model: params.model } : {}),
       extraSystemPrompt: NARRATIVE_SYSTEM_PROMPT,
       lane: `dreaming-narrative:${params.sessionKey}`,
       lightContext: true,
@@ -846,6 +849,7 @@ export async function generateAndAppendDreamNarrative(params: {
   data: NarrativePhaseData;
   nowMs?: number;
   timezone?: string;
+  model?: string;
   logger: Logger;
 }): Promise<void> {
   const nowMs = Number.isFinite(params.nowMs) ? (params.nowMs as number) : Date.now();
@@ -871,6 +875,7 @@ export async function generateAndAppendDreamNarrative(params: {
       workspaceDir: params.workspaceDir,
       nowMs,
       timezone: params.timezone,
+      model: params.model,
       logger: params.logger,
     });
     if (!runId) {
