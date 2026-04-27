@@ -65,7 +65,7 @@ on:
         default: ""
         type: string
       telegram_mode:
-        description: Optional published-npm Telegram QA lane
+        description: Optional Telegram QA lane for the resolved package candidate
         required: true
         default: none
         type: choice
@@ -125,7 +125,7 @@ on:
         default: ""
         type: string
       telegram_mode:
-        description: Optional published-npm Telegram QA lane
+        description: Optional Telegram QA lane for the resolved package candidate
         required: false
         default: none
         type: string
@@ -366,10 +366,6 @@ jobs:
 
           telegram_enabled=false
           if [[ "$TELEGRAM_MODE" != "none" ]]; then
-            if [[ "$SOURCE" != "npm" ]]; then
-              echo "telegram_mode requires source=npm because the Telegram workflow installs a published package spec." >&2
-              exit 1
-            fi
             telegram_enabled=true
           fi
 
@@ -476,12 +472,14 @@ jobs:
       FIREWORKS_API_KEY: ${{ secrets.FIREWORKS_API_KEY }}
 
   npm_telegram:
-    name: Published npm Telegram acceptance
+    name: Telegram package acceptance
     needs: resolve_package
     if: needs.resolve_package.outputs.telegram_enabled == 'true'
     uses: ./.github/workflows/npm-telegram-beta-e2e.yml
     with:
       package_spec: ${{ inputs.package_spec }}
+      package_artifact_name: ${{ needs.resolve_package.outputs.package_artifact_name }}
+      package_label: openclaw@${{ needs.resolve_package.outputs.package_version }}
       provider_mode: ${{ needs.resolve_package.outputs.telegram_mode }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
