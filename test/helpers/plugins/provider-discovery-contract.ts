@@ -16,7 +16,7 @@ export type ProviderDiscoveryContractPluginLoader = () => Promise<{
   default: Parameters<typeof registerProviders>[0];
 }>;
 
-type ProviderHandle = Awaited<ReturnType<typeof requireProvider>>;
+type ProviderHandle = Awaited<ReturnType<typeof registerProviders>>[number];
 
 type DiscoveryState = {
   runProviderCatalog: typeof import("../../../src/plugins/provider-discovery.js").runProviderCatalog;

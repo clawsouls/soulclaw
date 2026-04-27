@@ -115,10 +115,39 @@ export { expectGeneratedTokenPersistedToGatewayAuth } from "../test-utils/auth-t
 export { captureEnv, withEnv, withEnvAsync } from "../test-utils/env.js";
 export { withFetchPreconnect, type FetchMock } from "../test-utils/fetch-mock.js";
 export { createMockServerResponse } from "../test-utils/mock-http-response.js";
-export { registerSingleProviderPlugin } from "../test-utils/plugin-registration.js";
+export {
+  registerProviderPlugin,
+  registerSingleProviderPlugin,
+  requireRegisteredProvider,
+  type RegisteredProviderCollections,
+} from "../test-utils/plugin-registration.js";
 export { createTempHomeEnv, type TempHomeEnv } from "../test-utils/temp-home.js";
 export { withTempDir } from "../test-utils/temp-dir.js";
 export { typedCases } from "../test-utils/typed-cases.js";
+export { createProviderUsageFetch, makeResponse } from "../test-utils/provider-usage-fetch.js";
+export { useFrozenTime, useRealTime } from "../test-utils/frozen-time.js";
+export {
+  createNonExitingRuntimeEnv,
+  createNonExitingTypedRuntimeEnv,
+  createRuntimeEnv,
+  createTypedRuntimeEnv,
+} from "../test-utils/plugin-runtime-env.js";
+export {
+  createPluginSetupWizardAdapter,
+  createPluginSetupWizardConfigure,
+  createPluginSetupWizardStatus,
+  createQueuedWizardPrompter,
+  createSetupWizardAdapter,
+  createTestWizardPrompter,
+  promptSetupWizardAllowFrom,
+  resolveSetupWizardAllowFromEntries,
+  resolveSetupWizardGroupAllowlist,
+  runSetupWizardConfigure,
+  runSetupWizardFinalize,
+  runSetupWizardPrepare,
+  selectFirstWizardOption,
+  type WizardPrompter,
+} from "../test-utils/plugin-setup-wizard.js";
 export { createMockPluginRegistry } from "../plugins/hooks.test-helpers.js";
 export { buildPluginApi } from "../plugins/api-builder.js";
 export {
