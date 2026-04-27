@@ -1,8 +1,5 @@
-import {
-  loadPluginManifestRegistry,
-  pluginRegistrationContractRegistry,
-} from "openclaw/plugin-sdk/testing";
 import { describe, expect, it } from "vitest";
+import { loadPluginManifestRegistry, pluginRegistrationContractRegistry } from "../testing.js";
 
 type PluginRegistrationContractParams = {
   pluginId: string;

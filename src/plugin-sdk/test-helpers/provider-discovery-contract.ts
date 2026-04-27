@@ -1,10 +1,10 @@
-import type { AuthProfileStore, OpenClawConfig } from "openclaw/plugin-sdk/provider-auth";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { AuthProfileStore, OpenClawConfig } from "../provider-auth.js";
 import {
   registerProviderPlugins as registerProviders,
   requireRegisteredProvider as requireProvider,
   runProviderCatalog,
-} from "openclaw/plugin-sdk/testing";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+} from "../testing.js";
 
 const resolveCopilotApiTokenMock = vi.hoisted(() => vi.fn());
 const buildVllmProviderMock = vi.hoisted(() => vi.fn());

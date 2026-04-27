@@ -1,15 +1,12 @@
-import {
-  clearRuntimeAuthProfileStoreSnapshots,
-  type AuthProfileStore,
-} from "openclaw/plugin-sdk/agent-runtime";
-import { createNonExitingRuntime } from "openclaw/plugin-sdk/runtime";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { clearRuntimeAuthProfileStoreSnapshots, type AuthProfileStore } from "../agent-runtime.js";
+import { createNonExitingRuntime } from "../runtime.js";
 import type {
   WizardMultiSelectParams,
   WizardPrompter,
   WizardProgress,
   WizardSelectParams,
-} from "openclaw/plugin-sdk/setup";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+} from "../setup.js";
 import { registerProviders, requireProvider } from "./contracts-testkit.js";
 
 type LoginOpenAICodexOAuth =
@@ -29,28 +26,6 @@ const listProfilesForProviderMock = vi.hoisted(() => vi.fn<ListProfilesForProvid
 export type ProviderAuthContractPluginLoader = () => Promise<{
   default: Parameters<typeof registerProviders>[0];
 }>;
-
-vi.mock("openclaw/plugin-sdk/provider-auth-login", async () => {
-  const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/provider-auth-login")>(
-    "openclaw/plugin-sdk/provider-auth-login",
-  );
-  return {
-    ...actual,
-    loginOpenAICodexOAuth: loginOpenAICodexOAuthMock,
-    githubCopilotLoginCommand: githubCopilotLoginCommandMock,
-  };
-});
-
-vi.mock("openclaw/plugin-sdk/provider-auth", async () => {
-  const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/provider-auth")>(
-    "openclaw/plugin-sdk/provider-auth",
-  );
-  return {
-    ...actual,
-    ensureAuthProfileStore: ensureAuthProfileStoreMock,
-    listProfilesForProvider: listProfilesForProviderMock,
-  };
-});
 
 function buildPrompter(): WizardPrompter {
   const progress: WizardProgress = {
@@ -131,6 +106,26 @@ function buildOpenAICodexOAuthResult(params: {
 
 function installSharedAuthProfileStoreHooks(state: { authStore: AuthProfileStore }) {
   beforeEach(() => {
+    vi.doMock("openclaw/plugin-sdk/provider-auth-login", async () => {
+      const actual = await vi.importActual<
+        typeof import("openclaw/plugin-sdk/provider-auth-login")
+      >("openclaw/plugin-sdk/provider-auth-login");
+      return {
+        ...actual,
+        loginOpenAICodexOAuth: loginOpenAICodexOAuthMock,
+        githubCopilotLoginCommand: githubCopilotLoginCommandMock,
+      };
+    });
+    vi.doMock("openclaw/plugin-sdk/provider-auth", async () => {
+      const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/provider-auth")>(
+        "openclaw/plugin-sdk/provider-auth",
+      );
+      return {
+        ...actual,
+        ensureAuthProfileStore: ensureAuthProfileStoreMock,
+        listProfilesForProvider: listProfilesForProviderMock,
+      };
+    });
     state.authStore = { version: 1, profiles: {} };
     ensureAuthProfileStoreMock.mockReset();
     ensureAuthProfileStoreMock.mockImplementation(() => state.authStore);

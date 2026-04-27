@@ -4,9 +4,9 @@ import { pathToFileURL } from "node:url";
 
 const repoRoot = process.cwd();
 
-function readJson<T>(filePath: string): T | undefined {
+function readJson(filePath: string): unknown {
   try {
-    return JSON.parse(fs.readFileSync(filePath, "utf8")) as T;
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch {
     return undefined;
   }
@@ -29,7 +29,9 @@ function resolveSourceArtifactPath(packageDir: string, artifactBasename: string)
 
 function resolveExtensionDirByManifestId(pluginId: string): string {
   const pluginDir = path.resolve(repoRoot, "extensions", pluginId);
-  const manifest = readJson<{ id?: unknown }>(path.join(pluginDir, "openclaw.plugin.json"));
+  const manifest = readJson(path.join(pluginDir, "openclaw.plugin.json")) as
+    | { id?: unknown }
+    | undefined;
   if (manifest?.id === pluginId) {
     return pluginDir;
   }
@@ -43,7 +45,9 @@ function resolveWorkspacePackageDir(packageName: string): string {
       continue;
     }
     const packageDir = path.join(extensionsDir, entry.name);
-    const manifest = readJson<{ name?: unknown }>(path.join(packageDir, "package.json"));
+    const manifest = readJson(path.join(packageDir, "package.json")) as
+      | { name?: unknown }
+      | undefined;
     if (manifest?.name === packageName) {
       return packageDir;
     }
@@ -51,23 +55,30 @@ function resolveWorkspacePackageDir(packageName: string): string {
   throw new Error(`Unknown workspace package: ${packageName}`);
 }
 
-export async function loadBundledPluginPublicSurface<T extends object>(params: {
+type AsyncBundledPluginPublicSurfaceLoader = <T extends object>(params: {
   pluginId: string;
   artifactBasename: string;
-}): Promise<T> {
+}) => Promise<T>;
+
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Test loaders use caller-supplied module surface types.
+type BundledPluginPublicSurfaceLoader = <T extends object>(params: {
+  pluginId: string;
+  artifactBasename: string;
+}) => T;
+
+export const loadBundledPluginPublicSurface: AsyncBundledPluginPublicSurfaceLoader = async (
+  params,
+) => {
   const artifactPath = resolveSourceArtifactPath(
     resolveExtensionDirByManifestId(params.pluginId),
     params.artifactBasename,
   );
-  return (await import(pathToFileURL(artifactPath).href)) as T;
-}
+  return await import(pathToFileURL(artifactPath).href);
+};
 
-export function loadBundledPluginPublicSurfaceSync<T extends object>(_params: {
-  pluginId: string;
-  artifactBasename: string;
-}): T {
+export const loadBundledPluginPublicSurfaceSync: BundledPluginPublicSurfaceLoader = (_params) => {
   throw new Error("Synchronous bundled plugin public-surface loading is not available here");
-}
+};
 
 export function resolveWorkspacePackagePublicModuleUrl(params: {
   packageName: string;

@@ -1,13 +1,13 @@
-import type { ProviderAuthMethod } from "openclaw/plugin-sdk/plugin-entry";
-import type { ProviderPlugin } from "openclaw/plugin-sdk/provider-model-shared";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ProviderAuthMethod } from "../plugin-entry.js";
+import type { ProviderPlugin } from "../provider-model-shared.js";
 import {
   buildProviderPluginMethodChoice,
   resolveProviderModelPickerEntries,
   resolveProviderPluginChoice,
   resolveProviderWizardOptions,
   setProviderWizardProvidersResolverForTest,
-} from "openclaw/plugin-sdk/testing";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+} from "../testing.js";
 
 const resolvePluginProvidersMock = vi.fn();
 let restoreProviderResolver: (() => void) | undefined;

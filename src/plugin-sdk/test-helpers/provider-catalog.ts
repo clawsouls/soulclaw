@@ -3,8 +3,8 @@ export {
   expectedAugmentedOpenaiCodexCatalogEntriesWithGpt55,
   expectCodexBuiltInSuppression,
   expectCodexMissingAuthHint,
-} from "openclaw/plugin-sdk/testing";
-export type { ProviderPlugin } from "openclaw/plugin-sdk/provider-model-shared";
+} from "../testing.js";
+export type { ProviderPlugin } from "../provider-model-shared.js";
 export {
   loadBundledPluginPublicSurface,
   loadBundledPluginPublicSurfaceSync,

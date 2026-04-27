@@ -9,4 +9,4 @@ export {
   resetGlobalHookRunner,
   setActivePluginRegistry,
   type PluginHookRegistration,
-} from "openclaw/plugin-sdk/testing";
+} from "../testing.js";

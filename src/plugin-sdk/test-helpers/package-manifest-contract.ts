@@ -1,12 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import {
-  isAtLeast,
-  parseMinHostVersionRequirement,
-  parseSemver,
-} from "openclaw/plugin-sdk/testing";
 import { describe, expect, it } from "vitest";
-import { bundledPluginFile } from "../bundled-plugin-paths.js";
+import { isAtLeast, parseMinHostVersionRequirement, parseSemver } from "../testing.js";
 
 type PackageManifest = {
   dependencies?: Record<string, string>;
@@ -29,6 +24,10 @@ type PackageManifestContractParams = {
 function readJson<T>(relativePath: string): T {
   const absolutePath = path.resolve(process.cwd(), relativePath);
   return JSON.parse(fs.readFileSync(absolutePath, "utf8")) as T;
+}
+
+function bundledPluginFile(pluginId: string, relativePath: string): string {
+  return `extensions/${pluginId}/${relativePath}`;
 }
 
 export function describePackageManifestContract(params: PackageManifestContractParams) {

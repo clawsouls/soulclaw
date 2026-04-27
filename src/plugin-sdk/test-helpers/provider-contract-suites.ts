@@ -1,8 +1,8 @@
-import type { ProviderPlugin } from "openclaw/plugin-sdk/provider-model-shared";
-import type { WebFetchProviderPlugin } from "openclaw/plugin-sdk/provider-web-fetch-contract";
-import type { WebSearchProviderPlugin } from "openclaw/plugin-sdk/provider-web-search-contract";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/testing";
 import { expect, it } from "vitest";
+import type { ProviderPlugin } from "../provider-model-shared.js";
+import type { WebFetchProviderPlugin } from "../provider-web-fetch-contract.js";
+import type { WebSearchProviderPlugin } from "../provider-web-search-contract.js";
+import type { OpenClawConfig } from "../testing.js";
 
 type Lazy<T> = T | (() => T);
 

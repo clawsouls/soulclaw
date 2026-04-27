@@ -1,4 +1,4 @@
-import { assertUniqueValues, BUNDLED_RUNTIME_SIDECAR_PATHS } from "openclaw/plugin-sdk/testing";
+import { assertUniqueValues, BUNDLED_RUNTIME_SIDECAR_PATHS } from "../testing.js";
 
 export function getPublicArtifactBasename(relativePath: string): string {
   return relativePath.split("/").at(-1) ?? relativePath;

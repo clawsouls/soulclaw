@@ -1,15 +1,15 @@
+import { vi } from "vitest";
 import {
   implicitMentionKindWhen,
   resolveInboundMentionDecision,
-} from "openclaw/plugin-sdk/channel-mention-gating";
+} from "../channel-mention-gating.js";
 import {
   createAckReactionHandle,
   removeAckReactionAfterReply,
   removeAckReactionHandleAfterReply,
   shouldAckReaction,
-} from "openclaw/plugin-sdk/testing";
-import type { PluginRuntime } from "openclaw/plugin-sdk/testing";
-import { vi } from "vitest";
+} from "../testing.js";
+import type { PluginRuntime } from "../testing.js";
 
 const DEFAULT_PROVIDER = "openai";
 const DEFAULT_MODEL = "gpt-5.5";

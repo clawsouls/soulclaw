@@ -1,4 +1,4 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+import type { OpenClawPluginApi } from "../plugin-entry.js";
 import {
   createPluginRecord,
   createPluginRegistry,
@@ -7,7 +7,7 @@ import {
   type OpenClawConfig,
   type PluginRecord,
   type PluginRuntime,
-} from "openclaw/plugin-sdk/testing";
+} from "../testing.js";
 
 export { registerProviders, requireProvider };
 

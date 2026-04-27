@@ -1,5 +1,5 @@
-import type { ModelApi } from "openclaw/plugin-sdk/provider-model-shared";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/testing";
+import type { ModelApi } from "../provider-model-shared.js";
+import type { OpenClawConfig } from "../testing.js";
 
 export const EXPECTED_FALLBACKS = ["anthropic/claude-opus-4-5"] as const;
 

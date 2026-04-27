@@ -1,5 +1,5 @@
-import type { ChannelAccountSnapshot, ChannelGatewayContext } from "openclaw/plugin-sdk/testing";
 import { expect, vi } from "vitest";
+import type { ChannelAccountSnapshot, ChannelGatewayContext } from "../testing.js";
 import { createStartAccountContext } from "./start-account-context.js";
 
 export function startAccountAndTrackLifecycle<TAccount extends { accountId: string }>(params: {
