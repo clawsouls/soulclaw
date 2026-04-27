@@ -26,7 +26,7 @@ import {
   type ChatRunEntry,
   createChatRunState,
   createToolEventRecipientRegistry,
-} from "./server-chat.js";
+} from "./server-chat-state.js";
 import { MAX_PREAUTH_PAYLOAD_BYTES } from "./server-constants.js";
 import {
   attachGatewayUpgradeHandler,
