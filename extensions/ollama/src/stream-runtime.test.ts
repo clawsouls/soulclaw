@@ -94,6 +94,7 @@ describe("createConfiguredOllamaCompatStreamWrapper", () => {
       provider: "ollama",
       id: "kimi-k2.5:cloud",
       contextWindow: 262144,
+      params: { num_ctx: 65536 },
     };
 
     const wrapped = createConfiguredOllamaCompatStreamWrapper({
@@ -117,7 +118,43 @@ describe("createConfiguredOllamaCompatStreamWrapper", () => {
 
     expect(patchedPayload).toMatchObject({
       thinking: { type: "enabled" },
-      options: { num_ctx: 262144 },
+      options: { num_ctx: 65536 },
+    });
+  });
+
+  it("falls back to contextWindow when configured num_ctx is invalid", async () => {
+    let patchedPayload: Record<string, unknown> | undefined;
+    const baseStreamFn = vi.fn((_model, _context, options) => {
+      options?.onPayload?.({});
+      return (async function* () {})();
+    });
+    const model = {
+      api: "openai-completions",
+      provider: "ollama",
+      id: "qwen3:32b",
+      contextWindow: 131072,
+      params: { num_ctx: 0 },
+    };
+
+    const wrapped = createConfiguredOllamaCompatStreamWrapper({
+      provider: "ollama",
+      modelId: "qwen3:32b",
+      model,
+      streamFn: baseStreamFn,
+    } as never);
+
+    await wrapped?.(
+      model as never,
+      { messages: [] } as never,
+      {
+        onPayload: (payload: unknown) => {
+          patchedPayload = payload as Record<string, unknown>;
+        },
+      } as never,
+    );
+
+    expect(patchedPayload).toMatchObject({
+      options: { num_ctx: 131072 },
     });
   });
 
@@ -878,6 +915,7 @@ function getGuardedFetchCall(fetchMock: typeof fetchWithSsrFGuardMock): GuardedF
 async function createOllamaTestStream(params: {
   baseUrl: string;
   defaultHeaders?: Record<string, string>;
+  model?: Record<string, unknown>;
   options?: {
     apiKey?: string;
     maxTokens?: number;
@@ -892,6 +930,7 @@ async function createOllamaTestStream(params: {
       api: "ollama",
       provider: "custom-ollama",
       contextWindow: 131072,
+      ...params.model,
     } as unknown as Parameters<typeof streamFn>[0],
     {
       messages: [{ role: "user", content: "hello" }],
@@ -1153,6 +1192,33 @@ describe("createOllamaStreamFn", () => {
         };
         expect(requestBody.options.num_ctx).toBe(131072);
         expect(requestBody.options.num_predict).toBe(123);
+      },
+    );
+  });
+
+  it("uses configured params.num_ctx for native Ollama chat options", async () => {
+    await withMockNdjsonFetch(
+      [
+        '{"model":"m","created_at":"t","message":{"role":"assistant","content":"ok"},"done":false}',
+        '{"model":"m","created_at":"t","message":{"role":"assistant","content":""},"done":true,"prompt_eval_count":1,"eval_count":1}',
+      ],
+      async (fetchMock) => {
+        const stream = await createOllamaTestStream({
+          baseUrl: "http://ollama-host:11434",
+          model: { params: { num_ctx: 32768 }, contextWindow: 131072 },
+        });
+
+        const events = await collectStreamEvents(stream);
+        expect(events.at(-1)?.type).toBe("done");
+
+        const requestInit = getGuardedFetchCall(fetchMock).init ?? {};
+        if (typeof requestInit.body !== "string") {
+          throw new Error("Expected string request body");
+        }
+        const requestBody = JSON.parse(requestInit.body) as {
+          options: { num_ctx?: number };
+        };
+        expect(requestBody.options.num_ctx).toBe(32768);
       },
     );
   });

@@ -181,8 +181,19 @@ function resolveOllamaThinkValue(thinkingLevel: unknown): OllamaThinkValue | und
   return undefined;
 }
 
-function resolveOllamaCompatNumCtx(model: ProviderRuntimeModel): number {
-  return Math.max(1, Math.floor(model.contextWindow ?? model.maxTokens ?? DEFAULT_CONTEXT_TOKENS));
+function resolveOllamaConfiguredNumCtx(model: ProviderRuntimeModel): number | undefined {
+  const raw = model.params?.num_ctx;
+  if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) {
+    return undefined;
+  }
+  return Math.floor(raw);
+}
+
+function resolveOllamaNumCtx(model: ProviderRuntimeModel): number {
+  return (
+    resolveOllamaConfiguredNumCtx(model) ??
+    Math.max(1, Math.floor(model.contextWindow ?? model.maxTokens ?? DEFAULT_CONTEXT_TOKENS))
+  );
 }
 
 function isOllamaCloudKimiModelRef(modelId: string): boolean {
@@ -215,7 +226,7 @@ export function createConfiguredOllamaCompatStreamWrapper(
   }
 
   if (injectNumCtx && model) {
-    streamFn = wrapOllamaCompatNumCtx(streamFn, resolveOllamaCompatNumCtx(model));
+    streamFn = wrapOllamaCompatNumCtx(streamFn, resolveOllamaNumCtx(model));
   }
 
   const ollamaThinkValue = isNativeOllamaTransport
@@ -743,7 +754,7 @@ export function createOllamaStreamFn(
         );
         const ollamaTools = extractOllamaTools(context.tools);
 
-        const ollamaOptions: Record<string, unknown> = { num_ctx: model.contextWindow ?? 65536 };
+        const ollamaOptions: Record<string, unknown> = { num_ctx: resolveOllamaNumCtx(model) };
         if (typeof options?.temperature === "number") {
           ollamaOptions.temperature = options.temperature;
         }
