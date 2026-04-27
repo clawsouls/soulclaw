@@ -119,6 +119,8 @@ export type PluginManifestActivation = {
   onChannels?: string[];
   /** Route kinds that should include this plugin in activation/load plans. */
   onRoutes?: string[];
+  /** Root-relative config paths that should include this plugin in startup/load plans. */
+  onConfigPaths?: string[];
   /** Broad capability hints for activation/load plans. Prefer narrower ownership metadata. */
   onCapabilities?: PluginManifestActivationCapability[];
 };
@@ -740,6 +742,7 @@ function normalizeManifestActivation(value: unknown): PluginManifestActivation |
   const onCommands = normalizeTrimmedStringList(value.onCommands);
   const onChannels = normalizeTrimmedStringList(value.onChannels);
   const onRoutes = normalizeTrimmedStringList(value.onRoutes);
+  const onConfigPaths = normalizeTrimmedStringList(value.onConfigPaths);
   const onCapabilities = normalizeTrimmedStringList(value.onCapabilities).filter(
     (capability): capability is PluginManifestActivationCapability =>
       capability === "provider" ||
@@ -754,6 +757,7 @@ function normalizeManifestActivation(value: unknown): PluginManifestActivation |
     ...(onCommands.length > 0 ? { onCommands } : {}),
     ...(onChannels.length > 0 ? { onChannels } : {}),
     ...(onRoutes.length > 0 ? { onRoutes } : {}),
+    ...(onConfigPaths.length > 0 ? { onConfigPaths } : {}),
     ...(onCapabilities.length > 0 ? { onCapabilities } : {}),
   } satisfies PluginManifestActivation;
 
