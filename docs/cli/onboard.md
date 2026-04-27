@@ -181,12 +181,14 @@ openclaw onboard --non-interactive \
     When an auth choice implies a preferred provider, onboarding prefilters the default-model and allowlist pickers to that provider. For Volcengine and BytePlus, this also matches the coding-plan variants (`volcengine-plan/*`, `byteplus-plan/*`).
 
     If the preferred-provider filter yields no loaded models yet, onboarding falls back to the unfiltered catalog instead of leaving the picker empty.
+
   </Accordion>
   <Accordion title="Web-search follow-ups">
     Some web-search providers trigger provider-specific follow-up prompts:
 
     - **Grok** can offer optional `x_search` setup with the same `XAI_API_KEY` and an `x_search` model choice.
     - **Kimi** can ask for the Moonshot API region (`api.moonshot.ai` vs `api.moonshot.cn`) and the default Kimi web-search model.
+
   </Accordion>
   <Accordion title="Other behaviors">
     - Local onboarding DM scope behavior: [CLI setup reference](/start/wizard-cli-reference#outputs-and-internals).
