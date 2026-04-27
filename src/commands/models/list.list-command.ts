@@ -92,7 +92,10 @@ export async function modelsListCommand(
   const shouldLoadRegistry = sourcePlan?.requiresInitialRegistry ?? false;
   const loadRegistryState = async () => {
     const { loadListModelRegistry } = await loadRegistryLoadModule();
-    const loaded = await loadListModelRegistry(cfg, { providerFilter });
+    const loaded = await loadListModelRegistry(cfg, {
+      providerFilter,
+      normalizeModels: Boolean(providerFilter),
+    });
     modelRegistry = loaded.registry;
     discoveredKeys = loaded.discoveredKeys;
     availableKeys = loaded.availableKeys;

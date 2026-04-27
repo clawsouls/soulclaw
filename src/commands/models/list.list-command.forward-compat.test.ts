@@ -153,7 +153,7 @@ function installModelsListCommandForwardCompatMocks() {
   vi.doMock("./list.registry-load.js", () => ({
     loadListModelRegistry: async (
       cfg: unknown,
-      opts?: { providerFilter?: string },
+      opts?: { providerFilter?: string; normalizeModels?: boolean },
     ): Promise<{
       models: Array<{ provider: string; id: string }>;
       availableKeys?: Set<string>;
@@ -173,7 +173,7 @@ function installModelsListCommandForwardCompatMocks() {
     loadConfiguredListModelRegistry: (
       _cfg: unknown,
       _entries: unknown,
-      opts?: { providerFilter?: string },
+      opts?: { providerFilter?: string; normalizeModels?: boolean },
     ) => {
       mocks.loadModelRegistry(mocks.resolvedConfig, opts);
       return {
@@ -618,6 +618,7 @@ describe("modelsListCommand forward-compat", () => {
 
       expect(mocks.loadModelRegistry).toHaveBeenCalledWith(mocks.resolvedConfig, {
         providerFilter: undefined,
+        normalizeModels: false,
       });
       expect(mocks.loadProviderCatalogModelsForList).not.toHaveBeenCalled();
       expect(mocks.resolveModelWithRegistry).not.toHaveBeenCalled();
@@ -653,6 +654,7 @@ describe("modelsListCommand forward-compat", () => {
         mocks.resolvedConfig,
         expect.objectContaining({
           providerFilter: "openai-codex",
+          normalizeModels: true,
         }),
       );
       expect(mocks.loadProviderCatalogModelsForList).toHaveBeenNthCalledWith(1, {
