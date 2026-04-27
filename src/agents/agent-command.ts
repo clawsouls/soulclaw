@@ -191,6 +191,7 @@ type PersistSessionEntryParams = {
 type OverrideFieldClearedByDelete =
   | "providerOverride"
   | "modelOverride"
+  | "modelOverrideSource"
   | "authProfileOverride"
   | "authProfileOverrideSource"
   | "authProfileOverrideCompactionCount"
@@ -202,6 +203,7 @@ type OverrideFieldClearedByDelete =
 const OVERRIDE_FIELDS_CLEARED_BY_DELETE: OverrideFieldClearedByDelete[] = [
   "providerOverride",
   "modelOverride",
+  "modelOverrideSource",
   "authProfileOverride",
   "authProfileOverrideSource",
   "authProfileOverrideCompactionCount",
@@ -722,7 +724,28 @@ async function agentCommandInternal(
       allowAnyModel = allowed.allowAny ?? false;
     }
 
-    if (sessionEntry && sessionStore && sessionKey && hasStoredOverride) {
+    const hasAutoStoredOverride =
+      sessionEntry?.modelOverrideSource === "auto" && Boolean(sessionEntry.modelOverride?.trim());
+
+    if (sessionEntry && sessionStore && sessionKey && hasAutoStoredOverride) {
+      const { updated } = applyModelOverrideToSessionEntry({
+        entry: sessionEntry,
+        selection: { provider: defaultProvider, model: defaultModel, isDefault: true },
+      });
+      if (updated) {
+        sessionStore[sessionKey] = sessionEntry;
+        if (storePath) {
+          await persistSessionEntry({
+            sessionStore,
+            sessionKey,
+            storePath,
+            entry: sessionEntry,
+          });
+        }
+      }
+    }
+
+    if (sessionEntry && sessionStore && sessionKey && hasStoredOverride && !hasAutoStoredOverride) {
       const entry = sessionEntry;
       const overrideProvider = sessionEntry.providerOverride?.trim() || defaultProvider;
       const overrideModel = sessionEntry.modelOverride?.trim();
@@ -746,8 +769,12 @@ async function agentCommandInternal(
       }
     }
 
-    const storedProviderOverride = sessionEntry?.providerOverride?.trim();
-    let storedModelOverride = sessionEntry?.modelOverride?.trim();
+    const storedProviderOverride = hasAutoStoredOverride
+      ? undefined
+      : sessionEntry?.providerOverride?.trim();
+    let storedModelOverride = hasAutoStoredOverride
+      ? undefined
+      : sessionEntry?.modelOverride?.trim();
     if (storedModelOverride) {
       const candidateProvider = storedProviderOverride || defaultProvider;
       const normalizedStored = normalizeModelRef(candidateProvider, storedModelOverride);
