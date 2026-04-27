@@ -243,6 +243,31 @@ gh workflow run package-acceptance.yml --ref main \
   -f suite_profile=product
 ```
 
+Npm candidate selection:
+
+- Resolve the registry immediately before dispatch:
+  `npm view openclaw dist-tags --json --prefer-online --cache /tmp/openclaw-npm-cache-verify-$$`
+  and `npm view openclaw@beta version dist.tarball dist.integrity --json --prefer-online --cache /tmp/openclaw-npm-cache-verify-$$`.
+- If Peter asks for "latest beta", use `source=npm` with
+  `package_spec=openclaw@beta`, then record the resolved version from `npm view`
+  or the workflow summary.
+- For reruns, release proof, or comparing one known package, prefer the exact
+  immutable spec: `package_spec=openclaw@YYYY.M.D-beta.N` or
+  `package_spec=openclaw@YYYY.M.D`.
+- For stable package proof, use `package_spec=openclaw@latest` only when the
+  question is explicitly the current stable dist-tag; otherwise pin the exact
+  version.
+- `source=npm` only accepts registry specs for `openclaw@beta`,
+  `openclaw@latest`, or exact OpenClaw release versions. Do not pass semver
+  ranges, git refs, file paths, tarball URLs, or plugin package names there.
+- If the candidate is a tarball URL, use `source=url` with `package_sha256`. If
+  it is an Actions tarball artifact, use `source=artifact`. If it is an
+  unpublished source candidate, use `source=ref` with a trusted ref or SHA.
+- Package acceptance tests exactly the selected package candidate. Do not apply
+  `openclaw update --channel beta` fallback semantics here; if `beta` is absent,
+  stale, older than `latest`, or points at a broken tarball, report that tag
+  state instead of silently testing `latest`.
+
 Profiles:
 
 - `smoke`: quick package install/channel/agent + gateway/config lanes.
