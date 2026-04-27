@@ -17,7 +17,7 @@ export type OpenAICompletionsCompatDefaults = {
   supportsReasoningEffort: boolean;
   supportsUsageInStreaming: boolean;
   maxTokensField: "max_completion_tokens" | "max_tokens";
-  thinkingFormat: "openai" | "openrouter" | "deepseek" | "zai";
+  thinkingFormat: "openai" | "openrouter" | "deepseek" | "zai" | "qwen" | "qwen-chat-template";
   visibleReasoningDetailTypes: string[];
   supportsStrictMode: boolean;
 };

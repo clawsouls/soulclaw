@@ -1631,6 +1631,29 @@ function resolveOpenAICompletionsReasoningEffort(options: OpenAICompletionsOptio
   return options?.reasoningEffort ?? options?.reasoning ?? "high";
 }
 
+function isCompletionsThinkingEnabled(effort: string): boolean {
+  return normalizeOpenAIReasoningEffort(effort) !== "none";
+}
+
+function setChatTemplateThinking(params: Record<string, unknown>, enabled: boolean): void {
+  const existing = params.chat_template_kwargs;
+  if (existing && typeof existing === "object" && !Array.isArray(existing)) {
+    const next: Record<string, unknown> = {
+      ...(existing as Record<string, unknown>),
+      enable_thinking: enabled,
+    };
+    if (!Object.hasOwn(next, "preserve_thinking")) {
+      next.preserve_thinking = true;
+    }
+    params.chat_template_kwargs = next;
+    return;
+  }
+  params.chat_template_kwargs = {
+    enable_thinking: enabled,
+    preserve_thinking: true,
+  };
+}
+
 function convertTools(
   tools: NonNullable<Context["tools"]>,
   compat: ReturnType<typeof getCompat>,
@@ -1814,7 +1837,15 @@ export function buildOpenAICompletionsParams(
         fallbackMap: compat.reasoningEffortMap,
       })
     : undefined;
-  if (
+  if (compat.thinkingFormat === "qwen" && model.reasoning && completionsReasoningEffort) {
+    params.enable_thinking = isCompletionsThinkingEnabled(completionsReasoningEffort);
+  } else if (
+    compat.thinkingFormat === "qwen-chat-template" &&
+    model.reasoning &&
+    completionsReasoningEffort
+  ) {
+    setChatTemplateThinking(params, isCompletionsThinkingEnabled(completionsReasoningEffort));
+  } else if (
     compat.thinkingFormat === "openrouter" &&
     model.reasoning &&
     resolvedCompletionsReasoningEffort
