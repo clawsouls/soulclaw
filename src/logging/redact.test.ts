@@ -61,6 +61,24 @@ describe("redactSensitiveText", () => {
     expect(output).toBe("gog gmail watch serve --hook-token abcdef…ghij");
   });
 
+  it("masks sensitive URL query parameters", () => {
+    const input = "connect https://user.example/sync?access_token=abcdef1234567890ghij&safe=value";
+    const output = redactSensitiveText(input, {
+      mode: "tools",
+      patterns: defaults,
+    });
+    expect(output).toBe("connect https://user.example/sync?access_token=abcdef…ghij&safe=value");
+  });
+
+  it("masks short URL query tokens fully", () => {
+    const input = "cdp=https://browserless.example.com/?token=supersecret123";
+    const output = redactSensitiveText(input, {
+      mode: "tools",
+      patterns: defaults,
+    });
+    expect(output).toBe("cdp=https://browserless.example.com/?token=***");
+  });
+
   it("masks JSON fields", () => {
     const input = '{"token":"abcdef1234567890ghij"}';
     const output = redactSensitiveText(input, {
