@@ -44,6 +44,7 @@ import { renderCatNoncePngBase64 } from "./live-image-probe.js";
 import {
   hasExpectedSingleNonce,
   hasExpectedToolNonce,
+  isLikelyToolNonceRefusal,
   shouldRetryExecReadProbe,
   shouldRetryToolReadProbe,
 } from "./live-tool-probe-utils.js";
@@ -646,20 +647,7 @@ function isOpenAIReasoningSequenceError(error: string): boolean {
 }
 
 function isToolNonceRefusal(error: string): boolean {
-  const msg = error.toLowerCase();
-  if (!msg.includes("nonce")) {
-    return false;
-  }
-  return (
-    msg.includes("token") ||
-    msg.includes("secret") ||
-    msg.includes("local file") ||
-    msg.includes("disclose") ||
-    msg.includes("can't help") ||
-    msg.includes("can’t help") ||
-    msg.includes("can't comply") ||
-    msg.includes("can’t comply")
-  );
+  return isLikelyToolNonceRefusal(error);
 }
 
 function isToolNonceProbeMiss(error: string): boolean {

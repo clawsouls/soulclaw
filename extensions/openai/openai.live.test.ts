@@ -349,11 +349,12 @@ describeLive("openai plugin live", () => {
         silenceDurationMs: 500,
       },
       audio,
+      expectedNormalizedText: /openai.*realtime.*transcription/,
     });
 
     const normalized = transcripts.join(" ").toLowerCase();
     const compact = normalizeTranscriptForMatch(normalized);
-    expect(compact).toContain("openclaw");
+    expect(compact).toContain("openai");
     expect(normalized).toContain("transcription");
     expect(partials.length + transcripts.length).toBeGreaterThan(0);
   }, 180_000);
