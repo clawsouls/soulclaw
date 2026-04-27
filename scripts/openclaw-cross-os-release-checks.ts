@@ -585,6 +585,14 @@ async function runFreshLane(params) {
       logPath: join(params.logsDir, "fresh-onboard.log"),
     });
 
+    logLanePhase(lane, "models-set");
+    await runModelsSet({
+      lane,
+      env,
+      providerConfig: params.providerConfig,
+      logPath: join(params.logsDir, "fresh-models-set.log"),
+    });
+
     logLanePhase(lane, "start-gateway");
     const gateway = await startGateway({
       lane,
@@ -604,14 +612,6 @@ async function runFreshLane(params) {
     await runDashboardSmoke({
       lane,
       logPath: join(params.logsDir, "fresh-dashboard.log"),
-    });
-
-    logLanePhase(lane, "models-set");
-    await runModelsSet({
-      lane,
-      env,
-      providerConfig: params.providerConfig,
-      logPath: join(params.logsDir, "fresh-models-set.log"),
     });
 
     logLanePhase(lane, "agent-turn");
@@ -720,6 +720,14 @@ async function runUpgradeLane(params) {
       logPath: join(params.logsDir, "upgrade-onboard.log"),
     });
 
+    logLanePhase(lane, "models-set");
+    await runModelsSet({
+      lane,
+      env,
+      providerConfig: params.providerConfig,
+      logPath: join(params.logsDir, "upgrade-models-set.log"),
+    });
+
     logLanePhase(lane, "start-gateway");
     const gateway = await startGateway({
       lane,
@@ -739,14 +747,6 @@ async function runUpgradeLane(params) {
     await runDashboardSmoke({
       lane,
       logPath: join(params.logsDir, "upgrade-dashboard.log"),
-    });
-
-    logLanePhase(lane, "models-set");
-    await runModelsSet({
-      lane,
-      env,
-      providerConfig: params.providerConfig,
-      logPath: join(params.logsDir, "upgrade-models-set.log"),
     });
 
     logLanePhase(lane, "agent-turn");
@@ -837,6 +837,15 @@ async function runInstallerFreshSuite(params) {
       });
     }
 
+    logLanePhase(lane, "models-set");
+    await runInstalledModelsSet({
+      cliPath: freshShell.cliPath,
+      env,
+      providerConfig: params.providerConfig,
+      cwd: lane.homeDir,
+      logPath: join(params.logsDir, "installer-fresh-models-set.log"),
+    });
+
     if (!useManagedGatewayAfterInstall) {
       // Keep the Windows installer lane validating Scheduled Task registration during
       // onboarding and lifecycle commands, but use a manual gateway for the runtime
@@ -882,15 +891,6 @@ async function runInstallerFreshSuite(params) {
     await runDashboardSmoke({
       lane,
       logPath: join(params.logsDir, "installer-fresh-dashboard.log"),
-    });
-
-    logLanePhase(lane, "models-set");
-    await runInstalledModelsSet({
-      cliPath: freshShell.cliPath,
-      env,
-      providerConfig: params.providerConfig,
-      cwd: lane.homeDir,
-      logPath: join(params.logsDir, "installer-fresh-models-set.log"),
     });
 
     logLanePhase(lane, "agent-turn");
@@ -1023,6 +1023,15 @@ async function runDevUpdateSuite(params) {
       logPath: join(params.logsDir, "dev-update-onboard.log"),
     });
 
+    logLanePhase(lane, "models-set");
+    await runInstalledModelsSet({
+      cliPath: verifiedShell.cliPath,
+      env,
+      providerConfig: params.providerConfig,
+      cwd: lane.homeDir,
+      logPath: join(params.logsDir, "dev-update-models-set.log"),
+    });
+
     if (!useManagedGatewayAfterDevUpdate) {
       logLanePhase(lane, "gateway-start");
       const gateway = await startManualGatewayFromInstalledCli({
@@ -1054,15 +1063,6 @@ async function runDevUpdateSuite(params) {
     await runDashboardSmoke({
       lane,
       logPath: join(params.logsDir, "dev-update-dashboard.log"),
-    });
-
-    logLanePhase(lane, "models-set");
-    await runInstalledModelsSet({
-      cliPath: verifiedShell.cliPath,
-      env,
-      providerConfig: params.providerConfig,
-      cwd: lane.homeDir,
-      logPath: join(params.logsDir, "dev-update-models-set.log"),
     });
 
     logLanePhase(lane, "agent-turn");
