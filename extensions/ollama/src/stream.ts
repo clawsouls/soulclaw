@@ -350,7 +350,7 @@ interface OllamaTool {
 interface OllamaToolCall {
   function: {
     name: string;
-    arguments: Record<string, unknown>;
+    arguments: Record<string, unknown> | string;
   };
 }
 
@@ -404,6 +404,10 @@ function extractOllamaImages(content: unknown): string[] {
 
 function ensureArgsObject(value: unknown): Record<string, unknown> {
   return parseJsonObjectPreservingUnsafeIntegers(value) ?? {};
+}
+
+function normalizeOllamaToolCallArguments(value: unknown): Record<string, unknown> {
+  return ensureArgsObject(value);
 }
 
 function normalizeOllamaCompatMessageToolArgs(payloadRecord: Record<string, unknown>): void {
@@ -653,7 +657,7 @@ export function buildAssistantMessage(
         type: "toolCall",
         id: `ollama_call_${randomUUID()}`,
         name: toolCall.function.name,
-        arguments: toolCall.function.arguments,
+        arguments: normalizeOllamaToolCallArguments(toolCall.function.arguments),
       });
     }
   }

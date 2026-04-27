@@ -606,6 +606,73 @@ describe("buildAssistantMessage", () => {
     expect(toolCall.id).toMatch(/^ollama_call_[0-9a-f-]{36}$/);
   });
 
+  it("parses stringified tool call arguments from Ollama responses", () => {
+    const response = {
+      model: "qwen3:32b",
+      created_at: "2026-01-01T00:00:00Z",
+      message: {
+        role: "assistant" as const,
+        content: "",
+        tool_calls: [{ function: { name: "bash", arguments: '{"command":"ls","path":"/tmp"}' } }],
+      },
+      done: true,
+    };
+    const result = buildAssistantMessage(response, modelInfo);
+    expect(result.content[0]).toMatchObject({
+      type: "toolCall",
+      name: "bash",
+      arguments: { command: "ls", path: "/tmp" },
+    });
+  });
+
+  it("preserves unsafe integers in stringified tool call arguments", () => {
+    const response = {
+      model: "qwen3:32b",
+      created_at: "2026-01-01T00:00:00Z",
+      message: {
+        role: "assistant" as const,
+        content: "",
+        tool_calls: [
+          {
+            function: {
+              name: "send",
+              arguments: '{"target":9223372036854775807,"nested":{"thread":1234567890123456789}}',
+            },
+          },
+        ],
+      },
+      done: true,
+    };
+    const result = buildAssistantMessage(response, modelInfo);
+    expect(result.content[0]).toMatchObject({
+      type: "toolCall",
+      name: "send",
+      arguments: {
+        target: "9223372036854775807",
+        nested: { thread: "1234567890123456789" },
+      },
+    });
+  });
+
+  it("falls back to empty arguments for malformed stringified tool call arguments", () => {
+    const response = {
+      model: "qwen3:32b",
+      created_at: "2026-01-01T00:00:00Z",
+      message: {
+        role: "assistant" as const,
+        content: "",
+        tool_calls: [{ function: { name: "bash", arguments: '{"command":"ls"' } }],
+      },
+      done: true,
+    };
+    const result = buildAssistantMessage(response, modelInfo);
+    expect(result.content[0]).toMatchObject({
+      type: "toolCall",
+      name: "bash",
+      arguments: {},
+    });
+  });
+
   it("sets all costs to zero for local models", () => {
     const response = {
       model: "qwen3:32b",
@@ -701,7 +768,7 @@ describe("parseNdjsonStream", () => {
 
     // Simulate the accumulation logic from createOllamaStreamFn
     const accumulatedToolCalls: Array<{
-      function: { name: string; arguments: Record<string, unknown> };
+      function: { name: string; arguments: unknown };
     }> = [];
     const chunks = [];
     for await (const chunk of parseNdjsonStream(reader)) {
