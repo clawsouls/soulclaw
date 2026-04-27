@@ -5,24 +5,30 @@ const PACKAGE_ACCEPTANCE_WORKFLOW = ".github/workflows/package-acceptance.yml";
 const LIVE_E2E_WORKFLOW = ".github/workflows/openclaw-live-and-e2e-checks-reusable.yml";
 const DOCKER_E2E_PLAN_ACTION = ".github/actions/docker-e2e-plan/action.yml";
 const NPM_TELEGRAM_WORKFLOW = ".github/workflows/npm-telegram-beta-e2e.yml";
+const RELEASE_CHECKS_WORKFLOW = ".github/workflows/openclaw-release-checks.yml";
 
 describe("package acceptance workflow", () => {
   it("resolves candidate package sources before reusing Docker E2E lanes", () => {
     const workflow = readFileSync(PACKAGE_ACCEPTANCE_WORKFLOW, "utf8");
 
     expect(workflow).toContain("name: Package Acceptance");
+    expect(workflow).toContain("workflow_call:");
+    expect(workflow).toContain("workflow_ref:");
+    expect(workflow).toContain("package_ref:");
     expect(workflow).toContain("source:");
     expect(workflow).toContain("- npm");
     expect(workflow).toContain("- ref");
     expect(workflow).toContain("- url");
     expect(workflow).toContain("- artifact");
     expect(workflow).toContain("scripts/resolve-openclaw-package-candidate.mjs");
+    expect(workflow).toContain('--package-ref "$PACKAGE_REF"');
     expect(workflow).toContain('gh run download "$ARTIFACT_RUN_ID"');
     expect(workflow).toContain("name: ${{ env.PACKAGE_ARTIFACT_NAME }}");
     expect(workflow).toContain("pull-requests: read");
     expect(workflow).toContain(
       "uses: ./.github/workflows/openclaw-live-and-e2e-checks-reusable.yml",
     );
+    expect(workflow).toContain("ref: ${{ inputs.workflow_ref }}");
     expect(workflow).toContain(
       "package_artifact_name: ${{ needs.resolve_package.outputs.package_artifact_name }}",
     );
@@ -62,5 +68,14 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain("workflow_call:");
     expect(workflow).toContain("provider_mode:");
     expect(workflow).toContain("provider_mode must be mock-openai or live-frontier");
+  });
+
+  it("includes package acceptance in release checks", () => {
+    const workflow = readFileSync(RELEASE_CHECKS_WORKFLOW, "utf8");
+
+    expect(workflow).toContain("package_acceptance_release_checks:");
+    expect(workflow).toContain("uses: ./.github/workflows/package-acceptance.yml");
+    expect(workflow).toContain("package_ref: ${{ needs.resolve_target.outputs.ref }}");
+    expect(workflow).toContain("suite_profile: package");
   });
 });

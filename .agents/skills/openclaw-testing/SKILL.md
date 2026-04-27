@@ -239,6 +239,7 @@ Good defaults:
 ```bash
 gh workflow run package-acceptance.yml --ref main \
   -f source=npm \
+  -f workflow_ref=main \
   -f package_spec=openclaw@beta \
   -f suite_profile=product
 ```
@@ -270,19 +271,45 @@ Npm candidate selection:
 
 Profiles:
 
-- `smoke`: quick package install/channel/agent + gateway/config lanes.
-- `package`: package, update, and plugin lanes; no OpenWebUI.
-- `product`: package profile plus MCP channels, cron/subagent cleanup, OpenAI
-  web search, and OpenWebUI.
+- `smoke`: quick confidence that the tarball installs, can onboard a channel,
+  can run an agent turn, and basic gateway/config lanes work.
+- `package`: release-package contract. Adds installer/update, doctor install
+  switching, bundled plugin runtime deps, plugin install/update, and package
+  repair lanes. This is the default native replacement for most Parallels
+  package/update coverage.
+- `product`: package profile plus broader product surfaces: MCP channels,
+  cron/subagent cleanup, OpenAI web search, and OpenWebUI.
 - `full`: Docker release-path chunks with OpenWebUI.
 - `custom`: exact `docker_lanes` list for a focused rerun.
 
 Candidate sources:
 
 - `source=npm`: `openclaw@beta`, `openclaw@latest`, or an exact release version.
-- `source=ref`: pack the trusted ref in the workflow.
+- `source=ref`: pack `package_ref` using the trusted `workflow_ref` harness.
+  This intentionally separates old package commits from new workflow/test code.
 - `source=url`: HTTPS `.tgz` plus required `package_sha256`.
 - `source=artifact`: download one `.tgz` from `artifact_run_id`/`artifact_name`.
+
+Ref model:
+
+- `gh workflow run ... --ref <workflow-ref>` selects the workflow file revision
+  GitHub executes.
+- `workflow_ref` is the trusted harness/script ref passed to reusable Docker
+  E2E.
+- `package_ref` is the source ref to build when `source=ref`. It can be an
+  older branch/tag/SHA as long as it is reachable from an OpenClaw branch or
+  release tag.
+
+Example: run latest package acceptance harness against an older trusted commit:
+
+```bash
+gh workflow run package-acceptance.yml --ref main \
+  -f workflow_ref=main \
+  -f source=ref \
+  -f package_ref=<branch-or-sha> \
+  -f suite_profile=package \
+  -f telegram_mode=none
+```
 
 Use `telegram_mode=mock-openai` or `telegram_mode=live-frontier` only with
 `source=npm`; that path reuses the published npm Telegram E2E workflow and the
