@@ -21,6 +21,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - CLI/doctor: run bundled plugin runtime-dependency repairs through the async npm installer with spinner/line progress and heartbeat updates, so long `openclaw doctor --fix` installs no longer look hung in TTY or piped output. Fixes #72775. Thanks @dfpalhano.
+- Agents/fallback: classify internal live-session model switch conflicts as unknown fallback failures instead of provider overloads, preventing local vLLM endpoints from receiving misleading overloaded cooldowns. Refs #63229. Thanks @clawdia-lobster.
 - Control UI: keep session-specific assistant identity loads authoritative after WebSocket connect, so non-main agent chat sessions do not show the main agent name in the header after bootstrap refreshes. Fixes #72776. Thanks @rockytian-top.
 - Agents/Qwen: preserve exact custom `modelstudio` provider configs with foreign `api` owners so explicit OpenAI-compatible Model Studio endpoints no longer get normalized into the bundled Qwen plugin path. Fixes #64483. Thanks @FiredMosquito831.
 - Media-understanding/audio: migrate deprecated `{input}` placeholders in legacy `audio.transcription.command` configs to `{{MediaPath}}`, so custom audio transcribers no longer receive the literal placeholder after doctor repair. Fixes #72760. Thanks @krisfanue3-hash.
