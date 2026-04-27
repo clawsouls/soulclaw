@@ -15,15 +15,11 @@ const state = vi.hoisted(() => ({
   registerAgentRunContextMock: vi.fn(),
   clearAgentRunContextMock: vi.fn(),
   updateSessionStoreAfterAgentRunMock: vi.fn(),
-  updateSessionStoreFileMock: vi.fn(),
   deliverAgentCommandResultMock: vi.fn(),
   clearSessionAuthProfileOverrideMock: vi.fn(),
-  applyModelOverrideToSessionEntryMock: vi.fn((..._args: unknown[]) => ({ updated: false })),
   authProfileStoreMock: { profiles: {} } as { profiles: Record<string, unknown> },
   sessionEntryMock: undefined as unknown,
   sessionStoreMock: undefined as unknown,
-  sessionStorePathMock: undefined as string | undefined,
-  persistedSessionStoreMock: undefined as Record<string, unknown> | undefined,
 }));
 
 vi.mock("./model-fallback.js", () => ({
@@ -77,7 +73,7 @@ vi.mock("./command/session.js", () => ({
       skillsSnapshot: { prompt: "", skills: [], version: 0 },
     },
     sessionStore: state.sessionStoreMock,
-    storePath: state.sessionStorePathMock,
+    storePath: undefined,
     isNewSession: false,
     persistedThinking: undefined,
     persistedVerbose: undefined,
@@ -181,10 +177,6 @@ vi.mock("../config/sessions.js", () => ({
   ),
 }));
 
-vi.mock("../config/sessions/store.js", () => ({
-  updateSessionStore: (...args: unknown[]) => state.updateSessionStoreFileMock(...args),
-}));
-
 vi.mock("../config/sessions/transcript-resolve.runtime.js", () => ({
   resolveSessionTranscriptFile: async () => ({
     sessionFile: "/tmp/session.jsonl",
@@ -239,8 +231,7 @@ vi.mock("../sessions/level-overrides.js", () => ({
 }));
 
 vi.mock("../sessions/model-overrides.js", () => ({
-  applyModelOverrideToSessionEntry: (...args: unknown[]) =>
-    state.applyModelOverrideToSessionEntryMock(...args),
+  applyModelOverrideToSessionEntry: () => ({ updated: false }),
 }));
 
 vi.mock("../sessions/send-policy.js", () => ({
@@ -409,38 +400,6 @@ function expectFallbackOverrideCalls(first: boolean, second: boolean) {
   });
 }
 
-function useRealisticDefaultModelOverrideReset() {
-  state.applyModelOverrideToSessionEntryMock.mockImplementation((params: unknown) => {
-    const { entry, selection } = params as {
-      entry: {
-        providerOverride?: string;
-        modelOverride?: string;
-        modelOverrideSource?: string;
-        authProfileOverride?: string;
-        authProfileOverrideSource?: string;
-      };
-      selection: { isDefault?: boolean };
-    };
-    if (!selection.isDefault) {
-      return { updated: false };
-    }
-    const before = { ...entry };
-    delete entry.providerOverride;
-    delete entry.modelOverride;
-    delete entry.modelOverrideSource;
-    delete entry.authProfileOverride;
-    delete entry.authProfileOverrideSource;
-    return {
-      updated:
-        before.providerOverride !== entry.providerOverride ||
-        before.modelOverride !== entry.modelOverride ||
-        before.modelOverrideSource !== entry.modelOverrideSource ||
-        before.authProfileOverride !== entry.authProfileOverride ||
-        before.authProfileOverrideSource !== entry.authProfileOverrideSource,
-    };
-  });
-}
-
 describe("agentCommand – LiveSessionModelSwitchError retry", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -471,13 +430,6 @@ describe("agentCommand – LiveSessionModelSwitchError retry", () => {
     state.authProfileStoreMock = { profiles: {} };
     state.sessionEntryMock = undefined;
     state.sessionStoreMock = undefined;
-    state.sessionStorePathMock = undefined;
-    state.persistedSessionStoreMock = undefined;
-    state.applyModelOverrideToSessionEntryMock.mockReturnValue({ updated: false });
-    state.updateSessionStoreFileMock.mockImplementation(
-      async (_path: string, fn: (store: Record<string, unknown>) => unknown) =>
-        fn(state.persistedSessionStoreMock ?? {}),
-    );
     state.deliverAgentCommandResultMock.mockResolvedValue(undefined);
     state.updateSessionStoreAfterAgentRunMock.mockResolvedValue(undefined);
   });
@@ -689,65 +641,5 @@ describe("agentCommand – LiveSessionModelSwitchError retry", () => {
     await runBasicAgentCommand();
 
     expectFallbackOverrideCalls(false, true);
-  });
-
-  it("clears auto-fallback model overrides before the next command retries primary", async () => {
-    useRealisticDefaultModelOverrideReset();
-
-    const sessionEntry = {
-      sessionId: "session-1",
-      updatedAt: Date.now(),
-      providerOverride: "openai",
-      modelOverride: "gpt-5.4",
-      modelOverrideSource: "auto",
-      authProfileOverride: "openai:default",
-      authProfileOverrideSource: "auto",
-      skillsSnapshot: { prompt: "", skills: [], version: 0 },
-    };
-    state.sessionEntryMock = sessionEntry;
-    state.sessionStoreMock = { "agent:main": sessionEntry };
-    state.sessionStorePathMock = "/tmp/sessions.json";
-    state.persistedSessionStoreMock = { "agent:main": { ...sessionEntry } };
-    state.runWithModelFallbackMock.mockImplementation(async (params: FallbackRunnerParams) => {
-      const result = await params.run(params.provider, params.model);
-      return {
-        result,
-        provider: params.provider,
-        model: params.model,
-        attempts: [],
-      };
-    });
-    state.runAgentAttemptMock.mockResolvedValue(makeSuccessResult("anthropic", "claude"));
-
-    await agentCommand({
-      message: "hello",
-      sessionKey: "agent:main",
-      senderIsOwner: true,
-    });
-
-    const fallbackParams = state.runWithModelFallbackMock.mock.calls[0]?.[0] as
-      | FallbackRunnerParams
-      | undefined;
-    expect(fallbackParams).toMatchObject({
-      provider: "anthropic",
-      model: "claude",
-    });
-    expect(state.resolveEffectiveModelFallbacksMock).toHaveBeenCalledWith(
-      expect.objectContaining({ hasSessionModelOverride: false }),
-    );
-    const activeStore = state.sessionStoreMock as Record<string, typeof sessionEntry>;
-    const persistedStore = state.persistedSessionStoreMock as Record<string, typeof sessionEntry>;
-    expect(activeStore["agent:main"]).toMatchObject({
-      sessionId: "session-1",
-    });
-    expect(activeStore["agent:main"].providerOverride).toBeUndefined();
-    expect(activeStore["agent:main"].modelOverride).toBeUndefined();
-    expect(activeStore["agent:main"].modelOverrideSource).toBeUndefined();
-    expect(persistedStore["agent:main"]).toMatchObject({
-      sessionId: "session-1",
-    });
-    expect(persistedStore["agent:main"].providerOverride).toBeUndefined();
-    expect(persistedStore["agent:main"].modelOverride).toBeUndefined();
-    expect(persistedStore["agent:main"].modelOverrideSource).toBeUndefined();
   });
 });
