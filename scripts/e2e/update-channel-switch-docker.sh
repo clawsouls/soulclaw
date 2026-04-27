@@ -41,6 +41,9 @@ git_root="/tmp/openclaw-git"
 mkdir -p "$git_root"
 # Build the fake git install from the packed package contents, not the checkout.
 tar -xzf "$package_tgz" -C "$git_root" --strip-components=1
+# The package-derived fixture can carry patchedDependencies whose targets are
+# absent from the trimmed tarball install; that should not block update preflight.
+printf "\nallow-unused-patches=true\n" >>"$git_root/.npmrc"
 (
   cd "$git_root"
   npm install --omit=optional --no-fund --no-audit >/tmp/openclaw-git-install.log 2>&1
