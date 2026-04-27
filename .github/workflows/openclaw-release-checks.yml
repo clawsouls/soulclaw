@@ -25,6 +25,20 @@ on:
           - fresh
           - upgrade
           - both
+      rerun_group:
+        description: Release check group to run
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - install-smoke
+          - cross-os
+          - live-e2e
+          - package
+          - qa
+          - qa-parity
+          - qa-live
 
 concurrency:
   group: openclaw-release-checks-${{ inputs.ref }}
@@ -47,6 +61,7 @@ jobs:
       sha: ${{ steps.ref.outputs.sha }}
       provider: ${{ steps.inputs.outputs.provider }}
       mode: ${{ steps.inputs.outputs.mode }}
+      rerun_group: ${{ steps.inputs.outputs.rerun_group }}
     steps:
       - name: Require main or release workflow ref for release checks
         env:
@@ -105,12 +120,14 @@ jobs:
           RELEASE_REF_INPUT: ${{ inputs.ref }}
           RELEASE_PROVIDER_INPUT: ${{ inputs.provider }}
           RELEASE_MODE_INPUT: ${{ inputs.mode }}
+          RELEASE_RERUN_GROUP_INPUT: ${{ inputs.rerun_group }}
         run: |
           set -euo pipefail
           {
             printf 'ref=%s\n' "$RELEASE_REF_INPUT"
             printf 'provider=%s\n' "$RELEASE_PROVIDER_INPUT"
             printf 'mode=%s\n' "$RELEASE_MODE_INPUT"
+            printf 'rerun_group=%s\n' "$RELEASE_RERUN_GROUP_INPUT"
           } >> "$GITHUB_OUTPUT"
 
       - name: Summarize validated ref
@@ -119,6 +136,7 @@ jobs:
           RELEASE_SHA: ${{ steps.ref.outputs.sha }}
           RELEASE_PROVIDER: ${{ inputs.provider }}
           RELEASE_MODE: ${{ inputs.mode }}
+          RELEASE_RERUN_GROUP: ${{ inputs.rerun_group }}
         run: |
           {
             echo "## Release checks"
@@ -127,11 +145,13 @@ jobs:
             echo "- Validated SHA: \`${RELEASE_SHA}\`"
             echo "- Cross-OS provider: \`${RELEASE_PROVIDER}\`"
             echo "- Cross-OS mode: \`${RELEASE_MODE}\`"
+            echo "- Rerun group: \`${RELEASE_RERUN_GROUP}\`"
             echo "- This run will execute cross-OS release validation, install smoke, QA Lab parity, Matrix, and Telegram lanes, and the non-Parallels Docker/live/openwebui coverage from the CI migration plan."
           } >> "$GITHUB_STEP_SUMMARY"
 
   install_smoke_release_checks:
     needs: [resolve_target]
+    if: contains(fromJSON('["all","install-smoke"]'), needs.resolve_target.outputs.rerun_group)
     permissions:
       contents: read
     uses: ./.github/workflows/install-smoke.yml
@@ -141,6 +161,7 @@ jobs:
 
   cross_os_release_checks:
     needs: [resolve_target]
+    if: contains(fromJSON('["all","cross-os"]'), needs.resolve_target.outputs.rerun_group)
     permissions: read-all
     uses: ./.github/workflows/openclaw-cross-os-release-checks-reusable.yml
     with:
@@ -157,6 +178,7 @@ jobs:
 
   live_and_e2e_release_checks:
     needs: [resolve_target]
+    if: contains(fromJSON('["all","live-e2e"]'), needs.resolve_target.outputs.rerun_group)
     permissions:
       actions: read
       contents: read
@@ -218,6 +240,7 @@ jobs:
   package_acceptance_release_checks:
     name: Run package acceptance
     needs: [resolve_target]
+    if: contains(fromJSON('["all","package"]'), needs.resolve_target.outputs.rerun_group)
     permissions:
       actions: read
       contents: read
@@ -282,6 +305,7 @@ jobs:
   qa_lab_parity_release_checks:
     name: Run QA Lab parity gate
     needs: [resolve_target]
+    if: contains(fromJSON('["all","qa","qa-parity"]'), needs.resolve_target.outputs.rerun_group)
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: 30
     permissions:
@@ -356,6 +380,7 @@ jobs:
   qa_live_matrix_release_checks:
     name: Run QA Lab live Matrix lane
     needs: [resolve_target]
+    if: contains(fromJSON('["all","qa","qa-live"]'), needs.resolve_target.outputs.rerun_group)
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: 60
     permissions:
@@ -434,6 +459,7 @@ jobs:
   qa_live_telegram_release_checks:
     name: Run QA Lab live Telegram lane
     needs: [resolve_target]
+    if: contains(fromJSON('["all","qa","qa-live"]'), needs.resolve_target.outputs.rerun_group)
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: 60
     permissions:
