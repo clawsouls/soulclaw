@@ -769,6 +769,10 @@ export async function runPreparedReply(
     ({ activeSessionId, isActive, isStreaming } = queueState.busyState);
   }
   const authProfileIdSource = preparedSessionState.sessionEntry?.authProfileOverrideSource;
+  const runHasSessionModelOverride = Boolean(
+    normalizeOptionalString(preparedSessionState.sessionEntry?.modelOverride) ||
+    normalizeOptionalString(preparedSessionState.sessionEntry?.providerOverride),
+  );
   const followupRun = {
     prompt: queuedBody,
     transcriptPrompt: transcriptCommandBody,
@@ -816,6 +820,10 @@ export async function runPreparedReply(
       skillsSnapshot,
       provider,
       model,
+      hasSessionModelOverride: runHasSessionModelOverride,
+      modelOverrideSource: runHasSessionModelOverride
+        ? preparedSessionState.sessionEntry?.modelOverrideSource
+        : undefined,
       authProfileId,
       authProfileIdSource,
       thinkLevel: resolvedThinkLevel,
