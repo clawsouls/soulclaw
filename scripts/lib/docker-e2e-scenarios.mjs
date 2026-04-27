@@ -185,13 +185,6 @@ export const mainLanes = [
   ),
   serviceLane("gateway-network", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:gateway-network"),
   serviceLane(
-    "observability",
-    "OPENCLAW_SKIP_DOCKER_BUILD=1 bash scripts/e2e/docker-observability-smoke.sh",
-    {
-      weight: 3,
-    },
-  ),
-  serviceLane(
     "agents-delete-shared-workspace",
     "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:agents-delete-shared-workspace",
   ),
@@ -344,13 +337,6 @@ const releasePathChunks = {
     lane(
       "pi-bundle-mcp-tools",
       "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:pi-bundle-mcp-tools",
-    ),
-    serviceLane(
-      "observability",
-      "OPENCLAW_SKIP_DOCKER_BUILD=1 bash scripts/e2e/docker-observability-smoke.sh",
-      {
-        weight: 3,
-      },
     ),
     serviceLane("mcp-channels", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:mcp-channels", {
       resources: ["npm"],

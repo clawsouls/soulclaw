@@ -287,14 +287,10 @@ function startLocalOtlpTraceReceiver() {
 }
 
 function openClawEntryArgs(): string[] {
-  if (
-    existsSync(path.join(process.cwd(), "openclaw.mjs")) &&
-    (existsSync(path.join(process.cwd(), "dist", "entry.js")) ||
-      existsSync(path.join(process.cwd(), "dist", "entry.mjs")))
-  ) {
-    return ["openclaw.mjs"];
+  if (existsSync(path.join(process.cwd(), "scripts", "run-node.mjs"))) {
+    return ["scripts/run-node.mjs"];
   }
-  return ["scripts/run-node.mjs"];
+  return ["openclaw.mjs"];
 }
 
 function spawnOpenClaw(args: string[], env: NodeJS.ProcessEnv): ChildProcess {
