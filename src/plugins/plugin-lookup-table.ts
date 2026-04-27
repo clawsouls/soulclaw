@@ -8,12 +8,12 @@ import { hashJson } from "./installed-plugin-index-hash.js";
 import { loadPluginManifestRegistryForInstalledIndex } from "./manifest-registry-installed.js";
 import type { PluginManifestRecord, PluginManifestRegistry } from "./manifest-registry.js";
 import type { PluginDiagnostic } from "./manifest-types.js";
+import { createPluginRegistryIdNormalizer } from "./plugin-registry-contributions.js";
 import {
-  createPluginRegistryIdNormalizer,
   loadPluginRegistrySnapshotWithMetadata,
   type PluginRegistrySnapshot,
   type PluginRegistrySnapshotDiagnostic,
-} from "./plugin-registry.js";
+} from "./plugin-registry-snapshot.js";
 
 export type PluginLookUpTableOwnerMaps = {
   channels: ReadonlyMap<string, readonly string[]>;

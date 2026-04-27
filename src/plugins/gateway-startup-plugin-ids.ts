@@ -15,9 +15,9 @@ import { loadPluginManifestRegistryForInstalledIndex } from "./manifest-registry
 import type { PluginManifestRegistry } from "./manifest-registry.js";
 import {
   createPluginRegistryIdNormalizer,
-  loadPluginRegistrySnapshot,
   normalizePluginsConfigWithRegistry,
-} from "./plugin-registry.js";
+} from "./plugin-registry-contributions.js";
+import { loadPluginRegistrySnapshot } from "./plugin-registry-snapshot.js";
 
 function listDisabledChannelIds(config: OpenClawConfig): Set<string> {
   const channels = config.channels;
