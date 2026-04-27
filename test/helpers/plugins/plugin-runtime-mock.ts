@@ -63,6 +63,12 @@ function createTaskFlowSessionMock() {
   };
 }
 
+function createDeprecatedRuntimeConfigError(name: "loadConfig" | "writeConfigFile"): Error {
+  return new Error(
+    `Plugin runtime config.${name}() is deprecated in tests; pass cfg/current() or use mutateConfigFile()/replaceConfigFile().`,
+  );
+}
+
 export function createPluginRuntimeMock(overrides: DeepPartial<PluginRuntime> = {}): PluginRuntime {
   const taskFlow = {
     bindSession: vi.fn(
@@ -93,8 +99,12 @@ export function createPluginRuntimeMock(overrides: DeepPartial<PluginRuntime> = 
         afterWrite: { mode: "auto" },
         followUp: { mode: "auto", requiresRestart: false },
       })) as unknown as PluginRuntime["config"]["replaceConfigFile"],
-      loadConfig: vi.fn(() => ({})) as unknown as PluginRuntime["config"]["loadConfig"],
-      writeConfigFile: vi.fn() as unknown as PluginRuntime["config"]["writeConfigFile"],
+      loadConfig: vi.fn(() => {
+        throw createDeprecatedRuntimeConfigError("loadConfig");
+      }) as unknown as PluginRuntime["config"]["loadConfig"],
+      writeConfigFile: vi.fn(async () => {
+        throw createDeprecatedRuntimeConfigError("writeConfigFile");
+      }) as unknown as PluginRuntime["config"]["writeConfigFile"],
     },
     agent: {
       defaults: {
