@@ -20,8 +20,7 @@ const COOKIE_HEADER_RE = /\b(Cookie|Set-Cookie)\s*:\s*[^\r\n]+/giu;
 const AWS_ACCESS_KEY_ID_RE = /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/gu;
 const JWT_RE = /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/gu;
 const URL_USERINFO_RE = /\b([a-z][a-z0-9+.-]*:\/\/)([^/@\s:?#]+)(?::([^/@\s?#]+))?@/giu;
-const URL_SENSITIVE_PARAM_RE =
-  /([?&])(api[-_]?key|apikey|access[-_]?token|auth[-_]?token|client[-_]?secret|hook[-_]?token|refresh[-_]?token|token|key|secret|password|pass|passwd|auth|signature)=([^&#\s)"'<>]+)(?:&[^#\s)"'<>]*)?/giu;
+const URL_PARAM_RE = /([?&])([^=&\s]+)=([^&#\s]+)/giu;
 const EMAIL_RE = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/giu;
 const MATRIX_USER_ID_RE = /@[A-Za-z0-9._=-]+:[A-Za-z0-9.-]+/gu;
 const MATRIX_ROOM_ID_RE = /![A-Za-z0-9._=-]+:[A-Za-z0-9.-]+/gu;
@@ -307,7 +306,7 @@ function redactUrlSecretsForSupport(value: string): string {
     .replace(URL_USERINFO_RE, (_match, scheme: string, _username: string, password?: string) =>
       password ? `${scheme}<redacted>:<redacted>@` : `${scheme}<redacted>@`,
     )
-    .replace(URL_SENSITIVE_PARAM_RE, (match, prefix: string, key: string) =>
+    .replace(URL_PARAM_RE, (match, prefix: string, key: string) =>
       isSensitiveUrlQueryParamName(key) ? `${prefix}${key}=<redacted>` : match,
     );
 }
