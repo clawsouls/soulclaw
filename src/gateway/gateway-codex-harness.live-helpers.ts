@@ -94,6 +94,8 @@ export function isExpectedCodexStatusCommandText(text: string): boolean {
   const mentionsHarnessSession =
     normalized.includes("session: `agent:dev:live-codex-harness`") ||
     normalized.includes("session: agent:dev:live-codex-harness") ||
+    normalized.includes("session is `agent:dev:live-codex-harness`") ||
+    normalized.includes("session is agent:dev:live-codex-harness") ||
     normalized.includes("session `agent:dev:live-codex-harness`") ||
     normalized.includes("current session is `agent:dev:live-codex-harness`") ||
     normalized.includes("current session is agent:dev:live-codex-harness") ||

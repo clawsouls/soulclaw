@@ -37,6 +37,13 @@ describe("gateway codex harness live helpers", () => {
     expect(isExpectedCodexStatusCommandText(text)).toBe(true);
   });
 
+  it("accepts current app-server status prose with session-is wording", () => {
+    const text =
+      "Status: running on `openai/gpt-5.5`, context at 22k/272k tokens (8%), no compactions. Session is `agent:dev:live-codex-harness`; execution is direct with elevated mode.";
+
+    expect(isExpectedCodexStatusCommandText(text)).toBe(true);
+  });
+
   it("accepts the current status card emitted by OpenAI Codex", () => {
     const text = [
       "Current session status:",
