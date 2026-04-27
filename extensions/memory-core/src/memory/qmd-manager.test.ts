@@ -4798,6 +4798,64 @@ describe("QmdMemoryManager", () => {
     await manager.close();
   });
 
+  it.each([
+    ["equals separator", "Documents: 12\nVectors = 42\n"],
+    ["tab separator", "Documents: 12\nVectors:\t42\n"],
+    ["compact separator", "Documents: 12\nVectors:42\n"],
+    ["embedded suffix", "Documents: 12\nVectors:  42 embedded\n"],
+  ])("reports vector availability as ready for qmd status %s", async (_name, statusOutput) => {
+    spawnMock.mockImplementation((_cmd: string, args: string[]) => {
+      if (args[0] === "status") {
+        const child = createMockChild({ autoClose: false });
+        emitAndClose(child, "stdout", statusOutput);
+        return child;
+      }
+      return createMockChild();
+    });
+
+    const { manager } = await createManager({
+      cfg: {
+        ...cfg,
+        memory: {
+          ...cfg.memory,
+          qmd: { ...cfg.memory?.qmd, searchMode: "query" },
+        },
+      } as OpenClawConfig,
+    });
+
+    await expect(manager.probeVectorAvailability()).resolves.toBe(true);
+    await manager.close();
+  });
+
+  it("does not parse unrelated qmd status vector-like fields", async () => {
+    spawnMock.mockImplementation((_cmd: string, args: string[]) => {
+      if (args[0] === "status") {
+        const child = createMockChild({ autoClose: false });
+        emitAndClose(child, "stdout", "Documents: 12\nMaxVectors: 42\nVector index: yes\n");
+        return child;
+      }
+      return createMockChild();
+    });
+
+    const { manager } = await createManager({
+      cfg: {
+        ...cfg,
+        memory: {
+          ...cfg.memory,
+          qmd: { ...cfg.memory?.qmd, searchMode: "query" },
+        },
+      } as OpenClawConfig,
+    });
+
+    await expect(manager.probeVectorAvailability()).resolves.toBe(false);
+    expect(manager.status().vector).toEqual({
+      enabled: true,
+      available: false,
+      loadError: "Could not determine QMD vector status from `qmd status`",
+    });
+    await manager.close();
+  });
+
   it("skips qmd status vector probes for lexical search mode", async () => {
     const { manager } = await createManager({
       cfg: {

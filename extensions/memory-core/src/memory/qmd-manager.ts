@@ -154,12 +154,16 @@ function normalizeHanBm25Query(query: string): string {
 }
 
 function parseQmdStatusVectorCount(raw: string): number | null {
-  const match = raw.match(/(?:^|\n)\s*Vectors:\s*(\d+)\b/i);
-  if (!match) {
-    return null;
+  for (const line of raw.split(/\r?\n/)) {
+    const match = line.match(/^\s*Vectors(?:\s*[:=]\s*|\s+)(\d+)\b/i);
+    if (match?.[1]) {
+      const count = Number.parseInt(match[1], 10);
+      if (Number.isFinite(count)) {
+        return count;
+      }
+    }
   }
-  const count = Number.parseInt(match[1] ?? "", 10);
-  return Number.isFinite(count) ? count : null;
+  return null;
 }
 
 function resolveStableJitterMs(params: { seed: string; windowMs: number }): number {
