@@ -1001,7 +1001,7 @@ export const FIELD_HELP: Record<string, string> = {
   "agents.defaults.memorySearch.model":
     "Embedding model override used by the selected memory provider when a non-default model is required. Set this only when you need explicit recall quality/cost tuning beyond provider defaults.",
   "agents.defaults.memorySearch.inputType":
-    "Optional provider-specific `input_type` value forwarded to compatible embedding requests when the same label should apply to both query and document embeddings. For asymmetric providers, prefer queryInputType and documentInputType.",
+    "Use this optional provider-specific `input_type` value when the same label should apply to both query and document embedding requests. For asymmetric providers, prefer queryInputType and documentInputType.",
   "agents.defaults.memorySearch.queryInputType":
     "Optional provider-specific `input_type` value for query-time memory embeddings. Use this with OpenAI-compatible asymmetric embedding endpoints that require a query label.",
   "agents.defaults.memorySearch.documentInputType":
