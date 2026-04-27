@@ -11,7 +11,7 @@ describeLive("moonshot plugin live", () => {
     const provider = createKimiWebSearchProvider();
     const tool = provider.createTool?.({
       config: {},
-      searchConfig: { kimi: { apiKey: KIMI_SEARCH_KEY }, cacheTtlMinutes: 0 },
+      searchConfig: { kimi: { apiKey: KIMI_SEARCH_KEY }, cacheTtlMinutes: 0, timeoutSeconds: 90 },
     } as never);
 
     const result = await tool?.execute({ query: "OpenClaw GitHub", count: 1 });
