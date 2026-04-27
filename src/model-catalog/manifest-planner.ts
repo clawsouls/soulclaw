@@ -193,13 +193,14 @@ function applyModelCatalogAliasOverrides(params: {
   rows: readonly NormalizedModelCatalogRow[];
   alias?: ModelCatalogAlias;
 }): readonly NormalizedModelCatalogRow[] {
-  if (!params.alias) {
+  const alias = params.alias;
+  if (!alias) {
     return params.rows;
   }
   return params.rows.map((row) => ({
     ...row,
-    ...(params.alias.api ? { api: params.alias.api } : {}),
-    ...(params.alias.baseUrl ? { baseUrl: params.alias.baseUrl } : {}),
+    ...(alias.api ? { api: alias.api } : {}),
+    ...(alias.baseUrl ? { baseUrl: alias.baseUrl } : {}),
   }));
 }
 
