@@ -22,6 +22,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Local models: default custom providers with only `baseUrl` to the Chat Completions adapter and trust loopback model requests automatically, so local OpenAI-compatible proxies receive `/v1/chat/completions` without timing out. Fixes #40024. Thanks @parachuteshe.
+- Channels/message tool: surface Discord, Slack, and Mattermost `user:`/`channel:` target syntax in the shared message target schema and Discord ambiguity errors, so DM sends by numeric id stop burning retries before finding `user:<id>`. Fixes #72401. Thanks @garyd9, @hclsys, and @praveen9354.
 - Agents/tools: scope tool-loop detection history to the active run when available, so scheduled heartbeat cycles no longer inherit stale repeated-call counts from previous runs. Fixes #40144. Thanks @mattbrown319.
 - Control UI: show loading, reload, and retry states when a lazy dashboard panel cannot load after an upgrade, so the Logs tab no longer appears blank on stale browser bundles. Fixes #72450. Thanks @sobergou.
 - Gateway/plugins: start the Gateway in degraded mode when a single plugin entry has invalid schema config, and let `openclaw doctor --fix` quarantine that plugin config instead of crash-looping every channel. Fixes #62976 and #70371. Thanks @Doraemon-Claw and @pksidekyk.
