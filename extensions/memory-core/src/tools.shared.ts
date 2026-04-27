@@ -81,7 +81,7 @@ export async function getMemoryManagerContext(params: {
 export async function getMemoryManagerContextWithPurpose(params: {
   cfg: OpenClawConfig;
   agentId: string;
-  purpose?: "default" | "status";
+  purpose?: "default" | "status" | "cli";
 }): Promise<
   | {
       manager: NonNullable<MemorySearchManagerResult["manager"]>;
