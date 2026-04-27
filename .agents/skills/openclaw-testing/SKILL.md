@@ -311,9 +311,12 @@ gh workflow run package-acceptance.yml --ref main \
   -f telegram_mode=none
 ```
 
-Use `telegram_mode=mock-openai` or `telegram_mode=live-frontier` only with
-`source=npm`; that path reuses the published npm Telegram E2E workflow and the
-`qa-live-shared` environment.
+Use `telegram_mode=mock-openai` or `telegram_mode=live-frontier` when the same
+resolved `package-under-test` tarball should also run through the Telegram QA
+workflow in the `qa-live-shared` environment. The standalone Telegram workflow
+still accepts a published npm spec for post-publish checks, but Package
+Acceptance passes the resolved artifact for `source=npm`, `ref`, `url`, and
+`artifact`.
 
 Docker E2E images never copy repo sources as the app under test: the bare image
 is a Node/Git runner, and the functional image installs the same prebuilt npm
