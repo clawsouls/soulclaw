@@ -43,7 +43,11 @@ import {
   type UsageLike,
 } from "../usage.js";
 import { isZeroUsageEmptyStopAssistantTurn } from "./empty-assistant-turn.js";
-import { dropThinkingBlocks, stripInvalidThinkingSignatures } from "./thinking.js";
+import {
+  dropReasoningFromHistory,
+  dropThinkingBlocks,
+  stripInvalidThinkingSignatures,
+} from "./thinking.js";
 
 const INTER_SESSION_PREFIX_BASE = "[Inter-session message]";
 const MODEL_SNAPSHOT_CUSTOM_TYPE = "model-snapshot";
@@ -630,9 +634,12 @@ export async function sanitizeSessionHistory(params: {
   const validatedThinkingSignatures = policy.preserveSignatures
     ? stripInvalidThinkingSignatures(sanitizedImages)
     : sanitizedImages;
-  const droppedThinking = policy.dropThinkingBlocks
-    ? dropThinkingBlocks(validatedThinkingSignatures)
+  const droppedReasoning = policy.dropReasoningFromHistory
+    ? dropReasoningFromHistory(validatedThinkingSignatures)
     : validatedThinkingSignatures;
+  const droppedThinking = policy.dropThinkingBlocks
+    ? dropThinkingBlocks(droppedReasoning)
+    : droppedReasoning;
   const sanitizedToolCalls = sanitizeToolCallInputs(droppedThinking, {
     allowedToolNames: params.allowedToolNames,
     allowProviderOwnedThinkingReplay,

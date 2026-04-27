@@ -14,6 +14,7 @@ Docs: https://docs.openclaw.ai
 
 - CLI/update: keep the automatic post-update completion refresh on the core-command tree so it no longer stages bundled plugin runtime deps before the Gateway restart path, avoiding `.24` update hangs and 1006 disconnect cascades. Fixes #72665. Thanks @sakalaboator and @He-Pin.
 - Agents/Bedrock: stop heartbeat runs from persisting blank user transcript turns and repair existing blank user text messages before replay, preventing AWS Bedrock `ContentBlock` blank-text validation failures. Fixes #72640 and #72622. Thanks @goldzulu.
+- Agents/LM Studio: strip prior-turn Gemma 4 reasoning from OpenAI-compatible replay while preserving active tool-call continuation reasoning. Fixes #68704. Thanks @chip-snomo and @Kailigithub.
 - LM Studio: allow interactive onboarding to leave the API key blank for unauthenticated local servers, using local synthetic auth while clearing stale LM Studio auth profiles. Fixes #66937. Thanks @olamedia.
 - Process/Windows: decode command stdout and stderr from raw bytes with console-codepage awareness, while preserving valid UTF-8 output and multibyte characters split across chunks. Fixes #50519. Thanks @iready, @kevinten10, @zhangyongjie1997, @knightplat-blip, @heiqishi666, and @slepybear.
 - Agents/bootstrap: dedupe hook-injected bootstrap context files by workspace-relative path and store normalized resolved paths so duplicate relative and absolute hook paths no longer depend on the process cwd. (#59344; fixes #59319; related #56721, #56725, and #57587) Thanks @koen666.
