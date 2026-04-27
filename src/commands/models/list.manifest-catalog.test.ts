@@ -70,4 +70,20 @@ describe("loadStaticManifestCatalogRowsForList", () => {
       env: undefined,
     });
   });
+
+  it("can load refreshable manifest rows for broad registry-backed lists", async () => {
+    const { loadManifestCatalogRowsForList } = await import("./list.manifest-catalog.js");
+    mocks.loadPluginRegistrySnapshot.mockReturnValueOnce({ plugins: [], diagnostics: [] });
+    mocks.loadPluginManifestRegistryForInstalledIndex.mockReturnValueOnce({
+      plugins: [openrouterPlugin, moonshotPlugin],
+      diagnostics: [],
+    });
+
+    expect(
+      loadManifestCatalogRowsForList({
+        cfg: {},
+        staticOnly: false,
+      }).map((row) => row.ref),
+    ).toEqual(["moonshot/kimi-k2.6", "openrouter/auto"]);
+  });
 });

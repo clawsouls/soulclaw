@@ -51,11 +51,20 @@ export async function planAllModelListSources(params: {
     return createRegistryModelListSourcePlan();
   }
 
-  const { loadStaticManifestCatalogRowsForList } = await import("./list.manifest-catalog.js");
-  const manifestCatalogRows = loadStaticManifestCatalogRowsForList({
+  const { loadManifestCatalogRowsForList } = await import("./list.manifest-catalog.js");
+  const staticManifestCatalogRows = loadManifestCatalogRowsForList({
     cfg: params.cfg,
     ...(params.providerFilter ? { providerFilter: params.providerFilter } : {}),
+    staticOnly: Boolean(params.providerFilter),
   });
+  const manifestCatalogRows =
+    params.providerFilter && staticManifestCatalogRows.length === 0
+      ? loadManifestCatalogRowsForList({
+          cfg: params.cfg,
+          providerFilter: params.providerFilter,
+          staticOnly: false,
+        })
+      : staticManifestCatalogRows;
   if (!params.providerFilter) {
     const { loadProviderIndexCatalogRowsForList } =
       await import("./list.provider-index-catalog.js");
@@ -70,6 +79,13 @@ export async function planAllModelListSources(params: {
   }
 
   if (manifestCatalogRows.length > 0) {
+    if (staticManifestCatalogRows.length === 0) {
+      return createSourcePlan({
+        kind: "registry",
+        manifestCatalogRows,
+        requiresInitialRegistry: true,
+      });
+    }
     return createSourcePlan({
       kind: "manifest",
       manifestCatalogRows,

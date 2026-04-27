@@ -13,12 +13,13 @@ import {
   type PluginRegistrySnapshot,
 } from "../../plugins/plugin-registry.js";
 
-function loadStaticManifestCatalogRowsForPluginIds(params: {
+function loadManifestCatalogRowsForPluginIds(params: {
   cfg: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
   index: PluginRegistrySnapshot;
   pluginIds?: readonly string[];
   providerFilter?: string;
+  staticOnly?: boolean;
 }): readonly NormalizedModelCatalogRow[] {
   if (params.pluginIds && params.pluginIds.length === 0) {
     return [];
@@ -33,6 +34,9 @@ function loadStaticManifestCatalogRowsForPluginIds(params: {
     registry,
     ...(params.providerFilter ? { providerFilter: params.providerFilter } : {}),
   });
+  if (params.staticOnly === false) {
+    return plan.rows;
+  }
   const staticProviders = new Set(
     plan.entries.filter((entry) => entry.discovery === "static").map((entry) => entry.provider),
   );
@@ -77,10 +81,11 @@ function resolveDeclaredModelCatalogPluginIds(params: {
   });
 }
 
-export function loadStaticManifestCatalogRowsForList(params: {
+export function loadManifestCatalogRowsForList(params: {
   cfg: OpenClawConfig;
   providerFilter?: string;
   env?: NodeJS.ProcessEnv;
+  staticOnly?: boolean;
 }): readonly NormalizedModelCatalogRow[] {
   const providerFilter = params.providerFilter
     ? normalizeModelCatalogProviderId(params.providerFilter)
@@ -90,13 +95,14 @@ export function loadStaticManifestCatalogRowsForList(params: {
     env: params.env,
   });
   if (!providerFilter) {
-    return loadStaticManifestCatalogRowsForPluginIds({
+    return loadManifestCatalogRowsForPluginIds({
       cfg: params.cfg,
       env: params.env,
       index,
+      staticOnly: params.staticOnly,
     });
   }
-  const conventionRows = loadStaticManifestCatalogRowsForPluginIds({
+  const conventionRows = loadManifestCatalogRowsForPluginIds({
     cfg: params.cfg,
     env: params.env,
     index,
@@ -106,11 +112,12 @@ export function loadStaticManifestCatalogRowsForList(params: {
       providerFilter,
     }),
     providerFilter,
+    staticOnly: params.staticOnly,
   });
   if (conventionRows.length > 0) {
     return conventionRows;
   }
-  return loadStaticManifestCatalogRowsForPluginIds({
+  return loadManifestCatalogRowsForPluginIds({
     cfg: params.cfg,
     env: params.env,
     index,
@@ -120,5 +127,17 @@ export function loadStaticManifestCatalogRowsForList(params: {
       providerFilter,
     }),
     providerFilter,
+    staticOnly: params.staticOnly,
+  });
+}
+
+export function loadStaticManifestCatalogRowsForList(params: {
+  cfg: OpenClawConfig;
+  providerFilter?: string;
+  env?: NodeJS.ProcessEnv;
+}): readonly NormalizedModelCatalogRow[] {
+  return loadManifestCatalogRowsForList({
+    ...params,
+    staticOnly: true,
   });
 }

@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  loadStaticManifestCatalogRowsForList: vi.fn(),
+  loadManifestCatalogRowsForList: vi.fn(),
   loadProviderIndexCatalogRowsForList: vi.fn(),
   hasProviderStaticCatalogForFilter: vi.fn(),
 }));
 
 vi.mock("./list.manifest-catalog.js", () => ({
-  loadStaticManifestCatalogRowsForList: mocks.loadStaticManifestCatalogRowsForList,
+  loadManifestCatalogRowsForList: mocks.loadManifestCatalogRowsForList,
 }));
 
 vi.mock("./list.provider-index-catalog.js", () => ({
@@ -33,14 +33,14 @@ const catalogRow = {
 describe("planAllModelListSources", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.loadStaticManifestCatalogRowsForList.mockReturnValue([]);
+    mocks.loadManifestCatalogRowsForList.mockReturnValue([]);
     mocks.loadProviderIndexCatalogRowsForList.mockReturnValue([]);
     mocks.hasProviderStaticCatalogForFilter.mockResolvedValue(false);
   });
 
   it("uses installed manifest rows before provider index or runtime catalog sources", async () => {
     const { planAllModelListSources } = await import("./list.source-plan.js");
-    mocks.loadStaticManifestCatalogRowsForList.mockReturnValueOnce([catalogRow]);
+    mocks.loadManifestCatalogRowsForList.mockReturnValueOnce([catalogRow]);
 
     const plan = await planAllModelListSources({
       all: true,
@@ -54,6 +54,11 @@ describe("planAllModelListSources", () => {
       skipRuntimeModelSuppression: true,
     });
     expect(plan.manifestCatalogRows).toEqual([catalogRow]);
+    expect(mocks.loadManifestCatalogRowsForList).toHaveBeenCalledWith({
+      cfg: {},
+      providerFilter: "moonshot",
+      staticOnly: true,
+    });
     expect(mocks.loadProviderIndexCatalogRowsForList).not.toHaveBeenCalled();
     expect(mocks.hasProviderStaticCatalogForFilter).not.toHaveBeenCalled();
   });
@@ -78,6 +83,35 @@ describe("planAllModelListSources", () => {
     expect(mocks.hasProviderStaticCatalogForFilter).not.toHaveBeenCalled();
   });
 
+  it("uses the registry when provider-filtered manifest rows are refreshable", async () => {
+    const { planAllModelListSources } = await import("./list.source-plan.js");
+    mocks.loadManifestCatalogRowsForList.mockReturnValueOnce([]).mockReturnValueOnce([catalogRow]);
+
+    const plan = await planAllModelListSources({
+      all: true,
+      providerFilter: "openai",
+      cfg: {},
+    });
+
+    expect(plan).toMatchObject({
+      kind: "registry",
+      requiresInitialRegistry: true,
+      skipRuntimeModelSuppression: false,
+    });
+    expect(plan.manifestCatalogRows).toEqual([catalogRow]);
+    expect(mocks.loadManifestCatalogRowsForList).toHaveBeenNthCalledWith(1, {
+      cfg: {},
+      providerFilter: "openai",
+      staticOnly: true,
+    });
+    expect(mocks.loadManifestCatalogRowsForList).toHaveBeenNthCalledWith(2, {
+      cfg: {},
+      providerFilter: "openai",
+      staticOnly: false,
+    });
+    expect(mocks.loadProviderIndexCatalogRowsForList).not.toHaveBeenCalled();
+  });
+
   it("keeps scoped runtime catalog fallback separate from broad registry loading", async () => {
     const { planAllModelListSources } = await import("./list.source-plan.js");
 
@@ -98,7 +132,7 @@ describe("planAllModelListSources", () => {
   it("keeps broad all-model lists on the registry path with cheap catalog supplements", async () => {
     const { planAllModelListSources } = await import("./list.source-plan.js");
     const providerIndexRow = { ...catalogRow, source: "provider-index" };
-    mocks.loadStaticManifestCatalogRowsForList.mockReturnValueOnce([catalogRow]);
+    mocks.loadManifestCatalogRowsForList.mockReturnValueOnce([catalogRow]);
     mocks.loadProviderIndexCatalogRowsForList.mockReturnValueOnce([providerIndexRow]);
 
     const plan = await planAllModelListSources({
@@ -113,6 +147,10 @@ describe("planAllModelListSources", () => {
     });
     expect(plan.manifestCatalogRows).toEqual([catalogRow]);
     expect(plan.providerIndexCatalogRows).toEqual([providerIndexRow]);
+    expect(mocks.loadManifestCatalogRowsForList).toHaveBeenCalledWith({
+      cfg: {},
+      staticOnly: false,
+    });
     expect(mocks.hasProviderStaticCatalogForFilter).not.toHaveBeenCalled();
   });
 

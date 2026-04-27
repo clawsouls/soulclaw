@@ -781,9 +781,11 @@ Suppression fields:
 | `when.baseUrlHosts`        | `string[]` | Optional list of effective provider base URL hosts required before the suppression applies.               |
 | `when.providerConfigApiIn` | `string[]` | Optional list of exact provider-config `api` values required before the suppression applies.              |
 
-Do not put runtime-only data in `modelCatalog`. If a provider needs account
-state, an API request, or local process discovery to know the complete model
-set, declare that provider as `refreshable` or `runtime` in `discovery`.
+Do not put runtime-only data in `modelCatalog`. Use `static` only when manifest
+rows are complete enough for provider-filtered list and picker surfaces to skip
+registry/runtime discovery. Use `refreshable` when manifest rows are useful
+seeds or supplements but a registry/cache refresh may add more rows. Use
+`runtime` when OpenClaw must load provider runtime to know the list.
 
 ## modelIdNormalization reference
 
