@@ -379,6 +379,15 @@ release checks still matter for OS-specific onboarding, installer, and platform
 behavior, but package/update product validation should prefer Package
 Acceptance.
 
+Legacy package-acceptance leniency is intentionally time boxed. Packages through
+`2026.4.25` may use the compatibility path for metadata gaps already published
+to npm: private QA inventory entries missing from the tarball, missing
+`gateway install --wrapper`, missing patch files in the tarball-derived git
+fixture, missing persisted `update.channel`, legacy plugin install-record
+locations, missing marketplace install-record persistence, and config metadata
+migration during `plugins update`. Packages after `2026.4.25` must satisfy the
+modern package contracts; those same gaps fail release validation.
+
 Use broader Package Acceptance profiles when the release question is about an
 actual installable package:
 
