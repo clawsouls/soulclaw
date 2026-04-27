@@ -11,6 +11,7 @@ import {
 } from "../protocol/index.js";
 import {
   deliveryContextFromSession,
+  getActivePluginChannelRegistryVersion,
   getActivePluginRegistryVersion,
   listAgentIds,
   loadConfig,
@@ -108,6 +109,7 @@ function buildToolsEffectiveCacheKey(params: {
     v: 1,
     config: configFingerprint(context.cfg),
     pluginRegistry: getActivePluginRegistryVersion(),
+    channelRegistry: getActivePluginChannelRegistryVersion(),
     sessionKey: params.sessionKey,
     agentId: context.agentId,
     senderIsOwner: context.senderIsOwner,

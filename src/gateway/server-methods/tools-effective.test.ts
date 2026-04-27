@@ -29,6 +29,7 @@ const runtimeMocks = vi.hoisted(() => ({
       model: "gpt-4.1",
     },
   })),
+  getActivePluginChannelRegistryVersion: vi.fn(() => 1),
   getActivePluginRegistryVersion: vi.fn(() => 1),
   resolveEffectiveToolInventory: vi.fn(() => ({
     agentId: "main",
@@ -80,6 +81,7 @@ describe("tools.effective handler", () => {
     vi.clearAllMocks();
     __testing.resetToolsEffectiveCacheForTest();
     __testing.resetToolsEffectiveNowForTest();
+    runtimeMocks.getActivePluginChannelRegistryVersion.mockReturnValue(1);
     runtimeMocks.getActivePluginRegistryVersion.mockReturnValue(1);
   });
 
@@ -179,6 +181,18 @@ describe("tools.effective handler", () => {
 
     expect(runtimeMocks.resolveEffectiveToolInventory).toHaveBeenCalledTimes(1);
     expect((first.respond.mock.calls[0] as RespondCall | undefined)?.[0]).toBe(true);
+    expect((second.respond.mock.calls[0] as RespondCall | undefined)?.[0]).toBe(true);
+  });
+
+  it("invalidates the cache when only the channel registry version changes", async () => {
+    const first = createInvokeParams({ sessionKey: "main:abc" });
+    await first.invoke();
+
+    runtimeMocks.getActivePluginChannelRegistryVersion.mockReturnValue(2);
+    const second = createInvokeParams({ sessionKey: "main:abc" });
+    await second.invoke();
+
+    expect(runtimeMocks.resolveEffectiveToolInventory).toHaveBeenCalledTimes(2);
     expect((second.respond.mock.calls[0] as RespondCall | undefined)?.[0]).toBe(true);
   });
 
