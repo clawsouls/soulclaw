@@ -131,6 +131,12 @@ If a full run is already active on a newer `origin/main`, prefer watching that
 run over dispatching a duplicate. If you accidentally dispatch a stale duplicate,
 cancel it and monitor the current run.
 
+The child-dispatch jobs record the child run ids. The final
+`Verify full validation` job re-queries those child runs and is the canonical
+parent gate. If a child workflow failed but was later rerun successfully, rerun
+only the failed parent verifier job; do not dispatch a new full umbrella unless
+the release evidence is stale.
+
 ### Release Evidence
 
 After release-candidate validation or before a release decision, record the
