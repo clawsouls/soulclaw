@@ -396,6 +396,8 @@ function convertAnthropicTools(tools: Context["tools"], isOAuthToken: boolean) {
     return [];
   }
   return tools.flatMap((tool) => {
+    // Main quarantine happens when plugin tools materialize; this keeps Anthropic
+    // safe for direct/custom tool arrays that bypass the plugin registry.
     const parameters =
       tool.parameters && typeof tool.parameters === "object" && !Array.isArray(tool.parameters)
         ? (tool.parameters as Record<string, unknown>)

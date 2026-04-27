@@ -66,6 +66,7 @@ function readPluginToolName(tool: unknown): string {
   if (!isRecord(tool)) {
     return "";
   }
+  // Optional-tool allowlists need a best-effort name before full shape validation.
   return typeof tool.name === "string" ? tool.name.trim() : "";
 }
 
@@ -189,6 +190,8 @@ export function resolvePluginTools(params: {
     }
     const nameSet = new Set<string>();
     for (const toolRaw of list) {
+      // Plugin factories run at request time and can return arbitrary values; isolate
+      // malformed tools here so one bad plugin tool cannot poison every provider.
       const malformedReason = describeMalformedPluginTool(toolRaw);
       if (malformedReason) {
         const message = `plugin tool is malformed (${entry.pluginId}): ${malformedReason}`;
