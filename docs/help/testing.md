@@ -151,6 +151,42 @@ runs the same lanes before release approval.
   - GitHub Actions exposes this lane as the manual maintainer workflow
     `NPM Telegram Beta E2E`. It does not run on merge. The workflow uses the
     `qa-live-shared` environment and Convex CI credential leases.
+- GitHub Actions also exposes `Package Acceptance` for side-run product proof
+  against one candidate package. It accepts a trusted ref, published npm spec,
+  HTTPS tarball URL plus SHA-256, or tarball artifact from another run, uploads
+  the normalized `openclaw-current.tgz` as `package-under-test`, then runs the
+  existing Docker E2E scheduler with smoke, package, product, full, or custom
+  lane profiles. Published npm candidates can additionally run the Telegram QA
+  workflow.
+  - Latest beta product proof:
+
+```bash
+gh workflow run package-acceptance.yml --ref main \
+  -f source=npm \
+  -f package_spec=openclaw@beta \
+  -f suite_profile=product
+```
+
+- Exact tarball URL proof requires a digest:
+
+```bash
+gh workflow run package-acceptance.yml --ref main \
+  -f source=url \
+  -f package_url=https://registry.npmjs.org/openclaw/-/openclaw-VERSION.tgz \
+  -f package_sha256=<sha256> \
+  -f suite_profile=package
+```
+
+- Artifact proof downloads a tarball artifact from another Actions run:
+
+```bash
+gh workflow run package-acceptance.yml --ref main \
+  -f source=artifact \
+  -f artifact_run_id=<run-id> \
+  -f artifact_name=<artifact-name> \
+  -f suite_profile=smoke
+```
+
 - `pnpm test:docker:bundled-channel-deps`
   - Packs and installs the current OpenClaw build in Docker, starts the Gateway
     with OpenAI configured, then enables bundled channel/plugins via config

@@ -142,6 +142,41 @@ image. Release-path normal mode remains max three Docker chunk jobs:
 - `package-update`
 - `plugins-integrations`
 
+## Package Acceptance
+
+Use the manual `Package Acceptance` workflow when the question is "does this
+installable package work as a product?" rather than "does this source diff pass
+Vitest?"
+
+Good defaults:
+
+```bash
+gh workflow run package-acceptance.yml --ref main \
+  -f source=npm \
+  -f package_spec=openclaw@beta \
+  -f suite_profile=product
+```
+
+Profiles:
+
+- `smoke`: quick package install/channel/agent + gateway/config lanes.
+- `package`: package, update, and plugin lanes; no OpenWebUI.
+- `product`: package profile plus MCP channels, cron/subagent cleanup, OpenAI
+  web search, and OpenWebUI.
+- `full`: Docker release-path chunks with OpenWebUI.
+- `custom`: exact `docker_lanes` list for a focused rerun.
+
+Candidate sources:
+
+- `source=npm`: `openclaw@beta`, `openclaw@latest`, or an exact release version.
+- `source=ref`: pack the trusted ref in the workflow.
+- `source=url`: HTTPS `.tgz` plus required `package_sha256`.
+- `source=artifact`: download one `.tgz` from `artifact_run_id`/`artifact_name`.
+
+Use `telegram_mode=mock-openai` or `telegram_mode=live-frontier` only with
+`source=npm`; that path reuses the published npm Telegram E2E workflow and the
+`qa-live-shared` environment.
+
 Docker E2E images never copy repo sources as the app under test: the bare image
 is a Node/Git runner, and the functional image installs the same prebuilt npm
 tarball that bare lanes mount. `scripts/package-openclaw-for-docker.mjs` is the
