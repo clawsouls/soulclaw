@@ -1087,7 +1087,7 @@ jobs:
       contents: read
     name: checks-node-compat-node22
     needs: [preflight]
-    if: needs.preflight.outputs.run_build_artifacts == 'true' && github.event_name == 'push'
+    if: needs.preflight.outputs.run_build_artifacts == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ${{ github.repository == 'openclaw/openclaw' && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-24.04' }}
     timeout-minutes: 60
     steps:
