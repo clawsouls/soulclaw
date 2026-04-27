@@ -146,8 +146,9 @@ const bundledPluginInstallUninstallLanes = Array.from(
       `bundled-plugin-install-uninstall-${index}`,
       `OPENCLAW_BUNDLED_PLUGIN_SWEEP_TOTAL=${BUNDLED_PLUGIN_INSTALL_UNINSTALL_SHARDS} OPENCLAW_BUNDLED_PLUGIN_SWEEP_INDEX=${index} OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:bundled-plugin-install-uninstall`,
       {
+        estimateSeconds: 280,
         resources: ["npm"],
-        weight: 2,
+        weight: 1,
       },
     ),
 );

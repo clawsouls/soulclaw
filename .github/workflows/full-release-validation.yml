@@ -236,7 +236,7 @@ jobs:
               if [[ "$status" == "completed" ]]; then
                 break
               fi
-              sleep 60
+              sleep 30
             done
 
             conclusion="$(gh run view "$run_id" --json conclusion --jq '.conclusion')"
@@ -319,7 +319,7 @@ jobs:
             if [[ "$status" == "completed" ]]; then
               break
             fi
-            sleep 60
+            sleep 30
           done
 
           conclusion="$(gh run view "$run_id" --json conclusion --jq '.conclusion')"

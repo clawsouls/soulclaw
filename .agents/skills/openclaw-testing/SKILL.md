@@ -176,8 +176,10 @@ that private workflow manually with the full-validation run id.
 `OpenClaw Release Checks` (`openclaw-release-checks.yml`) is the release child
 workflow. It is broader than normal CI but narrower than the umbrella because it
 does not dispatch the separate full normal CI child. It runs Package Acceptance
-with `telegram_mode=mock-openai`, so the release package tarball also goes
-through Telegram package QA. Use it when release-path validation is needed
+with artifact-native delta lanes and `telegram_mode=mock-openai`, so the release
+package tarball also goes through offline plugin proof, bundled-channel compat,
+and Telegram package QA. The Docker release-path chunks cover the overlapping
+package/update/plugin lanes. Use it when release-path validation is needed
 without rerunning the entire umbrella.
 
 ```bash
