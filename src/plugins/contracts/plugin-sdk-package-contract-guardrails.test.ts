@@ -86,6 +86,12 @@ function collectPluginOwnedSdkEntrypoints(): string[] {
     .toSorted();
 }
 
+function resolvePluginOwnerFromEntrypoint(entrypoint: string): string | undefined {
+  return collectBundledPluginIds().find(
+    (pluginId) => entrypoint === pluginId || entrypoint.startsWith(`${pluginId}-`),
+  );
+}
+
 function collectClassificationOverlaps(classifications: Record<string, readonly string[]>) {
   const seen = new Map<string, string[]>();
   for (const [classification, entrypoints] of Object.entries(classifications)) {
@@ -224,6 +230,47 @@ function collectExtensionCoreImportLeaks(): Array<{ file: string; specifier: str
   return leaks;
 }
 
+function collectCrossOwnerReservedSdkImports(): Array<{
+  file: string;
+  specifier: string;
+  owner?: string;
+}> {
+  const leaks: Array<{ file: string; specifier: string; owner?: string }> = [];
+  const reserved = new Set<string>(reservedBundledPluginSdkEntrypoints);
+  const importPattern =
+    /\b(?:import|export)\b[\s\S]*?\bfrom\s*["']openclaw\/plugin-sdk\/([a-z0-9][a-z0-9-]*)["']/g;
+
+  for (const file of collectExtensionFiles(resolve(REPO_ROOT, "extensions"))) {
+    const repoRelativePath = relative(REPO_ROOT, file).replaceAll("\\", "/");
+    if (
+      /(?:^|\/)(?:__tests__|tests|test-support)(?:\/|$)/.test(repoRelativePath) ||
+      /(?:^|\/)test-support\.[cm]?tsx?$/.test(repoRelativePath) ||
+      /\.test-support\.[cm]?tsx?$/.test(repoRelativePath) ||
+      /\.test\.[cm]?tsx?$/.test(repoRelativePath)
+    ) {
+      continue;
+    }
+    const pluginId = repoRelativePath.split("/")[1];
+    const source = readFileSync(file, "utf8");
+    for (const match of source.matchAll(importPattern)) {
+      const subpath = match[1];
+      if (!subpath || !reserved.has(subpath)) {
+        continue;
+      }
+      const owner = resolvePluginOwnerFromEntrypoint(subpath);
+      if (owner === pluginId) {
+        continue;
+      }
+      leaks.push({
+        file: repoRelativePath,
+        specifier: `openclaw/plugin-sdk/${subpath}`,
+        owner,
+      });
+    }
+  }
+  return leaks;
+}
+
 describe("plugin-sdk package contract guardrails", () => {
   it("keeps plugin-sdk entrypoint metadata unique", () => {
     const counts = new Map<string, number>();
@@ -348,6 +395,10 @@ describe("plugin-sdk package contract guardrails", () => {
 
   it("keeps extension sources on public sdk or local package seams", () => {
     expect(collectExtensionCoreImportLeaks()).toEqual([]);
+  });
+
+  it("keeps reserved SDK compatibility subpaths inside their owning bundled plugins", () => {
+    expect(collectCrossOwnerReservedSdkImports()).toEqual([]);
   });
 
   it("keeps generic core poll helpers free of plugin owner names", () => {
