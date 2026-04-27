@@ -1491,6 +1491,42 @@ jobs:
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+          - suite_id: native-live-src-gateway-profiles-anthropic
+            label: Native live gateway profiles Anthropic
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=anthropic node scripts/test-live-shard.mjs native-live-src-gateway-profiles
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-src-gateway-profiles-google
+            label: Native live gateway profiles Google
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=google node scripts/test-live-shard.mjs native-live-src-gateway-profiles
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-src-gateway-profiles-minimax
+            label: Native live gateway profiles MiniMax
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=minimax,minimax-portal node scripts/test-live-shard.mjs native-live-src-gateway-profiles
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-src-gateway-profiles-openai
+            label: Native live gateway profiles OpenAI
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=openai node scripts/test-live-shard.mjs native-live-src-gateway-profiles
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-src-gateway-profiles-fireworks
+            label: Native live gateway profiles Fireworks
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=fireworks node scripts/test-live-shard.mjs native-live-src-gateway-profiles
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-src-gateway-profiles-other
+            label: Native live gateway profiles other providers
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=deepseek,opencode-go,openrouter,xai,zai node scripts/test-live-shard.mjs native-live-src-gateway-profiles
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
           - suite_id: native-live-src-gateway-backends
             label: Native live gateway backends
             command: node scripts/test-live-shard.mjs native-live-src-gateway-backends
@@ -1521,15 +1557,33 @@ jobs:
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
-          - suite_id: native-live-extensions-o-z
-            label: Native live plugins O-Z
-            command: node scripts/test-live-shard.mjs native-live-extensions-o-z
+          - suite_id: native-live-extensions-o-z-other
+            label: Native live plugins O-Z other
+            command: node scripts/test-live-shard.mjs native-live-extensions-o-z-other
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
-          - suite_id: native-live-extensions-media
-            label: Native live media plugins
-            command: node scripts/test-live-shard.mjs native-live-extensions-media
+          - suite_id: native-live-extensions-xai
+            label: Native live xAI plugin
+            command: node scripts/test-live-shard.mjs native-live-extensions-xai
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-extensions-media-audio
+            label: Native live media audio plugins
+            command: node scripts/test-live-shard.mjs native-live-extensions-media-audio
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-extensions-media-music
+            label: Native live media music plugins
+            command: node scripts/test-live-shard.mjs native-live-extensions-media-music
+            timeout_minutes: 90
+            needs_ffmpeg: true
+            profile_env_only: false
+          - suite_id: native-live-extensions-media-video
+            label: Native live media video plugins
+            command: node scripts/test-live-shard.mjs native-live-extensions-media-video
             timeout_minutes: 90
             needs_ffmpeg: true
             profile_env_only: false
