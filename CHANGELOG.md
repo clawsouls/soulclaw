@@ -17,6 +17,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Providers/Cloudflare AI Gateway: strip assistant prefill turns from Anthropic Messages payloads when thinking is enabled, so Claude requests through Cloudflare AI Gateway no longer fail Anthropic conversation-ending validation. Fixes #72905; carries forward #73005. Thanks @AaronFaby and @sahilsatralkar.
+- Gateway/startup: scope primary-model provider discovery during channel prewarm to the configured provider owner and add split startup trace timings, so boot avoids staging unrelated bundled provider dependencies while setup discovery remains broad. Fixes #73002. Thanks @Schnup03.
 - Channels/sessions: prevent guarded inbound session recording from creating route-only phantom sessions while still allowing last-route updates for sessions that already exist. Carries forward #73009. Thanks @jzakirov.
 - Cron: accept `delivery.threadId` in Gateway cron add/update schemas so scheduled announce delivery can target Telegram forum topics and other threaded channel destinations through the documented delivery path. Fixes #73017. Thanks @coachsootz.
 - Plugins/runtime deps: stage bundled plugin dependencies imported by mirrored root dist chunks, so packaged memory and status commands do not miss `chokidar` or similar root-chunk dependencies after update. Fixes #72882 and #72970; carries forward #72992. Thanks @shrimpy8, @colin-chang, and @Schnup03.
