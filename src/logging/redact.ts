@@ -11,8 +11,9 @@ const DEFAULT_REDACT_KEEP_START = 6;
 const DEFAULT_REDACT_KEEP_END = 4;
 
 const DEFAULT_REDACT_PATTERNS: string[] = [
-  // ENV-style assignments.
-  String.raw`\b[A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD)\b\s*[=:]\s*(["']?)([^\s"'\\]+)\1`,
+  // ENV-style assignments. Keep this case-sensitive so diagnostics like
+  // `Unrecognized key: "llm"` do not lose the actual config key.
+  String.raw`/\b[A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD)\b\s*[=:]\s*(["']?)([^\s"'\\]+)\1/g`,
   // JSON fields.
   String.raw`"(?:apiKey|token|secret|password|passwd|accessToken|refreshToken)"\s*:\s*"([^"]+)"`,
   // CLI flags.

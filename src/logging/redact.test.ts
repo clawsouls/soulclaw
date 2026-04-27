@@ -107,6 +107,15 @@ describe("redactSensitiveText", () => {
     expect(output).toBe("TOKEN=***");
   });
 
+  it("does not redact lowercase key diagnostics", () => {
+    const input = 'agents.defaults: Unrecognized key: "llm"';
+    const output = redactSensitiveText(input, {
+      mode: "tools",
+      patterns: defaults,
+    });
+    expect(output).toBe(input);
+  });
+
   it("redacts private key blocks", () => {
     const input = [
       "-----BEGIN PRIVATE KEY-----",
