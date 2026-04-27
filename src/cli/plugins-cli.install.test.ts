@@ -549,6 +549,120 @@ describe("plugins cli install", () => {
     );
   });
 
+  it("installs directly from npm when npm: prefix is used", async () => {
+    const cfg = createEmptyPluginConfig();
+    const enabledCfg = createEnabledPluginConfig("demo");
+
+    loadConfig.mockReturnValue(cfg);
+    installPluginFromNpmSpec.mockResolvedValue(createNpmPluginInstallResult("demo"));
+    enablePluginInConfig.mockReturnValue({ config: enabledCfg });
+    recordPluginInstall.mockReturnValue(enabledCfg);
+    applyExclusiveSlotSelection.mockReturnValue({
+      config: enabledCfg,
+      warnings: [],
+    });
+
+    await runPluginsCommand(["plugins", "install", "npm:demo"]);
+
+    expect(installPluginFromNpmSpec).toHaveBeenCalledWith(
+      expect.objectContaining({
+        spec: "demo",
+        mode: "install",
+      }),
+    );
+    expect(installPluginFromClawHub).not.toHaveBeenCalled();
+    expect(writePersistedInstalledPluginIndexInstallRecords).toHaveBeenCalledWith({
+      demo: expect.objectContaining({
+        source: "npm",
+        spec: "demo",
+        installPath: cliInstallPath("demo"),
+      }),
+    });
+    expect(writeConfigFile).toHaveBeenCalledWith(enabledCfg);
+  });
+
+  it("passes npm: prefix installs through npm options without ClawHub lookup", async () => {
+    const cfg = createEmptyPluginConfig();
+    const enabledCfg = createEnabledPluginConfig("demo");
+
+    loadConfig.mockReturnValue(cfg);
+    installPluginFromNpmSpec.mockResolvedValue(createNpmPluginInstallResult("demo"));
+    enablePluginInConfig.mockReturnValue({ config: enabledCfg });
+    recordPluginInstall.mockReturnValue(enabledCfg);
+
+    await runPluginsCommand([
+      "plugins",
+      "install",
+      "npm:demo",
+      "--force",
+      "--dangerously-force-unsafe-install",
+    ]);
+
+    expect(installPluginFromNpmSpec).toHaveBeenCalledWith(
+      expect.objectContaining({
+        spec: "demo",
+        mode: "update",
+        dangerouslyForceUnsafeInstall: true,
+      }),
+    );
+    expect(installPluginFromClawHub).not.toHaveBeenCalled();
+  });
+
+  it("reports npm install failures without trying ClawHub when npm: prefix is used", async () => {
+    loadConfig.mockReturnValue({} as OpenClawConfig);
+    installPluginFromNpmSpec.mockResolvedValue({
+      ok: false,
+      error: "npm install failed",
+    });
+    installHooksFromNpmSpec.mockResolvedValue({
+      ok: false,
+      error: "package.json missing openclaw.hooks",
+    });
+
+    await expect(runPluginsCommand(["plugins", "install", "npm:demo"])).rejects.toThrow(
+      "__exit__:1",
+    );
+
+    expect(installPluginFromClawHub).not.toHaveBeenCalled();
+    expect(runtimeErrors.at(-1)).toContain("npm install failed");
+  });
+
+  it("does not resolve npm: prefixed bundled plugin ids through bundled installs", async () => {
+    loadConfig.mockReturnValue({ plugins: { load: { paths: [] } } } as OpenClawConfig);
+    installPluginFromNpmSpec.mockResolvedValue({
+      ok: false,
+      error: "Package not found on npm: memory-lancedb.",
+      code: "npm_package_not_found",
+    });
+    installHooksFromNpmSpec.mockResolvedValue({
+      ok: false,
+      error: "package.json missing openclaw.hooks",
+    });
+
+    await expect(runPluginsCommand(["plugins", "install", "npm:memory-lancedb"])).rejects.toThrow(
+      "__exit__:1",
+    );
+
+    expect(installPluginFromNpmSpec).toHaveBeenCalledWith(
+      expect.objectContaining({
+        spec: "memory-lancedb",
+      }),
+    );
+    expect(installPluginFromClawHub).not.toHaveBeenCalled();
+    expect(writeConfigFile).not.toHaveBeenCalled();
+    expect(runtimeErrors.at(-1)).toContain("Package not found on npm: memory-lancedb.");
+  });
+
+  it("rejects empty npm: prefix installs before resolver lookup", async () => {
+    loadConfig.mockReturnValue({} as OpenClawConfig);
+
+    await expect(runPluginsCommand(["plugins", "install", "npm:"])).rejects.toThrow("__exit__:1");
+
+    expect(installPluginFromNpmSpec).not.toHaveBeenCalled();
+    expect(installPluginFromClawHub).not.toHaveBeenCalled();
+    expect(runtimeErrors.at(-1)).toContain("unsupported npm: spec: missing package");
+  });
+
   it("passes dangerous force unsafe install to marketplace installs", async () => {
     await expect(
       runPluginsCommand([

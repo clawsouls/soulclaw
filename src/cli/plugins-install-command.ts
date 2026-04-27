@@ -40,6 +40,7 @@ import {
   createPluginInstallLogger,
   decidePreferredClawHubFallback,
   formatPluginInstallWithHookFallbackError,
+  parseNpmPrefixSpec,
 } from "./plugins-command-helpers.js";
 import { persistHookPackInstall, persistPluginInstall } from "./plugins-install-persist.js";
 import type { ConfigSnapshotForInstallPersist } from "./plugins-install-persist.js";
@@ -258,6 +259,74 @@ async function tryInstallHookPackFromNpmSpec(params: {
     snapshot: params.snapshot,
     hookPackId: result.hookPackId,
     hooks: result.hooks,
+    install: installRecord,
+  });
+  return { ok: true };
+}
+
+async function tryInstallPluginOrHookPackFromNpmSpec(params: {
+  snapshot: ConfigSnapshotForInstallPersist;
+  installMode: "install" | "update";
+  spec: string;
+  pin?: boolean;
+  safetyOverrides: InstallSafetyOverrides;
+  allowBundledFallback: boolean;
+}): Promise<{ ok: true } | { ok: false }> {
+  const result = await installPluginFromNpmSpec({
+    ...params.safetyOverrides,
+    mode: params.installMode,
+    spec: params.spec,
+    logger: createPluginInstallLogger(),
+  });
+  if (!result.ok) {
+    if (isTerminalPluginInstallSecurityFailure(result.code)) {
+      defaultRuntime.error(result.error);
+      return { ok: false };
+    }
+    if (params.allowBundledFallback) {
+      const bundledFallbackPlan = resolveBundledInstallPlanForNpmFailure({
+        rawSpec: params.spec,
+        code: result.code,
+        findBundledSource: (lookup) => findBundledPluginSource({ lookup }),
+      });
+      if (bundledFallbackPlan) {
+        await installBundledPluginSource({
+          snapshot: params.snapshot,
+          rawSpec: params.spec,
+          bundledSource: bundledFallbackPlan.bundledSource,
+          warning: bundledFallbackPlan.warning,
+        });
+        return { ok: true };
+      }
+    }
+    const hookFallback = await tryInstallHookPackFromNpmSpec({
+      snapshot: params.snapshot,
+      installMode: params.installMode,
+      spec: params.spec,
+      pin: params.pin,
+    });
+    if (hookFallback.ok) {
+      return { ok: true };
+    }
+    defaultRuntime.error(
+      formatPluginInstallWithHookFallbackError(result.error, hookFallback.error),
+    );
+    return { ok: false };
+  }
+
+  clearPluginManifestRegistryCache();
+  const installRecord = resolvePinnedNpmInstallRecordForCli(
+    params.spec,
+    Boolean(params.pin),
+    result.targetDir,
+    result.version,
+    result.npmResolution,
+    defaultRuntime.log,
+    theme.warn,
+  );
+  await persistPluginInstall({
+    snapshot: params.snapshot,
+    pluginId: result.pluginId,
     install: installRecord,
   });
   return { ok: true };
@@ -534,6 +603,26 @@ export async function runPluginInstallCommand(params: {
     return defaultRuntime.exit(1);
   }
 
+  const npmPrefixSpec = parseNpmPrefixSpec(raw);
+  if (npmPrefixSpec !== null) {
+    if (!npmPrefixSpec) {
+      defaultRuntime.error("unsupported npm: spec: missing package");
+      return defaultRuntime.exit(1);
+    }
+    const npmPrefixResult = await tryInstallPluginOrHookPackFromNpmSpec({
+      snapshot,
+      installMode,
+      spec: npmPrefixSpec,
+      pin: opts.pin,
+      safetyOverrides,
+      allowBundledFallback: false,
+    });
+    if (!npmPrefixResult.ok) {
+      return defaultRuntime.exit(1);
+    }
+    return;
+  }
+
   if (
     looksLikeLocalInstallSpec(raw, [
       ".ts",
@@ -637,60 +726,15 @@ export async function runPluginInstallCommand(params: {
     }
   }
 
-  const result = await installPluginFromNpmSpec({
-    ...safetyOverrides,
-    mode: installMode,
-    spec: raw,
-    logger: createPluginInstallLogger(),
-  });
-  if (!result.ok) {
-    if (isTerminalPluginInstallSecurityFailure(result.code)) {
-      defaultRuntime.error(result.error);
-      return defaultRuntime.exit(1);
-    }
-    const bundledFallbackPlan = resolveBundledInstallPlanForNpmFailure({
-      rawSpec: raw,
-      code: result.code,
-      findBundledSource: (lookup) => findBundledPluginSource({ lookup }),
-    });
-    if (!bundledFallbackPlan) {
-      const hookFallback = await tryInstallHookPackFromNpmSpec({
-        snapshot,
-        installMode,
-        spec: raw,
-        pin: opts.pin,
-      });
-      if (hookFallback.ok) {
-        return;
-      }
-      defaultRuntime.error(
-        formatPluginInstallWithHookFallbackError(result.error, hookFallback.error),
-      );
-      return defaultRuntime.exit(1);
-    }
-
-    await installBundledPluginSource({
-      snapshot,
-      rawSpec: raw,
-      bundledSource: bundledFallbackPlan.bundledSource,
-      warning: bundledFallbackPlan.warning,
-    });
-    return;
-  }
-
-  clearPluginManifestRegistryCache();
-  const installRecord = resolvePinnedNpmInstallRecordForCli(
-    raw,
-    Boolean(opts.pin),
-    result.targetDir,
-    result.version,
-    result.npmResolution,
-    defaultRuntime.log,
-    theme.warn,
-  );
-  await persistPluginInstall({
+  const npmResult = await tryInstallPluginOrHookPackFromNpmSpec({
     snapshot,
-    pluginId: result.pluginId,
-    install: installRecord,
+    installMode,
+    spec: raw,
+    pin: opts.pin,
+    safetyOverrides,
+    allowBundledFallback: true,
   });
+  if (!npmResult.ok) {
+    return defaultRuntime.exit(1);
+  }
 }
