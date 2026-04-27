@@ -16,6 +16,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- CLI/model probes: fail local `infer model run` probes when the provider returns no text output, so unreachable local providers and empty completions no longer look like successful smoke tests. Refs #73023. Thanks @pavelyortho-cyber.
 - CLI/Ollama: run local `infer model run` through the lean provider completion path and skip global model discovery for one-shot local probes, so Ollama smoke tests no longer pay full chat-agent/tool startup cost or hang before the native `/api/chat` request. Fixes #72851. Thanks @TotalRes2020.
 - Daemon/service: only emit hard-coded version-manager paths such as `~/.volta/bin`, `~/.asdf/shims`, `~/.bun/bin`, and fnm/pnpm fallbacks into gateway and node service PATHs when the directories exist, so `openclaw doctor` no longer flags `gateway.path.non-minimal` against a PATH the daemon just wrote. Env-driven roots and stable user-bin dirs remain unconditional. Fixes #71944; carries forward #71964. Thanks @Sanjays2402.
 - Channels/commands: make generated `/dock-*` commands switch the active session reply route through `session.identityLinks` instead of falling through to normal chat. Fixes #69206; carries forward #73033. Thanks @clawbones and @michaelatamuk.

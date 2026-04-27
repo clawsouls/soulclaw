@@ -112,7 +112,7 @@ type CapabilityEnvelope = {
 const CAPABILITY_METADATA: CapabilityMetadata[] = [
   {
     id: "model.run",
-    description: "Run a one-shot text inference turn through the agent runtime.",
+    description: "Run a one-shot text inference turn through the selected model provider.",
     transports: ["local", "gateway"],
     flags: ["--prompt", "--model", "--local", "--gateway", "--json"],
     resultShape: "normalized payloads plus provider/model attribution",
@@ -570,6 +570,13 @@ function requireProviderModelOverride(
   };
 }
 
+function collectModelRunText(content: Array<{ type: string; text?: string }>): string {
+  return content
+    .map((block) => (block.type === "text" && typeof block.text === "string" ? block.text : ""))
+    .join("")
+    .trim();
+}
+
 async function runModelRun(params: {
   prompt: string;
   model?: string;
@@ -607,10 +614,12 @@ async function runModelRun(params: {
             : undefined,
       },
     });
-    const text = result.content
-      .map((block) => (block.type === "text" ? block.text : ""))
-      .join("")
-      .trim();
+    const text = collectModelRunText(result.content);
+    if (!text) {
+      throw new Error(
+        `No text output returned for provider "${prepared.selection.provider}" model "${prepared.selection.modelId}".`,
+      );
+    }
     return {
       ok: true,
       capability: "model.run",
@@ -618,14 +627,12 @@ async function runModelRun(params: {
       provider: prepared.selection.provider,
       model: prepared.selection.modelId,
       attempts: [],
-      outputs: text
-        ? [
-            {
-              text,
-              mediaUrl: null,
-            },
-          ]
-        : [],
+      outputs: [
+        {
+          text,
+          mediaUrl: null,
+        },
+      ],
     } satisfies CapabilityEnvelope;
   }
 
