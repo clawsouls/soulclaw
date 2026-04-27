@@ -667,6 +667,11 @@ export async function startGatewayServer(
   };
   const { getRuntimeSnapshot, startChannels, startChannel, stopChannel, markChannelLoggedOut } =
     channelManager;
+  const refreshGatewayHealthSnapshotWithRuntime: typeof refreshGatewayHealthSnapshot = (opts) =>
+    refreshGatewayHealthSnapshot({
+      ...opts,
+      getRuntimeSnapshot,
+    });
   const createCloseHandler = () =>
     createGatewayCloseHandler({
       bonjourStop: runtimeState.bonjourStop,
@@ -721,7 +726,7 @@ export async function startGatewayServer(
         nodeSendToAllSubscribed,
         getPresenceVersion,
         getHealthVersion,
-        refreshGatewayHealthSnapshot,
+        refreshGatewayHealthSnapshot: refreshGatewayHealthSnapshotWithRuntime,
         logHealth,
         dedupe,
         chatAbortControllers,
@@ -804,7 +809,7 @@ export async function startGatewayServer(
       pluginApprovalManager,
       loadGatewayModelCatalog,
       getHealthCache,
-      refreshHealthSnapshot: refreshGatewayHealthSnapshot,
+      refreshHealthSnapshot: refreshGatewayHealthSnapshotWithRuntime,
       logHealth,
       logGateway: log,
       incrementPresenceVersion,
