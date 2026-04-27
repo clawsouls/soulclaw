@@ -302,14 +302,22 @@ jobs:
       OPENCLAW_QA_CONVEX_SITE_URL: ${{ secrets.OPENCLAW_QA_CONVEX_SITE_URL }}
       OPENCLAW_QA_CONVEX_SECRET_CI: ${{ secrets.OPENCLAW_QA_CONVEX_SECRET_CI }}
 
-  qa_lab_parity_release_checks:
-    name: Run QA Lab parity gate
+  qa_lab_parity_lane_release_checks:
+    name: Run QA Lab parity lane (${{ matrix.lane }})
     needs: [resolve_target]
     if: contains(fromJSON('["all","qa","qa-parity"]'), needs.resolve_target.outputs.rerun_group)
     runs-on: blacksmith-32vcpu-ubuntu-2404
     timeout-minutes: 30
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: candidate
+            output_dir: gpt54
+          - lane: baseline
+            output_dir: opus46
     env:
       QA_PARITY_CONCURRENCY: "1"
       OPENCLAW_QA_TRANSPORT_READY_TIMEOUT_MS: "180000"
@@ -338,25 +346,80 @@ jobs:
       - name: Build private QA runtime
         run: pnpm build
 
-      - name: Run OpenAI candidate lane
+      - name: Run parity lane
+        env:
+          QA_PARITY_LANE: ${{ matrix.lane }}
+          QA_PARITY_OUTPUT_DIR: ${{ matrix.output_dir }}
         run: |
-          pnpm openclaw qa suite \
-            --provider-mode mock-openai \
-            --parity-pack agentic \
-            --concurrency "${QA_PARITY_CONCURRENCY}" \
-            --model "${OPENCLAW_CI_OPENAI_MODEL}" \
-            --alt-model openai/gpt-5.4-alt \
-            --output-dir .artifacts/qa-e2e/gpt54
+          set -euo pipefail
 
-      - name: Run Opus 4.6 lane
-        run: |
+          case "${QA_PARITY_LANE}" in
+            candidate)
+              model="${OPENCLAW_CI_OPENAI_MODEL}"
+              alt_model="openai/gpt-5.4-alt"
+              ;;
+            baseline)
+              model="anthropic/claude-opus-4-6"
+              alt_model="anthropic/claude-sonnet-4-6"
+              ;;
+            *)
+              echo "Unknown QA parity lane: ${QA_PARITY_LANE}" >&2
+              exit 1
+              ;;
+          esac
+
           pnpm openclaw qa suite \
             --provider-mode mock-openai \
             --parity-pack agentic \
             --concurrency "${QA_PARITY_CONCURRENCY}" \
-            --model anthropic/claude-opus-4-6 \
-            --alt-model anthropic/claude-sonnet-4-6 \
-            --output-dir .artifacts/qa-e2e/opus46
+            --model "${model}" \
+            --alt-model "${alt_model}" \
+            --output-dir ".artifacts/qa-e2e/${QA_PARITY_OUTPUT_DIR}"
+
+      - name: Upload parity lane artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-qa-parity-${{ matrix.lane }}-${{ needs.resolve_target.outputs.sha }}
+          path: .artifacts/qa-e2e/
+          retention-days: 14
+          if-no-files-found: warn
+
+  qa_lab_parity_report_release_checks:
+    name: Run QA Lab parity report
+    needs: [resolve_target, qa_lab_parity_lane_release_checks]
+    if: contains(fromJSON('["all","qa","qa-parity"]'), needs.resolve_target.outputs.rerun_group)
+    runs-on: blacksmith-32vcpu-ubuntu-2404
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    env:
+      OPENCLAW_BUILD_PRIVATE_QA: "1"
+      OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve_target.outputs.ref }}
+          fetch-depth: 1
+
+      - name: Setup Node environment
+        uses: ./.github/actions/setup-node-env
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+          install-bun: "true"
+
+      - name: Download parity lane artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-qa-parity-*-${{ needs.resolve_target.outputs.sha }}
+          path: .artifacts/qa-e2e/
+          merge-multiple: true
+
+      - name: Build private QA runtime
+        run: pnpm build
 
       - name: Generate parity report
         run: |
@@ -548,7 +611,8 @@ jobs:
       - cross_os_release_checks
       - live_and_e2e_release_checks
       - package_acceptance_release_checks
-      - qa_lab_parity_release_checks
+      - qa_lab_parity_lane_release_checks
+      - qa_lab_parity_report_release_checks
       - qa_live_matrix_release_checks
       - qa_live_telegram_release_checks
     if: always()
@@ -566,7 +630,8 @@ jobs:
             "cross_os_release_checks=${{ needs.cross_os_release_checks.result }}" \
             "live_and_e2e_release_checks=${{ needs.live_and_e2e_release_checks.result }}" \
             "package_acceptance_release_checks=${{ needs.package_acceptance_release_checks.result }}" \
-            "qa_lab_parity_release_checks=${{ needs.qa_lab_parity_release_checks.result }}" \
+            "qa_lab_parity_lane_release_checks=${{ needs.qa_lab_parity_lane_release_checks.result }}" \
+            "qa_lab_parity_report_release_checks=${{ needs.qa_lab_parity_report_release_checks.result }}" \
             "qa_live_matrix_release_checks=${{ needs.qa_live_matrix_release_checks.result }}" \
             "qa_live_telegram_release_checks=${{ needs.qa_live_telegram_release_checks.result }}"
           do
