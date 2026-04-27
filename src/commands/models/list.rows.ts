@@ -401,6 +401,9 @@ export async function appendCatalogSupplementRows(params: {
       continue;
     }
     const key = modelKey(entry.provider, entry.id);
+    if (params.seenKeys.has(key)) {
+      continue;
+    }
     const model = resolveModelWithRegistry({
       provider: entry.provider,
       modelId: entry.id,
