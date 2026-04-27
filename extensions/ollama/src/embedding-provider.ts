@@ -13,6 +13,7 @@ import {
   type SsrFPolicy,
 } from "openclaw/plugin-sdk/ssrf-runtime";
 import { normalizeOllamaWireModelId } from "./model-id.js";
+import { readProviderBaseUrl } from "./provider-base-url.js";
 import { resolveOllamaApiBase } from "./provider-models.js";
 
 export type OllamaEmbeddingProvider = {
@@ -138,7 +139,7 @@ function resolveOllamaEmbeddingClient(
   options: OllamaEmbeddingOptions,
 ): OllamaEmbeddingClientConfig {
   const providerConfig = resolveConfiguredProvider(options);
-  const rawBaseUrl = options.remote?.baseUrl?.trim() || providerConfig?.baseUrl?.trim();
+  const rawBaseUrl = options.remote?.baseUrl?.trim() || readProviderBaseUrl(providerConfig);
   const baseUrl = resolveOllamaApiBase(rawBaseUrl);
   const model = normalizeEmbeddingModel(options.model, options.provider);
   const headerOverrides = Object.assign({}, providerConfig?.headers, options.remote?.headers);

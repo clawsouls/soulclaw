@@ -1,5 +1,6 @@
 import type { ModelProviderConfig } from "openclaw/plugin-sdk/provider-model-shared";
 import { OLLAMA_DEFAULT_BASE_URL } from "./defaults.js";
+import { readProviderBaseUrl } from "./provider-base-url.js";
 import { resolveOllamaApiBase } from "./provider-models.js";
 
 export const OLLAMA_PROVIDER_ID = "ollama";
@@ -63,8 +64,9 @@ export function hasMeaningfulExplicitOllamaConfig(
   if (Array.isArray(providerConfig.models) && providerConfig.models.length > 0) {
     return true;
   }
-  if (typeof providerConfig.baseUrl === "string" && providerConfig.baseUrl.trim()) {
-    return resolveOllamaApiBase(providerConfig.baseUrl) !== OLLAMA_DEFAULT_BASE_URL;
+  const baseUrl = readProviderBaseUrl(providerConfig);
+  if (baseUrl) {
+    return resolveOllamaApiBase(baseUrl) !== OLLAMA_DEFAULT_BASE_URL;
   }
   if (readStringValue(providerConfig.apiKey)) {
     return true;
@@ -118,10 +120,7 @@ export async function resolveOllamaDiscoveryResult(params: {
     return {
       provider: {
         ...explicit,
-        baseUrl:
-          typeof explicit.baseUrl === "string" && explicit.baseUrl.trim()
-            ? resolveOllamaApiBase(explicit.baseUrl)
-            : OLLAMA_DEFAULT_BASE_URL,
+        baseUrl: resolveOllamaApiBase(readProviderBaseUrl(explicit) ?? OLLAMA_DEFAULT_BASE_URL),
         api: explicit.api ?? "ollama",
         apiKey: resolveOllamaDiscoveryApiKey({
           env: params.ctx.env,
@@ -142,7 +141,7 @@ export async function resolveOllamaDiscoveryResult(params: {
     return null;
   }
 
-  const provider = await params.buildProvider(explicit?.baseUrl, {
+  const provider = await params.buildProvider(readProviderBaseUrl(explicit), {
     quiet: !hasRealOllamaKey && !hasMeaningfulExplicitConfig,
   });
   if (provider.models?.length === 0 && !ollamaKey && !explicit?.apiKey) {

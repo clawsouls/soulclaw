@@ -434,6 +434,38 @@ describe("ollama setup", () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
+    it("uses baseURL alias when checking and pulling models", async () => {
+      const progress = { update: vi.fn(), stop: vi.fn() };
+      const prompter = {
+        progress: vi.fn(() => progress),
+      } as unknown as WizardPrompter;
+
+      const fetchMock = createOllamaFetchMock({
+        tags: [],
+        pullResponse: new Response('{"status":"success"}\n', { status: 200 }),
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      await ensureOllamaModelPulled({
+        config: {
+          agents: { defaults: { model: { primary: "ollama/gemma4" } } },
+          models: {
+            providers: {
+              ollama: {
+                baseURL: "http://127.0.0.1:11435",
+                models: [],
+              } as never,
+            },
+          },
+        },
+        model: "ollama/gemma4",
+        prompter,
+      });
+
+      expect(fetchMock.mock.calls[0]?.[0]).toBe("http://127.0.0.1:11435/api/tags");
+      expect(fetchMock.mock.calls[1]?.[0]).toBe("http://127.0.0.1:11435/api/pull");
+    });
+
     it("skips pull for cloud models", async () => {
       const prompter = {} as unknown as WizardPrompter;
       const fetchMock = vi.fn();

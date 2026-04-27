@@ -109,6 +109,33 @@ describe("ollama embedding provider", () => {
     );
   });
 
+  it("resolves configured baseURL alias", async () => {
+    const fetchMock = mockEmbeddingFetch([1, 0]);
+
+    const { provider } = await createOllamaEmbeddingProvider({
+      config: {
+        models: {
+          providers: {
+            ollama: {
+              baseURL: "http://remote-ollama:11434/v1",
+              models: [],
+            },
+          },
+        },
+      } as unknown as OpenClawConfig,
+      provider: "ollama",
+      model: "nomic-embed-text",
+      fallback: "none",
+    });
+
+    await provider.embedQuery("hello");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://remote-ollama:11434/api/embed",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   it("fails fast when memory-search remote apiKey is an unresolved SecretRef", async () => {
     await expect(
       createOllamaEmbeddingProvider({
