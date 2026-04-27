@@ -6,7 +6,14 @@ read_when:
   - You are debugging failing GitHub Actions checks
 ---
 
-The CI runs on every push to `main` and every pull request. It uses smart scoping to skip expensive jobs when only unrelated areas changed. Manual `workflow_dispatch` runs intentionally bypass smart scoping and fan out the full CI graph for release candidates or broad validation.
+The CI runs on every push to `main` and every pull request. It uses smart scoping to skip expensive jobs when only unrelated areas changed. Manual `workflow_dispatch` runs intentionally bypass smart scoping and fan out the full normal CI graph for release candidates or broad validation.
+
+`Full Release Validation` is the manual umbrella workflow for "run everything
+before release." It accepts a branch, tag, or full commit SHA, dispatches the
+manual `CI` workflow with that target, and dispatches `OpenClaw Release Checks`
+for install smoke, Docker release-path suites, live/E2E, OpenWebUI, QA Lab
+parity, Matrix, and Telegram lanes. It can also run the post-publish `NPM
+Telegram Beta E2E` workflow when a published package spec is provided.
 
 QA Lab has dedicated CI lanes outside the main smart-scoped workflow. The
 `Parity gate` workflow runs on matching PR changes and manual dispatch; it
@@ -84,10 +91,14 @@ scoped lane on: Linux Node shards, bundled-plugin shards, channel contracts,
 Node 22 compatibility, `check`, `check-additional`, build smoke, docs checks,
 Python skills, Windows, macOS, Android, and Control UI i18n. Manual runs use a
 unique concurrency group so a release-candidate full suite is not cancelled by
-another push or PR run on the same ref.
+another push or PR run on the same ref. The optional `target_ref` input lets a
+trusted caller run that graph against a branch, tag, or full commit SHA while
+using the workflow file from the selected dispatch ref.
 
 ```bash
 gh workflow run ci.yml --ref release/YYYY.M.D
+gh workflow run ci.yml --ref main -f target_ref=<branch-or-sha>
+gh workflow run full-release-validation.yml --ref main -f ref=<branch-or-sha>
 ```
 
 ## Fail-fast order

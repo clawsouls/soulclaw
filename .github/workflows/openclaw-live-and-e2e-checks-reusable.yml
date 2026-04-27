@@ -190,42 +190,29 @@ jobs:
       - name: Validate selected ref
         id: validate
         env:
-          GH_TOKEN: ${{ github.token }}
           INPUT_REF: ${{ inputs.ref }}
-          WORKFLOW_REF_NAME: ${{ github.ref_name }}
         shell: bash
         run: |
           set -euo pipefail
           selected_sha="$(git rev-parse HEAD)"
           trusted_reason=""
 
-          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
-          if [[ "${WORKFLOW_REF_NAME}" =~ ^release/[0-9]{4}\.[1-9][0-9]*\.[1-9][0-9]*$ ]]; then
-            git fetch --no-tags origin "+refs/heads/${WORKFLOW_REF_NAME}:refs/remotes/origin/${WORKFLOW_REF_NAME}"
-          fi
+          git fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*'
+          git fetch --tags origin '+refs/tags/*:refs/tags/*'
 
           if git merge-base --is-ancestor "$selected_sha" refs/remotes/origin/main; then
             trusted_reason="main-ancestor"
-          elif [[ "${WORKFLOW_REF_NAME}" =~ ^release/[0-9]{4}\.[1-9][0-9]*\.[1-9][0-9]*$ ]] &&
-            [[ "$selected_sha" == "$(git rev-parse "refs/remotes/origin/${WORKFLOW_REF_NAME}")" ]]; then
-            trusted_reason="release-branch-head"
           elif git tag --points-at "$selected_sha" | grep -Eq '^v'; then
             trusted_reason="release-tag"
+          elif git for-each-ref --format='%(refname:short)' --contains "$selected_sha" refs/remotes/origin | grep -Eq '^origin/'; then
+            trusted_reason="repository-branch-history"
           else
-            pr_head_count="$(
-              gh api \
-                -H "Accept: application/vnd.github+json" \
-                "repos/${GITHUB_REPOSITORY}/commits/${selected_sha}/pulls" \
-                --jq '[.[] | select(.state == "open" and .head.repo.full_name == "'"${GITHUB_REPOSITORY}"'" and .head.sha == "'"${selected_sha}"'")] | length'
-            )"
-            if [[ "$pr_head_count" != "0" ]]; then
-              trusted_reason="open-pr-head"
-            fi
+            trusted_reason=""
           fi
 
           if [[ -z "$trusted_reason" ]]; then
             echo "Ref '${INPUT_REF}' resolved to $selected_sha, which is not trusted for secret-bearing live/E2E checks." >&2
-            echo "Allowed refs must be on main, match the current release branch head, point to a release tag, or match an open PR head in ${GITHUB_REPOSITORY}." >&2
+            echo "Allowed refs must be reachable from an OpenClaw branch or release tag." >&2
             exit 1
           fi
 
