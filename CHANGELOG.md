@@ -16,6 +16,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- CLI/Ollama: run local `infer model run` through the lean provider completion path and skip global model discovery for one-shot local probes, so Ollama smoke tests no longer pay full chat-agent/tool startup cost or hang before the native `/api/chat` request. Fixes #72851. Thanks @TotalRes2020.
 - Channels/commands: make generated `/dock-*` commands switch the active session reply route through `session.identityLinks` instead of falling through to normal chat. Fixes #69206; carries forward #73033. Thanks @clawbones and @michaelatamuk.
 - Providers/Cloudflare AI Gateway: strip assistant prefill turns from Anthropic Messages payloads when thinking is enabled, so Claude requests through Cloudflare AI Gateway no longer fail Anthropic conversation-ending validation. Fixes #72905; carries forward #73005. Thanks @AaronFaby and @sahilsatralkar.
 - Gateway/startup: keep primary-model startup prewarm on scoped metadata preparation, let native approval bootstraps retry outside channel startup, and skip the global hook runner when no `gateway_start` hook is registered, so clean post-ready sidecar work stays off the critical path. Refs #72846. Thanks @RayWoo, @livekm0309, and @mrz1836.
