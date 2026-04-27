@@ -477,14 +477,14 @@ export function loadGatewayPlugins(params: {
             env: process.env,
           });
   const resolvedConfig = autoEnabled.config;
-  const pluginIds =
-    params.pluginIds ??
-    loadPluginLookUpTable({
+  const pluginIds = params.pluginIds ?? [
+    ...loadPluginLookUpTable({
       config: resolvedConfig,
       activationSourceConfig: params.activationSourceConfig,
       workspaceDir: params.workspaceDir,
       env: process.env,
-    }).startup.pluginIds;
+    }).startup.pluginIds,
+  ];
   if (pluginIds.length === 0) {
     const pluginRegistry = createEmptyPluginRegistry();
     setActivePluginRegistry(pluginRegistry, undefined, "gateway-bindable", params.workspaceDir);
