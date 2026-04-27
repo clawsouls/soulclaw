@@ -351,6 +351,32 @@ export const tailLanes = [
   ),
 ];
 
+const releasePathPluginRuntimeLanes = [
+  lane("plugins", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugins", {
+    resources: ["npm", "service"],
+    weight: 6,
+  }),
+  ...bundledPluginInstallUninstallLanes,
+  serviceLane(
+    "cron-mcp-cleanup",
+    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:cron-mcp-cleanup",
+    {
+      resources: ["npm"],
+      weight: 3,
+    },
+  ),
+  serviceLane(
+    "openai-web-search-minimal",
+    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openai-web-search-minimal",
+    { timeoutMs: 8 * 60 * 1000 },
+  ),
+];
+
+const releasePathBundledChannelLanes = [
+  npmLane("plugin-update", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugin-update"),
+  ...bundledScenarioLanes,
+];
+
 const releasePathChunks = {
   core: [
     lane("qr", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:qr"),
@@ -398,29 +424,13 @@ const releasePathChunks = {
       },
     ),
   ],
-  "plugins-integrations": [
-    lane("plugins", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugins", {
-      resources: ["npm", "service"],
-      weight: 6,
-    }),
-    ...bundledPluginInstallUninstallLanes,
-    npmLane("plugin-update", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugin-update"),
-    ...bundledScenarioLanes,
-    serviceLane(
-      "cron-mcp-cleanup",
-      "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:cron-mcp-cleanup",
-      {
-        resources: ["npm"],
-        weight: 3,
-      },
-    ),
-    serviceLane(
-      "openai-web-search-minimal",
-      "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openai-web-search-minimal",
-      { timeoutMs: 8 * 60 * 1000 },
-    ),
-  ],
+  "plugins-runtime": releasePathPluginRuntimeLanes,
+  "bundled-channels": releasePathBundledChannelLanes,
   openwebui: [],
+};
+
+const legacyReleasePathChunks = {
+  "plugins-integrations": [...releasePathPluginRuntimeLanes, ...releasePathBundledChannelLanes],
 };
 
 function openWebUILane() {
@@ -431,16 +441,22 @@ function openWebUILane() {
 }
 
 export function releasePathChunkLanes(chunk, options = {}) {
-  const base = releasePathChunks[chunk];
+  const base = releasePathChunks[chunk] ?? legacyReleasePathChunks[chunk];
   if (!base) {
     throw new Error(
-      `OPENCLAW_DOCKER_ALL_CHUNK must be one of: ${Object.keys(releasePathChunks).join(", ")}. Got: ${JSON.stringify(chunk)}`,
+      `OPENCLAW_DOCKER_ALL_CHUNK must be one of: ${[
+        ...Object.keys(releasePathChunks),
+        ...Object.keys(legacyReleasePathChunks),
+      ].join(", ")}. Got: ${JSON.stringify(chunk)}`,
     );
   }
   if (chunk === "openwebui") {
     return options.includeOpenWebUI ? [openWebUILane()] : [];
   }
-  if (chunk !== "plugins-integrations" || !options.includeOpenWebUI) {
+  if (
+    (chunk !== "plugins-runtime" && chunk !== "plugins-integrations") ||
+    !options.includeOpenWebUI
+  ) {
     return base;
   }
   return [...base, openWebUILane()];

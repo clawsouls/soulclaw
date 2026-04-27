@@ -435,8 +435,11 @@ jobs:
           - chunk_id: package-update
             label: package/update
             timeout_minutes: 180
-          - chunk_id: plugins-integrations
-            label: plugins/integrations
+          - chunk_id: plugins-runtime
+            label: plugins/runtime
+            timeout_minutes: 180
+          - chunk_id: bundled-channels
+            label: bundled channels
             timeout_minutes: 180
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

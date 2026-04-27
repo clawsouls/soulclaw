@@ -286,15 +286,19 @@ generated inside GitHub artifacts include `package_artifact_run_id`,
 exact tarball and prepared images from the failed run. When the fix changes
 package contents, omit those reuse inputs so the workflow packs a new tarball.
 Live-only targeted reruns skip the E2E images and build only the live-test
-image. Release-path normal mode remains max three Docker chunk jobs:
+image. Release-path normal mode fans out into four Docker chunk jobs:
 
 - `core`
 - `package-update`
-- `plugins-integrations`
+- `plugins-runtime`
+- `bundled-channels`
 
-OpenWebUI is folded into `plugins-integrations` for full release-path coverage
-and keeps a standalone `openwebui` chunk only for OpenWebUI-only dispatches.
-The bundled-channel runtime-dependency coverage inside `plugins-integrations`
+OpenWebUI is folded into `plugins-runtime` for full release-path coverage and
+keeps a standalone `openwebui` chunk only for OpenWebUI-only dispatches. The
+legacy `plugins-integrations` chunk still works as an aggregate alias for manual
+reruns, but the release workflow uses the split chunks so plugin runtime checks
+and bundled-channel checks can run on separate machines. The bundled-channel
+runtime-dependency coverage inside `bundled-channels`
 uses the split `bundled-channel-*` and `bundled-channel-update-*` lanes rather
 than the serial `bundled-channel-deps` lane, so failures produce cheap targeted
 reruns for the exact channel/update scenario. The bundled plugin
@@ -447,7 +451,7 @@ gh workflow run openclaw-live-and-e2e-checks-reusable.yml \
 That path still runs the prepare job, so it creates a new tarball for `<sha>`.
 If the SHA-tagged GHCR bare/functional image already exists, CI skips rebuilding
 that image and only uploads the fresh package artifact before the targeted lane
-job. Do not rerun the full three-chunk release path unless the failed lane list
+job. Do not rerun the full release path unless the failed lane list
 or touched surface really requires it.
 
 ## Docker Expected Timings
