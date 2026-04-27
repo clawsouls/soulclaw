@@ -74,9 +74,9 @@ describe("package Telegram live Docker E2E", () => {
     expect(script).toContain('"./extensions/qa-channel/api.ts"');
     expect(script).toContain('pkg.exports["./plugin-sdk/qa-channel-protocol"]');
     expect(script).toContain('"./extensions/qa-channel/src/protocol.ts"');
-    expect(gatewayRpcClient).toContain('from "openclaw/plugin-sdk/browser-node-runtime"');
-    expect(qaRuntimeApi).toContain('from "openclaw/plugin-sdk/browser-node-runtime"');
-    expect(gatewayRpcClient).not.toContain('from "openclaw/plugin-sdk/gateway-runtime"');
+    expect(gatewayRpcClient).toContain('from "openclaw/plugin-sdk/gateway-runtime"');
+    expect(qaRuntimeApi).toContain('from "openclaw/plugin-sdk/gateway-runtime"');
+    expect(gatewayRpcClient).not.toContain('from "openclaw/plugin-sdk/browser-node-runtime"');
   });
 
   it("exposes installed package dependencies to the mounted QA harness", () => {
