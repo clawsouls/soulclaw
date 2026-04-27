@@ -4,6 +4,66 @@ export const pluginSdkEntrypoints = [...pluginSdkEntryList];
 
 export const pluginSdkSubpaths = pluginSdkEntrypoints.filter((entry) => entry !== "index");
 
+export const reservedBundledPluginSdkEntrypoints = [
+  "bluebubbles",
+  "bluebubbles-policy",
+  "browser-cdp",
+  "browser-config-runtime",
+  "browser-config-support",
+  "browser-control-auth",
+  "browser-node-runtime",
+  "browser-profiles",
+  "browser-security-runtime",
+  "browser-setup-tools",
+  "browser-support",
+  "diagnostics-otel",
+  "diagnostics-prometheus",
+  "diffs",
+  "feishu",
+  "feishu-conversation",
+  "feishu-setup",
+  "github-copilot-login",
+  "github-copilot-token",
+  "googlechat",
+  "googlechat-runtime-shared",
+  "irc",
+  "irc-surface",
+  "line",
+  "line-core",
+  "line-runtime",
+  "line-surface",
+  "llm-task",
+  "matrix",
+  "matrix-helper",
+  "matrix-runtime-heavy",
+  "matrix-runtime-shared",
+  "matrix-runtime-surface",
+  "matrix-surface",
+  "matrix-thread-bindings",
+  "mattermost",
+  "mattermost-policy",
+  "memory-core",
+  "memory-lancedb",
+  "msteams",
+  "nextcloud-talk",
+  "nostr",
+  "thread-ownership",
+  "tlon",
+  "twitch",
+  "voice-call",
+  "zalo",
+  "zalo-setup",
+  "zalouser",
+] as const;
+
+export const supportedBundledFacadeSdkEntrypoints = [
+  "lmstudio",
+  "lmstudio-runtime",
+  "memory-core-engine-runtime",
+  "qa-runner-runtime",
+  "tts-runtime",
+] as const;
+
 /** Map every SDK entrypoint name to its source file path inside the repo. */
 export function buildPluginSdkEntrySources(entries: readonly string[] = pluginSdkEntrypoints) {
   return Object.fromEntries(entries.map((entry) => [entry, `src/plugin-sdk/${entry}.ts`]));

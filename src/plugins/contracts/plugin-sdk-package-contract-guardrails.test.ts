@@ -2,7 +2,11 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { pluginSdkEntrypoints } from "../../plugin-sdk/entrypoints.js";
+import {
+  pluginSdkEntrypoints,
+  reservedBundledPluginSdkEntrypoints,
+  supportedBundledFacadeSdkEntrypoints,
+} from "../../plugin-sdk/entrypoints.js";
 
 const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const REPO_ROOT = resolve(ROOT_DIR, "..");
@@ -11,6 +15,13 @@ const PUBLIC_CONTRACT_REFERENCE_FILES = [
   "src/plugins/contracts/plugin-sdk-subpaths.test.ts",
 ] as const;
 const PLUGIN_SDK_SUBPATH_PATTERN = /openclaw\/plugin-sdk\/([a-z0-9][a-z0-9-]*)\b/g;
+const BUNDLED_PLUGIN_FACADE_LOADER_PATTERN =
+  /\bload(?:Activated)?BundledPluginPublicSurfaceModuleSync\b/;
+const PRIVATE_BUNDLED_SDK_SURFACE_PATTERN =
+  /\b(?:Private helper surface|Narrow plugin-sdk surface for the bundled|Narrow .*runtime exports used by the bundled)\b/i;
+const GENERIC_CORE_HELPER_FILES = ["src/polls.ts", "src/poll-params.ts"] as const;
+const GENERIC_CORE_PLUGIN_OWNER_NAME_PATTERN =
+  /\b(?:bluebubbles|discord|feishu|googlechat|matrix|mattermost|msteams|slack|telegram|whatsapp|zalo|zalouser)\b/gi;
 
 function collectPluginSdkPackageExports(): string[] {
   const packageJson = JSON.parse(readFileSync(resolve(REPO_ROOT, "package.json"), "utf8")) as {
@@ -44,6 +55,45 @@ function collectPluginSdkSubpathReferences() {
     }
   }
   return references;
+}
+
+function collectBundledFacadeSdkEntrypoints(): string[] {
+  const entrypoints: string[] = [];
+  for (const entrypoint of pluginSdkEntrypoints) {
+    const filePath = resolve(REPO_ROOT, "src/plugin-sdk", `${entrypoint}.ts`);
+    const source = readFileSync(filePath, "utf8");
+    if (BUNDLED_PLUGIN_FACADE_LOADER_PATTERN.test(source)) {
+      entrypoints.push(entrypoint);
+    }
+  }
+  return entrypoints.toSorted();
+}
+
+function collectPrivateBundledSdkSurfaceEntrypoints(): string[] {
+  const entrypoints: string[] = [];
+  for (const entrypoint of pluginSdkEntrypoints) {
+    const filePath = resolve(REPO_ROOT, "src/plugin-sdk", `${entrypoint}.ts`);
+    const source = readFileSync(filePath, "utf8");
+    if (PRIVATE_BUNDLED_SDK_SURFACE_PATTERN.test(source)) {
+      entrypoints.push(entrypoint);
+    }
+  }
+  return entrypoints.toSorted();
+}
+
+function collectGenericCoreOwnerNameLeaks(): Array<{ file: string; match: string }> {
+  const leaks: Array<{ file: string; match: string }> = [];
+  for (const file of GENERIC_CORE_HELPER_FILES) {
+    const source = readFileSync(resolve(REPO_ROOT, file), "utf8");
+    for (const match of source.matchAll(GENERIC_CORE_PLUGIN_OWNER_NAME_PATTERN)) {
+      const ownerName = match[0];
+      if (!ownerName) {
+        continue;
+      }
+      leaks.push({ file, match: ownerName });
+    }
+  }
+  return leaks;
 }
 
 function readRootPackageJson(): {
@@ -148,6 +198,32 @@ describe("plugin-sdk package contract guardrails", () => {
     expect(collectPluginSdkPackageExports()).toEqual([...pluginSdkEntrypoints].toSorted());
   });
 
+  it("keeps bundled plugin SDK compatibility subpaths explicitly classified", () => {
+    const entrypoints = new Set(pluginSdkEntrypoints);
+    const reserved = new Set<string>(reservedBundledPluginSdkEntrypoints);
+    const supported = new Set<string>(supportedBundledFacadeSdkEntrypoints);
+    const unknownReserved = [...reserved].filter((entrypoint) => !entrypoints.has(entrypoint));
+    const unknownSupported = [...supported].filter((entrypoint) => !entrypoints.has(entrypoint));
+    const unclassifiedBundledFacades = collectBundledFacadeSdkEntrypoints().filter(
+      (entrypoint) => !reserved.has(entrypoint) && !supported.has(entrypoint),
+    );
+    const unreservedPrivateSurfaces = collectPrivateBundledSdkSurfaceEntrypoints().filter(
+      (entrypoint) => !reserved.has(entrypoint),
+    );
+
+    expect({
+      unknownReserved,
+      unknownSupported,
+      unclassifiedBundledFacades,
+      unreservedPrivateSurfaces,
+    }).toEqual({
+      unknownReserved: [],
+      unknownSupported: [],
+      unclassifiedBundledFacades: [],
+      unreservedPrivateSurfaces: [],
+    });
+  });
+
   it("keeps curated public plugin-sdk references on exported built subpaths", () => {
     const entrypoints = new Set(pluginSdkEntrypoints);
     const exports = new Set(collectPluginSdkPackageExports());
@@ -191,5 +267,9 @@ describe("plugin-sdk package contract guardrails", () => {
 
   it("keeps extension sources on public sdk or local package seams", () => {
     expect(collectExtensionCoreImportLeaks()).toEqual([]);
+  });
+
+  it("keeps generic core poll helpers free of plugin owner names", () => {
+    expect(collectGenericCoreOwnerNameLeaks()).toEqual([]);
   });
 });
