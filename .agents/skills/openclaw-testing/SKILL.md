@@ -295,7 +295,11 @@ and keeps a standalone `openwebui` chunk only for OpenWebUI-only dispatches.
 The bundled-channel runtime-dependency coverage inside `plugins-integrations`
 uses the split `bundled-channel-*` and `bundled-channel-update-*` lanes rather
 than the serial `bundled-channel-deps` lane, so failures produce cheap targeted
-reruns for the exact channel/update scenario.
+reruns for the exact channel/update scenario. The bundled plugin
+install/uninstall sweep is also split into
+`bundled-plugin-install-uninstall-0` through
+`bundled-plugin-install-uninstall-7`; selecting the legacy
+`bundled-plugin-install-uninstall` lane expands to all eight shards.
 
 ## Package Acceptance
 
