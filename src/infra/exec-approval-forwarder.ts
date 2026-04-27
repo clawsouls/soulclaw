@@ -3,6 +3,7 @@ import {
   getLoadedChannelPlugin,
   resolveChannelApprovalAdapter,
 } from "../channels/plugins/index.js";
+import { channelRouteIdentityKey } from "../channels/route/ref.js";
 import { getRuntimeConfig } from "../config/config.js";
 import type {
   ExecApprovalForwardingConfig,
@@ -169,9 +170,12 @@ function shouldForwardRoute(params: {
 
 function buildTargetKey(target: ExecApprovalForwardTarget): string {
   const channel = normalizeMessageChannel(target.channel) ?? target.channel;
-  const accountId = target.accountId ?? "";
-  const threadId = target.threadId ?? "";
-  return [channel, target.to, accountId, threadId].join(":");
+  return channelRouteIdentityKey({
+    channel,
+    to: target.to,
+    accountId: target.accountId,
+    threadId: target.threadId,
+  });
 }
 
 function buildSyntheticApprovalRequest(routeRequest: ApprovalRouteRequest): ExecApprovalRequest {

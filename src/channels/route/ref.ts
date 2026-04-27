@@ -36,6 +36,11 @@ export type ChannelRouteRefInput = {
   threadSource?: ChannelRouteThreadSource;
 };
 
+export type ChannelRouteTargetInput = Pick<
+  ChannelRouteRefInput,
+  "channel" | "accountId" | "to" | "rawTo" | "chatType" | "threadId"
+>;
+
 export function normalizeRouteThreadId(value: unknown): string | number | undefined {
   return normalizeOptionalThreadValue(value);
 }
@@ -90,6 +95,22 @@ export function channelRouteTarget(route?: ChannelRouteRef): string | undefined 
 
 export function channelRouteThreadId(route?: ChannelRouteRef): string | number | undefined {
   return route?.thread?.id;
+}
+
+export function normalizeChannelRouteTarget(
+  input?: ChannelRouteTargetInput | null,
+): ChannelRouteRef | undefined {
+  return input ? normalizeChannelRouteRef(input) : undefined;
+}
+
+export function channelRouteIdentityKey(input?: ChannelRouteTargetInput | null): string {
+  const route = normalizeChannelRouteTarget(input);
+  return JSON.stringify([
+    route?.channel ?? "",
+    route?.target?.to ?? "",
+    route?.accountId ?? "",
+    stringifyRouteThreadId(route?.thread?.id) ?? "",
+  ]);
 }
 
 function threadIdsEqual(left?: string | number, right?: string | number): boolean {

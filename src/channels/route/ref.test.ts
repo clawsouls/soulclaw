@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  channelRouteIdentityKey,
   channelRouteKey,
   channelRoutesMatchExact,
   channelRoutesShareConversation,
@@ -39,6 +40,24 @@ describe("channel route refs", () => {
 
     expect(stringifyRouteThreadId(route?.thread?.id)).toBe("42");
     expect(channelRouteKey(route)).toBe("telegram|-100123||42");
+  });
+
+  it("builds a stable identity key from route-like input", () => {
+    expect(
+      channelRouteIdentityKey({
+        channel: " Telegram ",
+        to: " -100123 ",
+        accountId: " Work ",
+        threadId: 42.9,
+      }),
+    ).toBe(
+      channelRouteIdentityKey({
+        channel: "telegram",
+        to: "-100123",
+        accountId: "work",
+        threadId: "42",
+      }),
+    );
   });
 
   it("matches exact routes when numeric and string thread ids are equivalent", () => {

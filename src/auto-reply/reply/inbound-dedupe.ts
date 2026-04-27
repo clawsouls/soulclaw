@@ -1,3 +1,4 @@
+import { channelRouteIdentityKey } from "../../channels/route/ref.js";
 import { logVerbose, shouldLogVerbose } from "../../globals.js";
 import { resolveGlobalDedupeCache, type DedupeCache } from "../../infra/dedupe.js";
 import { parseAgentSessionKey } from "../../sessions/session-key-utils.js";
@@ -68,11 +69,13 @@ export function buildInboundDedupeKey(ctx: MsgContext): string | null {
   }
   const sessionScope = resolveInboundDedupeSessionScope(ctx);
   const accountId = normalizeOptionalString(ctx.AccountId) ?? "";
-  const threadId =
-    ctx.MessageThreadId !== undefined && ctx.MessageThreadId !== null
-      ? String(ctx.MessageThreadId)
-      : "";
-  return [provider, accountId, sessionScope, peerId, threadId, messageId].filter(Boolean).join("|");
+  const routeKey = channelRouteIdentityKey({
+    channel: provider,
+    to: peerId,
+    accountId,
+    threadId: ctx.MessageThreadId,
+  });
+  return JSON.stringify([sessionScope, routeKey, messageId]);
 }
 
 export function shouldSkipDuplicateInbound(
