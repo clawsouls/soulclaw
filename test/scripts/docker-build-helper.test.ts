@@ -77,4 +77,13 @@ describe("docker build helper", () => {
       runner.indexOf('echo "==> Agent turns ($profile)"'),
     );
   });
+
+  it("keeps installer E2E tool smokes in isolated sessions", () => {
+    const runner = readFileSync(INSTALL_E2E_RUNNER_PATH, "utf8");
+
+    expect(runner).toContain('SESSION_ID_PREFIX="e2e-tools-${profile}"');
+    expect(runner).toContain('TURN1_SESSION_ID="${SESSION_ID_PREFIX}-read-proof"');
+    expect(runner).toContain('TURN3_SESSION_ID="${SESSION_ID_PREFIX}-exec-hostname"');
+    expect(runner).toContain('TURN4_SESSION_ID="${SESSION_ID_PREFIX}-image-write"');
+  });
 });
