@@ -233,18 +233,22 @@ cp "$openclaw_package_dir/package.json" /app/package.json
 node --input-type=module <<'NODE'
 import fs from "node:fs";
 
-const packageJsonPath = "/app/package.json";
-const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-pkg.exports = pkg.exports && typeof pkg.exports === "object" ? pkg.exports : {};
-pkg.exports["./plugin-sdk/qa-channel"] = {
-  types: "./extensions/qa-channel/api.ts",
-  default: "./extensions/qa-channel/api.ts",
-};
-pkg.exports["./plugin-sdk/qa-channel-protocol"] = {
-  types: "./extensions/qa-channel/src/protocol.ts",
-  default: "./extensions/qa-channel/src/protocol.ts",
-};
-fs.writeFileSync(packageJsonPath, `${JSON.stringify(pkg, null, 2)}\n`);
+for (const packageJsonPath of [
+  "/app/package.json",
+  "/app/node_modules/openclaw/package.json",
+]) {
+  const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+  pkg.exports = pkg.exports && typeof pkg.exports === "object" ? pkg.exports : {};
+  pkg.exports["./plugin-sdk/qa-channel"] = {
+    types: "./extensions/qa-channel/api.ts",
+    default: "./extensions/qa-channel/api.ts",
+  };
+  pkg.exports["./plugin-sdk/qa-channel-protocol"] = {
+    types: "./extensions/qa-channel/src/protocol.ts",
+    default: "./extensions/qa-channel/src/protocol.ts",
+  };
+  fs.writeFileSync(packageJsonPath, `${JSON.stringify(pkg, null, 2)}\n`);
+}
 NODE
 for deps_dir in "$openclaw_package_dir/node_modules" /npm-global/lib/node_modules; do
   [ -d "$deps_dir" ] || continue
