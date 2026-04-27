@@ -22,6 +22,7 @@ vi.mock("openclaw/plugin-sdk/config-mutation", async () => {
     ...actual,
     readConfigFileSnapshotForWrite,
     replaceConfigFile,
+    writeConfigFile,
   };
 });
 

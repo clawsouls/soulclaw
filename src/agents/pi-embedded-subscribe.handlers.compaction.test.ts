@@ -52,6 +52,7 @@ function createCompactionContext(params: {
       compactionCount += 1;
     },
     getCompactionCount: () => compactionCount,
+    noteCompactionTokensAfter: vi.fn(),
   } as unknown as EmbeddedPiSubscribeContext;
 }
 

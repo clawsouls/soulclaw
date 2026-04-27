@@ -59,6 +59,7 @@ describe("compaction hook wiring", () => {
       maybeResolveCompactionWait: vi.fn(),
       incrementCompactionCount: vi.fn(),
       getCompactionCount: () => params.compactionCount ?? 0,
+      noteCompactionTokensAfter: vi.fn(),
       ...(params.withRetryHooks
         ? {
             noteCompactionRetry: vi.fn(),
@@ -251,6 +252,7 @@ describe("compaction hook wiring", () => {
       maybeResolveCompactionWait: vi.fn(),
       getCompactionCount: () => 1,
       incrementCompactionCount: vi.fn(),
+      noteCompactionTokensAfter: vi.fn(),
     };
 
     runCompactionEnd(ctx, { willRetry: false, result: { summary: "compacted" } });
