@@ -48,6 +48,11 @@ const fs = require("node:fs");
 const packageJsonPath = "/tmp/openclaw-git/package.json";
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 packageJson.pnpm = { ...packageJson.pnpm, allowUnusedPatches: true };
+packageJson.scripts = {
+  ...packageJson.scripts,
+  build: "node -e \"console.log('fixture build skipped')\"",
+  "ui:build": "node -e \"console.log('fixture ui build skipped')\"",
+};
 fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 NODE
 (
