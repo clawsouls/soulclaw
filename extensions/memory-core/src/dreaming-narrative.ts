@@ -171,7 +171,7 @@ async function startNarrativeRunOrFallback(params: {
         nowMs: params.nowMs,
         timezone: params.timezone,
       });
-      params.logger.warn(
+      params.logger.info(
         `memory-core: narrative generation used fallback for ${params.data.phase} phase because subagent runtime is request-scoped.`,
       );
     } catch (fallbackErr) {

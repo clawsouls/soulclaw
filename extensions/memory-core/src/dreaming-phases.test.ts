@@ -319,6 +319,8 @@ describe("memory-core dreaming phases", () => {
     const dreams = await fs.readFile(path.join(workspaceDir, "DREAMS.md"), "utf-8");
     expect(dreams).toContain("Move backups to S3 Glacier.");
     expect(logger.error).not.toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining("request-scoped"));
+    expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining("request-scoped"));
     expect(logger.warn).not.toHaveBeenCalledWith(
       expect.stringContaining("narrative session cleanup failed"),
     );

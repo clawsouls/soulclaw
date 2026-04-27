@@ -719,7 +719,8 @@ describe("generateAndAppendDreamNarrative", () => {
 
     const content = await fs.readFile(path.join(workspaceDir, "DREAMS.md"), "utf-8");
     expect(content).toContain("API endpoints need authentication");
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("request-scoped"));
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining("request-scoped"));
+    expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining("request-scoped"));
     expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining(workspaceDir));
     expect(logger.warn).not.toHaveBeenCalledWith(
       expect.stringContaining("narrative session cleanup failed"),
@@ -749,6 +750,8 @@ describe("generateAndAppendDreamNarrative", () => {
 
     const content = await fs.readFile(path.join(workspaceDir, "DREAMS.md"), "utf-8");
     expect(content).toContain("A durable candidate surfaced.");
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining("request-scoped"));
+    expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining("request-scoped"));
     expect(subagent.deleteSession).not.toHaveBeenCalled();
   });
 
