@@ -66,6 +66,7 @@ function isProductionExtensionFile(relPath) {
     relPath.includes(".test-d.") ||
     relPath.includes(".test-harness.") ||
     relPath.includes(".test-shared.") ||
+    relPath.endsWith(".test-support.ts") ||
     relPath.endsWith("-test-helpers.ts") ||
     relPath.endsWith("-test-support.ts")
   ) {
@@ -155,6 +156,26 @@ function pushDeprecatedRuntimeApiViolations(violations, files) {
   }
 }
 
+function pushBroadConfigRuntimeBarrelViolations(violations, files) {
+  const staticImportPattern =
+    /\b(?:import|export)\s+(?:type\s+)?\{[\s\S]*?\}\s+from\s+["']openclaw\/plugin-sdk\/config-runtime["']/g;
+  const dynamicImportPattern =
+    /\b(?:const|let|var)\s+\{[\s\S]*?\}\s*=\s*(?:await\s+)?import\(["']openclaw\/plugin-sdk\/config-runtime["']\)/g;
+  const typeQueryPattern =
+    /\b(?:typeof\s+)?import\(["']openclaw\/plugin-sdk\/config-runtime["']\)\.[A-Za-z_$][\w$]*/g;
+
+  for (const { filePath, relPath } of files) {
+    const source = readFileSync(filePath, "utf8");
+    for (const pattern of [staticImportPattern, dynamicImportPattern, typeQueryPattern]) {
+      for (const line of findMatchLineNumbers(source, pattern)) {
+        violations.push(
+          `${relPath}:${line} use narrow plugin-sdk config subpaths instead of openclaw/plugin-sdk/config-runtime`,
+        );
+      }
+    }
+  }
+}
+
 export function collectDeprecatedInternalConfigApiViolations({
   repoRoot = DEFAULT_REPO_ROOT,
 } = {}) {
@@ -177,6 +198,7 @@ export function collectDeprecatedInternalConfigApiViolations({
     .map((filePath) => ({ filePath, relPath: repoRelative(repoRoot, filePath) }))
     .filter(({ relPath }) => isProductionExtensionFile(relPath));
   pushDeprecatedRuntimeApiViolations(violations, productionExtensionFiles);
+  pushBroadConfigRuntimeBarrelViolations(violations, productionExtensionFiles);
 
   for (const { filePath, relPath } of productionExtensionFiles) {
     const source = readFileSync(filePath, "utf8");
@@ -214,6 +236,15 @@ export function collectDeprecatedInternalConfigApiViolations({
   pushDeprecatedRuntimeApiViolations(
     violations,
     repoFiles.filter(({ relPath }) => !isCompatConfigApiFile(relPath)),
+  );
+  pushBroadConfigRuntimeBarrelViolations(
+    violations,
+    repoFiles.filter(
+      ({ relPath }) =>
+        !isTestOrHarnessFile(relPath) &&
+        !isCompatConfigApiFile(relPath) &&
+        !relPath.startsWith("test/"),
+    ),
   );
 
   for (const { filePath, relPath } of repoFiles.filter(

@@ -13,7 +13,7 @@ vi.mock("openclaw/plugin-sdk/config-runtime", async () => {
   };
 });
 
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "openclaw/plugin-sdk/config-types";
 import {
   getSessionBindingService,
   registerSessionBindingAdapter,
