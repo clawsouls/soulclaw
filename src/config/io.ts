@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import JSON5 from "json5";
+import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope-config.js";
 import { ensureOwnerDisplaySecret } from "../agents/owner-display.js";
 import { applyRuntimeLegacyConfigMigrations } from "../commands/doctor/shared/runtime-compat-api.js";
 import { loadDotEnv } from "../infra/dotenv.js";
@@ -23,6 +24,10 @@ import {
   resolveInstalledPluginIndexRecordsStorePath,
   writePersistedInstalledPluginIndexInstallRecordsSync,
 } from "../plugins/installed-plugin-index-records.js";
+import {
+  loadPluginMetadataSnapshot,
+  type PluginMetadataSnapshot,
+} from "../plugins/plugin-metadata-snapshot.js";
 import { sanitizeTerminalText } from "../terminal/safe-text.js";
 import { isRecord } from "../utils.js";
 import { VERSION } from "../version.js";
@@ -1166,6 +1171,7 @@ function createConfigFileSnapshot(params: {
   issues: ConfigFileSnapshot["issues"];
   warnings: ConfigFileSnapshot["warnings"];
   legacyIssues: LegacyConfigIssue[];
+  pluginMetadataSnapshot?: PluginMetadataSnapshot;
 }): ConfigFileSnapshot {
   const sourceConfig = asResolvedSourceConfig(params.sourceConfig);
   const runtimeConfig = asRuntimeConfig(params.runtimeConfig);
@@ -1183,6 +1189,9 @@ function createConfigFileSnapshot(params: {
     issues: params.issues,
     warnings: params.warnings,
     legacyIssues: params.legacyIssues,
+    ...(params.pluginMetadataSnapshot
+      ? { pluginMetadataSnapshot: params.pluginMetadataSnapshot }
+      : {}),
   };
 }
 
@@ -1745,10 +1754,24 @@ export function createConfigIO(
         ? hashConfigRaw(installMigration.persistedRootRaw)
         : hash;
       fallbackSourceConfig = coerceConfig(effectiveConfigRaw);
+      let pluginMetadataSnapshot: PluginMetadataSnapshot | undefined;
+      const loadValidationPluginMetadataSnapshot = (config: OpenClawConfig) => {
+        if (pluginMetadataSnapshot) {
+          return pluginMetadataSnapshot;
+        }
+        const defaultAgentId = resolveDefaultAgentId(config);
+        pluginMetadataSnapshot = loadPluginMetadataSnapshot({
+          config,
+          workspaceDir: resolveAgentWorkspaceDir(config, defaultAgentId),
+          env: deps.env,
+        });
+        return pluginMetadataSnapshot;
+      };
       const validated = await deps.measure("config.snapshot.read.validate", () =>
         validateConfigObjectWithPlugins(effectiveConfigRaw, {
           env: deps.env,
           pluginValidation: overrides.pluginValidation,
+          loadPluginMetadataSnapshot: loadValidationPluginMetadataSnapshot,
         }),
       );
       if (!validated.ok) {
@@ -1789,6 +1812,7 @@ export function createConfigIO(
             issues: [],
             warnings: [...validated.warnings, ...envVarWarnings],
             legacyIssues: legacyResolution.sourceLegacyIssues,
+            pluginMetadataSnapshot,
           }),
           envSnapshotForRestore: readResolution.envSnapshotForRestore,
         }),

@@ -1,3 +1,4 @@
+import type { PluginMetadataSnapshot } from "../plugins/plugin-metadata-snapshot.js";
 import type {
   SilentReplyPolicyShape,
   SilentReplyRewriteShape,
@@ -184,4 +185,5 @@ export type ConfigFileSnapshot = {
   issues: ConfigValidationIssue[];
   warnings: ConfigValidationIssue[];
   legacyIssues: LegacyConfigIssue[];
+  pluginMetadataSnapshot?: PluginMetadataSnapshot;
 };

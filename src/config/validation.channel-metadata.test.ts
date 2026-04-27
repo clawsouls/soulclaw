@@ -239,6 +239,7 @@ describe("validateConfigObjectWithPlugins bundled allowlist compatibility", () =
     const result = validateConfigObjectWithPlugins(
       {
         plugins: {
+          allow: ["opik"],
           entries: {
             opik: {
               enabled: true,
@@ -260,5 +261,31 @@ describe("validateConfigObjectWithPlugins bundled allowlist compatibility", () =
         workspace: "default-workspace",
       });
     }
+  });
+
+  it("loads a plugin metadata snapshot once during plugin validation", () => {
+    const loadPluginMetadataSnapshot = vi.fn((_config: unknown) => ({
+      manifestRegistry: createPluginConfigSchemaRegistry(),
+    }));
+
+    const result = validateConfigObjectWithPlugins(
+      {
+        plugins: {
+          allow: ["opik"],
+          entries: {
+            opik: {
+              enabled: true,
+            },
+          },
+        },
+      },
+      {
+        loadPluginMetadataSnapshot,
+      },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(loadPluginMetadataSnapshot).toHaveBeenCalledOnce();
+    expect(mockLoadPluginManifestRegistry).not.toHaveBeenCalled();
   });
 });

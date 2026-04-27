@@ -10,6 +10,7 @@ import {
   scanBundledPluginRuntimeDeps,
 } from "../plugins/bundled-runtime-deps.js";
 import { loadPluginLookUpTable } from "../plugins/plugin-lookup-table.js";
+import type { PluginMetadataSnapshot } from "../plugins/plugin-metadata-snapshot.js";
 import { createEmptyPluginRegistry } from "../plugins/registry.js";
 import { getActivePluginRegistry, setActivePluginRegistry } from "../plugins/runtime.js";
 import { mergeActivationSectionsIntoRuntimeConfig } from "./plugin-activation-runtime-config.js";
@@ -95,6 +96,7 @@ export async function prepareGatewayPluginBootstrap(params: {
   cfgAtStart: OpenClawConfig;
   activationSourceConfig?: OpenClawConfig;
   startupRuntimeConfig: OpenClawConfig;
+  pluginMetadataSnapshot?: PluginMetadataSnapshot;
   minimalTestGateway: boolean;
   log: GatewayPluginBootstrapLog;
 }) {
@@ -149,6 +151,7 @@ export async function prepareGatewayPluginBootstrap(params: {
         workspaceDir: defaultWorkspaceDir,
         env: process.env,
         activationSourceConfig,
+        metadataSnapshot: params.pluginMetadataSnapshot,
       });
   const deferredConfiguredChannelPluginIds = [
     ...(pluginLookUpTable?.startup.configuredDeferredChannelPluginIds ?? []),

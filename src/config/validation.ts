@@ -711,6 +711,9 @@ type ValidateConfigWithPluginsParams = {
   env?: NodeJS.ProcessEnv;
   pluginValidation?: "full" | "skip";
   pluginMetadataSnapshot?: Pick<PluginMetadataSnapshot, "manifestRegistry">;
+  loadPluginMetadataSnapshot?: (
+    config: OpenClawConfig,
+  ) => Pick<PluginMetadataSnapshot, "manifestRegistry">;
 };
 
 export function validateConfigObjectWithPlugins(
@@ -722,6 +725,7 @@ export function validateConfigObjectWithPlugins(
     env: params?.env,
     pluginValidation: params?.pluginValidation ?? "full",
     pluginMetadataSnapshot: params?.pluginMetadataSnapshot,
+    loadPluginMetadataSnapshot: params?.loadPluginMetadataSnapshot,
   });
 }
 
@@ -734,6 +738,7 @@ export function validateConfigObjectRawWithPlugins(
     env: params?.env,
     pluginValidation: params?.pluginValidation ?? "full",
     pluginMetadataSnapshot: params?.pluginMetadataSnapshot,
+    loadPluginMetadataSnapshot: params?.loadPluginMetadataSnapshot,
   });
 }
 
@@ -810,6 +815,11 @@ function validateConfigObjectWithPluginsBase(
   };
 
   const loadValidationRegistry = (): RegistryInfo => {
+    const pluginMetadataSnapshot = opts.loadPluginMetadataSnapshot?.(config);
+    if (pluginMetadataSnapshot) {
+      registryInfo = { registry: pluginMetadataSnapshot.manifestRegistry };
+      return registryInfo;
+    }
     const workspaceDir = resolveAgentWorkspaceDir(config, resolveDefaultAgentId(config));
     const registry = loadPluginManifestRegistryForPluginRegistry({
       config,
