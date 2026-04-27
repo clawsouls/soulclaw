@@ -72,6 +72,11 @@ type RunLivenessAttempt = Pick<
   "lastAssistant" | "promptErrorSource" | "replayMetadata" | "timedOutDuringCompaction"
 >;
 
+const REPLAY_UNSAFE_FALLBACK_METADATA: EmbeddedRunAttemptResult["replayMetadata"] = {
+  hadPotentialSideEffects: true,
+  replaySafe: false,
+};
+
 export function isIncompleteTerminalAssistantTurn(params: {
   hasAssistantVisibleText: boolean;
   lastAssistant?: { stopReason?: string } | null;
@@ -211,6 +216,12 @@ export function buildAttemptReplayMetadata(
   };
 }
 
+export function resolveAttemptReplayMetadata(attempt: {
+  replayMetadata?: EmbeddedRunAttemptResult["replayMetadata"] | null;
+}): EmbeddedRunAttemptResult["replayMetadata"] {
+  return attempt.replayMetadata ?? REPLAY_UNSAFE_FALLBACK_METADATA;
+}
+
 export function resolveIncompleteTurnPayloadText(params: {
   payloadCount: number;
   aborted: boolean;
@@ -258,7 +269,7 @@ export function resolveIncompleteTurnPayloadText(params: {
     return null;
   }
 
-  return params.attempt.replayMetadata.hadPotentialSideEffects
+  return resolveAttemptReplayMetadata(params.attempt).hadPotentialSideEffects
     ? "⚠️ Agent couldn't generate a response. Note: some tool actions may have already been executed — please verify before retrying."
     : "⚠️ Agent couldn't generate a response. Please try again.";
 }
@@ -351,7 +362,7 @@ export function resolveReplayInvalidFlag(params: {
   incompleteTurnText?: string | null;
 }): boolean {
   return (
-    !params.attempt.replayMetadata.replaySafe ||
+    !resolveAttemptReplayMetadata(params.attempt).replaySafe ||
     params.attempt.promptErrorSource === "compaction" ||
     params.attempt.timedOutDuringCompaction ||
     Boolean(params.incompleteTurnText)
@@ -465,7 +476,7 @@ function shouldSkipPlanningOnlyRetry(params: {
     params.attempt.yieldDetected ||
     params.attempt.didSendDeterministicApprovalPrompt ||
     params.attempt.lastToolError ||
-    params.attempt.replayMetadata.hadPotentialSideEffects,
+    resolveAttemptReplayMetadata(params.attempt).hadPotentialSideEffects,
   );
 }
 
@@ -796,7 +807,7 @@ export function resolvePlanningOnlyRetryInstruction(params: {
     (hasNonPlanToolActivity(params.attempt.toolMetas) && !allowSingleActionRetryBypass) ||
     (params.attempt.itemLifecycle.startedCount > planOnlyToolMetaCount &&
       !allowSingleActionRetryBypass) ||
-    params.attempt.replayMetadata.hadPotentialSideEffects
+    resolveAttemptReplayMetadata(params.attempt).hadPotentialSideEffects
   ) {
     return null;
   }
