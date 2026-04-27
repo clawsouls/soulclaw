@@ -244,6 +244,9 @@ describe("plugin registry facade", () => {
     expect(resolveProviderOwners({ lookUpTable, providerId: "DEMO" })).toEqual(["demo"]);
     expect(resolveChannelOwners({ lookUpTable, channelId: "demo-chat" })).toEqual(["demo"]);
     expect(resolveCliBackendOwners({ lookUpTable, cliBackendId: "demo-cli" })).toEqual(["demo"]);
+    expect(resolveCliBackendOwners({ lookUpTable, cliBackendId: "demo-setup-cli" })).toEqual([
+      "demo",
+    ]);
     expect(resolveSetupProviderOwners({ lookUpTable, setupProviderId: "demo-setup" })).toEqual([
       "demo",
     ]);
@@ -252,6 +255,13 @@ describe("plugin registry facade", () => {
         lookUpTable,
         contribution: "commandAliases",
         matches: "demo-command",
+      }),
+    ).toEqual(["demo"]);
+    expect(
+      resolvePluginContributionOwners({
+        lookUpTable,
+        contribution: "cliBackends",
+        matches: "demo-setup-cli",
       }),
     ).toEqual(["demo"]);
     expect(

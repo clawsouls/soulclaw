@@ -94,6 +94,9 @@ function buildOwnerMaps(plugins: readonly PluginManifestRecord[]): PluginLookUpT
     for (const cliBackendId of plugin.cliBackends) {
       appendOwner(cliBackends, cliBackendId, plugin.id);
     }
+    for (const cliBackendId of plugin.setup?.cliBackends ?? []) {
+      appendOwner(cliBackends, cliBackendId, plugin.id);
+    }
     for (const setupProvider of plugin.setup?.providers ?? []) {
       appendOwner(setupProviders, setupProvider.id, plugin.id);
     }
