@@ -25,24 +25,16 @@ import {
   type CommandArgs,
 } from "openclaw/plugin-sdk/command-auth";
 import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import {
-  applyModelOverrideToSessionEntry,
-  loadSessionStore,
-  resolveStorePath,
-  updateSessionStore,
-} from "openclaw/plugin-sdk/config-runtime";
+import { loadSessionStore, resolveStorePath } from "openclaw/plugin-sdk/config-runtime";
 import type { ResolvedAgentRoute } from "openclaw/plugin-sdk/routing";
-import { logVerbose } from "openclaw/plugin-sdk/runtime-env";
 import {
   chunkItems,
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-  withTimeout,
 } from "openclaw/plugin-sdk/text-runtime";
 import { resolveDiscordSlashCommandConfig } from "./commands.js";
 import {
   readDiscordModelPickerRecentModels,
-  recordDiscordModelPickerRecentModel,
   type DiscordModelPickerPreferenceScope,
 } from "./model-picker-preferences.js";
 import {
@@ -55,7 +47,14 @@ import {
   toDiscordModelPickerMessagePayload,
   type DiscordModelPickerCommandContext,
 } from "./model-picker.js";
+import type { DispatchDiscordCommandInteraction } from "./native-command-dispatch.js";
+import { applyDiscordModelPickerSelection } from "./native-command-model-picker-apply.js";
 import { resolveDiscordNativeInteractionRouteState } from "./native-command-route.js";
+export type {
+  DispatchDiscordCommandInteraction,
+  DispatchDiscordCommandInteractionParams,
+  DispatchDiscordCommandInteractionResult,
+} from "./native-command-dispatch.js";
 import { resolveDiscordNativeInteractionChannelContext } from "./native-interaction-channel-context.js";
 import type { ThreadBindingManager } from "./thread-bindings.js";
 
@@ -78,30 +77,6 @@ export type DiscordCommandArgContext = {
 };
 
 export type DiscordModelPickerContext = DiscordCommandArgContext;
-
-export type DispatchDiscordCommandInteractionParams = {
-  interaction: CommandInteraction | ButtonInteraction | StringSelectMenuInteraction;
-  prompt: string;
-  command: ChatCommandDefinition;
-  commandArgs?: CommandArgs;
-  cfg: OpenClawConfig;
-  discordConfig: DiscordConfig;
-  accountId: string;
-  sessionPrefix: string;
-  preferFollowUp: boolean;
-  threadBindings: ThreadBindingManager;
-  responseEphemeral?: boolean;
-  suppressReplies?: boolean;
-};
-
-export type DispatchDiscordCommandInteractionResult = {
-  accepted: boolean;
-  effectiveRoute?: ResolvedAgentRoute;
-};
-
-export type DispatchDiscordCommandInteraction = (
-  params: DispatchDiscordCommandInteractionParams,
-) => Promise<DispatchDiscordCommandInteractionResult>;
 
 export type SafeDiscordInteractionCall = <T>(
   label: string,
@@ -381,36 +356,6 @@ function resolveDiscordModelPickerCurrentModel(params: {
   } catch {
     return fallback;
   }
-}
-
-async function persistDiscordModelPickerOverride(params: {
-  cfg: OpenClawConfig;
-  route: ResolvedAgentRoute;
-  provider: string;
-  model: string;
-  isDefault: boolean;
-}): Promise<boolean> {
-  const storePath = resolveStorePath(params.cfg.session?.store, {
-    agentId: params.route.agentId,
-  });
-  let persisted = false;
-  await updateSessionStore(storePath, (store) => {
-    const entry = store[params.route.sessionKey];
-    if (!entry) {
-      return;
-    }
-    persisted =
-      applyModelOverrideToSessionEntry({
-        entry,
-        selection: {
-          provider: params.provider,
-          model: params.model,
-          isDefault: params.isDefault,
-        },
-        markLiveSwitchPending: true,
-      }).updated || persisted;
-  });
-  return persisted;
 }
 
 function resolveDiscordModelPickerCurrentRuntime(params: {
@@ -896,128 +841,38 @@ export async function handleDiscordModelPickerInteraction(params: {
       return;
     }
 
-    try {
-      const dispatchResult = await withTimeout(
-        params.dispatchCommandInteraction({
-          interaction,
-          prompt: selectionCommand.prompt,
-          command: selectionCommand.command,
-          commandArgs: selectionCommand.args,
+    const applyResult = await applyDiscordModelPickerSelection({
+      interaction,
+      selectionCommand,
+      dispatchCommandInteraction: params.dispatchCommandInteraction,
+      cfg: ctx.cfg,
+      discordConfig: ctx.discordConfig,
+      accountId: ctx.accountId,
+      sessionPrefix: ctx.sessionPrefix,
+      threadBindings: ctx.threadBindings,
+      route,
+      resolvedModelRef,
+      selectedProvider: parsedModelRef.provider,
+      selectedModel: parsedModelRef.model,
+      defaultProvider: pickerData.resolvedDefault.provider,
+      defaultModel: pickerData.resolvedDefault.model,
+      preferenceScope,
+      settleMs: ctx.postApplySettleMs ?? 250,
+      resolveCurrentModel: (currentRoute) =>
+        resolveDiscordModelPickerCurrentModel({
           cfg: ctx.cfg,
-          discordConfig: ctx.discordConfig,
-          accountId: ctx.accountId,
-          sessionPrefix: ctx.sessionPrefix,
-          preferFollowUp: true,
-          threadBindings: ctx.threadBindings,
-          suppressReplies: true,
+          route: currentRoute,
+          data: pickerData,
         }),
-        12000,
-      );
-      if (!dispatchResult.accepted) {
-        await params.safeInteractionCall("model picker follow-up", () =>
-          interaction.followUp({
-            ...buildDiscordModelPickerNoticePayload(
-              `❌ Failed to apply ${resolvedModelRef}. Try /model ${resolvedModelRef} directly.`,
-            ),
-            ephemeral: true,
-          }),
-        );
-        return;
-      }
+    });
 
-      const fallbackRoute = dispatchResult.effectiveRoute ?? route;
-      const settleMs = ctx.postApplySettleMs ?? 250;
-      if (settleMs > 0) {
-        await new Promise((resolve) => setTimeout(resolve, settleMs));
-      }
-
-      let effectiveModelRef = resolveDiscordModelPickerCurrentModel({
-        cfg: ctx.cfg,
-        route: fallbackRoute,
-        data: pickerData,
-      });
-      let persisted = effectiveModelRef === resolvedModelRef;
-
-      if (!persisted) {
-        logVerbose(
-          `discord: model picker override mismatch — expected ${resolvedModelRef} but read ${effectiveModelRef} from session key ${fallbackRoute.sessionKey}; attempting direct session override persist`,
-        );
-        try {
-          const directlyPersisted = await persistDiscordModelPickerOverride({
-            cfg: ctx.cfg,
-            route: fallbackRoute,
-            provider: parsedModelRef.provider,
-            model: parsedModelRef.model,
-            isDefault:
-              parsedModelRef.provider === pickerData.resolvedDefault.provider &&
-              parsedModelRef.model === pickerData.resolvedDefault.model,
-          });
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          effectiveModelRef = resolveDiscordModelPickerCurrentModel({
-            cfg: ctx.cfg,
-            route: fallbackRoute,
-            data: pickerData,
-          });
-          persisted = effectiveModelRef === resolvedModelRef;
-          if (!persisted) {
-            logVerbose(
-              `discord: direct session override persist failed — expected ${resolvedModelRef} but read ${effectiveModelRef} from session key ${fallbackRoute.sessionKey}`,
-            );
-          } else if (!directlyPersisted) {
-            logVerbose(
-              `discord: direct session override persist became a no-op because ${resolvedModelRef} was already present on re-read for session key ${fallbackRoute.sessionKey}`,
-            );
-          }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          logVerbose(
-            `discord: direct session override persist threw for session key ${fallbackRoute.sessionKey}: ${message}`,
-          );
-        }
-      }
-
-      if (persisted) {
-        await recordDiscordModelPickerRecentModel({
-          scope: preferenceScope,
-          modelRef: resolvedModelRef,
-          limit: 5,
-        }).catch(() => undefined);
-      }
-
-      await params.safeInteractionCall("model picker follow-up", () =>
-        interaction.followUp({
-          ...buildDiscordModelPickerNoticePayload(
-            persisted
-              ? `✅ Model set to ${resolvedModelRef}.`
-              : `⚠️ Tried to set ${resolvedModelRef}, but current model is ${effectiveModelRef}.`,
-          ),
-          ephemeral: true,
-        }),
-      );
-      return;
-    } catch (error) {
-      if (error instanceof Error && error.message === "timeout") {
-        await params.safeInteractionCall("model picker follow-up", () =>
-          interaction.followUp({
-            ...buildDiscordModelPickerNoticePayload(
-              `⏳ Model change to ${resolvedModelRef} is still processing. Check /status in a few seconds.`,
-            ),
-            ephemeral: true,
-          }),
-        );
-        return;
-      }
-
-      await params.safeInteractionCall("model picker follow-up", () =>
-        interaction.followUp({
-          ...buildDiscordModelPickerNoticePayload(
-            `❌ Failed to apply ${resolvedModelRef}. Try /model ${resolvedModelRef} directly.`,
-          ),
-          ephemeral: true,
-        }),
-      );
-      return;
-    }
+    await params.safeInteractionCall("model picker follow-up", () =>
+      interaction.followUp({
+        ...buildDiscordModelPickerNoticePayload(applyResult.noticeMessage),
+        ephemeral: true,
+      }),
+    );
+    return;
   }
 
   if (parsed.action === "cancel") {

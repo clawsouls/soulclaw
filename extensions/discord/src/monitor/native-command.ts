@@ -67,6 +67,7 @@ import { resolveDiscordChannelTopicSafe } from "./channel-access.js";
 import { resolveDiscordDmCommandAccess } from "./dm-command-auth.js";
 import { handleDiscordDmCommandDecision } from "./dm-command-decision.js";
 import { buildDiscordNativeCommandContext } from "./native-command-context.js";
+import type { DispatchDiscordCommandInteractionResult } from "./native-command-dispatch.js";
 import { resolveDiscordNativeInteractionRouteState } from "./native-command-route.js";
 import {
   buildDiscordCommandArgMenu,
@@ -77,7 +78,6 @@ import {
   resolveDiscordNativeChoiceContext,
   shouldOpenDiscordModelPickerFromCommand,
   type DiscordCommandArgContext,
-  type DispatchDiscordCommandInteractionResult,
   type DiscordModelPickerContext,
 } from "./native-command-ui.js";
 import { resolveDiscordNativeInteractionChannelContext } from "./native-interaction-channel-context.js";
