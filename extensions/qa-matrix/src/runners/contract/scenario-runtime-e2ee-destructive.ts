@@ -81,6 +81,19 @@ type MatrixQaDestructiveSetup = {
   seededEventId: string;
 };
 
+async function cleanupMatrixQaTempDevices(
+  client: MatrixQaE2eeScenarioClient,
+  deviceIds: Array<string | null | undefined>,
+): Promise<void> {
+  await client.stop().catch(() => undefined);
+  const uniqueDeviceIds = [
+    ...new Set(deviceIds.filter((deviceId): deviceId is string => !!deviceId)),
+  ];
+  if (uniqueDeviceIds.length > 0) {
+    await client.deleteOwnDevices(uniqueDeviceIds).catch(() => undefined);
+  }
+}
+
 function requireMatrixQaE2eeOutputDir(context: MatrixQaScenarioContext) {
   if (!context.outputDir) {
     throw new Error("Matrix E2EE destructive QA scenarios require an output directory");
@@ -668,8 +681,7 @@ export async function runMatrixQaE2eeStateLossExternalRecoveryKeyScenario(
     };
   } finally {
     await cli.dispose().catch(() => undefined);
-    await setup.owner.deleteOwnDevices([device.deviceId]).catch(() => undefined);
-    await setup.owner.stop().catch(() => undefined);
+    await cleanupMatrixQaTempDevices(setup.owner, [device.deviceId]);
   }
 }
 
@@ -748,8 +760,7 @@ export async function runMatrixQaE2eeStateLossStoredRecoveryKeyScenario(
     };
   } finally {
     await cli.dispose().catch(() => undefined);
-    await setup.owner.deleteOwnDevices([device.deviceId]).catch(() => undefined);
-    await setup.owner.stop().catch(() => undefined);
+    await cleanupMatrixQaTempDevices(setup.owner, [device.deviceId]);
   }
 }
 
@@ -793,8 +804,7 @@ export async function runMatrixQaE2eeStateLossNoRecoveryKeyScenario(
     };
   } finally {
     await cli.dispose().catch(() => undefined);
-    await setup.owner.deleteOwnDevices([device.deviceId]).catch(() => undefined);
-    await setup.owner.stop().catch(() => undefined);
+    await cleanupMatrixQaTempDevices(setup.owner, [device.deviceId]);
   }
 }
 
@@ -863,8 +873,7 @@ export async function runMatrixQaE2eeStaleRecoveryKeyAfterBackupResetScenario(
     };
   } finally {
     await cli.dispose().catch(() => undefined);
-    await setup.owner.deleteOwnDevices([device.deviceId]).catch(() => undefined);
-    await setup.owner.stop().catch(() => undefined);
+    await cleanupMatrixQaTempDevices(setup.owner, [device.deviceId]);
   }
 }
 
@@ -1026,8 +1035,7 @@ export async function runMatrixQaE2eeServerBackupDeletedLocalReuploadRestoresSce
     };
   } finally {
     await cli.dispose().catch(() => undefined);
-    await setup.owner.deleteOwnDevices([device.deviceId]).catch(() => undefined);
-    await setup.owner.stop().catch(() => undefined);
+    await cleanupMatrixQaTempDevices(setup.owner, [device.deviceId]);
   }
 }
 
@@ -1101,8 +1109,7 @@ export async function runMatrixQaE2eeCorruptCryptoIdbSnapshotScenario(
     };
   } finally {
     await cli.dispose().catch(() => undefined);
-    await setup.owner.deleteOwnDevices([device.deviceId]).catch(() => undefined);
-    await setup.owner.stop().catch(() => undefined);
+    await cleanupMatrixQaTempDevices(setup.owner, [device.deviceId]);
   }
 }
 
@@ -1141,6 +1148,7 @@ export async function runMatrixQaE2eeServerDeviceDeletedLocalStateIntactScenario
     assertMatrixQaCliBackupRestoreSucceeded(restored.payload, "deleted-device preflight");
     await setup.owner.deleteOwnDevices([device.deviceId]);
     const ownerDevicesAfterDelete = await setup.owner.listOwnDevices();
+    await setup.owner.stop().catch(() => undefined);
     const defaultStatus = await runMatrixQaCliJson<MatrixQaCliVerificationStatus>({
       allowNonZero: true,
       args: ["matrix", "verify", "status", "--account", "deleted-device", "--json"],
@@ -1238,6 +1246,7 @@ export async function runMatrixQaE2eeServerDeviceDeletedReloginRecoversScenario(
 
     await setup.owner.deleteOwnDevices([deleted.device.deviceId]);
     const ownerDevicesAfterDelete = await setup.owner.listOwnDevices();
+    await setup.owner.stop().catch(() => undefined);
     const defaultStatus = await runMatrixQaCliJson<MatrixQaCliVerificationStatus>({
       allowNonZero: true,
       args: ["matrix", "verify", "status", "--account", "deleted-device-recovery", "--json"],
@@ -1322,12 +1331,11 @@ export async function runMatrixQaE2eeServerDeviceDeletedReloginRecoversScenario(
     };
   } finally {
     await replacement?.cli.dispose().catch(() => undefined);
-    if (replacement?.device.deviceId) {
-      await setup.owner.deleteOwnDevices([replacement.device.deviceId]).catch(() => undefined);
-    }
     await deleted.cli.dispose().catch(() => undefined);
-    await setup.owner.deleteOwnDevices([deleted.device.deviceId]).catch(() => undefined);
-    await setup.owner.stop().catch(() => undefined);
+    await cleanupMatrixQaTempDevices(setup.owner, [
+      replacement?.device.deviceId,
+      deleted.device.deviceId,
+    ]);
   }
 }
 
@@ -1566,6 +1574,7 @@ export async function runMatrixQaE2eeWrongAccountRecoveryKeyScenario(
       };
     } finally {
       await cli?.dispose().catch(() => undefined);
+      await observer.stop().catch(() => undefined);
       if (device) {
         await observer.deleteOwnDevices([device.deviceId]).catch(() => undefined);
       }
@@ -1627,7 +1636,6 @@ export async function runMatrixQaE2eeHistoryExistsBackupEmptyScenario(
     };
   } finally {
     await cli.dispose().catch(() => undefined);
-    await setup.owner.deleteOwnDevices([device.deviceId]).catch(() => undefined);
-    await setup.owner.stop().catch(() => undefined);
+    await cleanupMatrixQaTempDevices(setup.owner, [device.deviceId]);
   }
 }

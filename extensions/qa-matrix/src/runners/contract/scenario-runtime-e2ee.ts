@@ -1495,6 +1495,7 @@ export async function runMatrixQaE2eeRecoveryKeyLifecycleScenario(
           }
         }
         await recoveryClient.stop();
+        await client.stop().catch(() => undefined);
         await client.deleteOwnDevices([recoveryDevice.deviceId]).catch(() => undefined);
         cleanupRecoveryDevice = false;
         return {
@@ -1530,6 +1531,7 @@ export async function runMatrixQaE2eeRecoveryKeyLifecycleScenario(
       } finally {
         if (cleanupRecoveryDevice) {
           await recoveryClient.stop().catch(() => undefined);
+          await client.stop().catch(() => undefined);
           await client.deleteOwnDevices([recoveryDevice.deviceId]).catch(() => undefined);
         }
       }
@@ -1609,6 +1611,7 @@ export async function runMatrixQaE2eeRecoveryOwnerVerificationRequiredScenario(
           ].join("\n"),
         };
       } finally {
+        await client.stop().catch(() => undefined);
         await client.deleteOwnDevices([recoveryDevice.deviceId]).catch(() => undefined);
       }
     },
@@ -3136,6 +3139,7 @@ export async function runMatrixQaE2eeStaleDeviceHygieneScenario(
       if (!before.some((device) => device.deviceId === secondary.deviceId)) {
         throw new Error("Matrix stale-device list did not include the secondary login");
       }
+      await client.stop().catch(() => undefined);
       const deleted = await client.deleteOwnDevices([secondary.deviceId]);
       const remainingDeviceIds = deleted.remainingDevices.map((device) => device.deviceId);
       if (remainingDeviceIds.includes(secondary.deviceId)) {
