@@ -18736,7 +18736,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
                 },
                 title: "Audio Transcription Command",
                 description:
-                  'Executable + args used to transcribe audio (first token must be a safe binary/path), for example `["whisper-cli", "--model", "small", "{input}"]`. Prefer a pinned command so runtime environments behave consistently.',
+                  'Executable + args used to transcribe audio (first token must be a safe binary/path), for example `["whisper-cli", "--model", "small", "{{MediaPath}}"]`. Deprecated `{input}` placeholders are still accepted and migrated to `{{MediaPath}}`.',
               },
               timeoutSeconds: {
                 type: "integer",
@@ -25727,7 +25727,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
     },
     "audio.transcription.command": {
       label: "Audio Transcription Command",
-      help: 'Executable + args used to transcribe audio (first token must be a safe binary/path), for example `["whisper-cli", "--model", "small", "{input}"]`. Prefer a pinned command so runtime environments behave consistently.',
+      help: 'Executable + args used to transcribe audio (first token must be a safe binary/path), for example `["whisper-cli", "--model", "small", "{{MediaPath}}"]`. Deprecated `{input}` placeholders are still accepted and migrated to `{{MediaPath}}`.',
       tags: ["media"],
     },
     "audio.transcription.timeoutSeconds": {

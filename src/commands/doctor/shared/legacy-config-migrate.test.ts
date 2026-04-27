@@ -67,6 +67,28 @@ describe("legacy migrate audio transcription", () => {
     expect(res.config?.audio).toBeUndefined();
     expect(res.config?.tools?.media?.audio).toBeUndefined();
   });
+
+  it("rewrites legacy audio {input} placeholders to media templates", () => {
+    const res = migrateLegacyConfigForTest({
+      audio: {
+        transcription: {
+          command: ["whisper-cli", "--model", "small", "{input}", "--input={input}"],
+          timeoutSeconds: 30,
+        },
+      },
+    });
+
+    expect(res.changes).toContain("Moved audio.transcription → tools.media.audio.models.");
+    expect(res.config?.audio).toBeUndefined();
+    expect(res.config?.tools?.media?.audio?.models).toEqual([
+      {
+        type: "cli",
+        command: "whisper-cli",
+        args: ["--model", "small", "{{MediaPath}}", "--input={{MediaPath}}"],
+        timeoutSeconds: 30,
+      },
+    ]);
+  });
 });
 
 describe("legacy migrate mention routing", () => {
