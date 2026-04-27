@@ -241,12 +241,26 @@ describe("plugin registry facade", () => {
     fs.unlinkSync(path.join(rootDir, "openclaw.plugin.json"));
 
     expect(listPluginContributionIds({ lookUpTable, contribution: "providers" })).toEqual(["demo"]);
-    expect(resolveProviderOwners({ lookUpTable, providerId: "demo" })).toEqual(["demo"]);
+    expect(resolveProviderOwners({ lookUpTable, providerId: "DEMO" })).toEqual(["demo"]);
     expect(resolveChannelOwners({ lookUpTable, channelId: "demo-chat" })).toEqual(["demo"]);
     expect(resolveCliBackendOwners({ lookUpTable, cliBackendId: "demo-cli" })).toEqual(["demo"]);
     expect(resolveSetupProviderOwners({ lookUpTable, setupProviderId: "demo-setup" })).toEqual([
       "demo",
     ]);
+    expect(
+      resolvePluginContributionOwners({
+        lookUpTable,
+        contribution: "commandAliases",
+        matches: "demo-command",
+      }),
+    ).toEqual(["demo"]);
+    expect(
+      resolvePluginContributionOwners({
+        lookUpTable,
+        contribution: "contracts",
+        matches: "tools",
+      }),
+    ).toEqual(["demo"]);
   });
 
   it("normalizes plugin config ids through registry contribution aliases", () => {

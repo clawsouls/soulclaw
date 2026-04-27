@@ -221,6 +221,47 @@ function listContributionManifestPlugins(
   }).plugins;
 }
 
+function resolveContributionOwnerMap(
+  table: PluginLookUpTable,
+  contribution: PluginRegistryContributionKey,
+): ReadonlyMap<string, readonly string[]> | undefined {
+  switch (contribution) {
+    case "channels":
+      return table.owners.channels;
+    case "channelConfigs":
+      return table.owners.channelConfigs;
+    case "providers":
+      return table.owners.providers;
+    case "modelCatalogProviders":
+      return table.owners.modelCatalogProviders;
+    case "cliBackends":
+      return table.owners.cliBackends;
+    case "setupProviders":
+      return table.owners.setupProviders;
+    case "commandAliases":
+      return table.owners.commandAliases;
+    case "contracts":
+      return table.owners.contracts;
+  }
+  return undefined;
+}
+
+function filterContributionOwnerIds(params: {
+  owners: readonly string[];
+  index: PluginRegistrySnapshot;
+  includeDisabled?: boolean;
+  config?: OpenClawConfig;
+}): readonly string[] {
+  const enabledPluginIds = new Set(
+    resolveContributionPluginIds({
+      index: params.index,
+      includeDisabled: params.includeDisabled,
+      config: params.config,
+    }),
+  );
+  return sortUnique(params.owners.filter((owner) => enabledPluginIds.has(owner)));
+}
+
 export function loadPluginManifestRegistryForPluginRegistry(
   params: LoadPluginRegistryManifestParams = {},
 ): PluginManifestRegistry {
@@ -310,11 +351,24 @@ export function listPluginContributionIds(
 export function resolvePluginContributionOwners(
   params: ResolvePluginContributionOwnersParams,
 ): readonly string[] {
+  const index = params.lookUpTable?.index ?? loadPluginRegistrySnapshot(params);
+  if (params.lookUpTable && typeof params.matches === "string") {
+    const ownerMap = resolveContributionOwnerMap(params.lookUpTable, params.contribution);
+    const owners = ownerMap?.get(params.matches);
+    if (owners) {
+      return filterContributionOwnerIds({
+        owners,
+        index,
+        includeDisabled: params.includeDisabled,
+        config: params.config,
+      });
+    }
+    return [];
+  }
   const matcher =
     typeof params.matches === "string"
       ? (contributionId: string) => contributionId === params.matches
       : params.matches;
-  const index = params.lookUpTable?.index ?? loadPluginRegistrySnapshot(params);
   const plugins = listContributionManifestPlugins({ ...params, index });
   return sortUnique(
     plugins.flatMap((plugin) =>
@@ -327,6 +381,19 @@ export function resolveProviderOwners(params: ResolveProviderOwnersParams): read
   const providerId = normalizeProviderId(params.providerId);
   if (!providerId) {
     return [];
+  }
+  if (params.lookUpTable) {
+    const index = params.lookUpTable.index;
+    const owners = [...params.lookUpTable.owners.providers.entries()].flatMap(
+      ([contributionId, ownerIds]) =>
+        normalizeProviderId(contributionId) === providerId ? [...ownerIds] : [],
+    );
+    return filterContributionOwnerIds({
+      owners,
+      index,
+      includeDisabled: params.includeDisabled,
+      config: params.config,
+    });
   }
   return resolvePluginContributionOwners({
     ...params,
