@@ -1573,7 +1573,7 @@ jobs:
             label: Native live media audio plugins
             command: node scripts/test-live-shard.mjs native-live-extensions-media-audio
             timeout_minutes: 90
-            needs_ffmpeg: false
+            needs_ffmpeg: true
             profile_env_only: false
           - suite_id: native-live-extensions-media-music
             label: Native live media music plugins

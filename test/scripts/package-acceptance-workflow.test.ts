@@ -108,6 +108,9 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain("suite_id: native-live-extensions-openai");
     expect(workflow).toContain("suite_id: native-live-extensions-o-z");
     expect(workflow).toContain("suite_id: native-live-extensions-media");
+    expect(workflow).toMatch(
+      /suite_id: native-live-extensions-media-audio[\s\S]*?needs_ffmpeg: true/u,
+    );
     expect(workflow).toContain("if: matrix.needs_ffmpeg");
   });
 
