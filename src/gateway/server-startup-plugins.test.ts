@@ -25,6 +25,7 @@ const resolveBundledRuntimeDependencyPackageInstallRoot = vi.hoisted(() =>
 const pluginManifestRegistry = vi.hoisted(() => ({ plugins: [], diagnostics: [] }));
 const pluginMetadataSnapshot = vi.hoisted(
   (): PluginMetadataSnapshot => ({
+    policyHash: "policy",
     index: {
       version: 1,
       hostContractVersion: "test",

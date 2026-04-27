@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
+import { resolveInstalledPluginIndexPolicyHash } from "./installed-plugin-index-policy.js";
 import type { PluginManifestRecord, PluginManifestRegistry } from "./manifest-registry.js";
 import type { PluginRegistrySnapshot } from "./plugin-registry.js";
 
@@ -47,13 +48,16 @@ function createManifestRecord(
   };
 }
 
-function createIndex(plugins: readonly PluginManifestRecord[]): PluginRegistrySnapshot {
+function createIndex(
+  plugins: readonly PluginManifestRecord[],
+  params: { policyHash?: string } = {},
+): PluginRegistrySnapshot {
   return {
     version: 1,
     hostContractVersion: "test",
     compatRegistryVersion: "test",
     migrationVersion: 1,
-    policyHash: "policy",
+    policyHash: params.policyHash ?? "policy",
     generatedAtMs: 1,
     installRecords: {},
     diagnostics: [],
@@ -194,6 +198,15 @@ describe("loadPluginLookUpTable", () => {
       }),
     ];
     const index = createIndex(plugins);
+    const config = {
+      channels: {
+        telegram: { token: "configured" },
+      },
+    } as OpenClawConfig;
+    const compatibleIndex = {
+      ...index,
+      policyHash: resolveInstalledPluginIndexPolicyHash(config),
+    };
     const manifestRegistry: PluginManifestRegistry = {
       plugins,
       diagnostics: [],
@@ -203,22 +216,14 @@ describe("loadPluginLookUpTable", () => {
     const { loadPluginLookUpTable } = await import("./plugin-lookup-table.js");
 
     const metadataSnapshot = loadPluginMetadataSnapshot({
-      config: {
-        channels: {
-          telegram: { token: "configured" },
-        },
-      } as OpenClawConfig,
+      config,
       env: {},
-      index,
+      index: compatibleIndex,
     });
     loadPluginManifestRegistryForInstalledIndex.mockClear();
 
     const table = loadPluginLookUpTable({
-      config: {
-        channels: {
-          telegram: { token: "configured" },
-        },
-      } as OpenClawConfig,
+      config,
       env: {},
       metadataSnapshot,
     });
@@ -228,5 +233,60 @@ describe("loadPluginLookUpTable", () => {
     expect(table.startup.pluginIds).toEqual(["telegram"]);
     expect(table.metrics.indexPluginCount).toBe(1);
     expect(table.metrics.manifestPluginCount).toBe(1);
+  });
+
+  it("rebuilds when a provided metadata snapshot has a stale plugin policy", async () => {
+    const plugins = [
+      createManifestRecord({
+        id: "telegram",
+        origin: "bundled",
+        channels: ["telegram"],
+      }),
+    ];
+    const snapshotConfig = {
+      plugins: {
+        allow: ["telegram"],
+      },
+    } as OpenClawConfig;
+    const requestedConfig = {
+      plugins: {
+        allow: ["other-plugin"],
+      },
+    } as OpenClawConfig;
+    const snapshotIndex = createIndex(plugins, {
+      policyHash: resolveInstalledPluginIndexPolicyHash(snapshotConfig),
+    });
+    const requestedIndex = createIndex(plugins, {
+      policyHash: resolveInstalledPluginIndexPolicyHash(requestedConfig),
+    });
+    const manifestRegistry: PluginManifestRegistry = {
+      plugins,
+      diagnostics: [],
+    };
+    loadPluginManifestRegistryForInstalledIndex.mockReturnValue(manifestRegistry);
+    const { loadPluginMetadataSnapshot } = await import("./plugin-metadata-snapshot.js");
+    const { loadPluginLookUpTable } = await import("./plugin-lookup-table.js");
+
+    const metadataSnapshot = loadPluginMetadataSnapshot({
+      config: snapshotConfig,
+      env: {},
+      index: snapshotIndex,
+    });
+    loadPluginManifestRegistryForInstalledIndex.mockClear();
+
+    loadPluginLookUpTable({
+      config: requestedConfig,
+      env: {},
+      index: requestedIndex,
+      metadataSnapshot,
+    });
+
+    expect(loadPluginManifestRegistryForInstalledIndex).toHaveBeenCalledOnce();
+    expect(loadPluginManifestRegistryForInstalledIndex).toHaveBeenCalledWith(
+      expect.objectContaining({
+        index: requestedIndex,
+        config: requestedConfig,
+      }),
+    );
   });
 });

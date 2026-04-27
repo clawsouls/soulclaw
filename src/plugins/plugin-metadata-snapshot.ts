@@ -1,4 +1,5 @@
 import type { OpenClawConfig } from "../config/types.openclaw.js";
+import { resolveInstalledPluginIndexPolicyHash } from "./installed-plugin-index-policy.js";
 import { loadPluginManifestRegistryForInstalledIndex } from "./manifest-registry-installed.js";
 import type { PluginManifestRecord, PluginManifestRegistry } from "./manifest-registry.js";
 import type { PluginDiagnostic } from "./manifest-types.js";
@@ -30,6 +31,8 @@ export type PluginMetadataSnapshotMetrics = {
 };
 
 export type PluginMetadataSnapshot = {
+  policyHash: string;
+  workspaceDir?: string;
   index: PluginRegistrySnapshot;
   registryDiagnostics: readonly PluginRegistrySnapshotDiagnostic[];
   manifestRegistry: PluginManifestRegistry;
@@ -47,6 +50,17 @@ export type LoadPluginMetadataSnapshotParams = {
   env: NodeJS.ProcessEnv;
   index?: PluginRegistrySnapshot;
 };
+
+export function isPluginMetadataSnapshotCompatible(params: {
+  snapshot: Pick<PluginMetadataSnapshot, "policyHash" | "workspaceDir">;
+  config: OpenClawConfig;
+  workspaceDir?: string;
+}): boolean {
+  return (
+    params.snapshot.policyHash === resolveInstalledPluginIndexPolicyHash(params.config) &&
+    (params.snapshot.workspaceDir ?? "") === (params.workspaceDir ?? "")
+  );
+}
 
 function appendOwner(owners: Map<string, string[]>, ownedId: string, pluginId: string): void {
   const existing = owners.get(ownedId);
@@ -149,6 +163,8 @@ export function loadPluginMetadataSnapshot(
   const totalMs = performance.now() - totalStartedAt;
 
   return {
+    policyHash: index.policyHash,
+    ...(params.workspaceDir ? { workspaceDir: params.workspaceDir } : {}),
     index,
     registryDiagnostics: registryResult.diagnostics,
     manifestRegistry,

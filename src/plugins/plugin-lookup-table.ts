@@ -6,6 +6,7 @@ import {
 } from "./channel-plugin-ids.js";
 import { hashJson } from "./installed-plugin-index-hash.js";
 import {
+  isPluginMetadataSnapshotCompatible,
   loadPluginMetadataSnapshot,
   type PluginMetadataSnapshot,
   type PluginMetadataSnapshotOwnerMaps,
@@ -52,14 +53,21 @@ export type LoadPluginLookUpTableParams = {
 };
 
 export function loadPluginLookUpTable(params: LoadPluginLookUpTableParams): PluginLookUpTable {
+  const requestedSnapshotConfig = params.activationSourceConfig ?? params.config;
   const metadataSnapshot =
-    params.metadataSnapshot ??
-    loadPluginMetadataSnapshot({
-      config: params.config,
+    params.metadataSnapshot &&
+    isPluginMetadataSnapshotCompatible({
+      snapshot: params.metadataSnapshot,
+      config: requestedSnapshotConfig,
       workspaceDir: params.workspaceDir,
-      env: params.env,
-      ...(params.index ? { index: params.index } : {}),
-    });
+    })
+      ? params.metadataSnapshot
+      : loadPluginMetadataSnapshot({
+          config: requestedSnapshotConfig,
+          workspaceDir: params.workspaceDir,
+          env: params.env,
+          ...(params.index ? { index: params.index } : {}),
+        });
   const { index, manifestRegistry } = metadataSnapshot;
   const startupPlanStartedAt = performance.now();
   const channelPluginIds = resolveChannelPluginIdsFromRegistry({ manifestRegistry });
