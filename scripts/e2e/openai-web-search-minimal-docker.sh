@@ -359,9 +359,8 @@ node "$entry" gateway health \
   --json >/dev/null
 
 cat >/tmp/openclaw-openai-web-search-minimal-client.mjs <<'NODE'
-import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
-const entry = process.env.OPENCLAW_ENTRY;
 const port = process.env.PORT;
 const token = process.env.OPENCLAW_GATEWAY_TOKEN;
 const mode = process.argv[2];
@@ -372,65 +371,47 @@ const message =
     : "Return exactly OPENCLAW_SCHEMA_E2E_OK.";
 const id = mode === "reject" ? "schema-reject" : "schema-success";
 
-if (!entry || !port || !token) throw new Error("missing OPENCLAW_ENTRY/PORT/OPENCLAW_GATEWAY_TOKEN");
+if (!port || !token) throw new Error("missing PORT/OPENCLAW_GATEWAY_TOKEN");
+const callGatewayUrl = new URL("dist/gateway/call.js", pathToFileURL(`${process.cwd()}/`));
+const { callGateway } = await import(callGatewayUrl.href);
 
-const gatewayArgs = [
-  entry,
-  "gateway",
-  "call",
-  "--url",
-  `ws://127.0.0.1:${port}`,
-  "--token",
-  token,
-  "--timeout",
-  "120000",
-  "--json",
-];
-
-function gatewayCall(method, params) {
+async function runAgent() {
   try {
-    return {
-      ok: true,
-      value: JSON.parse(execFileSync("node", [...gatewayArgs, method, "--params", JSON.stringify(params)], {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-      })),
-    };
+    return await callGateway({
+      method: "agent",
+      params: {
+        sessionKey,
+        message,
+        thinking: "minimal",
+        deliver: false,
+        timeout: 180,
+        idempotencyKey: id,
+      },
+      expectFinal: true,
+      url: `ws://127.0.0.1:${port}`,
+      token,
+      timeoutMs: 240000,
+    });
   } catch (error) {
-    const stderr = typeof error?.stderr === "string" ? error.stderr : "";
-    const stdout = typeof error?.stdout === "string" ? error.stdout : "";
-    const combined = [String(error), stderr.trim(), stdout.trim()].filter(Boolean).join("\n");
-    return { ok: false, error: new Error(combined) };
+    if (mode === "reject") {
+      console.error(String(error));
+      process.exit(0);
+    }
+    throw error;
   }
 }
 
-const sendRes = gatewayCall("agent", {
-  sessionKey,
-  message,
-  thinking: "minimal",
-  deliver: false,
-  timeout: 180,
-  idempotencyKey: id,
-});
-
-if (!sendRes.ok) throw sendRes.error;
-const runId =
-  sendRes.value && typeof sendRes.value === "object" && typeof sendRes.value.runId === "string"
-    ? sendRes.value.runId
-    : id;
-
-const wait = gatewayCall("agent.wait", { runId, timeoutMs: 180000 });
-if (!wait.ok) throw wait.error;
+const result = await runAgent();
 if (mode === "reject") {
-  console.error(JSON.stringify(wait.value));
+  console.error(JSON.stringify(result));
   process.exit(0);
 }
-if (wait.value?.status !== "ok") {
-  throw new Error(`agent run did not complete successfully: ${JSON.stringify(wait.value)}`);
+if (result?.status !== "ok") {
+  throw new Error(`agent run did not complete successfully: ${JSON.stringify(result)}`);
 }
 NODE
 
-OPENCLAW_ENTRY="$entry" PORT="$PORT" OPENCLAW_GATEWAY_TOKEN="$TOKEN" node /tmp/openclaw-openai-web-search-minimal-client.mjs success >/tmp/openclaw-openai-web-search-minimal-client-success.log 2>&1
+PORT="$PORT" OPENCLAW_GATEWAY_TOKEN="$TOKEN" node /tmp/openclaw-openai-web-search-minimal-client.mjs success >/tmp/openclaw-openai-web-search-minimal-client-success.log 2>&1
 
 node - "$MOCK_REQUEST_LOG" <<'NODE'
 const fs = require("node:fs");
@@ -454,7 +435,7 @@ if (success.body.reasoning?.effort === "minimal") {
 }
 NODE
 
-OPENCLAW_ENTRY="$entry" PORT="$PORT" OPENCLAW_GATEWAY_TOKEN="$TOKEN" node /tmp/openclaw-openai-web-search-minimal-client.mjs reject >/tmp/openclaw-openai-web-search-minimal-client-reject.log 2>&1
+PORT="$PORT" OPENCLAW_GATEWAY_TOKEN="$TOKEN" node /tmp/openclaw-openai-web-search-minimal-client.mjs reject >/tmp/openclaw-openai-web-search-minimal-client-reject.log 2>&1
 
 for _ in $(seq 1 80); do
   if grep -Fq "$RAW_SCHEMA_ERROR" "$GATEWAY_LOG"; then
