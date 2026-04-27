@@ -2047,6 +2047,44 @@ describe("AcpSessionManager", () => {
     expect(states.at(-1)).toBe("error");
   });
 
+  it("rejects ACP streams that end without a terminal done event", async () => {
+    const runtimeState = createRuntime();
+    hoisted.requireAcpRuntimeBackendMock.mockReturnValue({
+      id: "acpx",
+      runtime: runtimeState.runtime,
+    });
+    hoisted.readAcpSessionEntryMock.mockReturnValue({
+      sessionKey: "agent:codex:acp:session-1",
+      storeSessionKey: "agent:codex:acp:session-1",
+      acp: readySessionMeta(),
+    });
+    runtimeState.runTurn.mockImplementation(async function* () {
+      yield {
+        type: "text_delta" as const,
+        stream: "output" as const,
+        text: "Starting work...",
+      };
+    });
+
+    const manager = new AcpSessionManager();
+    await expect(
+      manager.runTurn({
+        cfg: baseCfg,
+        sessionKey: "agent:codex:acp:session-1",
+        text: "do work",
+        mode: "prompt",
+        requestId: "run-1",
+      }),
+    ).rejects.toMatchObject({
+      code: "ACP_TURN_FAILED",
+      message: "ACP turn ended without a terminal done event.",
+    });
+
+    const states = extractStatesFromUpserts();
+    expect(states).toContain("running");
+    expect(states.at(-1)).toBe("error");
+  });
+
   it("marks the session as errored when runtime ensure fails before turn start", async () => {
     const runtimeState = createRuntime();
     runtimeState.ensureSession.mockRejectedValue(new Error("acpx exited with code 1"));
