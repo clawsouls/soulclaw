@@ -1591,7 +1591,7 @@ describe("slack thread.requireExplicitMention", () => {
     const ctx = createCtxWithExplicitMention(true);
     const { storePath } = storeFixture.makeTmpStorePath();
     vi.spyOn(
-      await import("openclaw/plugin-sdk/config-runtime"),
+      await import("openclaw/plugin-sdk/session-store-runtime"),
       "resolveStorePath",
     ).mockReturnValue(storePath);
     const account = createSlackTestAccount();
@@ -1618,7 +1618,7 @@ describe("slack thread.requireExplicitMention", () => {
     const ctx = createCtxWithExplicitMention(true);
     const { storePath } = storeFixture.makeTmpStorePath();
     vi.spyOn(
-      await import("openclaw/plugin-sdk/config-runtime"),
+      await import("openclaw/plugin-sdk/session-store-runtime"),
       "resolveStorePath",
     ).mockReturnValue(storePath);
     const account = createSlackTestAccount();
@@ -1645,7 +1645,7 @@ describe("slack thread.requireExplicitMention", () => {
     const ctx = createCtxWithExplicitMention(false);
     const { storePath } = storeFixture.makeTmpStorePath();
     vi.spyOn(
-      await import("openclaw/plugin-sdk/config-runtime"),
+      await import("openclaw/plugin-sdk/session-store-runtime"),
       "resolveStorePath",
     ).mockReturnValue(storePath);
     const account = createSlackTestAccount();

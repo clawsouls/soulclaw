@@ -6,9 +6,12 @@ import type { TelegramBotDeps } from "./bot-deps.js";
 
 type AnyMock = ReturnType<typeof vi.fn>;
 type AnyAsyncMock = ReturnType<typeof vi.fn>;
-type GetRuntimeConfigFn = typeof import("openclaw/plugin-sdk/config-runtime").getRuntimeConfig;
-type LoadSessionStoreFn = typeof import("openclaw/plugin-sdk/config-runtime").loadSessionStore;
-type ResolveStorePathFn = typeof import("openclaw/plugin-sdk/config-runtime").resolveStorePath;
+type GetRuntimeConfigFn =
+  typeof import("openclaw/plugin-sdk/runtime-config-snapshot").getRuntimeConfig;
+type LoadSessionStoreFn =
+  typeof import("openclaw/plugin-sdk/session-store-runtime").loadSessionStore;
+type ResolveStorePathFn =
+  typeof import("openclaw/plugin-sdk/session-store-runtime").resolveStorePath;
 type SessionStore = ReturnType<LoadSessionStoreFn>;
 type TelegramBotRuntimeForTest = NonNullable<
   Parameters<typeof import("./bot.js").setTelegramBotRuntimeForTest>[0]

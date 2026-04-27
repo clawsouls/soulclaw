@@ -32,6 +32,12 @@ const PROCESS_BOUNDARY_DIRECT_CONFIG_LOAD_FILES = new Set([
   "src/cli/daemon-cli/status.gather.ts",
 ]);
 
+const BROAD_CONFIG_RUNTIME_COMPAT_FILES = new Set([
+  "scripts/check-no-monolithic-plugin-sdk-entry-imports.ts",
+  "src/plugins/bundled-capability-runtime.test.ts",
+  "src/plugins/contracts/config-boundary-guard.test.ts",
+]);
+
 function collectTypeScriptFiles(dir) {
   if (!existsSync(dir)) {
     return [];
@@ -176,6 +182,19 @@ function pushBroadConfigRuntimeBarrelViolations(violations, files) {
   }
 }
 
+function pushBroadConfigRuntimeSpecifierViolations(violations, files) {
+  const moduleSpecifierPattern = /["']openclaw\/plugin-sdk\/config-runtime["']/g;
+
+  for (const { filePath, relPath } of files) {
+    const source = readFileSync(filePath, "utf8");
+    for (const line of findMatchLineNumbers(source, moduleSpecifierPattern)) {
+      violations.push(
+        `${relPath}:${line} use narrow plugin-sdk config subpaths instead of openclaw/plugin-sdk/config-runtime`,
+      );
+    }
+  }
+}
+
 export function collectDeprecatedInternalConfigApiViolations({
   repoRoot = DEFAULT_REPO_ROOT,
 } = {}) {
@@ -244,6 +263,13 @@ export function collectDeprecatedInternalConfigApiViolations({
         !isTestOrHarnessFile(relPath) &&
         !isCompatConfigApiFile(relPath) &&
         !relPath.startsWith("test/"),
+    ),
+  );
+  pushBroadConfigRuntimeSpecifierViolations(
+    violations,
+    repoFiles.filter(
+      ({ relPath }) =>
+        !isCompatConfigApiFile(relPath) && !BROAD_CONFIG_RUNTIME_COMPAT_FILES.has(relPath),
     ),
   );
 
@@ -354,7 +380,7 @@ export function collectDeprecatedInternalConfigApiViolations({
     );
   }
 
-  return violations;
+  return [...new Set(violations)];
 }
 
 const CHANNEL_EXTENSION_IDS = new Set([

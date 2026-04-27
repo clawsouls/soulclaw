@@ -99,6 +99,19 @@ describe("config boundary guard", () => {
     );
   });
 
+  it("flags broad config-runtime test mocks outside compat guard fixtures", () => {
+    const repoRoot = makeRepoFixture();
+    writeFixture(
+      repoRoot,
+      "extensions/telegram/src/index.test.ts",
+      'vi.mock("openclaw/plugin-sdk/config-runtime", () => ({}));',
+    );
+
+    expect(collectDeprecatedInternalConfigApiViolations({ repoRoot })).toEqual([
+      "extensions/telegram/src/index.test.ts:1 use narrow plugin-sdk config subpaths instead of openclaw/plugin-sdk/config-runtime",
+    ]);
+  });
+
   it("allows narrow config SDK subpaths in production code", () => {
     const repoRoot = makeRepoFixture();
     writeFixture(
