@@ -176,6 +176,19 @@ function buildModelCatalogProviderAliasTargets(
   return aliasesByTargetProvider;
 }
 
+function buildModelCatalogProviderRefs(plugin: ManifestModelCatalogPlugin): ReadonlySet<string> {
+  const ownedProviders = buildOwnedProviderSet(plugin);
+  const refs = new Set(ownedProviders);
+  for (const [rawAlias, alias] of Object.entries(plugin.modelCatalog?.aliases ?? {})) {
+    const aliasProvider = normalizeModelCatalogProviderId(rawAlias);
+    const targetProvider = normalizeModelCatalogProviderId(alias.provider);
+    if (aliasProvider && targetProvider && ownedProviders.has(targetProvider)) {
+      refs.add(aliasProvider);
+    }
+  }
+  return refs;
+}
+
 function applyModelCatalogAliasOverrides(params: {
   rows: readonly NormalizedModelCatalogRow[];
   alias?: ModelCatalogAlias;
@@ -188,27 +201,6 @@ function applyModelCatalogAliasOverrides(params: {
     ...(params.alias.api ? { api: params.alias.api } : {}),
     ...(params.alias.baseUrl ? { baseUrl: params.alias.baseUrl } : {}),
   }));
-}
-
-function pluginOwnsModelCatalogProviderRef(params: {
-  plugin: ManifestModelCatalogPlugin;
-  provider: string;
-}): boolean {
-  const provider = normalizeModelCatalogProviderId(params.provider);
-  if (!provider) {
-    return false;
-  }
-  const ownedProviders = buildOwnedProviderSet(params.plugin);
-  if (ownedProviders.has(provider)) {
-    return true;
-  }
-  return Object.entries(params.plugin.modelCatalog?.aliases ?? {}).some(([rawAlias, alias]) => {
-    const aliasProvider = normalizeModelCatalogProviderId(rawAlias);
-    const targetProvider = normalizeModelCatalogProviderId(alias.provider);
-    return (
-      aliasProvider === provider && Boolean(targetProvider) && ownedProviders.has(targetProvider)
-    );
-  });
 }
 
 export function planManifestModelCatalogSuppressions(params: {
@@ -224,6 +216,7 @@ export function planManifestModelCatalogSuppressions(params: {
     : undefined;
   const suppressions: ManifestModelCatalogSuppressionEntry[] = [];
   for (const plugin of params.registry.plugins) {
+    const providerRefs = buildModelCatalogProviderRefs(plugin);
     for (const suppression of plugin.modelCatalog?.suppressions ?? []) {
       const provider = normalizeModelCatalogProviderId(suppression.provider);
       const model = normalizeLowercaseStringOrEmpty(suppression.model);
@@ -236,7 +229,7 @@ export function planManifestModelCatalogSuppressions(params: {
       if (modelFilter && model !== modelFilter) {
         continue;
       }
-      if (!pluginOwnsModelCatalogProviderRef({ plugin, provider })) {
+      if (!providerRefs.has(provider)) {
         continue;
       }
       suppressions.push({
