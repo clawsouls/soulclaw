@@ -1274,14 +1274,6 @@ export function attachGatewayWsMessageHandler(params: {
           return;
         }
 
-        const snapshot = buildGatewaySnapshot({
-          includeSensitive: scopes.includes(ADMIN_SCOPE),
-        });
-        const cachedHealth = getHealthCache();
-        if (cachedHealth) {
-          snapshot.health = cachedHealth;
-          snapshot.stateVersion.health = getHealthVersion();
-        }
         const canvasCapability = canvasHostUrl ? mintCanvasCapabilityToken() : undefined;
         const canvasCapabilityExpiresAtMs = canvasCapability
           ? Date.now() + CANVAS_CAPABILITY_TTL_MS
@@ -1294,36 +1286,6 @@ export function attachGatewayWsMessageHandler(params: {
           canvasHostUrl && canvasCapability
             ? (buildCanvasScopedHostUrl(canvasHostUrl, canvasCapability) ?? canvasHostUrl)
             : canvasHostUrl;
-        const helloOkAuthScopes = deviceToken ? deviceToken.scopes : scopes;
-        const helloOk = {
-          type: "hello-ok",
-          protocol: PROTOCOL_VERSION,
-          server: {
-            version: resolveRuntimeServiceVersion(process.env),
-            connId,
-          },
-          features: { methods: gatewayMethods, events },
-          snapshot,
-          canvasHostUrl: scopedCanvasHostUrl,
-          auth: {
-            role,
-            scopes: helloOkAuthScopes,
-            ...(deviceToken
-              ? {
-                  deviceToken: deviceToken.token,
-                  issuedAtMs: deviceToken.rotatedAtMs ?? deviceToken.createdAtMs,
-                  ...(bootstrapDeviceTokens.length > 1
-                    ? { deviceTokens: bootstrapDeviceTokens.slice(1) }
-                    : {}),
-                }
-              : {}),
-          },
-          policy: {
-            maxPayload: MAX_PAYLOAD_BYTES,
-            maxBufferedBytes: MAX_BUFFERED_BYTES,
-            tickIntervalMs: TICK_INTERVAL_MS,
-          },
-        };
 
         clearHandshakeTimer();
         const nextClient: GatewayWsClient = {
@@ -1382,6 +1344,45 @@ export function attachGatewayWsMessageHandler(params: {
           });
           incrementPresenceVersion();
         }
+
+        const snapshot = buildGatewaySnapshot({
+          includeSensitive: scopes.includes(ADMIN_SCOPE),
+        });
+        const cachedHealth = getHealthCache();
+        if (cachedHealth) {
+          snapshot.health = cachedHealth;
+          snapshot.stateVersion.health = getHealthVersion();
+        }
+        const helloOkAuthScopes = deviceToken ? deviceToken.scopes : scopes;
+        const helloOk = {
+          type: "hello-ok",
+          protocol: PROTOCOL_VERSION,
+          server: {
+            version: resolveRuntimeServiceVersion(process.env),
+            connId,
+          },
+          features: { methods: gatewayMethods, events },
+          snapshot,
+          canvasHostUrl: scopedCanvasHostUrl,
+          auth: {
+            role,
+            scopes: helloOkAuthScopes,
+            ...(deviceToken
+              ? {
+                  deviceToken: deviceToken.token,
+                  issuedAtMs: deviceToken.rotatedAtMs ?? deviceToken.createdAtMs,
+                  ...(bootstrapDeviceTokens.length > 1
+                    ? { deviceTokens: bootstrapDeviceTokens.slice(1) }
+                    : {}),
+                }
+              : {}),
+          },
+          policy: {
+            maxPayload: MAX_PAYLOAD_BYTES,
+            maxBufferedBytes: MAX_BUFFERED_BYTES,
+            tickIntervalMs: TICK_INTERVAL_MS,
+          },
+        };
         if (role === "node") {
           const context = buildRequestContext();
           const nodeSession = context.nodeRegistry.register(nextClient, {
