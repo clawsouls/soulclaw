@@ -1,0 +1,139 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { PluginManifestRecord, PluginManifestRegistry } from "./manifest-registry.js";
+import type { PluginRegistrySnapshot } from "./plugin-registry.js";
+
+const listPotentialConfiguredChannelIds = vi.hoisted(() => vi.fn());
+const loadPluginManifestRegistryForInstalledIndex = vi.hoisted(() => vi.fn());
+
+vi.mock("../channels/config-presence.js", () => ({
+  hasMeaningfulChannelConfig: (value: unknown) =>
+    Boolean(
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.keys(value).some((key) => key !== "enabled"),
+    ),
+  listPotentialConfiguredChannelIds: (
+    config: OpenClawConfig,
+    env: NodeJS.ProcessEnv,
+    options?: { includePersistedAuthState?: boolean },
+  ) => listPotentialConfiguredChannelIds(config, env, options),
+}));
+
+vi.mock("./manifest-registry-installed.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./manifest-registry-installed.js")>();
+  return {
+    ...actual,
+    loadPluginManifestRegistryForInstalledIndex: (params: unknown) =>
+      loadPluginManifestRegistryForInstalledIndex(params),
+  };
+});
+
+function createManifestRecord(
+  plugin: Partial<PluginManifestRecord> & Pick<PluginManifestRecord, "id" | "origin">,
+): PluginManifestRecord {
+  return {
+    name: plugin.id,
+    channels: [],
+    providers: [],
+    cliBackends: [],
+    skills: [],
+    hooks: [],
+    rootDir: `/plugins/${plugin.id}`,
+    source: `/plugins/${plugin.id}/index.js`,
+    manifestPath: `/plugins/${plugin.id}/openclaw.plugin.json`,
+    ...plugin,
+  };
+}
+
+function createIndex(plugins: readonly PluginManifestRecord[]): PluginRegistrySnapshot {
+  return {
+    version: 1,
+    hostContractVersion: "test",
+    compatRegistryVersion: "test",
+    migrationVersion: 1,
+    policyHash: "policy",
+    generatedAtMs: 1,
+    installRecords: {},
+    diagnostics: [],
+    plugins: plugins.map((plugin) => ({
+      pluginId: plugin.id,
+      manifestPath: plugin.manifestPath,
+      manifestHash: `${plugin.id}-hash`,
+      rootDir: plugin.rootDir,
+      origin: plugin.origin,
+      enabled: true,
+      ...(plugin.enabledByDefault !== undefined
+        ? { enabledByDefault: plugin.enabledByDefault }
+        : {}),
+      startup: {
+        sidecar: false,
+        memory: false,
+        deferConfiguredChannelFullLoadUntilAfterListen: Boolean(
+          plugin.startupDeferConfiguredChannelFullLoadUntilAfterListen,
+        ),
+        agentHarnesses: [],
+      },
+      compat: [],
+    })),
+  };
+}
+
+describe("loadPluginLookUpTable", () => {
+  beforeEach(() => {
+    listPotentialConfiguredChannelIds
+      .mockReset()
+      .mockImplementation((config: OpenClawConfig) => Object.keys(config.channels ?? {}));
+    loadPluginManifestRegistryForInstalledIndex.mockReset();
+  });
+
+  it("builds owner maps and startup ids from one installed manifest registry", async () => {
+    const plugins = [
+      createManifestRecord({
+        id: "telegram",
+        origin: "bundled",
+        channels: ["telegram"],
+      }),
+      createManifestRecord({
+        id: "openai",
+        origin: "bundled",
+        providers: ["openai"],
+        cliBackends: ["codex-cli"],
+        setup: {
+          providers: [{ id: "openai" }],
+        },
+      }),
+    ];
+    const index = createIndex(plugins);
+    const manifestRegistry: PluginManifestRegistry = {
+      plugins,
+      diagnostics: [],
+    };
+    loadPluginManifestRegistryForInstalledIndex.mockReturnValue(manifestRegistry);
+    const { loadPluginLookUpTable } = await import("./plugin-lookup-table.js");
+
+    const table = loadPluginLookUpTable({
+      config: {
+        channels: {
+          telegram: { token: "configured" },
+        },
+        plugins: {
+          slots: { memory: "none" },
+        },
+      } as OpenClawConfig,
+      env: {},
+      index,
+    });
+
+    expect(table.manifestRegistry).toBe(manifestRegistry);
+    expect(table.byPluginId.get("telegram")?.id).toBe("telegram");
+    expect(table.owners.channels.get("telegram")).toEqual(["telegram"]);
+    expect(table.owners.providers.get("openai")).toEqual(["openai"]);
+    expect(table.owners.cliBackends.get("codex-cli")).toEqual(["openai"]);
+    expect(table.owners.setupProviders.get("openai")).toEqual(["openai"]);
+    expect(table.startup.channelPluginIds).toEqual(["telegram"]);
+    expect(table.startup.configuredDeferredChannelPluginIds).toEqual([]);
+    expect(table.startup.pluginIds).toEqual(["telegram"]);
+  });
+});

@@ -20,8 +20,14 @@ const repairBundledRuntimeDepsInstallRootAsync = vi.hoisted(() =>
 const resolveBundledRuntimeDependencyPackageInstallRoot = vi.hoisted(() =>
   vi.fn((_packageRoot: string, _params: unknown) => "/runtime"),
 );
-const resolveConfiguredDeferredChannelPluginIds = vi.hoisted(() => vi.fn((_params: unknown) => []));
-const resolveGatewayStartupPluginIds = vi.hoisted(() => vi.fn((_params: unknown) => ["telegram"]));
+const loadPluginLookUpTable = vi.hoisted(() =>
+  vi.fn((_params: unknown) => ({
+    startup: {
+      configuredDeferredChannelPluginIds: [],
+      pluginIds: ["telegram"],
+    },
+  })),
+);
 const resolveOpenClawPackageRootSync = vi.hoisted(() => vi.fn((_params: unknown) => "/package"));
 const runChannelPluginStartupMaintenance = vi.hoisted(() =>
   vi.fn(async (_params: unknown) => undefined),
@@ -65,10 +71,8 @@ vi.mock("../plugins/bundled-runtime-deps.js", () => ({
   scanBundledPluginRuntimeDeps: (params: unknown) => scanBundledPluginRuntimeDeps(params),
 }));
 
-vi.mock("../plugins/channel-plugin-ids.js", () => ({
-  resolveConfiguredDeferredChannelPluginIds: (params: unknown) =>
-    resolveConfiguredDeferredChannelPluginIds(params),
-  resolveGatewayStartupPluginIds: (params: unknown) => resolveGatewayStartupPluginIds(params),
+vi.mock("../plugins/plugin-lookup-table.js", () => ({
+  loadPluginLookUpTable: (params: unknown) => loadPluginLookUpTable(params),
 }));
 
 vi.mock("../plugins/registry.js", () => ({
@@ -112,8 +116,12 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
     loadGatewayStartupPlugins.mockClear();
     repairBundledRuntimeDepsInstallRootAsync.mockReset().mockResolvedValue({});
     resolveBundledRuntimeDependencyPackageInstallRoot.mockClear();
-    resolveConfiguredDeferredChannelPluginIds.mockClear();
-    resolveGatewayStartupPluginIds.mockClear().mockReturnValue(["telegram"]);
+    loadPluginLookUpTable.mockClear().mockReturnValue({
+      startup: {
+        configuredDeferredChannelPluginIds: [],
+        pluginIds: ["telegram"],
+      },
+    });
     resolveOpenClawPackageRootSync.mockClear().mockReturnValue("/package");
     runChannelPluginStartupMaintenance.mockClear();
     runStartupSessionMigration.mockClear();
@@ -143,6 +151,7 @@ describe("prepareGatewayPluginBootstrap runtime-deps staging", () => {
     });
 
     expect(loadGatewayStartupPlugins).toHaveBeenCalledOnce();
+    expect(loadPluginLookUpTable).toHaveBeenCalledOnce();
     expect(scanBundledPluginRuntimeDeps).toHaveBeenCalledWith(
       expect.objectContaining({
         selectedPluginIds: ["telegram"],
