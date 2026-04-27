@@ -109,13 +109,15 @@ export async function appendAllModelRowSources(
     });
   }
 
-  if (params.modelRegistry) {
+  if (params.modelRegistry && params.context.filter.provider) {
     await appendCatalogSupplementRows({
       rows: params.rows,
       modelRegistry: params.modelRegistry,
       context: params.context,
       seenKeys,
     });
+  }
+  if (params.modelRegistry) {
     return { requiresRegistryFallback: false };
   }
 

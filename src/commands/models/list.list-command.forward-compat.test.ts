@@ -49,7 +49,7 @@ const mocks = vi.hoisted(() => {
     loadModelRegistry: vi.fn(),
     loadModelCatalog: vi.fn(),
     loadProviderCatalogModelsForList: vi.fn(),
-    loadStaticManifestCatalogRowsForList: vi.fn(),
+    loadManifestCatalogRowsForList: vi.fn(),
     loadProviderIndexCatalogRowsForList: vi.fn(),
     hasProviderStaticCatalogForFilter: vi.fn(),
     resolveConfiguredEntries: vi.fn(),
@@ -78,7 +78,7 @@ function resetMocks() {
   });
   mocks.loadModelCatalog.mockResolvedValue([]);
   mocks.loadProviderCatalogModelsForList.mockResolvedValue([]);
-  mocks.loadStaticManifestCatalogRowsForList.mockReturnValue([]);
+  mocks.loadManifestCatalogRowsForList.mockReturnValue([]);
   mocks.loadProviderIndexCatalogRowsForList.mockReturnValue([]);
   mocks.hasProviderStaticCatalogForFilter.mockResolvedValue(false);
   mocks.resolveConfiguredEntries.mockReturnValue({
@@ -143,7 +143,7 @@ function installModelsListCommandForwardCompatMocks() {
   }));
 
   vi.doMock("./list.manifest-catalog.js", () => ({
-    loadStaticManifestCatalogRowsForList: mocks.loadStaticManifestCatalogRowsForList,
+    loadManifestCatalogRowsForList: mocks.loadManifestCatalogRowsForList,
   }));
 
   vi.doMock("./list.provider-index-catalog.js", () => ({
@@ -525,7 +525,7 @@ describe("modelsListCommand forward-compat", () => {
 
     it("uses manifest catalog rows before provider runtime catalog rows", async () => {
       mocks.resolveConfiguredEntries.mockReturnValueOnce({ entries: [] });
-      mocks.loadStaticManifestCatalogRowsForList.mockReturnValueOnce([
+      mocks.loadManifestCatalogRowsForList.mockReturnValueOnce([
         {
           provider: "moonshot",
           id: "kimi-k2.6",
@@ -596,7 +596,7 @@ describe("modelsListCommand forward-compat", () => {
           getAll: () => [{ ...OPENAI_CODEX_MODEL }],
         },
       });
-      mocks.loadStaticManifestCatalogRowsForList.mockReturnValueOnce([
+      mocks.loadManifestCatalogRowsForList.mockReturnValueOnce([
         {
           provider: "moonshot",
           id: "kimi-k2.6",
@@ -622,6 +622,7 @@ describe("modelsListCommand forward-compat", () => {
       });
       expect(mocks.loadProviderCatalogModelsForList).not.toHaveBeenCalled();
       expect(mocks.resolveModelWithRegistry).not.toHaveBeenCalled();
+      expect(mocks.loadModelCatalog).not.toHaveBeenCalled();
       expect(lastPrintedRows<{ key: string }>()).toEqual([
         expect.objectContaining({
           key: "openai-codex/gpt-5.4",
