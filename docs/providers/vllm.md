@@ -168,6 +168,41 @@ Use explicit config when:
 
   </Accordion>
 
+  <Accordion title="Qwen tool-call parser needs required">
+    First make sure vLLM was started with the right tool-call parser and chat
+    template for the model. For example, vLLM documents `hermes` for Qwen2.5
+    models and `qwen3_xml` for Qwen3-Coder models.
+
+    Some Qwen/vLLM combinations still return raw tool-call text or an empty
+    `tool_calls` array when the request uses `tool_choice: "auto"`, but return
+    structured tool calls when the request uses `tool_choice: "required"`. For
+    those model entries, force the OpenAI-compatible request field with
+    `params.extra_body`:
+
+    ```json5
+    {
+      agents: {
+        defaults: {
+          models: {
+            "vllm/Qwen-Qwen2.5-Coder-32B-Instruct": {
+              params: {
+                extra_body: {
+                  tool_choice: "required",
+                },
+              },
+            },
+          },
+        },
+      },
+    }
+    ```
+
+    This is an opt-in compatibility workaround. It makes every model turn with
+    tools require a tool call, so use it only for a dedicated local model entry
+    where that behavior is acceptable.
+
+  </Accordion>
+
   <Accordion title="Custom base URL">
     If your vLLM server runs on a non-default host or port, set `baseUrl` in the explicit provider config:
 

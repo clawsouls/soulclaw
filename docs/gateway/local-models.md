@@ -174,6 +174,31 @@ Compatibility notes for stricter OpenAI-compatible backends:
   text and logs a warning with the run id, provider/model, detected pattern, and
   tool name when available. Treat that as provider/model tool-call
   incompatibility, not a completed tool run.
+- For OpenAI-compatible Chat Completions backends whose tool parser works only
+  when tool use is forced, set a per-model request override instead of relying
+  on text parsing:
+
+  ```json5
+  {
+    agents: {
+      defaults: {
+        models: {
+          "local/my-local-model": {
+            params: {
+              extra_body: {
+                tool_choice: "required",
+              },
+            },
+          },
+        },
+      },
+    },
+  }
+  ```
+
+  Use this only for models/sessions where every normal turn should call a tool.
+  It overrides OpenClaw's default proxy value of `tool_choice: "auto"`.
+
 - Some smaller or stricter local backends are unstable with OpenClaw's full
   agent-runtime prompt shape, especially when tool schemas are included. If the
   backend works for tiny direct `/v1/chat/completions` calls but fails on normal
