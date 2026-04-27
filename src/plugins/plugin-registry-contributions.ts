@@ -384,10 +384,12 @@ export function resolveProviderOwners(params: ResolveProviderOwnersParams): read
   }
   if (params.lookUpTable) {
     const index = params.lookUpTable.index;
-    const owners = [...params.lookUpTable.owners.providers.entries()].flatMap(
-      ([contributionId, ownerIds]) =>
-        normalizeProviderId(contributionId) === providerId ? [...ownerIds] : [],
-    );
+    const owners: string[] = [];
+    for (const [contributionId, ownerIds] of params.lookUpTable.owners.providers.entries()) {
+      if (normalizeProviderId(contributionId) === providerId) {
+        owners.push(...ownerIds);
+      }
+    }
     return filterContributionOwnerIds({
       owners,
       index,
