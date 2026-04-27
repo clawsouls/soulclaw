@@ -200,7 +200,8 @@ gh workflow run openclaw-release-checks.yml \
 `pnpm openclaw qa matrix` defaults to `--profile all`. Do not assume the CLI
 default is the fast release path. Use explicit profiles:
 
-- `--profile fast --fail-fast`: release-critical Matrix transport contract
+- `--profile fast`: release-critical Matrix transport contract; add
+  `--fail-fast` only when the target CLI supports it
 - `--profile transport|media|e2ee-smoke|e2ee-deep|e2ee-cli`: sharded full
   Matrix proof
 - `OPENCLAW_QA_MATRIX_NO_REPLY_WINDOW_MS=3000`: CI-friendly no-reply quiet

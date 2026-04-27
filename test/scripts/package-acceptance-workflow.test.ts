@@ -124,6 +124,21 @@ describe("package artifact reuse", () => {
     );
   });
 
+  it("detects Matrix fail-fast support for older release refs", () => {
+    const releaseWorkflow = readFileSync(RELEASE_CHECKS_WORKFLOW, "utf8");
+    const qaWorkflow = readFileSync(".github/workflows/qa-live-transports-convex.yml", "utf8");
+
+    expect(releaseWorkflow).toContain("matrix_args=(");
+    expect(releaseWorkflow).toContain(
+      'pnpm openclaw qa matrix --help 2>/dev/null | grep -F -q -- "--fail-fast"',
+    );
+    expect(releaseWorkflow).toContain("matrix_args+=(--fail-fast)");
+    expect(releaseWorkflow).toContain('pnpm openclaw qa matrix "${matrix_args[@]}"');
+    expect(qaWorkflow).toContain(
+      'pnpm openclaw qa matrix --help 2>/dev/null | grep -F -q -- "--fail-fast"',
+    );
+  });
+
   it("names package acceptance Telegram as artifact-backed package validation", () => {
     const workflow = readFileSync(PACKAGE_ACCEPTANCE_WORKFLOW, "utf8");
 
