@@ -8,7 +8,6 @@ Docs: https://docs.openclaw.ai
 
 ### Changes
 
-- Plugins/runtime: expose provider-backed thinking policy and normalization through `api.runtime.agent`, letting tool plugins validate thinking overrides without duplicating provider/model level lists. Thanks @openclaw.
 - Control UI/Talk: add a generic browser realtime transport contract, Google Live browser Talk sessions with constrained ephemeral tokens, and a Gateway relay for backend-only realtime voice plugins. Thanks @VACInc.
 - Providers: add Cerebras as a bundled plugin with onboarding, static model catalog, docs, and manifest-owned endpoint metadata.
 - Memory/OpenAI-compatible: add optional `memorySearch.inputType`, `queryInputType`, and `documentInputType` config for asymmetric embedding endpoints, including direct query embeddings and provider batch indexing. Carries forward #63313 and #60727. Thanks @HOYALIM and @prospect1314521.
@@ -25,13 +24,13 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
-- Google Meet: route local Chrome joins through OpenClaw browser control instead of raw default Chrome, so agents use the configured OpenClaw browser profile when opening Meet. Thanks @openclaw.
+- Google Meet: route local Chrome joins through OpenClaw browser control instead of raw default Chrome, so agents use the configured OpenClaw browser profile when opening Meet.
 - Plugins/discovery: follow symlinked plugin directories in global and workspace plugin roots while keeping broken links ignored and existing package safety checks in place. Fixes #36754; carries forward #72695 and #63206. Thanks @Quackstro, @ming1523, and @xsfX20.
 - Plugins/startup: reuse canonical realpath lookups throughout each plugin discovery pass, including package and manifest boundary checks, so Windows npm-global startups no longer repeat expensive path resolution for the same plugin roots. Fixes #65733. Thanks @welfo-beo.
 - Reply/link understanding: keep media and link preprocessing on stable runtime entrypoints and continue with raw message content if optional enrichment fails, so URL-bearing messages are no longer dropped after stale runtime chunk upgrades. Fixes #68466. Thanks @songshikang0111.
 - Discord: persist routed model-picker overrides when the hidden `/model` dispatch succeeds but the bound thread session store is still stale, including LM Studio suffixed model ids. Carries forward #61473. Thanks @Nanako0129.
-- Nodes/CLI: add `openclaw nodes remove --node <id|name|ip>` and `node.pair.remove` so stale gateway-owned node pairing records can be cleaned without hand-editing state files. Thanks @openclaw.
-- Gateway: include the connecting client and fresh presence version in the initial `hello-ok` snapshot, so clients no longer need a follow-up event before seeing themselves online. Thanks @codex.
+- Nodes/CLI: add `openclaw nodes remove --node <id|name|ip>` and `node.pair.remove` so stale gateway-owned node pairing records can be cleaned without hand-editing state files.
+- Gateway: include the connecting client and fresh presence version in the initial `hello-ok` snapshot, so clients no longer need a follow-up event before seeing themselves online.
 - Docker: install the CA certificate bundle in the slim runtime image so HTTPS calls from containerized gateways no longer fail TLS setup after the `bookworm-slim` base switch. Fixes #72787. Thanks @ryuhaneul.
 - Providers/OpenRouter: remove retired Hunter Alpha and Healer Alpha static catalog rows and disable proxy reasoning injection for stale Hunter Alpha configs, so replies are not hidden when OpenRouter returns answer text in reasoning fields. Fixes #43942. Thanks @EvanDataForge.
 - Providers/reasoning: let Groq and LM Studio declare provider-native reasoning effort values, so Qwen thinking models receive `none`/`default` or `off`/`on` instead of OpenAI-only `low`/`medium` values. Fixes #32638. Thanks @Aqu1bp, @mgoulart, @Norpps, and @BSTail.
@@ -1067,12 +1066,12 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
-- Dependencies: refresh workspace package pins and lockfile entries for AWS SDK, Anthropic SDK, ACP SDK, Matrix crypto, TypeBox, Vite, tsdown, Slack Bolt, CopilotKit AIMock, and related bundled plugin packages. Thanks @steipete.
-- Gateway/env: import each missing expected login-shell env var independently, so an existing gateway token no longer prevents `env.shellEnv` from loading plugin credentials such as `TWILIO_*` from `.profile`. Thanks @steipete.
-- macOS/Gateway pairing: silently accept same-host native app `metadata-upgrade` reconnects, so macOS patch-version changes update paired metadata instead of spamming security audit warnings and `pairing required` disconnects. Thanks @steipete.
+- Dependencies: refresh workspace package pins and lockfile entries for AWS SDK, Anthropic SDK, ACP SDK, Matrix crypto, TypeBox, Vite, tsdown, Slack Bolt, CopilotKit AIMock, and related bundled plugin packages.
+- Gateway/env: import each missing expected login-shell env var independently, so an existing gateway token no longer prevents `env.shellEnv` from loading plugin credentials such as `TWILIO_*` from `.profile`.
+- macOS/Gateway pairing: silently accept same-host native app `metadata-upgrade` reconnects, so macOS patch-version changes update paired metadata instead of spamming security audit warnings and `pairing required` disconnects.
 - CLI/Gateway: wait for one-shot gateway RPC clients to finish WebSocket teardown before the CLI process exits, reducing hangs where commands like `openclaw status` or `openclaw version` could finish their work but stay alive until an external timeout killed them (#70691). Thanks @Takhoffman.
 - Thinking defaults/status: raise the implicit default thinking level for reasoning-capable models from legacy `off`/`low` fallback behavior to a safe provider-supported `medium` equivalent when no explicit config default is set, preserve configured-model reasoning metadata when runtime catalog loading is empty, and make `/status` report the same resolved default as runtime (#70601). Thanks @Takhoffman.
-- Gateway/model pricing: extend OpenRouter and LiteLLM catalog fetch timeouts to 60 seconds, reducing noisy timeout warnings during slow upstream responses. Thanks @steipete.
+- Gateway/model pricing: extend OpenRouter and LiteLLM catalog fetch timeouts to 60 seconds, reducing noisy timeout warnings during slow upstream responses.
 - Agents/failover: classify bare undici transport failures (`terminated`, `UND_ERR_SOCKET`, `UND_ERR_CONNECT_TIMEOUT`, body/header timeouts, aborted streams) and pi-ai's openai-codex `Request failed` sentinel as `timeout`, so Cloudflare 502s with empty bodies and mid-response socket resets actually enter the configured fallback chain instead of surfacing as unclassified errors. Fixes #69368. (#69677) Thanks @sk7n4k3d.
 - Providers/Anthropic Vertex: restore ADC-backed model discovery after the lightweight provider-discovery path by resolving emitted discovery entries, exposing synthetic auth on bootstrap discovery, and honoring copied env snapshots when probing the default GCP ADC path. Fixes #65715. (#65716) Thanks @feiskyer.
 - Plugins/install: add newly installed plugin ids to an existing `plugins.allow` list before enabling them, so allowlisted configs load installed plugins after restart.

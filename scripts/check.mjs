@@ -30,6 +30,7 @@ export async function main(argv = process.argv.slice(2)) {
       parallel: true,
       commands: [
         { name: "conflict markers", args: ["check:no-conflict-markers"] },
+        { name: "changelog attributions", args: ["check:changelog-attributions"] },
         { name: "tool display", args: ["tool-display:check"] },
         { name: "host env policy", args: ["check:host-env-policy:swift"] },
       ],
