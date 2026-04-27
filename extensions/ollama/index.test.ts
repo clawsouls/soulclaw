@@ -241,7 +241,20 @@ describe("ollama plugin", () => {
     });
   });
 
-  it("keeps empty default-ish provider stubs quiet", async () => {
+  it("skips ambient discovery without Ollama auth or meaningful config", async () => {
+    const provider = registerProvider();
+
+    const result = await provider.discovery.run({
+      config: {},
+      env: { NODE_ENV: "development" },
+      resolveProviderApiKey: () => ({ apiKey: "" }),
+    } as never);
+
+    expect(result).toBeNull();
+    expect(buildOllamaProviderMock).not.toHaveBeenCalled();
+  });
+
+  it("skips empty default-ish provider stubs without probing localhost", async () => {
     const provider = registerProvider();
     buildOllamaProviderMock.mockResolvedValueOnce({
       baseUrl: "http://127.0.0.1:11434",
@@ -266,9 +279,7 @@ describe("ollama plugin", () => {
     } as never);
 
     expect(result).toBeNull();
-    expect(buildOllamaProviderMock).toHaveBeenCalledWith("http://127.0.0.1:11434", {
-      quiet: true,
-    });
+    expect(buildOllamaProviderMock).not.toHaveBeenCalled();
   });
 
   it("treats non-default baseUrl as explicit discovery config", async () => {
