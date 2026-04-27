@@ -110,7 +110,7 @@ dispatches:
 
 - manual `CI` for the full normal CI graph
 - `OpenClaw Release Checks` for install smoke, cross-OS release checks, live and
-  E2E checks, Docker release-path suites, OpenWebUI, QA Lab, Matrix, and
+  E2E checks, Docker release-path suites, OpenWebUI, QA Lab, fast Matrix, and
   Telegram release lanes
 - optional post-publish Telegram E2E when a package spec is supplied
 
@@ -174,6 +174,23 @@ gh workflow run openclaw-release-checks.yml \
   -f provider=openai \
   -f mode=both
 ```
+
+### QA Lab Matrix Profiles
+
+`pnpm openclaw qa matrix` defaults to `--profile all`. Do not assume the CLI
+default is the fast release path. Use explicit profiles:
+
+- `--profile fast --fail-fast`: release-critical Matrix transport contract
+- `--profile transport|media|e2ee-smoke|e2ee-deep|e2ee-cli`: sharded full
+  Matrix proof
+- `OPENCLAW_QA_MATRIX_NO_REPLY_WINDOW_MS=3000`: CI-friendly no-reply quiet
+  window when paired with fast or sharded gates
+
+`QA-Lab - All Lanes` uses explicit fast Matrix on scheduled runs; manual
+dispatch keeps `matrix_profile=all` as the default and can shard full Matrix
+with `matrix_profile=all` and `matrix_shards=true`. `OpenClaw Release Checks`
+uses explicit fast Matrix; run the sharded all-lanes workflow when release
+investigation needs full Matrix media/E2EE inventory.
 
 ### Reusable Live/E2E Checks
 
