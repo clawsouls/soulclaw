@@ -4374,7 +4374,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
                         maximum: 9007199254740991,
                         title: "Remote Non-Batch Embedding Concurrency",
                         description:
-                          "Limits concurrent inline embedding requests during non-batch memory indexing. Lower this for local or small self-hosted providers such as Ollama; batch embedding concurrency is configured separately under remote.batch.",
+                          "Controls concurrent inline embedding requests during non-batch memory indexing. Use a low value for local or small self-hosted providers such as Ollama; batch embedding concurrency is configured separately under remote.batch.",
                       },
                       batch: {
                         type: "object",
@@ -26096,7 +26096,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
     },
     "agents.defaults.memorySearch.remote.nonBatchConcurrency": {
       label: "Remote Non-Batch Embedding Concurrency",
-      help: "Limits concurrent inline embedding requests during non-batch memory indexing. Lower this for local or small self-hosted providers such as Ollama; batch embedding concurrency is configured separately under remote.batch.",
+      help: "Controls concurrent inline embedding requests during non-batch memory indexing. Use a low value for local or small self-hosted providers such as Ollama; batch embedding concurrency is configured separately under remote.batch.",
       tags: ["performance"],
     },
     "agents.defaults.memorySearch.remote.batch.enabled": {
