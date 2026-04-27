@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 
 const PACKAGE_ACCEPTANCE_WORKFLOW = ".github/workflows/package-acceptance.yml";
 const LIVE_E2E_WORKFLOW = ".github/workflows/openclaw-live-and-e2e-checks-reusable.yml";
-const DOCKER_E2E_PLAN_ACTION = ".github/actions/docker-e2e-plan/action.yml";
 const NPM_TELEGRAM_WORKFLOW = ".github/workflows/npm-telegram-beta-e2e.yml";
 const RELEASE_CHECKS_WORKFLOW = ".github/workflows/openclaw-release-checks.yml";
 const FULL_RELEASE_VALIDATION_WORKFLOW = ".github/workflows/full-release-validation.yml";
@@ -58,7 +57,6 @@ describe("package acceptance workflow", () => {
 describe("package artifact reuse", () => {
   it("lets reusable Docker E2E consume an already resolved package artifact", () => {
     const workflow = readFileSync(LIVE_E2E_WORKFLOW, "utf8");
-    const action = readFileSync(DOCKER_E2E_PLAN_ACTION, "utf8");
 
     expect(workflow).toContain("package_artifact_name:");
     expect(workflow).toContain("package_artifact_run_id:");
@@ -74,11 +72,10 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain(
       'functional_image="${PROVIDED_FUNCTIONAL_IMAGE:-ghcr.io/${repository}-docker-e2e-functional:${image_tag}}"',
     );
-    expect(workflow).toContain(
-      "package-artifact-name: ${{ inputs.package_artifact_name || 'docker-e2e-package' }}",
-    );
-    expect(action).toContain("package-artifact-name:");
-    expect(action).toContain("name: ${{ inputs.package-artifact-name }}");
+    expect(workflow).toContain("name: ${{ inputs.package_artifact_name || 'docker-e2e-package' }}");
+    expect(workflow).not.toContain("uses: ./.github/actions/docker-e2e-plan");
+    expect(workflow).toContain("node scripts/test-docker-all.mjs --plan-json");
+    expect(workflow).toContain("node scripts/docker-e2e.mjs github-outputs");
   });
 
   it("uses Blacksmith Docker build caching for prepared E2E images", () => {
