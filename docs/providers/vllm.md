@@ -131,7 +131,7 @@ Use explicit config when:
 
   <Accordion title="Qwen thinking controls">
     For Qwen models served through vLLM, set
-    `compat.thinkingFormat: "qwen-chat-template"` on the model entry when the
+    `params.qwenThinkingFormat: "chat-template"` on the model entry when the
     server expects Qwen chat-template kwargs. OpenClaw maps `/think off` to:
 
     ```json
@@ -145,8 +145,8 @@ Use explicit config when:
 
     Non-`off` thinking levels send `enable_thinking: true`. If your endpoint
     expects DashScope-style top-level flags instead, use
-    `compat.thinkingFormat: "qwen"` to send `enable_thinking` at the request
-    root.
+    `params.qwenThinkingFormat: "top-level"` to send `enable_thinking` at the
+    request root. Snake-case `params.qwen_thinking_format` is also accepted.
 
   </Accordion>
 

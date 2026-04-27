@@ -3105,14 +3105,6 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
                                 type: "string",
                                 const: "zai",
                               },
-                              {
-                                type: "string",
-                                const: "qwen",
-                              },
-                              {
-                                type: "string",
-                                const: "qwen-chat-template",
-                              },
                             ],
                           },
                           requiresToolResultName: {

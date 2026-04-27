@@ -87,8 +87,12 @@ type OpenAICompletionsOptions = BaseStreamOptions & {
   reasoningEffort?: OpenAIReasoningEffort;
 };
 
+type OpenAIModeCompatInput = Omit<ModelCompatConfig, "thinkingFormat"> & {
+  thinkingFormat?: string;
+};
+
 type OpenAIModeModel = Omit<Model<Api>, "compat"> & {
-  compat?: ModelCompatConfig;
+  compat?: OpenAIModeCompatInput | null;
 };
 
 type MutableAssistantOutput = {
@@ -1592,7 +1596,7 @@ function getCompat(model: OpenAIModeModel): {
     requiresAssistantAfterToolResult:
       compat.requiresAssistantAfterToolResult ?? detected.requiresAssistantAfterToolResult,
     requiresThinkingAsText: compat.requiresThinkingAsText ?? detected.requiresThinkingAsText,
-    thinkingFormat: (compat.thinkingFormat as string | undefined) ?? detected.thinkingFormat,
+    thinkingFormat: compat.thinkingFormat ?? detected.thinkingFormat,
     openRouterRouting: (compat.openRouterRouting as Record<string, unknown> | undefined) ?? {},
     vercelGatewayRouting:
       (compat.vercelGatewayRouting as Record<string, unknown> | undefined) ??
@@ -1629,29 +1633,6 @@ type OpenAIResponsesRequestParams = {
 
 function resolveOpenAICompletionsReasoningEffort(options: OpenAICompletionsOptions | undefined) {
   return options?.reasoningEffort ?? options?.reasoning ?? "high";
-}
-
-function isCompletionsThinkingEnabled(effort: string): boolean {
-  return normalizeOpenAIReasoningEffort(effort) !== "none";
-}
-
-function setChatTemplateThinking(params: Record<string, unknown>, enabled: boolean): void {
-  const existing = params.chat_template_kwargs;
-  if (existing && typeof existing === "object" && !Array.isArray(existing)) {
-    const next: Record<string, unknown> = {
-      ...(existing as Record<string, unknown>),
-      enable_thinking: enabled,
-    };
-    if (!Object.hasOwn(next, "preserve_thinking")) {
-      next.preserve_thinking = true;
-    }
-    params.chat_template_kwargs = next;
-    return;
-  }
-  params.chat_template_kwargs = {
-    enable_thinking: enabled,
-    preserve_thinking: true,
-  };
 }
 
 function convertTools(
@@ -1837,15 +1818,7 @@ export function buildOpenAICompletionsParams(
         fallbackMap: compat.reasoningEffortMap,
       })
     : undefined;
-  if (compat.thinkingFormat === "qwen" && model.reasoning && completionsReasoningEffort) {
-    params.enable_thinking = isCompletionsThinkingEnabled(completionsReasoningEffort);
-  } else if (
-    compat.thinkingFormat === "qwen-chat-template" &&
-    model.reasoning &&
-    completionsReasoningEffort
-  ) {
-    setChatTemplateThinking(params, isCompletionsThinkingEnabled(completionsReasoningEffort));
-  } else if (
+  if (
     compat.thinkingFormat === "openrouter" &&
     model.reasoning &&
     resolvedCompletionsReasoningEffort
