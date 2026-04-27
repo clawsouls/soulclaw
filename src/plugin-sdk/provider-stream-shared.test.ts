@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCopilotDynamicHeaders,
   createHtmlEntityToolCallArgumentDecodingWrapper,
+  createPayloadPatchStreamWrapper,
   defaultToolStreamExtraParams,
   decodeHtmlEntitiesInObject,
   hasCopilotVisionInput,
@@ -180,5 +181,49 @@ describe("createHtmlEntityToolCallArgumentDecodingWrapper", () => {
         },
       },
     });
+  });
+});
+
+describe("createPayloadPatchStreamWrapper", () => {
+  it("passes stream call options to payload patches", () => {
+    let captured: Record<string, unknown> = {};
+    const baseStreamFn: StreamFn = (_model, _context, options) => {
+      const payload: Record<string, unknown> = {};
+      options?.onPayload?.(payload, _model);
+      captured = payload;
+      return {} as ReturnType<StreamFn>;
+    };
+
+    const wrapped = createPayloadPatchStreamWrapper(baseStreamFn, ({ payload, options }) => {
+      payload.reasoning = (options as { reasoning?: unknown } | undefined)?.reasoning;
+    });
+    void wrapped(
+      { id: "model" } as never,
+      { messages: [] } as never,
+      {
+        reasoning: "medium",
+      } as never,
+    );
+
+    expect(captured).toEqual({ reasoning: "medium" });
+  });
+
+  it("calls the underlying stream directly when shouldPatch rejects the model", () => {
+    let onPayloadWasInstalled = false;
+    const baseStreamFn: StreamFn = (_model, _context, options) => {
+      onPayloadWasInstalled = typeof options?.onPayload === "function";
+      return {} as ReturnType<StreamFn>;
+    };
+
+    const wrapped = createPayloadPatchStreamWrapper(
+      baseStreamFn,
+      ({ payload }) => {
+        payload.unexpected = true;
+      },
+      { shouldPatch: () => false },
+    );
+    void wrapped({ id: "model" } as never, { messages: [] } as never, {});
+
+    expect(onPayloadWasInstalled).toBe(false);
   });
 });

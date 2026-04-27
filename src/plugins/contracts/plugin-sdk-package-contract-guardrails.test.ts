@@ -131,6 +131,19 @@ function collectExtensionCoreImportLeaks(): Array<{ file: string; specifier: str
 }
 
 describe("plugin-sdk package contract guardrails", () => {
+  it("keeps plugin-sdk entrypoint metadata unique", () => {
+    const counts = new Map<string, number>();
+    for (const entrypoint of pluginSdkEntrypoints) {
+      counts.set(entrypoint, (counts.get(entrypoint) ?? 0) + 1);
+    }
+    const duplicates = [...counts.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([entrypoint]) => entrypoint)
+      .toSorted();
+
+    expect(duplicates).toEqual([]);
+  });
+
   it("keeps package.json exports aligned with built plugin-sdk entrypoints", () => {
     expect(collectPluginSdkPackageExports()).toEqual([...pluginSdkEntrypoints].toSorted());
   });

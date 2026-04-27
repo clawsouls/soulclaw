@@ -1,8 +1,7 @@
 import type { StreamFn } from "@mariozechner/pi-agent-core";
-import { streamSimple } from "@mariozechner/pi-ai";
 import type { ProviderWrapStreamFnContext } from "openclaw/plugin-sdk/plugin-entry";
 import { normalizeProviderId } from "openclaw/plugin-sdk/provider-model-shared";
-import { streamWithPayloadPatch } from "openclaw/plugin-sdk/provider-stream-shared";
+import { createPayloadPatchStreamWrapper } from "openclaw/plugin-sdk/provider-stream-shared";
 
 type VllmThinkingLevel = ProviderWrapStreamFnContext["thinkingLevel"];
 type VllmQwenThinkingFormat = "chat-template" | "top-level";
@@ -79,16 +78,13 @@ export function createVllmQwenThinkingWrapper(params: {
   format: VllmQwenThinkingFormat;
   thinkingLevel: VllmThinkingLevel;
 }): StreamFn {
-  const underlying = params.baseStreamFn ?? streamSimple;
-  return (model, context, options) => {
-    if (model.api !== "openai-completions" || !model.reasoning) {
-      return underlying(model, context, options);
-    }
-    const enableThinking = resolveOpenAICompatibleThinkingEnabled({
-      thinkingLevel: params.thinkingLevel,
-      options,
-    });
-    return streamWithPayloadPatch(underlying, model, context, options, (payloadObj) => {
+  return createPayloadPatchStreamWrapper(
+    params.baseStreamFn,
+    ({ payload: payloadObj, options }) => {
+      const enableThinking = resolveOpenAICompatibleThinkingEnabled({
+        thinkingLevel: params.thinkingLevel,
+        options,
+      });
       if (params.format === "chat-template") {
         setQwenChatTemplateThinking(payloadObj, enableThinking);
       } else {
@@ -97,8 +93,11 @@ export function createVllmQwenThinkingWrapper(params: {
       delete payloadObj.reasoning_effort;
       delete payloadObj.reasoningEffort;
       delete payloadObj.reasoning;
-    });
-  };
+    },
+    {
+      shouldPatch: ({ model }) => model.api === "openai-completions" && model.reasoning,
+    },
+  );
 }
 
 export function wrapVllmProviderStream(ctx: ProviderWrapStreamFnContext): StreamFn | undefined {
