@@ -1,4 +1,5 @@
 import type { OpenClawConfig } from "../config/types.openclaw.js";
+import { resolveManifestBuiltInModelSuppression } from "../plugins/manifest-model-suppression.js";
 import { resolveProviderBuiltInModelSuppression } from "../plugins/provider-runtime.js";
 import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import { normalizeProviderId } from "./provider-id.js";
@@ -13,6 +14,15 @@ function resolveBuiltInModelSuppression(params: {
   const modelId = normalizeLowercaseStringOrEmpty(params.id);
   if (!provider || !modelId) {
     return undefined;
+  }
+  const manifestResult = resolveManifestBuiltInModelSuppression({
+    provider,
+    id: modelId,
+    ...(params.config ? { config: params.config } : {}),
+    env: process.env,
+  });
+  if (manifestResult?.suppress) {
+    return manifestResult;
   }
   return resolveProviderBuiltInModelSuppression({
     ...(params.config ? { config: params.config } : {}),
