@@ -91,7 +91,10 @@ export function materializeBundledRuntimeMirrorDistFile(
     return;
   }
   try {
-    if (fs.realpathSync(sourcePath) === fs.realpathSync(targetPath)) {
+    if (
+      fs.realpathSync(sourcePath) === fs.realpathSync(targetPath) &&
+      !fs.lstatSync(targetPath).isSymbolicLink()
+    ) {
       return;
     }
   } catch {
