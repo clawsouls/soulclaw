@@ -19,6 +19,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Memory-core/dreaming: treat request-scoped narrative fallback as expected, skip session cleanup when no subagent run was created, and remove duplicate phase-level cleanup so fallback no longer emits warning noise. Fixes #67152. Thanks @jsompis.
+- Agents/exec: apply configured `tools.exec.timeoutSec` to background and `yieldMs` commands when no per-call timeout is set, preventing auto-backgrounded commands from running indefinitely. Fixes #67600; supersedes #67603. Thanks @dlmpx and @kagura-agent.
 - Config/doctor: stop masking unknown-key validation diagnostics such as `agents.defaults.llm`, and have `openclaw doctor --fix` remove the retired `agents.defaults.llm` timeout block. Thanks @aidiffuser.
 - CLI/plugins: preserve unversioned ClawHub install specs so `plugins update` can follow newer ClawHub releases instead of pinning to the initially resolved version. Fixes #63010; supersedes #58426. Thanks @kangsen1234 and @robinspt.
 - Memory-core/subagents: tag plugin-created subagent sessions with their plugin owner so dreaming narrative cleanup can delete its own ephemeral sessions without granting broad admin session deletion. Fixes #72712. Thanks @BSG2000.
