@@ -8,6 +8,11 @@ import { redactIdentifier } from "../logging/redact-identifier.js";
 import type { AuthProfileFailureReason } from "./auth-profiles.js";
 import { buildAttemptReplayMetadata } from "./pi-embedded-runner/run/incomplete-turn.js";
 import type { EmbeddedRunAttemptResult } from "./pi-embedded-runner/run/types.js";
+import {
+  installEmbeddedRunnerBackoffE2eMocks,
+  installEmbeddedRunnerBaseE2eMocks,
+  installEmbeddedRunnerFastRunE2eMocks,
+} from "./test-helpers/pi-embedded-runner-e2e-mocks.js";
 
 const runEmbeddedAttemptMock = vi.fn<(params: unknown) => Promise<EmbeddedRunAttemptResult>>();
 const resolveCopilotApiTokenMock = vi.fn();
@@ -22,96 +27,21 @@ const { computeBackoffMock, sleepWithAbortMock } = vi.hoisted(() => ({
 }));
 
 const installRunEmbeddedMocks = () => {
-  vi.doMock("../plugins/hook-runner-global.js", () => ({
-    getGlobalHookRunner: vi.fn(() => undefined),
-  }));
-  vi.doMock("../context-engine/init.js", () => ({
-    ensureContextEnginesInitialized: vi.fn(),
-  }));
-  vi.doMock("../context-engine/registry.js", () => ({
-    resolveContextEngine: vi.fn(async () => ({
-      dispose: async () => undefined,
-    })),
-  }));
-  vi.doMock("./runtime-plugins.js", () => ({
-    ensureRuntimePluginsLoaded: vi.fn(),
-  }));
-  vi.doMock("./harness/selection.js", () => ({
-    selectAgentHarness: vi.fn((params: { provider?: string }) => ({
-      id: params.provider === "codex-cli" ? "codex" : "pi",
-      label: "Mock agent harness",
-      supports: vi.fn(() => ({ supported: false })),
-      runAttempt: vi.fn(),
-    })),
-    runAgentHarnessAttemptWithFallback: (params: unknown) => runEmbeddedAttemptMock(params),
-  }));
-  vi.doMock("./runtime-plan/build.js", () => ({
-    buildAgentRuntimePlan: vi.fn(
-      (params: {
-        provider: string;
-        modelId: string;
-        modelApi?: string | null;
-        harnessId?: string;
-        sessionAuthProfileId?: string;
-      }) => ({
-        resolvedRef: {
-          provider: params.provider,
-          modelId: params.modelId,
-          ...(params.modelApi ? { modelApi: params.modelApi } : {}),
-          ...(params.harnessId ? { harnessId: params.harnessId } : {}),
-        },
-        auth: {
-          providerForAuth: params.provider,
-          authProfileProviderForAuth: params.sessionAuthProfileId?.split(":", 1)[0] ?? "",
-          forwardedAuthProfileId: params.sessionAuthProfileId,
-        },
-        prompt: {
-          provider: params.provider,
-          modelId: params.modelId,
-          resolveSystemPromptContribution: vi.fn(() => undefined),
-        },
-        tools: {
-          normalize: vi.fn((tools: unknown[]) => tools),
-          logDiagnostics: vi.fn(),
-        },
-        transcript: {
-          policy: {
-            sanitizeMode: "full",
-            sanitizeToolCallIds: true,
-            preserveNativeAnthropicToolUseIds: false,
-            repairToolUseResultPairing: true,
-            preserveSignatures: false,
-            sanitizeThinkingSignatures: true,
-            dropThinkingBlocks: false,
-            applyGoogleTurnOrdering: false,
-            validateGeminiTurns: false,
-            validateAnthropicTurns: false,
-            allowSyntheticToolResults: true,
-          },
-          resolvePolicy: vi.fn(() => undefined),
-        },
-        delivery: {
-          isSilentPayload: vi.fn(() => false),
-          resolveFollowupRoute: vi.fn(() => undefined),
-        },
-        outcome: {
-          classifyRunResult: vi.fn(() => undefined),
-        },
-        transport: {
-          extraParams: {},
-          resolveExtraParams: vi.fn(() => ({})),
-        },
-        observability: {
-          resolvedRef: `${params.provider}/${params.modelId}`,
-          provider: params.provider,
-          modelId: params.modelId,
-          ...(params.modelApi ? { modelApi: params.modelApi } : {}),
-          ...(params.harnessId ? { harnessId: params.harnessId } : {}),
-          ...(params.sessionAuthProfileId ? { authProfileId: params.sessionAuthProfileId } : {}),
-        },
-      }),
-    ),
-  }));
+  installEmbeddedRunnerBaseE2eMocks();
+  installEmbeddedRunnerFastRunE2eMocks({
+    runEmbeddedAttempt: (params) => runEmbeddedAttemptMock(params),
+    prepareProviderRuntimeAuth: async (params) => {
+      if (params.provider !== "github-copilot") {
+        return undefined;
+      }
+      const token = await resolveCopilotApiTokenMock(params.context.apiKey);
+      return {
+        apiKey: token.token,
+        baseUrl: token.baseUrl,
+        expiresAt: token.expiresAt,
+      };
+    },
+  });
   vi.doMock("./pi-embedded-runner/model.js", () => ({
     resolveModelAsync: async (provider: string, modelId: string) => ({
       model: {
@@ -134,38 +64,10 @@ const installRunEmbeddedMocks = () => {
       modelRegistry: {},
     }),
   }));
-  vi.doMock("./pi-embedded-runner/run/attempt.js", () => ({
-    runEmbeddedAttempt: (params: unknown) => runEmbeddedAttemptMock(params),
-  }));
-  vi.doMock("../plugins/provider-runtime.js", () => ({
-    buildProviderMissingAuthMessageWithPlugin: vi.fn(() => undefined),
-    prepareProviderRuntimeAuth: async (params: {
-      provider: string;
-      context: { apiKey: string };
-    }) => {
-      if (params.provider !== "github-copilot") {
-        return undefined;
-      }
-      const token = await resolveCopilotApiTokenMock(params.context.apiKey);
-      return {
-        apiKey: token.token,
-        baseUrl: token.baseUrl,
-        expiresAt: token.expiresAt,
-      };
-    },
-    resolveProviderAuthProfileId: vi.fn(() => undefined),
-    resolveProviderCapabilitiesWithPlugin: vi.fn(() => undefined),
-    resolveExternalAuthProfilesWithPlugins: vi.fn(() => []),
-    resolveProviderSyntheticAuthWithPlugin: vi.fn(() => undefined),
-    shouldDeferProviderSyntheticProfileAuthWithPlugin: vi.fn(() => false),
-  }));
-  vi.doMock("../infra/backoff.js", () => ({
-    computeBackoff: (
-      policy: { initialMs: number; maxMs: number; factor: number; jitter: number },
-      attempt: number,
-    ) => computeBackoffMock(policy, attempt),
-    sleepWithAbort: (ms: number, abortSignal?: AbortSignal) => sleepWithAbortMock(ms, abortSignal),
-  }));
+  installEmbeddedRunnerBackoffE2eMocks({
+    computeBackoff: (policy, attempt) => computeBackoffMock(policy, attempt),
+    sleepWithAbort: (ms, abortSignal) => sleepWithAbortMock(ms, abortSignal),
+  });
   vi.doMock("./pi-embedded-runner/compact.js", () => ({
     compactEmbeddedPiSessionDirect: vi.fn(async () => {
       throw new Error("compact should not run in auth profile rotation tests");
