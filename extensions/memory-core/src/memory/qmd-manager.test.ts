@@ -434,10 +434,13 @@ describe("QmdMemoryManager", () => {
     expect(initialUpdateCalls).toHaveLength(0);
 
     watcher.emit("change", path.join(workspaceDir, "notes.md"));
+    expect(manager.status().dirty).toBe(true);
+
     await vi.advanceTimersByTimeAsync(25);
 
     const updateCalls = spawnMock.mock.calls.filter((call) => call[1]?.[0] === "update");
     expect(updateCalls).toHaveLength(1);
+    expect(manager.status().dirty).toBe(false);
 
     await manager.close();
   });

@@ -1324,7 +1324,7 @@ export class QmdMemoryManager implements MemorySearchManager {
       requestedProvider: "qmd",
       files: counts.totalDocuments,
       chunks: counts.totalDocuments,
-      dirty: false,
+      dirty: this.dirty,
       workspaceDir: this.workspaceDir,
       dbPath: this.indexPath,
       sources: Array.from(this.sources),
