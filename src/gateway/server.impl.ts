@@ -313,6 +313,7 @@ export async function startGatewayServer(
     loadGatewayStartupConfigSnapshot({
       minimalTestGateway,
       log,
+      measure: (name, run) => startupTrace.measure(name, run),
     }),
   );
   const configSnapshot = startupConfigLoad.snapshot;
