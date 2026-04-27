@@ -48,7 +48,6 @@ vi.mock("../../../config/config.js", () => ({
 vi.mock("../../../config/io.js", () => ({
   getRuntimeConfig: loadConfigMock,
 }));
-
 vi.mock("../../../infra/system-presence.js", () => ({
   upsertPresence: upsertPresenceMock,
 }));
