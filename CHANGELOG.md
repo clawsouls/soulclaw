@@ -21,6 +21,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Channels/setup: treat bundled channel plugins as already bundled during `channels add` and onboarding, enabling them without writing redundant `plugins.load.paths` entries or path install records. Fixes #72740. Thanks @iCodePoet.
+- WhatsApp: honor gateway `HTTPS_PROXY` / `HTTP_PROXY` env vars for QR-login WebSocket connections, while respecting `NO_PROXY`, so proxied networks no longer fall back to direct `mmg.whatsapp.net` connections that time out with 408. Fixes #72547; supersedes #72692. Thanks @mebusw and @SymbolStar.
 - Agents/OpenAI-compatible: retry replay-safe empty `stop` turns once for `openai-completions` endpoints, so transient empty local backend responses no longer surface as “Agent couldn't generate a response” when a continuation succeeds. Fixes #72751. Thanks @moooV252.
 - Git hooks: skip ignored staged paths when formatting and restaging pre-commit files, so merge commits no longer abort when `.gitignore` newly ignores staged merged content. Fixes #72744. Thanks @100yenadmin.
 - Memory-core/dreaming: add a supported `dreaming.model` knob for Dream Diary narrative subagents, wired through phase config and the existing plugin subagent model-override trust gate. Refs #65963. Thanks @esqandil and @mjamiv.
