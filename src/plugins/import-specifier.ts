@@ -1,4 +1,5 @@
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 /**
  * On Windows, Node's ESM loader requires absolute paths to be expressed as
@@ -12,11 +13,7 @@ export function toSafeImportPath(specifier: string): string {
     return specifier;
   }
   if (path.win32.isAbsolute(specifier)) {
-    const normalizedSpecifier = specifier.replaceAll("\\", "/");
-    if (normalizedSpecifier.startsWith("//")) {
-      return new URL(`file:${encodeURI(normalizedSpecifier)}`).href;
-    }
-    return new URL(`file:///${encodeURI(normalizedSpecifier)}`).href;
+    return pathToFileURL(specifier, { windows: true }).href;
   }
   return specifier;
 }

@@ -12,6 +12,9 @@ describe("toSafeImportPath", () => {
     expect(toSafeImportPath("C:\\Users\\alice\\plugin\\index.mjs")).toBe(
       "file:///C:/Users/alice/plugin/index.mjs",
     );
+    expect(toSafeImportPath("C:\\Users\\alice\\plugin folder\\x#y.mjs")).toBe(
+      "file:///C:/Users/alice/plugin%20folder/x%23y.mjs",
+    );
     expect(toSafeImportPath("\\\\server\\share\\plugin\\index.mjs")).toBe(
       "file://server/share/plugin/index.mjs",
     );

@@ -95,12 +95,14 @@ describe("startLazyPluginServiceModule", () => {
     const importModule = vi.fn(async () => ({ startOverride: start }));
 
     try {
-      await defaultLoadOverrideModule("C:\\Users\\alice\\browser-service.mjs", importModule);
+      await defaultLoadOverrideModule("C:\\Users\\alice\\plugin folder\\x#y.mjs", importModule);
     } finally {
       platformSpy.mockRestore();
     }
 
-    expect(importModule).toHaveBeenCalledWith("file:///C:/Users/alice/browser-service.mjs");
+    expect(importModule).toHaveBeenCalledWith(
+      "file:///C:/Users/alice/plugin%20folder/x%23y.mjs",
+    );
   });
 
   it("leaves caller-supplied override loaders responsible for their own specifiers", async () => {
