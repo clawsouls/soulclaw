@@ -69,6 +69,12 @@ import { createUtilsVitestConfig } from "./vitest/vitest.utils.config.ts";
 import { createWizardVitestConfig } from "./vitest/vitest.wizard.config.ts";
 
 const EXTENSIONS_CHANNEL_GLOB = ["extensions", "channel", "**"].join("/");
+const PRIVATE_PLUGIN_SDK_SUBPATHS = [
+  "qa-channel",
+  "qa-channel-protocol",
+  "qa-lab",
+  "qa-runtime",
+] as const;
 
 function bundledExcludePatternCouldMatchFile(pattern: string, file: string): boolean {
   if (pattern === file) {
@@ -82,6 +88,28 @@ function bundledExcludePatternCouldMatchFile(pattern: string, file: string): boo
 }
 
 describe("resolveVitestIsolation", () => {
+  it("aliases private QA plugin SDK subpaths for source tests only", () => {
+    expect(sharedVitestConfig.resolve.alias).toEqual(
+      expect.arrayContaining(
+        PRIVATE_PLUGIN_SDK_SUBPATHS.map((subpath) =>
+          expect.objectContaining({
+            find: `openclaw/plugin-sdk/${subpath}`,
+            replacement: path.join(process.cwd(), "src", "plugin-sdk", `${subpath}.ts`),
+          }),
+        ),
+      ),
+    );
+    expect(sharedVitestConfig.resolve.alias).not.toEqual(
+      expect.arrayContaining(
+        PRIVATE_PLUGIN_SDK_SUBPATHS.map((subpath) =>
+          expect.objectContaining({
+            find: `@openclaw/plugin-sdk/${subpath}`,
+          }),
+        ),
+      ),
+    );
+  });
+
   it("defaults shared scoped configs to the non-isolated runner", () => {
     expect(resolveVitestIsolation({})).toBe(false);
   });
