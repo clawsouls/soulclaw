@@ -106,6 +106,7 @@ function replaceDirAtomically(targetPath, sourcePath) {
   } catch (error) {
     if (movedExistingTarget && !fs.existsSync(targetPath) && fs.existsSync(backupPath)) {
       fs.renameSync(backupPath, targetPath);
+      removePathIfExists(path.join(targetPath, TEMP_OWNER_FILE));
     }
     throw error;
   }

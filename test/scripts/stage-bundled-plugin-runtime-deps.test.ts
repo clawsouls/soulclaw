@@ -392,6 +392,7 @@ describe("stageBundledPluginRuntimeDeps", () => {
     ).toThrow("rename failed after backup");
 
     expect(fs.readFileSync(path.join(targetPath, "marker.txt"), "utf8")).toBe("original\n");
+    expect(fs.existsSync(path.join(targetPath, "owner.json"))).toBe(false);
   });
 
   it("restages when installed root runtime dependency contents change", () => {
