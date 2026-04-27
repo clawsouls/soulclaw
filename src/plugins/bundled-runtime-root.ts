@@ -142,6 +142,9 @@ function prepareBundledPluginRuntimeDistMirror(params: {
     }
     const sourcePath = path.join(sourceDistRoot, entry.name);
     const targetPath = path.join(mirrorDistRoot, entry.name);
+    if (path.resolve(sourcePath) === path.resolve(targetPath)) {
+      continue;
+    }
     if (entry.isFile() && shouldMaterializeBundledRuntimeMirrorDistFile(sourcePath)) {
       materializeBundledRuntimeMirrorDistFile(sourcePath, targetPath);
       continue;
@@ -175,6 +178,9 @@ function ensureBundledRuntimeDistPackageJson(mirrorDistRoot: string): void {
 }
 
 function copyBundledPluginRuntimeRoot(sourceRoot: string, targetRoot: string): void {
+  if (path.resolve(sourceRoot) === path.resolve(targetRoot)) {
+    return;
+  }
   fs.mkdirSync(targetRoot, { recursive: true, mode: 0o755 });
   for (const entry of fs.readdirSync(sourceRoot, { withFileTypes: true })) {
     if (entry.name === "node_modules") {
