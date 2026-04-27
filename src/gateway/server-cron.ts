@@ -23,7 +23,10 @@ import {
   resolveCronRunLogPruneOptions,
 } from "../cron/run-log.js";
 import { CronService } from "../cron/service.js";
-import { assertSafeCronSessionTargetId } from "../cron/session-target.js";
+import {
+  resolveCronDeliverySessionKey,
+  resolveCronSessionTargetSessionKey,
+} from "../cron/session-target.js";
 import { resolveCronStorePath } from "../cron/store.js";
 import { normalizeHttpWebhookUrl } from "../cron/webhook-url.js";
 import { formatErrorMessage } from "../infra/errors.js";
@@ -32,6 +35,7 @@ import { requestHeartbeatNow } from "../infra/heartbeat-wake.js";
 import { fetchWithSsrFGuard } from "../infra/net/fetch-guard.js";
 import { SsrFBlockedError } from "../infra/net/ssrf.js";
 import { deliverOutboundPayloads } from "../infra/outbound/deliver.js";
+import { buildOutboundSessionContext } from "../infra/outbound/session-context.js";
 import { enqueueSystemEvent } from "../infra/system-events.js";
 import { getChildLogger } from "../logging.js";
 import { normalizeAgentId, toAgentStoreSessionKey } from "../routing/session-key.js";
@@ -332,10 +336,7 @@ export function buildGatewayCronService(params: {
     },
     runIsolatedAgentJob: async ({ job, message, abortSignal }) => {
       const { agentId, cfg: runtimeConfig } = resolveCronAgent(job.agentId);
-      let sessionKey = `cron:${job.id}`;
-      if (job.sessionTarget.startsWith("session:")) {
-        sessionKey = assertSafeCronSessionTargetId(job.sessionTarget.slice(8));
-      }
+      const sessionKey = resolveCronSessionTargetSessionKey(job.sessionTarget) ?? `cron:${job.id}`;
       try {
         return await runCronIsolatedAgentTurn({
           cfg: runtimeConfig,
@@ -395,14 +396,21 @@ export function buildGatewayCronService(params: {
         return;
       }
 
+      const deliverySessionKey = resolveCronDeliverySessionKey(job);
       const target = await resolveDeliveryTarget(runtimeConfig, agentId, {
         channel,
         to,
         accountId,
+        sessionKey: deliverySessionKey,
       });
       if (!target.ok) {
         throw target.error;
       }
+      const session = buildOutboundSessionContext({
+        cfg: runtimeConfig,
+        agentId,
+        sessionKey: deliverySessionKey ?? `cron:${job.id}:failure`,
+      });
       await deliverOutboundPayloads({
         cfg: runtimeConfig,
         channel: target.channel,
@@ -411,6 +419,7 @@ export function buildGatewayCronService(params: {
         threadId: target.threadId,
         payloads: [{ text }],
         deps: createOutboundSendDeps(params.deps),
+        session,
       });
     },
     log: getChildLogger({ module: "cron", storePath }),
@@ -470,6 +479,7 @@ export function buildGatewayCronService(params: {
           if (!isBestEffort) {
             const failureMessage = `Cron job "${job.name}" failed: ${evt.error ?? "unknown error"}`;
             const failureDest = resolveFailureDestination(job, params.cfg.cron?.failureDestination);
+            const deliverySessionKey = resolveCronDeliverySessionKey(job);
 
             if (failureDest) {
               // Explicit failureDestination configured — use it
@@ -518,7 +528,7 @@ export function buildGatewayCronService(params: {
                     channel: failureDest.channel,
                     to: failureDest.to,
                     accountId: failureDest.accountId,
-                    sessionKey: job.sessionKey,
+                    sessionKey: deliverySessionKey,
                   },
                   `⚠️ ${failureMessage}`,
                 );
@@ -537,7 +547,7 @@ export function buildGatewayCronService(params: {
                     channel: primaryPlan.channel,
                     to: primaryPlan.to,
                     accountId: primaryPlan.accountId,
-                    sessionKey: job.sessionKey,
+                    sessionKey: deliverySessionKey,
                   },
                   `⚠️ ${failureMessage}`,
                 );

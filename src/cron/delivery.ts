@@ -51,10 +51,14 @@ export async function sendFailureNotificationAnnounce(
   }
 
   const identity = resolveAgentOutboundIdentity(cfg, agentId);
+  const deliverySessionKey =
+    typeof target.sessionKey === "string" && target.sessionKey.trim()
+      ? target.sessionKey.trim()
+      : `cron:${jobId}:failure`;
   const session = buildOutboundSessionContext({
     cfg,
     agentId,
-    sessionKey: `cron:${jobId}:failure`,
+    sessionKey: deliverySessionKey,
   });
 
   const abortController = new AbortController();
