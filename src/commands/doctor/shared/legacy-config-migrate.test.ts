@@ -262,6 +262,58 @@ describe("legacy migrate sandbox scope aliases", () => {
   });
 });
 
+describe("legacy migrate MCP server type aliases", () => {
+  it("moves CLI-native http type to OpenClaw streamable HTTP transport", () => {
+    const res = migrateLegacyConfigForTest({
+      mcp: {
+        servers: {
+          silo: {
+            type: "http",
+            url: "https://example.com/mcp",
+          },
+          legacySse: {
+            type: "sse",
+            url: "https://example.com/sse",
+          },
+        },
+      },
+    });
+
+    expect(res.changes).toContain(
+      'Moved mcp.servers.silo.type "http" → transport "streamable-http".',
+    );
+    expect(res.changes).toContain('Moved mcp.servers.legacySse.type "sse" → transport "sse".');
+    expect(res.config?.mcp?.servers?.silo).toEqual({
+      url: "https://example.com/mcp",
+      transport: "streamable-http",
+    });
+    expect(res.config?.mcp?.servers?.legacySse).toEqual({
+      url: "https://example.com/sse",
+      transport: "sse",
+    });
+  });
+
+  it("removes CLI-native type when canonical transport is already set", () => {
+    const res = migrateLegacyConfigForTest({
+      mcp: {
+        servers: {
+          mixed: {
+            type: "http",
+            transport: "sse",
+            url: "https://example.com/mcp",
+          },
+        },
+      },
+    });
+
+    expect(res.changes).toContain('Removed mcp.servers.mixed.type (transport "sse" already set).');
+    expect(res.config?.mcp?.servers?.mixed).toEqual({
+      url: "https://example.com/mcp",
+      transport: "sse",
+    });
+  });
+});
+
 describe("legacy migrate x_search auth", () => {
   it("moves only legacy x_search auth into plugin-owned xai config", () => {
     const res = migrateLegacyConfigForTest({

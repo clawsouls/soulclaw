@@ -23316,6 +23316,18 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
                   type: "string",
                   format: "uri",
                 },
+                transport: {
+                  anyOf: [
+                    {
+                      type: "string",
+                      const: "sse",
+                    },
+                    {
+                      type: "string",
+                      const: "streamable-http",
+                    },
+                  ],
+                },
                 headers: {
                   type: "object",
                   propertyNames: {
