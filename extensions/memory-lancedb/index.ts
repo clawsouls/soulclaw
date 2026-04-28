@@ -15,7 +15,7 @@ import {
   getMemoryEmbeddingProvider,
   type MemoryEmbeddingProvider,
 } from "openclaw/plugin-sdk/memory-core-host-engine-embeddings";
-import { resolveDefaultAgentId } from "openclaw/plugin-sdk/memory-core-host-runtime-core";
+import { resolveDefaultAgentId } from "openclaw/plugin-sdk/memory-host-core";
 import { resolveLivePluginConfigObject } from "openclaw/plugin-sdk/plugin-config-runtime";
 import { ensureGlobalUndiciEnvProxyDispatcher } from "openclaw/plugin-sdk/runtime-env";
 import {
