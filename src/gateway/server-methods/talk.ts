@@ -371,10 +371,15 @@ function resolveTalkResponseFromConfig(params: {
   const providerInputConfig = stripUnresolvedSecretApiKey(
     Object.keys(runtimeProviderConfig).length > 0 ? runtimeProviderConfig : sourceProviderConfig,
   );
+  // The same SecretRef-wrapper hazard exists on `messages.tts.providers.*`:
+  // strict speech resolvers normalize base TTS secrets before merging talk config.
+  const baseTtsConfig = stripUnresolvedSecretInputsFromBaseTtsProviders(
+    Object.keys(sourceBaseTts).length > 0 ? sourceBaseTts : runtimeBaseTts,
+  );
   const resolvedConfig =
     speechProvider?.resolveTalkConfig?.({
       cfg: params.runtimeConfig,
-      baseTtsConfig: Object.keys(sourceBaseTts).length > 0 ? sourceBaseTts : runtimeBaseTts,
+      baseTtsConfig,
       talkProviderConfig: providerInputConfig,
       timeoutMs:
         typeof sourceBaseTts.timeoutMs === "number"
@@ -404,6 +409,55 @@ function stripUnresolvedSecretApiKey(config: TalkProviderConfig): TalkProviderCo
   }
   const { apiKey: _omit, ...rest } = config;
   return rest;
+}
+
+const BASE_TTS_PROVIDER_SECRET_INPUT_KEYS = ["apiKey", "token"] as const;
+
+function stripUnresolvedSecretInputsFromProviderConfig(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  let next: Record<string, unknown> | undefined;
+  for (const key of BASE_TTS_PROVIDER_SECRET_INPUT_KEYS) {
+    const value = config[key];
+    if (value === undefined || typeof value === "string") {
+      continue;
+    }
+    next ??= { ...config };
+    delete next[key];
+  }
+  return next ?? config;
+}
+
+function stripUnresolvedSecretInputsFromBaseTtsProviders(
+  base: Record<string, unknown>,
+): Record<string, unknown> {
+  const providers = asRecord(base.providers);
+  if (!providers) {
+    return base;
+  }
+  let mutated = false;
+  // Null-prototype map so an attacker-influenced provider id like `__proto__`,
+  // `constructor`, or `prototype` cannot pollute Object.prototype via the
+  // dynamic `cleaned[providerId] = ...` assignment below. Provider-id keys
+  // come from operator config and may be plain JSON, so we cannot assume
+  // they're already validated upstream.
+  const cleaned: Record<string, unknown> = Object.create(null);
+  for (const [providerId, providerConfig] of Object.entries(providers)) {
+    const cfg = asRecord(providerConfig);
+    if (!cfg) {
+      cleaned[providerId] = providerConfig;
+      continue;
+    }
+    const next = stripUnresolvedSecretInputsFromProviderConfig(cfg);
+    if (next !== cfg) {
+      mutated = true;
+    }
+    cleaned[providerId] = next;
+  }
+  if (!mutated) {
+    return base;
+  }
+  return { ...base, providers: cleaned };
 }
 
 export const talkHandlers: GatewayRequestHandlers = {
