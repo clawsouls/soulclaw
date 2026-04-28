@@ -217,4 +217,27 @@ describe("provider-catalog-shared manifest provider configs", () => {
       }),
     ).toThrow("unsupported runtime input document");
   });
+
+  it("rejects manifest catalogs when normalization drops a model row", () => {
+    expect(() =>
+      buildManifestModelProviderConfig({
+        providerId: "example",
+        catalog: {
+          baseUrl: "https://api.example.test/v1",
+          models: [
+            {
+              id: "valid",
+              contextWindow: 1024,
+              maxTokens: 1024,
+            },
+            {
+              id: "",
+              contextWindow: 1024,
+              maxTokens: 1024,
+            },
+          ],
+        },
+      }),
+    ).toThrow("providers.example.models");
+  });
 });

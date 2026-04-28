@@ -32,6 +32,14 @@ export type ConfiguredProviderCatalogEntry = {
   input?: Array<"text" | "image" | "audio" | "video" | "document">;
 };
 
+function countRawManifestCatalogModels(catalog: unknown): number | undefined {
+  if (!catalog || typeof catalog !== "object") {
+    return undefined;
+  }
+  const models = (catalog as { models?: unknown }).models;
+  return Array.isArray(models) ? models.length : undefined;
+}
+
 function cloneManifestCatalogTieredCost(
   tier: ModelCatalogTieredCost,
 ): NonNullable<ModelDefinitionConfig["cost"]["tieredPricing"]>[number] {
@@ -101,6 +109,10 @@ export function buildManifestModelProviderConfig(params: {
   }
   if (!catalog.baseUrl) {
     throw new Error(`Missing modelCatalog.providers.${params.providerId}.baseUrl`);
+  }
+  const rawModelCount = countRawManifestCatalogModels(params.catalog);
+  if (rawModelCount !== undefined && rawModelCount !== catalog.models.length) {
+    throw new Error(`Invalid modelCatalog.providers.${params.providerId}.models`);
   }
   return {
     baseUrl: catalog.baseUrl,
