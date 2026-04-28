@@ -255,7 +255,10 @@ export async function ensureOpenClawModelsJson(
     const refreshedCacheKey = modelsJsonReadyCacheKey(targetPath, refreshedFingerprint);
     if (refreshedCacheKey !== cacheKey) {
       MODELS_JSON_STATE.readyCache.delete(cacheKey);
-      MODELS_JSON_STATE.readyCache.set(refreshedCacheKey, Promise.resolve(settled));
+      MODELS_JSON_STATE.readyCache.set(
+        refreshedCacheKey,
+        Promise.resolve({ fingerprint: refreshedFingerprint, result: settled.result }),
+      );
     }
     return settled.result;
   } catch (error) {
