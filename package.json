@@ -538,6 +538,10 @@
       "types": "./dist/plugin-sdk/test-fixtures.d.ts",
       "default": "./dist/plugin-sdk/test-fixtures.js"
     },
+    "./plugin-sdk/test-node-mocks": {
+      "types": "./dist/plugin-sdk/test-node-mocks.d.ts",
+      "default": "./dist/plugin-sdk/test-node-mocks.js"
+    },
     "./plugin-sdk/testing": {
       "types": "./dist/plugin-sdk/testing.d.ts",
       "default": "./dist/plugin-sdk/testing.js"

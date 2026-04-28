@@ -63,6 +63,7 @@ const PUBLIC_SDK_TEST_HELPER_SUBPATHS = [
   "provider-test-contracts",
   "test-env",
   "test-fixtures",
+  "test-node-mocks",
 ] as const;
 const PUBLIC_SDK_TEST_HELPER_SUBPATHS_WITH_TOP_LEVEL_MOCKS = ["provider-http-test-mocks"] as const;
 
@@ -744,8 +745,20 @@ describe("plugin-sdk subpath exports", () => {
       "createPluginSetupWizardStatus",
       "runProviderCatalog",
     ]);
+    expectSourceMentions("channel-test-helpers", [
+      "assertBundledChannelEntries",
+      "formatEnvelopeTimestamp",
+      "expectPairingReplyText",
+    ]);
+    expectSourceMentions("provider-test-contracts", [
+      "expectPassthroughReplayPolicy",
+      "runRealtimeSttLiveTest",
+    ]);
     expectSourceMentions("test-env", [
       "withEnv",
+      "withServer",
+      "withTempHome",
+      "createMockIncomingRequest",
       "withFetchPreconnect",
       "createRequestCaptureJsonFetch",
       "installPinnedHostnameTestHooks",
@@ -753,10 +766,17 @@ describe("plugin-sdk subpath exports", () => {
     ]);
     expectSourceMentions("test-fixtures", [
       "createCliRuntimeCapture",
+      "importFreshModule",
+      "bundledPluginRoot",
       "createSandboxTestContext",
       "makeAgentAssistantMessage",
       "peekSystemEvents",
       "typedCases",
+    ]);
+    expectSourceMentions("test-node-mocks", [
+      "mockNodeBuiltinModule",
+      "mockNodeChildProcessExecFile",
+      "mockNodeChildProcessSpawnSync",
     ]);
     expectSourceMentions("channel-target-testing", [
       "installCommonResolveTargetErrorCases",
