@@ -29,12 +29,7 @@ export const BYTEPLUS_MODEL_CATALOG: ModelDefinitionConfig[] = BYTEPLUS_MANIFEST
 export const BYTEPLUS_CODING_MODEL_CATALOG: ModelDefinitionConfig[] =
   BYTEPLUS_CODING_MANIFEST_PROVIDER.models;
 
-export type BytePlusCatalogEntry = (typeof BYTEPLUS_MODEL_CATALOG)[number];
-export type BytePlusCodingCatalogEntry = (typeof BYTEPLUS_CODING_MODEL_CATALOG)[number];
-
-export function buildBytePlusModelDefinition(
-  entry: BytePlusCatalogEntry | BytePlusCodingCatalogEntry,
-): ModelDefinitionConfig {
+export function buildBytePlusModelDefinition(entry: ModelDefinitionConfig): ModelDefinitionConfig {
   return {
     ...entry,
     input: [...entry.input],

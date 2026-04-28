@@ -29,12 +29,7 @@ export const DOUBAO_MODEL_CATALOG: ModelDefinitionConfig[] = DOUBAO_MANIFEST_PRO
 export const DOUBAO_CODING_MODEL_CATALOG: ModelDefinitionConfig[] =
   DOUBAO_CODING_MANIFEST_PROVIDER.models;
 
-export type DoubaoCatalogEntry = (typeof DOUBAO_MODEL_CATALOG)[number];
-export type DoubaoCodingCatalogEntry = (typeof DOUBAO_CODING_MODEL_CATALOG)[number];
-
-export function buildDoubaoModelDefinition(
-  entry: DoubaoCatalogEntry | DoubaoCodingCatalogEntry,
-): ModelDefinitionConfig {
+export function buildDoubaoModelDefinition(entry: ModelDefinitionConfig): ModelDefinitionConfig {
   return {
     ...entry,
     input: [...entry.input],
