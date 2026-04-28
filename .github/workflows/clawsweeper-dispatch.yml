@@ -12,17 +12,32 @@ permissions:
 jobs:
   dispatch:
     runs-on: ubuntu-latest
+    env:
+      CLAWSWEEPER_APP_ID: ${{ secrets.CLAWSWEEPER_APP_ID }}
+      CLAWSWEEPER_APP_PRIVATE_KEY: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY }}
     steps:
+      - name: Check ClawSweeper app credentials
+        id: clawsweeper-credentials
+        run: |
+          if [ -n "$CLAWSWEEPER_APP_ID" ] && [ -n "$CLAWSWEEPER_APP_PRIVATE_KEY" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "ClawSweeper app credentials are not configured; skipping dispatch."
+          fi
+
       - name: Create ClawSweeper dispatch token
+        if: steps.clawsweeper-credentials.outputs.configured == 'true'
         id: token
         uses: actions/create-github-app-token@v2
         with:
-          app-id: ${{ secrets.CLAWSWEEPER_APP_ID }}
-          private-key: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY }}
+          app-id: ${{ env.CLAWSWEEPER_APP_ID }}
+          private-key: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY }}
           owner: openclaw
           repositories: clawsweeper
 
       - name: Dispatch exact ClawSweeper review
+        if: steps.clawsweeper-credentials.outputs.configured == 'true'
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           TARGET_REPO: ${{ github.repository }}
