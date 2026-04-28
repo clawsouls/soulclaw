@@ -41,6 +41,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Discord: own the Carbon interaction listener and hand off Discord slash/component handling asynchronously, so compaction or long session locks no longer trip `InteractionEventListener` listener timeouts. Fixes #73204. Thanks @slideshow-dingo.
 - Gateway/startup: keep value-option foreground starts on the gateway fast path and skip proxy bootstrap unless proxy env is configured, reducing normal gateway startup RSS and avoiding full CLI graph loading. Thanks @vincentkoc.
 - Heartbeat/models: show heartbeat model bleed guidance on context-overflow resets when the last runtime model matches configured `heartbeat.model`, so smaller local heartbeat models point users to `isolatedSession` or `lightContext` instead of only compaction-buffer tuning. Fixes #67314. Thanks @Knightmare6890.
 - Subagents/models: persist `sessions_spawn.model` and configured subagent models as child-session model overrides before the first turn, so spawned subagents actually run on the requested provider/model instead of reverting to the target agent default. Fixes #73180. Thanks @danielzinhu99.
