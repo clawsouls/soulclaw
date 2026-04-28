@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ConfigFileSnapshot, OpenClawConfig } from "../config/types.js";
+import type { ConfigFileSnapshot, ModelDefinitionConfig, OpenClawConfig } from "../config/types.js";
 import type { PluginMetadataSnapshot } from "../plugins/plugin-metadata-snapshot.js";
 import { buildTestConfigSnapshot } from "./test-helpers.config-snapshots.js";
 
@@ -123,6 +123,23 @@ const validConfig = {
   },
 } as OpenClawConfig;
 
+function testModel(id: string, name: string): ModelDefinitionConfig {
+  return {
+    id,
+    name,
+    reasoning: false,
+    input: ["text"],
+    cost: {
+      input: 0,
+      output: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+    },
+    contextWindow: 8192,
+    maxTokens: 4096,
+  };
+}
+
 function buildSnapshot(params: {
   valid: boolean;
   raw: string;
@@ -245,10 +262,7 @@ describe("gateway startup config recovery", () => {
             baseUrl: "https://dos.example.test/v1",
             apiKey: "test-key",
             api: "openai-completions",
-            models: [
-              { id: "dos-ai", name: "DOS AI" },
-              { id: "dos-auto", name: "DOS Auto" },
-            ],
+            models: [testModel("dos-ai", "DOS AI"), testModel("dos-auto", "DOS Auto")],
           },
         },
       },
