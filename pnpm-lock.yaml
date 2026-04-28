@@ -217,6 +217,9 @@ importers:
 
   extensions/acpx:
     dependencies:
+      '@agentclientprotocol/claude-agent-acp':
+        specifier: 0.31.0
+        version: 0.31.0(patch_hash=e8b472d71289ac8de9813c57d79abac524889ca96f279f6f3ad08043434f6615)
       '@zed-industries/codex-acp':
         specifier: 0.12.0
         version: 0.12.0
@@ -224,9 +227,6 @@ importers:
         specifier: 0.6.1
         version: 0.6.1
     devDependencies:
-      '@agentclientprotocol/claude-agent-acp':
-        specifier: 0.31.0
-        version: 0.31.0(patch_hash=e8b472d71289ac8de9813c57d79abac524889ca96f279f6f3ad08043434f6615)
       '@openclaw/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk

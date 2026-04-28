@@ -45,6 +45,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Export/session: keep inline export HTML scripts and vendor libraries injected after template formatting so generated session exports open with the app code, markdown renderer, and syntax highlighter present. Fixes #41862 and #49957; carries forward #41861 and #68947. Thanks @briannewman, @martenzi, and @armanddp.
+- Agents/ACPX: stage the patched Claude ACP adapter as an ACPX runtime dependency and route known Codex/Claude ACP commands through local wrappers, so Gateway runtime no longer depends on live `npx` adapter resolution. Fixes #73202. Thanks @joerod26.
 - Gateway/hooks: route non-delivered hook completion and error summaries to the target agent's main session instead of the default agent session, preserving multi-agent hook isolation. Fixes #24693; carries forward #68667. Thanks @abersonFAC and @bluesky6868.
 - Control UI/models: request the configured Gateway model-list view so dashboards with only `models.providers.*.models` show those configured models first instead of flooding the picker with the full built-in catalog. Fixes #65405. Thanks @wbyanclaw.
 - CLI/models: keep default-model and allowlist pickers on explicit `models.providers.*.models` entries when `models.mode` is `replace` instead of loading the full built-in catalog. Fixes #64950. Thanks @mrozentsvayg.
