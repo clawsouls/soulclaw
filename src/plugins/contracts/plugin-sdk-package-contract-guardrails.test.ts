@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -361,6 +361,88 @@ function collectDeprecatedTestBarrelImports(): Array<{ file: string; specifier: 
   return leaks;
 }
 
+function parseTestApiNamedExports(source: string): string[] {
+  const exports = new Set<string>();
+  const declarationPattern =
+    /\bexport\s+(?:const|function|class|async\s+function|type|interface)\s+([A-Za-z_$][\w$]*)/g;
+  const exportListPattern = /\bexport\s*\{([^}]+)\}/g;
+
+  for (const match of source.matchAll(declarationPattern)) {
+    const exportName = match[1];
+    if (exportName) {
+      exports.add(exportName);
+    }
+  }
+
+  for (const match of source.matchAll(exportListPattern)) {
+    const exportList = match[1];
+    if (!exportList) {
+      continue;
+    }
+    for (const part of exportList.split(",")) {
+      const item = part.trim().replace(/^type\s+/, "");
+      const aliasMatch = /\bas\s+([A-Za-z_$][\w$]*)$/u.exec(item);
+      const nameMatch = /^([A-Za-z_$][\w$]*)/u.exec(item);
+      const exportName = aliasMatch?.[1] ?? nameMatch?.[1];
+      if (exportName && exportName !== "default") {
+        exports.add(exportName);
+      }
+    }
+  }
+
+  return [...exports].toSorted();
+}
+
+function collectWorkspaceCodeFiles(): string[] {
+  const files: string[] = [];
+  for (const root of ["src", "test", "extensions", "packages", "scripts"]) {
+    const dir = resolve(REPO_ROOT, root);
+    if (existsSync(dir)) {
+      files.push(...collectCodeFiles(dir));
+    }
+  }
+  return files;
+}
+
+function countIdentifierReferences(
+  files: readonly string[],
+  excludedFile: string,
+  name: string,
+): number {
+  let count = 0;
+  const pattern = new RegExp(`\\b${name}\\b`, "g");
+  for (const file of files) {
+    if (file === excludedFile) {
+      continue;
+    }
+    const source = readFileSync(file, "utf8");
+    count += [...source.matchAll(pattern)].length;
+  }
+  return count;
+}
+
+function collectUnusedExtensionTestApiExports(): Array<{ file: string; exportName: string }> {
+  const leaks: Array<{ file: string; exportName: string }> = [];
+  const workspaceCodeFiles = collectWorkspaceCodeFiles();
+  const testApiFiles = collectCodeFiles(resolve(REPO_ROOT, "extensions")).filter((file) =>
+    file.endsWith("/test-api.ts"),
+  );
+
+  for (const file of testApiFiles) {
+    const repoRelativePath = relative(REPO_ROOT, file).replaceAll("\\", "/");
+    const source = readFileSync(file, "utf8");
+    for (const exportName of parseTestApiNamedExports(source)) {
+      if (countIdentifierReferences(workspaceCodeFiles, file, exportName) === 0) {
+        leaks.push({ file: repoRelativePath, exportName });
+      }
+    }
+  }
+
+  return leaks.toSorted(
+    (a, b) => a.file.localeCompare(b.file) || a.exportName.localeCompare(b.exportName),
+  );
+}
+
 function collectCrossOwnerReservedSdkImports(): Array<{
   file: string;
   specifier: string;
@@ -530,6 +612,10 @@ describe("plugin-sdk package contract guardrails", () => {
 
   it("keeps real tests off deprecated plugin-sdk testing barrels", () => {
     expect(collectDeprecatedTestBarrelImports()).toEqual([]);
+  });
+
+  it("keeps extension test-api exports consumed", () => {
+    expect(collectUnusedExtensionTestApiExports()).toEqual([]);
   });
 
   it("keeps reserved SDK compatibility subpaths inside their owning bundled plugins", () => {
