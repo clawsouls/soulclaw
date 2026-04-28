@@ -2221,6 +2221,8 @@ export function createDiagnosticsOtelService(): OpenClawPluginService {
             case "run.attempt":
               recordRunAttempt(evt);
               return;
+            case "diagnostic.liveness.warning":
+              return;
             case "diagnostic.heartbeat":
               recordHeartbeat(evt);
               return;
