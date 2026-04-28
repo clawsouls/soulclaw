@@ -31,6 +31,17 @@ const DEPRECATED_EXTENSION_SDK_SPECIFIERS = new Set([
   "openclaw/plugin-sdk/testing",
   "openclaw/plugin-sdk/test-utils",
 ]);
+const DEPRECATED_TEST_BARREL_SPECIFIERS = new Set([
+  "openclaw/plugin-sdk/testing",
+  "openclaw/plugin-sdk/test-utils",
+]);
+const DEPRECATED_TEST_BARREL_ALLOWED_REFERENCE_FILES = new Set([
+  "src/plugin-sdk/testing.ts",
+  "src/plugin-sdk/test-utils.ts",
+  "src/plugins/compat/registry.ts",
+  "src/plugins/contracts/plugin-entry-guardrails.test.ts",
+  "src/plugins/contracts/plugin-sdk-package-contract-guardrails.test.ts",
+]);
 
 function collectPluginSdkPackageExports(): string[] {
   const packageJson = JSON.parse(readFileSync(resolve(REPO_ROOT, "package.json"), "utf8")) as {
@@ -300,6 +311,56 @@ function collectDeprecatedExtensionSdkImports(): Array<{ file: string; specifier
   return leaks;
 }
 
+function collectCodeFiles(dir: string): string[] {
+  const files: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === "dist" || entry.name === "node_modules" || entry.name === ".git") {
+      continue;
+    }
+    const nextPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectCodeFiles(nextPath));
+      continue;
+    }
+    if (!entry.isFile() || !/\.(?:[cm]?ts|tsx|mts|cts)$/.test(entry.name)) {
+      continue;
+    }
+    files.push(nextPath);
+  }
+  return files;
+}
+
+function collectDeprecatedTestBarrelImports(): Array<{ file: string; specifier: string }> {
+  const leaks: Array<{ file: string; specifier: string }> = [];
+  const importPatterns = [
+    /\b(?:import|export)\b[\s\S]*?\bfrom\s*["'](openclaw\/plugin-sdk\/(?:testing|test-utils))["']/g,
+    /\bimport\s*\(\s*["'](openclaw\/plugin-sdk\/(?:testing|test-utils))["']\s*\)/g,
+    /\bvi\.(?:mock|doMock)\s*\(\s*["'](openclaw\/plugin-sdk\/(?:testing|test-utils))["']/g,
+  ];
+  for (const root of ["src", "test", "extensions", "packages"]) {
+    for (const file of collectCodeFiles(resolve(REPO_ROOT, root))) {
+      const repoRelativePath = relative(REPO_ROOT, file).replaceAll("\\", "/");
+      if (DEPRECATED_TEST_BARREL_ALLOWED_REFERENCE_FILES.has(repoRelativePath)) {
+        continue;
+      }
+      const source = readFileSync(file, "utf8");
+      for (const importPattern of importPatterns) {
+        for (const match of source.matchAll(importPattern)) {
+          const specifier = match[1];
+          if (!specifier || !DEPRECATED_TEST_BARREL_SPECIFIERS.has(specifier)) {
+            continue;
+          }
+          leaks.push({
+            file: repoRelativePath,
+            specifier,
+          });
+        }
+      }
+    }
+  }
+  return leaks;
+}
+
 function collectCrossOwnerReservedSdkImports(): Array<{
   file: string;
   specifier: string;
@@ -465,6 +526,10 @@ describe("plugin-sdk package contract guardrails", () => {
 
   it("keeps extension sources off deprecated plugin-sdk compatibility imports", () => {
     expect(collectDeprecatedExtensionSdkImports()).toEqual([]);
+  });
+
+  it("keeps real tests off deprecated plugin-sdk testing barrels", () => {
+    expect(collectDeprecatedTestBarrelImports()).toEqual([]);
   });
 
   it("keeps reserved SDK compatibility subpaths inside their owning bundled plugins", () => {
