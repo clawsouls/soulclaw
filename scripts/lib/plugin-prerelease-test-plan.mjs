@@ -12,6 +12,7 @@ export const PLUGIN_PRERELEASE_REQUIRED_SURFACES = Object.freeze([
   "sdk-compatibility",
   "status-diagnostics",
   "npm-registry-plugin",
+  "clawhub-registry-plugin",
   "resource-guardrails",
   "live-ish-availability",
 ]);
@@ -48,6 +49,7 @@ const pluginPrereleaseDockerLanes = Object.freeze([
       "sdk-compatibility",
       "status-diagnostics",
       "npm-registry-plugin",
+      "clawhub-registry-plugin",
       "resource-guardrails",
     ],
   },
