@@ -40,4 +40,18 @@ describe("plugin-boundary-report", () => {
     expect(summary.pluginSdk?.unclassifiedUnusedReservedCount).toBe(0);
     expect(summary.memoryHostSdk?.implementation).toBe("private-core-bridge");
   });
+
+  it("emits an owner-scoped dormant SDK retirement plan", () => {
+    const output = runBoundaryReport("--retirement-plan", "--owner", "matrix");
+
+    expect(output).toContain("# Plugin SDK Dormant Reserved Subpath Retirement Plan");
+    expect(output).toContain("Owner filter: `matrix`");
+    expect(output).toContain("Dormant reserved subpaths: 6");
+    expect(output).toContain(
+      "`openclaw/plugin-sdk/matrix-runtime-heavy` remove after `2026-07-24`",
+    );
+    expect(output).toContain(
+      "replacement: Matrix local runtime-api plus doctor/fix migration paths",
+    );
+  });
 });

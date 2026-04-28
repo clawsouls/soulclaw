@@ -30,6 +30,7 @@ const PLUGIN_SDK_SPECIFIER_PATTERN =
 type CliOptions = {
   json: boolean;
   summary: boolean;
+  retirementPlan: boolean;
   owner?: string;
   failOnCrossOwner: boolean;
   failOnEligibleCompat: boolean;
@@ -162,6 +163,7 @@ function parseArgs(args: readonly string[]): CliOptions {
   const options: CliOptions = {
     json: false,
     summary: false,
+    retirementPlan: false,
     failOnCrossOwner: false,
     failOnEligibleCompat: false,
     failOnUnclassifiedUnusedReserved: false,
@@ -173,6 +175,8 @@ function parseArgs(args: readonly string[]): CliOptions {
       options.json = true;
     } else if (arg === "--summary") {
       options.summary = true;
+    } else if (arg === "--retirement-plan") {
+      options.retirementPlan = true;
     } else if (arg === "--owner") {
       const owner = args[index + 1];
       if (!owner || owner.startsWith("--")) {
@@ -192,6 +196,9 @@ function parseArgs(args: readonly string[]): CliOptions {
       throw new Error(`Unknown argument: ${arg}`);
     }
   }
+  if (options.retirementPlan && (options.json || options.summary)) {
+    throw new Error("--retirement-plan cannot be combined with --summary or --json");
+  }
   return options;
 }
 
@@ -202,6 +209,7 @@ function renderHelp(): string {
     "Options:",
     "  --summary                              Print compact counts only.",
     "  --json                                 Emit JSON instead of text.",
+    "  --retirement-plan                      Emit an issue/PR-ready dormant SDK subpath retirement checklist.",
     "  --owner <id>                           Filter compat/imports/reserved shims by owner id.",
     "  --fail-on-cross-owner                  Exit non-zero on cross-owner reserved SDK imports.",
     "  --fail-on-eligible-compat              Exit non-zero when deprecated compat is due for removal.",
@@ -570,6 +578,49 @@ function renderText(report: BoundaryReport, owner?: string): string {
   return lines.join("\n");
 }
 
+function renderRetirementPlan(report: BoundaryReport, owner?: string): string {
+  const records = report.pluginSdk.dormantReservedRecords.toSorted(
+    (left, right) =>
+      left.owner.localeCompare(right.owner) ||
+      left.removeAfter.localeCompare(right.removeAfter) ||
+      left.subpath.localeCompare(right.subpath),
+  );
+  const dueSubpaths = new Set(report.pluginSdk.dormantReservedEligibleForRemovalSubpaths);
+  const owners = [...new Set(records.map((record) => record.owner))];
+  const removeAfterDates = [...new Set(records.map((record) => record.removeAfter))];
+  const lines: string[] = [];
+  lines.push(`# Plugin SDK Dormant Reserved Subpath Retirement Plan`);
+  lines.push("");
+  lines.push(`Generated: ${report.generatedAt}`);
+  if (owner) {
+    lines.push(`Owner filter: \`${owner}\``);
+  }
+  lines.push("");
+  lines.push("## Summary");
+  lines.push("");
+  lines.push(`- Dormant reserved subpaths: ${records.length}`);
+  lines.push(`- Owners: ${owners.length}`);
+  lines.push(`- Removal dates: ${removeAfterDates.join(", ") || "none"}`);
+  lines.push(`- Eligible for removal now: ${dueSubpaths.size}`);
+  lines.push(`- CI gate: \`pnpm plugins:boundary-report:ci\``);
+  if (records.length === 0) {
+    lines.push("");
+    lines.push("No dormant reserved SDK subpaths match this filter.");
+    return lines.join("\n");
+  }
+  for (const ownerId of owners) {
+    lines.push("");
+    lines.push(`## ${ownerId}`);
+    for (const record of records.filter((candidate) => candidate.owner === ownerId)) {
+      const status = dueSubpaths.has(record.subpath) ? "due" : "waiting";
+      lines.push(
+        `- [ ] \`openclaw/plugin-sdk/${record.subpath}\` remove after \`${record.removeAfter}\` (${status}); reason=\`${record.reason}\`; replacement: ${record.replacement}`,
+      );
+    }
+  }
+  return lines.join("\n");
+}
+
 function collectFailures(report: BoundaryReport, options: CliOptions): string[] {
   const failures: string[] = [];
   if (options.failOnCrossOwner && report.pluginSdk.crossOwnerReservedImports.length > 0) {
@@ -618,7 +669,9 @@ if (options.help) {
 
 const report = buildReport(options);
 const summary = buildSummary(report, options.owner);
-if (options.json) {
+if (options.retirementPlan) {
+  process.stdout.write(`${renderRetirementPlan(report, options.owner)}\n`);
+} else if (options.json) {
   process.stdout.write(`${JSON.stringify(options.summary ? summary : report, null, 2)}\n`);
 } else if (options.summary) {
   process.stdout.write(`${renderSummaryText(summary)}\n`);
