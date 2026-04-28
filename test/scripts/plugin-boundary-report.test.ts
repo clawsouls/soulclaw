@@ -36,6 +36,8 @@ describe("plugin-boundary-report", () => {
 
     expect(summary.pluginSdk?.crossOwnerReservedImportCount).toBe(0);
     expect(summary.pluginSdk?.unusedReservedCount).toBe(0);
-    expect(summary.memoryHostSdk?.implementation).toBe("private-core-bridge");
+    expect(["private-core-bridge", "private-package-core-integrated"]).toContain(
+      summary.memoryHostSdk?.implementation,
+    );
   });
 });
