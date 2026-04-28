@@ -10,7 +10,7 @@ import {
 } from "../agents/agent-scope.js";
 import { lookupContextTokens, resolveContextTokensForModel } from "../agents/context.js";
 import { DEFAULT_CONTEXT_TOKENS, DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
-import type { ModelCatalogEntry } from "../agents/model-catalog.js";
+import { findModelInCatalog, type ModelCatalogEntry } from "../agents/model-catalog.js";
 import {
   inferUniqueProviderFromConfiguredModels,
   normalizeStoredOverrideModel,
@@ -1115,6 +1115,23 @@ export function resolveSessionModelRef(
   return resolved;
 }
 
+function findGatewayImageSupportCatalogEntry(params: {
+  catalog: ModelCatalogEntry[];
+  provider?: string;
+  model: string;
+}): ModelCatalogEntry | undefined {
+  const provider = normalizeOptionalString(params.provider);
+  if (provider) {
+    return findModelInCatalog(params.catalog, provider, params.model);
+  }
+
+  const normalizedModel = normalizeLowercaseStringOrEmpty(params.model);
+  const matches = params.catalog.filter(
+    (entry) => normalizeLowercaseStringOrEmpty(entry.id) === normalizedModel,
+  );
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
 export async function resolveGatewayModelSupportsImages(params: {
   loadGatewayModelCatalog: () => Promise<ModelCatalogEntry[]>;
   provider?: string;
@@ -1126,11 +1143,14 @@ export async function resolveGatewayModelSupportsImages(params: {
 
   try {
     const catalog = await params.loadGatewayModelCatalog();
-    const modelEntry = catalog.find(
-      (entry) =>
-        entry.id === params.model && (!params.provider || entry.provider === params.provider),
+    const modelEntry = findGatewayImageSupportCatalogEntry({
+      catalog,
+      provider: params.provider,
+      model: params.model,
+    });
+    const normalizedProvider = normalizeOptionalLowercaseString(
+      params.provider ?? modelEntry?.provider,
     );
-    const normalizedProvider = normalizeOptionalLowercaseString(params.provider);
     const normalizedCandidates = [
       normalizeLowercaseStringOrEmpty(params.model),
       normalizeLowercaseStringOrEmpty(modelEntry?.name),
