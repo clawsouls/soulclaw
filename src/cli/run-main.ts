@@ -72,6 +72,52 @@ function createGatewayCliMainStartupTrace(argv: string[]) {
   };
 }
 
+export function isGatewayRunFastPathArgv(argv: string[]): boolean {
+  if (argv[2] !== "gateway") {
+    return false;
+  }
+  const invocation = resolveCliArgvInvocation(argv);
+  if (invocation.hasHelpOrVersion || invocation.commandPath[0] !== "gateway") {
+    return false;
+  }
+  return invocation.commandPath.length === 1 || invocation.commandPath[1] === "run";
+}
+
+async function tryRunGatewayRunFastPath(
+  argv: string[],
+  startupTrace: ReturnType<typeof createGatewayCliMainStartupTrace>,
+): Promise<boolean> {
+  if (!isGatewayRunFastPathArgv(argv)) {
+    return false;
+  }
+  const [{ Command }, { addGatewayRunCommand }] = await startupTrace.measure(
+    "gateway-run-imports",
+    () => Promise.all([import("commander"), import("./gateway-cli/run.js")]),
+  );
+  const program = new Command();
+  program.name("openclaw");
+  program.enablePositionalOptions();
+  program.exitOverride((err) => {
+    process.exitCode = typeof err.exitCode === "number" ? err.exitCode : 1;
+    throw err;
+  });
+  const gateway = addGatewayRunCommand(
+    program.command("gateway").description("Run, inspect, and query the WebSocket Gateway"),
+  );
+  addGatewayRunCommand(
+    gateway.command("run").description("Run the WebSocket Gateway (foreground)"),
+  );
+  try {
+    await startupTrace.measure("gateway-run-parse", () => program.parseAsync(argv));
+  } catch (error) {
+    if (!isCommanderParseExit(error)) {
+      throw error;
+    }
+    process.exitCode = error.exitCode;
+  }
+  return true;
+}
+
 async function closeCliMemoryManagers(): Promise<void> {
   const { hasMemoryRuntime } = await import("../plugins/memory-state.js");
   if (!hasMemoryRuntime()) {
@@ -255,6 +301,10 @@ export async function runCli(argv: string[] = process.argv) {
     await startupTrace.measure("proxy-dispatcher", () => ensureCliEnvProxyDispatcher());
     maybeWarnAboutDebugProxyCoverage();
 
+    if (await tryRunGatewayRunFastPath(normalizedArgv, startupTrace)) {
+      return;
+    }
+
     const { tryRouteCli } = await startupTrace.measure("route-import", () => import("./route.js"));
     if (await startupTrace.measure("route", () => tryRouteCli(normalizedArgv))) {
       return;
@@ -339,7 +389,7 @@ export async function runCli(argv: string[] = process.argv) {
             await registerCoreCliByName(program, ctx, primary, parseArgv);
           }
           const { registerSubCliByName } = await import("./program/register.subclis.js");
-          await registerSubCliByName(program, primary);
+          await registerSubCliByName(program, primary, parseArgv);
         });
       }
 
