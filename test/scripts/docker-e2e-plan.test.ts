@@ -322,6 +322,10 @@ describe("scripts/lib/docker-e2e-plan", () => {
         "agents-delete-shared-workspace",
         "doctor-switch",
         "openai-image-auth",
+        "openai-web-search-minimal",
+        "plugins",
+        "bundled-channel-deps-compat",
+        "bundled-channel-setup-entry",
         "bundled-plugin-install-uninstall-0",
         "update-channel-switch",
       ],
@@ -342,6 +346,22 @@ describe("scripts/lib/docker-e2e-plan", () => {
       }),
       expect.objectContaining({
         name: "openai-image-auth",
+        stateScenario: "empty",
+      }),
+      expect.objectContaining({
+        name: "openai-web-search-minimal",
+        stateScenario: "empty",
+      }),
+      expect.objectContaining({
+        name: "plugins",
+        stateScenario: "empty",
+      }),
+      expect.objectContaining({
+        name: "bundled-channel-deps-compat",
+        stateScenario: "empty",
+      }),
+      expect.objectContaining({
+        name: "bundled-channel-setup-entry",
         stateScenario: "empty",
       }),
       expect.objectContaining({

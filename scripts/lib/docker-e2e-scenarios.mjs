@@ -120,6 +120,7 @@ const bundledChannelSmokeLanes = ["telegram", "discord", "slack", "feishu", "mem
     npmLane(
       `bundled-channel-${channel}`,
       `OPENCLAW_BUNDLED_CHANNELS=${channel} ${bundledChannelLaneCommand}`,
+      { stateScenario: "empty" },
     ),
 );
 
@@ -138,6 +139,7 @@ const bundledChannelUpdateLanes = [
       noOutputTimeoutMs: BUNDLED_UPDATE_NO_OUTPUT_TIMEOUT_MS,
       retryPatterns: LIVE_RETRY_PATTERNS,
       retries: 1,
+      stateScenario: "empty",
       timeoutMs: BUNDLED_UPDATE_TIMEOUT_MS,
     },
   ),
@@ -151,14 +153,17 @@ const bundledChannelContractLanes = [
   bundledChannelScenarioLane(
     "bundled-channel-setup-entry",
     "OPENCLAW_BUNDLED_CHANNEL_SCENARIOS=0 OPENCLAW_BUNDLED_CHANNEL_UPDATE_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_ROOT_OWNED_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_SETUP_ENTRY_SCENARIO=1 OPENCLAW_BUNDLED_CHANNEL_LOAD_FAILURE_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_DISABLED_CONFIG_SCENARIO=0",
+    { stateScenario: "empty" },
   ),
   bundledChannelScenarioLane(
     "bundled-channel-load-failure",
     "OPENCLAW_BUNDLED_CHANNEL_SCENARIOS=0 OPENCLAW_BUNDLED_CHANNEL_UPDATE_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_ROOT_OWNED_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_SETUP_ENTRY_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_LOAD_FAILURE_SCENARIO=1 OPENCLAW_BUNDLED_CHANNEL_DISABLED_CONFIG_SCENARIO=0",
+    { stateScenario: "empty" },
   ),
   bundledChannelScenarioLane(
     "bundled-channel-disabled-config",
     "OPENCLAW_BUNDLED_CHANNEL_SCENARIOS=0 OPENCLAW_BUNDLED_CHANNEL_UPDATE_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_ROOT_OWNED_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_SETUP_ENTRY_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_LOAD_FAILURE_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_DISABLED_CONFIG_SCENARIO=1",
+    { stateScenario: "empty" },
   ),
 ];
 
@@ -268,6 +273,7 @@ export const mainLanes = [
   ),
   lane("plugins", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugins", {
     resources: ["npm", "service"],
+    stateScenario: "empty",
     weight: 6,
   }),
   ...bundledPluginInstallUninstallLanes,
@@ -276,13 +282,14 @@ export const mainLanes = [
     "OPENCLAW_PLUGINS_E2E_CLAWHUB=0 OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugins",
     {
       resources: ["npm", "service"],
+      stateScenario: "empty",
       weight: 6,
     },
   ),
   npmLane(
     "bundled-channel-deps-compat",
     "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:bundled-channel-deps:fast",
-    { resources: ["service"], weight: 3 },
+    { resources: ["service"], stateScenario: "empty", weight: 3 },
   ),
   npmLane("plugin-update", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugin-update"),
   serviceLane("config-reload", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:config-reload"),
@@ -305,7 +312,7 @@ export const tailLanes = [
   serviceLane(
     "openai-web-search-minimal",
     "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openai-web-search-minimal",
-    { timeoutMs: 8 * 60 * 1000 },
+    { stateScenario: "empty", timeoutMs: 8 * 60 * 1000 },
   ),
   liveLane("live-codex-harness", liveDockerScriptCommand("test-live-codex-harness-docker.sh"), {
     cacheKey: "codex-harness",
@@ -408,6 +415,7 @@ export const tailLanes = [
 const releasePathPluginRuntimeLanes = [
   lane("plugins", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugins", {
     resources: ["npm", "service"],
+    stateScenario: "empty",
     weight: 6,
   }),
   ...bundledPluginInstallUninstallLanes,
@@ -422,13 +430,14 @@ const releasePathPluginRuntimeLanes = [
   serviceLane(
     "openai-web-search-minimal",
     "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openai-web-search-minimal",
-    { timeoutMs: 8 * 60 * 1000 },
+    { stateScenario: "empty", timeoutMs: 8 * 60 * 1000 },
   ),
 ];
 
 const releasePathPluginRuntimePluginLanes = [
   lane("plugins", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:plugins", {
     resources: ["npm", "service"],
+    stateScenario: "empty",
     weight: 6,
   }),
 ];
@@ -445,7 +454,7 @@ const releasePathPluginRuntimeServiceLanes = [
   serviceLane(
     "openai-web-search-minimal",
     "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openai-web-search-minimal",
-    { timeoutMs: 8 * 60 * 1000 },
+    { stateScenario: "empty", timeoutMs: 8 * 60 * 1000 },
   ),
 ];
 
