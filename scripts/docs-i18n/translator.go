@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -179,7 +180,11 @@ func runCodexExecPrompt(ctx context.Context, req codexPromptRequest) (string, er
 	_ = outputFile.Close()
 	defer os.Remove(outputPath)
 
-	codexHome, err := os.MkdirTemp("", "openclaw-docs-i18n-codex-home-*")
+	codexHomeBase, err := isolatedCodexHomeBase()
+	if err != nil {
+		return "", err
+	}
+	codexHome, err := os.MkdirTemp(codexHomeBase, "codex-home-*")
 	if err != nil {
 		return "", err
 	}
@@ -215,6 +220,22 @@ func runCodexExecPrompt(ctx context.Context, req codexPromptRequest) (string, er
 		return "", errEmptyTranslation
 	}
 	return translated, nil
+}
+
+func isolatedCodexHomeBase() (string, error) {
+	cacheDir, err := os.UserCacheDir()
+	if err != nil || strings.TrimSpace(cacheDir) == "" {
+		homeDir, homeErr := os.UserHomeDir()
+		if homeErr != nil {
+			return "", err
+		}
+		cacheDir = filepath.Join(homeDir, ".cache")
+	}
+	base := filepath.Join(cacheDir, "openclaw-docs-i18n")
+	if err := os.MkdirAll(base, 0o700); err != nil {
+		return "", err
+	}
+	return base, nil
 }
 
 func docsCodexExecutable() string {

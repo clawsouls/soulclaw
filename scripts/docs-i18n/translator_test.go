@@ -153,6 +153,12 @@ if [ -z "${CODEX_HOME:-}" ]; then
   echo "missing CODEX_HOME" >&2
   exit 1
 fi
+case "$CODEX_HOME" in
+  /tmp/*)
+    echo "CODEX_HOME must not be under /tmp" >&2
+    exit 1
+    ;;
+esac
 printf 'translated from codex\n' > "$out"
 `), 0o755); err != nil {
 		t.Fatalf("write fake codex: %v", err)
