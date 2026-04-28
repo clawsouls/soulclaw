@@ -231,11 +231,13 @@ func previewCommandOutput(stdout, stderr string) string {
 		return "no output"
 	}
 	combined = strings.Join(strings.Fields(combined), " ")
-	const limit = 500
+	const limit = 900
 	if len(combined) <= limit {
 		return combined
 	}
-	return combined[:limit] + "..."
+	const headLimit = 350
+	const tailLimit = limit - headLimit
+	return combined[:headLimit] + " ... " + combined[len(combined)-tailLimit:]
 }
 
 func sleepWithContext(ctx context.Context, delay time.Duration) error {
