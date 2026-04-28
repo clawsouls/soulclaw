@@ -4,7 +4,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { resolveStateDir } from "../config/paths.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
-import { normalizeEnv } from "../infra/env.js";
+import { isTruthyEnvValue, normalizeEnv } from "../infra/env.js";
 import { isMainModule } from "../infra/is-main.js";
 import { ensureOpenClawCliOnPath } from "../infra/path-env.js";
 import { assertSupportedRuntime } from "../infra/runtime-guard.js";
@@ -36,6 +36,41 @@ export {
   shouldUseBrowserHelpFastPath,
   shouldUseRootHelpFastPath,
 } from "./run-main-policy.js";
+
+type Awaitable<T> = T | Promise<T>;
+
+function createGatewayCliMainStartupTrace(argv: string[]) {
+  const enabled =
+    isTruthyEnvValue(process.env.OPENCLAW_GATEWAY_STARTUP_TRACE) &&
+    argv.slice(2).includes("gateway");
+  const started = performance.now();
+  let last = started;
+  const emit = (name: string, durationMs: number, totalMs: number) => {
+    if (!enabled) {
+      return;
+    }
+    process.stderr.write(
+      `[gateway] startup trace: cli.main.${name} ${durationMs.toFixed(1)}ms total=${totalMs.toFixed(1)}ms\n`,
+    );
+  };
+  return {
+    mark(name: string) {
+      const now = performance.now();
+      emit(name, now - last, now - started);
+      last = now;
+    },
+    async measure<T>(name: string, run: () => Awaitable<T>): Promise<T> {
+      const before = performance.now();
+      try {
+        return await run();
+      } finally {
+        const now = performance.now();
+        emit(name, now - before, now - started);
+        last = now;
+      }
+    },
+  };
+}
 
 async function closeCliMemoryManagers(): Promise<void> {
   const { hasMemoryRuntime } = await import("../plugins/memory-state.js");
@@ -98,6 +133,7 @@ async function ensureCliEnvProxyDispatcher(): Promise<void> {
 
 export async function runCli(argv: string[] = process.argv) {
   const originalArgv = normalizeWindowsArgv(argv);
+  const startupTrace = createGatewayCliMainStartupTrace(originalArgv);
   const parsedContainer = parseCliContainerArgs(originalArgv);
   if (!parsedContainer.ok) {
     throw new Error(parsedContainer.error);
@@ -123,10 +159,13 @@ export async function runCli(argv: string[] = process.argv) {
     return;
   }
   let normalizedArgv = parsedProfile.argv;
+  startupTrace.mark("argv");
 
   if (shouldLoadCliDotEnv()) {
-    const { loadCliDotEnv } = await import("./dotenv.js");
-    loadCliDotEnv({ quiet: true });
+    await startupTrace.measure("dotenv", async () => {
+      const { loadCliDotEnv } = await import("./dotenv.js");
+      loadCliDotEnv({ quiet: true });
+    });
   }
   normalizeEnv();
   if (shouldEnsureCliPath(normalizedArgv)) {
@@ -206,19 +245,18 @@ export async function runCli(argv: string[] = process.argv) {
     const [
       { initializeDebugProxyCapture, finalizeDebugProxyCapture },
       { maybeWarnAboutDebugProxyCoverage },
-    ] = await Promise.all([
-      import("../proxy-capture/runtime.js"),
-      import("../proxy-capture/coverage.js"),
-    ]);
+    ] = await startupTrace.measure("proxy-imports", () =>
+      Promise.all([import("../proxy-capture/runtime.js"), import("../proxy-capture/coverage.js")]),
+    );
     initializeDebugProxyCapture("cli");
     process.once("exit", () => {
       finalizeDebugProxyCapture();
     });
-    await ensureCliEnvProxyDispatcher();
+    await startupTrace.measure("proxy-dispatcher", () => ensureCliEnvProxyDispatcher());
     maybeWarnAboutDebugProxyCoverage();
 
-    const { tryRouteCli } = await import("./route.js");
-    if (await tryRouteCli(normalizedArgv)) {
+    const { tryRouteCli } = await startupTrace.measure("route-import", () => import("./route.js"));
+    if (await startupTrace.measure("route", () => tryRouteCli(normalizedArgv))) {
       return;
     }
 
@@ -253,14 +291,16 @@ export async function runCli(argv: string[] = process.argv) {
           isUncaughtExceptionHandled,
         },
         { restoreTerminalState },
-      ] = await Promise.all([
-        import("./program.js"),
-        import("../infra/errors.js"),
-        import("../infra/fatal-error-hooks.js"),
-        import("../infra/unhandled-rejections.js"),
-        import("../terminal/restore.js"),
-      ]);
-      const program = buildProgram();
+      ] = await startupTrace.measure("core-imports", () =>
+        Promise.all([
+          import("./program.js"),
+          import("../infra/errors.js"),
+          import("../infra/fatal-error-hooks.js"),
+          import("../infra/unhandled-rejections.js"),
+          import("../terminal/restore.js"),
+        ]),
+      );
+      const program = await startupTrace.measure("build-program", () => buildProgram());
 
       // Global error handlers to prevent silent crashes from unhandled rejections/exceptions.
       // These log the error and exit gracefully instead of crashing without trace.
@@ -291,14 +331,16 @@ export async function runCli(argv: string[] = process.argv) {
       // are correct even with lazy command registration.
       const { primary } = invocation;
       if (primary && shouldRegisterPrimaryCommandOnly(parseArgv)) {
-        const { getProgramContext } = await import("./program/program-context.js");
-        const ctx = getProgramContext(program);
-        if (ctx) {
-          const { registerCoreCliByName } = await import("./program/command-registry.js");
-          await registerCoreCliByName(program, ctx, primary, parseArgv);
-        }
-        const { registerSubCliByName } = await import("./program/register.subclis.js");
-        await registerSubCliByName(program, primary);
+        await startupTrace.measure("register-primary", async () => {
+          const { getProgramContext } = await import("./program/program-context.js");
+          const ctx = getProgramContext(program);
+          if (ctx) {
+            const { registerCoreCliByName } = await import("./program/command-registry.js");
+            await registerCoreCliByName(program, ctx, primary, parseArgv);
+          }
+          const { registerSubCliByName } = await import("./program/register.subclis.js");
+          await registerSubCliByName(program, primary);
+        });
       }
 
       const hasBuiltinPrimary =
@@ -312,17 +354,14 @@ export async function runCli(argv: string[] = process.argv) {
         hasBuiltinPrimary,
       });
       if (!shouldSkipPluginRegistration) {
-        // Register plugin CLI commands before parsing
-        const { registerPluginCliCommandsFromValidatedConfig } = await import("../plugins/cli.js");
-        const config = await registerPluginCliCommandsFromValidatedConfig(
-          program,
-          undefined,
-          undefined,
-          {
+        const config = await startupTrace.measure("register-plugin-commands", async () => {
+          const { registerPluginCliCommandsFromValidatedConfig } =
+            await import("../plugins/cli.js");
+          return await registerPluginCliCommandsFromValidatedConfig(program, undefined, undefined, {
             mode: "lazy",
             primary,
-          },
-        );
+          });
+        });
         if (config) {
           if (
             primary &&
@@ -349,7 +388,7 @@ export async function runCli(argv: string[] = process.argv) {
       stopStartupProgress();
 
       try {
-        await program.parseAsync(parseArgv);
+        await startupTrace.measure("parse", () => program.parseAsync(parseArgv));
       } catch (error) {
         if (!isCommanderParseExit(error)) {
           throw error;
