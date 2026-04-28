@@ -143,6 +143,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- CLI/models: keep Chutes and Kilo static catalog rows visible through refreshable manifest catalog metadata while provider-filtered manifest list paths avoid registry/runtime discovery unless a provider requires runtime rows. Thanks @shakkernerd.
 - CLI/models: skip duplicate catalog supplement resolution during broad `models list --all` output so already-listed registry rows do not pay a second registry lookup pass. Thanks @shakkernerd.
 - CLI/models: move OpenAI and OpenCode Go forward-compat list rows into refreshable manifest catalogs and stop broad `models list --all` from loading runtime catalog supplement hooks. Thanks @shakkernerd.
 - CLI/models: keep broad unfiltered `models list --all` on raw registry rows instead of loading every provider runtime normalization hook, while preserving full normalization for provider-filtered and configured model paths. Thanks @shakkernerd.
