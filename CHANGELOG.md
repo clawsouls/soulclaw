@@ -13,6 +13,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Tasks/media: infer agent ownership for session-scoped task records so `/tasks` agent-local fallback includes session-backed `video_generate` and other async media jobs even when the current chat session has no linked rows. Thanks @vincentkoc.
 - Plugins/inspector: keep bundled plugin runtime capture quiet and config-tolerant for Codex, memory-lancedb, Feishu, Mattermost, QQBot, and Tlon so plugin-inspector JSON checks can validate the full bundled set. Thanks @vincentkoc.
 - Slack/auto-reply: keep fully consumed text reset triggers such as `new session` out of `BodyForAgent` after directive cleanup, so configured Slack reset phrases do not leak into the fresh model turn. Fixes #73137. Thanks @neeravmakwana.
 - Plugins/runtime deps: prune stale retained bundled runtime deps and keep doctor/secret channel contract scans on lightweight artifacts, so disabled bundled channels stop preserving old dependency trees or importing heavy plugin surfaces. Thanks @SymbolStar and @vincentkoc.
