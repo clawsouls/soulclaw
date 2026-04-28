@@ -12,6 +12,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Cron/Telegram: preserve explicit `:topic:` delivery targets over stale session-derived thread IDs when isolated cron announces to Telegram forum topics. Carries forward #59069; refs #49704 and #43808. Thanks @roytong9.
+- Build/runtime: write the runtime-postbuild stamp after `pnpm build` writes the build stamp, so the next CLI invocation does not re-sync runtime artifacts after a successful build. Fixes #73151. Thanks @bittoby.
 - CLI/model probes: reject empty or whitespace-only `infer model run --prompt` values before calling local providers or the Gateway, so smoke checks do not spend provider calls on invalid turns. Fixes #73185. Thanks @iot2edge.
 - Gateway/media: route text-only `chat.send` image offloads through media-understanding fields so `agents.defaults.imageModel` can describe WebChat attachments instead of leaving only an opaque `media://inbound` marker. Fixes #72968. Thanks @vorajeeah.
 - Gateway/sessions: remove automatic oversized `sessions.json` rotation backups, deprecate `session.maintenance.rotateBytes`, and teach `openclaw doctor --fix` to remove the ignored key so hot session writes no longer copy multi-MB stores. Refs #72338. Thanks @midhunmonachan and @DougButdorf.

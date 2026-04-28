@@ -4,6 +4,7 @@
 // prebuilt package artifact with dist inventory, not a source checkout.
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import { LOCAL_BUILD_METADATA_DIST_PATHS } from "./lib/local-build-metadata-paths.mjs";
 
 function usage() {
   return "Usage: node scripts/check-openclaw-package-tarball.mjs <openclaw.tgz>";
@@ -39,6 +40,7 @@ const entrySet = new Set(normalized);
 const errors = [];
 const warnings = [];
 const LEGACY_PACKAGE_ACCEPTANCE_COMPAT_MAX = { year: 2026, month: 4, day: 25 };
+const FORBIDDEN_LOCAL_BUILD_METADATA_FILES = new Set(LOCAL_BUILD_METADATA_DIST_PATHS);
 
 const LEGACY_OMITTED_PRIVATE_QA_INVENTORY_PREFIXES = [
   "dist/extensions/qa-channel/",
@@ -120,6 +122,11 @@ if (!entrySet.has("package.json")) {
 }
 if (!normalized.some((entry) => entry.startsWith("dist/"))) {
   errors.push("missing dist/ entries");
+}
+for (const forbiddenEntry of FORBIDDEN_LOCAL_BUILD_METADATA_FILES) {
+  if (entrySet.has(forbiddenEntry)) {
+    errors.push(`forbidden local build metadata tar entry ${forbiddenEntry}`);
+  }
 }
 if (!entrySet.has("dist/postinstall-inventory.json")) {
   errors.push("missing dist/postinstall-inventory.json");
