@@ -51,32 +51,34 @@ export async function planAllModelListSources(params: {
     return createRegistryModelListSourcePlan();
   }
 
-  const { loadManifestCatalogRowsForList } = await import("./list.manifest-catalog.js");
-  const staticManifestCatalogRows = loadManifestCatalogRowsForList({
-    cfg: params.cfg,
-    ...(params.providerFilter ? { providerFilter: params.providerFilter } : {}),
-    staticOnly: Boolean(params.providerFilter),
-  });
-  const manifestCatalogRows =
-    params.providerFilter && staticManifestCatalogRows.length === 0
-      ? loadManifestCatalogRowsForList({
-          cfg: params.cfg,
-          providerFilter: params.providerFilter,
-          staticOnly: false,
-        })
-      : staticManifestCatalogRows;
+  const { loadStaticManifestCatalogRowsForList, loadSupplementalManifestCatalogRowsForList } =
+    await import("./list.manifest-catalog.js");
   if (!params.providerFilter) {
     const { loadProviderIndexCatalogRowsForList } =
       await import("./list.provider-index-catalog.js");
     return createSourcePlan({
       kind: "registry",
-      manifestCatalogRows,
+      manifestCatalogRows: loadSupplementalManifestCatalogRowsForList({
+        cfg: params.cfg,
+      }),
       providerIndexCatalogRows: loadProviderIndexCatalogRowsForList({
         cfg: params.cfg,
       }),
       requiresInitialRegistry: true,
     });
   }
+
+  const staticManifestCatalogRows = loadStaticManifestCatalogRowsForList({
+    cfg: params.cfg,
+    providerFilter: params.providerFilter,
+  });
+  const manifestCatalogRows =
+    staticManifestCatalogRows.length === 0
+      ? loadSupplementalManifestCatalogRowsForList({
+          cfg: params.cfg,
+          providerFilter: params.providerFilter,
+        })
+      : staticManifestCatalogRows;
 
   if (manifestCatalogRows.length > 0) {
     if (staticManifestCatalogRows.length === 0) {

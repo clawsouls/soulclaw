@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  loadManifestCatalogRowsForList: vi.fn(),
+  loadStaticManifestCatalogRowsForList: vi.fn(),
+  loadSupplementalManifestCatalogRowsForList: vi.fn(),
   loadProviderIndexCatalogRowsForList: vi.fn(),
   hasProviderStaticCatalogForFilter: vi.fn(),
 }));
 
 vi.mock("./list.manifest-catalog.js", () => ({
-  loadManifestCatalogRowsForList: mocks.loadManifestCatalogRowsForList,
+  loadStaticManifestCatalogRowsForList: mocks.loadStaticManifestCatalogRowsForList,
+  loadSupplementalManifestCatalogRowsForList: mocks.loadSupplementalManifestCatalogRowsForList,
 }));
 
 vi.mock("./list.provider-index-catalog.js", () => ({
@@ -33,14 +35,15 @@ const catalogRow = {
 describe("planAllModelListSources", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.loadManifestCatalogRowsForList.mockReturnValue([]);
+    mocks.loadStaticManifestCatalogRowsForList.mockReturnValue([]);
+    mocks.loadSupplementalManifestCatalogRowsForList.mockReturnValue([]);
     mocks.loadProviderIndexCatalogRowsForList.mockReturnValue([]);
     mocks.hasProviderStaticCatalogForFilter.mockResolvedValue(false);
   });
 
   it("uses installed manifest rows before provider index or runtime catalog sources", async () => {
     const { planAllModelListSources } = await import("./list.source-plan.js");
-    mocks.loadManifestCatalogRowsForList.mockReturnValueOnce([catalogRow]);
+    mocks.loadStaticManifestCatalogRowsForList.mockReturnValueOnce([catalogRow]);
 
     const plan = await planAllModelListSources({
       all: true,
@@ -54,11 +57,11 @@ describe("planAllModelListSources", () => {
       skipRuntimeModelSuppression: true,
     });
     expect(plan.manifestCatalogRows).toEqual([catalogRow]);
-    expect(mocks.loadManifestCatalogRowsForList).toHaveBeenCalledWith({
+    expect(mocks.loadStaticManifestCatalogRowsForList).toHaveBeenCalledWith({
       cfg: {},
       providerFilter: "moonshot",
-      staticOnly: true,
     });
+    expect(mocks.loadSupplementalManifestCatalogRowsForList).not.toHaveBeenCalled();
     expect(mocks.loadProviderIndexCatalogRowsForList).not.toHaveBeenCalled();
     expect(mocks.hasProviderStaticCatalogForFilter).not.toHaveBeenCalled();
   });
@@ -83,9 +86,9 @@ describe("planAllModelListSources", () => {
     expect(mocks.hasProviderStaticCatalogForFilter).not.toHaveBeenCalled();
   });
 
-  it("uses provider-filtered refreshable manifest rows without loading the registry", async () => {
+  it("keeps provider-filtered refreshable manifest rows registry-backed", async () => {
     const { planAllModelListSources } = await import("./list.source-plan.js");
-    mocks.loadManifestCatalogRowsForList.mockReturnValueOnce([catalogRow]);
+    mocks.loadSupplementalManifestCatalogRowsForList.mockReturnValueOnce([catalogRow]);
 
     const plan = await planAllModelListSources({
       all: true,
@@ -94,15 +97,18 @@ describe("planAllModelListSources", () => {
     });
 
     expect(plan).toMatchObject({
-      kind: "manifest",
-      requiresInitialRegistry: false,
-      skipRuntimeModelSuppression: true,
+      kind: "registry",
+      requiresInitialRegistry: true,
+      skipRuntimeModelSuppression: false,
     });
     expect(plan.manifestCatalogRows).toEqual([catalogRow]);
-    expect(mocks.loadManifestCatalogRowsForList).toHaveBeenCalledWith({
+    expect(mocks.loadStaticManifestCatalogRowsForList).toHaveBeenCalledWith({
       cfg: {},
       providerFilter: "openai",
-      staticOnly: true,
+    });
+    expect(mocks.loadSupplementalManifestCatalogRowsForList).toHaveBeenCalledWith({
+      cfg: {},
+      providerFilter: "openai",
     });
     expect(mocks.loadProviderIndexCatalogRowsForList).not.toHaveBeenCalled();
   });
@@ -127,7 +133,7 @@ describe("planAllModelListSources", () => {
   it("keeps broad all-model lists on the registry path with cheap catalog supplements", async () => {
     const { planAllModelListSources } = await import("./list.source-plan.js");
     const providerIndexRow = { ...catalogRow, source: "provider-index" };
-    mocks.loadManifestCatalogRowsForList.mockReturnValueOnce([catalogRow]);
+    mocks.loadSupplementalManifestCatalogRowsForList.mockReturnValueOnce([catalogRow]);
     mocks.loadProviderIndexCatalogRowsForList.mockReturnValueOnce([providerIndexRow]);
 
     const plan = await planAllModelListSources({
@@ -142,10 +148,10 @@ describe("planAllModelListSources", () => {
     });
     expect(plan.manifestCatalogRows).toEqual([catalogRow]);
     expect(plan.providerIndexCatalogRows).toEqual([providerIndexRow]);
-    expect(mocks.loadManifestCatalogRowsForList).toHaveBeenCalledWith({
+    expect(mocks.loadSupplementalManifestCatalogRowsForList).toHaveBeenCalledWith({
       cfg: {},
-      staticOnly: false,
     });
+    expect(mocks.loadStaticManifestCatalogRowsForList).not.toHaveBeenCalled();
     expect(mocks.hasProviderStaticCatalogForFilter).not.toHaveBeenCalled();
   });
 

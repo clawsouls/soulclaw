@@ -49,7 +49,8 @@ const mocks = vi.hoisted(() => {
     loadModelRegistry: vi.fn(),
     loadModelCatalog: vi.fn(),
     loadProviderCatalogModelsForList: vi.fn(),
-    loadManifestCatalogRowsForList: vi.fn(),
+    loadStaticManifestCatalogRowsForList: vi.fn(),
+    loadSupplementalManifestCatalogRowsForList: vi.fn(),
     loadProviderIndexCatalogRowsForList: vi.fn(),
     hasProviderStaticCatalogForFilter: vi.fn(),
     resolveConfiguredEntries: vi.fn(),
@@ -78,7 +79,8 @@ function resetMocks() {
   });
   mocks.loadModelCatalog.mockResolvedValue([]);
   mocks.loadProviderCatalogModelsForList.mockResolvedValue([]);
-  mocks.loadManifestCatalogRowsForList.mockReturnValue([]);
+  mocks.loadStaticManifestCatalogRowsForList.mockReturnValue([]);
+  mocks.loadSupplementalManifestCatalogRowsForList.mockReturnValue([]);
   mocks.loadProviderIndexCatalogRowsForList.mockReturnValue([]);
   mocks.hasProviderStaticCatalogForFilter.mockResolvedValue(false);
   mocks.resolveConfiguredEntries.mockReturnValue({
@@ -143,7 +145,8 @@ function installModelsListCommandForwardCompatMocks() {
   }));
 
   vi.doMock("./list.manifest-catalog.js", () => ({
-    loadManifestCatalogRowsForList: mocks.loadManifestCatalogRowsForList,
+    loadStaticManifestCatalogRowsForList: mocks.loadStaticManifestCatalogRowsForList,
+    loadSupplementalManifestCatalogRowsForList: mocks.loadSupplementalManifestCatalogRowsForList,
   }));
 
   vi.doMock("./list.provider-index-catalog.js", () => ({
@@ -525,7 +528,7 @@ describe("modelsListCommand forward-compat", () => {
 
     it("uses manifest catalog rows before provider runtime catalog rows", async () => {
       mocks.resolveConfiguredEntries.mockReturnValueOnce({ entries: [] });
-      mocks.loadManifestCatalogRowsForList.mockReturnValueOnce([
+      mocks.loadStaticManifestCatalogRowsForList.mockReturnValueOnce([
         {
           provider: "moonshot",
           id: "kimi-k2.6",
@@ -552,6 +555,72 @@ describe("modelsListCommand forward-compat", () => {
           key: "moonshot/kimi-k2.6",
           available: false,
         }),
+      ]);
+    });
+
+    it("keeps refreshable manifest catalog rows on the registry-backed provider path", async () => {
+      mocks.resolveConfiguredEntries.mockReturnValueOnce({ entries: [] });
+      mocks.loadSupplementalManifestCatalogRowsForList.mockReturnValueOnce([
+        {
+          provider: "openai",
+          id: "gpt-5.5-pro",
+          ref: "openai/gpt-5.5-pro",
+          mergeKey: "openai::gpt-5.5-pro",
+          name: "gpt-5.5-pro",
+          source: "manifest",
+          input: ["text", "image"],
+          reasoning: true,
+          status: "available",
+          baseUrl: "https://api.openai.com/v1",
+          contextWindow: 1_000_000,
+        },
+      ]);
+      mocks.loadModelRegistry.mockResolvedValueOnce({
+        models: [
+          {
+            provider: "openai",
+            id: "gpt-5.4",
+            name: "GPT-5.4",
+            api: "openai-responses",
+            baseUrl: "https://api.openai.com/v1",
+            input: ["text", "image"],
+            contextWindow: 1_050_000,
+            maxTokens: 128_000,
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          },
+        ],
+        availableKeys: new Set(),
+        registry: {
+          getAll: () => [],
+        },
+      });
+      mocks.resolveModelWithRegistry.mockImplementation(
+        ({ provider, modelId }: { provider: string; modelId: string }) =>
+          provider === "openai" && modelId === "gpt-5.4"
+            ? {
+                provider,
+                id: modelId,
+                name: "GPT-5.4",
+                api: "openai-responses",
+                baseUrl: "https://api.openai.com/v1",
+                input: ["text", "image"],
+                contextWindow: 1_050_000,
+                maxTokens: 128_000,
+                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+              }
+            : undefined,
+      );
+      const runtime = createRuntime();
+
+      await modelsListCommand({ all: true, provider: "openai", json: true }, runtime as never);
+
+      expect(mocks.loadModelRegistry).toHaveBeenCalledWith(mocks.resolvedConfig, {
+        providerFilter: "openai",
+        normalizeModels: true,
+      });
+      expect(lastPrintedRows<{ key: string }>()).toEqual([
+        expect.objectContaining({ key: "openai/gpt-5.4" }),
+        expect.objectContaining({ key: "openai/gpt-5.5-pro" }),
       ]);
     });
 
@@ -596,7 +665,7 @@ describe("modelsListCommand forward-compat", () => {
           getAll: () => [{ ...OPENAI_CODEX_MODEL }],
         },
       });
-      mocks.loadManifestCatalogRowsForList.mockReturnValueOnce([
+      mocks.loadSupplementalManifestCatalogRowsForList.mockReturnValueOnce([
         {
           provider: "moonshot",
           id: "kimi-k2.6",

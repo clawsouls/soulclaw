@@ -50,7 +50,7 @@ const openrouterPlugin = {
 };
 
 describe("loadStaticManifestCatalogRowsForList", () => {
-  it("loads listable manifest catalog rows without a provider filter", async () => {
+  it("loads only static manifest catalog rows without a provider filter", async () => {
     const { loadStaticManifestCatalogRowsForList } = await import("./list.manifest-catalog.js");
     const index = { plugins: [], diagnostics: [] };
     mocks.loadPluginRegistrySnapshot.mockReturnValueOnce(index);
@@ -63,7 +63,7 @@ describe("loadStaticManifestCatalogRowsForList", () => {
       loadStaticManifestCatalogRowsForList({
         cfg: {},
       }).map((row) => row.ref),
-    ).toEqual(["moonshot/kimi-k2.6", "openrouter/auto"]);
+    ).toEqual(["moonshot/kimi-k2.6"]);
     expect(mocks.loadPluginManifestRegistryForInstalledIndex).toHaveBeenCalledWith({
       index,
       config: {},
@@ -71,8 +71,9 @@ describe("loadStaticManifestCatalogRowsForList", () => {
     });
   });
 
-  it("can load refreshable manifest rows for broad registry-backed lists", async () => {
-    const { loadManifestCatalogRowsForList } = await import("./list.manifest-catalog.js");
+  it("loads refreshable manifest rows as registry-backed supplements", async () => {
+    const { loadSupplementalManifestCatalogRowsForList } =
+      await import("./list.manifest-catalog.js");
     mocks.loadPluginRegistrySnapshot.mockReturnValueOnce({ plugins: [], diagnostics: [] });
     mocks.loadPluginManifestRegistryForInstalledIndex.mockReturnValueOnce({
       plugins: [openrouterPlugin, moonshotPlugin],
@@ -80,9 +81,8 @@ describe("loadStaticManifestCatalogRowsForList", () => {
     });
 
     expect(
-      loadManifestCatalogRowsForList({
+      loadSupplementalManifestCatalogRowsForList({
         cfg: {},
-        staticOnly: false,
       }).map((row) => row.ref),
     ).toEqual(["moonshot/kimi-k2.6", "openrouter/auto"]);
   });
