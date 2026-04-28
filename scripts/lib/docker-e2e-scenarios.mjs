@@ -22,6 +22,11 @@ export const LIVE_RETRY_PATTERNS = [
 const bundledChannelLaneCommand =
   "OPENCLAW_SKIP_DOCKER_BUILD=1 OPENCLAW_BUNDLED_CHANNEL_UPDATE_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_ROOT_OWNED_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_SETUP_ENTRY_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_LOAD_FAILURE_SCENARIO=0 OPENCLAW_BUNDLED_CHANNEL_DISABLED_CONFIG_SCENARIO=0 pnpm test:docker:bundled-channel-deps";
 
+function liveDockerScriptCommand(script, envPrefix = "") {
+  const prefix = envPrefix ? `${envPrefix} ` : "";
+  return `${prefix}OPENCLAW_SKIP_DOCKER_BUILD=1 bash -c 'harness="\${OPENCLAW_DOCKER_E2E_TRUSTED_HARNESS_DIR:-}"; if [ -z "$harness" ]; then if [ -d .release-harness/scripts ]; then harness=.release-harness; else harness=.; fi; fi; OPENCLAW_LIVE_DOCKER_REPO_ROOT="\${OPENCLAW_DOCKER_E2E_REPO_ROOT:-$PWD}" bash "$harness/scripts/${script}"'`;
+}
+
 function lane(name, command, options = {}) {
   return {
     cacheKey: options.cacheKey,
@@ -170,19 +175,22 @@ const bundledPluginInstallUninstallLanes = Array.from(
 );
 
 export const mainLanes = [
-  liveLane("live-models", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-models", {
+  liveLane("live-models", liveDockerScriptCommand("test-live-models-docker.sh"), {
     providers: ["claude-cli", "codex-cli", "google-gemini-cli"],
     timeoutMs: LIVE_PROFILE_TIMEOUT_MS,
     weight: 4,
   }),
-  liveLane("live-gateway", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-gateway", {
+  liveLane("live-gateway", liveDockerScriptCommand("test-live-gateway-models-docker.sh"), {
     providers: ["claude-cli", "codex-cli", "google-gemini-cli"],
     timeoutMs: LIVE_PROFILE_TIMEOUT_MS,
     weight: 4,
   }),
   liveLane(
     "live-cli-backend-claude",
-    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-cli-backend:claude",
+    liveDockerScriptCommand(
+      "test-live-cli-backend-docker.sh",
+      "OPENCLAW_LIVE_CLI_BACKEND_MODEL=claude-cli/claude-sonnet-4-6",
+    ),
     {
       cacheKey: "cli-backend-claude",
       provider: "claude-cli",
@@ -193,7 +201,10 @@ export const mainLanes = [
   ),
   liveLane(
     "live-cli-backend-gemini",
-    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-cli-backend:gemini",
+    liveDockerScriptCommand(
+      "test-live-cli-backend-docker.sh",
+      "OPENCLAW_LIVE_CLI_BACKEND_MODEL=google-gemini-cli/gemini-3-flash-preview",
+    ),
     {
       cacheKey: "cli-backend-gemini",
       provider: "google-gemini-cli",
@@ -281,9 +292,19 @@ export const tailLanes = [
     "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openai-web-search-minimal",
     { timeoutMs: 8 * 60 * 1000 },
   ),
+  liveLane("live-codex-harness", liveDockerScriptCommand("test-live-codex-harness-docker.sh"), {
+    cacheKey: "codex-harness",
+    provider: "codex-cli",
+    resources: ["npm"],
+    timeoutMs: LIVE_ACP_TIMEOUT_MS,
+    weight: 3,
+  }),
   liveLane(
-    "live-codex-harness",
-    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-codex-harness",
+    "live-codex-bind",
+    liveDockerScriptCommand(
+      "test-live-codex-harness-docker.sh",
+      "OPENCLAW_LIVE_CODEX_BIND=1 OPENCLAW_LIVE_CODEX_TEST_FILES=src/gateway/gateway-codex-bind.live.test.ts",
+    ),
     {
       cacheKey: "codex-harness",
       provider: "codex-cli",
@@ -292,16 +313,12 @@ export const tailLanes = [
       weight: 3,
     },
   ),
-  liveLane("live-codex-bind", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-codex-bind", {
-    cacheKey: "codex-harness",
-    provider: "codex-cli",
-    resources: ["npm"],
-    timeoutMs: LIVE_ACP_TIMEOUT_MS,
-    weight: 3,
-  }),
   liveLane(
     "live-cli-backend-codex",
-    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-cli-backend:codex",
+    liveDockerScriptCommand(
+      "test-live-cli-backend-docker.sh",
+      "OPENCLAW_LIVE_CLI_BACKEND_MODEL=codex-cli/gpt-5.2",
+    ),
     {
       cacheKey: "cli-backend-codex",
       provider: "codex-cli",
@@ -312,7 +329,7 @@ export const tailLanes = [
   ),
   liveLane(
     "live-acp-bind-claude",
-    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-acp-bind:claude",
+    liveDockerScriptCommand("test-live-acp-bind-docker.sh", "OPENCLAW_LIVE_ACP_BIND_AGENT=claude"),
     {
       cacheKey: "acp-bind-claude",
       provider: "claude-cli",
@@ -323,7 +340,7 @@ export const tailLanes = [
   ),
   liveLane(
     "live-acp-bind-codex",
-    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-acp-bind:codex",
+    liveDockerScriptCommand("test-live-acp-bind-docker.sh", "OPENCLAW_LIVE_ACP_BIND_AGENT=codex"),
     {
       cacheKey: "acp-bind-codex",
       provider: "codex-cli",
@@ -334,7 +351,10 @@ export const tailLanes = [
   ),
   liveLane(
     "live-acp-bind-droid",
-    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-acp-bind:droid",
+    liveDockerScriptCommand(
+      "test-live-acp-bind-docker.sh",
+      "OPENCLAW_LIVE_ACP_BIND_AGENT=droid OPENCLAW_LIVE_ACP_BIND_REQUIRE_TRANSCRIPT=1",
+    ),
     {
       cacheKey: "acp-bind-droid",
       provider: "droid",
@@ -345,7 +365,7 @@ export const tailLanes = [
   ),
   liveLane(
     "live-acp-bind-gemini",
-    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-acp-bind:gemini",
+    liveDockerScriptCommand("test-live-acp-bind-docker.sh", "OPENCLAW_LIVE_ACP_BIND_AGENT=gemini"),
     {
       cacheKey: "acp-bind-gemini",
       provider: "google-gemini-cli",
@@ -356,7 +376,10 @@ export const tailLanes = [
   ),
   liveLane(
     "live-acp-bind-opencode",
-    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-acp-bind:opencode",
+    liveDockerScriptCommand(
+      "test-live-acp-bind-docker.sh",
+      "OPENCLAW_LIVE_ACP_BIND_AGENT=opencode OPENCLAW_LIVE_ACP_BIND_REQUIRE_TRANSCRIPT=1",
+    ),
     {
       cacheKey: "acp-bind-opencode",
       provider: "opencode",

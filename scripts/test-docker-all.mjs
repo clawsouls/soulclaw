@@ -268,6 +268,10 @@ function withResolvedPnpmCommand(command, env) {
   return command.replace(/(^|\s)pnpm(?=\s)/g, `$1${shellQuote(pnpmCommand)}`);
 }
 
+function liveDockerHarnessScriptCommand(script) {
+  return `bash -c 'harness="\${OPENCLAW_DOCKER_E2E_TRUSTED_HARNESS_DIR:-}"; if [ -z "$harness" ]; then if [ -d .release-harness/scripts ]; then harness=.release-harness; else harness=.; fi; fi; OPENCLAW_LIVE_DOCKER_REPO_ROOT="\${OPENCLAW_DOCKER_E2E_REPO_ROOT:-$PWD}" bash "$harness/scripts/${script}"'`;
+}
+
 async function loadTimingStore(file, enabled) {
   if (!enabled) {
     return { enabled: false, file, lanes: {}, version: 1 };
@@ -1134,7 +1138,7 @@ async function main() {
     const buildEntries = [];
     if (scheduledLanes.some((poolLane) => poolLane.live)) {
       buildEntries.push({
-        command: "pnpm test:docker:live-build",
+        command: liveDockerHarnessScriptCommand("test-live-build-docker.sh"),
         label: "shared live-test image once",
         phaseDetails: { imageKind: "live" },
         phases,
