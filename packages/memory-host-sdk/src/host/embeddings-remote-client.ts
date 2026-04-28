@@ -1,5 +1,5 @@
 import type { EmbeddingProviderOptions } from "./embeddings.types.js";
-import { requireApiKey, resolveApiKeyForProvider } from "./openclaw-runtime.js";
+import { requireApiKey, resolveApiKeyForProvider } from "./openclaw-runtime-auth.js";
 import { buildRemoteBaseUrlPolicy } from "./remote-http.js";
 import { resolveMemorySecretInputString } from "./secret-input.js";
 import type { SsrFPolicy } from "./ssrf-policy.js";

@@ -16,10 +16,12 @@ import {
   CHARS_PER_TOKEN_ESTIMATE,
   detectMime,
   estimateStringChars,
-  resolveCanonicalRootMemoryFile,
   runTasksWithConcurrency,
+} from "./openclaw-runtime-io.js";
+import {
+  resolveCanonicalRootMemoryFile,
   shouldSkipRootMemoryAuxiliaryPath,
-} from "./openclaw-runtime.js";
+} from "./openclaw-runtime-memory.js";
 
 export { hashText } from "./hash.js";
 import { hashText } from "./hash.js";
