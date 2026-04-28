@@ -528,6 +528,29 @@ describe("isHighSignalLiveModelRef", () => {
     );
   });
 
+  it("keeps only curated OpenRouter routes in the default live matrix", () => {
+    providerRuntimeMocks.resolveProviderModernModelRef.mockReturnValue(true);
+
+    expect(isHighSignalLiveModelRef({ provider: "openrouter", id: "openai/gpt-5.2-chat" })).toBe(
+      true,
+    );
+    expect(isHighSignalLiveModelRef({ provider: "openrouter", id: "minimax/minimax-m2.7" })).toBe(
+      true,
+    );
+    expect(isHighSignalLiveModelRef({ provider: "openrouter", id: "ai21/jamba-large-1.7" })).toBe(
+      true,
+    );
+    expect(
+      isHighSignalLiveModelRef({ provider: "openrouter", id: "allenai/olmo-3.1-32b-instruct" }),
+    ).toBe(false);
+    expect(isHighSignalLiveModelRef({ provider: "openrouter", id: "amazon/nova-lite-v1" })).toBe(
+      false,
+    );
+    expect(isHighSignalLiveModelRef({ provider: "openrouter", id: "amazon/nova-micro-v1" })).toBe(
+      false,
+    );
+  });
+
   it("drops GLM 4.x models from the default live matrix while keeping GLM 5", () => {
     providerRuntimeMocks.resolveProviderModernModelRef.mockReturnValue(true);
 
