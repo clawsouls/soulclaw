@@ -40,6 +40,24 @@ vi.mock("../channels/plugins/status.js", () => ({
 
 import { channelsListCommand } from "./channels/list.js";
 
+function createMockChannelPlugin(accountIds: string[]): ChannelPlugin {
+  return {
+    id: "telegram",
+    meta: {
+      id: "telegram",
+      label: "Telegram",
+      selectionLabel: "Telegram",
+      docsPath: "/channels/telegram",
+      blurb: "Telegram",
+    },
+    capabilities: { chatTypes: ["direct"] },
+    config: {
+      listAccountIds: () => accountIds,
+      resolveAccount: () => ({}),
+    },
+  };
+}
+
 describe("channels list auth profiles", () => {
   beforeEach(() => {
     mocks.readConfigFileSnapshot.mockReset();
@@ -92,21 +110,7 @@ describe("channels list auth profiles", () => {
   it("includes configured chat channel accounts in JSON output", async () => {
     const runtime = createTestRuntime();
     mocks.listReadOnlyChannelPluginsForConfig.mockReturnValue([
-      {
-        id: "telegram",
-        meta: {
-          id: "telegram",
-          label: "Telegram",
-          selectionLabel: "Telegram",
-          docsPath: "/channels/telegram",
-          blurb: "Telegram",
-        },
-        capabilities: { chatTypes: ["direct"] },
-        config: {
-          listAccountIds: () => ["alerts", "default"],
-          resolveAccount: () => ({}),
-        },
-      },
+      createMockChannelPlugin(["alerts", "default"]),
     ]);
     mocks.readConfigFileSnapshot.mockResolvedValue({
       ...baseConfigSnapshot,
@@ -141,21 +145,7 @@ describe("channels list auth profiles", () => {
   it("prints configured chat channel accounts before auth providers", async () => {
     const runtime = createTestRuntime();
     mocks.listReadOnlyChannelPluginsForConfig.mockReturnValue([
-      {
-        id: "telegram",
-        meta: {
-          id: "telegram",
-          label: "Telegram",
-          selectionLabel: "Telegram",
-          docsPath: "/channels/telegram",
-          blurb: "Telegram",
-        },
-        capabilities: { chatTypes: ["direct"] },
-        config: {
-          listAccountIds: () => ["default"],
-          resolveAccount: () => ({}),
-        },
-      },
+      createMockChannelPlugin(["default"]),
     ]);
     mocks.buildChannelAccountSnapshot.mockResolvedValue({
       accountId: "default",
