@@ -358,7 +358,7 @@ function runMeasuredCommand(params) {
 function runPluginLifecycle(params) {
   for (const plugin of params.plugins) {
     const commands = [
-      ["install", ["install", plugin.id]],
+      ["install", ["install", plugin.dir, "--link", "--force"]],
       ["inspect", ["inspect", plugin.id, "--json"]],
       ["disable", ["disable", plugin.id]],
       ["enable", ["enable", plugin.id]],
