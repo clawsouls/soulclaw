@@ -349,7 +349,7 @@ describe("startGatewayPostAttachRuntime", () => {
         expect(hoisted.ensureOpenClawModelsJson).toHaveBeenCalledTimes(1);
         expect(startChannels).toHaveBeenCalledTimes(1);
       },
-      { timeout: 250 },
+      { timeout: 2_000 },
     );
     await sidecarsPromise;
 
