@@ -53,6 +53,7 @@ const sourceCache = new Map<string, string>();
 const repoTsFilesCache = new Map<string, string[]>();
 const representativeRuntimeSmokeSubpaths = ["channel-runtime", "conversation-runtime"] as const;
 const PUBLIC_SDK_TEST_HELPER_SUBPATHS = [
+  "agent-runtime-test-contracts",
   "channel-contract-testing",
   "channel-target-testing",
   "channel-test-helpers",
@@ -744,6 +745,12 @@ describe("plugin-sdk subpath exports", () => {
       "createRuntimeEnv",
       "createPluginSetupWizardStatus",
       "runProviderCatalog",
+    ]);
+    expectSourceMentions("agent-runtime-test-contracts", [
+      "AUTH_PROFILE_RUNTIME_CONTRACT",
+      "DELIVERY_NO_REPLY_RUNTIME_CONTRACT",
+      "createParameterFreeTool",
+      "QUEUED_USER_MESSAGE_MARKER",
     ]);
     expectSourceMentions("channel-test-helpers", [
       "assertBundledChannelEntries",

@@ -58,6 +58,10 @@ const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; hint: string }> = [
     hint: "Use openclaw/plugin-sdk/provider-test-contracts instead of repo-only provider test helper bridges.",
   },
   {
+    pattern: /["'](?:\.\.\/)+(?:test\/helpers\/)[^"']+["']/,
+    hint: "Use a documented openclaw/plugin-sdk test subpath instead of repo-only test helper bridges.",
+  },
+  {
     pattern: /["'](?:\.\.\/)+(?:src\/channels\/plugins\/contracts\/test-helpers\/)[^"']+["']/,
     hint: "Use openclaw/plugin-sdk/channel-test-helpers or another focused SDK test subpath instead of core-only channel contract helpers.",
   },
@@ -145,6 +149,14 @@ const RETIRED_EXTENSION_TEST_HELPER_BRIDGE_FILES = [
   "test/helpers/provider-replay-policy.ts",
   "test/helpers/stt-live-audio.ts",
   "test/helpers/temp-home.ts",
+  "test/helpers/agents/auth-profile-runtime-contract.ts",
+  "test/helpers/agents/delivery-no-reply-runtime-contract.ts",
+  "test/helpers/agents/openclaw-owned-tool-runtime-contract.ts",
+  "test/helpers/agents/outcome-fallback-runtime-contract.ts",
+  "test/helpers/agents/prompt-overlay-runtime-contract.ts",
+  "test/helpers/agents/schema-normalization-runtime-contract.ts",
+  "test/helpers/agents/transcript-repair-runtime-contract.ts",
+  "test/helpers/sandbox-fixtures.ts",
 ];
 
 function isExtensionTestFile(filePath: string): boolean {

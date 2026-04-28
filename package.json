@@ -502,6 +502,10 @@
       "types": "./dist/plugin-sdk/lazy-runtime.d.ts",
       "default": "./dist/plugin-sdk/lazy-runtime.js"
     },
+    "./plugin-sdk/agent-runtime-test-contracts": {
+      "types": "./dist/plugin-sdk/agent-runtime-test-contracts.d.ts",
+      "default": "./dist/plugin-sdk/agent-runtime-test-contracts.js"
+    },
     "./plugin-sdk/channel-target-testing": {
       "types": "./dist/plugin-sdk/channel-target-testing.d.ts",
       "default": "./dist/plugin-sdk/channel-target-testing.js"
