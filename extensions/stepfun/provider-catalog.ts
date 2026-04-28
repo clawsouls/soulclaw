@@ -15,7 +15,12 @@ export const STEPFUN_FLASH_2603_MODEL_ID = "step-3.5-flash-2603";
 export const STEPFUN_DEFAULT_MODEL_REF = `${STEPFUN_PROVIDER_ID}/${STEPFUN_DEFAULT_MODEL_ID}`;
 export const STEPFUN_PLAN_DEFAULT_MODEL_REF = `${STEPFUN_PLAN_PROVIDER_ID}/${STEPFUN_DEFAULT_MODEL_ID}`;
 
-function buildStepFunManifestProvider(providerId: string, baseUrl: string): ModelProviderConfig {
+type StepFunManifestProviderId = keyof typeof manifest.modelCatalog.providers;
+
+function buildStepFunManifestProvider(
+  providerId: StepFunManifestProviderId,
+  baseUrl: string,
+): ModelProviderConfig {
   const provider = buildManifestModelProviderConfig({
     providerId,
     catalog: manifest.modelCatalog.providers[providerId],
