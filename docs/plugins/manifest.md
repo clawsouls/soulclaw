@@ -784,8 +784,9 @@ Suppression fields:
 Do not put runtime-only data in `modelCatalog`. Use `static` only when manifest
 rows are complete enough for provider-filtered list and picker surfaces to skip
 registry/runtime discovery. Use `refreshable` when manifest rows are useful
-seeds or supplements but a registry/cache refresh may add more rows. Use
-`runtime` when OpenClaw must load provider runtime to know the list.
+listable seeds or supplements but a refresh/cache can add more rows later;
+refreshable rows are not authoritative by themselves. Use `runtime` when OpenClaw
+must load provider runtime to know the list.
 
 ## modelIdNormalization reference
 
