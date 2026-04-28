@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PluginManifestRegistry } from "../plugins/manifest-registry.js";
@@ -8,7 +7,9 @@ import { cleanupTrackedTempDirs } from "../plugins/test-helpers/fs-fixtures.js";
 const tempDirs: string[] = [];
 
 function makeTempDir(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-plugin-prefer-over-"));
+  const trustedRoot = path.resolve("dist-runtime", "extensions");
+  fs.mkdirSync(trustedRoot, { recursive: true });
+  const dir = fs.mkdtempSync(path.join(trustedRoot, ".openclaw-plugin-prefer-over-"));
   tempDirs.push(dir);
   return dir;
 }

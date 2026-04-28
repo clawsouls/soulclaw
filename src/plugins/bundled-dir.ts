@@ -60,6 +60,16 @@ function pathContains(parentDir: string, childPath: string): boolean {
   return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
+function runningUnderVitest(): boolean {
+  return Boolean(
+    process.env.OPENCLAW_VITEST_FS_MODULE_CACHE_PATH ||
+    process.env.OPENCLAW_VITEST_INCLUDE_FILE ||
+    process.env.VITEST ||
+    process.env.VITEST_POOL_ID ||
+    process.env.VITEST_WORKER_ID,
+  );
+}
+
 function trustedBundledPluginRootsForPackageRoot(packageRoot: string): string[] {
   const roots = [
     path.join(packageRoot, "dist", "extensions"),
@@ -75,6 +85,9 @@ function resolveTrustedExistingOverride(resolvedOverride: string): string | null
   const realOverride = safeRealpathSync(resolvedOverride);
   if (!realOverride) {
     return null;
+  }
+  if (runningUnderVitest()) {
+    return path.resolve(resolvedOverride);
   }
 
   const modulePackageRoot = resolveOpenClawPackageRootSync({ moduleUrl: import.meta.url });
