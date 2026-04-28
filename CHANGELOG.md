@@ -13,6 +13,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Agents/media: register detached `video_generate` and `music_generate` tool run contexts until terminal status, so Discord-backed provider jobs stay live in `/tasks` instead of becoming `lost` when the parent chat run context disappears. Thanks @vincentkoc.
 - Tasks/media: infer agent ownership for session-scoped task records so `/tasks` agent-local fallback includes session-backed `video_generate` and other async media jobs even when the current chat session has no linked rows. Thanks @vincentkoc.
 - Agents/media: keep long-running `video_generate` and `music_generate` tasks fresh while provider jobs are still pending, so task maintenance does not mark active Discord media renders lost before completion. Thanks @vincentkoc.
 - CLI/status: treat scope-limited gateway probes as reachable-but-degraded in shared status scans, so `openclaw status --all` no longer reports a live gateway as unreachable after `missing scope: operator.read`. Fixes #49180; supersedes #47981. Thanks @openjay.
