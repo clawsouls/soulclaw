@@ -129,17 +129,8 @@ describe("opt-in extension package boundaries", () => {
     expect(packageJson.exports?.["./acp-runtime"]?.types).toBe(
       "./dist/src/plugin-sdk/acp-runtime.d.ts",
     );
-    expect(packageJson.exports?.["./browser-config-runtime"]?.types).toBe(
-      "./dist/src/plugin-sdk/browser-config-runtime.d.ts",
-    );
-    expect(packageJson.exports?.["./browser-node-runtime"]?.types).toBe(
-      "./dist/src/plugin-sdk/browser-node-runtime.d.ts",
-    );
-    expect(packageJson.exports?.["./browser-setup-tools"]?.types).toBe(
-      "./dist/src/plugin-sdk/browser-setup-tools.d.ts",
-    );
-    expect(packageJson.exports?.["./browser-security-runtime"]?.types).toBe(
-      "./dist/src/plugin-sdk/browser-security-runtime.d.ts",
+    expect(packageJson.exports?.["./browser-config"]?.types).toBe(
+      "./dist/src/plugin-sdk/browser-config.d.ts",
     );
     expect(packageJson.exports?.["./channel-secret-runtime"]?.types).toBe(
       "./dist/src/plugin-sdk/channel-secret-runtime.d.ts",

@@ -56,17 +56,9 @@
       "types": "./dist/src/plugin-sdk/transport-ready-runtime.d.ts",
       "default": "./src/transport-ready-runtime.ts"
     },
-    "./browser-config-runtime": {
-      "types": "./dist/src/plugin-sdk/browser-config-runtime.d.ts",
-      "default": "./src/browser-config-runtime.ts"
-    },
     "./core": {
       "types": "./dist/src/plugin-sdk/core.d.ts",
       "default": "./src/core.ts"
-    },
-    "./browser-node-runtime": {
-      "types": "./dist/src/plugin-sdk/browser-node-runtime.d.ts",
-      "default": "./src/browser-node-runtime.ts"
     },
     "./config-runtime": {
       "types": "./dist/src/plugin-sdk/config-runtime.d.ts",
@@ -87,14 +79,6 @@
     "./cron-store-runtime": {
       "types": "./dist/src/plugin-sdk/cron-store-runtime.d.ts",
       "default": "./src/cron-store-runtime.ts"
-    },
-    "./browser-setup-tools": {
-      "types": "./dist/src/plugin-sdk/browser-setup-tools.d.ts",
-      "default": "./src/browser-setup-tools.ts"
-    },
-    "./browser-security-runtime": {
-      "types": "./dist/src/plugin-sdk/browser-security-runtime.d.ts",
-      "default": "./src/browser-security-runtime.ts"
     },
     "./channel-secret-runtime": {
       "types": "./dist/src/plugin-sdk/channel-secret-runtime.d.ts",

@@ -370,10 +370,6 @@
       "types": "./dist/plugin-sdk/conversation-runtime.d.ts",
       "default": "./dist/plugin-sdk/conversation-runtime.js"
     },
-    "./plugin-sdk/matrix-runtime-shared": {
-      "types": "./dist/plugin-sdk/matrix-runtime-shared.d.ts",
-      "default": "./dist/plugin-sdk/matrix-runtime-shared.js"
-    },
     "./plugin-sdk/thread-bindings-runtime": {
       "types": "./dist/plugin-sdk/thread-bindings-runtime.d.ts",
       "default": "./dist/plugin-sdk/thread-bindings-runtime.js"
@@ -441,10 +437,6 @@
     "./plugin-sdk/gateway-runtime": {
       "types": "./dist/plugin-sdk/gateway-runtime.d.ts",
       "default": "./dist/plugin-sdk/gateway-runtime.js"
-    },
-    "./plugin-sdk/github-copilot-token": {
-      "types": "./dist/plugin-sdk/github-copilot-token.d.ts",
-      "default": "./dist/plugin-sdk/github-copilot-token.js"
     },
     "./plugin-sdk/cli-runtime": {
       "types": "./dist/plugin-sdk/cli-runtime.d.ts",
@@ -597,26 +589,6 @@
     "./plugin-sdk/browser-config": {
       "types": "./dist/plugin-sdk/browser-config.d.ts",
       "default": "./dist/plugin-sdk/browser-config.js"
-    },
-    "./plugin-sdk/browser-config-runtime": {
-      "types": "./dist/plugin-sdk/browser-config-runtime.d.ts",
-      "default": "./dist/plugin-sdk/browser-config-runtime.js"
-    },
-    "./plugin-sdk/browser-config-support": {
-      "types": "./dist/plugin-sdk/browser-config-support.d.ts",
-      "default": "./dist/plugin-sdk/browser-config-support.js"
-    },
-    "./plugin-sdk/browser-node-runtime": {
-      "types": "./dist/plugin-sdk/browser-node-runtime.d.ts",
-      "default": "./dist/plugin-sdk/browser-node-runtime.js"
-    },
-    "./plugin-sdk/browser-security-runtime": {
-      "types": "./dist/plugin-sdk/browser-security-runtime.d.ts",
-      "default": "./dist/plugin-sdk/browser-security-runtime.js"
-    },
-    "./plugin-sdk/browser-setup-tools": {
-      "types": "./dist/plugin-sdk/browser-setup-tools.d.ts",
-      "default": "./dist/plugin-sdk/browser-setup-tools.js"
     },
     "./plugin-sdk/boolean-param": {
       "types": "./dist/plugin-sdk/boolean-param.d.ts",
@@ -953,10 +925,6 @@
     "./plugin-sdk/qa-runner-runtime": {
       "types": "./dist/plugin-sdk/qa-runner-runtime.d.ts",
       "default": "./dist/plugin-sdk/qa-runner-runtime.js"
-    },
-    "./plugin-sdk/memory-core": {
-      "types": "./dist/plugin-sdk/memory-core.d.ts",
-      "default": "./dist/plugin-sdk/memory-core.js"
     },
     "./plugin-sdk/memory-core-engine-runtime": {
       "types": "./dist/plugin-sdk/memory-core-engine-runtime.d.ts",

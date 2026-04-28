@@ -429,7 +429,7 @@ function buildReport(options: Pick<CliOptions, "owner"> = {}): BoundaryReport {
         !usedReserved.has(subpath) &&
         matchesOwner(options.owner, resolvePluginOwner(subpath, pluginIds)),
     )
-    .toSorted();
+    .toSorted((a, b) => a.localeCompare(b));
   return {
     generatedAt: new Date().toISOString(),
     compat: {

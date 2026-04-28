@@ -6,16 +6,7 @@ export const pluginSdkSubpaths = pluginSdkEntrypoints.filter((entry) => entry !=
 
 // Transitional compatibility/helper surfaces owned by their matching bundled plugin.
 // Cross-owner extension imports are blocked by the package contract guardrails.
-export const reservedBundledPluginSdkEntrypoints = [
-  "browser-config-runtime",
-  "browser-config-support",
-  "browser-node-runtime",
-  "browser-security-runtime",
-  "browser-setup-tools",
-  "github-copilot-token",
-  "matrix-runtime-shared",
-  "memory-core",
-] as const;
+export const reservedBundledPluginSdkEntrypoints = [] as const;
 
 // Supported SDK facades backed by bundled plugins. These are intentionally public
 // until they move to generic, plugin-neutral contracts.
