@@ -62,6 +62,7 @@ export const forcedUnitFastTestFiles = [
   "packages/memory-host-sdk/src/host/session-files.test.ts",
   "src/acp/client.test.ts",
   "src/acp/control-plane/manager.test.ts",
+  "src/acp/session-mapper.test.ts",
   "src/acp/persistent-bindings.lifecycle.test.ts",
   "src/acp/translator.prompt-prefix.test.ts",
   "src/acp/translator.cancel-scoping.test.ts",
