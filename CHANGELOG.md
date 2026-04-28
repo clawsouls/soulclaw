@@ -15,6 +15,7 @@ Docs: https://docs.openclaw.ai
 
 - Tasks/media: infer agent ownership for session-scoped task records so `/tasks` agent-local fallback includes session-backed `video_generate` and other async media jobs even when the current chat session has no linked rows. Thanks @vincentkoc.
 - Agents/media: keep long-running `video_generate` and `music_generate` tasks fresh while provider jobs are still pending, so task maintenance does not mark active Discord media renders lost before completion. Thanks @vincentkoc.
+- CLI/status: treat scope-limited gateway probes as reachable-but-degraded in shared status scans, so `openclaw status --all` no longer reports a live gateway as unreachable after `missing scope: operator.read`. Fixes #49180; supersedes #47981. Thanks @openjay.
 - Plugins/inspector: keep bundled plugin runtime capture quiet and config-tolerant for Codex, memory-lancedb, Feishu, Mattermost, QQBot, and Tlon so plugin-inspector JSON checks can validate the full bundled set. Thanks @vincentkoc.
 - Slack/auto-reply: keep fully consumed text reset triggers such as `new session` out of `BodyForAgent` after directive cleanup, so configured Slack reset phrases do not leak into the fresh model turn. Fixes #73137. Thanks @neeravmakwana.
 - Plugins/runtime deps: prune stale retained bundled runtime deps and keep doctor/secret channel contract scans on lightweight artifacts, so disabled bundled channels stop preserving old dependency trees or importing heavy plugin surfaces. Thanks @SymbolStar and @vincentkoc.
