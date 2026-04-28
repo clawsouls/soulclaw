@@ -15,6 +15,7 @@ Docs: https://docs.openclaw.ai
 - Gateway/runtime: reuse the current plugin metadata snapshot for provider discovery so repeated model-provider discovery avoids rebuilding plugin manifest metadata. Thanks @shakkernerd.
 - Gateway/startup: pass the plugin metadata snapshot from config validation into plugin bootstrap so startup reuses one manifest product instead of rebuilding plugin metadata. Thanks @shakkernerd.
 - Plugin SDK/testing: promote bundled plugin/provider/channel contract helpers to focused SDK test subpaths and retire the repo-only `test/helpers/plugins` TypeScript bridge. Thanks @vincentkoc.
+- Plugin SDK/testing: add focused plugin runtime and environment fixture subpaths so plugin tests can avoid the broad `plugin-sdk/testing` barrel for common setup helpers. Thanks @vincentkoc.
 - Plugin SDK/testing: add a focused `plugin-sdk/plugin-test-api` helper subpath and move bundled plugin registration tests off the repo-only plugin API bridge. Thanks @vincentkoc.
 - Plugin SDK: add generic host hooks for session state, next-turn context, trusted tool policy, UI descriptors, events, scheduler cleanup, and run-scoped plugin context. (#72287) Thanks @100yenadmin.
 - Plugin SDK/testing: expose provider catalog, wizard, registry, manifest, public-artifact, outbound, and TTS contract helpers through documented SDK testing seams so bundled plugin tests no longer import repo `src/**` internals. Thanks @vincentkoc.

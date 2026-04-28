@@ -1,5 +1,5 @@
 import type { BaseProbeResult } from "openclaw/plugin-sdk/channel-contract";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/testing";
+import type { OpenClawConfig } from "openclaw/plugin-sdk/config-types";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { expectDirectoryIds } from "../../../test/helpers/channels/directory-ids.js";
 import {

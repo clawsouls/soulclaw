@@ -21,6 +21,7 @@ import type {
   PluginRuntime as CorePluginRuntime,
 } from "openclaw/plugin-sdk/core";
 import * as providerEntrySdk from "openclaw/plugin-sdk/provider-entry";
+import ts from "typescript";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type { ChannelMessageActionContext } from "../../channels/plugins/types.js";
 import type {
@@ -51,6 +52,15 @@ const PLUGIN_SDK_DIR = resolve(SRC_ROOT, "plugin-sdk");
 const sourceCache = new Map<string, string>();
 const repoTsFilesCache = new Map<string, string[]>();
 const representativeRuntimeSmokeSubpaths = ["channel-runtime", "conversation-runtime"] as const;
+const PUBLIC_SDK_TEST_HELPER_SUBPATHS = [
+  "channel-contract-testing",
+  "channel-test-helpers",
+  "plugin-test-api",
+  "plugin-test-contracts",
+  "plugin-test-runtime",
+  "provider-test-contracts",
+  "test-env",
+] as const;
 
 const importResolvedPluginSdkSubpath = async (specifier: string) => import(specifier);
 
@@ -217,6 +227,81 @@ function collectNamedExportsFromSource(source: string): string[] {
 
 function collectNamedExportsFromRepoFile(relativePath: string): string[] {
   return collectNamedExportsFromSource(readRepoSource(relativePath));
+}
+
+function createSourceFile(absolutePath: string): ts.SourceFile {
+  return ts.createSourceFile(
+    absolutePath,
+    readCachedSource(absolutePath),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+}
+
+function resolveTypeScriptModuleSource(fromFile: string, specifier: string): string | null {
+  if (!specifier.startsWith(".")) {
+    return null;
+  }
+  const resolved = resolve(dirname(fromFile), specifier);
+  if (resolved.endsWith(".js")) {
+    return `${resolved.slice(0, -3)}.ts`;
+  }
+  if (resolved.endsWith(".ts")) {
+    return resolved;
+  }
+  return `${resolved}.ts`;
+}
+
+function collectReexportedSourceFiles(entrypointPath: string): string[] {
+  const visited = new Set<string>();
+
+  function visit(filePath: string) {
+    if (visited.has(filePath)) {
+      return;
+    }
+    visited.add(filePath);
+    const sourceFile = createSourceFile(filePath);
+    for (const statement of sourceFile.statements) {
+      if (
+        !ts.isExportDeclaration(statement) ||
+        !statement.moduleSpecifier ||
+        !ts.isStringLiteral(statement.moduleSpecifier)
+      ) {
+        continue;
+      }
+      const target = resolveTypeScriptModuleSource(filePath, statement.moduleSpecifier.text);
+      if (target) {
+        visit(target);
+      }
+    }
+  }
+
+  visit(entrypointPath);
+  return [...visited].toSorted();
+}
+
+function topLevelVitestModuleMockLines(filePath: string): number[] {
+  const sourceFile = createSourceFile(filePath);
+  const lines: number[] = [];
+  for (const statement of sourceFile.statements) {
+    if (!ts.isExpressionStatement(statement) || !ts.isCallExpression(statement.expression)) {
+      continue;
+    }
+    const expression = statement.expression.expression;
+    if (
+      !ts.isPropertyAccessExpression(expression) ||
+      !ts.isIdentifier(expression.expression) ||
+      expression.expression.text !== "vi"
+    ) {
+      continue;
+    }
+    if (!["mock", "doMock", "unmock", "doUnmock"].includes(expression.name.text)) {
+      continue;
+    }
+    lines.push(sourceFile.getLineAndCharacterOfPosition(statement.getStart(sourceFile)).line + 1);
+  }
+  return lines;
 }
 
 function expectNamedExportParity(params: BrowserHelperExportParityContract) {
@@ -648,6 +733,32 @@ describe("plugin-sdk subpath exports", () => {
       "memory-core-host-runtime-files",
       'export * from "../memory-host-sdk/runtime-files.js";',
     );
+    expectSourceMentions("plugin-test-runtime", [
+      "registerSingleProviderPlugin",
+      "registerProviderPlugin",
+      "createRuntimeEnv",
+      "createPluginSetupWizardStatus",
+      "runProviderCatalog",
+    ]);
+    expectSourceMentions("test-env", [
+      "withEnv",
+      "withFetchPreconnect",
+      "createRequestCaptureJsonFetch",
+      "installPinnedHostnameTestHooks",
+      "isLiveTestEnabled",
+    ]);
+  });
+
+  it("keeps public SDK test helper subpaths free of top-level Vitest module mocks", () => {
+    const violations = PUBLIC_SDK_TEST_HELPER_SUBPATHS.flatMap((subpath) =>
+      collectReexportedSourceFiles(resolve(PLUGIN_SDK_DIR, `${subpath}.ts`)).flatMap((file) =>
+        topLevelVitestModuleMockLines(file).map(
+          (line) => `${file.slice(REPO_ROOT.length + 1)}:${line}`,
+        ),
+      ),
+    ).toSorted();
+
+    expect(violations).toEqual([]);
   });
 
   it("keeps the deprecated channel-runtime shim unused in repo imports", () => {

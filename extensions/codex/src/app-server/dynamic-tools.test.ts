@@ -9,7 +9,7 @@ import {
   createEmptyPluginRegistry,
   createMockPluginRegistry,
   setActivePluginRegistry,
-} from "openclaw/plugin-sdk/testing";
+} from "openclaw/plugin-sdk/plugin-test-runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCodexDynamicToolBridge } from "./dynamic-tools.js";
 import type { JsonValue } from "./protocol.js";

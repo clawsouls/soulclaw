@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import type { Context, Model } from "@mariozechner/pi-ai";
+import { registerSingleProviderPlugin } from "openclaw/plugin-sdk/plugin-test-runtime";
 import { createCapturedThinkingConfigStream } from "openclaw/plugin-sdk/provider-test-contracts";
-import { registerSingleProviderPlugin } from "openclaw/plugin-sdk/testing";
 import { describe, expect, it } from "vitest";
 import plugin from "./index.js";
 import { createKimiWebSearchProvider } from "./src/kimi-web-search-provider.js";

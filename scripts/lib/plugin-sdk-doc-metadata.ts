@@ -47,6 +47,9 @@ export const pluginSdkDocMetadata = {
   "plugin-test-contracts": {
     category: "utilities",
   },
+  "plugin-test-runtime": {
+    category: "utilities",
+  },
   "channel-actions": {
     category: "channel",
   },
@@ -111,6 +114,9 @@ export const pluginSdkDocMetadata = {
     category: "utilities",
   },
   "provider-test-contracts": {
+    category: "utilities",
+  },
+  "test-env": {
     category: "utilities",
   },
 } as const satisfies Record<string, PluginSdkDocMetadata>;

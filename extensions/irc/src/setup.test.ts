@@ -9,8 +9,8 @@ import {
   createTestWizardPrompter,
   promptSetupWizardAllowFrom,
   runSetupWizardConfigure,
-  type WizardPrompter,
-} from "openclaw/plugin-sdk/testing";
+} from "openclaw/plugin-sdk/plugin-test-runtime";
+import type { WizardPrompter } from "openclaw/plugin-sdk/plugin-test-runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   listIrcAccountIds,

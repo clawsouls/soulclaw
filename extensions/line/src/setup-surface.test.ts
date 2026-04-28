@@ -5,8 +5,8 @@ import {
   createPluginSetupWizardConfigure,
   createTestWizardPrompter,
   runSetupWizardConfigure,
-  type WizardPrompter,
-} from "openclaw/plugin-sdk/testing";
+} from "openclaw/plugin-sdk/plugin-test-runtime";
+import type { WizardPrompter } from "openclaw/plugin-sdk/plugin-test-runtime";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bundledPluginRoot } from "../../../test/helpers/bundled-plugin-paths.js";

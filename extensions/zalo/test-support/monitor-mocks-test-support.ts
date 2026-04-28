@@ -3,7 +3,7 @@ import {
   createEmptyPluginRegistry,
   createRuntimeEnv,
   setActivePluginRegistry,
-} from "openclaw/plugin-sdk/testing";
+} from "openclaw/plugin-sdk/plugin-test-runtime";
 import { vi, type Mock } from "vitest";
 import type { OpenClawConfig } from "../runtime-api.js";
 import type { ResolvedZaloAccount } from "../src/types.js";

@@ -514,9 +514,17 @@
       "types": "./dist/plugin-sdk/plugin-test-contracts.d.ts",
       "default": "./dist/plugin-sdk/plugin-test-contracts.js"
     },
+    "./plugin-sdk/plugin-test-runtime": {
+      "types": "./dist/plugin-sdk/plugin-test-runtime.d.ts",
+      "default": "./dist/plugin-sdk/plugin-test-runtime.js"
+    },
     "./plugin-sdk/provider-test-contracts": {
       "types": "./dist/plugin-sdk/provider-test-contracts.d.ts",
       "default": "./dist/plugin-sdk/provider-test-contracts.js"
+    },
+    "./plugin-sdk/test-env": {
+      "types": "./dist/plugin-sdk/test-env.d.ts",
+      "default": "./dist/plugin-sdk/test-env.js"
     },
     "./plugin-sdk/testing": {
       "types": "./dist/plugin-sdk/testing.d.ts",

@@ -1,4 +1,8 @@
 import {
+  registerProviderPlugin,
+  requireRegisteredProvider,
+} from "openclaw/plugin-sdk/plugin-test-runtime";
+import {
   expectAugmentedCodexCatalog,
   expectedAugmentedOpenaiCodexCatalogEntriesWithGpt55,
   expectCodexBuiltInSuppression,
@@ -7,7 +11,6 @@ import {
   loadBundledPluginPublicSurface,
 } from "openclaw/plugin-sdk/provider-test-contracts";
 import type { ProviderPlugin } from "openclaw/plugin-sdk/provider-test-contracts";
-import { registerProviderPlugin, requireRegisteredProvider } from "openclaw/plugin-sdk/testing";
 import { beforeEach, describe, it, vi } from "vitest";
 
 const PROVIDER_CATALOG_CONTRACT_TIMEOUT_MS = 300_000;

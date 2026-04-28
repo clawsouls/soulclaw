@@ -1,41 +1,44 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProviderRuntimeModel } from "../plugin-entry.js";
+import { registerProviderPlugin, requireRegisteredProvider } from "../plugin-test-runtime.js";
 import type { ProviderPlugin } from "../provider-model-shared.js";
-import {
-  createProviderUsageFetch,
-  makeResponse,
-  registerProviderPlugin,
-  requireRegisteredProvider,
-} from "../testing.js";
+import { createProviderUsageFetch, makeResponse } from "../test-env.js";
 
 const CONTRACT_SETUP_TIMEOUT_MS = 300_000;
 
-const refreshOpenAICodexTokenMock = vi.hoisted(() => vi.fn());
-const getOAuthProvidersMock = vi.hoisted(() =>
-  vi.fn(() => [
-    { id: "anthropic", envApiKey: "ANTHROPIC_API_KEY", oauthTokenEnv: "ANTHROPIC_OAUTH_TOKEN" },
-    { id: "google", envApiKey: "GOOGLE_API_KEY", oauthTokenEnv: "GOOGLE_OAUTH_TOKEN" },
-    { id: "openai-codex", envApiKey: "OPENAI_API_KEY", oauthTokenEnv: "OPENAI_OAUTH_TOKEN" },
-  ]),
-);
+const OAUTH_MODULE_ID = "@mariozechner/pi-ai/oauth";
+const OPENAI_CODEX_PROVIDER_RUNTIME_MODULE_ID =
+  "../../../extensions/openai/openai-codex-provider.runtime.js";
+const refreshOpenAICodexTokenMock = vi.fn();
+const getOAuthProvidersMock = vi.fn(() => [
+  { id: "anthropic", envApiKey: "ANTHROPIC_API_KEY", oauthTokenEnv: "ANTHROPIC_OAUTH_TOKEN" },
+  { id: "google", envApiKey: "GOOGLE_API_KEY", oauthTokenEnv: "GOOGLE_OAUTH_TOKEN" },
+  { id: "openai-codex", envApiKey: "OPENAI_API_KEY", oauthTokenEnv: "OPENAI_OAUTH_TOKEN" },
+]);
 
-vi.mock("@mariozechner/pi-ai/oauth", async () => {
-  const actual = await vi.importActual<typeof import("@mariozechner/pi-ai/oauth")>(
-    "@mariozechner/pi-ai/oauth",
-  );
-  return {
-    ...actual,
+function installProviderRuntimeContractMocks() {
+  vi.doMock(OAUTH_MODULE_ID, async () => {
+    const actual =
+      await vi.importActual<typeof import("@mariozechner/pi-ai/oauth")>(OAUTH_MODULE_ID);
+    return {
+      ...actual,
+      refreshOpenAICodexToken: refreshOpenAICodexTokenMock,
+      getOAuthProviders: getOAuthProvidersMock,
+    };
+  });
+
+  vi.doMock(OPENAI_CODEX_PROVIDER_RUNTIME_MODULE_ID, () => ({
     refreshOpenAICodexToken: refreshOpenAICodexTokenMock,
-    getOAuthProviders: getOAuthProvidersMock,
-  };
-});
+  }));
+}
 
-vi.mock("../../../extensions/openai/openai-codex-provider.runtime.js", () => ({
-  refreshOpenAICodexToken: refreshOpenAICodexTokenMock,
-}));
+function removeProviderRuntimeContractMocks() {
+  vi.doUnmock(OAUTH_MODULE_ID);
+  vi.doUnmock(OPENAI_CODEX_PROVIDER_RUNTIME_MODULE_ID);
+}
 
 function createModel(overrides: Partial<ProviderRuntimeModel> & Pick<ProviderRuntimeModel, "id">) {
   return {
@@ -109,8 +112,13 @@ function installRuntimeHooks(fixtures: readonly ProviderRuntimeContractFixture[]
   }
 
   beforeAll(async () => {
+    installProviderRuntimeContractMocks();
     await ensureProvidersLoaded();
   }, CONTRACT_SETUP_TIMEOUT_MS);
+
+  afterAll(() => {
+    removeProviderRuntimeContractMocks();
+  });
 
   beforeEach(() => {
     refreshOpenAICodexTokenMock.mockReset();

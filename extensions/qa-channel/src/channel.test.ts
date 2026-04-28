@@ -4,7 +4,7 @@ import {
   createTestRegistry,
   resetPluginRuntimeStateForTest,
   setActivePluginRegistry,
-} from "openclaw/plugin-sdk/testing";
+} from "openclaw/plugin-sdk/plugin-test-runtime";
 import { extractToolPayload } from "openclaw/plugin-sdk/tool-payload";
 import { afterEach, describe, expect, it } from "vitest";
 import { createQaBusState, startQaBusServer } from "../../qa-lab/bus-api.js";

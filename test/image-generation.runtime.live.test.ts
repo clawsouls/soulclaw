@@ -1,4 +1,7 @@
-import { registerProviderPlugin, requireRegisteredProvider } from "openclaw/plugin-sdk/testing";
+import {
+  registerProviderPlugin,
+  requireRegisteredProvider,
+} from "openclaw/plugin-sdk/plugin-test-runtime";
 import { describe, expect, it } from "vitest";
 import { resolveOpenClawAgentDir } from "../src/agents/agent-paths.js";
 import { collectProviderApiKeys } from "../src/agents/live-auth-keys.js";

@@ -1,5 +1,5 @@
 import type { ChannelDirectoryEntry } from "openclaw/plugin-sdk/channel-contract";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/testing";
+import type { OpenClawConfig } from "openclaw/plugin-sdk/config-types";
 import { expect } from "vitest";
 
 export type DirectoryListFn = (params: {

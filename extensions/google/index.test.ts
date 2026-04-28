@@ -3,8 +3,11 @@ import type {
   ProviderReplaySessionEntry,
   ProviderSanitizeReplayHistoryContext,
 } from "openclaw/plugin-sdk/plugin-entry";
+import {
+  registerProviderPlugin,
+  requireRegisteredProvider,
+} from "openclaw/plugin-sdk/plugin-test-runtime";
 import { createCapturedThinkingConfigStream } from "openclaw/plugin-sdk/provider-test-contracts";
-import { registerProviderPlugin, requireRegisteredProvider } from "openclaw/plugin-sdk/testing";
 import { describe, expect, it } from "vitest";
 import { registerGoogleGeminiCliProvider } from "./gemini-cli-provider.js";
 import { registerGoogleProvider } from "./provider-registration.js";

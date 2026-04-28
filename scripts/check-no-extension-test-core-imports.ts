@@ -11,7 +11,7 @@ const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; hint: string }> = [
   },
   {
     pattern: /["']openclaw\/plugin-sdk\/test-utils["']/,
-    hint: "Use openclaw/plugin-sdk/testing for the public extension test surface.",
+    hint: "Use openclaw/plugin-sdk/testing or a focused plugin-sdk test subpath for the public extension test surface.",
   },
   {
     pattern: /["']openclaw\/plugin-sdk\/compat["']/,
@@ -35,7 +35,7 @@ const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; hint: string }> = [
   },
   {
     pattern: /["'](?:\.\.\/)+(?:src\/channels\/plugins\/contracts\/test-helpers\.js)["']/,
-    hint: "Use openclaw/plugin-sdk/testing for channel contract test helpers.",
+    hint: "Use openclaw/plugin-sdk/channel-contract-testing for channel contract test helpers.",
   },
 ];
 

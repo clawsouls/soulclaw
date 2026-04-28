@@ -3,6 +3,10 @@ import {
   resolveOpenClawAgentDir,
 } from "openclaw/plugin-sdk/agent-runtime";
 import type { OpenClawConfig } from "openclaw/plugin-sdk/config-types";
+import {
+  registerProviderPlugin,
+  requireRegisteredProvider,
+} from "openclaw/plugin-sdk/plugin-test-runtime";
 import { getRuntimeConfig } from "openclaw/plugin-sdk/runtime-config-snapshot";
 import {
   DEFAULT_LIVE_VIDEO_MODELS,
@@ -26,17 +30,17 @@ import {
   parseProviderModelMap,
   parseVideoGenerationModelRef,
   redactLiveApiKey,
-  registerProviderPlugin,
-  requireRegisteredProvider,
   resolveConfiguredLiveVideoModels,
   resolveLiveVideoAuthStore,
   resolveLiveVideoResolution,
-  type GeneratedVideoAsset,
-  type VideoGenerationMode,
-  type VideoGenerationModeCapabilities,
-  type VideoGenerationProvider,
-  type VideoGenerationRequest,
-} from "openclaw/plugin-sdk/testing";
+} from "openclaw/plugin-sdk/test-env";
+import type {
+  GeneratedVideoAsset,
+  VideoGenerationMode,
+  VideoGenerationModeCapabilities,
+  VideoGenerationProvider,
+  VideoGenerationRequest,
+} from "openclaw/plugin-sdk/test-env";
 import { describe, expect, it } from "vitest";
 import alibabaPlugin from "./alibaba/index.js";
 import byteplusPlugin from "./byteplus/index.js";
