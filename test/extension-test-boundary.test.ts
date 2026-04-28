@@ -202,4 +202,21 @@ describe("non-extension test boundaries", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it("keeps extension tests off legacy broad testing barrels and repo helper bridges", () => {
+    const bannedPatterns = [
+      /["']openclaw\/plugin-sdk\/testing["']/u,
+      /["']openclaw\/plugin-sdk\/test-utils["']/u,
+      /["'](?:\.\.\/)+(?:test\/helpers\/channels\/)[^"']+["']/u,
+      /["'](?:\.\.\/)+(?:test\/helpers\/plugins\/)[^"']+["']/u,
+    ];
+    const files = walkCode(path.join(repoRoot, "extensions"));
+
+    const offenders = files.filter((file) => {
+      const source = fs.readFileSync(path.join(repoRoot, file), "utf8");
+      return bannedPatterns.some((pattern) => pattern.test(source));
+    });
+
+    expect(offenders).toEqual([]);
+  });
 });
