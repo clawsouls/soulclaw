@@ -219,6 +219,13 @@ function openclawCommand(repoRoot, args) {
   };
 }
 
+function sourceOpenclawCommand(repoRoot, args) {
+  return {
+    command: process.execPath,
+    args: [path.join(repoRoot, "scripts", "run-node.mjs"), ...args],
+  };
+}
+
 function chunkArray(values, chunkSize) {
   const chunks = [];
   for (let index = 0; index < values.length; index += chunkSize) {
@@ -423,7 +430,7 @@ function runQaChunks(params) {
       cwd: params.repoRoot,
       env: params.env,
       logDir: path.join(params.outputDir, "logs", "qa-suite"),
-      ...openclawCommand(params.repoRoot, [
+      ...sourceOpenclawCommand(params.repoRoot, [
         "qa",
         "suite",
         "--provider-mode",
