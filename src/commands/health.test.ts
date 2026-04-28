@@ -106,7 +106,13 @@ describe("healthCommand", () => {
     callGatewayMock.mockResolvedValueOnce(snapshot);
 
     await healthCommand(
-      { json: true, timeoutMs: 5000, config: {}, token: "setup-token" },
+      {
+        json: true,
+        timeoutMs: 5000,
+        config: {},
+        token: "setup-token",
+        password: "setup-password",
+      },
       runtime as never,
     );
 
@@ -114,6 +120,7 @@ describe("healthCommand", () => {
       expect.objectContaining({
         method: "health",
         token: "setup-token",
+        password: "setup-password",
       }),
     );
   });
