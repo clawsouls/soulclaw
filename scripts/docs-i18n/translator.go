@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -189,11 +190,15 @@ func runCodexExecPrompt(ctx context.Context, req codexPromptRequest) (string, er
 		return "", err
 	}
 	defer os.RemoveAll(codexHome)
+	if err := writeCodexAuthFile(codexHome); err != nil {
+		return "", err
+	}
 
 	args := []string{
 		"exec",
 		"--model", req.Model,
 		"-c", fmt.Sprintf("model_reasoning_effort=%q", normalizeThinking(req.Thinking)),
+		"-c", `service_tier="fast"`,
 		"--sandbox", "read-only",
 		"--ignore-rules",
 		"--skip-git-repo-check",
@@ -220,6 +225,21 @@ func runCodexExecPrompt(ctx context.Context, req codexPromptRequest) (string, er
 		return "", errEmptyTranslation
 	}
 	return translated, nil
+}
+
+func writeCodexAuthFile(codexHome string) error {
+	apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	if apiKey == "" {
+		return nil
+	}
+	data, err := json.Marshal(map[string]string{
+		"auth_mode":      "apikey",
+		"OPENAI_API_KEY": apiKey,
+	})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(codexHome, "auth.json"), append(data, '\n'), 0o600)
 }
 
 func isolatedCodexHomeBase() (string, error) {

@@ -141,16 +141,51 @@ func TestRunCodexExecPromptUsesOutputLastMessage(t *testing.T) {
 	if err := os.WriteFile(fakeCodex, []byte(`#!/bin/sh
 set -eu
 out=""
+saw_effort=0
+saw_service=0
 while [ "$#" -gt 0 ]; do
-  if [ "$1" = "--output-last-message" ]; then
-    shift
-    out="$1"
-  fi
+  case "$1" in
+    --output-last-message)
+      shift
+      out="$1"
+      ;;
+    -c|--config)
+      shift
+      case "$1" in
+        model_reasoning_effort=\"high\")
+          saw_effort=1
+          ;;
+        service_tier=\"fast\")
+          saw_service=1
+          ;;
+      esac
+      ;;
+  esac
   shift || true
 done
 cat >/dev/null
+if [ "$saw_effort" != "1" ]; then
+  echo "missing high reasoning effort config" >&2
+  exit 1
+fi
+if [ "$saw_service" != "1" ]; then
+  echo "missing fast service tier config" >&2
+  exit 1
+fi
 if [ -z "${CODEX_HOME:-}" ]; then
   echo "missing CODEX_HOME" >&2
+  exit 1
+fi
+if [ ! -f "$CODEX_HOME/auth.json" ]; then
+  echo "missing auth.json" >&2
+  exit 1
+fi
+if ! grep -q '"auth_mode":"apikey"' "$CODEX_HOME/auth.json"; then
+  echo "auth.json missing apikey mode" >&2
+  exit 1
+fi
+if ! grep -q '"OPENAI_API_KEY":"test-openai-key"' "$CODEX_HOME/auth.json"; then
+  echo "auth.json missing API key" >&2
   exit 1
 fi
 case "$CODEX_HOME" in
@@ -164,6 +199,7 @@ printf 'translated from codex\n' > "$out"
 		t.Fatalf("write fake codex: %v", err)
 	}
 	t.Setenv(envDocsI18nCodexExecutable, fakeCodex)
+	t.Setenv("OPENAI_API_KEY", "test-openai-key")
 
 	got, err := runCodexExecPrompt(context.Background(), codexPromptRequest{
 		SystemPrompt: "Translate.",
