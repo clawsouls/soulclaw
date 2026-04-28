@@ -13,11 +13,9 @@ Docs: https://docs.openclaw.ai
 
 - Cron/Telegram: preserve explicit `:topic:` delivery targets over stale session-derived thread IDs when isolated cron announces to Telegram forum topics. Carries forward #59069; refs #49704 and #43808. Thanks @roytong9.
 - CLI/onboarding: infer image input for common custom-provider vision model IDs, ask only for unknown models, and keep `--custom-image-input`/`--custom-text-input` overrides so vision-capable proxies do not get saved as text-only configs. Fixes #51869. Thanks @Antsoldier1974.
+- Models/OpenAI Codex: stop listing or resolving unsupported `openai-codex/gpt-5.4-mini` rows through Codex OAuth, keep stale discovery rows suppressed with a clear API-key-route hint, and leave direct `openai/gpt-5.4-mini` available. Fixes #73242. Thanks @0xCyda.
 - Memory/Dreaming: retry Dream Diary once with the session default when a configured dreaming model is unavailable, while leaving subagent trust and allowlist errors visible instead of silently masking configuration problems. Refs #67409 and #69209. Thanks @Ghiggins18 and @everySympathy.
 - Feishu/inbound files: recover CJK filenames from plain `Content-Disposition: filename=` download headers when Feishu exposes UTF-8 bytes through Latin-1 header decoding, while leaving valid Latin-1 and JSON-derived names unchanged. (#48578, #50435, #59431) Thanks @alex-xuweilong, @lishuaigit, and @DoChaoing.
-
-### Fixes
-
 - Channels/Telegram: normalize accidental full `/bot<TOKEN>` Telegram `apiRoot` values at runtime and teach `openclaw doctor --fix` to remove the suffix, so startup control calls no longer 404 when direct Bot API curl commands work. Fixes #55387. Thanks @brendanmatthewjones-cmyk, @techfindubai-ux, and @Sivlerback-Chris.
 
 ## 2026.4.27
