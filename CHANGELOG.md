@@ -8,6 +8,10 @@ Docs: https://docs.openclaw.ai
 
 - Gateway/chat: accept non-image attachments through `chat.send` by staging them as agent-readable media paths, while keeping unsupported RPC attachment paths explicit instead of silently dropping files. Fixes #48123. (#67572) Thanks @samzong.
 
+### Fixes
+
+- Memory/Dreaming: retry Dream Diary once with the session default when a configured dreaming model is unavailable, while leaving subagent trust and allowlist errors visible instead of silently masking configuration problems. Refs #67409 and #69209. Thanks @Ghiggins18 and @everySympathy.
+
 ## 2026.4.27
 
 ### Changes
