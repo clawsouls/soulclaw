@@ -13,37 +13,29 @@ jobs:
   dispatch:
     runs-on: ubuntu-latest
     env:
-      CLAWSWEEPER_APP_ID: ${{ secrets.CLAWSWEEPER_APP_ID }}
-      CLAWSWEEPER_APP_PRIVATE_KEY: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY }}
+      HAS_CLAWSWEEPER_APP_PRIVATE_KEY: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY != '' }}
     steps:
-      - name: Check ClawSweeper app credentials
-        id: clawsweeper-credentials
-        run: |
-          if [ -n "$CLAWSWEEPER_APP_ID" ] && [ -n "$CLAWSWEEPER_APP_PRIVATE_KEY" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "ClawSweeper app credentials are not configured; skipping dispatch."
-          fi
-
       - name: Create ClawSweeper dispatch token
-        if: steps.clawsweeper-credentials.outputs.configured == 'true'
         id: token
+        if: ${{ env.HAS_CLAWSWEEPER_APP_PRIVATE_KEY == 'true' }}
         uses: actions/create-github-app-token@v2
         with:
-          app-id: ${{ env.CLAWSWEEPER_APP_ID }}
-          private-key: ${{ env.CLAWSWEEPER_APP_PRIVATE_KEY }}
+          app-id: 3306130
+          private-key: ${{ secrets.CLAWSWEEPER_APP_PRIVATE_KEY }}
           owner: openclaw
           repositories: clawsweeper
 
       - name: Dispatch exact ClawSweeper review
-        if: steps.clawsweeper-credentials.outputs.configured == 'true'
         env:
-          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_TOKEN: ${{ steps.token.outputs.token || secrets.OPENCLAW_GH_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
           ITEM_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
           ITEM_KIND: ${{ github.event_name == 'pull_request_target' && 'pull_request' || 'issue' }}
         run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice::Skipping ClawSweeper dispatch because no dispatch credential is configured."
+            exit 0
+          fi
           payload="$(jq -nc \
             --arg target_repo "$TARGET_REPO" \
             --argjson item_number "$ITEM_NUMBER" \
