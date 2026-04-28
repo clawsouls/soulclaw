@@ -4,6 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PluginManifestRegistry } from "../plugins/manifest-registry.js";
 import { cleanupTrackedTempDirs } from "../plugins/test-helpers/fs-fixtures.js";
 
+vi.mock("../plugins/bundled-dir.js", () => ({
+  resolveBundledPluginsDir: (env: NodeJS.ProcessEnv = process.env) =>
+    env.OPENCLAW_BUNDLED_PLUGINS_DIR,
+}));
+
 const tempDirs: string[] = [];
 
 function makeTempDir(): string {
