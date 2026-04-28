@@ -208,6 +208,7 @@ export async function startGatewaySidecars(params: {
   defaultWorkspaceDir: string;
   deps: CliDeps;
   startChannels: () => Promise<void>;
+  prewarmPrimaryModel?: typeof prewarmConfiguredPrimaryModel;
   log: { warn: (msg: string) => void };
   logHooks: {
     info: (msg: string) => void;
@@ -329,11 +330,14 @@ export async function startGatewaySidecars(params: {
   await measureStartup(params.startupTrace, "sidecars.channels", async () => {
     if (!skipChannels) {
       try {
-        schedulePrimaryModelPrewarm({
-          cfg: params.cfg,
-          log: params.log,
-          startupTrace: params.startupTrace,
-        });
+        schedulePrimaryModelPrewarm(
+          {
+            cfg: params.cfg,
+            log: params.log,
+            startupTrace: params.startupTrace,
+          },
+          params.prewarmPrimaryModel,
+        );
         await measureStartup(params.startupTrace, "sidecars.channel-start", () =>
           params.startChannels(),
         );

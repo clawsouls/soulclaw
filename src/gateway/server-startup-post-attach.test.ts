@@ -313,9 +313,8 @@ describe("startGatewayPostAttachRuntime", () => {
   });
 
   it("starts channels without waiting for primary model prewarm completion", async () => {
-    hoisted.resolveAgentModelPrimaryValue.mockReturnValue("openai/gpt-5.4");
     let resolvePrewarm!: () => void;
-    hoisted.ensureOpenClawModelsJson.mockImplementation(
+    const prewarmPrimaryModel = vi.fn(
       async () =>
         await new Promise<undefined>((resolve) => {
           resolvePrewarm = () => resolve(undefined);
@@ -332,6 +331,7 @@ describe("startGatewayPostAttachRuntime", () => {
       defaultWorkspaceDir: "/tmp/openclaw-workspace",
       deps: {} as never,
       startChannels,
+      prewarmPrimaryModel: prewarmPrimaryModel as never,
       log: { warn: vi.fn() },
       logHooks: {
         info: vi.fn(),
@@ -346,7 +346,7 @@ describe("startGatewayPostAttachRuntime", () => {
 
     await vi.waitFor(
       () => {
-        expect(hoisted.ensureOpenClawModelsJson).toHaveBeenCalledTimes(1);
+        expect(prewarmPrimaryModel).toHaveBeenCalledTimes(1);
         expect(startChannels).toHaveBeenCalledTimes(1);
       },
       { timeout: 2_000 },
