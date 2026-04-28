@@ -1893,6 +1893,7 @@ jobs:
               echo 'OPENCLAW_LIVE_CLI_BACKEND_RESUME_ARGS=["exec","resume","{sessionId}","-c","sandbox_mode=\"danger-full-access\"","--skip-git-repo-check"]' >> "$GITHUB_ENV"
               echo "OPENCLAW_LIVE_CLI_BACKEND_DEBUG=1" >> "$GITHUB_ENV"
               echo "OPENCLAW_CLI_BACKEND_LOG_OUTPUT=1" >> "$GITHUB_ENV"
+              echo "OPENCLAW_TEST_CONSOLE=1" >> "$GITHUB_ENV"
               echo "OPENCLAW_LIVE_CLI_BACKEND_USE_CI_SAFE_CODEX_CONFIG=1" >> "$GITHUB_ENV"
               ;;
             live-codex-harness-docker)
@@ -1900,6 +1901,9 @@ jobs:
               # is currently stale, but the wrapper still supports codex-auth for
               # local maintainer reruns without changing Peter's flow.
               echo "OPENCLAW_LIVE_CODEX_HARNESS_AUTH=api-key" >> "$GITHUB_ENV"
+              echo "OPENCLAW_LIVE_CODEX_HARNESS_DEBUG=1" >> "$GITHUB_ENV"
+              echo "OPENCLAW_CLI_BACKEND_LOG_OUTPUT=1" >> "$GITHUB_ENV"
+              echo "OPENCLAW_TEST_CONSOLE=1" >> "$GITHUB_ENV"
               ;;
             live-acp-bind-docker)
               if [[ -n "${GEMINI_API_KEY:-}" || -n "${GOOGLE_API_KEY:-}" ]]; then
