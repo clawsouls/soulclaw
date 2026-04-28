@@ -62,7 +62,7 @@ function buildManifestCatalogModelInput(model: ModelCatalogModel): ModelDefiniti
       `Manifest modelCatalog row ${model.id} uses unsupported runtime input document`,
     );
   }
-  return model.input ?? ["text"];
+  return model.input?.filter((item): item is "text" | "image" => item !== "document") ?? ["text"];
 }
 
 function buildManifestCatalogModel(model: ModelCatalogModel): ModelDefinitionConfig {
