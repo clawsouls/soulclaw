@@ -20699,9 +20699,9 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
                     type: "number",
                   },
                 ],
-                title: "Session Rotate Size",
+                title: "Deprecated Session Rotate Size",
                 description:
-                  "Rotates the session store when file size exceeds a threshold such as `10mb` or `1gb`. Use this to bound single-file growth and keep backup/restore operations manageable.",
+                  'Deprecated and ignored. Do not use for `sessions.json` growth control; OpenClaw no longer creates automatic rotation backups, and "openclaw doctor --fix" removes this key.',
               },
               resetArchiveRetention: {
                 anyOf: [
@@ -20750,7 +20750,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
             additionalProperties: false,
             title: "Session Maintenance",
             description:
-              "Automatic session-store maintenance controls for pruning age, entry caps, and file rotation behavior. Start in warn mode to observe impact, then enforce once thresholds are tuned.",
+              "Automatic session-store maintenance controls for pruning age, entry caps, reset archive retention, and disk budget cleanup. Start in warn mode to observe impact, then enforce once thresholds are tuned.",
           },
         },
         additionalProperties: false,
@@ -27524,7 +27524,7 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
     },
     "session.maintenance": {
       label: "Session Maintenance",
-      help: "Automatic session-store maintenance controls for pruning age, entry caps, and file rotation behavior. Start in warn mode to observe impact, then enforce once thresholds are tuned.",
+      help: "Automatic session-store maintenance controls for pruning age, entry caps, reset archive retention, and disk budget cleanup. Start in warn mode to observe impact, then enforce once thresholds are tuned.",
       tags: ["storage"],
     },
     "session.maintenance.mode": {
@@ -27548,8 +27548,8 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
       tags: ["performance", "storage"],
     },
     "session.maintenance.rotateBytes": {
-      label: "Session Rotate Size",
-      help: "Rotates the session store when file size exceeds a threshold such as `10mb` or `1gb`. Use this to bound single-file growth and keep backup/restore operations manageable.",
+      label: "Deprecated Session Rotate Size",
+      help: 'Deprecated and ignored. Do not use for `sessions.json` growth control; OpenClaw no longer creates automatic rotation backups, and "openclaw doctor --fix" removes this key.',
       tags: ["storage"],
     },
     "session.maintenance.resetArchiveRetention": {
