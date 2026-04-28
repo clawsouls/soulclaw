@@ -34,6 +34,10 @@ const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; hint: string }> = [
     hint: "Use openclaw/plugin-sdk/channel-test-helpers or another focused SDK test subpath instead of repo-only channel helper bridges.",
   },
   {
+    pattern: /["'](?:\.\.\/)+(?:test\/helpers\/media-generation\/)[^"']+["']/,
+    hint: "Use openclaw/plugin-sdk/provider-test-contracts or openclaw/plugin-sdk/provider-http-test-mocks instead of repo-only media provider helper bridges.",
+  },
+  {
     pattern: /["'](?:\.\.\/)+(?:src\/channels\/plugins\/contracts\/test-helpers\/)[^"']+["']/,
     hint: "Use openclaw/plugin-sdk/channel-test-helpers or another focused SDK test subpath instead of core-only channel contract helpers.",
   },
@@ -107,6 +111,9 @@ const RETIRED_EXTENSION_TEST_HELPER_BRIDGE_FILES = [
   "test/helpers/plugins/typed-cases.ts",
   "test/helpers/plugins/web-fetch-provider-contract.ts",
   "test/helpers/plugins/web-search-provider-contract.ts",
+  "test/helpers/media-generation/dashscope-video-provider.ts",
+  "test/helpers/media-generation/provider-capability-assertions.ts",
+  "test/helpers/media-generation/provider-http-mocks.ts",
 ];
 
 function isExtensionTestFile(filePath: string): boolean {

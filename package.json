@@ -522,6 +522,10 @@
       "types": "./dist/plugin-sdk/plugin-test-runtime.d.ts",
       "default": "./dist/plugin-sdk/plugin-test-runtime.js"
     },
+    "./plugin-sdk/provider-http-test-mocks": {
+      "types": "./dist/plugin-sdk/provider-http-test-mocks.d.ts",
+      "default": "./dist/plugin-sdk/provider-http-test-mocks.js"
+    },
     "./plugin-sdk/provider-test-contracts": {
       "types": "./dist/plugin-sdk/provider-test-contracts.d.ts",
       "default": "./dist/plugin-sdk/provider-test-contracts.js"
