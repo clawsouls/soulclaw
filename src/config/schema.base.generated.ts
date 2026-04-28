@@ -7214,6 +7214,10 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
                       exclusiveMinimum: 0,
                       maximum: 9007199254740991,
                     },
+                    visibleReplies: {
+                      type: "string",
+                      enum: ["automatic", "message_tool"],
+                    },
                   },
                   additionalProperties: false,
                 },
@@ -18854,6 +18858,13 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
                 description:
                   "Maximum number of prior group messages loaded as context per turn for group sessions. Use higher values for richer continuity, or lower values for faster and cheaper responses.",
               },
+              visibleReplies: {
+                type: "string",
+                enum: ["automatic", "message_tool"],
+                title: "Group Visible Replies",
+                description:
+                  'Controls visible group/channel replies. "message_tool" keeps normal final replies private and requires message(action=send) for room output; "automatic" posts normal replies as before.',
+              },
             },
             additionalProperties: false,
             title: "Group Chat Rules",
@@ -28049,6 +28060,11 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
       label: "Group History Limit",
       help: "Maximum number of prior group messages loaded as context per turn for group sessions. Use higher values for richer continuity, or lower values for faster and cheaper responses.",
       tags: ["performance"],
+    },
+    "messages.groupChat.visibleReplies": {
+      label: "Group Visible Replies",
+      help: 'Controls visible group/channel replies. "message_tool" keeps normal final replies private and requires message(action=send) for room output; "automatic" posts normal replies as before.',
+      tags: ["advanced"],
     },
     "messages.queue": {
       label: "Inbound Queue",
