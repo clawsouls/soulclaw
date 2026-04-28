@@ -585,6 +585,19 @@ describe("isHighSignalLiveModelRef", () => {
     ).toBe(false);
   });
 
+  it("keeps only curated xAI routes in the default live matrix", () => {
+    providerRuntimeMocks.resolveProviderModernModelRef.mockReturnValue(true);
+
+    expect(isHighSignalLiveModelRef({ provider: "xai", id: "grok-4-1-fast-non-reasoning" })).toBe(
+      true,
+    );
+    expect(isHighSignalLiveModelRef({ provider: "xai", id: "grok-3" })).toBe(false);
+    expect(isHighSignalLiveModelRef({ provider: "xai", id: "grok-4-fast-non-reasoning" })).toBe(
+      false,
+    );
+    expect(isHighSignalLiveModelRef({ provider: "xai", id: "grok-4-1-fast" })).toBe(false);
+  });
+
   it("keeps DeepSeek V4 models in the default live matrix when the provider marks them modern", () => {
     providerRuntimeMocks.resolveProviderModernModelRef.mockImplementation(({ provider, context }) =>
       provider === "deepseek" && context.modelId.startsWith("deepseek-v4") ? true : undefined,
