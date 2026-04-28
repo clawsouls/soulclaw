@@ -543,8 +543,8 @@ describe("CLI attempt execution", () => {
 
     await runAgentAttempt({
       providerOverride: "anthropic",
-      originalProvider: "anthropic",
       modelOverride: "claude-opus-4-7",
+      originalProvider: "anthropic",
       cfg: {
         agents: {
           defaults: {
