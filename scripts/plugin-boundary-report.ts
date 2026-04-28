@@ -3,11 +3,13 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import {
   dormantReservedBundledPluginSdkEntrypoints,
+  dormantReservedBundledPluginSdkEntrypointRecords,
   pluginSdkEntrypoints,
   publicPluginOwnedSdkEntrypoints,
   reservedBundledPluginSdkEntrypoints,
   supportedBundledFacadeSdkEntrypoints,
 } from "../src/plugin-sdk/entrypoints.ts";
+import type { DormantReservedBundledPluginSdkEntrypointRecord } from "../src/plugin-sdk/entrypoints.ts";
 import { PLUGIN_COMPAT_RECORDS } from "../src/plugins/compat/registry.ts";
 import type { PluginCompatRecord } from "../src/plugins/compat/types.ts";
 
@@ -75,7 +77,9 @@ type BoundaryReport = {
     crossOwnerReservedImports: ReservedSdkImport[];
     unusedReservedSubpaths: string[];
     dormantReservedSubpaths: string[];
+    dormantReservedRecords: DormantReservedBundledPluginSdkEntrypointRecord[];
     unclassifiedUnusedReservedSubpaths: string[];
+    dormantReservedEligibleForRemovalSubpaths: string[];
   };
   memoryHostSdk: {
     privatePackage: boolean;
@@ -106,6 +110,8 @@ type BoundaryReportSummary = {
     dormantReservedCountInUnused: number;
     unclassifiedUnusedReservedCount: number;
     unclassifiedUnusedReservedSubpaths: string[];
+    dormantReservedEligibleForRemovalCount: number;
+    dormantReservedEligibleForRemovalSubpaths: string[];
     crossOwnerReservedImports: ReservedSdkImport[];
   };
   memoryHostSdk: {
@@ -381,6 +387,10 @@ function resolveMemoryHostImplementation(
   return "mixed";
 }
 
+function isDateDue(removeAfter: string, today = new Date()): boolean {
+  return new Date(`${removeAfter}T00:00:00Z`) <= today;
+}
+
 function buildSummary(report: BoundaryReport, owner?: string): BoundaryReportSummary {
   const eligibleForRemoval = report.compat.records
     .filter((record) => record.eligibleForRemoval)
@@ -410,6 +420,10 @@ function buildSummary(report: BoundaryReport, owner?: string): BoundaryReportSum
       dormantReservedCountInUnused: report.pluginSdk.dormantReservedSubpaths.length,
       unclassifiedUnusedReservedCount: report.pluginSdk.unclassifiedUnusedReservedSubpaths.length,
       unclassifiedUnusedReservedSubpaths: report.pluginSdk.unclassifiedUnusedReservedSubpaths,
+      dormantReservedEligibleForRemovalCount:
+        report.pluginSdk.dormantReservedEligibleForRemovalSubpaths.length,
+      dormantReservedEligibleForRemovalSubpaths:
+        report.pluginSdk.dormantReservedEligibleForRemovalSubpaths,
       crossOwnerReservedImports: report.pluginSdk.crossOwnerReservedImports,
     },
     memoryHostSdk: {
@@ -434,6 +448,9 @@ function buildReport(options: Pick<CliOptions, "owner"> = {}): BoundaryReport {
   );
   const usedReserved = new Set(reservedImports.map((entry) => entry.subpath));
   const dormantReserved = new Set<string>(dormantReservedBundledPluginSdkEntrypoints);
+  const dormantReservedRecords = dormantReservedBundledPluginSdkEntrypointRecords.filter((record) =>
+    matchesOwner(options.owner, record.owner),
+  );
   const unusedReservedSubpaths = reservedBundledPluginSdkEntrypoints
     .filter(
       (subpath) =>
@@ -443,6 +460,11 @@ function buildReport(options: Pick<CliOptions, "owner"> = {}): BoundaryReport {
     .toSorted();
   const dormantReservedSubpaths = unusedReservedSubpaths
     .filter((subpath) => dormantReserved.has(subpath))
+    .toSorted();
+  const dormantReservedEligibleForRemovalSubpaths = dormantReservedRecords
+    .filter((record) => unusedReservedSubpaths.includes(record.subpath))
+    .filter((record) => isDateDue(record.removeAfter))
+    .map((record) => record.subpath)
     .toSorted();
   return {
     generatedAt: new Date().toISOString(),
@@ -463,9 +485,11 @@ function buildReport(options: Pick<CliOptions, "owner"> = {}): BoundaryReport {
       ),
       unusedReservedSubpaths,
       dormantReservedSubpaths,
+      dormantReservedRecords,
       unclassifiedUnusedReservedSubpaths: unusedReservedSubpaths
         .filter((subpath) => !dormantReserved.has(subpath))
         .toSorted(),
+      dormantReservedEligibleForRemovalSubpaths,
     },
     memoryHostSdk: collectMemoryHostBoundary(files),
   };
@@ -487,8 +511,14 @@ function renderSummaryText(summary: BoundaryReportSummary): string {
   lines.push(
     `  dormantUnused=${summary.pluginSdk.dormantReservedCountInUnused} unclassifiedUnused=${summary.pluginSdk.unclassifiedUnusedReservedCount}`,
   );
+  lines.push(
+    `  dormantEligibleForRemoval=${summary.pluginSdk.dormantReservedEligibleForRemovalCount}`,
+  );
   for (const subpath of summary.pluginSdk.unclassifiedUnusedReservedSubpaths) {
     lines.push(`  unclassified-unused ${subpath}`);
+  }
+  for (const subpath of summary.pluginSdk.dormantReservedEligibleForRemovalSubpaths) {
+    lines.push(`  dormant-due ${subpath}`);
   }
   for (const entry of summary.pluginSdk.crossOwnerReservedImports) {
     lines.push(`  cross-owner ${entry.file}: ${entry.specifier} owner=${entry.owner ?? "unknown"}`);
@@ -521,8 +551,14 @@ function renderText(report: BoundaryReport, owner?: string): string {
   lines.push(
     `  dormantUnused=${report.pluginSdk.dormantReservedSubpaths.length} unclassifiedUnused=${report.pluginSdk.unclassifiedUnusedReservedSubpaths.length}`,
   );
+  lines.push(
+    `  dormantEligibleForRemoval=${report.pluginSdk.dormantReservedEligibleForRemovalSubpaths.length}`,
+  );
   for (const subpath of report.pluginSdk.unclassifiedUnusedReservedSubpaths) {
     lines.push(`  unclassified-unused ${subpath}`);
+  }
+  for (const subpath of report.pluginSdk.dormantReservedEligibleForRemovalSubpaths) {
+    lines.push(`  dormant-due ${subpath}`);
   }
   for (const entry of report.pluginSdk.crossOwnerReservedImports) {
     lines.push(`  cross-owner ${entry.file}: ${entry.specifier} owner=${entry.owner ?? "unknown"}`);
@@ -552,6 +588,14 @@ function collectFailures(report: BoundaryReport, options: CliOptions): string[] 
   if (options.failOnEligibleCompat && report.compat.eligibleForRemovalCount > 0) {
     failures.push(
       `${report.compat.eligibleForRemovalCount} compatibility record(s) are due for removal`,
+    );
+  }
+  if (
+    options.failOnEligibleCompat &&
+    report.pluginSdk.dormantReservedEligibleForRemovalSubpaths.length > 0
+  ) {
+    failures.push(
+      `${report.pluginSdk.dormantReservedEligibleForRemovalSubpaths.length} dormant reserved SDK subpath(s) are due for removal`,
     );
   }
   return failures;
