@@ -18,13 +18,7 @@ import {
   getShellEnvAppliedKeys,
   isLiveProfileKeyModeEnabled,
   isLiveTestEnabled,
-  isModelNotFoundErrorMessage,
   isTruthyEnvValue,
-  isAuthErrorMessage,
-  isBillingErrorMessage,
-  isOverloadedErrorMessage,
-  isServerErrorMessage,
-  isTimeoutErrorMessage,
   normalizeVideoGenerationDuration,
   parseCsvFilter,
   parseProviderModelMap,
@@ -42,6 +36,7 @@ import type {
   VideoGenerationRequest,
 } from "openclaw/plugin-sdk/test-env";
 import { describe, expect, it } from "vitest";
+import { resolveLiveVideoSkipReason } from "../test/helpers/media-generation/live-video-skip-reason.js";
 import alibabaPlugin from "./alibaba/index.js";
 import byteplusPlugin from "./byteplus/index.js";
 import deepinfraPlugin from "./deepinfra/index.js";
@@ -77,7 +72,7 @@ const LIVE_VIDEO_OPERATION_TIMEOUT_MS = readPositiveIntegerEnv(
 const LIVE_VIDEO_TEST_TIMEOUT_MS =
   (RUN_FULL_VIDEO_MODES ? 3 : 1) * LIVE_VIDEO_OPERATION_TIMEOUT_MS + 30_000;
 const LIVE_VIDEO_SMOKE_PROMPT =
-  "A one-second low-motion video of a lobster walking across wet sand, no text.";
+  "A one-second low-motion video of a blue cube sliding across a clean studio floor.";
 
 type LiveProviderCase = {
   plugin: Parameters<typeof registerProviderPlugin>[0]["plugin"];
@@ -228,39 +223,6 @@ function buildLiveCapabilityOverrides(params: {
     ...(caps?.supportsAudio ? { audio: false } : {}),
     ...(caps?.supportsWatermark ? { watermark: false } : {}),
   };
-}
-
-function resolveLiveVideoSkipReason(message: string): string | null {
-  if (isAuthErrorMessage(message)) {
-    return "auth drift";
-  }
-  if (isModelNotFoundErrorMessage(message)) {
-    return "model drift";
-  }
-  if (isBillingErrorMessage(message)) {
-    return "billing drift";
-  }
-  if (
-    isTimeoutErrorMessage(message) ||
-    /did not finish in time/i.test(message) ||
-    /last status:\s*in_progress/i.test(message)
-  ) {
-    return "provider timeout";
-  }
-  if (isOverloadedErrorMessage(message) || isServerErrorMessage(message)) {
-    return "provider outage";
-  }
-  if (
-    /HTTP\s+404/i.test(message) &&
-    /Invalid URL/i.test(message) &&
-    /\/platform\/video_gen/i.test(message)
-  ) {
-    return "provider endpoint drift";
-  }
-  if (/access denied|not authorized|not enabled|permission denied/i.test(message)) {
-    return "provider/model drift";
-  }
-  return null;
 }
 
 async function runLiveVideoAttempt(params: {
