@@ -113,15 +113,10 @@ function listRepoBundledPluginManifests() {
   return fs
     .readdirSync(bundledPluginsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
-    .map((entry) => ({
-      dirName: entry.name,
-      manifest: loadPluginManifest(path.join(bundledPluginsDir, entry.name), false),
-    }))
-    .filter((entry) => entry.manifest.ok)
-    .map((entry) => ({
-      dirName: entry.dirName,
-      manifest: entry.manifest.manifest,
-    }));
+    .flatMap((entry) => {
+      const result = loadPluginManifest(path.join(bundledPluginsDir, entry.name), false);
+      return result.ok ? [{ dirName: entry.name, manifest: result.manifest }] : [];
+    });
 }
 
 function readPackageManifest(pluginDir: string): PackageManifest | undefined {
