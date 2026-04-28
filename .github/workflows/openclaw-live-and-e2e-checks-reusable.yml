@@ -1736,7 +1736,7 @@ jobs:
             profiles: stable full
           - suite_id: live-codex-harness-docker
             label: Docker live Codex harness
-            command: pnpm test:docker:live-codex-harness
+            command: OPENCLAW_LIVE_DOCKER_REPO_ROOT="$GITHUB_WORKSPACE" bash .release-harness/scripts/test-live-codex-harness-docker.sh
             timeout_minutes: 120
             needs_ffmpeg: false
             profile_env_only: false
