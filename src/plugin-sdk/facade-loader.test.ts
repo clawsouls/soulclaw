@@ -257,13 +257,13 @@ describe("plugin-sdk facade loader", () => {
     useBundledPluginDirOverrideForTest(overrideDir);
 
     const loaded = loadBundledPluginPublicSurfaceModuleSync<{
-      closeTrackedBrowserTabsForSessions: unknown;
+      definePluginEntry: unknown;
     }>({
-      dirName: "browser",
-      artifactBasename: "browser-maintenance.js",
+      dirName: "thread-ownership",
+      artifactBasename: "api.js",
     });
 
-    expect(loaded.closeTrackedBrowserTabsForSessions).toEqual(expect.any(Function));
+    expect(loaded.definePluginEntry).toEqual(expect.any(Function));
   });
 
   it("keeps bundled facade loads disabled when bundled plugins are disabled", () => {
