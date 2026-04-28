@@ -570,7 +570,7 @@ export function registerPluginsCli(program: Command) {
         withoutPluginInstallRecords,
         withPluginInstallRecords,
       } = await import("../plugins/installed-plugin-index-records.js");
-      const { buildPluginDiagnosticsReport } = await import("../plugins/status.js");
+      const { buildPluginSnapshotReport } = await import("../plugins/status.js");
       const {
         applyPluginUninstallDirectoryRemoval,
         formatUninstallActionLabels,
@@ -589,7 +589,7 @@ export function registerPluginsCli(program: Command) {
       const sourceConfig = (snapshot.sourceConfig ?? snapshot.config) as OpenClawConfig;
       const installRecords = await loadInstalledPluginIndexInstallRecords();
       const cfg = withPluginInstallRecords(sourceConfig, installRecords);
-      const report = buildPluginDiagnosticsReport({ config: cfg });
+      const report = buildPluginSnapshotReport({ config: cfg });
       const extensionsDir = path.join(resolveStateDir(process.env, os.homedir), "extensions");
       const keepFiles = Boolean(opts.keepFiles || opts.keepConfig);
 
