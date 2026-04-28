@@ -83,6 +83,10 @@ export function isGatewayRunFastPathArgv(argv: string[]): boolean {
   return invocation.commandPath.length === 1 || invocation.commandPath[1] === "run";
 }
 
+function hasJsonOutputFlag(argv: string[]): boolean {
+  return argv.some((arg) => arg === "--json" || arg.startsWith("--json="));
+}
+
 async function tryRunGatewayRunFastPath(
   argv: string[],
   startupTrace: ReturnType<typeof createGatewayCliMainStartupTrace>,
@@ -90,10 +94,30 @@ async function tryRunGatewayRunFastPath(
   if (!isGatewayRunFastPathArgv(argv)) {
     return false;
   }
-  const [{ Command }, { addGatewayRunCommand }] = await startupTrace.measure(
-    "gateway-run-imports",
-    () => Promise.all([import("commander"), import("./gateway-cli/run.js")]),
+  const [
+    { Command },
+    { addGatewayRunCommand },
+    { VERSION },
+    { emitCliBanner },
+    { resolveCliStartupPolicy },
+  ] = await startupTrace.measure("gateway-run-imports", () =>
+    Promise.all([
+      import("commander"),
+      import("./gateway-cli/run.js"),
+      import("../version.js"),
+      import("./banner.js"),
+      import("./command-startup-policy.js"),
+    ]),
   );
+  const invocation = resolveCliArgvInvocation(argv);
+  const startupPolicy = resolveCliStartupPolicy({
+    commandPath: invocation.commandPath,
+    jsonOutputMode: hasJsonOutputFlag(argv),
+    routeMode: true,
+  });
+  if (!startupPolicy.hideBanner) {
+    emitCliBanner(VERSION, { argv });
+  }
   const program = new Command();
   program.name("openclaw");
   program.enablePositionalOptions();
