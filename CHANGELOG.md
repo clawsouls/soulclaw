@@ -27,6 +27,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Plugins/hooks: time out never-settling `agent_end` observation hooks after 30 seconds and log the plugin failure, so hung embedding endpoints no longer leave memory capture silently pending forever. Fixes #65544. Thanks @ghoc0099.
+- Gateway/config: serve runtime config schemas from the current plugin metadata snapshot and generated bundled channel schema metadata instead of rebuilding plugin channel config modules on every `config.get`/`config.schema`, preventing idle plugin-discovery CPU churn after upgrades. Fixes #73088. Thanks @sleitor and @geovansb.
 - Memory/LanceDB: call OpenAI-compatible embedding endpoints through the raw SDK transport without sending `encoding_format`, then normalize float-array or base64 responses so providers such as ZhiPu and DashScope no longer fail recall with wrong vector dimensions or rejected parameters. Fixes #63655. Thanks @kinthaiofficial.
 - Plugins/install: run dependency installs with npm error-level logging instead of silent mode so failed plugin or hook installs surface actionable npm errors such as EUNSUPPORTEDPROTOCOL instead of `npm install failed:` with no detail. (#73093) Thanks @sanctrl.
 - Memory/LanceDB: bound memory recall embedding queries with a new `recallMaxChars` setting, prefer the latest user message over channel prompt metadata during auto-recall, and document the knob so small Ollama embedding models avoid context-length failures. Fixes #56780. Thanks @rungmc357 and @zak-collaborator.
