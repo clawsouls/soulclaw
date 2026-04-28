@@ -3,7 +3,7 @@ name: ClawSweeper Dispatch
 on:
   issues:
     types: [opened, reopened, edited, labeled, unlabeled]
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] maintainer-owned external dispatch; no checkout or untrusted PR code execution
     types: [opened, reopened, synchronize, ready_for_review, edited, labeled, unlabeled]
 
 permissions:
