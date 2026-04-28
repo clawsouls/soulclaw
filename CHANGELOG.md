@@ -16,6 +16,10 @@ Docs: https://docs.openclaw.ai
 - Memory/Dreaming: retry Dream Diary once with the session default when a configured dreaming model is unavailable, while leaving subagent trust and allowlist errors visible instead of silently masking configuration problems. Refs #67409 and #69209. Thanks @Ghiggins18 and @everySympathy.
 - Feishu/inbound files: recover CJK filenames from plain `Content-Disposition: filename=` download headers when Feishu exposes UTF-8 bytes through Latin-1 header decoding, while leaving valid Latin-1 and JSON-derived names unchanged. (#48578, #50435, #59431) Thanks @alex-xuweilong, @lishuaigit, and @DoChaoing.
 
+### Fixes
+
+- Channels/Telegram: normalize accidental full `/bot<TOKEN>` Telegram `apiRoot` values at runtime and teach `openclaw doctor --fix` to remove the suffix, so startup control calls no longer 404 when direct Bot API curl commands work. Fixes #55387. Thanks @brendanmatthewjones-cmyk, @techfindubai-ux, and @Sivlerback-Chris.
+
 ## 2026.4.27
 
 ### Changes
