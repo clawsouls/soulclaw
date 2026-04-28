@@ -64,11 +64,13 @@ function hasDiagnosticSourceSuffix(
 }
 
 function buildDiscoveryEnv(stateDir: string): NodeJS.ProcessEnv {
+  const bundledPluginsDir = path.join(stateDir, "empty-bundled-plugins");
+  mkdirSafe(bundledPluginsDir);
   return {
     OPENCLAW_STATE_DIR: stateDir,
     OPENCLAW_HOME: undefined,
     OPENCLAW_DISABLE_BUNDLED_PLUGINS: "1",
-    OPENCLAW_BUNDLED_PLUGINS_DIR: "/nonexistent/bundled/plugins",
+    OPENCLAW_BUNDLED_PLUGINS_DIR: bundledPluginsDir,
   };
 }
 
