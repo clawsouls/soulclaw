@@ -33,6 +33,7 @@ const unitFastCandidateGlobs = [
   "src/media-generation/**/*.test.ts",
   "src/media-understanding/**/*.test.ts",
   "src/memory-host-sdk/**/*.test.ts",
+  "src/model-catalog/**/*.test.ts",
   "src/music-generation/**/*.test.ts",
   "src/node-host/**/*.test.ts",
   "src/plugin-sdk/**/*.test.ts",
