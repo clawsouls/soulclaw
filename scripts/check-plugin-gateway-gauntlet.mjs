@@ -215,7 +215,7 @@ function pnpmCommand() {
 function openclawCommand(repoRoot, args) {
   return {
     command: process.execPath,
-    args: [path.join(repoRoot, "scripts", "run-node.mjs"), ...args],
+    args: [path.join(repoRoot, "dist", "entry.js"), ...args],
   };
 }
 
@@ -358,7 +358,7 @@ function runMeasuredCommand(params) {
 function runPluginLifecycle(params) {
   for (const plugin of params.plugins) {
     const commands = [
-      ["install", ["install", plugin.dir, "--link", "--force"]],
+      ["install", ["install", plugin.dir, "--link"]],
       ["inspect", ["inspect", plugin.id, "--json"]],
       ["disable", ["disable", plugin.id]],
       ["enable", ["enable", plugin.id]],
