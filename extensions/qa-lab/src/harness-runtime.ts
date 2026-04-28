@@ -1,13 +1,16 @@
+import {
+  buildMentionRegexes,
+  implicitMentionKindWhen,
+  matchesMentionPatterns,
+  matchesMentionWithExplicit,
+  resolveInboundMentionDecision,
+} from "openclaw/plugin-sdk/channel-inbound";
 import type { PluginRuntime } from "openclaw/plugin-sdk/runtime-store";
 
 type SessionRecord = {
   sessionKey: string;
   body: string;
 };
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 export function createQaRunnerRuntime(): PluginRuntime {
   const sessions = new Map<string, SessionRecord>();
@@ -53,13 +56,11 @@ export function createQaRunnerRuntime(): PluginRuntime {
         },
       },
       mentions: {
-        buildMentionRegexes(_cfg: unknown, agentId?: string) {
-          const normalized = agentId?.trim();
-          return normalized ? [new RegExp(`\\b@?${escapeRegExp(normalized)}\\b`, "i")] : [];
-        },
-        matchesMentionPatterns(text: string, mentionRegexes: RegExp[]) {
-          return mentionRegexes.some((regex) => regex.test(text));
-        },
+        buildMentionRegexes,
+        matchesMentionPatterns,
+        matchesMentionWithExplicit,
+        implicitMentionKindWhen,
+        resolveInboundMentionDecision,
       },
       reply: {
         resolveEnvelopeFormatOptions() {
