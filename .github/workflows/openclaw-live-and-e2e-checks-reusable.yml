@@ -63,6 +63,15 @@ on:
         required: false
         default: ""
         type: string
+      release_test_profile:
+        description: Release coverage profile for live/Docker/provider breadth
+        required: false
+        default: full
+        type: choice
+        options:
+          - minimum
+          - stable
+          - full
   workflow_call:
     inputs:
       ref:
@@ -123,6 +132,11 @@ on:
         description: Comma/space separated provider ids for the Docker live model matrix; blank runs all providers
         required: false
         default: ""
+        type: string
+      release_test_profile:
+        description: Release coverage profile for live/Docker/provider breadth
+        required: false
+        default: full
         type: string
     secrets:
       OPENAI_API_KEY:
@@ -1208,22 +1222,31 @@ jobs:
         include:
           - provider_label: Anthropic
             providers: anthropic
+            profiles: stable full
           - provider_label: Google
             providers: google
+            profiles: stable full
           - provider_label: MiniMax
             providers: minimax
+            profiles: stable full
           - provider_label: OpenAI
             providers: openai
+            profiles: minimum stable full
           - provider_label: OpenCode
             providers: opencode-go
+            profiles: full
           - provider_label: OpenRouter
             providers: openrouter
+            profiles: full
           - provider_label: xAI
             providers: xai
+            profiles: full
           - provider_label: Z.ai
             providers: zai
+            profiles: full
           - provider_label: Fireworks
             providers: fireworks
+            profiles: full
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
@@ -1261,12 +1284,14 @@ jobs:
       OPENCLAW_VITEST_MAX_WORKERS: "2"
     steps:
       - name: Checkout selected ref
+        if: contains(matrix.profiles, inputs.release_test_profile)
         uses: actions/checkout@v6
         with:
           ref: ${{ needs.validate_selected_ref.outputs.selected_sha }}
           fetch-depth: 1
 
       - name: Setup Node environment
+        if: contains(matrix.profiles, inputs.release_test_profile)
         uses: ./.github/actions/setup-node-env
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -1274,9 +1299,11 @@ jobs:
           install-bun: "true"
 
       - name: Hydrate live auth/profile inputs
+        if: contains(matrix.profiles, inputs.release_test_profile)
         run: bash scripts/ci-hydrate-live-auth.sh
 
       - name: Validate provider credential
+        if: contains(matrix.profiles, inputs.release_test_profile)
         shell: bash
         run: |
           set -euo pipefail
@@ -1311,6 +1338,7 @@ jobs:
           esac
 
       - name: Run Docker live model sweep
+        if: contains(matrix.profiles, inputs.release_test_profile)
         run: pnpm test:docker:live-models
 
   validate_live_models_docker_targeted:
@@ -1485,156 +1513,196 @@ jobs:
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: stable full
           - suite_id: native-live-src-gateway-core
             label: Native live gateway core
             command: node scripts/test-live-shard.mjs native-live-src-gateway-core
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: minimum stable full
           - suite_id: native-live-src-gateway-profiles-anthropic
             label: Native live gateway profiles Anthropic
             command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=anthropic node scripts/test-live-shard.mjs native-live-src-gateway-profiles
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: stable full
           - suite_id: native-live-src-gateway-profiles-google
             label: Native live gateway profiles Google
             command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=google node scripts/test-live-shard.mjs native-live-src-gateway-profiles
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: stable full
           - suite_id: native-live-src-gateway-profiles-minimax
             label: Native live gateway profiles MiniMax
             command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=minimax,minimax-portal node scripts/test-live-shard.mjs native-live-src-gateway-profiles
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: stable full
           - suite_id: native-live-src-gateway-profiles-openai
             label: Native live gateway profiles OpenAI
             command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=openai node scripts/test-live-shard.mjs native-live-src-gateway-profiles
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: minimum stable full
           - suite_id: native-live-src-gateway-profiles-fireworks
             label: Native live gateway profiles Fireworks
             command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=fireworks node scripts/test-live-shard.mjs native-live-src-gateway-profiles
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: full
           - suite_id: native-live-src-gateway-profiles-deepseek
             label: Native live gateway profiles DeepSeek
             command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=deepseek node scripts/test-live-shard.mjs native-live-src-gateway-profiles
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: full
           - suite_id: native-live-src-gateway-profiles-opencode-go
-            label: Native live gateway profiles OpenCode Go
+            label: Native live gateway profiles OpenCode Go deep
             command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=opencode-go node scripts/test-live-shard.mjs native-live-src-gateway-profiles
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: full
+          - suite_id: native-live-src-gateway-profiles-opencode-go-smoke
+            label: Native live gateway profiles OpenCode Go smoke
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=opencode-go OPENCLAW_LIVE_GATEWAY_SMOKE=1 OPENCLAW_LIVE_GATEWAY_MAX_MODELS=1 node scripts/test-live-shard.mjs native-live-src-gateway-profiles
+            timeout_minutes: 45
+            needs_ffmpeg: false
+            profile_env_only: false
+            profiles: stable
           - suite_id: native-live-src-gateway-profiles-openrouter
             label: Native live gateway profiles OpenRouter
             command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=openrouter node scripts/test-live-shard.mjs native-live-src-gateway-profiles
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: full
           - suite_id: native-live-src-gateway-profiles-xai
             label: Native live gateway profiles xAI
             command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=xai node scripts/test-live-shard.mjs native-live-src-gateway-profiles
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: full
           - suite_id: native-live-src-gateway-profiles-zai
             label: Native live gateway profiles Z.ai
             command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=zai node scripts/test-live-shard.mjs native-live-src-gateway-profiles
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: full
           - suite_id: native-live-src-gateway-backends
             label: Native live gateway backends
             command: node scripts/test-live-shard.mjs native-live-src-gateway-backends
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: stable full
           - suite_id: native-live-test
             label: Native live test harnesses
             command: node scripts/test-live-shard.mjs native-live-test
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: stable full
           - suite_id: native-live-extensions-a-k
             label: Native live plugins A-K
             command: node scripts/test-live-shard.mjs native-live-extensions-a-k
             timeout_minutes: 90
             needs_ffmpeg: true
             profile_env_only: false
+            profiles: full
           - suite_id: native-live-extensions-l-n
             label: Native live plugins L-N
             command: node scripts/test-live-shard.mjs native-live-extensions-l-n
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: full
           - suite_id: native-live-extensions-openai
             label: Native live OpenAI plugin
             command: node scripts/test-live-shard.mjs native-live-extensions-openai
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: minimum stable full
           - suite_id: native-live-extensions-o-z-other
             label: Native live plugins O-Z other
             command: node scripts/test-live-shard.mjs native-live-extensions-o-z-other
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: full
           - suite_id: native-live-extensions-xai
             label: Native live xAI plugin
             command: node scripts/test-live-shard.mjs native-live-extensions-xai
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: full
           - suite_id: native-live-extensions-media-audio
             label: Native live media audio plugins
             command: node scripts/test-live-shard.mjs native-live-extensions-media-audio
             timeout_minutes: 90
             needs_ffmpeg: true
             profile_env_only: false
-          - suite_id: native-live-extensions-media-music
-            label: Native live media music plugins
-            command: node scripts/test-live-shard.mjs native-live-extensions-media-music
+            profiles: full
+          - suite_id: native-live-extensions-media-music-google
+            label: Native live media music Google
+            command: OPENCLAW_LIVE_MUSIC_GENERATION_PROVIDERS=google node scripts/test-live-shard.mjs native-live-extensions-media-music-google
             timeout_minutes: 90
             needs_ffmpeg: true
             profile_env_only: false
+            profiles: full
+          - suite_id: native-live-extensions-media-music-minimax
+            label: Native live media music MiniMax
+            command: OPENCLAW_LIVE_MUSIC_GENERATION_PROVIDERS=minimax node scripts/test-live-shard.mjs native-live-extensions-media-music-minimax
+            timeout_minutes: 90
+            needs_ffmpeg: true
+            profile_env_only: false
+            profiles: full
           - suite_id: native-live-extensions-media-video
             label: Native live media video plugins
             command: node scripts/test-live-shard.mjs native-live-extensions-media-video
             timeout_minutes: 90
             needs_ffmpeg: true
             profile_env_only: false
+            profiles: full
           - suite_id: live-gateway-docker
             label: Docker live gateway
             command: pnpm test:docker:live-gateway
             timeout_minutes: 120
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: minimum stable full
           - suite_id: live-cli-backend-docker
             label: Docker live CLI backend
             command: pnpm test:docker:live-cli-backend
             timeout_minutes: 120
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: stable full
           - suite_id: live-acp-bind-docker
             label: Docker live ACP bind
             command: pnpm test:docker:live-acp-bind
             timeout_minutes: 120
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: stable full
           - suite_id: live-codex-harness-docker
             label: Docker live Codex harness
             command: pnpm test:docker:live-codex-harness
             timeout_minutes: 120
             needs_ffmpeg: false
             profile_env_only: false
+            profiles: stable full
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
@@ -1685,12 +1753,14 @@ jobs:
       OPENCLAW_VITEST_MAX_WORKERS: "2"
     steps:
       - name: Checkout selected ref
+        if: contains(matrix.profiles, inputs.release_test_profile)
         uses: actions/checkout@v6
         with:
           ref: ${{ needs.validate_selected_ref.outputs.selected_sha }}
           fetch-depth: 1
 
       - name: Setup Node environment
+        if: contains(matrix.profiles, inputs.release_test_profile)
         uses: ./.github/actions/setup-node-env
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -1698,10 +1768,11 @@ jobs:
           install-bun: "true"
 
       - name: Hydrate live auth/profile inputs
+        if: contains(matrix.profiles, inputs.release_test_profile)
         run: bash scripts/ci-hydrate-live-auth.sh
 
       - name: Install live media dependencies
-        if: matrix.needs_ffmpeg
+        if: matrix.needs_ffmpeg && contains(matrix.profiles, inputs.release_test_profile)
         shell: bash
         run: |
           set -euo pipefail
@@ -1720,6 +1791,7 @@ jobs:
           ffmpeg -version | head -1
 
       - name: Configure suite-specific env
+        if: contains(matrix.profiles, inputs.release_test_profile)
         shell: bash
         run: |
           set -euo pipefail
@@ -1766,4 +1838,5 @@ jobs:
           esac
 
       - name: Run ${{ matrix.label }}
+        if: contains(matrix.profiles, inputs.release_test_profile)
         run: ${{ matrix.command }}
