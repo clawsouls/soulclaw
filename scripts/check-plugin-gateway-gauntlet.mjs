@@ -21,6 +21,7 @@ const DEFAULT_CPU_CORE_WARN = 0.9;
 const DEFAULT_HOT_WALL_WARN_MS = 30_000;
 const DEFAULT_MAX_RSS_WARN_MB = 1536;
 const DEFAULT_QA_PLUGIN_CHUNK_SIZE = 12;
+const ANSI_PATTERN = new RegExp(String.raw`\u001B\[[0-9;]*m`, "gu");
 
 function parseArgs(argv) {
   const options = {
@@ -313,7 +314,7 @@ function parseFirstFloat(value, pattern) {
 }
 
 function stripAnsi(value) {
-  return value.replace(/\u001B\[[0-9;]*m/gu, "");
+  return value.replace(ANSI_PATTERN, "");
 }
 
 function writeCommandLog(params) {
@@ -331,7 +332,7 @@ function writeCommandLog(params) {
 
 function runMeasuredCommand(params) {
   const { command, args, mode } = timeWrapperArgs(params.command, params.args);
-  const started = process.hrtime.bigint();
+  const started = performance.now();
   const result = spawnSync(command, args, {
     cwd: params.cwd,
     env: params.env,
@@ -339,7 +340,7 @@ function runMeasuredCommand(params) {
     timeout: params.timeoutMs,
     maxBuffer: 16 * 1024 * 1024,
   });
-  const wallMs = Number(process.hrtime.bigint() - started) / 1_000_000;
+  const wallMs = performance.now() - started;
   const status = result.status ?? (result.signal ? 1 : 0);
   const stdout = result.stdout ?? "";
   const stderr = result.stderr ?? "";
@@ -365,14 +366,17 @@ function runMeasuredCommand(params) {
 function runPluginLifecycle(params) {
   for (const plugin of params.plugins) {
     const commands = [
-      ["install", ["install", plugin.dir, "--link", "--dangerously-force-unsafe-install"]],
-      ["inspect", ["inspect", plugin.id, "--json"]],
-      ["disable", ["disable", plugin.id]],
-      ["enable", ["enable", plugin.id]],
-      ["doctor", ["doctor"]],
-      ["uninstall", ["uninstall", plugin.id, "--force"]],
+      {
+        phase: "install",
+        args: ["install", plugin.dir, "--link", "--dangerously-force-unsafe-install"],
+      },
+      { phase: "inspect", args: ["inspect", plugin.id, "--json"] },
+      { phase: "disable", args: ["disable", plugin.id] },
+      { phase: "enable", args: ["enable", plugin.id] },
+      { phase: "doctor", args: ["doctor"] },
+      { phase: "uninstall", args: ["uninstall", plugin.id, "--force"] },
     ];
-    for (const [phase, args] of commands) {
+    for (const { phase, args } of commands) {
       process.stderr.write(`[plugin-gauntlet] ${plugin.id} ${phase}\n`);
       params.rows.push(
         runMeasuredCommand({

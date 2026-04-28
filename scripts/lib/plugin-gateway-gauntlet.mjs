@@ -155,7 +155,7 @@ function discoverBundledPluginManifests(repoRoot) {
       const manifest = readPluginManifest(manifestPath);
       return [buildPluginMatrixEntry({ repoRoot, manifestPath, manifest })];
     });
-  return entries.sort((left, right) => left.id.localeCompare(right.id));
+  return entries.toSorted((left, right) => left.id.localeCompare(right.id));
 }
 
 function selectPluginEntries(entries, options = {}) {
@@ -186,7 +186,7 @@ function selectPluginEntries(entries, options = {}) {
 function median(values) {
   const sorted = values
     .filter((value) => typeof value === "number" && Number.isFinite(value))
-    .sort((left, right) => left - right);
+    .toSorted((left, right) => left - right);
   if (sorted.length === 0) {
     return null;
   }
