@@ -234,19 +234,7 @@ export async function persistCliTurnTranscript(params: {
 export function runAgentAttempt(params: {
   providerOverride: string;
   modelOverride: string;
-  /**
-   * The provider the user originally requested for this turn (i.e. the
-   * primary candidate of the fallback chain). Used to scope claude-cli
-   * fallback context seeding to chains that actually started on claude-cli;
-   * a stale `cliSessionBindings["claude-cli"]` from an unrelated past run
-   * must not contaminate fallbacks that started on another provider
-   * (Codex review #72069 P1). Optional for callers that don't drive
-   * a fallback chain (tests, ad-hoc invocations); when omitted, the
-   * claude-cli fallback seed is skipped — that's a no-op for non-fallback
-   * paths and a defensive default for fallback paths that didn't plumb
-   * the original provider through.
-   */
-  originalProvider?: string;
+  originalProvider: string;
   cfg: OpenClawConfig;
   sessionEntry: SessionEntry | undefined;
   sessionId: string;
@@ -273,21 +261,8 @@ export function runAgentAttempt(params: {
   allowTransientCooldownProbe?: boolean;
   sessionHasHistory?: boolean;
 }) {
-  // #69973: when a fallback fires from claude-cli to a non-CLI candidate
-  // (or a different CLI backend), the next runner cannot see Claude Code's
-  // local JSONL history. Without a seed, the fallback model starts cold —
-  // even though the original Claude session is still alive on disk.
-  // Harvest a compacted context (Claude's own `/compact` summary plus the
-  // most recent post-boundary turns) and prepend it to the retry prompt.
-  // This mirrors what Claude Code itself replays after compaction.
-  //
-  // Gate explicitly on `originalProvider === "claude-cli"`: if the user-
-  // requested provider for this run was not claude-cli, any claude-cli
-  // session binding on the entry is stale state from an earlier run and
-  // must not bleed into this fallback chain.
   const claudeCliFallbackPrelude =
     params.isFallbackRetry &&
-    typeof params.originalProvider === "string" &&
     isClaudeCliProvider(params.originalProvider) &&
     !isClaudeCliProvider(params.providerOverride)
       ? buildClaudeCliFallbackContextPrelude({

@@ -334,14 +334,6 @@ export function readClaudeCliSessionMessages(params: {
   return coalesceClaudeCliToolMessages(messages);
 }
 
-// Compaction surface in Claude Code's JSONL: `/compact` writes a
-// `type: "summary"` entry whose `summary` field holds the condensed text,
-// and an associated `type: "system", subtype: "compact_boundary"` entry
-// whose `compactMetadata` carries `trigger`/`preTokens`. After a boundary,
-// only post-compaction `user`/`assistant` turns are written as individual
-// entries; pre-compaction context lives in the summary. This shape mirrors
-// what Claude Code itself sends to the model after compaction (summary plus
-// recent turns), per the upstream session-management docs.
 type ClaudeCliCompactBoundaryEntry = {
   type: "system";
   subtype?: unknown;
@@ -361,20 +353,7 @@ type ClaudeCliSummaryEntry = {
 };
 
 export type ClaudeCliFallbackSeed = {
-  /**
-   * The most recent compaction summary, if the session has been `/compact`-ed
-   * at any point. Sourced from the latest `type: "summary"` entry, falling
-   * back to the latest `compact_boundary` content when no explicit summary
-   * is present (older Claude Code builds).
-   */
   summaryText?: string;
-  /**
-   * User/assistant turns after the most recent compact boundary, or all
-   * turns when the session has never been compacted. Tool-result turns are
-   * coalesced into adjacent assistant turns the same way
-   * `readClaudeCliSessionMessages` does, so consumers can format them like
-   * a regular transcript.
-   */
   recentTurns: TranscriptLikeMessage[];
 };
 
@@ -387,11 +366,6 @@ function isCompactBoundary(entry: ClaudeCliProjectEntry): boolean {
 }
 
 function extractCompactBoundaryFallbackText(entry: ClaudeCliProjectEntry): string | undefined {
-  // When `/compact` is invoked, Claude Code writes a separate summary entry
-  // — but on older builds the boundary's `content` ("Conversation compacted")
-  // is the only signal that compaction happened. Prefer the explicit summary
-  // when both exist; this fallback gives a non-empty hint when only the
-  // boundary is present so the seed at least labels the gap honestly.
   const content = (entry as ClaudeCliCompactBoundaryEntry).content;
   return typeof content === "string" && content.trim() ? content.trim() : undefined;
 }
@@ -420,17 +394,6 @@ export function readClaudeCliFallbackSeed(params: {
     return undefined;
   }
 
-  // Pair each compact_boundary with the summary entry that preceded it
-  // since the previous boundary, so a later compaction whose summary is
-  // missing (e.g. crash mid-write) does not silently keep an older
-  // compaction's summary alive (#72069 Codex P2). Walk shape:
-  //   - explicit `summary` entry queues into `pendingSummary` until the
-  //     next boundary "consumes" it.
-  //   - `compact_boundary` flushes the pending summary into `lastSummary`,
-  //     refreshes `lastBoundaryFallback` from the boundary's content, and
-  //     drops the windowed turns and tool registry.
-  //   - everything after the latest boundary forms the recent-window the
-  //     fallback runner will replay alongside the summary.
   let pendingSummary: string | undefined;
   let lastSummary: string | undefined;
   let lastBoundaryFallback: string | undefined;
@@ -450,23 +413,15 @@ export function readClaudeCliFallbackSeed(params: {
 
     const explicitSummary = extractSummaryText(parsed);
     if (explicitSummary) {
-      // Queue the summary; the next boundary will pair it with itself.
-      // Multiple summaries between boundaries (rare) take the last one,
-      // matching how Claude Code's resume picks the most recent summary.
       pendingSummary = explicitSummary;
       continue;
     }
 
     if (isCompactBoundary(parsed)) {
-      lastSummary = pendingSummary; // may be undefined if no preceding summary
+      lastSummary = pendingSummary;
       pendingSummary = undefined;
       lastBoundaryFallback = extractCompactBoundaryFallbackText(parsed) ?? lastBoundaryFallback;
-      // Drop turns that lived before this boundary — they are now
-      // represented by the summary, and replaying them would double-count
-      // their tokens against the fallback model's budget.
       windowedTurns = [];
-      // Reset tool-name registry too: tool ids before a compact boundary
-      // are no longer visible to the post-boundary turns.
       toolNameRegistry.clear();
       continue;
     }
@@ -478,9 +433,6 @@ export function readClaudeCliFallbackSeed(params: {
   }
 
   const recentTurns = coalesceClaudeCliToolMessages(windowedTurns);
-  // Honor a `/compact` summary that was written but never followed by a
-  // boundary marker (older Claude Code build, or graceful-degrade case).
-  // `pendingSummary` then carries the latest such summary into the result.
   const resolvedSummaryText = lastSummary ?? pendingSummary ?? lastBoundaryFallback;
   if (!resolvedSummaryText && recentTurns.length === 0) {
     return undefined;

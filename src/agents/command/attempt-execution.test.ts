@@ -80,10 +80,6 @@ describe("resolveFallbackRetryPrompt", () => {
     ).toBe(originalBody);
   });
 
-  // #69973: even when OpenClaw's own session file is empty (the claude-cli
-  // case where Claude Code maintains its own JSONL), a harvested
-  // priorContextPrelude must still seed the retry prompt so the fallback
-  // candidate has prior context.
   it("prepends priorContextPrelude before the retry marker on fallback retry", () => {
     const prelude = "## Prior session context (from claude-cli)\nuser: prior question";
     const result = resolveFallbackRetryPrompt({
@@ -191,8 +187,6 @@ describe("formatClaudeCliFallbackPrelude", () => {
     );
     expect(out).toContain("Summary of earlier conversation (truncated):");
     expect(out.length).toBeLessThan(800);
-    // Trailing ellipsis tells the model the summary was clipped — better
-    // than silently emitting a fragment that looks complete.
     expect(out).toMatch(/…$/);
   });
 
@@ -205,6 +199,23 @@ describe("formatClaudeCliFallbackPrelude", () => {
     // Newest turn (turn 10) must be present; oldest (turn 1) must not be.
     expect(out).toContain("turn 10");
     expect(out).not.toContain("turn 1 ");
+  });
+
+  it("keeps the recent turn window contiguous when an adjacent turn is oversized", () => {
+    const out = formatClaudeCliFallbackPrelude(
+      {
+        recentTurns: [
+          { role: "user", content: "older small turn" },
+          { role: "assistant", content: `oversized adjacent turn ${"x".repeat(500)}` },
+          { role: "user", content: "newest small turn" },
+        ],
+      },
+      { charBudget: 260 },
+    );
+
+    expect(out).toContain("newest small turn");
+    expect(out).not.toContain("oversized adjacent turn");
+    expect(out).not.toContain("older small turn");
   });
 });
 

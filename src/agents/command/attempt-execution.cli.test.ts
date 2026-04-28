@@ -102,6 +102,7 @@ describe("CLI attempt execution", () => {
   }) {
     await runAgentAttempt({
       providerOverride: "claude-cli",
+      originalProvider: "claude-cli",
       modelOverride: "opus",
       cfg: {} as OpenClawConfig,
       sessionEntry: params.sessionEntry,
@@ -166,6 +167,7 @@ describe("CLI attempt execution", () => {
 
     await runAgentAttempt({
       providerOverride: "claude-cli",
+      originalProvider: "claude-cli",
       modelOverride: "opus",
       cfg: {} as OpenClawConfig,
       sessionEntry,
@@ -317,6 +319,7 @@ describe("CLI attempt execution", () => {
 
     await runAgentAttempt({
       providerOverride: "codex-cli",
+      originalProvider: "codex-cli",
       modelOverride: "gpt-5.4",
       cfg: {} as OpenClawConfig,
       sessionEntry,
@@ -433,6 +436,7 @@ describe("CLI attempt execution", () => {
 
     await runAgentAttempt({
       providerOverride: "claude-cli",
+      originalProvider: "claude-cli",
       modelOverride: "opus",
       cfg: {} as OpenClawConfig,
       sessionEntry,
@@ -482,6 +486,7 @@ describe("CLI attempt execution", () => {
 
     await runAgentAttempt({
       providerOverride: "anthropic",
+      originalProvider: "anthropic",
       modelOverride: "claude-opus-4-7",
       cfg: {
         agents: {
@@ -536,6 +541,7 @@ describe("CLI attempt execution", () => {
 
     await runAgentAttempt({
       providerOverride: "claude-cli",
+      originalProvider: "claude-cli",
       modelOverride: "claude-opus-4-7",
       cfg: {} as OpenClawConfig,
       sessionEntry,
@@ -601,6 +607,7 @@ describe("embedded attempt harness pinning", () => {
 
     await runAgentAttempt({
       providerOverride: "openai",
+      originalProvider: "openai",
       modelOverride: "gpt-5.4",
       cfg: {} as OpenClawConfig,
       sessionEntry,
@@ -644,6 +651,7 @@ describe("embedded attempt harness pinning", () => {
 
     await runAgentAttempt({
       providerOverride: "codex",
+      originalProvider: "codex",
       modelOverride: "gpt-5.4",
       cfg: {
         agents: {
@@ -693,6 +701,7 @@ describe("embedded attempt harness pinning", () => {
 
     await runAgentAttempt({
       providerOverride: "openai",
+      originalProvider: "openai",
       modelOverride: "gpt-5.4",
       cfg: {} as OpenClawConfig,
       sessionEntry,
@@ -736,6 +745,7 @@ describe("embedded attempt harness pinning", () => {
 
     await runAgentAttempt({
       providerOverride: "openai",
+      originalProvider: "claude-cli",
       modelOverride: "gpt-5.4",
       cfg: {
         agents: {

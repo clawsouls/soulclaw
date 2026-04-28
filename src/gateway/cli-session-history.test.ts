@@ -299,10 +299,6 @@ describe("cli session history", () => {
   });
 });
 
-// Regression coverage for #69973 — claude-cli fallback context loss. The
-// new reader exposes the explicit `/compact` summary and the post-boundary
-// turn window so a fallback to a non-CLI candidate can replay the same
-// shape Claude Code itself uses on resume after compaction.
 describe("readClaudeCliFallbackSeed", () => {
   let tmpRoot: string;
   let homeDir: string;
@@ -372,7 +368,7 @@ describe("readClaudeCliFallbackSeed", () => {
       {
         type: "user",
         uuid: "u-pre",
-        message: { role: "user", content: "PRE-COMPACT user turn that must NOT be in seed" },
+        message: { role: "user", content: "pre-compact user turn excluded from seed" },
       },
       {
         type: "assistant",
@@ -512,10 +508,6 @@ describe("readClaudeCliFallbackSeed", () => {
     expect(seed).toBeUndefined();
   });
 
-  // Codex P2 on #72069: each compact_boundary must pair with the summary
-  // entry that preceded it since the previous boundary. A later boundary
-  // without its own summary must not silently keep an older compaction's
-  // summary alive — that paired stale text with fresh post-boundary turns.
   it("falls back to the latest boundary content when a newer compaction has no summary", async () => {
     await writeJsonl([
       { type: "summary", summary: "FIRST compact summary", leafUuid: "x" },
@@ -530,9 +522,6 @@ describe("readClaudeCliFallbackSeed", () => {
         uuid: "u-mid",
         message: { role: "user", content: "post-first-compact turn" },
       },
-      // Second compaction: boundary written, but the summary entry never
-      // landed (e.g. crash between writes). The seed must NOT serve the
-      // FIRST summary alongside post-second-boundary turns.
       {
         type: "system",
         subtype: "compact_boundary",
@@ -555,9 +544,6 @@ describe("readClaudeCliFallbackSeed", () => {
   });
 
   it("uses a trailing summary that has no following compact_boundary marker", async () => {
-    // Older Claude Code builds wrote the summary entry without a paired
-    // boundary marker. The seed should still surface that summary so a
-    // subsequent fallback at least has a labeled context block.
     await writeJsonl([
       {
         type: "user",

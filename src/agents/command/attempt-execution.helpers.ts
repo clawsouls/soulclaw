@@ -109,14 +109,6 @@ export function resolveFallbackRetryPrompt(params: {
   body: string;
   isFallbackRetry: boolean;
   sessionHasHistory?: boolean;
-  /**
-   * Optional context prelude (e.g., a compacted summary harvested from a
-   * non-OpenClaw transcript such as Claude Code's local JSONL). Prepended
-   * before the retry marker so the fallback candidate has prior context
-   * even when OpenClaw's own session file is empty for the current
-   * provider — see `buildClaudeCliFallbackContextPrelude` for the
-   * claude-cli case (#69973).
-   */
   priorContextPrelude?: string;
 }): string {
   if (!params.isFallbackRetry) {
@@ -189,15 +181,6 @@ function formatFallbackTurns(
   if (turns.length === 0 || remainingBudget <= 0) {
     return { text: "", consumed: 0 };
   }
-  // Walk newest -> oldest, prepending lines until one does not fit.
-  //
-  // We stop on the FIRST oversized turn instead of skipping it and then
-  // continuing into older ones. The fallback prelude is a "most recent
-  // contiguous window" summary — what was happening just before the
-  // failed attempt — so a non-contiguous slice (newest + something from
-  // 20 turns ago, gap in the middle) would mislead the fallback model
-  // about the actual flow. Sparse coverage is worse than fewer turns:
-  // greptile flagged this as a P2 on #72069; behavior is intentional.
   const lines: string[] = [];
   let consumed = 0;
   for (let i = turns.length - 1; i >= 0; i -= 1) {
