@@ -266,13 +266,13 @@ describe("gateway startup config recovery", () => {
           },
         },
       },
-    } as OpenClawConfig;
+    } as unknown as OpenClawConfig;
     const autoEnabledConfig = {
       ...sourceConfig,
       channels: {
         telegram: { enabled: true },
       },
-    } as OpenClawConfig;
+    } as unknown as OpenClawConfig;
     const initialSnapshot = {
       ...buildTestConfigSnapshot({
         path: configPath,
