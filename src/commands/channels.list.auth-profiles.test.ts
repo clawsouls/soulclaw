@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { baseConfigSnapshot, createTestRuntime } from "./test-runtime-config-helpers.js";
 
 const mocks = vi.hoisted(() => ({
@@ -9,7 +9,8 @@ const mocks = vi.hoisted(() => ({
     diagnostics: [],
   })),
   loadAuthProfileStoreWithoutExternalProfiles: vi.fn(),
-  listChannelPlugins: vi.fn(() => []),
+  listReadOnlyChannelPluginsForConfig: vi.fn(() => []),
+  buildChannelAccountSnapshot: vi.fn(),
 }));
 
 vi.mock("../config/config.js", () => ({
@@ -28,13 +29,26 @@ vi.mock("../agents/auth-profiles.js", () => ({
   loadAuthProfileStoreWithoutExternalProfiles: mocks.loadAuthProfileStoreWithoutExternalProfiles,
 }));
 
-vi.mock("../channels/plugins/index.js", () => ({
-  listChannelPlugins: mocks.listChannelPlugins,
+vi.mock("../channels/plugins/read-only.js", () => ({
+  listReadOnlyChannelPluginsForConfig: mocks.listReadOnlyChannelPluginsForConfig,
+}));
+
+vi.mock("../channels/plugins/status.js", () => ({
+  buildChannelAccountSnapshot: mocks.buildChannelAccountSnapshot,
 }));
 
 import { channelsListCommand } from "./channels/list.js";
 
 describe("channels list auth profiles", () => {
+  beforeEach(() => {
+    mocks.readConfigFileSnapshot.mockReset();
+    mocks.resolveCommandConfigWithSecrets.mockClear();
+    mocks.loadAuthProfileStoreWithoutExternalProfiles.mockReset();
+    mocks.listReadOnlyChannelPluginsForConfig.mockReset();
+    mocks.listReadOnlyChannelPluginsForConfig.mockReturnValue([]);
+    mocks.buildChannelAccountSnapshot.mockReset();
+  });
+
   it("includes local auth profiles in JSON output without loading external profiles", async () => {
     const runtime = createTestRuntime();
     mocks.readConfigFileSnapshot.mockResolvedValue({
@@ -72,5 +86,93 @@ describe("channels list auth profiles", () => {
     const ids = payload.auth?.map((entry) => entry.id) ?? [];
     expect(ids).toContain("anthropic:default");
     expect(ids).toContain("openai-codex:default");
+  });
+
+  it("includes configured chat channel accounts in JSON output", async () => {
+    const runtime = createTestRuntime();
+    mocks.listReadOnlyChannelPluginsForConfig.mockReturnValue([
+      {
+        id: "telegram",
+        meta: { id: "telegram", label: "Telegram" },
+        config: {
+          listAccountIds: () => ["alerts", "default"],
+        },
+      },
+    ]);
+    mocks.readConfigFileSnapshot.mockResolvedValue({
+      ...baseConfigSnapshot,
+      config: {
+        channels: {
+          telegram: {
+            accounts: {
+              default: { botToken: "123:abc" },
+              alerts: { botToken: "456:def" },
+            },
+          },
+        },
+      },
+    });
+    mocks.loadAuthProfileStoreWithoutExternalProfiles.mockReturnValue({
+      version: 1,
+      profiles: {},
+    });
+
+    await channelsListCommand({ json: true, usage: false }, runtime);
+
+    expect(mocks.listReadOnlyChannelPluginsForConfig).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ includeSetupRuntimeFallback: true }),
+    );
+    const payload = JSON.parse(runtime.log.mock.calls[0]?.[0] as string) as {
+      chat?: Record<string, string[]>;
+    };
+    expect(payload.chat?.telegram).toEqual(["alerts", "default"]);
+  });
+
+  it("prints configured chat channel accounts before auth providers", async () => {
+    const runtime = createTestRuntime();
+    mocks.listReadOnlyChannelPluginsForConfig.mockReturnValue([
+      {
+        id: "telegram",
+        meta: { id: "telegram", label: "Telegram" },
+        config: {
+          listAccountIds: () => ["default"],
+        },
+      },
+    ]);
+    mocks.buildChannelAccountSnapshot.mockResolvedValue({
+      accountId: "default",
+      configured: true,
+      tokenSource: "config",
+      enabled: true,
+    });
+    mocks.readConfigFileSnapshot.mockResolvedValue({
+      ...baseConfigSnapshot,
+      config: {
+        channels: {
+          telegram: {
+            accounts: {
+              default: { botToken: "123:abc" },
+            },
+          },
+        },
+      },
+    });
+    mocks.loadAuthProfileStoreWithoutExternalProfiles.mockReturnValue({
+      version: 1,
+      profiles: {},
+    });
+
+    await channelsListCommand({ usage: false }, runtime);
+
+    expect(mocks.listReadOnlyChannelPluginsForConfig).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ includeSetupRuntimeFallback: true }),
+    );
+    const output = runtime.log.mock.calls[0]?.[0] as string;
+    expect(output).toContain("Chat channels:");
+    expect(output).toContain("Telegram default:");
+    expect(output).toContain("configured");
+    expect(output.indexOf("Telegram default:")).toBeLessThan(output.indexOf("Auth providers"));
   });
 });
