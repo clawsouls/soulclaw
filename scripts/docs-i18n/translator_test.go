@@ -158,7 +158,7 @@ printf 'translated from codex\n' > "$out"
 	got, err := runCodexExecPrompt(context.Background(), codexPromptRequest{
 		SystemPrompt: "Translate.",
 		Message:      "Hello",
-		Model:        "gpt-5.2",
+		Model:        "gpt-5.5",
 		Thinking:     "high",
 	})
 	if err != nil {
@@ -170,7 +170,7 @@ printf 'translated from codex\n' > "$out"
 }
 
 func TestPreviewCommandOutputFlattensAndTruncates(t *testing.T) {
-	input := "line one\n\nline   two\tline three " + strings.Repeat("x", 1200)
+	input := "line one\n\nline   two\tline three " + strings.Repeat("x", 600)
 	preview := previewCommandOutput(input, "")
 	if strings.Contains(preview, "\n") {
 		t.Fatalf("expected flattened whitespace, got %q", preview)
@@ -178,7 +178,7 @@ func TestPreviewCommandOutputFlattensAndTruncates(t *testing.T) {
 	if !strings.HasPrefix(preview, "line one line two line three ") {
 		t.Fatalf("unexpected preview prefix: %q", preview)
 	}
-	if !strings.Contains(preview, " ... ") {
-		t.Fatalf("expected truncation marker, got %q", preview)
+	if !strings.HasSuffix(preview, "...") {
+		t.Fatalf("expected truncation suffix, got %q", preview)
 	}
 }
