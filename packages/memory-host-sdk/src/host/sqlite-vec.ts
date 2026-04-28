@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { formatErrorMessage } from "../../../../src/infra/errors.js";
+import { formatErrorMessage } from "./error-utils.js";
 import { normalizeOptionalString } from "./string-utils.js";
 
 type SqliteVecModule = {

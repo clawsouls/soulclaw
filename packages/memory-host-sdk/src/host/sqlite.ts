@@ -1,12 +1,12 @@
 import { createRequire } from "node:module";
 import type { DatabaseSync } from "node:sqlite";
-import { formatErrorMessage } from "../../../../src/infra/errors.js";
+import { formatErrorMessage } from "./error-utils.js";
 import {
   configureSqliteWalMaintenance,
   type SqliteWalMaintenance,
   type SqliteWalMaintenanceOptions,
-} from "../../../../src/infra/sqlite-wal.js";
-import { installProcessWarningFilter } from "../../../../src/infra/warning-filter.js";
+} from "./sqlite-wal.js";
+import { installProcessWarningFilter } from "./warning-filter.js";
 
 const require = createRequire(import.meta.url);
 const sqliteWalMaintenanceByDb = new WeakMap<DatabaseSync, SqliteWalMaintenance>();

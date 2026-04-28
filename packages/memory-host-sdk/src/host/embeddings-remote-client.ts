@@ -1,9 +1,9 @@
 import { requireApiKey, resolveApiKeyForProvider } from "../../../../src/agents/model-auth.js";
-import type { SsrFPolicy } from "../../../../src/infra/net/ssrf.js";
-import { normalizeOptionalString } from "../../../../src/shared/string-coerce.js";
 import type { EmbeddingProviderOptions } from "./embeddings.types.js";
 import { buildRemoteBaseUrlPolicy } from "./remote-http.js";
 import { resolveMemorySecretInputString } from "./secret-input.js";
+import type { SsrFPolicy } from "./ssrf-policy.js";
+import { normalizeOptionalString } from "./string-utils.js";
 
 export type RemoteEmbeddingProviderId = string;
 

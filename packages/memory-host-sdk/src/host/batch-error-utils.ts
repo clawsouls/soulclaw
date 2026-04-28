@@ -1,4 +1,4 @@
-import { formatErrorMessage } from "../../../../src/infra/errors.js";
+import { formatErrorMessage } from "./error-utils.js";
 
 type BatchOutputErrorLike = {
   error?: { message?: string };

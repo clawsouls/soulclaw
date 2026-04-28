@@ -1,5 +1,5 @@
-import type { SsrFPolicy } from "../../../../src/infra/net/ssrf.js";
 import { withRemoteHttpResponse } from "./remote-http.js";
+import type { SsrFPolicy } from "./ssrf-policy.js";
 
 export async function postJson<T>(params: {
   url: string;

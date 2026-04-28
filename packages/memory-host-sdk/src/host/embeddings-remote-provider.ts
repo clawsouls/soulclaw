@@ -1,10 +1,10 @@
-import type { SsrFPolicy } from "../../../../src/infra/net/ssrf.js";
 import {
   resolveRemoteEmbeddingBearerClient,
   type RemoteEmbeddingProviderId,
 } from "./embeddings-remote-client.js";
 import { fetchRemoteEmbeddingVectors } from "./embeddings-remote-fetch.js";
 import type { EmbeddingProvider, EmbeddingProviderOptions } from "./embeddings.types.js";
+import type { SsrFPolicy } from "./ssrf-policy.js";
 
 export type RemoteEmbeddingClient = {
   baseUrl: string;
