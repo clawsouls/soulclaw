@@ -62,6 +62,10 @@ Docs: https://docs.openclaw.ai
 - Agents/failover: seed non-claude-cli fallback prompts with Claude Code session context when a claude-cli attempt fails, so fallback models do not restart cold after billing or quota failover. (#72069) Thanks @stainlu.
 - Agents/CLI runner: transfer bundle-MCP tempDir cleanup from the per-turn runner finally to the Claude live-session lifecycle, so persistent Claude CLI sessions keep their `--mcp-config` directory until the live subprocess closes. Fixes #73244. Thanks @edwin-rivera-dev.
 
+### Fixes
+
+- Gateway/nodes: allow Windows companion nodes to use safe declared commands such as canvas, camera list, location, device info, and screen snapshot by default while keeping dangerous media commands opt-in. (#71884) Thanks @shanselman.
+
 ## 2026.4.27
 
 ### Changes
