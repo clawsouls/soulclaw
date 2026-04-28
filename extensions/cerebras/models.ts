@@ -21,5 +21,5 @@ export function buildCerebrasModelDefinition(
     providerId: "cerebras",
     catalog: { ...CEREBRAS_MANIFEST_CATALOG, models: [model] },
   });
-  return providerConfig.models[0]!;
+  return providerConfig.models[0];
 }

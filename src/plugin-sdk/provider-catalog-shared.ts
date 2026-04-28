@@ -7,10 +7,10 @@ import { resolveProviderRequestCapabilities } from "../agents/provider-attributi
 import { findNormalizedProviderKey } from "../agents/provider-id.js";
 import type { ModelDefinitionConfig } from "../config/types.models.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
+import { normalizeModelCatalog } from "../model-catalog/normalize.js";
 import type {
   ModelCatalogCost,
   ModelCatalogModel,
-  ModelCatalogProvider,
   ModelCatalogTieredCost,
 } from "../model-catalog/types.js";
 import type { ModelProviderConfig } from "./provider-model-shared.js";
@@ -90,19 +90,23 @@ function buildManifestCatalogModel(model: ModelCatalogModel): ModelDefinitionCon
 
 export function buildManifestModelProviderConfig(params: {
   providerId: string;
-  catalog: ModelCatalogProvider | undefined;
+  catalog: unknown;
 }): ModelProviderConfig {
-  if (!params.catalog) {
+  const catalog = normalizeModelCatalog(
+    { providers: { [params.providerId]: params.catalog } },
+    { ownedProviders: new Set([params.providerId]) },
+  )?.providers?.[params.providerId];
+  if (!catalog) {
     throw new Error(`Missing modelCatalog.providers.${params.providerId}`);
   }
-  if (!params.catalog.baseUrl) {
+  if (!catalog.baseUrl) {
     throw new Error(`Missing modelCatalog.providers.${params.providerId}.baseUrl`);
   }
   return {
-    baseUrl: params.catalog.baseUrl,
-    ...(params.catalog.api ? { api: params.catalog.api } : {}),
-    ...(params.catalog.headers ? { headers: { ...params.catalog.headers } } : {}),
-    models: params.catalog.models.map(buildManifestCatalogModel),
+    baseUrl: catalog.baseUrl,
+    ...(catalog.api ? { api: catalog.api } : {}),
+    ...(catalog.headers ? { headers: { ...catalog.headers } } : {}),
+    models: catalog.models.map(buildManifestCatalogModel),
   };
 }
 
