@@ -28,6 +28,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Cron/providers: preflight local Ollama and OpenAI-compatible provider endpoints before isolated cron agent turns, record unreachable local providers as skipped runs, and cache dead-endpoint probes so many jobs do not hammer the same stopped local server. Fixes #58584. Thanks @jpeghead.
 - CLI/status: show skipped fast-path memory checks as `not checked` and report active custom memory plugin runtime status from `status --json --all` without requiring built-in `agents.defaults.memorySearch`, so plugins such as memory-lancedb-pro and memory-cms no longer look unavailable when their own runtime is healthy. Fixes #56968. Thanks @Tony-ooo and @aderius.
 - Gateway/channels: record and log unexpected clean channel monitor exits so channels that return without throwing no longer appear stopped with no error. Fixes #73099. Thanks @balaji1968-kingler.
 - Channels/Telegram: centralize polling update tracking so accepted offsets remain durable across restarts, same-process handler failures can still retry, and slow offset writes cannot overwrite newer accepted watermarks. Refs #73115. Thanks @vdruts.
