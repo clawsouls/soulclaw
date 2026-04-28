@@ -51,6 +51,8 @@ describe("opencode-go provider plugin", () => {
 
     const models = new Map(getModels("opencode-go").map((model) => [model.id, model]));
     expect([...models.keys()]).toEqual([
+      "deepseek-v4-flash",
+      "deepseek-v4-pro",
       "glm-5",
       "glm-5.1",
       "kimi-k2.5",
