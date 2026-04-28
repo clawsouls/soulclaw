@@ -26,8 +26,11 @@ describe("unit-fast vitest lane", () => {
     expect(config.test?.include).toContain("src/acp/control-plane/runtime-cache.test.ts");
     expect(config.test?.include).toContain("src/acp/runtime/registry.test.ts");
     expect(config.test?.include).toContain("src/commands/status-overview-values.test.ts");
+    expect(config.test?.include).toContain("src/flows/doctor-startup-channel-maintenance.test.ts");
     expect(config.test?.include).toContain("src/plugins/config-policy.test.ts");
     expect(config.test?.include).toContain("src/plugin-sdk/provider-entry.test.ts");
+    expect(config.test?.include).toContain("src/security/dangerous-config-flags.test.ts");
+    expect(config.test?.include).toContain("src/security/safe-regex.test.ts");
   });
 
   it("does not treat moved config paths as CLI include filters", () => {
