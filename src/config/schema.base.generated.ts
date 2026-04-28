@@ -3179,6 +3179,21 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
             description:
               "Provider map keyed by provider ID containing connection/auth settings and concrete model definitions. Use stable provider keys so references from agents and tooling remain portable across environments.",
           },
+          pricing: {
+            type: "object",
+            properties: {
+              enabled: {
+                type: "boolean",
+                title: "Model Pricing Enabled",
+                description:
+                  "Enable the background model-pricing bootstrap. Set to false to skip OpenRouter and LiteLLM catalog fetches during Gateway startup; changing this value requires a Gateway restart.",
+              },
+            },
+            additionalProperties: false,
+            title: "Model Pricing",
+            description:
+              "Controls the optional background model-pricing bootstrap that fetches remote per-token cost catalogs.",
+          },
         },
         additionalProperties: false,
         title: "Models",
@@ -26590,6 +26605,16 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
     "models.mode": {
       label: "Model Catalog Mode",
       help: 'Controls provider catalog behavior: "merge" keeps built-ins and overlays your custom providers, while "replace" uses only your configured providers. In "merge", matching provider IDs preserve non-empty agent models.json baseUrl values, while apiKey values are preserved only when the provider is not SecretRef-managed in current config/auth-profile context; SecretRef-managed providers refresh apiKey from current source markers, and matching model contextWindow/maxTokens use the higher value between explicit and implicit entries.',
+      tags: ["models"],
+    },
+    "models.pricing": {
+      label: "Model Pricing",
+      help: "Controls the optional background model-pricing bootstrap that fetches remote per-token cost catalogs.",
+      tags: ["models"],
+    },
+    "models.pricing.enabled": {
+      label: "Model Pricing Enabled",
+      help: "Enable the background model-pricing bootstrap. Set to false to skip OpenRouter and LiteLLM catalog fetches during Gateway startup; changing this value requires a Gateway restart.",
       tags: ["models"],
     },
     "models.providers": {
