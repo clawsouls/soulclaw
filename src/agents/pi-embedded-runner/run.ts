@@ -981,6 +981,8 @@ export async function runEmbeddedPiAgent(
             sourceReplyDeliveryMode: params.sourceReplyDeliveryMode,
             inputProvenance: params.inputProvenance,
             streamParams: params.streamParams,
+            modelRun: params.modelRun,
+            promptMode: params.promptMode,
             ownerNumbers: params.ownerNumbers,
             enforceFinalTag: params.enforceFinalTag,
             silentExpected: params.silentExpected,
