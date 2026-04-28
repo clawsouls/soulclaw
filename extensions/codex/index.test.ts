@@ -75,7 +75,7 @@ describe("codex plugin", () => {
     }) as ReturnType<typeof createTestPluginApi> & {
       onConversationBindingResolved?: ReturnType<typeof vi.fn>;
     };
-    delete api.onConversationBindingResolved;
+    delete (api as { onConversationBindingResolved?: unknown }).onConversationBindingResolved;
 
     expect(() => plugin.register(api)).not.toThrow();
   });
