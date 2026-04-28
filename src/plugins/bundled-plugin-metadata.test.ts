@@ -9,12 +9,15 @@ import {
   resolveBundledPluginGeneratedPath,
   resolveBundledPluginRepoEntryPath,
 } from "./bundled-plugin-metadata.js";
+import { resolveGatewayStartupPluginIdsFromRegistry } from "./gateway-startup-plugin-ids.js";
 import {
   createGeneratedPluginTempRoot,
   installGeneratedPluginTempRootCleanup,
   pluginTestRepoRoot as repoRoot,
   writeJson,
 } from "./generated-plugin-test-helpers.js";
+import type { InstalledPluginIndex, InstalledPluginIndexRecord } from "./installed-plugin-index.js";
+import type { PluginManifestRecord, PluginManifestRegistry } from "./manifest-registry.js";
 import {
   getPackageManifestMetadata,
   loadPluginManifest,
@@ -44,6 +47,15 @@ const EXPECTED_BUNDLED_STARTUP_PLUGIN_IDS = [
   "thread-ownership",
   "voice-call",
   "webhooks",
+] as const;
+const EXPECTED_EMPTY_CONFIG_GATEWAY_STARTUP_PLUGIN_IDS = [
+  "acpx",
+  "bonjour",
+  "browser",
+  "device-pair",
+  "memory-core",
+  "phone-control",
+  "talk-voice",
 ] as const;
 
 installGeneratedPluginTempRootCleanup();
@@ -138,6 +150,51 @@ function collectRepoBundledChannelConfigsForTest(dirName: string) {
     manifest: manifest.manifest,
     packageManifest: getPackageManifestMetadata(readPackageManifest(pluginDir)),
   });
+}
+
+function hasPluginKind(record: PluginManifestRecord, kind: string): boolean {
+  return Array.isArray(record.kind) ? record.kind.includes(kind as never) : record.kind === kind;
+}
+
+function createInstalledPluginRecordForManifest(
+  record: PluginManifestRecord,
+): InstalledPluginIndexRecord {
+  return {
+    pluginId: record.id,
+    manifestPath: record.manifestPath,
+    manifestHash: `test-${record.id}`,
+    source: record.source,
+    rootDir: record.rootDir,
+    origin: record.origin,
+    enabled: record.enabledByDefault === true,
+    ...(record.enabledByDefault === true ? { enabledByDefault: true } : {}),
+    startup: {
+      sidecar: record.activation?.onStartup === true,
+      memory: hasPluginKind(record, "memory"),
+      deferConfiguredChannelFullLoadUntilAfterListen:
+        record.startupDeferConfiguredChannelFullLoadUntilAfterListen === true,
+      agentHarnesses: [
+        ...new Set([...(record.activation?.onAgentHarnesses ?? []), ...record.cliBackends]),
+      ].toSorted((left, right) => left.localeCompare(right)),
+    },
+    compat: [],
+  };
+}
+
+function createInstalledPluginIndexForManifests(
+  manifestRegistry: PluginManifestRegistry,
+): InstalledPluginIndex {
+  return {
+    version: 1,
+    hostContractVersion: "test",
+    compatRegistryVersion: "test",
+    migrationVersion: 1,
+    policyHash: "test",
+    generatedAtMs: 0,
+    installRecords: {},
+    plugins: manifestRegistry.plugins.map(createInstalledPluginRecordForManifest),
+    diagnostics: [],
+  };
 }
 
 describe("bundled plugin metadata", () => {
@@ -321,6 +378,44 @@ describe("bundled plugin metadata", () => {
     expect(startupPluginIds.toSorted((left, right) => left.localeCompare(right))).toEqual(
       EXPECTED_BUNDLED_STARTUP_PLUGIN_IDS,
     );
+  });
+
+  it("keeps empty-config Gateway startup narrower than declared startup sidecars", () => {
+    const manifestRegistry = {
+      plugins: listRepoBundledPluginManifests().map(({ manifest, dirName }) => ({
+        id: manifest.id,
+        name: manifest.name,
+        description: manifest.description,
+        version: manifest.version,
+        enabledByDefault: manifest.enabledByDefault === true ? true : undefined,
+        kind: manifest.kind,
+        channels: manifest.channels ?? [],
+        providers: manifest.providers ?? [],
+        cliBackends: manifest.cliBackends ?? [],
+        syntheticAuthRefs: manifest.syntheticAuthRefs ?? [],
+        nonSecretAuthMarkers: manifest.nonSecretAuthMarkers ?? [],
+        skills: manifest.skills ?? [],
+        origin: "bundled",
+        rootDir: path.join(repoRoot, "extensions", dirName),
+        source: path.join(repoRoot, "extensions", dirName, "index.ts"),
+        manifestPath: path.join(repoRoot, "extensions", dirName, "openclaw.plugin.json"),
+        activation: manifest.activation,
+        setup: manifest.setup,
+        hooks: [],
+        contracts: manifest.contracts,
+      })),
+      diagnostics: [],
+    } satisfies PluginManifestRegistry;
+    const index = createInstalledPluginIndexForManifests(manifestRegistry);
+
+    expect(
+      resolveGatewayStartupPluginIdsFromRegistry({
+        config: {},
+        env: process.env,
+        index,
+        manifestRegistry,
+      }),
+    ).toEqual(EXPECTED_EMPTY_CONFIG_GATEWAY_STARTUP_PLUGIN_IDS);
   });
 
   it("prefers built generated paths when present and falls back to source paths", () => {
