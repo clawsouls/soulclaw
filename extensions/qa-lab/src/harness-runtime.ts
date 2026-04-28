@@ -5,6 +5,10 @@ type SessionRecord = {
   body: string;
 };
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function createQaRunnerRuntime(): PluginRuntime {
   const sessions = new Map<string, SessionRecord>();
   return {
@@ -46,6 +50,15 @@ export function createQaRunnerRuntime(): PluginRuntime {
             sessionKey,
             body: ctx.BodyForAgent ?? ctx.Body ?? "",
           });
+        },
+      },
+      mentions: {
+        buildMentionRegexes(_cfg: unknown, agentId?: string) {
+          const normalized = agentId?.trim();
+          return normalized ? [new RegExp(`\\b@?${escapeRegExp(normalized)}\\b`, "i")] : [];
+        },
+        matchesMentionPatterns(text: string, mentionRegexes: RegExp[]) {
+          return mentionRegexes.some((regex) => regex.test(text));
         },
       },
       reply: {
