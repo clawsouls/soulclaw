@@ -15,6 +15,11 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Gateway/sessions: align `chat.history` and `sessions.list` thinking defaults with owning-agent and catalog-aware resolution so Control UI session defaults match backend runtime state. (#63418) Thanks @jpreagan.
+- Devices/pairing: recover array-shaped device and node pairing state files before persisting approvals, so UUID-keyed pending and paired entries no longer disappear after a malformed JSON store write. Fixes #63035. Thanks @sar618.
+- Gateway/auth: clear reused stale device tokens and stop reconnecting on device-token mismatch in the Control UI and Node gateway clients, avoiding rate-limit loops after scope-upgrade or token-rotation handoffs. Fixes #71609. Thanks @ricksayhi.
+- Gateway/approvals: treat duplicate same-decision approval resolves as idempotent during the resolved-entry grace window, including consumed `allow-once` approvals, while returning an explicit already-resolved error for conflicting repeats. Fixes #59162; refs #58479 and #65486. Thanks @wikithoughts, @sajazuniga7-coder, and @mjmai20682068-create.
+- Channels/Telegram: honor `approvals.exec/plugin.targets[].accountId` when routing native approvals across multi-bot Telegram accounts while preserving unscoped Telegram targets for any account. Fixes #69916. Thanks @joerod26.
+- Agents/exec: omit the internal session-resume fallback preface from successful async exec completion messages sent directly back to chat. Fixes #67181. Thanks @raistlin88.
 - Agents/media: register detached `video_generate` and `music_generate` tool run contexts until terminal status, so Discord-backed provider jobs stay live in `/tasks` instead of becoming `lost` when the parent chat run context disappears. Thanks @vincentkoc.
 - Agents/media: prefer OpenAI image and video providers when the default model uses the OpenAI Codex auth alias, so auto media generation no longer falls through to Fal before GPT Image or Sora. Thanks @vincentkoc.
 - Tasks/media: infer agent ownership for session-scoped task records so `/tasks` agent-local fallback includes session-backed `video_generate` and other async media jobs even when the current chat session has no linked rows. Thanks @vincentkoc.
