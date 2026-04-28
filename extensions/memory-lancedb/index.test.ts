@@ -24,8 +24,10 @@ import { installTmpDirHarness } from "./test-helpers.js";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "test-key";
 type MemoryPluginTestConfig = {
   embedding?: {
+    provider?: string;
     apiKey?: string;
     model?: string;
+    baseUrl?: string;
     dimensions?: number;
   };
   dbPath?: string;
@@ -144,13 +146,17 @@ describe("memory plugin e2e", () => {
     delete process.env.TEST_MEMORY_API_KEY;
   });
 
-  test("config schema rejects missing apiKey", async () => {
-    expect(() => {
-      memoryPlugin.configSchema?.parse?.({
-        embedding: {},
-        dbPath: getDbPath(),
-      });
-    }).toThrow("embedding.apiKey is required");
+  test("config schema accepts provider-backed embeddings without apiKey", async () => {
+    const config = memoryPlugin.configSchema?.parse?.({
+      embedding: {
+        provider: "openai",
+      },
+      dbPath: getDbPath(),
+    }) as MemoryPluginTestConfig | undefined;
+
+    expect(config?.embedding?.provider).toBe("openai");
+    expect(config?.embedding?.apiKey).toBeUndefined();
+    expect(config?.embedding?.model).toBe("text-embedding-3-small");
   });
 
   test("config schema validates captureMaxChars range", async () => {
@@ -230,6 +236,121 @@ describe("memory plugin e2e", () => {
 
     expect(on).toHaveBeenCalledWith("before_prompt_build", expect.any(Function));
     expect(on).not.toHaveBeenCalledWith("before_agent_start", expect.any(Function));
+  });
+
+  test("uses provider adapter auth when embedding apiKey is omitted", async () => {
+    const embedQuery = vi.fn(async () => [0.1, 0.2, 0.3]);
+    const createProvider = vi.fn(async (options: Record<string, unknown>) => ({
+      provider: {
+        id: "openai",
+        model: options.model,
+        embedQuery,
+        embedBatch: vi.fn(async () => [[0.1, 0.2, 0.3]]),
+      },
+    }));
+    const getMemoryEmbeddingProvider = vi.fn(() => ({
+      id: "openai",
+      create: createProvider,
+    }));
+    const toArray = vi.fn(async () => []);
+    const limit = vi.fn(() => ({ toArray }));
+    const vectorSearch = vi.fn(() => ({ limit }));
+    const loadLanceDbModule = vi.fn(async () => ({
+      connect: vi.fn(async () => ({
+        tableNames: vi.fn(async () => ["memories"]),
+        openTable: vi.fn(async () => ({
+          vectorSearch,
+          countRows: vi.fn(async () => 0),
+          add: vi.fn(async () => undefined),
+          delete: vi.fn(async () => undefined),
+        })),
+      })),
+    }));
+
+    vi.resetModules();
+    vi.doMock("openclaw/plugin-sdk/memory-core-host-engine-embeddings", () => ({
+      getMemoryEmbeddingProvider,
+    }));
+    vi.doMock("openai", () => ({
+      default: function UnexpectedOpenAI() {
+        throw new Error("direct OpenAI client should not be constructed");
+      },
+    }));
+    vi.doMock("./lancedb-runtime.js", () => ({
+      loadLanceDbModule,
+    }));
+
+    try {
+      const { default: dynamicMemoryPlugin } = await import("./index.js");
+      const cfg = {
+        models: {
+          providers: {
+            openai: {
+              apiKey: "profile-backed-key",
+            },
+          },
+        },
+      };
+      const registerTool = vi.fn();
+      const mockApi = {
+        id: "memory-lancedb",
+        name: "Memory (LanceDB)",
+        source: "test",
+        config: cfg,
+        pluginConfig: {
+          embedding: {
+            provider: "openai",
+            model: "text-embedding-3-small",
+          },
+          dbPath: getDbPath(),
+        },
+        runtime: {
+          config: {
+            current: () => cfg,
+          },
+          agent: {
+            resolveAgentDir: vi.fn(() => "/tmp/openclaw-agent"),
+          },
+        },
+        logger: {
+          info: vi.fn(),
+          warn: vi.fn(),
+          error: vi.fn(),
+          debug: vi.fn(),
+        },
+        registerTool,
+        registerCli: vi.fn(),
+        registerService: vi.fn(),
+        on: vi.fn(),
+        resolvePath: (filePath: string) => filePath,
+      };
+
+      dynamicMemoryPlugin.register(mockApi as any);
+      const recallTool = registerTool.mock.calls
+        .map(([tool]) => tool)
+        .find((tool) => tool.name === "memory_recall");
+      expect(recallTool).toBeTruthy();
+
+      await recallTool.execute("call-1", { query: "project memory" });
+
+      expect(getMemoryEmbeddingProvider).toHaveBeenCalledWith("openai", cfg);
+      expect(createProvider).toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: cfg,
+          agentDir: "/tmp/openclaw-agent",
+          provider: "openai",
+          fallback: "none",
+          model: "text-embedding-3-small",
+        }),
+      );
+      expect(createProvider.mock.calls[0][0]).not.toHaveProperty("remote");
+      expect(embedQuery).toHaveBeenCalledWith("project memory");
+    } finally {
+      vi.doUnmock("openclaw/plugin-sdk/memory-core-host-engine-embeddings");
+      vi.doUnmock("openai");
+      vi.doUnmock("./lancedb-runtime.js");
+      vi.resetModules();
+    }
   });
 
   test("keeps before_prompt_build registered but inert when auto-recall is disabled", async () => {

@@ -10,7 +10,12 @@ import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import type * as LanceDB from "@lancedb/lancedb";
 import OpenAI from "openai";
+import { resolveDefaultAgentId } from "openclaw/plugin-sdk/config-runtime";
 import type { OpenClawConfig } from "openclaw/plugin-sdk/config-types";
+import {
+  getMemoryEmbeddingProvider,
+  type MemoryEmbeddingProvider,
+} from "openclaw/plugin-sdk/memory-core-host-engine-embeddings";
 import { resolveLivePluginConfigObject } from "openclaw/plugin-sdk/plugin-config-runtime";
 import { ensureGlobalUndiciEnvProxyDispatcher } from "openclaw/plugin-sdk/runtime-env";
 import {
@@ -23,6 +28,7 @@ import {
   DEFAULT_CAPTURE_MAX_CHARS,
   DEFAULT_RECALL_MAX_CHARS,
   MEMORY_CATEGORIES,
+  type MemoryConfig,
   type MemoryCategory,
   memoryConfigSchema,
   vectorDimsForModel,
@@ -252,10 +258,14 @@ class MemoryDB {
 }
 
 // ============================================================================
-// OpenAI Embeddings
+// Embeddings
 // ============================================================================
 
-class Embeddings {
+type Embeddings = {
+  embed(text: string): Promise<number[]>;
+};
+
+class OpenAiCompatibleEmbeddings implements Embeddings {
   private client: OpenAI;
 
   constructor(
@@ -285,6 +295,70 @@ class Embeddings {
     });
     return normalizeEmbeddingVector(response.data?.[0]?.embedding);
   }
+}
+
+class ProviderAdapterEmbeddings implements Embeddings {
+  private providerPromise: Promise<MemoryEmbeddingProvider> | undefined;
+
+  constructor(
+    private api: OpenClawPluginApi,
+    private embedding: MemoryConfig["embedding"],
+  ) {}
+
+  private getProvider(): Promise<MemoryEmbeddingProvider> {
+    // Auth profiles and local providers can be repaired while the Gateway stays up.
+    // Cache successful setup, but retry after failed provider discovery/auth.
+    this.providerPromise ??= this.createProvider().catch((err) => {
+      this.providerPromise = undefined;
+      throw err;
+    });
+    return this.providerPromise;
+  }
+
+  private async createProvider(): Promise<MemoryEmbeddingProvider> {
+    const cfg = (this.api.runtime.config?.current?.() ?? this.api.config) as OpenClawConfig;
+    const providerId = this.embedding.provider;
+    const adapter = getMemoryEmbeddingProvider(providerId, cfg);
+    if (!adapter) {
+      throw new Error(`Unknown memory embedding provider: ${providerId}`);
+    }
+    const defaultAgentId = resolveDefaultAgentId(cfg);
+    const agentDir = this.api.runtime.agent.resolveAgentDir(cfg, defaultAgentId);
+    const remote =
+      this.embedding.apiKey || this.embedding.baseUrl
+        ? {
+            ...(this.embedding.apiKey ? { apiKey: this.embedding.apiKey } : {}),
+            ...(this.embedding.baseUrl ? { baseUrl: this.embedding.baseUrl } : {}),
+          }
+        : undefined;
+    const result = await adapter.create({
+      config: cfg,
+      agentDir,
+      provider: providerId,
+      fallback: "none",
+      model: this.embedding.model,
+      ...(remote ? { remote } : {}),
+      ...(typeof this.embedding.dimensions === "number"
+        ? { outputDimensionality: this.embedding.dimensions }
+        : {}),
+    });
+    if (!result.provider) {
+      throw new Error(`Memory embedding provider ${providerId} is unavailable.`);
+    }
+    return result.provider;
+  }
+
+  async embed(text: string): Promise<number[]> {
+    return await (await this.getProvider()).embedQuery(text);
+  }
+}
+
+function createEmbeddings(api: OpenClawPluginApi, cfg: MemoryConfig): Embeddings {
+  const { provider, model, dimensions, apiKey, baseUrl } = cfg.embedding;
+  if (provider === "openai" && apiKey) {
+    return new OpenAiCompatibleEmbeddings(apiKey, model, baseUrl, dimensions);
+  }
+  return new ProviderAdapterEmbeddings(api, cfg.embedding);
 }
 
 type EmbeddingCreateResponse = {
@@ -432,12 +506,12 @@ export default definePluginEntry({
     const cfg = memoryConfigSchema.parse(api.pluginConfig);
     const dbPath = cfg.dbPath!;
     const resolvedDbPath = dbPath.includes("://") ? dbPath : api.resolvePath(dbPath);
-    const { model, dimensions, apiKey, baseUrl } = cfg.embedding;
+    const { model, dimensions } = cfg.embedding;
     const disabledHookCfg = { ...cfg, autoCapture: false, autoRecall: false };
 
     const vectorDim = dimensions ?? vectorDimsForModel(model);
     const db = new MemoryDB(resolvedDbPath, vectorDim, cfg.storageOptions);
-    const embeddings = new Embeddings(apiKey, model, baseUrl, dimensions);
+    const embeddings = createEmbeddings(api, cfg);
     const autoCaptureCursors = new Map<string, AutoCaptureCursor>();
     const resolveCurrentHookConfig = () => {
       const runtimePluginConfig = resolveLivePluginConfigObject(
@@ -452,6 +526,7 @@ export default definePluginEntry({
       }
       return memoryConfigSchema.parse({
         embedding: {
+          provider: cfg.embedding.provider,
           apiKey: cfg.embedding.apiKey,
           model: cfg.embedding.model,
           ...(cfg.embedding.baseUrl ? { baseUrl: cfg.embedding.baseUrl } : {}),
@@ -465,6 +540,7 @@ export default definePluginEntry({
         autoCapture: cfg.autoCapture,
         autoRecall: cfg.autoRecall,
         captureMaxChars: cfg.captureMaxChars,
+        recallMaxChars: cfg.recallMaxChars,
         ...(cfg.storageOptions ? { storageOptions: cfg.storageOptions } : {}),
         ...asRecord(runtimePluginConfig),
       });
