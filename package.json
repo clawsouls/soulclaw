@@ -474,6 +474,10 @@
       "types": "./dist/plugin-sdk/acp-runtime.d.ts",
       "default": "./dist/plugin-sdk/acp-runtime.js"
     },
+    "./plugin-sdk/acp-runtime-backend": {
+      "types": "./dist/plugin-sdk/acp-runtime-backend.d.ts",
+      "default": "./dist/plugin-sdk/acp-runtime-backend.js"
+    },
     "./plugin-sdk/acp-binding-runtime": {
       "types": "./dist/plugin-sdk/acp-binding-runtime.d.ts",
       "default": "./dist/plugin-sdk/acp-binding-runtime.js"

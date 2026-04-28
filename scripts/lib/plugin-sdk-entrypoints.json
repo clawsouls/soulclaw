@@ -102,6 +102,7 @@
   "process-runtime",
   "windows-spawn",
   "acp-runtime",
+  "acp-runtime-backend",
   "acp-binding-runtime",
   "acp-binding-resolve-runtime",
   "lazy-runtime",
