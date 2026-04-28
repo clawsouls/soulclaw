@@ -23,6 +23,8 @@ describe("unit-fast vitest lane", () => {
     expect(config.test?.include).toContain(
       "src/agents/pi-tools.deferred-followup-guidance.test.ts",
     );
+    expect(config.test?.include).toContain("src/acp/control-plane/runtime-cache.test.ts");
+    expect(config.test?.include).toContain("src/acp/runtime/registry.test.ts");
     expect(config.test?.include).toContain("src/commands/status-overview-values.test.ts");
     expect(config.test?.include).toContain("src/plugins/config-policy.test.ts");
     expect(config.test?.include).toContain("src/plugin-sdk/provider-entry.test.ts");
