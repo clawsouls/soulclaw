@@ -499,10 +499,12 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
     expect(
       buildRealUpdateEnv({
         FOO: "bar",
+        NODE_COMPILE_CACHE: "/tmp/stale-openclaw-cache",
         OPENCLAW_DISABLE_BUNDLED_PLUGIN_POSTINSTALL: "1",
       }),
     ).toEqual({
       FOO: "bar",
+      NODE_DISABLE_COMPILE_CACHE: "1",
     });
   });
 
