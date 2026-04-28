@@ -7,6 +7,12 @@ import {
 } from "./approval-native-helpers.js";
 import type { OpenClawConfig } from "./config-runtime.js";
 
+const EMPTY_SESSION_CFG = {
+  session: {
+    store: ".artifacts/test/approval-native-helpers-empty-sessions.json",
+  },
+} satisfies OpenClawConfig;
+
 describe("createChannelNativeOriginTargetResolver", () => {
   it("reuses shared turn-source routing and respects shouldHandle gating", () => {
     const resolveOriginTarget = createChannelNativeOriginTargetResolver<NativeApprovalTarget>({
@@ -24,7 +30,7 @@ describe("createChannelNativeOriginTargetResolver", () => {
 
     expect(
       resolveOriginTarget({
-        cfg: {} as OpenClawConfig,
+        cfg: EMPTY_SESSION_CFG,
         accountId: "ops",
         request: {
           id: "plugin:req-1",
@@ -47,7 +53,7 @@ describe("createChannelNativeOriginTargetResolver", () => {
 
     expect(
       resolveOriginTarget({
-        cfg: {} as OpenClawConfig,
+        cfg: EMPTY_SESSION_CFG,
         accountId: "other",
         request: {
           id: "plugin:req-1",
@@ -90,7 +96,7 @@ describe("createChannelNativeOriginTargetResolver", () => {
 
     expect(
       resolveOriginTarget({
-        cfg: {} as OpenClawConfig,
+        cfg: EMPTY_SESSION_CFG,
         request: {
           id: "req-1",
           request: {
@@ -120,7 +126,7 @@ describe("createChannelNativeOriginTargetResolver", () => {
 
     expect(
       resolveOriginTarget({
-        cfg: {} as OpenClawConfig,
+        cfg: EMPTY_SESSION_CFG,
         request: {
           id: "req-1",
           request: {
@@ -149,7 +155,7 @@ describe("createChannelNativeOriginTargetResolver", () => {
 
     expect(
       resolveOriginTarget({
-        cfg: {} as OpenClawConfig,
+        cfg: EMPTY_SESSION_CFG,
         request: {
           id: "req-1",
           request: {
@@ -178,7 +184,7 @@ describe("createChannelNativeOriginTargetResolver", () => {
 
     expect(
       resolveOriginTarget({
-        cfg: {} as OpenClawConfig,
+        cfg: EMPTY_SESSION_CFG,
         request: {
           id: "req-1",
           request: {
@@ -206,7 +212,7 @@ describe("createChannelNativeOriginTargetResolver", () => {
 
     expect(
       resolveOriginTarget({
-        cfg: {} as OpenClawConfig,
+        cfg: EMPTY_SESSION_CFG,
         request: {
           id: "req-1",
           request: {
