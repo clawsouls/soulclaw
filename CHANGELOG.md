@@ -12,6 +12,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Cron/Telegram: preserve explicit `:topic:` delivery targets over stale session-derived thread IDs when isolated cron announces to Telegram forum topics. Carries forward #59069; refs #49704 and #43808. Thanks @roytong9.
+- Gateway/media: route text-only `chat.send` image offloads through media-understanding fields so `agents.defaults.imageModel` can describe WebChat attachments instead of leaving only an opaque `media://inbound` marker. Fixes #72968. Thanks @vorajeeah.
 - CLI/onboarding: infer image input for common custom-provider vision model IDs, ask only for unknown models, and keep `--custom-image-input`/`--custom-text-input` overrides so vision-capable proxies do not get saved as text-only configs. Fixes #51869. Thanks @Antsoldier1974.
 - Models/OpenAI Codex: stop listing or resolving unsupported `openai-codex/gpt-5.4-mini` rows through Codex OAuth, keep stale discovery rows suppressed with a clear API-key-route hint, and leave direct `openai/gpt-5.4-mini` available. Fixes #73242. Thanks @0xCyda.
 - Memory/Dreaming: retry Dream Diary once with the session default when a configured dreaming model is unavailable, while leaving subagent trust and allowlist errors visible instead of silently masking configuration problems. Refs #67409 and #69209. Thanks @Ghiggins18 and @everySympathy.
