@@ -48,6 +48,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Channels/Telegram: keep Bot API network fallbacks sticky after failed attempts and retry timed-out startup control calls once on the fallback route, so `deleteWebhook` IPv6 stalls no longer trigger slow multi-account retry storms. Fixes #73255. Thanks @ttomiczek and @sktbrd.
 - Export/session: keep inline export HTML scripts and vendor libraries injected after template formatting so generated session exports open with the app code, markdown renderer, and syntax highlighter present. Fixes #41862 and #49957; carries forward #41861 and #68947. Thanks @briannewman, @martenzi, and @armanddp.
 - Agents/ACPX: stage the patched Claude ACP adapter as an ACPX runtime dependency and route known Codex/Claude ACP commands through local wrappers, so Gateway runtime no longer depends on live `npx` adapter resolution. Fixes #73202. Thanks @joerod26.
 - Memory/compaction: let pre-compaction memory flush use an exact `agents.defaults.compaction.memoryFlush.model` override such as `ollama/qwen3:8b` without inheriting the active session fallback chain, so local housekeeping can avoid paid conversation models. Fixes #53772. Thanks @limen96.
