@@ -47,6 +47,8 @@ const MOCK_RELATIVE_MODULE_PATTERN =
 const RELATIVE_CORE_HINT =
   "Use openclaw/plugin-sdk/testing or a focused plugin-sdk test/runtime subpath instead of core internals.";
 
+// Tombstones for retired repo-only plugin helper bridge files. Keep this list so
+// deleted bridges fail loudly if they are recreated instead of using SDK subpaths.
 const RETIRED_EXTENSION_TEST_HELPER_BRIDGE_FILES = [
   "test/helpers/plugins/env.ts",
   "test/helpers/plugins/fetch-mock.ts",

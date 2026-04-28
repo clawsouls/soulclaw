@@ -3,7 +3,7 @@ export {
   expectGeneratedTokenPersistedToGatewayAuth,
   type CliMockOutputRuntime,
   type CliRuntimeCapture,
-} from "openclaw/plugin-sdk/testing";
+} from "openclaw/plugin-sdk/test-fixtures";
 export {
   createTempHomeEnv,
   withEnv,

@@ -115,6 +115,7 @@
   "plugin-test-runtime",
   "provider-test-contracts",
   "test-env",
+  "test-fixtures",
   "testing",
   "temp-path",
   "logging-core",

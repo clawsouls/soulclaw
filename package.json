@@ -526,6 +526,10 @@
       "types": "./dist/plugin-sdk/test-env.d.ts",
       "default": "./dist/plugin-sdk/test-env.js"
     },
+    "./plugin-sdk/test-fixtures": {
+      "types": "./dist/plugin-sdk/test-fixtures.d.ts",
+      "default": "./dist/plugin-sdk/test-fixtures.js"
+    },
     "./plugin-sdk/testing": {
       "types": "./dist/plugin-sdk/testing.d.ts",
       "default": "./dist/plugin-sdk/testing.js"

@@ -10,7 +10,7 @@ import {
   castAgentMessage,
   makeAgentAssistantMessage,
   makeAgentUserMessage,
-} from "openclaw/plugin-sdk/testing";
+} from "openclaw/plugin-sdk/test-fixtures";
 import { afterEach, describe, expect, it } from "vitest";
 import { mirrorCodexAppServerTranscript } from "./transcript-mirror.js";
 

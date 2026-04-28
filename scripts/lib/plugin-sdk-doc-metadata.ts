@@ -119,6 +119,9 @@ export const pluginSdkDocMetadata = {
   "test-env": {
     category: "utilities",
   },
+  "test-fixtures": {
+    category: "utilities",
+  },
 } as const satisfies Record<string, PluginSdkDocMetadata>;
 
 export type PluginSdkDocEntrypoint = keyof typeof pluginSdkDocMetadata;

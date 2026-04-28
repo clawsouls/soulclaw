@@ -60,6 +60,7 @@ const PUBLIC_SDK_TEST_HELPER_SUBPATHS = [
   "plugin-test-runtime",
   "provider-test-contracts",
   "test-env",
+  "test-fixtures",
 ] as const;
 
 const importResolvedPluginSdkSubpath = async (specifier: string) => import(specifier);
@@ -746,6 +747,13 @@ describe("plugin-sdk subpath exports", () => {
       "createRequestCaptureJsonFetch",
       "installPinnedHostnameTestHooks",
       "isLiveTestEnabled",
+    ]);
+    expectSourceMentions("test-fixtures", [
+      "createCliRuntimeCapture",
+      "createSandboxTestContext",
+      "makeAgentAssistantMessage",
+      "peekSystemEvents",
+      "typedCases",
     ]);
   });
 

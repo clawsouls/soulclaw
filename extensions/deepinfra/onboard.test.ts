@@ -6,7 +6,7 @@ import {
   type OpenClawConfig,
   resolveAgentModelPrimaryValue,
 } from "openclaw/plugin-sdk/provider-onboard";
-import { captureEnv } from "openclaw/plugin-sdk/testing";
+import { captureEnv } from "openclaw/plugin-sdk/test-env";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   applyDeepInfraProviderConfig,
