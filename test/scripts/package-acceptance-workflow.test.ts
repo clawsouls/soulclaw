@@ -129,6 +129,33 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain("if: matrix.needs_ffmpeg");
   });
 
+  it("runs the Codex Docker live harness from trusted helper scripts", () => {
+    const workflow = readFileSync(LIVE_E2E_WORKFLOW, "utf8");
+    const harness = readFileSync("scripts/test-live-codex-harness-docker.sh", "utf8");
+    const build = readFileSync("scripts/test-live-build-docker.sh", "utf8");
+    const stage = readFileSync("scripts/lib/live-docker-stage.sh", "utf8");
+
+    expect(workflow).toContain(
+      'command: OPENCLAW_LIVE_DOCKER_REPO_ROOT="$GITHUB_WORKSPACE" bash .release-harness/scripts/test-live-codex-harness-docker.sh',
+    );
+    expect(harness).toContain('source "$TRUSTED_HARNESS_DIR/scripts/lib/live-docker-auth.sh"');
+    expect(harness).not.toContain('source "$ROOT_DIR/scripts/lib/live-docker-auth.sh"');
+    expect(harness).toContain(
+      'OPENCLAW_LIVE_DOCKER_REPO_ROOT="$ROOT_DIR" "$TRUSTED_HARNESS_DIR/scripts/test-live-build-docker.sh"',
+    );
+    expect(harness).toContain(
+      '-e OPENCLAW_LIVE_DOCKER_SCRIPTS_DIR="${DOCKER_TRUSTED_HARNESS_CONTAINER_DIR}/scripts"',
+    );
+    expect(harness).toContain('node --import tsx "$trusted_scripts_dir/prepare-codex-ci-auth.ts"');
+    expect(harness).toContain('source "$trusted_scripts_dir/lib/live-docker-stage.sh"');
+    expect(build).toContain('ROOT_DIR="${OPENCLAW_LIVE_DOCKER_REPO_ROOT:-$SCRIPT_ROOT_DIR}"');
+    expect(build).toContain('source "$SCRIPT_ROOT_DIR/scripts/lib/docker-build.sh"');
+    expect(stage).toContain(
+      'local scripts_dir="${OPENCLAW_LIVE_DOCKER_SCRIPTS_DIR:-/src/scripts}"',
+    );
+    expect(stage).toContain('node --import tsx "$scripts_dir/live-docker-normalize-config.ts"');
+  });
+
   it("allows the Telegram lane to run from reusable package acceptance artifacts", () => {
     const workflow = readFileSync(NPM_TELEGRAM_WORKFLOW, "utf8");
 
