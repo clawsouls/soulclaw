@@ -74,7 +74,10 @@ export function copyBundledPluginRuntimeRoot(sourceRoot: string, targetRoot: str
   pruneStaleBundledRuntimeMirrorEntries(targetRoot, mirroredNames);
 }
 
-function pruneStaleBundledRuntimeMirrorEntries(targetRoot: string, mirroredNames: Set<string>): void {
+function pruneStaleBundledRuntimeMirrorEntries(
+  targetRoot: string,
+  mirroredNames: Set<string>,
+): void {
   for (const entry of fs.readdirSync(targetRoot, { withFileTypes: true })) {
     if (shouldIgnoreBundledRuntimeMirrorEntry(entry.name)) {
       continue;
