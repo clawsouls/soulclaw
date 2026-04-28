@@ -93,11 +93,10 @@ jobs:
           sudo ln -sf "$node_bin/npx" /usr/local/bin/npx
           sudo ln -sf "$node_bin/corepack" /usr/local/bin/corepack
           sudo ln -sf "$pnpm_bin" /usr/local/bin/pnpm
-      - name: Run Testbox
-        uses: useblacksmith/run-testbox@v2
-        if: always()
+
+      - name: Hydrate Testbox provider env helper
+        shell: bash
         env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_API_KEY_OLD: ${{ secrets.ANTHROPIC_API_KEY_OLD }}
           ANTHROPIC_API_TOKEN: ${{ secrets.ANTHROPIC_API_TOKEN }}
@@ -119,3 +118,10 @@ jobs:
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
           ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
           Z_AI_API_KEY: ${{ secrets.Z_AI_API_KEY }}
+        run: bash scripts/ci-hydrate-testbox-env.sh
+
+      - name: Run Testbox
+        uses: useblacksmith/run-testbox@v2
+        if: always()
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
