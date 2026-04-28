@@ -16,6 +16,7 @@ type AllModelRowSources = {
   rows: ModelRow[];
   context: RowBuilderContext;
   modelRegistry?: ModelRegistry;
+  registryModels?: ReturnType<ModelRegistry["getAll"]>;
   sourcePlan: ModelListSourcePlan;
 };
 
@@ -78,7 +79,7 @@ export async function appendAllModelRowSources(
 
   const seenKeys = await appendDiscoveredRows({
     rows: params.rows,
-    models: params.modelRegistry?.getAll() ?? [],
+    models: params.registryModels ?? params.modelRegistry?.getAll() ?? [],
     modelRegistry: params.modelRegistry,
     context: params.context,
     resolveWithRegistry: Boolean(params.context.filter.provider),

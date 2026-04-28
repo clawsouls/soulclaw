@@ -1,3 +1,4 @@
+import type { Api, Model } from "@mariozechner/pi-ai";
 import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { parseModelRef } from "../../agents/model-selection.js";
 import type { RuntimeEnv } from "../../runtime.js";
@@ -76,6 +77,7 @@ export async function modelsListCommand(
   const agentDir = resolveOpenClawAgentDir();
 
   let modelRegistry: ModelRegistry | undefined;
+  let registryModels: Model<Api>[] = [];
   let discoveredKeys = new Set<string>();
   let availableKeys: Set<string> | undefined;
   let availabilityErrorMessage: string | undefined;
@@ -97,6 +99,7 @@ export async function modelsListCommand(
       normalizeModels: Boolean(providerFilter),
     });
     modelRegistry = loaded.registry;
+    registryModels = loaded.models;
     discoveredKeys = loaded.discoveredKeys;
     availableKeys = loaded.availableKeys;
     availabilityErrorMessage = loaded.availabilityErrorMessage;
@@ -141,6 +144,7 @@ export async function modelsListCommand(
       rows,
       context: rowContext,
       modelRegistry,
+      registryModels,
       sourcePlan,
     });
     if (initialAppend.requiresRegistryFallback) {
@@ -157,6 +161,7 @@ export async function modelsListCommand(
         rows,
         context: rowContext,
         modelRegistry,
+        registryModels,
         sourcePlan: sourcePlanModule.createRegistryModelListSourcePlan(),
       });
     }
