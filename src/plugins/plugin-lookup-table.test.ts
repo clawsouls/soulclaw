@@ -20,6 +20,7 @@ vi.mock("../channels/config-presence.js", () => ({
     env: NodeJS.ProcessEnv,
     options?: { includePersistedAuthState?: boolean },
   ) => listPotentialConfiguredChannelIds(config, env, options),
+  listExplicitlyDisabledChannelIdsForConfig: () => [],
 }));
 
 vi.mock("./manifest-registry-installed.js", async (importOriginal) => {

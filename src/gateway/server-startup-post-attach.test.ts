@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   PluginHookGatewayContext,
   PluginHookGatewayStartEvent,
@@ -184,6 +184,8 @@ type PostAttachRuntimeDeps = NonNullable<Parameters<typeof startGatewayPostAttac
 
 describe("startGatewayPostAttachRuntime", () => {
   beforeEach(() => {
+    vi.stubEnv("OPENCLAW_SKIP_CHANNELS", "0");
+    vi.stubEnv("OPENCLAW_SKIP_PROVIDERS", "0");
     hoisted.startPluginServices.mockClear();
     hoisted.startGmailWatcherWithLogs.mockClear();
     hoisted.loadInternalHooks.mockClear();
@@ -213,6 +215,10 @@ describe("startGatewayPostAttachRuntime", () => {
     hoisted.resolveEmbeddedAgentRuntime.mockReturnValue("pi");
     hoisted.ensureOpenClawModelsJson.mockReset();
     hoisted.ensureOpenClawModelsJson.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("re-enables startup-gated methods after post-attach sidecars start", async () => {
