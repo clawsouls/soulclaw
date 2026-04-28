@@ -32,6 +32,7 @@ describe("scripts/lib/plugin-prerelease-test-plan.mjs", () => {
       "bundled-channel-deps-compat",
       "plugins-offline",
       "plugins",
+      "kitchen-sink-plugin",
       "plugin-update",
       "config-reload",
       "gateway-network",
@@ -73,6 +74,30 @@ describe("scripts/lib/plugin-prerelease-test-plan.mjs", () => {
       "checks-plugin-prerelease-package-boundary-canary",
       "checks-plugin-prerelease-live-ish-availability",
     ]);
+  });
+
+  it("uses the npm kitchen-sink plugin as the registry install canary", () => {
+    const lane = findLaneByName("kitchen-sink-plugin");
+    const script = readFileSync("scripts/e2e/kitchen-sink-plugin-docker.sh", "utf8");
+
+    expect(lane).toEqual(
+      expect.objectContaining({
+        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:kitchen-sink-plugin",
+        e2eImageKind: "functional",
+        name: "kitchen-sink-plugin",
+        resources: expect.arrayContaining(["npm"]),
+        stateScenario: "empty",
+      }),
+    );
+    expect(script).toContain(
+      'KITCHEN_SINK_SPEC="${OPENCLAW_KITCHEN_SINK_PLUGIN_SPEC:-npm:@openclaw/kitchen-sink@0.1.0}"',
+    );
+    expect(script).toContain('plugins install "$KITCHEN_SINK_SPEC"');
+    expect(script).toContain('record.source !== "npm"');
+    expect(script).toContain("expectedErrorMessages");
+    expect(script).toContain("docker stats --no-stream");
+    expect(script).toContain("scan_logs_for_unexpected_errors");
+    expect(script).not.toMatch(/clawhub:/i);
   });
 
   it("wires the full plugin prerelease plan into the mega CI workflow", () => {
