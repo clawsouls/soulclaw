@@ -1,8 +1,8 @@
 import { vi } from "vitest";
 
-vi.mock("../src/sdk-security-runtime.js", async () => {
-  const actual = await vi.importActual<typeof import("../src/sdk-security-runtime.js")>(
-    "../src/sdk-security-runtime.js",
+vi.mock("../sdk-security-runtime.js", async () => {
+  const actual = await vi.importActual<typeof import("../sdk-security-runtime.js")>(
+    "../sdk-security-runtime.js",
   );
   const lookupFn = async (_hostname: string, options?: { all?: boolean }) => {
     const result = { address: "93.184.216.34", family: 4 };

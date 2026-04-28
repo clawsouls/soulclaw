@@ -3,12 +3,12 @@ import { normalizeOptionalLowercaseString } from "openclaw/plugin-sdk/text-runti
 export {
   getRuntimeConfig,
   getRuntimeConfigSnapshot,
-  replaceConfigFile,
-} from "openclaw/plugin-sdk/config-runtime";
-export type {
-  BrowserConfig,
-  BrowserProfileConfig,
-  OpenClawConfig,
+} from "openclaw/plugin-sdk/runtime-config-snapshot";
+export { replaceConfigFile } from "openclaw/plugin-sdk/config-mutation";
+export {
+  type BrowserConfig,
+  type BrowserProfileConfig,
+  type OpenClawConfig,
 } from "openclaw/plugin-sdk/config-types";
 export {
   normalizePluginsConfig,
