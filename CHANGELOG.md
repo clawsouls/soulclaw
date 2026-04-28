@@ -21,6 +21,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Memory/LanceDB: call OpenAI-compatible embedding endpoints through the raw SDK transport without sending `encoding_format`, then normalize float-array or base64 responses so providers such as ZhiPu and DashScope no longer fail recall with wrong vector dimensions or rejected parameters. Fixes #63655. Thanks @kinthaiofficial.
 - Memory/LanceDB: bound memory recall embedding queries with a new `recallMaxChars` setting, prefer the latest user message over channel prompt metadata during auto-recall, and document the knob so small Ollama embedding models avoid context-length failures. Fixes #56780. Thanks @rungmc357 and @zak-collaborator.
 - CLI/skills: resolve workspace-backed skills commands from `--agent`, then the current agent workspace, before falling back to the default agent, so multi-agent ClawHub installs, updates, and status checks stay scoped to the active workspace. Fixes #56161; carries forward #72726. Thanks @langbowang and @luyao618.
 - Plugin SDK: fall back from partial bundled plugin directory overrides to package source public surfaces while preserving `OPENCLAW_DISABLE_BUNDLED_PLUGINS` as a hard disable. (#72817) Thanks @serkonyc.

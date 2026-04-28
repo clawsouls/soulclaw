@@ -6,6 +6,7 @@
  * Provides seamless auto-recall and auto-capture via lifecycle hooks.
  */
 
+import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import type * as LanceDB from "@lancedb/lancedb";
 import OpenAI from "openai";
@@ -270,15 +271,50 @@ class Embeddings {
     const params: OpenAI.EmbeddingCreateParams = {
       model: this.model,
       input: text,
-      encoding_format: "float",
     };
     if (this.dimensions) {
       params.dimensions = this.dimensions;
     }
     ensureGlobalUndiciEnvProxyDispatcher();
-    const response = await this.client.embeddings.create(params);
-    return response.data[0].embedding;
+    // The OpenAI SDK's embeddings helper injects encoding_format=base64 when
+    // omitted, then decodes the response. Several compatible providers either
+    // reject encoding_format or always return float arrays, so use the generic
+    // transport and normalize the response ourselves.
+    const response = await this.client.post<EmbeddingCreateResponse>("/embeddings", {
+      body: params,
+    });
+    return normalizeEmbeddingVector(response.data?.[0]?.embedding);
   }
+}
+
+type EmbeddingCreateResponse = {
+  data?: Array<{
+    embedding?: unknown;
+  }>;
+};
+
+export function normalizeEmbeddingVector(value: unknown): number[] {
+  if (Array.isArray(value)) {
+    if (!value.every((item) => typeof item === "number" && Number.isFinite(item))) {
+      throw new Error("Embedding response contains non-numeric values");
+    }
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const bytes = Buffer.from(value, "base64");
+    if (bytes.byteLength % Float32Array.BYTES_PER_ELEMENT !== 0) {
+      throw new Error("Base64 embedding response has invalid byte length");
+    }
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const floats: number[] = [];
+    for (let offset = 0; offset < bytes.byteLength; offset += Float32Array.BYTES_PER_ELEMENT) {
+      floats.push(view.getFloat32(offset, true));
+    }
+    return floats;
+  }
+
+  throw new Error("Embedding response is missing a vector");
 }
 
 // ============================================================================

@@ -8,11 +8,13 @@
  * - Auto-capture filtering
  */
 
+import { Buffer } from "node:buffer";
 import { describe, test, expect, vi } from "vitest";
 import memoryPlugin, {
   detectCategory,
   formatRelevantMemoriesContext,
   looksLikePromptInjection,
+  normalizeEmbeddingVector,
   normalizeRecallQuery,
   shouldCapture,
 } from "./index.js";
@@ -55,6 +57,10 @@ function createMockModule(): LanceDbModule {
   return {
     connect: vi.fn(),
   } as unknown as LanceDbModule;
+}
+
+function invokeEmbeddingCreate(mock: ReturnType<typeof vi.fn>, body: unknown) {
+  return (mock as unknown as (body: unknown) => unknown)(body);
 }
 
 function createRuntimeLoader(
@@ -351,7 +357,9 @@ describe("memory plugin e2e", () => {
     }));
     vi.doMock("openai", () => ({
       default: class MockOpenAI {
-        embeddings = { create: embeddingsCreate };
+        post = vi.fn((_path: string, opts: { body?: unknown }) =>
+          invokeEmbeddingCreate(embeddingsCreate, opts.body),
+        );
       },
     }));
     vi.doMock("./lancedb-runtime.js", () => ({
@@ -417,7 +425,6 @@ describe("memory plugin e2e", () => {
       expect(embeddingsCreate).toHaveBeenCalledWith({
         model: "text-embedding-3-small",
         input: expectedRecallQuery,
-        encoding_format: "float",
       });
       expect(expectedRecallQuery).toHaveLength(120);
       expect(vectorSearch).toHaveBeenCalledWith([0.1, 0.2, 0.3]);
@@ -491,7 +498,9 @@ describe("memory plugin e2e", () => {
     }));
     vi.doMock("openai", () => ({
       default: class MockOpenAI {
-        embeddings = { create: embeddingsCreate };
+        post = vi.fn((_path: string, opts: { body?: unknown }) =>
+          invokeEmbeddingCreate(embeddingsCreate, opts.body),
+        );
       },
     }));
     vi.doMock("./lancedb-runtime.js", () => ({
@@ -568,7 +577,6 @@ describe("memory plugin e2e", () => {
       expect(embeddingsCreate).toHaveBeenCalledWith({
         model: "text-embedding-3-small",
         input: "what editor should i use?",
-        encoding_format: "float",
       });
       expect(result).toMatchObject({
         prependContext: expect.stringContaining("I prefer Helix for editing code."),
@@ -622,7 +630,9 @@ describe("memory plugin e2e", () => {
     }));
     vi.doMock("openai", () => ({
       default: class MockOpenAI {
-        embeddings = { create: embeddingsCreate };
+        post = vi.fn((_path: string, opts: { body?: unknown }) =>
+          invokeEmbeddingCreate(embeddingsCreate, opts.body),
+        );
       },
     }));
     vi.doMock("./lancedb-runtime.js", () => ({
@@ -745,7 +755,9 @@ describe("memory plugin e2e", () => {
     }));
     vi.doMock("openai", () => ({
       default: class MockOpenAI {
-        embeddings = { create: embeddingsCreate };
+        post = vi.fn((_path: string, opts: { body?: unknown }) =>
+          invokeEmbeddingCreate(embeddingsCreate, opts.body),
+        );
       },
     }));
     vi.doMock("./lancedb-runtime.js", () => ({
@@ -844,7 +856,9 @@ describe("memory plugin e2e", () => {
     }));
     vi.doMock("openai", () => ({
       default: class MockOpenAI {
-        embeddings = { create: embeddingsCreate };
+        post = vi.fn((_path: string, opts: { body?: unknown }) =>
+          invokeEmbeddingCreate(embeddingsCreate, opts.body),
+        );
       },
     }));
     vi.doMock("./lancedb-runtime.js", () => ({
@@ -905,7 +919,6 @@ describe("memory plugin e2e", () => {
       expect(embeddingsCreate).toHaveBeenCalledWith({
         model: "text-embedding-3-small",
         input: "I prefer Helix for editing code every day.",
-        encoding_format: "float",
       });
       expect(vectorSearch).toHaveBeenCalledTimes(1);
       expect(add).toHaveBeenCalledTimes(1);
@@ -970,7 +983,9 @@ describe("memory plugin e2e", () => {
     }));
     vi.doMock("openai", () => ({
       default: class MockOpenAI {
-        embeddings = { create: embeddingsCreate };
+        post = vi.fn((_path: string, opts: { body?: unknown }) =>
+          invokeEmbeddingCreate(embeddingsCreate, opts.body),
+        );
       },
     }));
     vi.doMock("./lancedb-runtime.js", () => ({
@@ -1047,7 +1062,6 @@ describe("memory plugin e2e", () => {
       expect(embeddingsCreate).toHaveBeenCalledWith({
         model: "text-embedding-3-small",
         input: "I prefer Helix for editing code every day.",
-        encoding_format: "float",
       });
       expect(add).toHaveBeenCalledWith([
         expect.objectContaining({
@@ -1106,7 +1120,9 @@ describe("memory plugin e2e", () => {
     }));
     vi.doMock("openai", () => ({
       default: class MockOpenAI {
-        embeddings = { create: embeddingsCreate };
+        post = vi.fn((_path: string, opts: { body?: unknown }) =>
+          invokeEmbeddingCreate(embeddingsCreate, opts.body),
+        );
       },
     }));
     vi.doMock("./lancedb-runtime.js", () => ({
@@ -1231,7 +1247,9 @@ describe("memory plugin e2e", () => {
     }));
     vi.doMock("openai", () => ({
       default: class MockOpenAI {
-        embeddings = { create: embeddingsCreate };
+        post = vi.fn((_path: string, opts: { body?: unknown }) =>
+          invokeEmbeddingCreate(embeddingsCreate, opts.body),
+        );
       },
     }));
     vi.doMock("./lancedb-runtime.js", () => ({
@@ -1336,7 +1354,9 @@ describe("memory plugin e2e", () => {
     }));
     vi.doMock("openai", () => ({
       default: class MockOpenAI {
-        embeddings = { create: embeddingsCreate };
+        post = vi.fn((_path: string, opts: { body?: unknown }) =>
+          invokeEmbeddingCreate(embeddingsCreate, opts.body),
+        );
       },
     }));
     vi.doMock("./lancedb-runtime.js", () => ({
@@ -1425,12 +1445,10 @@ describe("memory plugin e2e", () => {
       expect(harness.embeddingsCreate).toHaveBeenNthCalledWith(1, {
         model: "text-embedding-3-small",
         input: "I prefer Helix for editing code every day.",
-        encoding_format: "float",
       });
       expect(harness.embeddingsCreate).toHaveBeenNthCalledWith(2, {
         model: "text-embedding-3-small",
         input: "I prefer Fish for shell commands every day.",
-        encoding_format: "float",
       });
       expect(harness.add).toHaveBeenCalledTimes(2);
     } finally {
@@ -1493,7 +1511,6 @@ describe("memory plugin e2e", () => {
       expect(harness.embeddingsCreate).toHaveBeenNthCalledWith(3, {
         model: "text-embedding-3-small",
         input: "I prefer Deno for small scripts every day.",
-        encoding_format: "float",
       });
       expect(harness.add).toHaveBeenCalledTimes(3);
     } finally {
@@ -1555,7 +1572,9 @@ describe("memory plugin e2e", () => {
     }));
     vi.doMock("openai", () => ({
       default: class MockOpenAI {
-        embeddings = { create: embeddingsCreate };
+        post = vi.fn((_path: string, opts: { body?: unknown }) =>
+          invokeEmbeddingCreate(embeddingsCreate, opts.body),
+        );
       },
     }));
     vi.doMock("./lancedb-runtime.js", () => ({
@@ -1611,7 +1630,6 @@ describe("memory plugin e2e", () => {
       expect(embeddingsCreate).toHaveBeenCalledWith({
         model: "text-embedding-3-small",
         input: "hello dimensions",
-        encoding_format: "float",
         dimensions: 1024,
       });
     } finally {
@@ -1651,7 +1669,9 @@ describe("memory plugin e2e", () => {
     }));
     vi.doMock("openai", () => ({
       default: class MockOpenAI {
-        embeddings = { create: embeddingsCreate };
+        post = vi.fn((_path: string, opts: { body?: unknown }) =>
+          invokeEmbeddingCreate(embeddingsCreate, opts.body),
+        );
       },
     }));
     vi.doMock("./lancedb-runtime.js", () => ({
@@ -1831,6 +1851,31 @@ describe("memory plugin e2e", () => {
       "remember the blue mug",
     );
     expect(normalizeRecallQuery(`look up ${"x".repeat(200)}`, 120)).toHaveLength(120);
+  });
+
+  test("normalizeEmbeddingVector accepts float arrays and base64 float32 responses", async () => {
+    expect(normalizeEmbeddingVector([0.1, 0.2, 0.3])).toEqual([0.1, 0.2, 0.3]);
+
+    const bytes = Buffer.alloc(2 * Float32Array.BYTES_PER_ELEMENT);
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    view.setFloat32(0, 1.25, true);
+    view.setFloat32(Float32Array.BYTES_PER_ELEMENT, -2.5, true);
+
+    const decoded = normalizeEmbeddingVector(bytes.toString("base64"));
+    expect(decoded[0]).toBeCloseTo(1.25);
+    expect(decoded[1]).toBeCloseTo(-2.5);
+  });
+
+  test("normalizeEmbeddingVector rejects malformed embedding payloads", async () => {
+    expect(() => normalizeEmbeddingVector([0.1, Number.NaN])).toThrow(
+      "Embedding response contains non-numeric values",
+    );
+    expect(() => normalizeEmbeddingVector("abc")).toThrow(
+      "Base64 embedding response has invalid byte length",
+    );
+    expect(() => normalizeEmbeddingVector(undefined)).toThrow(
+      "Embedding response is missing a vector",
+    );
   });
 
   test("formatRelevantMemoriesContext escapes memory text and marks entries as untrusted", async () => {
