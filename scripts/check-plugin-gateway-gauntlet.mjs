@@ -567,6 +567,14 @@ async function main() {
   process.stdout.write(
     `[plugin-gauntlet] plugins=${selectedPlugins.length}/${matrix.length} rows=${rows.length} failures=${failures.length} observations=${summary.observations.length}\n`,
   );
+  for (const failure of failures) {
+    process.stdout.write(
+      `[plugin-gauntlet] failure phase=${failure.phase} plugin=${failure.pluginId ?? "<none>"} status=${failure.status} timedOut=${failure.timedOut} wallMs=${Math.round(failure.wallMs)} log=${failure.logPath}\n`,
+    );
+  }
+  for (const observation of summary.observations.slice(0, 20)) {
+    process.stdout.write(`[plugin-gauntlet] observation ${JSON.stringify(observation)}\n`);
+  }
   if (failures.length > 0) {
     process.exitCode = 1;
   }
