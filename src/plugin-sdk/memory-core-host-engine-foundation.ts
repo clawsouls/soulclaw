@@ -1,1 +1,1 @@
-export * from "../memory-host-sdk/engine-foundation.js";
+export * from "../../packages/memory-host-sdk/src/engine-foundation.js";

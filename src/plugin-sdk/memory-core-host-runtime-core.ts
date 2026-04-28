@@ -1,4 +1,4 @@
-export * from "../memory-host-sdk/runtime-core.js";
+export * from "../../packages/memory-host-sdk/src/runtime-core.js";
 export type {
   MemoryCorpusGetResult,
   MemoryCorpusSearchResult,
