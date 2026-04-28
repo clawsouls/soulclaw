@@ -119,6 +119,7 @@
   "test-node-mocks",
   "testing",
   "temp-path",
+  "time-runtime",
   "logging-core",
   "migration",
   "migration-runtime",

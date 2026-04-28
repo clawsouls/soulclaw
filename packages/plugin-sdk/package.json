@@ -60,6 +60,10 @@
       "types": "./dist/src/plugin-sdk/system-event-runtime.d.ts",
       "default": "./src/system-event-runtime.ts"
     },
+    "./time-runtime": {
+      "types": "./dist/src/plugin-sdk/time-runtime.d.ts",
+      "default": "./src/time-runtime.ts"
+    },
     "./transport-ready-runtime": {
       "types": "./dist/src/plugin-sdk/transport-ready-runtime.d.ts",
       "default": "./src/transport-ready-runtime.ts"
