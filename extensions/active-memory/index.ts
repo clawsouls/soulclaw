@@ -15,6 +15,7 @@ import {
   resolvePluginConfigObject,
 } from "openclaw/plugin-sdk/plugin-config-runtime";
 import { definePluginEntry, type OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+import { parseAgentSessionKey, parseThreadSessionSuffix } from "openclaw/plugin-sdk/routing";
 import {
   resolveSessionStoreEntry,
   updateSessionStore,
@@ -68,6 +69,8 @@ type ActiveRecallPluginConfig = {
   modelFallback?: string;
   modelFallbackPolicy?: "default-remote" | "resolved-only";
   allowedChatTypes?: Array<"direct" | "group" | "channel">;
+  allowedChatIds?: string[];
+  deniedChatIds?: string[];
   thinking?: ActiveMemoryThinkingLevel;
   promptStyle?:
     | "balanced"
@@ -103,6 +106,8 @@ type ResolvedActiveRecallPluginConfig = {
   modelFallback?: string;
   modelFallbackPolicy: "default-remote" | "resolved-only";
   allowedChatTypes: Array<"direct" | "group" | "channel">;
+  allowedChatIds: string[];
+  deniedChatIds: string[];
   thinking: ActiveMemoryThinkingLevel;
   promptStyle:
     | "balanced"
@@ -268,6 +273,29 @@ function normalizeTranscriptDir(value: unknown): string {
   const parts = normalized.split("/").map((part) => part.trim());
   const safeParts = parts.filter((part) => part.length > 0 && part !== "." && part !== "..");
   return safeParts.length > 0 ? path.join(...safeParts) : DEFAULT_TRANSCRIPT_DIR;
+}
+
+function normalizeChatIdList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "string") {
+      continue;
+    }
+    const trimmed = entry.trim().toLowerCase();
+    if (!trimmed) {
+      continue;
+    }
+    if (seen.has(trimmed)) {
+      continue;
+    }
+    seen.add(trimmed);
+    out.push(trimmed);
+  }
+  return out;
 }
 
 function normalizePromptConfigText(value: unknown): string | undefined {
@@ -631,6 +659,8 @@ function normalizePluginConfig(pluginConfig: unknown): ResolvedActiveRecallPlugi
     modelFallbackPolicy:
       raw.modelFallbackPolicy === "resolved-only" ? "resolved-only" : "default-remote",
     allowedChatTypes: allowedChatTypes.length > 0 ? allowedChatTypes : ["direct"],
+    allowedChatIds: normalizeChatIdList(raw.allowedChatIds),
+    deniedChatIds: normalizeChatIdList(raw.deniedChatIds),
     thinking: resolveThinkingLevel(raw.thinking),
     promptStyle: resolvePromptStyle(raw.promptStyle, raw.queryMode),
     promptOverride: normalizePromptConfigText(raw.promptOverride),
@@ -927,6 +957,105 @@ function isAllowedChatType(
     return false;
   }
   return config.allowedChatTypes.includes(chatType);
+}
+
+/**
+ * Best-effort extraction of the conversation id (peer id) embedded in an
+ * agent-scoped session key, using shared session-key utilities so we
+ * stay aligned with the canonical key shapes produced by
+ * `buildAgentPeerSessionKey` / `resolveThreadSessionKeys`.
+ *
+ * Supported shapes (after stripping the optional `:thread:<id>` suffix):
+ *   - agent:<agentId>:direct:<peerId>                         (dmScope=per-peer)
+ *   - agent:<agentId>:<channel>:direct:<peerId>               (dmScope=per-channel-peer)
+ *   - agent:<agentId>:<channel>:<accountId>:direct:<peerId>   (dmScope=per-account-channel-peer)
+ *   - agent:<agentId>:<channel>:group:<peerId>                (group)
+ *   - agent:<agentId>:<channel>:channel:<peerId>              (channel)
+ *
+ * The legacy `dm` token is also accepted for backwards compatibility.
+ *
+ * Returns undefined for sessions that do not embed a peer id (for
+ * example dmScope=main `agent:<agentId>:<mainKey>` sessions, or any
+ * non-canonical session key shape).
+ */
+function resolveConversationId(ctx: {
+  sessionKey?: string;
+  messageProvider?: string;
+}): string | undefined {
+  const rawSessionKey = ctx.sessionKey?.trim();
+  if (!rawSessionKey) {
+    return undefined;
+  }
+  // Strip generic `:thread:<id>` suffix first so threaded sessions match
+  // the same conversation id as their non-threaded parent. Provider-
+  // specific topic ids (e.g. Telegram/Feishu) that are baked into the
+  // peer id by the channel adapter are preserved.
+  const { baseSessionKey } = parseThreadSessionSuffix(rawSessionKey);
+  const baseKey = (baseSessionKey ?? rawSessionKey).trim();
+  if (!baseKey) {
+    return undefined;
+  }
+  const parsed = parseAgentSessionKey(baseKey);
+  if (!parsed) {
+    return undefined;
+  }
+  const restParts = parsed.rest.split(":").filter(Boolean);
+  if (restParts.length < 2) {
+    // `agent:<agentId>:<mainKey>` (dmScope=main) lands here — there is
+    // no embedded peer id to filter against.
+    return undefined;
+  }
+  // Walk left-to-right until we hit the first chat-type marker. Every
+  // canonical peer key terminates with `<chatType>:<peerId...>`, so the
+  // tail after the first marker is the conversation id we want.
+  for (let index = 0; index < restParts.length - 1; index += 1) {
+    const token = restParts[index];
+    if (token === "direct" || token === "dm" || token === "group" || token === "channel") {
+      const tail = restParts
+        .slice(index + 1)
+        .join(":")
+        .trim();
+      return tail || undefined;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Apply allowedChatIds / deniedChatIds filters after the chat type check
+ * has already passed. Empty allowedChatIds means "no allowlist" and this
+ * function returns true for any conversation. Empty deniedChatIds is also
+ * a no-op.
+ *
+ * When allowedChatIds is non-empty but the session key does not expose a
+ * conversation id (e.g. webchat default session), the session is skipped
+ * to avoid accidentally running against an unknown conversation.
+ */
+function isAllowedChatId(
+  config: ResolvedActiveRecallPluginConfig,
+  ctx: {
+    sessionKey?: string;
+    messageProvider?: string;
+  },
+): boolean {
+  const hasAllowlist = config.allowedChatIds.length > 0;
+  const hasDenylist = config.deniedChatIds.length > 0;
+  if (!hasAllowlist && !hasDenylist) {
+    return true;
+  }
+  const conversationId = resolveConversationId(ctx);
+  if (hasAllowlist) {
+    if (!conversationId) {
+      return false;
+    }
+    if (!config.allowedChatIds.includes(conversationId)) {
+      return false;
+    }
+  }
+  if (hasDenylist && conversationId && config.deniedChatIds.includes(conversationId)) {
+    return false;
+  }
+  return true;
 }
 
 function buildCacheKey(params: {
@@ -2062,6 +2191,19 @@ export default definePluginEntry({
             ...ctx,
             sessionKey: resolvedSessionKey ?? ctx.sessionKey,
             mainKey: api.config.session?.mainKey,
+          })
+        ) {
+          await persistPluginStatusLines({
+            api,
+            agentId: effectiveAgentId,
+            sessionKey: resolvedSessionKey,
+          });
+          return undefined;
+        }
+        if (
+          !isAllowedChatId(config, {
+            sessionKey: resolvedSessionKey ?? ctx.sessionKey,
+            messageProvider: ctx.messageProvider,
           })
         ) {
           await persistPluginStatusLines({
