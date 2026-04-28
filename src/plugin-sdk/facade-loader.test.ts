@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setBundledPluginsDirOverrideForTest } from "../plugins/bundled-dir.js";
 import {
   clearBundledRuntimeDependencyNodePaths,
   resolveBundledRuntimeDependencyInstallRoot,
@@ -71,6 +72,11 @@ function createBundledPluginDir(prefix: string, marker: string): string {
     "utf8",
   );
   return rootDir;
+}
+
+function useBundledPluginDirOverrideForTest(dir: string): void {
+  process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = dir;
+  setBundledPluginsDirOverrideForTest(dir);
 }
 
 function createThrowingPluginDir(prefix: string): string {
@@ -206,6 +212,7 @@ afterEach(() => {
   }
   resetFacadeLoaderStateForTest();
   setFacadeLoaderJitiFactoryForTest(undefined);
+  setBundledPluginsDirOverrideForTest(undefined);
   clearBundledRuntimeDependencyNodePaths();
   delete (globalThis as typeof globalThis & Record<string, unknown>)[FACADE_LOADER_GLOBAL];
   if (originalBundledPluginsDir === undefined) {
@@ -230,14 +237,14 @@ describe("plugin-sdk facade loader", () => {
     const overrideA = createBundledPluginDir("openclaw-facade-loader-a-", "override-a");
     const overrideB = createBundledPluginDir("openclaw-facade-loader-b-", "override-b");
 
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = overrideA;
+    useBundledPluginDirOverrideForTest(overrideA);
     const fromA = loadBundledPluginPublicSurfaceModuleSync<{ marker: string }>({
       dirName: "demo",
       artifactBasename: "api.js",
     });
     expect(fromA.marker).toBe("override-a");
 
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = overrideB;
+    useBundledPluginDirOverrideForTest(overrideB);
     const fromB = loadBundledPluginPublicSurfaceModuleSync<{ marker: string }>({
       dirName: "demo",
       artifactBasename: "api.js",
@@ -246,7 +253,8 @@ describe("plugin-sdk facade loader", () => {
   });
 
   it("falls back to package source surfaces when an override dir lacks a bundled plugin", () => {
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = createTempDirSync("openclaw-facade-loader-empty-");
+    const overrideDir = createTrustedBundledFixtureRoot("openclaw-facade-loader-empty-");
+    useBundledPluginDirOverrideForTest(overrideDir);
 
     const loaded = loadBundledPluginPublicSurfaceModuleSync<{
       closeTrackedBrowserTabsForSessions: unknown;
@@ -272,7 +280,7 @@ describe("plugin-sdk facade loader", () => {
 
   it("shares loaded facade ids with facade-runtime", () => {
     const dir = createBundledPluginDir("openclaw-facade-loader-ids-", "identity-check");
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = dir;
+    useBundledPluginDirOverrideForTest(dir);
 
     const first = loadBundledPluginPublicSurfaceModuleSync<{ marker: string }>({
       dirName: "demo",
@@ -301,7 +309,7 @@ describe("plugin-sdk facade loader", () => {
       'export const marker = "windows-dist-ok";\n',
       "utf8",
     );
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = bundledPluginsDir;
+    useBundledPluginDirOverrideForTest(bundledPluginsDir);
 
     const createJitiCalls: Parameters<FacadeLoaderJitiFactory>[] = [];
     setFacadeLoaderJitiFactoryForTest(((...args) => {
@@ -338,7 +346,7 @@ describe("plugin-sdk facade loader", () => {
       marker: "staged",
       prefix: "openclaw-facade-loader-runtime-deps-",
     });
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = fixture.bundledPluginsDir;
+    useBundledPluginDirOverrideForTest(fixture.bundledPluginsDir);
     process.env.OPENCLAW_PLUGIN_STAGE_DIR = fixture.stageRoot;
 
     await expect(import(pathToFileURL(fixture.modulePath).href)).rejects.toMatchObject({
@@ -367,6 +375,7 @@ describe("plugin-sdk facade loader", () => {
       marker: "staged",
       prefix: "openclaw-facade-loader-built-async-",
     });
+    setBundledPluginsDirOverrideForTest(fixture.bundledPluginsDir);
 
     const loaded = await loadBundledPluginPublicSurfaceModule<{
       marker: string;
@@ -387,7 +396,7 @@ describe("plugin-sdk facade loader", () => {
 
   it("breaks circular facade re-entry during module evaluation", () => {
     const dir = createCircularPluginDir("openclaw-facade-loader-circular-");
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = dir;
+    useBundledPluginDirOverrideForTest(dir);
     (globalThis as typeof globalThis & Record<string, unknown>)[FACADE_LOADER_GLOBAL] =
       loadBundledPluginPublicSurfaceModuleSync;
 
@@ -401,7 +410,7 @@ describe("plugin-sdk facade loader", () => {
 
   it("clears the cache on load failure so retries re-execute", () => {
     const dir = createThrowingPluginDir("openclaw-facade-loader-throw-");
-    process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = dir;
+    useBundledPluginDirOverrideForTest(dir);
 
     expect(() =>
       loadBundledPluginPublicSurfaceModuleSync<{ marker: string }>({
