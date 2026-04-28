@@ -35,7 +35,12 @@ const HIGH_SIGNAL_LIVE_MODEL_PRIORITY = [
 
 export const DEFAULT_HIGH_SIGNAL_LIVE_MODEL_LIMIT = HIGH_SIGNAL_LIVE_MODEL_PRIORITY.length;
 const DEFAULT_HIGH_SIGNAL_LIVE_EXCLUDED_PROVIDERS = new Set(["codex", "codex-cli", "openai-codex"]);
-const CURATED_ONLY_HIGH_SIGNAL_LIVE_PROVIDERS = new Set(["fireworks", "openrouter", "xai"]);
+const CURATED_ONLY_HIGH_SIGNAL_LIVE_PROVIDERS = new Set([
+  "fireworks",
+  "google",
+  "openrouter",
+  "xai",
+]);
 
 const HIGH_SIGNAL_LIVE_MODEL_PRIORITY_INDEX = new Map<string, number>(
   HIGH_SIGNAL_LIVE_MODEL_PRIORITY.map((key, index) => [key, index]),

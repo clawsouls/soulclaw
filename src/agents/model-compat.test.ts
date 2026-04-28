@@ -462,7 +462,7 @@ describe("isHighSignalLiveModelRef", () => {
     ).toBe(false);
   });
 
-  it("drops Gemini families older than major version 3 from the default live matrix", () => {
+  it("keeps only curated Gemini routes in the default live matrix", () => {
     providerRuntimeMocks.resolveProviderModernModelRef.mockReturnValue(true);
 
     expect(isHighSignalLiveModelRef({ provider: "google", id: "gemini-2.5-flash-lite" })).toBe(
@@ -474,6 +474,13 @@ describe("isHighSignalLiveModelRef", () => {
     expect(isHighSignalLiveModelRef({ provider: "google", id: "gemini-3-flash-preview" })).toBe(
       true,
     );
+    expect(isHighSignalLiveModelRef({ provider: "google", id: "gemini-3-pro-preview" })).toBe(
+      false,
+    );
+    expect(
+      isHighSignalLiveModelRef({ provider: "google", id: "gemini-3.1-pro-preview-customtools" }),
+    ).toBe(false);
+    expect(isHighSignalLiveModelRef({ provider: "google", id: "gemma-4-31b-it" })).toBe(false);
     expect(isHighSignalLiveModelRef({ provider: "google", id: "gemini-flash-latest" })).toBe(false);
     expect(isHighSignalLiveModelRef({ provider: "google", id: "gemini-flash-lite-latest" })).toBe(
       false,
