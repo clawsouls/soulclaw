@@ -517,6 +517,32 @@ describe("plugins cli install", () => {
     expect(runtimeLogs.some((line) => line.includes("requires configuration first"))).toBe(true);
   });
 
+  it("enables config-gated bundled installs when provider-backed config is explicit", async () => {
+    const cfg = {
+      plugins: {
+        entries: {
+          "memory-lancedb": {
+            config: {
+              embedding: {
+                provider: "openai",
+                model: "text-embedding-3-small",
+              },
+            },
+          },
+        },
+      },
+    } as OpenClawConfig;
+    const enabledCfg = createEnabledPluginConfig("memory-lancedb");
+    loadConfig.mockReturnValue(cfg);
+    enablePluginInConfig.mockReturnValue({ config: enabledCfg });
+
+    await runPluginsCommand(["plugins", "install", "memory-lancedb"]);
+
+    expect(enablePluginInConfig).toHaveBeenCalled();
+    expect(writeConfigFile).toHaveBeenCalledWith(enabledCfg);
+    expect(runtimeLogs.some((line) => line.includes("requires configuration first"))).toBe(false);
+  });
+
   it("passes force through as overwrite mode for ClawHub installs", async () => {
     const cfg = {
       plugins: {

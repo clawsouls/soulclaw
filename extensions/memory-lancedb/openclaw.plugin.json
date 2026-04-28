@@ -73,6 +73,7 @@
         "type": "object",
         "minProperties": 1,
         "additionalProperties": false,
+        "minProperties": 1,
         "properties": {
           "apiKey": {
             "type": "string"
