@@ -40,6 +40,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Gateway/startup: keep value-option foreground starts on the gateway fast path and skip proxy bootstrap unless proxy env is configured, reducing normal gateway startup RSS and avoiding full CLI graph loading. Thanks @vincentkoc.
+- Heartbeat/models: show heartbeat model bleed guidance on context-overflow resets when the last runtime model matches configured `heartbeat.model`, so smaller local heartbeat models point users to `isolatedSession` or `lightContext` instead of only compaction-buffer tuning. Fixes #67314. Thanks @Knightmare6890.
 - Subagents/models: persist `sessions_spawn.model` and configured subagent models as child-session model overrides before the first turn, so spawned subagents actually run on the requested provider/model instead of reverting to the target agent default. Fixes #73180. Thanks @danielzinhu99.
 - Backup: skip installed plugin `extensions/*/node_modules` dependency trees while keeping plugin manifests and source files in archives, so local backups avoid rebuildable npm payload bloat. Fixes #64144. Thanks @BrilliantWang.
 - Cron/models: fail isolated cron runs closed when an explicit `payload.model` is not allowed or cannot be resolved, so scheduled jobs do not silently fall back to an unrelated agent default or paid route before configured provider proxies such as LiteLLM can run. Fixes #73146. Thanks @oneandrewwang.
