@@ -13,6 +13,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Gateway/startup: start chat channels without waiting for primary model prewarm, keeping model warmup bounded in the background so Slack and other channels come online promptly when provider discovery is slow. Supersedes #73420. Thanks @dorukardahan.
 - Gateway/install: carry env-backed config SecretRefs such as `channels.discord.token` into generated service environments when they are present only in the installing shell, while keeping gateway auth SecretRefs non-persisted. Fixes #67817; supersedes #73426. Thanks @wdimaculangan and @ztexydt-cqh.
 - Auto-reply/commands: stop bare `/reset` and `/new` after reset hooks acknowledge the command, so non-ACP channels no longer fall through into empty provider calls while `/reset <message>` and `/new <message>` still seed the next model turn. Fixes #73367. Thanks @hoyanhan and @wenxu007.
 - Auto-reply: preserve voice-note media from silent turns while continuing to suppress text and non-voice media, so `NO_REPLY` TTS replies still deliver the requested audio bubble. (#73406) Thanks @zqchris.
