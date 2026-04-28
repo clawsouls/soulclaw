@@ -50,7 +50,7 @@ const openrouterPlugin = {
 };
 
 describe("loadStaticManifestCatalogRowsForList", () => {
-  it("loads all static manifest catalog rows without a provider filter", async () => {
+  it("loads listable manifest catalog rows without a provider filter", async () => {
     const { loadStaticManifestCatalogRowsForList } = await import("./list.manifest-catalog.js");
     const index = { plugins: [], diagnostics: [] };
     mocks.loadPluginRegistrySnapshot.mockReturnValueOnce(index);
@@ -63,7 +63,7 @@ describe("loadStaticManifestCatalogRowsForList", () => {
       loadStaticManifestCatalogRowsForList({
         cfg: {},
       }).map((row) => row.ref),
-    ).toEqual(["moonshot/kimi-k2.6"]);
+    ).toEqual(["moonshot/kimi-k2.6", "openrouter/auto"]);
     expect(mocks.loadPluginManifestRegistryForInstalledIndex).toHaveBeenCalledWith({
       index,
       config: {},

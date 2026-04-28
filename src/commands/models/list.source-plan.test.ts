@@ -83,9 +83,9 @@ describe("planAllModelListSources", () => {
     expect(mocks.hasProviderStaticCatalogForFilter).not.toHaveBeenCalled();
   });
 
-  it("uses the registry when provider-filtered manifest rows are refreshable", async () => {
+  it("uses provider-filtered refreshable manifest rows without loading the registry", async () => {
     const { planAllModelListSources } = await import("./list.source-plan.js");
-    mocks.loadManifestCatalogRowsForList.mockReturnValueOnce([]).mockReturnValueOnce([catalogRow]);
+    mocks.loadManifestCatalogRowsForList.mockReturnValueOnce([catalogRow]);
 
     const plan = await planAllModelListSources({
       all: true,
@@ -94,20 +94,15 @@ describe("planAllModelListSources", () => {
     });
 
     expect(plan).toMatchObject({
-      kind: "registry",
-      requiresInitialRegistry: true,
-      skipRuntimeModelSuppression: false,
+      kind: "manifest",
+      requiresInitialRegistry: false,
+      skipRuntimeModelSuppression: true,
     });
     expect(plan.manifestCatalogRows).toEqual([catalogRow]);
-    expect(mocks.loadManifestCatalogRowsForList).toHaveBeenNthCalledWith(1, {
+    expect(mocks.loadManifestCatalogRowsForList).toHaveBeenCalledWith({
       cfg: {},
       providerFilter: "openai",
       staticOnly: true,
-    });
-    expect(mocks.loadManifestCatalogRowsForList).toHaveBeenNthCalledWith(2, {
-      cfg: {},
-      providerFilter: "openai",
-      staticOnly: false,
     });
     expect(mocks.loadProviderIndexCatalogRowsForList).not.toHaveBeenCalled();
   });

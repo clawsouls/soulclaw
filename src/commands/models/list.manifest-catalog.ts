@@ -37,13 +37,13 @@ function loadManifestCatalogRowsForPluginIds(params: {
   if (params.staticOnly === false) {
     return plan.rows;
   }
-  const staticProviders = new Set(
-    plan.entries.filter((entry) => entry.discovery === "static").map((entry) => entry.provider),
+  const listableProviders = new Set(
+    plan.entries.filter((entry) => entry.discovery !== "runtime").map((entry) => entry.provider),
   );
-  if (staticProviders.size === 0) {
+  if (listableProviders.size === 0) {
     return [];
   }
-  return plan.rows.filter((row) => staticProviders.has(row.provider));
+  return plan.rows.filter((row) => listableProviders.has(row.provider));
 }
 
 function resolveConventionModelCatalogPluginIds(params: {

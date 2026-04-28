@@ -53,8 +53,8 @@ Notes:
   unavailable until matching auth is configured.
 - Broad `models list --all` merges manifest catalog rows over registry rows
   without loading provider runtime supplement hooks. Provider-filtered manifest
-  fast paths only use providers marked `static`, so partial `refreshable`
-  manifest rows do not hide registry-backed provider lists.
+  fast paths use `static` and `refreshable` manifest rows; providers marked
+  `runtime` stay on registry/runtime discovery.
 - `models list` keeps native model metadata and runtime caps distinct. In table
   output, `Ctx` shows `contextTokens/contextWindow` when an effective runtime
   cap differs from the native context window; JSON rows include `contextTokens`
