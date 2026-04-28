@@ -1,10 +1,11 @@
-import { normalizeOptionalAccountId } from "../../routing/account-id.js";
+import { normalizeOptionalAccountId } from "../routing/account-id.js";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
   normalizeOptionalThreadValue,
-} from "../../shared/string-coerce.js";
-import type { ChatType } from "../chat-type.js";
+} from "../shared/string-coerce.js";
+
+export type ChannelRouteChatType = "direct" | "group" | "channel";
 
 export type ChannelRouteThreadKind = "topic" | "thread" | "reply";
 
@@ -16,7 +17,7 @@ export type ChannelRouteRef = {
   target?: {
     to: string;
     rawTo?: string;
-    chatType?: ChatType;
+    chatType?: ChannelRouteChatType;
   };
   thread?: {
     id: string | number;
@@ -30,7 +31,7 @@ export type ChannelRouteRefInput = {
   accountId?: unknown;
   to?: unknown;
   rawTo?: unknown;
-  chatType?: ChatType;
+  chatType?: ChannelRouteChatType;
   threadId?: unknown;
   threadKind?: ChannelRouteThreadKind;
   threadSource?: ChannelRouteThreadSource;
@@ -40,6 +41,19 @@ export type ChannelRouteTargetInput = Pick<
   ChannelRouteRefInput,
   "channel" | "accountId" | "to" | "rawTo" | "chatType" | "threadId"
 >;
+
+export type ChannelRouteKeyInput = ChannelRouteRef | ChannelRouteTargetInput;
+
+export type ChannelRouteExplicitTarget = {
+  to: string;
+  threadId?: string | number;
+  chatType?: ChannelRouteChatType;
+};
+
+export type ChannelRouteExplicitTargetParser = (
+  channel: string,
+  rawTarget: string,
+) => ChannelRouteExplicitTarget | null;
 
 export function normalizeRouteThreadId(value: unknown): string | number | undefined {
   return normalizeOptionalThreadValue(value);
@@ -103,7 +117,37 @@ export function normalizeChannelRouteTarget(
   return input ? normalizeChannelRouteRef(input) : undefined;
 }
 
-export function channelRouteIdentityKey(input?: ChannelRouteTargetInput | null): string {
+export type ChannelRouteParsedTarget = ChannelRouteTargetInput & {
+  channel: string;
+  rawTo: string;
+  to: string;
+  threadId?: string | number;
+  chatType?: ChannelRouteChatType;
+};
+
+export function resolveChannelRouteTargetWithParser(params: {
+  channel: string;
+  rawTarget?: string | null;
+  fallbackThreadId?: string | number | null;
+  parseExplicitTarget: ChannelRouteExplicitTargetParser;
+}): ChannelRouteParsedTarget | null {
+  const channel = normalizeLowercaseStringOrEmpty(params.channel);
+  const rawTo = normalizeOptionalString(params.rawTarget);
+  if (!channel || !rawTo) {
+    return null;
+  }
+  const parsed = params.parseExplicitTarget(channel, rawTo);
+  const fallbackThreadId = normalizeOptionalThreadValue(params.fallbackThreadId);
+  return {
+    channel,
+    rawTo,
+    to: parsed?.to ?? rawTo,
+    threadId: normalizeOptionalThreadValue(parsed?.threadId ?? fallbackThreadId),
+    chatType: parsed?.chatType,
+  };
+}
+
+export function channelRouteDedupeKey(input?: ChannelRouteTargetInput | null): string {
   const route = normalizeChannelRouteTarget(input);
   return JSON.stringify([
     route?.channel ?? "",
@@ -111,6 +155,11 @@ export function channelRouteIdentityKey(input?: ChannelRouteTargetInput | null):
     route?.accountId ?? "",
     stringifyRouteThreadId(route?.thread?.id) ?? "",
   ]);
+}
+
+/** @deprecated Use `channelRouteDedupeKey`. */
+export function channelRouteIdentityKey(input?: ChannelRouteTargetInput | null): string {
+  return channelRouteDedupeKey(input);
 }
 
 function threadIdsEqual(left?: string | number, right?: string | number): boolean {
@@ -123,6 +172,10 @@ function accountsCompatible(left?: string, right?: string): boolean {
   return !left || !right || left === right;
 }
 
+function accountsEqual(left?: string, right?: string): boolean {
+  return (left ?? "") === (right ?? "");
+}
+
 export function channelRoutesMatchExact(params: {
   left?: ChannelRouteRef | null;
   right?: ChannelRouteRef | null;
@@ -133,9 +186,9 @@ export function channelRoutesMatchExact(params: {
   }
   return (
     left.channel === right.channel &&
-    left.accountId === right.accountId &&
-    channelRouteTarget(left) === channelRouteTarget(right) &&
-    threadIdsEqual(channelRouteThreadId(left), channelRouteThreadId(right))
+    left.target?.to === right.target?.to &&
+    accountsEqual(left.accountId, right.accountId) &&
+    threadIdsEqual(left.thread?.id, right.thread?.id)
   );
 }
 
@@ -147,30 +200,61 @@ export function channelRoutesShareConversation(params: {
   if (!left || !right) {
     return false;
   }
-  if (left.channel && right.channel && left.channel !== right.channel) {
+  if (
+    left.channel !== right.channel ||
+    left.target?.to !== right.target?.to ||
+    !accountsCompatible(left.accountId, right.accountId)
+  ) {
     return false;
   }
-  if (!accountsCompatible(left.accountId, right.accountId)) {
-    return false;
-  }
-  if (channelRouteTarget(left) !== channelRouteTarget(right)) {
-    return false;
-  }
-  const leftThreadId = channelRouteThreadId(left);
-  const rightThreadId = channelRouteThreadId(right);
-  if (leftThreadId == null || rightThreadId == null) {
+  if (left.thread?.id == null || right.thread?.id == null) {
     return true;
   }
-  return threadIdsEqual(leftThreadId, rightThreadId);
+  return threadIdsEqual(left.thread.id, right.thread.id);
 }
 
-export function channelRouteKey(route?: ChannelRouteRef): string | undefined {
-  const normalized = normalizeChannelRouteRef({
-    channel: route?.channel,
-    accountId: route?.accountId,
-    to: route?.target?.to,
-    threadId: route?.thread?.id,
+export function channelRouteTargetsMatchExact(params: {
+  left?: ChannelRouteTargetInput | null;
+  right?: ChannelRouteTargetInput | null;
+}): boolean {
+  return channelRoutesMatchExact({
+    left: normalizeChannelRouteTarget(params.left),
+    right: normalizeChannelRouteTarget(params.right),
   });
+}
+
+export function channelRouteTargetsShareConversation(params: {
+  left?: ChannelRouteTargetInput | null;
+  right?: ChannelRouteTargetInput | null;
+}): boolean {
+  return channelRoutesShareConversation({
+    left: normalizeChannelRouteTarget(params.left),
+    right: normalizeChannelRouteTarget(params.right),
+  });
+}
+
+function isChannelRouteRef(route: ChannelRouteKeyInput): route is ChannelRouteRef {
+  return "target" in route || "thread" in route;
+}
+
+function normalizeChannelRouteKeyInput(
+  route?: ChannelRouteKeyInput | null,
+): ChannelRouteRef | undefined {
+  if (!route) {
+    return undefined;
+  }
+  return isChannelRouteRef(route)
+    ? normalizeChannelRouteRef({
+        channel: route.channel,
+        to: route.target?.to,
+        accountId: route.accountId,
+        threadId: route.thread?.id,
+      })
+    : normalizeChannelRouteTarget(route);
+}
+
+export function channelRouteCompactKey(route?: ChannelRouteKeyInput | null): string | undefined {
+  const normalized = normalizeChannelRouteKeyInput(route);
   if (!normalized?.channel || !normalized.target?.to) {
     return undefined;
   }
@@ -180,4 +264,9 @@ export function channelRouteKey(route?: ChannelRouteRef): string | undefined {
     normalized.accountId ?? "",
     stringifyRouteThreadId(normalized.thread?.id) ?? "",
   ].join("|");
+}
+
+/** @deprecated Use `channelRouteCompactKey`. */
+export function channelRouteKey(route?: ChannelRouteRef): string | undefined {
+  return channelRouteCompactKey(route);
 }

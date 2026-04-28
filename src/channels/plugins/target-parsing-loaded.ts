@@ -1,27 +1,19 @@
 import {
-  normalizeOptionalString,
-  normalizeOptionalThreadValue,
-} from "../../shared/string-coerce.js";
-import type { ChatType } from "../chat-type.js";
-import {
-  channelRoutesMatchExact,
-  channelRoutesShareConversation,
-  normalizeChannelRouteRef,
-} from "../route/ref.js";
+  channelRouteTargetsMatchExact,
+  channelRouteTargetsShareConversation,
+  resolveChannelRouteTargetWithParser,
+  type ChannelRouteExplicitTarget,
+  type ChannelRouteParsedTarget,
+} from "../../plugin-sdk/channel-route.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { getLoadedChannelPluginForRead } from "./registry-loaded-read.js";
 
-export type ParsedChannelExplicitTarget = {
-  to: string;
-  threadId?: string | number;
-  chatType?: ChatType;
-};
+export type { ChannelRouteParsedTarget } from "../../plugin-sdk/channel-route.js";
 
-export type ComparableChannelTarget = {
-  rawTo: string;
-  to: string;
-  threadId?: string | number;
-  chatType?: ChatType;
-};
+export type ParsedChannelExplicitTarget = ChannelRouteExplicitTarget;
+
+/** @deprecated Use `ChannelRouteParsedTarget`. */
+export type ComparableChannelTarget = ChannelRouteParsedTarget;
 
 export function parseExplicitTargetForLoadedChannel(
   channel: string,
@@ -38,52 +30,38 @@ export function parseExplicitTargetForLoadedChannel(
   );
 }
 
+export function resolveRouteTargetForLoadedChannel(params: {
+  channel: string;
+  rawTarget?: string | null;
+  fallbackThreadId?: string | number | null;
+}): ChannelRouteParsedTarget | null {
+  return resolveChannelRouteTargetWithParser({
+    ...params,
+    parseExplicitTarget: parseExplicitTargetForLoadedChannel,
+  });
+}
+
+/** @deprecated Use `resolveRouteTargetForLoadedChannel`. */
 export function resolveComparableTargetForLoadedChannel(params: {
   channel: string;
   rawTarget?: string | null;
   fallbackThreadId?: string | number | null;
-}): ComparableChannelTarget | null {
-  const rawTo = normalizeOptionalString(params.rawTarget);
-  if (!rawTo) {
-    return null;
-  }
-  const parsed = parseExplicitTargetForLoadedChannel(params.channel, rawTo);
-  const fallbackThreadId = normalizeOptionalThreadValue(params.fallbackThreadId);
-  return {
-    rawTo,
-    to: parsed?.to ?? rawTo,
-    threadId: normalizeOptionalThreadValue(parsed?.threadId ?? fallbackThreadId),
-    chatType: parsed?.chatType,
-  };
+}): ChannelRouteParsedTarget | null {
+  return resolveRouteTargetForLoadedChannel(params);
 }
 
+/** @deprecated Use `channelRouteTargetsMatchExact` from `openclaw/plugin-sdk/channel-route`. */
 export function comparableChannelTargetsMatch(params: {
-  left?: ComparableChannelTarget | null;
-  right?: ComparableChannelTarget | null;
+  left?: ChannelRouteParsedTarget | null;
+  right?: ChannelRouteParsedTarget | null;
 }): boolean {
-  return channelRoutesMatchExact({
-    left: targetToRoute(params.left),
-    right: targetToRoute(params.right),
-  });
+  return channelRouteTargetsMatchExact(params);
 }
 
+/** @deprecated Use `channelRouteTargetsShareConversation` from `openclaw/plugin-sdk/channel-route`. */
 export function comparableChannelTargetsShareRoute(params: {
-  left?: ComparableChannelTarget | null;
-  right?: ComparableChannelTarget | null;
+  left?: ChannelRouteParsedTarget | null;
+  right?: ChannelRouteParsedTarget | null;
 }): boolean {
-  return channelRoutesShareConversation({
-    left: targetToRoute(params.left),
-    right: targetToRoute(params.right),
-  });
-}
-
-function targetToRoute(target?: ComparableChannelTarget | null) {
-  return target
-    ? normalizeChannelRouteRef({
-        to: target.to,
-        rawTo: target.rawTo,
-        threadId: target.threadId,
-        chatType: target.chatType,
-      })
-    : undefined;
+  return channelRouteTargetsShareConversation(params);
 }

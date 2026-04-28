@@ -1,5 +1,5 @@
-import { channelRouteIdentityKey } from "../../../channels/route/ref.js";
 import { resolveGlobalDedupeCache } from "../../../infra/dedupe.js";
+import { channelRouteDedupeKey } from "../../../plugin-sdk/channel-route.js";
 import { normalizeOptionalString } from "../../../shared/string-coerce.js";
 import { applyQueueDropPolicy, shouldSkipQueueItem } from "../../../utils/queue-helpers.js";
 import { kickFollowupDrainIfIdle, rememberFollowupDrainCallback } from "./drain.js";
@@ -18,7 +18,7 @@ const RECENT_QUEUE_MESSAGE_IDS = resolveGlobalDedupeCache(RECENT_QUEUE_MESSAGE_I
 });
 
 function followupRouteIdentityKey(run: FollowupRun): string {
-  return channelRouteIdentityKey({
+  return channelRouteDedupeKey({
     channel: run.originatingChannel,
     to: run.originatingTo,
     accountId: run.originatingAccountId,

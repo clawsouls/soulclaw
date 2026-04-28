@@ -668,6 +668,46 @@ describe("plugin-sdk subpath exports", () => {
     expect(matches).toEqual([]);
   });
 
+  it("keeps deprecated comparable channel target helpers behind compatibility shims", () => {
+    const matches = findRepoFilesContaining({
+      roots: [
+        resolve(REPO_ROOT, "src"),
+        resolve(REPO_ROOT, "extensions"),
+        resolve(REPO_ROOT, "test"),
+      ],
+      pattern:
+        /\b(?:ComparableChannelTarget|resolveComparableTargetFor(?:Channel|LoadedChannel)|comparableChannelTargets(?:Match|ShareRoute))\b/u,
+      exclude: [
+        "src/channels/plugins/target-parsing.ts",
+        "src/channels/plugins/target-parsing-loaded.ts",
+        "src/channels/plugins/target-parsing.test.ts",
+        "src/plugins/compat/registry.ts",
+        "src/plugins/compat/registry.test.ts",
+        "src/plugins/contracts/plugin-sdk-subpaths.test.ts",
+      ],
+    });
+    expect(matches).toEqual([]);
+  });
+
+  it("keeps deprecated channel route key aliases behind compatibility shims", () => {
+    const matches = findRepoFilesContaining({
+      roots: [
+        resolve(REPO_ROOT, "src"),
+        resolve(REPO_ROOT, "extensions"),
+        resolve(REPO_ROOT, "test"),
+      ],
+      pattern: /\b(?:channelRouteIdentityKey|channelRouteKey)\b/u,
+      exclude: [
+        "src/plugin-sdk/channel-route.ts",
+        "src/plugin-sdk/channel-route.test.ts",
+        "src/plugins/compat/registry.ts",
+        "src/plugins/compat/registry.test.ts",
+        "src/plugins/contracts/plugin-sdk-subpaths.test.ts",
+      ],
+    });
+    expect(matches).toEqual([]);
+  });
+
   it("keeps removed channel-named runtime boundaries out of core imports", () => {
     const matches = findRepoFilesContaining({
       roots: [resolve(REPO_ROOT, "src")],

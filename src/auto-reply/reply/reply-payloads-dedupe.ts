@@ -2,8 +2,12 @@ import { isMessagingToolDuplicate } from "../../agents/pi-embedded-helpers.js";
 import type { MessagingToolSend } from "../../agents/pi-embedded-messaging.types.js";
 import { getChannelPlugin } from "../../channels/plugins/index.js";
 import { normalizeAnyChannelId } from "../../channels/registry.js";
-import { stringifyRouteThreadId } from "../../channels/route/ref.js";
 import { normalizeTargetForProvider } from "../../infra/outbound/target-normalization.js";
+import {
+  channelRouteTargetsMatchExact,
+  stringifyRouteThreadId,
+  type ChannelRouteTargetInput,
+} from "../../plugin-sdk/channel-route.js";
 import { normalizeOptionalAccountId } from "../../routing/account-id.js";
 import {
   normalizeLowercaseStringOrEmpty,
@@ -102,6 +106,29 @@ function resolveTargetProviderForComparison(params: {
   return targetProvider;
 }
 
+type SuppressionRouteTarget = ChannelRouteTargetInput & {
+  channel: string;
+  to: string;
+};
+
+function normalizeRouteTargetForSuppression(params: {
+  provider: string;
+  rawTarget?: string;
+  accountId?: string;
+  threadId?: string;
+}): SuppressionRouteTarget | null {
+  const to = normalizeTargetForProvider(params.provider, params.rawTarget);
+  if (!to) {
+    return null;
+  }
+  return {
+    channel: params.provider,
+    to,
+    ...(params.accountId ? { accountId: params.accountId } : {}),
+    ...(params.threadId != null ? { threadId: params.threadId } : {}),
+  };
+}
+
 function targetsMatchForSuppression(params: {
   provider: string;
   originTarget: string;
@@ -148,21 +175,31 @@ export function shouldSuppressMessagingToolReplies(params: {
       return false;
     }
     const targetRaw = normalizeOptionalString(target.to);
-    if (originRawTarget && targetRaw === originRawTarget && !target.threadId) {
+    const routeAccount = originAccount ?? targetAccount;
+    const originRoute = normalizeRouteTargetForSuppression({
+      provider,
+      rawTarget: originRawTarget,
+      accountId: routeAccount,
+    });
+    if (!originRoute) {
+      return false;
+    }
+    const targetRoute = normalizeRouteTargetForSuppression({
+      provider: targetProvider,
+      rawTarget: targetRaw,
+      accountId: routeAccount,
+      threadId: target.threadId,
+    });
+    if (!targetRoute) {
+      return false;
+    }
+    if (channelRouteTargetsMatchExact({ left: originRoute, right: targetRoute })) {
       return true;
-    }
-    const originTarget = normalizeTargetForProvider(provider, originRawTarget);
-    if (!originTarget) {
-      return false;
-    }
-    const targetKey = normalizeTargetForProvider(targetProvider, targetRaw);
-    if (!targetKey) {
-      return false;
     }
     return targetsMatchForSuppression({
       provider,
-      originTarget,
-      targetKey,
+      originTarget: originRoute.to,
+      targetKey: targetRoute.to,
       targetThreadId: target.threadId,
     });
   });

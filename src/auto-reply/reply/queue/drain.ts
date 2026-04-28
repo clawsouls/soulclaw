@@ -1,4 +1,4 @@
-import { channelRouteKey, normalizeChannelRouteRef } from "../../../channels/route/ref.js";
+import { channelRouteCompactKey } from "../../../plugin-sdk/channel-route.js";
 import { defaultRuntime } from "../../../runtime.js";
 import { resolveGlobalMap } from "../../../shared/global-singleton.js";
 import {
@@ -135,7 +135,7 @@ function resolveCrossChannelKey(item: FollowupRun): { cross?: true; key?: string
   if (!isRoutableChannel(channel) || !to) {
     return { cross: true };
   }
-  const key = channelRouteKey(normalizeChannelRouteRef({ channel, to, accountId, threadId }));
+  const key = channelRouteCompactKey({ channel, to, accountId, threadId });
   return key ? { key } : { cross: true };
 }
 

@@ -120,6 +120,16 @@ const knownDeprecatedSurfaceMarkers = [
     file: "src/commands/doctor/shared/legacy-x-search-migrate.ts",
     marker: "tools.web.x_search",
   },
+  {
+    code: "channel-route-key-aliases",
+    file: "src/plugin-sdk/channel-route.ts",
+    marker: "channelRouteIdentityKey",
+  },
+  {
+    code: "channel-target-comparable-aliases",
+    file: "src/channels/plugins/target-parsing-loaded.ts",
+    marker: "ComparableChannelTarget",
+  },
 ] as const;
 
 function parseDate(date: string): Date {

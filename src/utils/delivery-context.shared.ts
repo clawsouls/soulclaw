@@ -1,9 +1,9 @@
 import {
-  channelRouteKey,
+  channelRouteCompactKey,
   channelRouteThreadId,
   channelRouteTarget,
-  normalizeChannelRouteRef,
-} from "../channels/route/ref.js";
+  normalizeChannelRouteTarget,
+} from "../plugin-sdk/channel-route.js";
 import { normalizeAccountId } from "./account-id.js";
 import type { DeliveryContext, DeliveryContextSessionSource } from "./delivery-context.types.js";
 import { normalizeMessageChannel } from "./message-channel-core.js";
@@ -13,7 +13,7 @@ export function normalizeDeliveryContext(context?: DeliveryContext): DeliveryCon
   if (!context) {
     return undefined;
   }
-  const route = normalizeChannelRouteRef({
+  const route = normalizeChannelRouteTarget({
     channel:
       typeof context.channel === "string"
         ? (normalizeMessageChannel(context.channel) ?? context.channel.trim())
@@ -131,13 +131,5 @@ export function mergeDeliveryContext(
 }
 
 export function deliveryContextKey(context?: DeliveryContext): string | undefined {
-  const normalized = normalizeDeliveryContext(context);
-  return channelRouteKey(
-    normalizeChannelRouteRef({
-      channel: normalized?.channel,
-      to: normalized?.to,
-      accountId: normalized?.accountId,
-      threadId: normalized?.threadId,
-    }),
-  );
+  return channelRouteCompactKey(normalizeDeliveryContext(context));
 }

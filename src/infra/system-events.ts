@@ -2,7 +2,7 @@
 // prefixed to the next prompt. We intentionally avoid persistence to keep
 // events ephemeral. Events are session-scoped and require an explicit key.
 
-import { channelRouteIdentityKey } from "../channels/route/ref.js";
+import { channelRouteDedupeKey } from "../plugin-sdk/channel-route.js";
 import { resolveGlobalMap } from "../shared/global-singleton.js";
 import {
   normalizeOptionalLowercaseString,
@@ -136,7 +136,7 @@ function areDeliveryContextsEqual(left?: DeliveryContext, right?: DeliveryContex
   if (!left || !right) {
     return false;
   }
-  return channelRouteIdentityKey(left) === channelRouteIdentityKey(right);
+  return channelRouteDedupeKey(left) === channelRouteDedupeKey(right);
 }
 
 function areSystemEventsEqual(left: SystemEvent, right: SystemEvent): boolean {

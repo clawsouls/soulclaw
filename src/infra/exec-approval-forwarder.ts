@@ -3,7 +3,6 @@ import {
   getLoadedChannelPlugin,
   resolveChannelApprovalAdapter,
 } from "../channels/plugins/index.js";
-import { channelRouteIdentityKey } from "../channels/route/ref.js";
 import { getRuntimeConfig } from "../config/config.js";
 import type {
   ExecApprovalForwardingConfig,
@@ -17,6 +16,7 @@ import {
   buildPluginApprovalPendingReplyPayload,
   buildPluginApprovalResolvedReplyPayload,
 } from "../plugin-sdk/approval-renderers.js";
+import { channelRouteDedupeKey } from "../plugin-sdk/channel-route.js";
 import { normalizeOptionalString } from "../shared/string-coerce.js";
 import {
   isDeliverableMessageChannel,
@@ -170,7 +170,7 @@ function shouldForwardRoute(params: {
 
 function buildTargetKey(target: ExecApprovalForwardTarget): string {
   const channel = normalizeMessageChannel(target.channel) ?? target.channel;
-  return channelRouteIdentityKey({
+  return channelRouteDedupeKey({
     channel,
     to: target.to,
     accountId: target.accountId,

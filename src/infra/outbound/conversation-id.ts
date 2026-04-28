@@ -1,4 +1,4 @@
-import { stringifyRouteThreadId } from "../../channels/route/ref.js";
+import { stringifyRouteThreadId } from "../../plugin-sdk/channel-route.js";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,

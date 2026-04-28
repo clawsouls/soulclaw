@@ -185,6 +185,7 @@
   "channel-pairing-paths",
   "channel-policy",
   "channel-send-result",
+  "channel-route",
   "channel-targets",
   "context-visibility-runtime",
   "feishu",

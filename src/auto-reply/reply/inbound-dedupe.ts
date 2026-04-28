@@ -1,6 +1,6 @@
-import { channelRouteIdentityKey } from "../../channels/route/ref.js";
 import { logVerbose, shouldLogVerbose } from "../../globals.js";
 import { resolveGlobalDedupeCache, type DedupeCache } from "../../infra/dedupe.js";
+import { channelRouteDedupeKey } from "../../plugin-sdk/channel-route.js";
 import { parseAgentSessionKey } from "../../sessions/session-key-utils.js";
 import { resolveGlobalSingleton } from "../../shared/global-singleton.js";
 import {
@@ -69,7 +69,7 @@ export function buildInboundDedupeKey(ctx: MsgContext): string | null {
   }
   const sessionScope = resolveInboundDedupeSessionScope(ctx);
   const accountId = normalizeOptionalString(ctx.AccountId) ?? "";
-  const routeKey = channelRouteIdentityKey({
+  const routeKey = channelRouteDedupeKey({
     channel: provider,
     to: peerId,
     accountId,

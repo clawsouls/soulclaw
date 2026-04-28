@@ -1,4 +1,4 @@
-import { resolveComparableTargetForLoadedChannel } from "../channels/plugins/target-parsing-loaded.js";
+import { resolveRouteTargetForLoadedChannel } from "../channels/plugins/target-parsing-loaded.js";
 import { normalizeOptionalString } from "../shared/string-coerce.js";
 import {
   deliveryContextFromSession,
@@ -23,7 +23,7 @@ function normalizeAnnounceRouteTarget(context?: DeliveryContext): string | undef
   }
   const channel = normalizeOptionalString(context?.channel);
   const parsed = channel
-    ? resolveComparableTargetForLoadedChannel({
+    ? resolveRouteTargetForLoadedChannel({
         channel,
         rawTarget: rawTo,
         fallbackThreadId: context?.threadId,
