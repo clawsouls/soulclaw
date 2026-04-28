@@ -231,6 +231,7 @@ import { flushPendingToolResultsAfterIdle } from "../wait-for-idle-before-flush.
 import { createEmbeddedAgentSessionWithResourceLoader } from "./attempt-session.js";
 export { buildContextEnginePromptCacheInfo } from "./attempt.context-engine-helpers.js";
 import {
+  appendBootstrapFileToUserPromptPrefix,
   resolveAttemptWorkspaceBootstrapRouting,
   shouldStripBootstrapFromEmbeddedContext,
 } from "./attempt-bootstrap-routing.js";
@@ -1212,7 +1213,11 @@ export async function runEmbeddedAttempt(
     });
     const systemPromptOverride = createSystemPromptOverride(appendPrompt);
     let systemPromptText = systemPromptOverride();
-    const userPromptPrefixText = bootstrapRouting.userPromptPrefixText;
+    const userPromptPrefixText = appendBootstrapFileToUserPromptPrefix({
+      prefixText: bootstrapRouting.userPromptPrefixText,
+      bootstrapMode,
+      contextFiles: remappedContextFiles,
+    });
 
     // Keep the session lock scoped to transcript/session mutations. Cold plugin
     // and tool setup can be slow, and holding the lock there blocks CLI fallback
