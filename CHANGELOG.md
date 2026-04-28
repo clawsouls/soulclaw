@@ -13,6 +13,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Agents/Anthropic: send implicit Anthropic beta headers only to direct public Anthropic endpoints, including OAuth, so custom Anthropic-compatible providers no longer mis-handle unsupported beta flags unless explicitly configured. Refs #73346. Thanks @byBrodowski.
 - Plugins/startup: precompute bundled runtime mirror fingerprints before taking the mirror lock, including dist-runtime canonical roots, so Docker Desktop/WSL cold starts no longer hold `.openclaw-runtime-mirror.lock` while scanning slow persisted volumes. Fixes #73339. Thanks @1yihui.
 - Channels/LINE: persist inbound image, video, audio, and file downloads in `~/.openclaw/media/inbound/` instead of temporary files so agents can still read LINE media after `/tmp` cleanup. Fixes #73370. Thanks @hijirii and @wenxu007.
 - Control UI/WebChat: keep large attachment payloads out of Lit state and optimistic chat messages, using object URL previews plus send-time payload serialization so PDF/image uploads no longer trigger `RangeError: Maximum call stack size exceeded`. Fixes #73360; refs #54378 and #63432. Thanks @hejunhui-73, @Ansub, and @christianhernandez3-afk.
