@@ -66,7 +66,9 @@ function normalizeLabel(value: string | undefined): string {
   return (value ?? "state").replace(/[^A-Za-z0-9_.-]+/gu, "-").replace(/^-+|-+$/gu, "") || "state";
 }
 
-function resolveWindowsHomeEnv(home: string): Pick<NodeJS.ProcessEnv, "HOMEDRIVE" | "HOMEPATH"> {
+function resolveWindowsHomeEnv(
+  home: string,
+): Partial<Pick<NodeJS.ProcessEnv, "HOMEDRIVE" | "HOMEPATH">> {
   if (process.platform !== "win32") {
     return {};
   }
@@ -118,7 +120,7 @@ function resolveLayout(
   };
 }
 
-function scenarioConfig(options: OpenClawTestStateOptions): unknown | undefined {
+function scenarioConfig(options: OpenClawTestStateOptions): Record<string, unknown> | undefined {
   const scenario = options.scenario ?? "empty";
   if (scenario === "minimal" || scenario === "external-service") {
     return {};
