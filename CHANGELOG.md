@@ -13,6 +13,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Auto-reply/commands: stop bare `/reset` and `/new` after reset hooks acknowledge the command, so non-ACP channels no longer fall through into empty provider calls while `/reset <message>` and `/new <message>` still seed the next model turn. Fixes #73367. Thanks @hoyanhan and @wenxu007.
 - Agents/Anthropic: send implicit Anthropic beta headers only to direct public Anthropic endpoints, including OAuth, so custom Anthropic-compatible providers no longer mis-handle unsupported beta flags unless explicitly configured. Refs #73346. Thanks @byBrodowski.
 - Skills: require explicit `skills.entries.coding-agent.enabled` before exposing the bundled coding-agent skill, so installs with Codex on PATH but no OpenAI auth do not silently offer Codex delegation. Fixes #73358. Thanks @LaFleurAdvertising and @Sanjays2402.
 - Plugins/startup: precompute bundled runtime mirror fingerprints before taking the mirror lock, including dist-runtime canonical roots, so Docker Desktop/WSL cold starts no longer hold `.openclaw-runtime-mirror.lock` while scanning slow persisted volumes. Fixes #73339. Thanks @1yihui.
