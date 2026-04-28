@@ -106,7 +106,11 @@ type BoundaryReportSummary = {
     exportedSubpathCount: number;
     sourceBridgeFileCount: number;
     packageCoreReferenceFileCount: number;
-    implementation: "private-core-bridge" | "package-owned" | "mixed";
+    implementation:
+      | "private-core-bridge"
+      | "private-package-core-integrated"
+      | "package-owned"
+      | "mixed";
   };
 };
 
@@ -365,10 +369,13 @@ function countByOwner(records: readonly CompatDebtRecord[]): Record<string, numb
 function resolveMemoryHostImplementation(
   memoryHostSdk: BoundaryReport["memoryHostSdk"],
 ): BoundaryReportSummary["memoryHostSdk"]["implementation"] {
-  if (memoryHostSdk.privatePackage && memoryHostSdk.packageCoreReferenceFiles.length > 0) {
+  if (memoryHostSdk.privatePackage && memoryHostSdk.sourceBridgeFiles.length > 0) {
     return "private-core-bridge";
   }
-  if (!memoryHostSdk.privatePackage && memoryHostSdk.packageCoreReferenceFiles.length === 0) {
+  if (memoryHostSdk.privatePackage && memoryHostSdk.packageCoreReferenceFiles.length > 0) {
+    return "private-package-core-integrated";
+  }
+  if (memoryHostSdk.packageCoreReferenceFiles.length === 0) {
     return "package-owned";
   }
   return "mixed";

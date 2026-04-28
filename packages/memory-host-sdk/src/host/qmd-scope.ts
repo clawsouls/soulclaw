@@ -1,9 +1,9 @@
 import { parseAgentSessionKey } from "../../../../src/sessions/session-key-utils.js";
+import type { ResolvedQmdConfig } from "./backend-config.js";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
-} from "../../../../src/shared/string-coerce.js";
-import type { ResolvedQmdConfig } from "./backend-config.js";
+} from "./string-utils.js";
 
 type ParsedQmdSessionScope = {
   channel?: string;

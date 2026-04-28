@@ -129,9 +129,6 @@ describe("opt-in extension package boundaries", () => {
     expect(packageJson.exports?.["./acp-runtime"]?.types).toBe(
       "./dist/src/plugin-sdk/acp-runtime.d.ts",
     );
-    expect(packageJson.exports?.["./browser-config"]?.types).toBe(
-      "./dist/src/plugin-sdk/browser-config.d.ts",
-    );
     expect(packageJson.exports?.["./channel-secret-runtime"]?.types).toBe(
       "./dist/src/plugin-sdk/channel-secret-runtime.d.ts",
     );
@@ -193,7 +190,7 @@ describe("opt-in extension package boundaries", () => {
     );
   });
 
-  it("keeps memory-host-sdk as a private package bridge over the core-owned implementation", () => {
+  it("keeps memory-host-sdk as a private package-owned contract surface", () => {
     const packageJson = readJsonFile<PackageJson>("packages/memory-host-sdk/package.json");
     const packageExports = packageJson.exports as unknown as Record<string, string>;
 
@@ -210,9 +207,7 @@ describe("opt-in extension package boundaries", () => {
         throw new Error(`Missing memory-host-sdk export target for ${exportPath}`);
       }
       const source = readFileSync(resolve(REPO_ROOT, "packages/memory-host-sdk", target), "utf8");
-      expect(source.trim(), target).toBe(
-        `export * from "../../../src/memory-host-sdk/${exportPath.slice(2)}.js";`,
-      );
+      expect(source, target).not.toContain("src/memory-host-sdk/");
     }
   });
 });

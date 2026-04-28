@@ -1,6 +1,6 @@
 import { formatErrorMessage } from "../../../../src/infra/errors.js";
 import { createSubsystemLogger } from "../../../../src/logging/subsystem.js";
-import { normalizeLowercaseStringOrEmpty } from "../../../../src/shared/string-coerce.js";
+import { normalizeLowercaseStringOrEmpty } from "./string-utils.js";
 
 const log = createSubsystemLogger("memory");
 
