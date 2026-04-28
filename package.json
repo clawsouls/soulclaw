@@ -746,6 +746,10 @@
       "types": "./dist/plugin-sdk/channel-config-schema.d.ts",
       "default": "./dist/plugin-sdk/channel-config-schema.js"
     },
+    "./plugin-sdk/bundled-channel-config-schema": {
+      "types": "./dist/plugin-sdk/bundled-channel-config-schema.d.ts",
+      "default": "./dist/plugin-sdk/bundled-channel-config-schema.js"
+    },
     "./plugin-sdk/channel-config-schema-legacy": {
       "types": "./dist/plugin-sdk/channel-config-schema-legacy.d.ts",
       "default": "./dist/plugin-sdk/channel-config-schema-legacy.js"

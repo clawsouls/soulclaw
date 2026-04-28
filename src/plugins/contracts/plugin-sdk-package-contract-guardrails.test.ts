@@ -196,17 +196,25 @@ function collectExtensionFiles(dir: string): string[] {
   return files;
 }
 
+function isExtensionTestOrSupportPath(repoRelativePath: string): boolean {
+  return (
+    /(?:^|\/)(?:__tests__|tests|test-support)(?:\/|$)/.test(repoRelativePath) ||
+    /(?:^|\/)test-support\.[cm]?tsx?$/.test(repoRelativePath) ||
+    /(?:^|\/)test-helpers\.[cm]?tsx?$/.test(repoRelativePath) ||
+    /(?:^|\/)test-harness\.[cm]?tsx?$/.test(repoRelativePath) ||
+    /\.test-support\.[cm]?tsx?$/.test(repoRelativePath) ||
+    /\.test-helpers\.[cm]?tsx?$/.test(repoRelativePath) ||
+    /\.test-harness\.[cm]?tsx?$/.test(repoRelativePath) ||
+    /\.test\.[cm]?tsx?$/.test(repoRelativePath)
+  );
+}
+
 function collectExtensionCoreImportLeaks(): Array<{ file: string; specifier: string }> {
   const leaks: Array<{ file: string; specifier: string }> = [];
   const importPattern = /\b(?:import|export)\b[\s\S]*?\bfrom\s*["']((?:\.\.\/)+src\/[^"']+)["']/g;
   for (const file of collectExtensionFiles(resolve(REPO_ROOT, "extensions"))) {
     const repoRelativePath = relative(REPO_ROOT, file).replaceAll("\\", "/");
-    if (
-      /(?:^|\/)(?:__tests__|tests|test-support)(?:\/|$)/.test(repoRelativePath) ||
-      /(?:^|\/)test-support\.[cm]?tsx?$/.test(repoRelativePath) ||
-      /\.test-support\.[cm]?tsx?$/.test(repoRelativePath) ||
-      /\.test\.[cm]?tsx?$/.test(repoRelativePath)
-    ) {
+    if (isExtensionTestOrSupportPath(repoRelativePath)) {
       continue;
     }
     const extensionRootMatch = /^(.*?\/extensions\/[^/]+)/.exec(file.replaceAll("\\", "/"));
@@ -225,6 +233,35 @@ function collectExtensionCoreImportLeaks(): Array<{ file: string; specifier: str
         file: repoRelativePath,
         specifier,
       });
+    }
+  }
+  return leaks;
+}
+
+function collectExtensionTestHelperImportLeaks(): Array<{ file: string; specifier: string }> {
+  const leaks: Array<{ file: string; specifier: string }> = [];
+  const importPatterns = [
+    /\b(?:import|export)\b[\s\S]*?\bfrom\s*["']((?:\.\.\/)+test\/helpers\/[^"']+)["']/g,
+    /\bimport\s*\(\s*["']((?:\.\.\/)+test\/helpers\/[^"']+)["']\s*\)/g,
+    /\bvi\.(?:mock|doMock)\s*\(\s*["']((?:\.\.\/)+test\/helpers\/[^"']+)["']/g,
+  ];
+  for (const file of collectExtensionFiles(resolve(REPO_ROOT, "extensions"))) {
+    const repoRelativePath = relative(REPO_ROOT, file).replaceAll("\\", "/");
+    if (isExtensionTestOrSupportPath(repoRelativePath)) {
+      continue;
+    }
+    const source = readFileSync(file, "utf8");
+    for (const importPattern of importPatterns) {
+      for (const match of source.matchAll(importPattern)) {
+        const specifier = match[1];
+        if (!specifier) {
+          continue;
+        }
+        leaks.push({
+          file: repoRelativePath,
+          specifier,
+        });
+      }
     }
   }
   return leaks;
@@ -387,6 +424,10 @@ describe("plugin-sdk package contract guardrails", () => {
 
   it("keeps extension sources on public sdk or local package seams", () => {
     expect(collectExtensionCoreImportLeaks()).toEqual([]);
+  });
+
+  it("keeps extension production sources off repo test helpers", () => {
+    expect(collectExtensionTestHelperImportLeaks()).toEqual([]);
   });
 
   it("keeps reserved SDK compatibility subpaths inside their owning bundled plugins", () => {

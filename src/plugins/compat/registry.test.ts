@@ -121,6 +121,16 @@ const knownDeprecatedSurfaceMarkers = [
     marker: "tools.web.x_search",
   },
   {
+    code: "bundled-channel-config-schema-legacy",
+    file: "src/plugin-sdk/channel-config-schema-legacy.ts",
+    marker: "Deprecated bundled-channel compatibility surface",
+  },
+  {
+    code: "plugin-sdk-testing-barrel",
+    file: "src/plugin-sdk/testing.ts",
+    marker: "Broad legacy compatibility barrel for older plugin tests",
+  },
+  {
     code: "channel-route-key-aliases",
     file: "src/plugin-sdk/channel-route.ts",
     marker: "channelRouteIdentityKey",

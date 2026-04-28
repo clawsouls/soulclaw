@@ -170,6 +170,7 @@
   "channel-config-writes",
   "channel-config-primitives",
   "channel-config-schema",
+  "bundled-channel-config-schema",
   "channel-config-schema-legacy",
   "channel-actions",
   "channel-plugin-common",

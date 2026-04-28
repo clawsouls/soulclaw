@@ -52,6 +52,42 @@ export const PLUGIN_COMPAT_RECORDS = [
     ],
   },
   {
+    code: "bundled-channel-config-schema-legacy",
+    status: "deprecated",
+    owner: "sdk",
+    introduced: "2026-04-28",
+    deprecated: "2026-04-28",
+    warningStarts: "2026-04-28",
+    removeAfter: "2026-07-28",
+    replacement:
+      "`openclaw/plugin-sdk/bundled-channel-config-schema` for maintained bundled plugins; plugin-local schemas for third-party plugins",
+    docsPath: "/plugins/sdk-migration",
+    surfaces: ["openclaw/plugin-sdk/channel-config-schema-legacy"],
+    diagnostics: ["plugin SDK compatibility warning"],
+    tests: [
+      "src/plugins/contracts/config-footprint-guardrails.test.ts",
+      "test/extension-test-boundary.test.ts",
+    ],
+  },
+  {
+    code: "plugin-sdk-testing-barrel",
+    status: "deprecated",
+    owner: "sdk",
+    introduced: "2026-04-28",
+    deprecated: "2026-04-28",
+    warningStarts: "2026-04-28",
+    removeAfter: "2026-07-28",
+    replacement:
+      "focused `openclaw/plugin-sdk/*` test subpaths such as `plugin-test-runtime`, `channel-test-helpers`, `test-env`, and `test-fixtures`",
+    docsPath: "/plugins/sdk-migration",
+    surfaces: ["openclaw/plugin-sdk/testing"],
+    diagnostics: ["plugin SDK compatibility warning"],
+    tests: [
+      "scripts/check-no-extension-test-core-imports.ts",
+      "test/extension-test-boundary.test.ts",
+    ],
+  },
+  {
     code: "channel-route-key-aliases",
     status: "deprecated",
     owner: "sdk",

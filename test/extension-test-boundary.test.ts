@@ -227,4 +227,15 @@ describe("non-extension test boundaries", () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it("keeps bundled extension sources off deprecated channel config schema aliases", () => {
+    const files = walkCode(path.join(repoRoot, "extensions"));
+
+    const offenders = files.filter((file) => {
+      const source = fs.readFileSync(path.join(repoRoot, file), "utf8");
+      return source.includes("openclaw/plugin-sdk/channel-config-schema-legacy");
+    });
+
+    expect(offenders).toEqual([]);
+  });
 });
