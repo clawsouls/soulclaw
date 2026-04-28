@@ -1521,9 +1521,33 @@ jobs:
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
-          - suite_id: native-live-src-gateway-profiles-other
-            label: Native live gateway profiles other providers
-            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=deepseek,opencode-go,openrouter,xai,zai node scripts/test-live-shard.mjs native-live-src-gateway-profiles
+          - suite_id: native-live-src-gateway-profiles-deepseek
+            label: Native live gateway profiles DeepSeek
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=deepseek node scripts/test-live-shard.mjs native-live-src-gateway-profiles
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-src-gateway-profiles-opencode-go
+            label: Native live gateway profiles OpenCode Go
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=opencode-go node scripts/test-live-shard.mjs native-live-src-gateway-profiles
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-src-gateway-profiles-openrouter
+            label: Native live gateway profiles OpenRouter
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=openrouter node scripts/test-live-shard.mjs native-live-src-gateway-profiles
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-src-gateway-profiles-xai
+            label: Native live gateway profiles xAI
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=xai node scripts/test-live-shard.mjs native-live-src-gateway-profiles
+            timeout_minutes: 90
+            needs_ffmpeg: false
+            profile_env_only: false
+          - suite_id: native-live-src-gateway-profiles-zai
+            label: Native live gateway profiles Z.ai
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=zai node scripts/test-live-shard.mjs native-live-src-gateway-profiles
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
