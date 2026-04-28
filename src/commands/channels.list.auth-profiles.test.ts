@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ChannelPlugin } from "../channels/plugins/types.plugin.js";
 import { baseConfigSnapshot, createTestRuntime } from "./test-runtime-config-helpers.js";
 
 const mocks = vi.hoisted(() => ({
@@ -9,7 +10,7 @@ const mocks = vi.hoisted(() => ({
     diagnostics: [],
   })),
   loadAuthProfileStoreWithoutExternalProfiles: vi.fn(),
-  listReadOnlyChannelPluginsForConfig: vi.fn(() => []),
+  listReadOnlyChannelPluginsForConfig: vi.fn<() => ChannelPlugin[]>(() => []),
   buildChannelAccountSnapshot: vi.fn(),
 }));
 
@@ -93,9 +94,17 @@ describe("channels list auth profiles", () => {
     mocks.listReadOnlyChannelPluginsForConfig.mockReturnValue([
       {
         id: "telegram",
-        meta: { id: "telegram", label: "Telegram" },
+        meta: {
+          id: "telegram",
+          label: "Telegram",
+          selectionLabel: "Telegram",
+          docsPath: "/channels/telegram",
+          blurb: "Telegram",
+        },
+        capabilities: { chatTypes: ["direct"] },
         config: {
           listAccountIds: () => ["alerts", "default"],
+          resolveAccount: () => ({}),
         },
       },
     ]);
@@ -134,9 +143,17 @@ describe("channels list auth profiles", () => {
     mocks.listReadOnlyChannelPluginsForConfig.mockReturnValue([
       {
         id: "telegram",
-        meta: { id: "telegram", label: "Telegram" },
+        meta: {
+          id: "telegram",
+          label: "Telegram",
+          selectionLabel: "Telegram",
+          docsPath: "/channels/telegram",
+          blurb: "Telegram",
+        },
+        capabilities: { chatTypes: ["direct"] },
         config: {
           listAccountIds: () => ["default"],
+          resolveAccount: () => ({}),
         },
       },
     ]);
