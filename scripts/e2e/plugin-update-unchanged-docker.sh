@@ -43,19 +43,11 @@ cat > \"\$HOME/.openclaw/extensions/lossless-claw/package.json\" <<'JSON'
   \"version\": \"0.9.0\"
 }
 JSON
-if [ \"\$OPENCLAW_PACKAGE_ACCEPTANCE_LEGACY_COMPAT\" = \"1\" ]; then
-  cat > \"\$HOME/.openclaw/openclaw.json\" <<'JSON'
+cat > \"\$OPENCLAW_CONFIG_PATH\" <<'JSON'
 {
   \"plugins\": {}
 }
 JSON
-else
-  cat > \"\$HOME/.openclaw/openclaw.json\" <<'JSON'
-{
-  \"plugins\": {}
-}
-JSON
-fi
 mkdir -p \"\$HOME/.openclaw/plugins\"
 cat > \"\$HOME/.openclaw/plugins/installs.json\" <<'JSON'
 {
@@ -144,7 +136,7 @@ fi
 
 before_config_hash=\"\"
 if [ \"\$OPENCLAW_PACKAGE_ACCEPTANCE_LEGACY_COMPAT\" != \"1\" ]; then
-  before_config_hash=\$(sha256sum \"\$HOME/.openclaw/openclaw.json\" | awk '{print \$1}')
+  before_config_hash=\$(sha256sum \"\$OPENCLAW_CONFIG_PATH\" | awk '{print \$1}')
 fi
 
 node --input-type=module > /tmp/plugin-update-before.json <<'NODE'
@@ -182,7 +174,7 @@ NODE
 node \"\$entry\" plugins update @example/lossless-claw > /tmp/plugin-update-output.log 2>&1
 
 if [ -n \"\$before_config_hash\" ]; then
-  after_config_hash=\$(sha256sum \"\$HOME/.openclaw/openclaw.json\" | awk '{print \$1}')
+  after_config_hash=\$(sha256sum \"\$OPENCLAW_CONFIG_PATH\" | awk '{print \$1}')
   if [ \"\$before_config_hash\" != \"\$after_config_hash\" ]; then
     echo \"Config changed unexpectedly for modern package \$package_version\"
     cat /tmp/plugin-update-output.log
