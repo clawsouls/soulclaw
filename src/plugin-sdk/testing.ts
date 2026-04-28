@@ -49,7 +49,6 @@ export { resolveBundledExplicitProviderContractsFromPublicArtifacts } from "../p
 export {
   expectAugmentedCodexCatalog,
   expectedAugmentedOpenaiCodexCatalogEntriesWithGpt55,
-  expectCodexBuiltInSuppression,
   expectCodexMissingAuthHint,
 } from "../plugins/provider-runtime.test-support.js";
 export {
