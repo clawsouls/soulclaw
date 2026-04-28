@@ -1583,7 +1583,7 @@ jobs:
             profiles: stable full
           - suite_id: native-live-src-gateway-profiles-google
             label: Native live gateway profiles Google
-            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=google node .release-harness/scripts/test-live-shard.mjs native-live-src-gateway-profiles
+            command: OPENCLAW_LIVE_GATEWAY_PROVIDERS=google OPENCLAW_LIVE_GATEWAY_MODELS=google/gemini-3.1-pro-preview,google/gemini-3-flash-preview node .release-harness/scripts/test-live-shard.mjs native-live-src-gateway-profiles
             timeout_minutes: 90
             needs_ffmpeg: false
             profile_env_only: false
