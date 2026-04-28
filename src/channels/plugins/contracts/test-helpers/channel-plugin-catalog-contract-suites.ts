@@ -1,7 +1,7 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { resolvePreferredOpenClawTmpDir } from "../../../../infra/tmp-openclaw-dir.js";
 import { listChannelPluginCatalogEntries } from "../../catalog.js";
 
 function createCatalogEntry(params: {
@@ -122,7 +122,9 @@ export function describeChannelPluginCatalogEntriesContract() {
       {
         name: "includes external catalog entries",
         setup: () => {
-          const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-catalog-"));
+          const dir = fs.mkdtempSync(
+            path.join(resolvePreferredOpenClawTmpDir(), "openclaw-catalog-"),
+          );
           const catalogPath = path.join(dir, "catalog.json");
           writeCatalogFile(
             catalogPath,
@@ -145,7 +147,7 @@ export function describeChannelPluginCatalogEntriesContract() {
         name: "preserves plugin ids when they differ from channel ids",
         setup: () => {
           const stateDir = fs.mkdtempSync(
-            path.join(os.tmpdir(), "openclaw-channel-catalog-state-"),
+            path.join(resolvePreferredOpenClawTmpDir(), "openclaw-channel-catalog-state-"),
           );
           writeDiscoveredChannelPlugin({
             stateDir,
@@ -168,7 +170,9 @@ export function describeChannelPluginCatalogEntriesContract() {
       {
         name: "keeps discovered plugins ahead of external catalog overrides",
         setup: () => {
-          const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-catalog-state-"));
+          const stateDir = fs.mkdtempSync(
+            path.join(resolvePreferredOpenClawTmpDir(), "openclaw-catalog-state-"),
+          );
           const catalogPath = path.join(stateDir, "catalog.json");
           writeDiscoveredChannelPlugin({
             stateDir,
@@ -206,7 +210,9 @@ export function describeChannelPluginCatalogEntriesContract() {
       {
         name: "accepts rich external manifest entries with pinned npm metadata",
         setup: () => {
-          const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-catalog-rich-"));
+          const dir = fs.mkdtempSync(
+            path.join(resolvePreferredOpenClawTmpDir(), "openclaw-catalog-rich-"),
+          );
           const catalogPath = path.join(dir, "catalog.json");
           fs.writeFileSync(
             catalogPath,
@@ -284,7 +290,9 @@ export function describeChannelPluginCatalogEntriesContract() {
       {
         name: "accepts rich external manifest entries for yuanbao with pinned npm metadata",
         setup: () => {
-          const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-catalog-yuanbao-"));
+          const dir = fs.mkdtempSync(
+            path.join(resolvePreferredOpenClawTmpDir(), "openclaw-catalog-yuanbao-"),
+          );
           const catalogPath = path.join(dir, "catalog.json");
           fs.writeFileSync(
             catalogPath,
@@ -365,7 +373,9 @@ export function describeChannelPluginCatalogPathResolutionContract() {
       {
         name: "uses the provided env for external catalog path resolution",
         setup: () => {
-          const home = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-catalog-home-"));
+          const home = fs.mkdtempSync(
+            path.join(resolvePreferredOpenClawTmpDir(), "openclaw-catalog-home-"),
+          );
           const catalogPath = path.join(home, "catalog.json");
           writeCatalogFile(
             catalogPath,
@@ -391,7 +401,9 @@ export function describeChannelPluginCatalogPathResolutionContract() {
       {
         name: "uses the provided env for default catalog paths",
         setup: () => {
-          const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-catalog-state-"));
+          const stateDir = fs.mkdtempSync(
+            path.join(resolvePreferredOpenClawTmpDir(), "openclaw-catalog-state-"),
+          );
           const catalogPath = path.join(stateDir, "plugins", "catalog.json");
           fs.mkdirSync(path.dirname(catalogPath), { recursive: true });
           writeCatalogFile(
