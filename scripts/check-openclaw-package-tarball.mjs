@@ -4,6 +4,8 @@
 // prebuilt package artifact with dist inventory, not a source checkout.
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { LOCAL_BUILD_METADATA_DIST_PATHS } from "./lib/local-build-metadata-paths.mjs";
 import { collectPackageDistImportErrors } from "./lib/package-dist-imports.mjs";
 
@@ -30,6 +32,20 @@ const list = spawnSync("tar", ["-tf", tarball], {
 });
 if (list.status !== 0) {
   fail(`tar -tf failed for ${tarball}: ${list.stderr || list.status}`);
+}
+
+const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-package-tarball-"));
+try {
+  const extract = spawnSync("tar", ["-xf", tarball, "-C", extractDir], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (extract.status !== 0) {
+    fail(`tar -xf failed for ${tarball}: ${extract.stderr || extract.status}`);
+  }
+} catch (error) {
+  fs.rmSync(extractDir, { recursive: true, force: true });
+  throw error;
 }
 
 const entries = list.stdout
@@ -107,14 +123,13 @@ function isLegacyLocalBuildMetadataCompatVersion(version) {
 }
 
 function readTarEntry(entryPath) {
-  const candidates = [entryPath, `package/${entryPath}`];
+  const candidates = [
+    path.join(extractDir, entryPath),
+    path.join(extractDir, "package", entryPath),
+  ];
   for (const candidate of candidates) {
-    const result = spawnSync("tar", ["-xOf", tarball, candidate], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    if (result.status === 0) {
-      return result.stdout;
+    if (fs.existsSync(candidate)) {
+      return fs.readFileSync(candidate, "utf8");
     }
   }
   return "";
@@ -204,10 +219,12 @@ errors.push(
 );
 
 if (errors.length > 0) {
+  fs.rmSync(extractDir, { recursive: true, force: true });
   fail(`OpenClaw package tarball integrity failed:\n${errors.join("\n")}`);
 }
 
 for (const warning of warnings) {
   console.warn(`OpenClaw package tarball integrity warning: ${warning}`);
 }
+fs.rmSync(extractDir, { recursive: true, force: true });
 console.log("OpenClaw package tarball integrity passed.");
