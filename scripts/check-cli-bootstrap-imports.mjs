@@ -6,6 +6,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_ENTRYPOINTS = ["dist/entry.js", "dist/cli/run-main.js"];
+const DEFAULT_GATEWAY_RUN_CHUNK_MAX_BYTES = 70 * 1024;
+const GATEWAY_RUN_CHUNK_MARKERS = ["const GATEWAY_RUN_VALUE_KEYS", "function addGatewayRunCommand"];
+const GATEWAY_RUN_FORBIDDEN_STATIC_IMPORTS = [
+  "control-ui-assets",
+  "diagnostic-stability-bundle",
+  "onboard-helpers",
+  "process-respawn",
+  "restart-sentinel",
+  "server-close",
+  "server-reload-handlers",
+];
 const STATIC_IMPORT_RE =
   /\b(?:import|export)\s+(?:(?:[^'"()]*?\s+from\s+)|)["'](?<specifier>[^"']+)["']/gu;
 
@@ -104,8 +115,86 @@ export function collectCliBootstrapExternalImportErrors(params = {}) {
   return errors.toSorted((left, right) => left.localeCompare(right));
 }
 
+function listJsFiles(dirPath, fsImpl = fs) {
+  let entries;
+  try {
+    entries = fsImpl.readdirSync(dirPath, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const files = [];
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...listJsFiles(fullPath, fsImpl));
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith(".js")) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
+
+export function collectGatewayRunChunkBudgetErrors(params = {}) {
+  const rootDir = params.rootDir ?? process.cwd();
+  const fsImpl = params.fs ?? fs;
+  const distDir = path.resolve(rootDir, params.distDir ?? "dist");
+  const maxBytes = params.gatewayRunChunkMaxBytes ?? DEFAULT_GATEWAY_RUN_CHUNK_MAX_BYTES;
+  const chunks = [];
+
+  for (const filePath of listJsFiles(distDir, fsImpl)) {
+    let source;
+    try {
+      source = fsImpl.readFileSync(filePath, "utf8");
+    } catch {
+      continue;
+    }
+    if (GATEWAY_RUN_CHUNK_MARKERS.every((marker) => source.includes(marker))) {
+      chunks.push({ filePath, source });
+    }
+  }
+
+  if (chunks.length === 0) {
+    return [
+      "CLI bootstrap import guard could not find the bundled gateway run chunk. Run pnpm build first.",
+    ];
+  }
+
+  const errors = [];
+  for (const { filePath, source } of chunks) {
+    const relativePath = path.relative(rootDir, filePath) || filePath;
+    let size = Buffer.byteLength(source, "utf8");
+    try {
+      size = fsImpl.statSync(filePath).size;
+    } catch {
+      // Fall back to source byte length for in-memory test fixtures.
+    }
+    if (size > maxBytes) {
+      errors.push(
+        `Gateway run chunk ${relativePath} is ${size} bytes, above budget ${maxBytes} bytes.`,
+      );
+    }
+
+    for (const specifier of listStaticImportSpecifiers(source)) {
+      for (const forbidden of GATEWAY_RUN_FORBIDDEN_STATIC_IMPORTS) {
+        if (specifier.includes(forbidden)) {
+          errors.push(
+            `Gateway run chunk ${relativePath} statically imports cold path "${specifier}".`,
+          );
+        }
+      }
+    }
+  }
+
+  return errors.toSorted((left, right) => left.localeCompare(right));
+}
+
 export function checkCliBootstrapExternalImports(params = {}) {
-  const errors = collectCliBootstrapExternalImportErrors(params);
+  const errors = [
+    ...collectCliBootstrapExternalImportErrors(params),
+    ...collectGatewayRunChunkBudgetErrors(params),
+  ];
   if (errors.length === 0) {
     return;
   }
