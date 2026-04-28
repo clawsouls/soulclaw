@@ -251,7 +251,7 @@ describe("handleCommands reset hooks", () => {
       },
     );
 
-    await maybeHandleResetCommand(params);
+    const result = await maybeHandleResetCommand(params);
 
     expect(routeReplyMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -262,6 +262,7 @@ describe("handleCommands reset hooks", () => {
         threadId: "thread-1",
       }),
     );
+    expect(result).toEqual({ shouldContinue: false });
   });
 
   it("prefers the target session entry when emitting reset hooks", async () => {
