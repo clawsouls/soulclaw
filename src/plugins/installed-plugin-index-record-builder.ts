@@ -55,8 +55,9 @@ function hasRuntimeContractSurface(record: PluginManifestRecord): boolean {
  * startup decision so Gateway boot can avoid importing inert plugins.
  */
 function isLegacyImplicitStartupSidecar(record: PluginManifestRecord): boolean {
+  const channels = Array.isArray(record.channels) ? record.channels : [];
   return (
-    record.channels.length === 0 &&
+    channels.length === 0 &&
     !hasRuntimeContractSurface(record) &&
     record.activation?.onStartup === undefined
   );
