@@ -3,6 +3,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  dormantReservedBundledPluginSdkEntrypoints,
   pluginSdkEntrypoints,
   publicPluginOwnedSdkEntrypoints,
   reservedBundledPluginSdkEntrypoints,
@@ -487,6 +488,32 @@ function collectCrossOwnerReservedSdkImports(): Array<{
   return leaks;
 }
 
+function collectReservedSdkSubpathImports(): string[] {
+  const imports = new Set<string>();
+  const reserved = new Set<string>(reservedBundledPluginSdkEntrypoints);
+  const importPatterns = [
+    /\b(?:import|export)\b[\s\S]*?\bfrom\s*["']openclaw\/plugin-sdk\/([a-z0-9][a-z0-9-]*)["']/g,
+    /\bimport\s*\(\s*["']openclaw\/plugin-sdk\/([a-z0-9][a-z0-9-]*)["']\s*\)/g,
+    /\bvi\.(?:mock|doMock)\s*\(\s*["']openclaw\/plugin-sdk\/([a-z0-9][a-z0-9-]*)["']/g,
+  ];
+
+  for (const root of ["src", "test", "extensions", "packages", "scripts"]) {
+    for (const file of collectCodeFiles(resolve(REPO_ROOT, root))) {
+      const source = readFileSync(file, "utf8");
+      for (const importPattern of importPatterns) {
+        for (const match of source.matchAll(importPattern)) {
+          const subpath = match[1];
+          if (subpath && reserved.has(subpath)) {
+            imports.add(subpath);
+          }
+        }
+      }
+    }
+  }
+
+  return [...imports].toSorted();
+}
+
 describe("plugin-sdk package contract guardrails", () => {
   it("keeps plugin-sdk entrypoint metadata unique", () => {
     const counts = new Map<string, number>();
@@ -508,8 +535,12 @@ describe("plugin-sdk package contract guardrails", () => {
   it("keeps bundled plugin SDK compatibility subpaths explicitly classified", () => {
     const entrypoints = new Set(pluginSdkEntrypoints);
     const reserved = new Set<string>(reservedBundledPluginSdkEntrypoints);
+    const dormantReserved = new Set<string>(dormantReservedBundledPluginSdkEntrypoints);
     const supported = new Set<string>(supportedBundledFacadeSdkEntrypoints);
     const unknownReserved = [...reserved].filter((entrypoint) => !entrypoints.has(entrypoint));
+    const unknownDormantReserved = [...dormantReserved].filter(
+      (entrypoint) => !reserved.has(entrypoint),
+    );
     const unknownSupported = [...supported].filter((entrypoint) => !entrypoints.has(entrypoint));
     const unclassifiedBundledFacades = collectBundledFacadeSdkEntrypoints().filter(
       (entrypoint) => !reserved.has(entrypoint) && !supported.has(entrypoint),
@@ -520,11 +551,13 @@ describe("plugin-sdk package contract guardrails", () => {
 
     expect({
       unknownReserved,
+      unknownDormantReserved,
       unknownSupported,
       unclassifiedBundledFacades,
       unreservedPrivateSurfaces,
     }).toEqual({
       unknownReserved: [],
+      unknownDormantReserved: [],
       unknownSupported: [],
       unclassifiedBundledFacades: [],
       unreservedPrivateSurfaces: [],
@@ -635,6 +668,22 @@ describe("plugin-sdk package contract guardrails", () => {
 
   it("keeps reserved SDK compatibility subpaths inside their owning bundled plugins", () => {
     expect(collectCrossOwnerReservedSdkImports()).toEqual([]);
+  });
+
+  it("keeps unused reserved SDK compatibility subpaths classified as dormant", () => {
+    const usedReserved = new Set(collectReservedSdkSubpathImports());
+    const dormantReserved = new Set<string>(dormantReservedBundledPluginSdkEntrypoints);
+    const usedButDormant = [...usedReserved].filter((entrypoint) =>
+      dormantReserved.has(entrypoint),
+    );
+    const unusedUnclassified = reservedBundledPluginSdkEntrypoints.filter(
+      (entrypoint) => !usedReserved.has(entrypoint) && !dormantReserved.has(entrypoint),
+    );
+
+    expect({ usedButDormant, unusedUnclassified }).toEqual({
+      usedButDormant: [],
+      unusedUnclassified: [],
+    });
   });
 
   it("keeps generic core poll helpers free of plugin owner names", () => {

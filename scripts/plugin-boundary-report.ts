@@ -2,6 +2,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import {
+  dormantReservedBundledPluginSdkEntrypoints,
   pluginSdkEntrypoints,
   publicPluginOwnedSdkEntrypoints,
   reservedBundledPluginSdkEntrypoints,
@@ -23,6 +24,16 @@ const SKIPPED_DIRS = new Set([
 const TEXT_FILE_PATTERN = /\.(?:[cm]?[jt]sx?|json|mdx?|ya?ml)$/u;
 const PLUGIN_SDK_SPECIFIER_PATTERN =
   /\b(?:from\s*["']|import\s*\(\s*["']|require\s*\(\s*["']|vi\.(?:mock|doMock)\s*\(\s*["'])(openclaw\/plugin-sdk\/([a-z0-9][a-z0-9-]*))["']/g;
+
+type CliOptions = {
+  json: boolean;
+  summary: boolean;
+  owner?: string;
+  failOnCrossOwner: boolean;
+  failOnEligibleCompat: boolean;
+  failOnUnclassifiedUnusedReserved: boolean;
+  help: boolean;
+};
 
 type CompatDebtRecord = {
   code: string;
@@ -57,17 +68,52 @@ type BoundaryReport = {
   pluginSdk: {
     entrypointCount: number;
     reservedCount: number;
+    dormantReservedCount: number;
     supportedBundledFacadeCount: number;
     publicPluginOwnedCount: number;
     reservedImports: ReservedSdkImport[];
     crossOwnerReservedImports: ReservedSdkImport[];
     unusedReservedSubpaths: string[];
+    dormantReservedSubpaths: string[];
+    unclassifiedUnusedReservedSubpaths: string[];
   };
   memoryHostSdk: {
     privatePackage: boolean;
     exportedSubpaths: string[];
     sourceBridgeFiles: string[];
     packageCoreReferenceFiles: string[];
+  };
+};
+
+type BoundaryReportSummary = {
+  generatedAt: string;
+  owner?: string;
+  compat: {
+    deprecatedCount: number;
+    eligibleForRemovalCount: number;
+    deprecatedByOwner: Record<string, number>;
+    eligibleForRemoval: Array<Pick<CompatDebtRecord, "code" | "owner" | "removeAfter">>;
+  };
+  pluginSdk: {
+    entrypointCount: number;
+    reservedCount: number;
+    dormantReservedCount: number;
+    supportedBundledFacadeCount: number;
+    publicPluginOwnedCount: number;
+    reservedImportCount: number;
+    crossOwnerReservedImportCount: number;
+    unusedReservedCount: number;
+    dormantReservedCountInUnused: number;
+    unclassifiedUnusedReservedCount: number;
+    unclassifiedUnusedReservedSubpaths: string[];
+    crossOwnerReservedImports: ReservedSdkImport[];
+  };
+  memoryHostSdk: {
+    privatePackage: boolean;
+    exportedSubpathCount: number;
+    sourceBridgeFileCount: number;
+    packageCoreReferenceFileCount: number;
+    implementation: "private-core-bridge" | "package-owned" | "mixed";
   };
 };
 
@@ -104,6 +150,57 @@ function repoRelative(file: string): string {
 
 function isDocsFile(file: string): boolean {
   return file.startsWith("docs/") || file === "README.md";
+}
+
+function parseArgs(args: readonly string[]): CliOptions {
+  const options: CliOptions = {
+    json: false,
+    summary: false,
+    failOnCrossOwner: false,
+    failOnEligibleCompat: false,
+    failOnUnclassifiedUnusedReserved: false,
+    help: false,
+  };
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--json") {
+      options.json = true;
+    } else if (arg === "--summary") {
+      options.summary = true;
+    } else if (arg === "--owner") {
+      const owner = args[index + 1];
+      if (!owner || owner.startsWith("--")) {
+        throw new Error("--owner requires a plugin or compatibility owner id");
+      }
+      options.owner = owner;
+      index += 1;
+    } else if (arg === "--fail-on-cross-owner") {
+      options.failOnCrossOwner = true;
+    } else if (arg === "--fail-on-eligible-compat") {
+      options.failOnEligibleCompat = true;
+    } else if (arg === "--fail-on-unclassified-unused-reserved") {
+      options.failOnUnclassifiedUnusedReserved = true;
+    } else if (arg === "--help" || arg === "-h") {
+      options.help = true;
+    } else {
+      throw new Error(`Unknown argument: ${arg}`);
+    }
+  }
+  return options;
+}
+
+function renderHelp(): string {
+  return [
+    "Usage: pnpm plugins:boundary-report [--summary] [--json] [--owner <id>] [fail flags]",
+    "",
+    "Options:",
+    "  --summary                              Print compact counts only.",
+    "  --json                                 Emit JSON instead of text.",
+    "  --owner <id>                           Filter compat/imports/reserved shims by owner id.",
+    "  --fail-on-cross-owner                  Exit non-zero on cross-owner reserved SDK imports.",
+    "  --fail-on-eligible-compat              Exit non-zero when deprecated compat is due for removal.",
+    "  --fail-on-unclassified-unused-reserved Exit non-zero on unused reserved SDK shims without a dormant classification.",
+  ].join("\n");
 }
 
 function collectBundledPluginIds(): string[] {
@@ -258,11 +355,95 @@ function collectMemoryHostBoundary(files: readonly string[]): BoundaryReport["me
   };
 }
 
-function buildReport(): BoundaryReport {
+function matchesOwner(owner: string | undefined, value: string | undefined): boolean {
+  return owner === undefined || value === owner;
+}
+
+function countByOwner(records: readonly CompatDebtRecord[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const record of records) {
+    counts[record.owner] = (counts[record.owner] ?? 0) + 1;
+  }
+  return Object.fromEntries(
+    Object.entries(counts).toSorted(([left], [right]) => left.localeCompare(right)),
+  );
+}
+
+function resolveMemoryHostImplementation(
+  memoryHostSdk: BoundaryReport["memoryHostSdk"],
+): BoundaryReportSummary["memoryHostSdk"]["implementation"] {
+  if (memoryHostSdk.privatePackage && memoryHostSdk.packageCoreReferenceFiles.length > 0) {
+    return "private-core-bridge";
+  }
+  if (!memoryHostSdk.privatePackage && memoryHostSdk.packageCoreReferenceFiles.length === 0) {
+    return "package-owned";
+  }
+  return "mixed";
+}
+
+function buildSummary(report: BoundaryReport, owner?: string): BoundaryReportSummary {
+  const eligibleForRemoval = report.compat.records
+    .filter((record) => record.eligibleForRemoval)
+    .map((record) => ({
+      code: record.code,
+      owner: record.owner,
+      removeAfter: record.removeAfter,
+    }));
+  return {
+    generatedAt: report.generatedAt,
+    owner,
+    compat: {
+      deprecatedCount: report.compat.deprecatedCount,
+      eligibleForRemovalCount: report.compat.eligibleForRemovalCount,
+      deprecatedByOwner: countByOwner(report.compat.records),
+      eligibleForRemoval,
+    },
+    pluginSdk: {
+      entrypointCount: report.pluginSdk.entrypointCount,
+      reservedCount: report.pluginSdk.reservedCount,
+      dormantReservedCount: report.pluginSdk.dormantReservedCount,
+      supportedBundledFacadeCount: report.pluginSdk.supportedBundledFacadeCount,
+      publicPluginOwnedCount: report.pluginSdk.publicPluginOwnedCount,
+      reservedImportCount: report.pluginSdk.reservedImports.length,
+      crossOwnerReservedImportCount: report.pluginSdk.crossOwnerReservedImports.length,
+      unusedReservedCount: report.pluginSdk.unusedReservedSubpaths.length,
+      dormantReservedCountInUnused: report.pluginSdk.dormantReservedSubpaths.length,
+      unclassifiedUnusedReservedCount: report.pluginSdk.unclassifiedUnusedReservedSubpaths.length,
+      unclassifiedUnusedReservedSubpaths: report.pluginSdk.unclassifiedUnusedReservedSubpaths,
+      crossOwnerReservedImports: report.pluginSdk.crossOwnerReservedImports,
+    },
+    memoryHostSdk: {
+      privatePackage: report.memoryHostSdk.privatePackage,
+      exportedSubpathCount: report.memoryHostSdk.exportedSubpaths.length,
+      sourceBridgeFileCount: report.memoryHostSdk.sourceBridgeFiles.length,
+      packageCoreReferenceFileCount: report.memoryHostSdk.packageCoreReferenceFiles.length,
+      implementation: resolveMemoryHostImplementation(report.memoryHostSdk),
+    },
+  };
+}
+
+function buildReport(options: Pick<CliOptions, "owner"> = {}): BoundaryReport {
   const files = collectWorkspaceTextFiles();
-  const compatRecords = collectCompatDebt(files);
-  const reservedImports = collectReservedSdkImports(files);
+  const pluginIds = collectBundledPluginIds();
+  const compatRecords = collectCompatDebt(files).filter((record) =>
+    matchesOwner(options.owner, record.owner),
+  );
+  const reservedImports = collectReservedSdkImports(files).filter(
+    (entry) =>
+      matchesOwner(options.owner, entry.owner) || matchesOwner(options.owner, entry.consumerOwner),
+  );
   const usedReserved = new Set(reservedImports.map((entry) => entry.subpath));
+  const dormantReserved = new Set<string>(dormantReservedBundledPluginSdkEntrypoints);
+  const unusedReservedSubpaths = reservedBundledPluginSdkEntrypoints
+    .filter(
+      (subpath) =>
+        !usedReserved.has(subpath) &&
+        matchesOwner(options.owner, resolvePluginOwner(subpath, pluginIds)),
+    )
+    .toSorted();
+  const dormantReservedSubpaths = unusedReservedSubpaths
+    .filter((subpath) => dormantReserved.has(subpath))
+    .toSorted();
   return {
     generatedAt: new Date().toISOString(),
     compat: {
@@ -273,23 +454,54 @@ function buildReport(): BoundaryReport {
     pluginSdk: {
       entrypointCount: pluginSdkEntrypoints.length,
       reservedCount: reservedBundledPluginSdkEntrypoints.length,
+      dormantReservedCount: dormantReservedBundledPluginSdkEntrypoints.length,
       supportedBundledFacadeCount: supportedBundledFacadeSdkEntrypoints.length,
       publicPluginOwnedCount: publicPluginOwnedSdkEntrypoints.length,
       reservedImports,
       crossOwnerReservedImports: reservedImports.filter(
         (entry) => entry.relation === "cross-owner",
       ),
-      unusedReservedSubpaths: reservedBundledPluginSdkEntrypoints
-        .filter((subpath) => !usedReserved.has(subpath))
+      unusedReservedSubpaths,
+      dormantReservedSubpaths,
+      unclassifiedUnusedReservedSubpaths: unusedReservedSubpaths
+        .filter((subpath) => !dormantReserved.has(subpath))
         .toSorted(),
     },
     memoryHostSdk: collectMemoryHostBoundary(files),
   };
 }
 
-function renderText(report: BoundaryReport): string {
+function renderSummaryText(summary: BoundaryReportSummary): string {
   const lines: string[] = [];
-  lines.push("Plugin Boundary Report");
+  lines.push(`Plugin Boundary Report${summary.owner ? ` (${summary.owner})` : ""}`);
+  lines.push("");
+  lines.push(
+    `compat deprecated=${summary.compat.deprecatedCount} eligibleForRemoval=${summary.compat.eligibleForRemovalCount}`,
+  );
+  lines.push(
+    `plugin-sdk entrypoints=${summary.pluginSdk.entrypointCount} reserved=${summary.pluginSdk.reservedCount} dormantReserved=${summary.pluginSdk.dormantReservedCount}`,
+  );
+  lines.push(
+    `  reservedImports=${summary.pluginSdk.reservedImportCount} crossOwnerReservedImports=${summary.pluginSdk.crossOwnerReservedImportCount} unusedReserved=${summary.pluginSdk.unusedReservedCount}`,
+  );
+  lines.push(
+    `  dormantUnused=${summary.pluginSdk.dormantReservedCountInUnused} unclassifiedUnused=${summary.pluginSdk.unclassifiedUnusedReservedCount}`,
+  );
+  for (const subpath of summary.pluginSdk.unclassifiedUnusedReservedSubpaths) {
+    lines.push(`  unclassified-unused ${subpath}`);
+  }
+  for (const entry of summary.pluginSdk.crossOwnerReservedImports) {
+    lines.push(`  cross-owner ${entry.file}: ${entry.specifier} owner=${entry.owner ?? "unknown"}`);
+  }
+  lines.push(
+    `memory-host-sdk implementation=${summary.memoryHostSdk.implementation} private=${summary.memoryHostSdk.privatePackage} exports=${summary.memoryHostSdk.exportedSubpathCount} sourceBridgeFiles=${summary.memoryHostSdk.sourceBridgeFileCount} coreReferenceFiles=${summary.memoryHostSdk.packageCoreReferenceFileCount}`,
+  );
+  return lines.join("\n");
+}
+
+function renderText(report: BoundaryReport, owner?: string): string {
+  const lines: string[] = [];
+  lines.push(`Plugin Boundary Report${owner ? ` (${owner})` : ""}`);
   lines.push("");
   lines.push(
     `compat deprecated=${report.compat.deprecatedCount} eligibleForRemoval=${report.compat.eligibleForRemovalCount}`,
@@ -301,24 +513,79 @@ function renderText(report: BoundaryReport): string {
   }
   lines.push("");
   lines.push(
-    `plugin-sdk entrypoints=${report.pluginSdk.entrypointCount} reserved=${report.pluginSdk.reservedCount} supportedBundledFacade=${report.pluginSdk.supportedBundledFacadeCount} publicPluginOwned=${report.pluginSdk.publicPluginOwnedCount}`,
+    `plugin-sdk entrypoints=${report.pluginSdk.entrypointCount} reserved=${report.pluginSdk.reservedCount} dormantReserved=${report.pluginSdk.dormantReservedCount} supportedBundledFacade=${report.pluginSdk.supportedBundledFacadeCount} publicPluginOwned=${report.pluginSdk.publicPluginOwnedCount}`,
   );
   lines.push(
     `  reservedImports=${report.pluginSdk.reservedImports.length} crossOwnerReservedImports=${report.pluginSdk.crossOwnerReservedImports.length} unusedReserved=${report.pluginSdk.unusedReservedSubpaths.length}`,
   );
+  lines.push(
+    `  dormantUnused=${report.pluginSdk.dormantReservedSubpaths.length} unclassifiedUnused=${report.pluginSdk.unclassifiedUnusedReservedSubpaths.length}`,
+  );
+  for (const subpath of report.pluginSdk.unclassifiedUnusedReservedSubpaths) {
+    lines.push(`  unclassified-unused ${subpath}`);
+  }
   for (const entry of report.pluginSdk.crossOwnerReservedImports) {
     lines.push(`  cross-owner ${entry.file}: ${entry.specifier} owner=${entry.owner ?? "unknown"}`);
   }
   lines.push("");
   lines.push(
-    `memory-host-sdk private=${report.memoryHostSdk.privatePackage} exports=${report.memoryHostSdk.exportedSubpaths.length} sourceBridgeFiles=${report.memoryHostSdk.sourceBridgeFiles.length} coreReferenceFiles=${report.memoryHostSdk.packageCoreReferenceFiles.length}`,
+    `memory-host-sdk implementation=${resolveMemoryHostImplementation(report.memoryHostSdk)} private=${report.memoryHostSdk.privatePackage} exports=${report.memoryHostSdk.exportedSubpaths.length} sourceBridgeFiles=${report.memoryHostSdk.sourceBridgeFiles.length} coreReferenceFiles=${report.memoryHostSdk.packageCoreReferenceFiles.length}`,
   );
   return lines.join("\n");
 }
 
-const report = buildReport();
-if (process.argv.includes("--json")) {
-  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+function collectFailures(report: BoundaryReport, options: CliOptions): string[] {
+  const failures: string[] = [];
+  if (options.failOnCrossOwner && report.pluginSdk.crossOwnerReservedImports.length > 0) {
+    failures.push(
+      `${report.pluginSdk.crossOwnerReservedImports.length} cross-owner reserved SDK import(s) found`,
+    );
+  }
+  if (
+    options.failOnUnclassifiedUnusedReserved &&
+    report.pluginSdk.unclassifiedUnusedReservedSubpaths.length > 0
+  ) {
+    failures.push(
+      `${report.pluginSdk.unclassifiedUnusedReservedSubpaths.length} unused reserved SDK subpath(s) lack dormant classification`,
+    );
+  }
+  if (options.failOnEligibleCompat && report.compat.eligibleForRemovalCount > 0) {
+    failures.push(
+      `${report.compat.eligibleForRemovalCount} compatibility record(s) are due for removal`,
+    );
+  }
+  return failures;
+}
+
+let options: CliOptions;
+try {
+  options = parseArgs(process.argv.slice(2));
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  process.stderr.write(`${message}\n\n${renderHelp()}\n`);
+  process.exitCode = 2;
+  process.exit();
+}
+
+if (options.help) {
+  process.stdout.write(`${renderHelp()}\n`);
+  process.exit();
+}
+
+const report = buildReport(options);
+const summary = buildSummary(report, options.owner);
+if (options.json) {
+  process.stdout.write(`${JSON.stringify(options.summary ? summary : report, null, 2)}\n`);
+} else if (options.summary) {
+  process.stdout.write(`${renderSummaryText(summary)}\n`);
 } else {
-  process.stdout.write(`${renderText(report)}\n`);
+  process.stdout.write(`${renderText(report, options.owner)}\n`);
+}
+
+const failures = collectFailures(report, options);
+if (failures.length > 0) {
+  process.stderr.write(
+    `${failures.map((failure) => `plugin-boundary-report: ${failure}`).join("\n")}\n`,
+  );
+  process.exitCode = 1;
 }
