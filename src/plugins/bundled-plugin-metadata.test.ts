@@ -24,6 +24,26 @@ import { collectBundledRuntimeSidecarPaths } from "./runtime-sidecar-paths-basel
 import { BUNDLED_RUNTIME_SIDECAR_PATHS } from "./runtime-sidecar-paths.js";
 
 const BUNDLED_PLUGIN_METADATA_TEST_TIMEOUT_MS = 300_000;
+const EXPECTED_BUNDLED_STARTUP_PLUGIN_IDS = [
+  "acpx",
+  "active-memory",
+  "bonjour",
+  "browser",
+  "device-pair",
+  "diagnostics-otel",
+  "diagnostics-prometheus",
+  "diffs",
+  "google-meet",
+  "llm-task",
+  "lobster",
+  "memory-wiki",
+  "openshell",
+  "phone-control",
+  "talk-voice",
+  "thread-ownership",
+  "voice-call",
+  "webhooks",
+] as const;
 
 installGeneratedPluginTempRootCleanup();
 
@@ -86,6 +106,22 @@ function listRepoBundledPluginMetadata(): readonly BundledPluginMetadata[] {
     rootDir: repoRoot,
     includeSyntheticChannelConfigs: false,
   });
+}
+
+function listRepoBundledPluginManifests() {
+  const bundledPluginsDir = path.join(repoRoot, "extensions");
+  return fs
+    .readdirSync(bundledPluginsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => ({
+      dirName: entry.name,
+      manifest: loadPluginManifest(path.join(bundledPluginsDir, entry.name), false),
+    }))
+    .filter((entry) => entry.manifest.ok)
+    .map((entry) => ({
+      dirName: entry.dirName,
+      manifest: entry.manifest.manifest,
+    }));
 }
 
 function readPackageManifest(pluginDir: string): PackageManifest | undefined {
@@ -274,6 +310,21 @@ describe("bundled plugin metadata", () => {
     for (const entry of listRepoBundledPluginMetadata()) {
       expect(entry.manifest.configSchema).toEqual(expect.any(Object));
     }
+  });
+
+  it("declares explicit startup activation on all bundled plugin manifests", () => {
+    const startupPluginIds: string[] = [];
+
+    for (const entry of listRepoBundledPluginManifests()) {
+      expect(typeof entry.manifest.activation?.onStartup).toBe("boolean");
+      if (entry.manifest.activation?.onStartup === true) {
+        startupPluginIds.push(entry.manifest.id);
+      }
+    }
+
+    expect(startupPluginIds.toSorted((left, right) => left.localeCompare(right))).toEqual(
+      EXPECTED_BUNDLED_STARTUP_PLUGIN_IDS,
+    );
   });
 
   it("prefers built generated paths when present and falls back to source paths", () => {
