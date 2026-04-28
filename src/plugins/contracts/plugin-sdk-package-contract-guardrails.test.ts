@@ -38,6 +38,7 @@ const DEPRECATED_TEST_BARREL_SPECIFIERS = new Set([
 const DEPRECATED_TEST_BARREL_ALLOWED_REFERENCE_FILES = new Set([
   "src/plugin-sdk/testing.ts",
   "src/plugin-sdk/test-utils.ts",
+  "packages/plugin-sdk/src/testing.ts",
   "src/plugins/compat/registry.ts",
   "src/plugins/contracts/plugin-entry-guardrails.test.ts",
   "src/plugins/contracts/plugin-sdk-package-contract-guardrails.test.ts",
@@ -361,6 +362,16 @@ function collectDeprecatedTestBarrelImports(): Array<{ file: string; specifier: 
   return leaks;
 }
 
+function collectDeprecatedPackageTestingBridgeDrift(): string[] {
+  const source = readFileSync(
+    resolve(REPO_ROOT, "packages/plugin-sdk/src/testing.ts"),
+    "utf8",
+  ).trim();
+  return source === 'export * from "../../../src/plugin-sdk/testing.js";'
+    ? []
+    : ["packages/plugin-sdk/src/testing.ts"];
+}
+
 function parseTestApiNamedExports(source: string): string[] {
   const exports = new Set<string>();
   const declarationPattern =
@@ -612,6 +623,10 @@ describe("plugin-sdk package contract guardrails", () => {
 
   it("keeps real tests off deprecated plugin-sdk testing barrels", () => {
     expect(collectDeprecatedTestBarrelImports()).toEqual([]);
+  });
+
+  it("keeps the package testing barrel as a single deprecated bridge", () => {
+    expect(collectDeprecatedPackageTestingBridgeDrift()).toEqual([]);
   });
 
   it("keeps extension test-api exports consumed", () => {
