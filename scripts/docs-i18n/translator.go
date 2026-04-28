@@ -179,6 +179,12 @@ func runCodexExecPrompt(ctx context.Context, req codexPromptRequest) (string, er
 	_ = outputFile.Close()
 	defer os.Remove(outputPath)
 
+	codexHome, err := os.MkdirTemp("", "openclaw-docs-i18n-codex-home-*")
+	if err != nil {
+		return "", err
+	}
+	defer os.RemoveAll(codexHome)
+
 	args := []string{
 		"exec",
 		"--model", req.Model,
@@ -191,6 +197,7 @@ func runCodexExecPrompt(ctx context.Context, req codexPromptRequest) (string, er
 	}
 	command := exec.CommandContext(ctx, docsCodexExecutable(), args...)
 	command.Stdin = strings.NewReader(buildCodexTranslationPrompt(req.SystemPrompt, req.Message))
+	command.Env = append(os.Environ(), "CODEX_HOME="+codexHome)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	command.Stdout = &stdout

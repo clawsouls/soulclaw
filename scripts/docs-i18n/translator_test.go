@@ -149,6 +149,10 @@ while [ "$#" -gt 0 ]; do
   shift || true
 done
 cat >/dev/null
+if [ -z "${CODEX_HOME:-}" ]; then
+  echo "missing CODEX_HOME" >&2
+  exit 1
+fi
 printf 'translated from codex\n' > "$out"
 `), 0o755); err != nil {
 		t.Fatalf("write fake codex: %v", err)
