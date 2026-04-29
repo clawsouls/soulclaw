@@ -13,6 +13,7 @@ run_root_owned_global_scenario() {
 set -euo pipefail
 
 source scripts/lib/openclaw-e2e-instance.sh
+source scripts/e2e/lib/bundled-channel/common.sh
 export HOME="/root"
 export OPENAI_API_KEY="sk-openclaw-bundled-channel-root-owned-e2e"
 export OPENCLAW_NO_ONBOARD=1
@@ -23,10 +24,6 @@ PORT="18791"
 CHANNEL="slack"
 DEP_SENTINEL="@slack/web-api"
 gateway_pid=""
-
-package_root() {
-  printf "%s/openclaw" "$(npm root -g)"
-}
 
 cleanup() {
   if [ -n "${gateway_pid:-}" ] && kill -0 "$gateway_pid" 2>/dev/null; then
@@ -44,7 +41,7 @@ if ! npm install -g "$package_tgz" --no-fund --no-audit >/tmp/openclaw-root-owne
   exit 1
 fi
 
-root="$(package_root)"
+root="$(bundled_channel_package_root)"
 test -d "$root/dist/extensions/$CHANNEL"
 rm -rf "$root/dist/extensions/$CHANNEL/node_modules"
 chmod -R a-w "$root"

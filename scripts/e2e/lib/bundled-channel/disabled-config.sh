@@ -17,16 +17,13 @@ run_disabled_config_scenario() {
 set -euo pipefail
 
 source scripts/lib/openclaw-e2e-instance.sh
+source scripts/e2e/lib/bundled-channel/common.sh
 openclaw_e2e_eval_test_state_from_b64 "${OPENCLAW_TEST_STATE_SCRIPT_B64:?missing OPENCLAW_TEST_STATE_SCRIPT_B64}"
 export NPM_CONFIG_PREFIX="$HOME/.npm-global"
 export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
 export OPENCLAW_NO_ONBOARD=1
 export OPENCLAW_PLUGIN_STAGE_DIR="$HOME/.openclaw/plugin-runtime-deps"
 mkdir -p "$OPENCLAW_PLUGIN_STAGE_DIR"
-
-package_root() {
-  printf "%s/openclaw" "$(npm root -g)"
-}
 
 assert_dep_absent_everywhere() {
   local channel="$1"
@@ -99,7 +96,7 @@ echo "Installing mounted OpenClaw package..."
 package_tgz="${OPENCLAW_CURRENT_PACKAGE_TGZ:?missing OPENCLAW_CURRENT_PACKAGE_TGZ}"
 npm install -g "$package_tgz" --no-fund --no-audit >/tmp/openclaw-disabled-config-install.log 2>&1
 
-root="$(package_root)"
+root="$(bundled_channel_package_root)"
 test -d "$root/dist/extensions/telegram"
 test -d "$root/dist/extensions/discord"
 test -d "$root/dist/extensions/slack"
