@@ -97,7 +97,10 @@ async function main() {
           structuredContent?: { conversations?: Array<Record<string, unknown>> };
         }>({
           name: "conversations_list",
-          arguments: {},
+          arguments: {
+            includeDerivedTitles: false,
+            includeLastMessage: false,
+          },
         });
         lastMcpConversationList = listed;
         return listed.structuredContent?.conversations?.find(
