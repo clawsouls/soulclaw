@@ -531,7 +531,7 @@ async function runWriteConfigHealth(ctx: DoctorHealthFlowContext): Promise<void>
     });
     if (
       shouldSkipLegacyUpdateDoctorMetadataWrite({
-        env: ctx.env,
+        env: process.env,
         before: ctx.cfgForPersistence,
         after: ctx.cfg,
       })
