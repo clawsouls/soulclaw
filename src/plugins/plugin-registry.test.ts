@@ -542,7 +542,7 @@ describe("plugin registry facade", () => {
     ]);
   });
 
-  it("caches config-scoped derived registries when the persisted registry is missing", () => {
+  it("derives fresh config-scoped registries when the persisted registry is missing", () => {
     const stateDir = makeTempDir();
     const workspaceDir = makeTempDir();
     const bundledRoot = makeTempDir();
@@ -574,9 +574,10 @@ describe("plugin registry facade", () => {
     ).length;
 
     expect(first.source).toBe("derived");
-    expect(second).toBe(first);
+    expect(second.source).toBe("derived");
+    expect(second).not.toBe(first);
     expect(manifestReadsAfterFirst).toBeGreaterThan(0);
-    expect(manifestReadsAfterSecond).toBe(manifestReadsAfterFirst);
+    expect(manifestReadsAfterSecond).toBeGreaterThan(manifestReadsAfterFirst);
   });
 
   it("falls back to the derived registry when persisted reads are disabled", async () => {
