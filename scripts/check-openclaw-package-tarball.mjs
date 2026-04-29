@@ -7,7 +7,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { LOCAL_BUILD_METADATA_DIST_PATHS } from "./lib/local-build-metadata-paths.mjs";
-import { collectPackageDistImportErrors } from "./lib/package-dist-imports.mjs";
+import {
+  collectPackageDistImportErrors,
+  expandPackageDistImportClosure,
+} from "./lib/package-dist-imports.mjs";
 
 function usage() {
   return "Usage: node scripts/check-openclaw-package-tarball.mjs <openclaw.tgz>";
@@ -186,6 +189,8 @@ if (entrySet.has("dist/postinstall-inventory.json")) {
     if (!Array.isArray(inventory) || inventory.some((entry) => typeof entry !== "string")) {
       errors.push("invalid dist/postinstall-inventory.json");
     } else {
+      const normalizedInventory = inventory.map((entry) => entry.replace(/\\/gu, "/"));
+      const normalizedInventorySet = new Set(normalizedInventory);
       for (const inventoryEntry of inventory) {
         const normalizedEntry = inventoryEntry.replace(/\\/gu, "/");
         if (!entrySet.has(normalizedEntry)) {
@@ -199,6 +204,16 @@ if (entrySet.has("dist/postinstall-inventory.json")) {
             continue;
           }
           errors.push(`inventory references missing tar entry ${normalizedEntry}`);
+        }
+      }
+      const expandedInventory = expandPackageDistImportClosure({
+        files: normalized,
+        seedFiles: normalizedInventory,
+        readText: readTarEntry,
+      });
+      for (const importedEntry of expandedInventory) {
+        if (!normalizedInventorySet.has(importedEntry)) {
+          errors.push(`inventory omits imported dist file ${importedEntry}`);
         }
       }
     }

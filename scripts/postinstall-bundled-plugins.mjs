@@ -23,6 +23,7 @@ import {
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { expandPackageDistImportClosure } from "./lib/package-dist-imports.mjs";
 import { resolveNpmRunner } from "./npm-runner.mjs";
 
 export const BUNDLED_PLUGIN_INSTALL_TARGETS = [];
@@ -292,6 +293,16 @@ export function pruneInstalledPackageDist(params = {}) {
     }
   }
   const installedFiles = listInstalledDistFiles(params);
+  const readFile = params.readFileSync ?? readFileSync;
+  expectedFiles = new Set(
+    expandPackageDistImportClosure({
+      files: installedFiles,
+      seedFiles: [...expectedFiles],
+      readText(relativePath) {
+        return readFile(join(packageRoot, relativePath), "utf8");
+      },
+    }),
+  );
   const removed = [];
 
   for (const relativePath of installedFiles) {
