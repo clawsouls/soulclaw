@@ -25,6 +25,7 @@ export type DoctorHealthFlowContext = {
   cfgForPersistence: OpenClawConfig;
   sourceConfigValid: boolean;
   configPath: string;
+  env?: NodeJS.ProcessEnv;
   gatewayDetails?: ReturnType<typeof buildGatewayConnectionDetails>;
   healthOk?: boolean;
   gatewayMemoryProbe?: Awaited<ReturnType<typeof probeGatewayMemoryStatus>>;
@@ -531,7 +532,7 @@ async function runWriteConfigHealth(ctx: DoctorHealthFlowContext): Promise<void>
     });
     if (
       shouldSkipLegacyUpdateDoctorMetadataWrite({
-        env: process.env,
+        env: ctx.env ?? process.env,
         before: ctx.cfgForPersistence,
         after: ctx.cfg,
       })
