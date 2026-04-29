@@ -214,7 +214,7 @@ case "$PROVIDER" in
   openai)
     AUTH_CHOICE="openai-api-key"
     AUTH_KEY_FLAG="openai-api-key"
-    [[ "$MODEL_ID_EXPLICIT" -eq 1 ]] || MODEL_ID="${OPENCLAW_PARALLELS_OPENAI_MODEL:-openai/gpt-5.4}"
+    [[ "$MODEL_ID_EXPLICIT" -eq 1 ]] || MODEL_ID="${OPENCLAW_PARALLELS_OPENAI_MODEL:-openai/gpt-5.5}"
     [[ -n "$API_KEY_ENV" ]] || API_KEY_ENV="OPENAI_API_KEY"
     ;;
   anthropic)
