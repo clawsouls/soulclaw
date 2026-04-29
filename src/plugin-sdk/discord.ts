@@ -12,10 +12,6 @@ import {
 } from "./facade-loader.js";
 import { getRuntimeConfig, getRuntimeConfigSnapshot } from "./runtime-config-snapshot.js";
 
-export type {
-  DiscordComponentBuildResult,
-  DiscordComponentMessageSpec,
-} from "../../extensions/discord/api.js";
 export type { ChannelMessageActionAdapter, ChannelMessageActionName } from "./channel-contract.js";
 export type { ChannelPlugin } from "./channel-core.js";
 export type { OpenClawConfig } from "./config-types.js";
@@ -40,6 +36,43 @@ export {
 export { DiscordConfigSchema } from "./bundled-channel-config-schema.js";
 
 export type DiscordAccountConfig = NonNullable<NonNullable<OpenClawConfig["channels"]>["discord"]>;
+
+export type DiscordComponentMessageSpec = {
+  text?: string;
+  reusable?: boolean;
+  container?: {
+    accentColor?: string | number;
+    spoiler?: boolean;
+  };
+  blocks?: unknown[];
+  modal?: unknown;
+};
+
+export type DiscordComponentBuildResult = {
+  components: unknown[];
+  entries: unknown[];
+  modals: unknown[];
+};
+
+export type DiscordComponentSendOpts = {
+  cfg?: OpenClawConfig;
+  accountId?: string;
+  replyTo?: string;
+  files?: unknown;
+  mediaReadFile?: (filePath: string) => Promise<Buffer>;
+  filename?: string;
+  textLimit?: number;
+  maxLinesPerMessage?: number;
+  tableMode?: unknown;
+  chunkMode?: unknown;
+  [key: string]: unknown;
+};
+
+export type DiscordComponentSendResult = {
+  id?: string;
+  channel_id?: string;
+  [key: string]: unknown;
+};
 
 export type ResolvedDiscordAccount = {
   accountId: string;
@@ -70,9 +103,29 @@ type DirectoryConfigParams = {
   accountId?: string | null;
 };
 
+type BuildDiscordComponentMessage = (params: {
+  spec: DiscordComponentMessageSpec;
+  fallbackText?: string;
+  sessionKey?: string;
+  agentId?: string;
+  accountId?: string;
+}) => DiscordComponentBuildResult;
+
+type EditDiscordComponentMessage = (
+  to: string,
+  messageId: string,
+  spec: DiscordComponentMessageSpec,
+  opts: DiscordComponentSendOpts,
+) => Promise<DiscordComponentSendResult>;
+
+type RegisterBuiltDiscordComponentMessage = (params: {
+  buildResult: DiscordComponentBuildResult;
+  messageId: string;
+}) => void;
+
 type DiscordApiFacadeModule = {
   collectDiscordStatusIssues: (accounts: ChannelAccountSnapshot[]) => ChannelStatusIssue[];
-  buildDiscordComponentMessage: typeof import("../../extensions/discord/api.js").buildDiscordComponentMessage;
+  buildDiscordComponentMessage: BuildDiscordComponentMessage;
   discordOnboardingAdapter?: NonNullable<ChannelPlugin<ResolvedDiscordAccount>["setup"]>;
   inspectDiscordAccount: (params: { cfg: OpenClawConfig; accountId?: string | null }) => unknown;
   listDiscordAccountIds: (cfg: OpenClawConfig) => string[];
@@ -95,8 +148,8 @@ type DiscordApiFacadeModule = {
 };
 
 type DiscordRuntimeFacadeModule = {
-  editDiscordComponentMessage: typeof import("../../extensions/discord/runtime-api.js").editDiscordComponentMessage;
-  registerBuiltDiscordComponentMessage: typeof import("../../extensions/discord/runtime-api.js").registerBuiltDiscordComponentMessage;
+  editDiscordComponentMessage: EditDiscordComponentMessage;
+  registerBuiltDiscordComponentMessage: RegisterBuiltDiscordComponentMessage;
   autoBindSpawnedDiscordSubagent: (params: {
     cfg: OpenClawConfig;
     accountId?: string;
