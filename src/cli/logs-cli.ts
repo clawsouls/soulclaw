@@ -1,6 +1,10 @@
 import { setTimeout as delay } from "node:timers/promises";
 import type { Command } from "commander";
-import { buildGatewayConnectionDetails } from "../gateway/call.js";
+import {
+  buildGatewayConnectionDetails,
+  isGatewayTransportError,
+  type GatewayConnectionDetails,
+} from "../gateway/call.js";
 import { isLoopbackHost } from "../gateway/net.js";
 import { readConnectPairingRequiredMessage } from "../gateway/protocol/connect-error-details.js";
 import { formatErrorMessage } from "../infra/errors.js";
@@ -97,14 +101,19 @@ function normalizeErrorMessage(error: unknown): string {
 }
 
 function shouldUseLocalLogsFallback(opts: LogsCliOptions, error: unknown): boolean {
-  const message = normalizeLowercaseStringOrEmpty(normalizeErrorMessage(error));
-  if (!isLocalGatewayRpcUnavailableError(message)) {
+  if (!isLocalGatewayRpcUnavailableError(error)) {
     return false;
   }
   if (typeof opts.url === "string" && opts.url.trim().length > 0) {
     return false;
   }
-  const connection = buildGatewayConnectionDetails();
+  const connection = isGatewayTransportError(error)
+    ? error.connectionDetails
+    : buildGatewayConnectionDetails();
+  return isImplicitLoopbackGatewayConnection(connection);
+}
+
+function isImplicitLoopbackGatewayConnection(connection: GatewayConnectionDetails): boolean {
   if (connection.urlSource !== "local loopback") {
     return false;
   }
@@ -115,15 +124,24 @@ function shouldUseLocalLogsFallback(opts: LogsCliOptions, error: unknown): boole
   }
 }
 
-function isLocalGatewayRpcUnavailableError(message: string): boolean {
+function isLocalGatewayRpcUnavailableError(error: unknown): boolean {
+  if (isGatewayTransportError(error)) {
+    return error.kind === "closed" || error.kind === "timeout";
+  }
+  const message = normalizeLowercaseStringOrEmpty(normalizeErrorMessage(error));
   if (readConnectPairingRequiredMessage(message)) {
     return true;
   }
-  return (
-    message.includes("gateway closed (") ||
-    message.includes("gateway timeout after") ||
-    message.includes("gateway connect failed:")
-  );
+  // GatewayClient pending request failures are still plain Error instances.
+  return isPlainGatewayRequestCloseError(message) || isPlainGatewayRequestTimeoutError(message);
+}
+
+function isPlainGatewayRequestCloseError(message: string): boolean {
+  return message.startsWith("gateway closed (");
+}
+
+function isPlainGatewayRequestTimeoutError(message: string): boolean {
+  return /^gateway timeout after \d+ms\b/u.test(message);
 }
 
 export function formatLogTimestamp(
