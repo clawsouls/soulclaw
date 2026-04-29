@@ -49,7 +49,7 @@ type LogsCliOptions = {
   expectFinal?: boolean;
 };
 
-const LOCAL_FALLBACK_NOTICE = "Gateway pairing required; reading local log file instead.";
+const LOCAL_FALLBACK_NOTICE = "Local Gateway RPC unavailable; reading configured file log instead.";
 
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   if (!value) {
@@ -81,6 +81,7 @@ async function fetchLogs(
     if (!shouldUseLocalLogsFallback(opts, error)) {
       throw error;
     }
+    // Match the Gateway logs.tail source when implicit local RPC is unavailable.
     return {
       ...(await readConfiguredLogTail({ cursor, limit, maxBytes })),
       localFallback: true,
@@ -97,7 +98,7 @@ function normalizeErrorMessage(error: unknown): string {
 
 function shouldUseLocalLogsFallback(opts: LogsCliOptions, error: unknown): boolean {
   const message = normalizeLowercaseStringOrEmpty(normalizeErrorMessage(error));
-  if (!readConnectPairingRequiredMessage(message)) {
+  if (!isLocalGatewayRpcUnavailableError(message)) {
     return false;
   }
   if (typeof opts.url === "string" && opts.url.trim().length > 0) {
@@ -112,6 +113,17 @@ function shouldUseLocalLogsFallback(opts: LogsCliOptions, error: unknown): boole
   } catch {
     return false;
   }
+}
+
+function isLocalGatewayRpcUnavailableError(message: string): boolean {
+  if (readConnectPairingRequiredMessage(message)) {
+    return true;
+  }
+  return (
+    message.includes("gateway closed (") ||
+    message.includes("gateway timeout after") ||
+    message.includes("gateway connect failed:")
+  );
 }
 
 export function formatLogTimestamp(

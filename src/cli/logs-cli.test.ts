@@ -181,6 +181,46 @@ describe("logs cli", () => {
     expect(stderrWrites.join("")).toContain("reading local log file instead");
   });
 
+  it("falls back to the configured Gateway file log on loopback gateway close errors", async () => {
+    callGatewayFromCli.mockRejectedValueOnce(
+      new Error("gateway closed (1000 normal closure): no close reason"),
+    );
+    readConfiguredLogTail.mockResolvedValueOnce({
+      file: "/tmp/openclaw.log",
+      cursor: 5,
+      size: 5,
+      lines: ["local fallback line"],
+      truncated: false,
+      reset: false,
+    });
+
+    const stdoutWrites = captureStdoutWrites();
+    const stderrWrites = captureStderrWrites();
+
+    await runLogsCli(["logs"]);
+
+    expect(readConfiguredLogTail).toHaveBeenCalledTimes(1);
+    expect(stdoutWrites.join("")).toContain("local fallback line");
+    expect(stderrWrites.join("")).toContain("Local Gateway RPC unavailable");
+  });
+
+  it("does not use local fallback for explicit Gateway URLs", async () => {
+    callGatewayFromCli.mockRejectedValueOnce(
+      new Error("gateway closed (1000 normal closure): no close reason"),
+    );
+
+    const stdoutWrites = captureStdoutWrites();
+    const stderrWrites = captureStderrWrites();
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+
+    await runLogsCli(["logs", "--url", "ws://127.0.0.1:18789"]);
+
+    expect(readConfiguredLogTail).not.toHaveBeenCalled();
+    expect(stdoutWrites.join("")).not.toContain("local fallback line");
+    expect(stderrWrites.join("")).toContain("Gateway not reachable");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
   describe("formatLogTimestamp", () => {
     it("formats UTC timestamp in plain mode by default", () => {
       const result = formatLogTimestamp("2025-01-01T12:00:00.000Z");

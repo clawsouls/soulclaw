@@ -16,6 +16,8 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - MCP/plugins: stringify non-array plugin tool results with chat-content coercion instead of default object stringification, so MCP callers receive useful JSON/text content from plugin tools. Thanks @vincentkoc.
+- CLI/logs: fall back to the configured Gateway file log when implicit loopback Gateway connections close or time out before or during `logs.tail`, so `openclaw logs` still works while diagnosing local-model Gateway disconnects. Refs #74078. Thanks @sakalaboator.
+- MCP/plugins: stringify non-array plugin tool results with chat-content coercion instead of default object stringification, so MCP callers receive useful JSON/text content from plugin tools. Thanks @vincentkoc.
 - Channels/Discord: remove Discord-owned queued-run timeout replies through the shared channel lifecycle queue while preserving message ordering and compatibility timeout constants, so long Discord turns stay governed by session/tool/runtime lifecycle instead of channel fallback errors. Thanks @codexGW.
 - Agents/tools: clamp `process.poll` waits to 30 seconds, advertise that cap in the tool schema, and honor abort signals while waiting, so long command polls cannot pin agent responsiveness after cancellation. Thanks @vincentkoc.
 - Plugin SDK: add tracked Discord component-message helpers and a Telegram account-resolution compatibility facade, so existing plugins using those subpaths resolve while new plugins stay on generic channel SDK contracts. Thanks @vincentkoc.
