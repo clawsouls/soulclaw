@@ -59,6 +59,7 @@ function omitDoctorWriteMetadata(cfg: OpenClawConfig): OpenClawConfig {
 
 export function shouldSkipLegacyUpdateDoctorMetadataWrite(params: {
   env: NodeJS.ProcessEnv;
+  hasPendingConfigWrite?: boolean;
   before: OpenClawConfig;
   after: OpenClawConfig;
 }): boolean {
@@ -66,6 +67,9 @@ export function shouldSkipLegacyUpdateDoctorMetadataWrite(params: {
     return false;
   }
   if (isTruthyEnvValue(params.env[UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE_ENV])) {
+    return false;
+  }
+  if (params.hasPendingConfigWrite === true) {
     return false;
   }
   return isDeepStrictEqual(
@@ -533,6 +537,7 @@ async function runWriteConfigHealth(ctx: DoctorHealthFlowContext): Promise<void>
     if (
       shouldSkipLegacyUpdateDoctorMetadataWrite({
         env: ctx.env ?? process.env,
+        hasPendingConfigWrite: ctx.configResult.shouldWriteConfig === true,
         before: ctx.cfgForPersistence,
         after: ctx.cfg,
       })
