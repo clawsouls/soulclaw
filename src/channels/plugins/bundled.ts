@@ -88,6 +88,8 @@ type BundledChannelLoadContext = {
 };
 
 const log = createSubsystemLogger("channels");
+const MAX_BUNDLED_CHANNEL_LOAD_CONTEXTS = 32;
+const bundledChannelLoadContextsByRoot = new Map<string, BundledChannelLoadContext>();
 
 function resolveChannelPluginModuleEntry(
   moduleExport: unknown,
@@ -310,9 +312,27 @@ function resolveActiveBundledChannelLoadScope(): {
   loadContext: BundledChannelLoadContext;
 } {
   const rootScope = resolveBundledChannelRootScope();
+  const cachedContext = bundledChannelLoadContextsByRoot.get(rootScope.cacheKey);
+  if (cachedContext) {
+    bundledChannelLoadContextsByRoot.delete(rootScope.cacheKey);
+    bundledChannelLoadContextsByRoot.set(rootScope.cacheKey, cachedContext);
+    return {
+      rootScope,
+      loadContext: cachedContext,
+    };
+  }
+  const loadContext = createBundledChannelLoadContext();
+  bundledChannelLoadContextsByRoot.set(rootScope.cacheKey, loadContext);
+  while (bundledChannelLoadContextsByRoot.size > MAX_BUNDLED_CHANNEL_LOAD_CONTEXTS) {
+    const oldestKey = bundledChannelLoadContextsByRoot.keys().next().value;
+    if (oldestKey === undefined) {
+      break;
+    }
+    bundledChannelLoadContextsByRoot.delete(oldestKey);
+  }
   return {
     rootScope,
-    loadContext: createBundledChannelLoadContext(),
+    loadContext,
   };
 }
 
