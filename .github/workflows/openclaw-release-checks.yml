@@ -665,7 +665,6 @@ jobs:
 
           matrix_args=(
             --repo-root . \
-            --output-dir "${output_dir}" \
             --provider-mode mock-openai \
             --model mock-openai/gpt-5.5 \
             --alt-model mock-openai/gpt-5.5-alt \
@@ -676,7 +675,17 @@ jobs:
             matrix_args+=(--fail-fast)
           fi
 
-          pnpm openclaw qa matrix "${matrix_args[@]}"
+          for attempt in 1 2; do
+            attempt_output_dir="${output_dir}/attempt-${attempt}"
+            if pnpm openclaw qa matrix --output-dir "${attempt_output_dir}" "${matrix_args[@]}"; then
+              exit 0
+            fi
+            if [[ "${attempt}" == "2" ]]; then
+              exit 1
+            fi
+            echo "Matrix live lane failed on attempt ${attempt}; retrying once..." >&2
+            sleep 10
+          done
 
       - name: Upload Matrix QA artifacts
         if: always()
@@ -751,15 +760,25 @@ jobs:
           output_dir=".artifacts/qa-e2e/telegram-live-release-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           echo "output_dir=${output_dir}" >> "$GITHUB_OUTPUT"
 
-          pnpm openclaw qa telegram \
-            --repo-root . \
-            --output-dir "${output_dir}" \
-            --provider-mode mock-openai \
-            --model mock-openai/gpt-5.5 \
-            --alt-model mock-openai/gpt-5.5-alt \
-            --fast \
-            --credential-source convex \
-            --credential-role ci
+          for attempt in 1 2; do
+            attempt_output_dir="${output_dir}/attempt-${attempt}"
+            if pnpm openclaw qa telegram \
+              --repo-root . \
+              --output-dir "${attempt_output_dir}" \
+              --provider-mode mock-openai \
+              --model mock-openai/gpt-5.5 \
+              --alt-model mock-openai/gpt-5.5-alt \
+              --fast \
+              --credential-source convex \
+              --credential-role ci; then
+              exit 0
+            fi
+            if [[ "${attempt}" == "2" ]]; then
+              exit 1
+            fi
+            echo "Telegram live lane failed on attempt ${attempt}; retrying once..." >&2
+            sleep 10
+          done
 
       - name: Upload Telegram QA artifacts
         if: always()

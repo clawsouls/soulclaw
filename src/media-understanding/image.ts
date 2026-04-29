@@ -349,11 +349,17 @@ async function describeImagesWithModelInternal(
   options: { onPayload?: ProviderStreamOptions["onPayload"] } = {},
 ): Promise<ImagesDescriptionResult> {
   const prompt = params.prompt ?? "Describe the image.";
+  const startedAtMs = Date.now();
+  const controller = new AbortController();
   let apiKey: string;
   let model: Model<Api> | undefined;
 
   try {
-    const resolved = await resolveImageRuntime(params);
+    const resolved = await withImageDescriptionTimeout({
+      controller,
+      timeoutMs: resolveImageDescriptionTimeoutMs(params.timeoutMs, startedAtMs),
+      task: resolveImageRuntime(params),
+    });
     apiKey = resolved.apiKey;
     model = resolved.model;
   } catch (err) {
@@ -391,8 +397,6 @@ async function describeImagesWithModelInternal(
   const context = buildImageContext(prompt, params.images, {
     promptInUserContent: shouldPlaceImagePromptInUserContent(model),
   });
-  const startedAtMs = Date.now();
-  const controller = new AbortController();
 
   const maxTokens = resolveImageToolMaxTokens(model.maxTokens, params.maxTokens ?? 512);
   const completeImage = async (onPayload?: ProviderStreamOptions["onPayload"]) => {
