@@ -49,6 +49,37 @@ Do not use `--dispatch` until the job is committed and pushed; the workflow
 reads the job path from GitHub. Keep `CLOWNFISH_ALLOW_MERGE=0` unless Peter
 explicitly opens the merge gate.
 
+## Maintainer Comment Commands
+
+Clownfish can also be asked from target repo comments, but only by maintainers.
+Use `/clownfish ...` or `@openclaw-clownfish ...`; do not use `@clownfish`
+because that is a separate GitHub user.
+
+Supported commands:
+
+```text
+/clownfish status
+/clownfish fix ci
+/clownfish address review
+/clownfish rebase
+/clownfish explain
+/clownfish stop
+@openclaw-clownfish fix ci
+```
+
+The router accepts `OWNER`, `MEMBER`, and `COLLABORATOR` comments by default.
+Contributor comments are ignored without a reply. Repair commands dispatch
+`cluster-worker.yml` only for existing Clownfish PRs with the `clownfish` label
+or `clownfish/*` branch.
+
+```bash
+npm run comment-router -- --repo openclaw/openclaw --lookback-minutes 180
+npm run comment-router -- --repo openclaw/openclaw --execute --wait-for-capacity
+```
+
+Scheduled routing stays dry until `CLOWNFISH_COMMENT_ROUTER_EXECUTE=1` is set in
+`openclaw/clownfish` repo variables.
+
 ## Guardrails
 
 - One cluster, one branch, one PR: `clownfish/<cluster-id>`.
