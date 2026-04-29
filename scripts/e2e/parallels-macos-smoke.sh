@@ -1109,6 +1109,7 @@ ensure_guest_pnpm_for_dev_update() {
 
 repair_legacy_dev_source_checkout_if_needed() {
   local bootstrap_bin update_root update_entry
+  LEGACY_DEV_SOURCE_REPAIR_APPLIED=0
   bootstrap_bin="/tmp/openclaw-smoke-pnpm-bootstrap/node_modules/.bin"
   update_root="$(resolve_guest_current_user_home)/openclaw"
   update_entry="$update_root/openclaw.mjs"
@@ -1121,6 +1122,7 @@ repair_legacy_dev_source_checkout_if_needed() {
   if ! guest_current_user_exec /bin/test -f "$update_root/src/entry.ts"; then
     return 0
   fi
+  LEGACY_DEV_SOURCE_REPAIR_APPLIED=1
   warn "repairing legacy dev source archive into git checkout"
   ensure_guest_pnpm_for_dev_update
   guest_current_user_exec /bin/rm -rf "$update_root"
@@ -1160,6 +1162,9 @@ EOF
     guest_current_user_tail_file "$update_log" 120 >&2 || true
   fi
   repair_legacy_dev_source_checkout_if_needed
+  if (( update_rc != 0 && LEGACY_DEV_SOURCE_REPAIR_APPLIED == 0 )); then
+    return "$update_rc"
+  fi
   printf 'update-dev: git-version\n'
   guest_current_user_exec "$GUEST_NODE_BIN" "$GUEST_OPENCLAW_ENTRY" --version
   printf 'update-dev: git-status\n'
