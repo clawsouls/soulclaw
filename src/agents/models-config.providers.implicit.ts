@@ -456,6 +456,7 @@ export async function resolveImplicitProviders(
   const getAuthStore = () =>
     (authStore ??= ensureAuthProfileStore(params.agentDir, {
       allowKeychainPrompt: false,
+      externalCliProviderIds: params.providerDiscoveryProviderIds,
     }));
   const context: ImplicitProviderContext = {
     ...params,
