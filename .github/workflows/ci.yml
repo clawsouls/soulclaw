@@ -55,6 +55,7 @@ jobs:
       run_checks_fast: ${{ steps.manifest.outputs.run_checks_fast }}
       checks_fast_core_matrix: ${{ steps.manifest.outputs.checks_fast_core_matrix }}
       channel_contracts_matrix: ${{ steps.manifest.outputs.channel_contracts_matrix }}
+      run_checks_node_extensions: ${{ steps.manifest.outputs.run_checks_node_extensions }}
       checks_node_extensions_matrix: ${{ steps.manifest.outputs.checks_node_extensions_matrix }}
       run_checks: ${{ steps.manifest.outputs.run_checks }}
       checks_matrix: ${{ steps.manifest.outputs.checks_matrix }}
@@ -304,6 +305,7 @@ jobs:
             channel_contracts_matrix: createMatrix(
               runNodeFull ? createChannelContractTestShards() : [],
             ),
+            run_checks_node_extensions: runReleaseOnlyPluginSuites,
             checks_node_extensions_matrix: extensionShardMatrix,
             run_checks: runNodeFull,
             checks_matrix: createMatrix(
@@ -993,7 +995,7 @@ jobs:
       contents: read
     name: ${{ matrix.check_name }}
     needs: [preflight]
-    if: needs.preflight.outputs.run_checks_fast == 'true'
+    if: needs.preflight.outputs.run_checks_node_extensions == 'true'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     strategy:
@@ -1066,7 +1068,7 @@ jobs:
       contents: read
     name: checks-node-extensions
     needs: [preflight, checks-node-extensions-shard]
-    if: ${{ !cancelled() && always() && needs.preflight.outputs.run_checks_fast == 'true' }}
+    if: ${{ !cancelled() && always() && needs.preflight.outputs.run_checks_node_extensions == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

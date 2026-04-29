@@ -110,6 +110,8 @@ describe("scripts/lib/plugin-prerelease-test-plan.mjs", () => {
   it("wires the full plugin prerelease plan into the mega CI workflow", () => {
     const workflow = readCiWorkflow();
     const preflight = workflow.jobs.preflight;
+    const extensionShard = workflow.jobs["checks-node-extensions-shard"];
+    const extensionSuite = workflow.jobs["checks-node-extensions"];
     const staticShard = workflow.jobs["plugin-prerelease-static-shard"];
     const dockerSuite = workflow.jobs["plugin-prerelease-docker-suite"];
     const suite = workflow.jobs["plugin-prerelease-suite"];
@@ -127,6 +129,7 @@ describe("scripts/lib/plugin-prerelease-test-plan.mjs", () => {
       plugin_prerelease_static_matrix:
         "${{ steps.manifest.outputs.plugin_prerelease_static_matrix }}",
       run_plugin_prerelease_suite: "${{ steps.manifest.outputs.run_plugin_prerelease_suite }}",
+      run_checks_node_extensions: "${{ steps.manifest.outputs.run_checks_node_extensions }}",
     });
     expect(staticShard).toMatchObject({
       name: "${{ matrix.check_name }}",
@@ -147,6 +150,7 @@ describe("scripts/lib/plugin-prerelease-test-plan.mjs", () => {
     expect(manifestScript).toContain(
       "let runPluginPrereleaseSuite =\n  isFullReleaseValidationCiRun && runNodeFull && isCanonicalRepository;",
     );
+    expect(manifestScript).toContain("run_checks_node_extensions: runReleaseOnlyPluginSuites");
     expect(normalCiScript).toContain(
       'dispatch_and_wait ci.yml -f target_ref="$TARGET_SHA" -f full_release_validation=true',
     );
@@ -158,6 +162,10 @@ describe("scripts/lib/plugin-prerelease-test-plan.mjs", () => {
     );
     expect(staticShard.strategy.matrix).toBe(
       "${{ fromJson(needs.preflight.outputs.plugin_prerelease_static_matrix) }}",
+    );
+    expect(extensionShard.if).toBe("needs.preflight.outputs.run_checks_node_extensions == 'true'");
+    expect(extensionSuite.if).toBe(
+      "${{ !cancelled() && always() && needs.preflight.outputs.run_checks_node_extensions == 'true' }}",
     );
     expect(
       staticShard.steps.find((step) => step.name === "Run plugin prerelease static shard").run,
