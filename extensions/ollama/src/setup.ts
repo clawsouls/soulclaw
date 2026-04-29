@@ -598,8 +598,7 @@ export async function promptAndConfigureOllama(params: {
       secretInputMode: params.secretInputMode,
       allowSecretRefPrompt: params.allowSecretRefPrompt,
     });
-    const { reachable, models: rawDiscoveredModels } =
-      await fetchOllamaModels(OLLAMA_CLOUD_BASE_URL);
+    const { models: rawDiscoveredModels } = await fetchOllamaModels(OLLAMA_CLOUD_BASE_URL);
     const discoveredModels = rawDiscoveredModels.slice(0, OLLAMA_CLOUD_MAX_DISCOVERED_MODELS);
     const discoveredModelNames = discoveredModels.map((model) => model.name);
     const modelNames =
