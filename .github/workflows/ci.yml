@@ -8,6 +8,11 @@ on:
         required: false
         default: ""
         type: string
+      full_release_validation:
+        description: Run release-only CI lanes. Reserved for Full Release Validation.
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main]
     paths-ignore:
@@ -130,6 +135,7 @@ jobs:
           OPENCLAW_CI_RUN_CONTROL_UI_I18N: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.changed_scope.outputs.run_control_ui_i18n || 'false' }}
           OPENCLAW_CI_CHECKOUT_REVISION: ${{ steps.checkout_ref.outputs.sha }}
           OPENCLAW_CI_EVENT_NAME: ${{ github.event_name }}
+          OPENCLAW_CI_FULL_RELEASE_VALIDATION: ${{ github.event_name == 'workflow_dispatch' && inputs.full_release_validation && 'true' || 'false' }}
           OPENCLAW_CI_PR_HEAD_REPOSITORY: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
           OPENCLAW_CI_PR_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}
           OPENCLAW_CI_REPOSITORY: ${{ github.repository }}
@@ -181,7 +187,9 @@ jobs:
           const runSkillsPython = parseBoolean(process.env.OPENCLAW_CI_RUN_SKILLS_PYTHON) && !docsOnly;
           const runControlUiI18n =
             parseBoolean(process.env.OPENCLAW_CI_RUN_CONTROL_UI_I18N) && !docsOnly;
-          const isMegaCiRun = process.env.OPENCLAW_CI_EVENT_NAME === "workflow_dispatch";
+          const isFullReleaseValidationCiRun =
+            process.env.OPENCLAW_CI_EVENT_NAME === "workflow_dispatch" &&
+            parseBoolean(process.env.OPENCLAW_CI_FULL_RELEASE_VALIDATION);
           const trustedPluginPrereleaseRef =
             process.env.OPENCLAW_CI_EVENT_NAME !== "pull_request" ||
             process.env.OPENCLAW_CI_PR_HEAD_REPOSITORY === process.env.OPENCLAW_CI_REPOSITORY;
@@ -190,7 +198,7 @@ jobs:
               ? process.env.OPENCLAW_CI_PR_HEAD_SHA
               : process.env.OPENCLAW_CI_CHECKOUT_REVISION;
           let runPluginPrereleaseSuite =
-            isMegaCiRun && runNodeFull && isCanonicalRepository;
+            isFullReleaseValidationCiRun && runNodeFull && isCanonicalRepository;
           let pluginPrereleasePlan = { staticChecks: [], dockerLanes: [] };
           if (runPluginPrereleaseSuite) {
             try {
