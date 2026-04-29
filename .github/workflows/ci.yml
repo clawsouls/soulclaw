@@ -53,7 +53,6 @@ jobs:
       run_build_artifacts: ${{ steps.manifest.outputs.run_build_artifacts }}
       run_checks_fast_core: ${{ steps.manifest.outputs.run_checks_fast_core }}
       run_checks_fast: ${{ steps.manifest.outputs.run_checks_fast }}
-      run_checks_node_extensions: ${{ steps.manifest.outputs.run_checks_node_extensions }}
       checks_fast_core_matrix: ${{ steps.manifest.outputs.checks_fast_core_matrix }}
       channel_contracts_matrix: ${{ steps.manifest.outputs.channel_contracts_matrix }}
       run_checks_node_extensions: ${{ steps.manifest.outputs.run_checks_node_extensions }}
@@ -302,7 +301,6 @@ jobs:
             run_build_artifacts: runNodeFull,
             run_checks_fast_core: runChecksFastCore,
             run_checks_fast: runNodeFull,
-            run_checks_node_extensions: extensionShardMatrix.include.length > 0,
             checks_fast_core_matrix: createMatrix(checksFastCoreTasks),
             channel_contracts_matrix: createMatrix(
               runNodeFull ? createChannelContractTestShards() : [],
