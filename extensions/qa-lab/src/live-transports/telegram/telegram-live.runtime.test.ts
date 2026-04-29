@@ -336,6 +336,17 @@ describe("telegram live qa runtime", () => {
     ).toBe(true);
   });
 
+  it("keeps bot-to-bot plain mentions out of the default Telegram live set", () => {
+    expect(__testing.findScenario().map((scenario) => scenario.id)).toEqual([
+      "telegram-help-command",
+      "telegram-commands-command",
+      "telegram-tools-compact-command",
+      "telegram-whoami-command",
+      "telegram-context-command",
+      "telegram-mention-gating",
+    ]);
+  });
+
   it("tracks Telegram live coverage against the shared transport contract", () => {
     expect(__testing.TELEGRAM_QA_STANDARD_SCENARIO_IDS).toEqual([
       "canary",
