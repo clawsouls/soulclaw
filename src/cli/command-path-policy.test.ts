@@ -70,7 +70,7 @@ describe("command-path-policy", () => {
     expect(resolveCliCommandPathPolicy(["agent"])).toEqual({
       bypassConfigGuard: false,
       routeConfigGuard: "never",
-      loadPlugins: "text-only",
+      loadPlugins: expect.any(Function),
       hideBanner: false,
       ensureCliPath: true,
       networkProxy: expect.any(Function),
