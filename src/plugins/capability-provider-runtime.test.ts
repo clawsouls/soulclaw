@@ -101,6 +101,7 @@ function expectBundledCompatLoadPath(params: {
   });
   expect(mocks.resolveRuntimePluginRegistry).toHaveBeenCalledWith({
     config: params.enablementCompat,
+    onlyPluginIds: ["openai"],
     activate: false,
   });
 }
@@ -400,6 +401,7 @@ describe("resolvePluginCapabilityProviders", () => {
           allow: ["openai", "microsoft"],
         }),
       }),
+      onlyPluginIds: ["microsoft"],
       activate: false,
     });
   });
@@ -573,6 +575,7 @@ describe("resolvePluginCapabilityProviders", () => {
     expectNoResolvedCapabilityProviders(providers);
     expect(mocks.resolveRuntimePluginRegistry).toHaveBeenCalledWith({
       config: expect.anything(),
+      onlyPluginIds: [],
       activate: false,
     });
   });
@@ -600,7 +603,16 @@ describe("resolvePluginCapabilityProviders", () => {
         nativeDocumentInputs: ["pdf"],
       },
     } as never);
-    setBundledCapabilityFixture("mediaUnderstandingProviders");
+    mocks.loadPluginManifestRegistry.mockReturnValue({
+      plugins: [
+        {
+          id: "google",
+          origin: "bundled",
+          contracts: { mediaUnderstandingProviders: ["google"] },
+        },
+      ] as never,
+      diagnostics: [],
+    });
     mocks.withBundledPluginEnablementCompat.mockReturnValue(compatConfig);
     mocks.withBundledPluginVitestCompat.mockReturnValue(compatConfig);
     mocks.resolveRuntimePluginRegistry.mockImplementation((params?: unknown) =>
@@ -616,6 +628,7 @@ describe("resolvePluginCapabilityProviders", () => {
     });
     expect(mocks.resolveRuntimePluginRegistry).toHaveBeenCalledWith({
       config: compatConfig,
+      onlyPluginIds: ["google"],
       activate: false,
     });
   });
@@ -681,6 +694,7 @@ describe("resolvePluginCapabilityProviders", () => {
     });
     expect(mocks.resolveRuntimePluginRegistry).toHaveBeenCalledWith({
       config: enablementCompat,
+      onlyPluginIds: ["google"],
       activate: false,
     });
   });
