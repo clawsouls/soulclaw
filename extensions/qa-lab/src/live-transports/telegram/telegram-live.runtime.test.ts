@@ -466,6 +466,14 @@ describe("telegram live qa runtime", () => {
     expect(signal?.aborted).toBe(true);
   });
 
+  it("treats transient Telegram getUpdates network errors as recoverable", () => {
+    expect(__testing.isRecoverableTelegramQaPollError(new TypeError("fetch failed"))).toBe(true);
+    expect(__testing.isRecoverableTelegramQaPollError(new Error("socket hang up"))).toBe(true);
+    expect(
+      __testing.isRecoverableTelegramQaPollError(new Error("Bad Request: chat not found")),
+    ).toBe(false);
+  });
+
   it("redacts observed message content by default in artifacts", () => {
     expect(
       __testing.buildObservedMessagesArtifact({
