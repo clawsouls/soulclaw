@@ -1420,6 +1420,9 @@ function isBundledPluginConfiguredForRuntimeDeps(params: {
   }
   const entry = plugins.entries[params.pluginId];
   const manifest = readBundledPluginRuntimeDepsManifest(params.pluginDir, params.manifestCache);
+  if (plugins.slots.memory === params.pluginId || plugins.slots.contextEngine === params.pluginId) {
+    return true;
+  }
   let hasExplicitChannelDisable = false;
   let hasConfiguredChannel = false;
   for (const channelId of manifest.channels) {
