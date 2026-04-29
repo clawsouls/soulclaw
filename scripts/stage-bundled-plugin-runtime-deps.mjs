@@ -26,7 +26,17 @@ function readOptionalUtf8(filePath) {
 }
 
 function removePathIfExists(targetPath) {
-  fs.rmSync(targetPath, { recursive: true, force: true });
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      fs.rmSync(targetPath, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (!isTransientTempRemoveError(error) || attempt >= TEMP_REMOVE_RETRY_DELAYS_MS.length) {
+        throw error;
+      }
+      sleepSync(TEMP_REMOVE_RETRY_DELAYS_MS[attempt]);
+    }
+  }
 }
 
 function isTransientTempRemoveError(error) {

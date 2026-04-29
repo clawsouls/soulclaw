@@ -420,6 +420,37 @@ describe("stageBundledPluginRuntimeDeps", () => {
     expect(fs.existsSync(path.join(targetPath, "owner.json"))).toBe(false);
   });
 
+  it("retries transient backup cleanup during atomic replace", () => {
+    const parentDir = createTempDir("openclaw-runtime-deps-replace-");
+    const targetPath = path.join(parentDir, "node_modules");
+    const sourcePath = path.join(parentDir, "source-node_modules");
+    fs.mkdirSync(targetPath, { recursive: true });
+    fs.writeFileSync(path.join(targetPath, "marker.txt"), "original\n", "utf8");
+    fs.mkdirSync(sourcePath, { recursive: true });
+    fs.writeFileSync(path.join(sourcePath, "marker.txt"), "replacement\n", "utf8");
+
+    const realRmSync = fs.rmSync.bind(fs);
+    let transientFailures = 0;
+    vi.spyOn(fs, "rmSync").mockImplementation((target, options) => {
+      const targetString = String(target);
+      if (
+        targetString.includes(`${path.sep}.openclaw-runtime-deps-backup-`) &&
+        transientFailures < 2
+      ) {
+        transientFailures += 1;
+        const error = new Error("transient backup cleanup failure") as NodeJS.ErrnoException;
+        error.code = "ENOTEMPTY";
+        throw error;
+      }
+      return realRmSync(target, options);
+    });
+
+    stageBundledPluginRuntimeDepsTesting.replaceDirAtomically(targetPath, sourcePath);
+
+    expect(transientFailures).toBe(2);
+    expect(fs.readFileSync(path.join(targetPath, "marker.txt"), "utf8")).toBe("replacement\n");
+  });
+
   it("restages when installed root runtime dependency contents change", () => {
     const { pluginDir, repoRoot } = createBundledPluginFixture({
       packageJson: {

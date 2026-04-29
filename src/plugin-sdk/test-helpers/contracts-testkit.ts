@@ -8,12 +8,9 @@ import {
   type PluginRecord,
   type PluginRuntime,
 } from "../testing.js";
+import { uniqueSortedStrings } from "./string-utils.js";
 
-export { registerProviders, requireProvider };
-
-export function uniqueSortedStrings(values: readonly string[]) {
-  return [...new Set(values)].toSorted((left, right) => left.localeCompare(right));
-}
+export { registerProviders, requireProvider, uniqueSortedStrings };
 
 function formatImportSideEffectCall(args: readonly unknown[]): string {
   if (args.length === 0) {
