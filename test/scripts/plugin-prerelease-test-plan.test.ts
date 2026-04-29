@@ -127,7 +127,13 @@ describe("scripts/lib/plugin-prerelease-test-plan.mjs", () => {
       'const isMegaCiRun = process.env.OPENCLAW_CI_EVENT_NAME === "workflow_dispatch";',
     );
     expect(manifestScript).toContain(
-      "const runPluginPrereleaseSuite =\n  isMegaCiRun && runNodeFull && isCanonicalRepository;",
+      "let runPluginPrereleaseSuite =\n  isMegaCiRun && runNodeFull && isCanonicalRepository;",
+    );
+    expect(manifestScript).toContain("await import(");
+    expect(manifestScript).toContain('"./scripts/lib/plugin-prerelease-test-plan.mjs"');
+    expect(manifestScript).not.toContain('} from "./scripts/lib/plugin-prerelease-test-plan.mjs";');
+    expect(manifestScript).toContain(
+      "Plugin prerelease plan unavailable in target ref; skipping plugin prerelease suite.",
     );
     expect(staticShard.strategy.matrix).toBe(
       "${{ fromJson(needs.preflight.outputs.plugin_prerelease_static_matrix) }}",
