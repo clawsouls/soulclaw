@@ -595,6 +595,10 @@ async function sendGroupMessage(token: string, groupId: string, text: string) {
   });
 }
 
+async function waitForTelegramPollRetryDelay(remainingMs: number) {
+  await new Promise((resolve) => setTimeout(resolve, Math.min(250, Math.max(100, remainingMs))));
+}
+
 async function waitForObservedMessage(params: {
   token: string;
   initialOffset: number;
@@ -606,6 +610,7 @@ async function waitForObservedMessage(params: {
 }) {
   const startedAt = Date.now();
   let offset = params.initialOffset;
+  let lastPollingError: unknown;
   while (Date.now() - startedAt < params.timeoutMs) {
     const remainingMs = Math.max(
       1_000,
@@ -624,10 +629,13 @@ async function waitForObservedMessage(params: {
         },
         timeoutSeconds * 1000 + 5_000,
       );
+      lastPollingError = undefined;
     } catch (error) {
       if (!isRecoverableTelegramQaPollError(error)) {
         throw error;
       }
+      lastPollingError = error;
+      await waitForTelegramPollRetryDelay(params.timeoutMs - (Date.now() - startedAt));
       continue;
     }
     const batchObservedAtMs = Date.now();
@@ -653,7 +661,13 @@ async function waitForObservedMessage(params: {
       }
     }
   }
-  throw new Error(`timed out after ${params.timeoutMs}ms waiting for Telegram message`);
+  const timeoutMessage = `timed out after ${params.timeoutMs}ms waiting for Telegram message`;
+  if (lastPollingError) {
+    throw new Error(
+      `${timeoutMessage}; last polling error: ${formatErrorMessage(lastPollingError)}`,
+    );
+  }
+  throw new Error(timeoutMessage);
 }
 
 async function waitForTelegramChannelRunning(
@@ -1472,4 +1486,5 @@ export const __testing = {
   shouldLogTelegramQaLiveProgress,
   formatTelegramQaProgressDetails,
   renderTelegramQaMarkdown,
+  waitForObservedMessage,
 };
