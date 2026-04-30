@@ -30,6 +30,12 @@ export type GeminiEmbeddingClient = {
 
 export const DEFAULT_GEMINI_EMBEDDING_MODEL = "gemini-embedding-001";
 const DEFAULT_GOOGLE_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+const TRANSIENT_PROVIDER_RETRY = {
+  attempts: 2,
+  baseDelayMs: 250,
+  maxDelayMs: 1_000,
+} as const;
+
 const GEMINI_MAX_INPUT_TOKENS: Record<string, number> = {
   "text-embedding-004": 2048,
   "gemini-embedding-001": 2048,
@@ -199,6 +205,7 @@ async function fetchGeminiEmbeddingPayload(params: {
   return await executeWithApiKeyRotation({
     provider: "google",
     apiKeys: params.client.apiKeys,
+    transientRetry: TRANSIENT_PROVIDER_RETRY,
     execute: async (apiKey) => {
       const authHeaders = parseGeminiAuth(apiKey);
       const headers = {
