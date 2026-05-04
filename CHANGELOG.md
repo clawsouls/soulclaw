@@ -13,6 +13,7 @@ Docs: https://docs.openclaw.ai
 
 - Channels/streaming: add unified `streaming.mode: "progress"` drafts with auto single-word status labels and shared progress configuration across Discord, Telegram, Matrix, Slack, and Microsoft Teams.
 - Slack/streaming: add `streaming.progress.render: "rich"` for Block Kit progress drafts backed by structured progress line data.
+- Slack/streaming: keep the newest rich progress lines when Block Kit limits trim long progress drafts. Thanks @vincentkoc.
 - Channels/streaming: cap progress-draft tool lines by default so edited progress boxes avoid jumpy reflow from long wrapped lines.
 - Agents/verbose: use compact explain-mode tool summaries for `/verbose` and progress drafts by default, with `agents.defaults.toolProgressDetail: "raw"` and per-agent overrides for debugging raw command/detail output.
 - Agents/commands: add `/steer <message>` for queue-independent steering of the active current-session run without starting a new turn when the session is idle. (#76934)
@@ -50,6 +51,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Agents/Pi: suppress persistence for synthetic mid-turn overflow continuation prompts, so transcript-retry recovery does not write the "continue from transcript" prompt as a new user turn. Thanks @vincentkoc.
 - Exec approvals: detect `env -S` split-string command-carrier risks when `-S`/`-s` is combined with other env short options, so approval explanations do not miss split payloads hidden behind `env -iS...`. Thanks @vincentkoc.
 - Voice Call: mark realtime calls completed when the realtime provider closes normally, so Twilio/OpenAI/Google realtime stop events do not leave active call records behind. Thanks @vincentkoc.
 - Exec approvals: treat POSIX `exec` as a command carrier for inline eval, shell-wrapper, and eval/source detection, so approval explanations and command-risk checks do not miss payloads hidden behind `exec`. Thanks @vincentkoc.
@@ -259,6 +261,7 @@ Docs: https://docs.openclaw.ai
 - Plugins/install: keep managed npm-root security scans from treating earlier plugin `openclaw` peer links as failures, so one external plugin install cannot poison later official npm installs. Thanks @vincentkoc.
 - Memory LanceDB: allow installed-but-unconfigured plugin metadata to load so onboarding and setup flows can prompt for embedding config instead of failing the plugin registry first. Thanks @vincentkoc.
 - CLI/plugins: keep `plugins enable` and `plugins disable` from creating unconfigured channel config sections, so channel plugins with required setup fields no longer fail validation during lifecycle probes. Thanks @vincentkoc.
+- Agents/subagents: detect prefix-only completion announce replies and fall back to the captured child result so requester chats no longer lose most of long sub-agent reports silently. Fixes #76412. Thanks @inxaos and @davemorin.
 - Doctor/config: set `messages.groupChat.visibleReplies: "message_tool"` during compatibility repair for configured-channel configs that omit a visible-reply policy, so upgrades can persist the intended tool-only group/channel reply default. Thanks @kagura-agent.
 - Agents/sessions: keep delayed `sessions_send` A2A replies alive after soft wait-window timeouts, while preserving terminal run timeouts and avoiding stale target replies in requester sessions. Fixes #76443. Thanks @ryswork1993 and @vincentkoc.
 - TUI/Control UI: fix `/think` command showing only base thinking levels when the active session uses a different model from the default, so provider-specific levels like DeepSeek V4 Pro's `xhigh` and `max` are now visible and selectable. Fixes #76482. Thanks @amknight.
