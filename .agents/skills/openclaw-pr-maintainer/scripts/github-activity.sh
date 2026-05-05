@@ -20,11 +20,11 @@ need() {
 
 date_utc_relative_months() {
   local count="$1"
-  if date -u -v-"${count}"m +%Y-%m-%dT%H:%M:%SZ >/dev/null 2>&1; then
-    date -u -v-"${count}"m +%Y-%m-%dT%H:%M:%SZ
+  if date -u -v-"${count}"m +%Y-%m-%dT00:00:00Z >/dev/null 2>&1; then
+    date -u -v-"${count}"m +%Y-%m-%dT00:00:00Z
     return
   fi
-  date -u -d "${count} months ago" +%Y-%m-%dT%H:%M:%SZ
+  date -u -d "${count} months ago" +%Y-%m-%dT00:00:00Z
 }
 
 date_to_epoch() {
@@ -49,20 +49,17 @@ rough_age() {
   awk -v days="$days" 'BEGIN { printf "~%.1fy old", days / 365.2425 }'
 }
 
-count_threads() {
-  local kind="$1"
-  local login="$2"
-  local since_ts="$3"
-  local kind_filter
-  if [[ "$kind" == "prs" ]]; then
-    kind_filter='has("pull_request")'
-  else
-    kind_filter='has("pull_request") | not'
-  fi
+thread_kinds() {
+  local login="$1"
+  local since_ts="$2"
   gh api --paginate "repos/${repo}/issues?state=all&creator=${login}&since=${since_ts}&per_page=100" \
-    --jq ".[] | select(.created_at >= \"${since_ts}\") | select(${kind_filter}) | .number" |
-    wc -l |
-    tr -d '[:space:]'
+    --jq ".[] | select(.created_at >= \"${since_ts}\") | if has(\"pull_request\") then \"pr\" else \"issue\" end"
+}
+
+count_kind_lines() {
+  local kind="$1"
+  local lines="$2"
+  grep -cx "$kind" <<<"$lines" 2>/dev/null || true
 }
 
 count_commits() {
@@ -138,7 +135,7 @@ need gh
 need jq
 
 since_ts=$(date_utc_relative_months "$months")
-now_ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+now_ts=$(date -u +%Y-%m-%dT%H:00:00Z)
 
 for login in "$@"; do
   profile=$(gh api "users/${login}" --jq '{login,name,created_at,type}')
@@ -148,8 +145,9 @@ for login in "$@"; do
   type=$(jq -r '.type' <<<"$profile")
   created_day=${created_at%%T*}
 
-  prs=$(count_threads prs "$display_login" "$since_ts")
-  issues=$(count_threads issues "$display_login" "$since_ts")
+  kinds=$(thread_kinds "$display_login" "$since_ts")
+  prs=$(count_kind_lines pr "$kinds")
+  issues=$(count_kind_lines issue "$kinds")
   commits=$(count_commits "$display_login" "$since_ts")
 
   if [[ -n "$name" ]]; then
