@@ -190,6 +190,36 @@ describe("gateway restart handoff", () => {
     expect(fs.existsSync(handoffPath(env))).toBe(false);
   });
 
+  it("rejects persisted handoffs with a ttl longer than the supported window", () => {
+    const env = createHandoffEnv();
+
+    fs.writeFileSync(
+      handoffPath(env),
+      `${JSON.stringify({
+        kind: GATEWAY_SUPERVISOR_RESTART_HANDOFF_KIND,
+        version: 1,
+        intentId: "too-long",
+        pid: 111,
+        createdAt: 1_000,
+        expiresAt: 61_001,
+        source: "plugin-change",
+        restartKind: "full-process",
+        supervisorMode: "external",
+      })}\n`,
+      { encoding: "utf8", mode: 0o600 },
+    );
+
+    expect(readGatewayRestartHandoffSync(env, 1_001)).toBeNull();
+    expect(
+      consumeGatewayRestartHandoffForExitedProcessSync({
+        env,
+        exitedPid: 111,
+        now: 1_001,
+      }),
+    ).toBeNull();
+    expect(fs.existsSync(handoffPath(env))).toBe(false);
+  });
+
   it("does not follow an existing handoff-path symlink when writing", () => {
     const env = createHandoffEnv();
     const targetPath = path.join(env.OPENCLAW_STATE_DIR ?? "", "attacker-target.txt");

@@ -157,6 +157,7 @@ function parseGatewayRestartHandoff(raw: string): GatewayRestartHandoff | null {
     typeof parsed.expiresAt !== "number" ||
     !Number.isFinite(parsed.expiresAt) ||
     parsed.expiresAt <= parsed.createdAt ||
+    parsed.expiresAt - parsed.createdAt > GATEWAY_RESTART_HANDOFF_TTL_MS ||
     !isSource(parsed.source) ||
     !isRestartKind(parsed.restartKind) ||
     !isSupervisorMode(parsed.supervisorMode)
