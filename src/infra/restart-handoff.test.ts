@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   consumeGatewayRestartHandoffForExitedProcessSync,
+  formatGatewayRestartHandoffDiagnostic,
   GATEWAY_SUPERVISOR_RESTART_HANDOFF_FILENAME,
   GATEWAY_SUPERVISOR_RESTART_HANDOFF_KIND,
   readGatewayRestartHandoffSync,
@@ -247,5 +248,27 @@ describe("gateway restart handoff", () => {
         exitedPid: 12_345,
       }),
     ).toMatchObject({ pid: 12_345 });
+  });
+
+  it("formats a concise diagnostic line for status surfaces", () => {
+    expect(
+      formatGatewayRestartHandoffDiagnostic(
+        {
+          kind: GATEWAY_SUPERVISOR_RESTART_HANDOFF_KIND,
+          version: 1,
+          intentId: "intent-1",
+          pid: 12_345,
+          createdAt: 10_000,
+          expiresAt: 70_000,
+          reason: "plugin source changed",
+          source: "plugin-change",
+          restartKind: "full-process",
+          supervisorMode: "launchd",
+        },
+        12_500,
+      ),
+    ).toBe(
+      "Recent restart handoff: full-process via launchd; source=plugin-change; reason=plugin source changed; pid=12345; age=2s; expiresIn=57s",
+    );
   });
 });

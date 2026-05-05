@@ -39,6 +39,35 @@ export type GatewayRestartHandoff = {
   supervisorMode: GatewayRestartHandoffSupervisorMode;
 };
 
+function formatShortDuration(ms: number): string {
+  const clamped = Math.max(0, Math.floor(ms));
+  if (clamped < 1000) {
+    return `${clamped}ms`;
+  }
+  const seconds = Math.floor(clamped / 1000);
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return remainingSeconds === 0 ? `${minutes}m` : `${minutes}m ${remainingSeconds}s`;
+}
+
+export function formatGatewayRestartHandoffDiagnostic(
+  handoff: GatewayRestartHandoff,
+  now = Date.now(),
+): string {
+  const detail = [
+    `${handoff.restartKind} via ${handoff.supervisorMode}`,
+    `source=${handoff.source}`,
+    handoff.reason ? `reason=${handoff.reason}` : undefined,
+    `pid=${handoff.pid}`,
+    `age=${formatShortDuration(now - handoff.createdAt)}`,
+    `expiresIn=${formatShortDuration(handoff.expiresAt - now)}`,
+  ].filter((value): value is string => Boolean(value));
+  return `Recent restart handoff: ${detail.join("; ")}`;
+}
+
 function resolveGatewayRestartHandoffPath(env: NodeJS.ProcessEnv = process.env): string {
   return path.join(resolveStateDir(env), GATEWAY_SUPERVISOR_RESTART_HANDOFF_FILENAME);
 }
