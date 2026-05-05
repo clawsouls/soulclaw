@@ -420,6 +420,9 @@ jobs:
               --json > "$metadata"
           }
 
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y ffmpeg || true
+          fi
           if ! make_desktop_preview baseline || ! make_desktop_preview candidate; then
             rm -f "$root/baseline/discord-status-reactions-tool-only-desktop-preview.gif"
             rm -f "$root/candidate/discord-status-reactions-tool-only-desktop-preview.gif"
