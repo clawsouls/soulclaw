@@ -42,6 +42,41 @@ gitcrawl cluster-detail openclaw/openclaw --id <cluster-id> --member-limit 20 --
 - If `name` is empty, use the login only. If profile lookup is rate-limited or unavailable, say `account age unknown` rather than omitting the opener.
 - Use identity and activity as triage signal, not proof by itself: new, low-activity, or bot-like accounts can raise review caution, but code, repro, and CI evidence still decide.
 
+## Suppress top-maintainer items in issue triage
+
+When Peter asks for issue triage, hot issues, pressing bugs, Discord-correlated issues, or "what is still open", do not surface issues or PRs authored by top maintainers by default. He wants external/user-reported hot issues and external PRs, not maintainer-owned work queues.
+
+Suppress by default when the opener/author is one of:
+
+- `@vincentkoc`
+- `@Takhoffman`
+- `@gumadeiras`
+- `@obviyus`
+- `@shakkernerd`
+- `@mbelinky`
+- `@joshavant`
+- `@ngutman`
+- `@vignesh07`
+- `@huntharo`
+
+Also suppress lower-priority maintainer-owned noise from the broader keep/top-maintainer group unless it is directly relevant:
+
+- `@thewilloftheshadow`
+- `@onutc` / `@osolmaz`
+- `@jacobtomlinson`
+- `@tyler6204`
+- `@velvet-shark`
+- `@jalehman`
+- `@frankekn`
+- `@ImLukeF`
+- `@mcaxtr`
+
+Exceptions:
+
+- Show maintainer-authored items when Peter explicitly asks for maintainer PRs/issues, PR landing candidates, release-blocking maintainer work, or a specific PR/issue number.
+- Show a maintainer-authored item when it is the canonical fix for an external hot issue, but frame it as the fix path rather than as a user-facing issue candidate.
+- Do not close, label, or deprioritize solely because an item is maintainer-authored; this section only controls what appears in triage shortlists.
+
 ## Apply close and triage labels correctly
 
 - If an issue or PR matches an auto-close reason, apply the label and let `.github/workflows/auto-response.yml` handle the comment/close/lock flow.
