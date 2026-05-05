@@ -271,4 +271,26 @@ describe("gateway restart handoff", () => {
       "Recent restart handoff: full-process via launchd; source=plugin-change; reason=plugin source changed; pid=12345; age=2s; expiresIn=57s",
     );
   });
+
+  it("formats restart reasons as a single diagnostic line", () => {
+    expect(
+      formatGatewayRestartHandoffDiagnostic(
+        {
+          kind: GATEWAY_SUPERVISOR_RESTART_HANDOFF_KIND,
+          version: 1,
+          intentId: "intent-1",
+          pid: 12_345,
+          createdAt: 10_000,
+          expiresAt: 70_000,
+          reason: "ok\nFake: bad",
+          source: "operator-restart",
+          restartKind: "full-process",
+          supervisorMode: "external",
+        },
+        12_500,
+      ),
+    ).toBe(
+      "Recent restart handoff: full-process via external; source=operator-restart; reason=ok Fake: bad; pid=12345; age=2s; expiresIn=57s",
+    );
+  });
 });

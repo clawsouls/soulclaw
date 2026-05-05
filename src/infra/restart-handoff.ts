@@ -53,14 +53,22 @@ function formatShortDuration(ms: number): string {
   return remainingSeconds === 0 ? `${minutes}m` : `${minutes}m ${remainingSeconds}s`;
 }
 
+function formatDiagnosticValue(value: string): string {
+  return value
+    .replace(/[\u0000-\u001f\u007f]+/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
 export function formatGatewayRestartHandoffDiagnostic(
   handoff: GatewayRestartHandoff,
   now = Date.now(),
 ): string {
+  const reason = handoff.reason ? formatDiagnosticValue(handoff.reason) : undefined;
   const detail = [
     `${handoff.restartKind} via ${handoff.supervisorMode}`,
     `source=${handoff.source}`,
-    handoff.reason ? `reason=${handoff.reason}` : undefined,
+    reason ? `reason=${reason}` : undefined,
     `pid=${handoff.pid}`,
     `age=${formatShortDuration(now - handoff.createdAt)}`,
     `expiresIn=${formatShortDuration(handoff.expiresAt - now)}`,
