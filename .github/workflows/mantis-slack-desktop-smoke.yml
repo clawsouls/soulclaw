@@ -164,7 +164,8 @@ jobs:
           go build -C "$install_dir/src" -o "$HOME/.local/bin/crabbox" ./cmd/crabbox
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/crabbox" --version
-          "$HOME/.local/bin/crabbox" warmup --help 2>&1 | grep -q -- "-desktop"
+          "$HOME/.local/bin/crabbox" warmup --help > "$install_dir/warmup-help.txt" 2>&1
+          grep -q -- "-desktop" "$install_dir/warmup-help.txt"
           "$HOME/.local/bin/crabbox" media preview --help >/dev/null
 
       - name: Prepare candidate worktree
