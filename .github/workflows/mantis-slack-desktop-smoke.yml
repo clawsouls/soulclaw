@@ -50,6 +50,7 @@ env:
   PNPM_VERSION: "10.33.0"
   OPENCLAW_BUILD_PRIVATE_QA: "1"
   OPENCLAW_ENABLE_PRIVATE_QA_CLI: "1"
+  CRABBOX_REF: main
 
 jobs:
   authorize_actor:
@@ -164,7 +165,10 @@ jobs:
           set -euo pipefail
           install_dir="${RUNNER_TEMP}/crabbox"
           mkdir -p "$install_dir" "$HOME/.local/bin"
-          git clone --depth 1 https://github.com/openclaw/crabbox.git "$install_dir/src"
+          git init "$install_dir/src"
+          git -C "$install_dir/src" remote add origin https://github.com/openclaw/crabbox.git
+          git -C "$install_dir/src" fetch --depth 1 origin "$CRABBOX_REF"
+          git -C "$install_dir/src" checkout --detach FETCH_HEAD
           go build -C "$install_dir/src" -o "$HOME/.local/bin/crabbox" ./cmd/crabbox
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/crabbox" --version
@@ -266,7 +270,8 @@ jobs:
 
           if [[ -f "$root/slack-desktop-smoke.mp4" ]]; then
             if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
-              sudo apt-get update && sudo apt-get install -y ffmpeg || true
+              sudo apt-get update -y >/tmp/mantis-slack-ffmpeg-apt.log 2>&1 || true
+              sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg >>/tmp/mantis-slack-ffmpeg-apt.log 2>&1 || true
             fi
             if ! crabbox media preview \
               --input "$root/slack-desktop-smoke.mp4" \
