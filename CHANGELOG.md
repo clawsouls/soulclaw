@@ -27,6 +27,21 @@ Docs: https://docs.openclaw.ai
 - Channels/streaming: cap progress-draft tool lines by default so edited progress boxes avoid jumpy reflow from long wrapped lines.
 - Control UI/chat: add an agent-first filter to the chat session picker, keep chat controls/composer responsive across phone/tablet/desktop widths, keep desktop chat controls on one row, avoid duplicate avatar refreshes during initial chat load, and hide that row while scrolling down the transcript. Thanks @BunsDev.
 - Control UI/chat: collapse consecutive duplicate text messages into one bubble with a count so repeated text-only messages stay compact without hiding nearby context.
+- Agents/subagents: preserve every grouped child result when direct completion fallback has to bypass the requester-agent announce turn. Thanks @vincentkoc.
+- TTS/telephony: honor provider voice/model overrides in telephony synthesis providers so Google Meet agent speech logs match the backend that actually produced the audio. Thanks @vincentkoc.
+- Voice Call/realtime: bound the paced Twilio audio queue and close overloaded realtime streams before provider audio can pile up behind the websocket backpressure guard. Thanks @vincentkoc.
+- Docs: clarify that IRC uses raw TCP/TLS sockets outside operator-managed forward proxy routing, so direct IRC egress should be explicitly approved before enabling IRC. Thanks @jesse-merhi.
+- Gateway/performance: defer non-readiness sidecars until after the ready signal, avoid hot-path channel plugin barrel imports, and fast-path trusted bundled plugin metadata during Gateway startup.
+- Gateway/performance: avoid importing `jiti` on native-loadable plugin startup paths, so compiled bundled plugin surfaces do not pay source-transform loader cost unless fallback loading is actually needed.
+- Gateway/diagnostics: add startup phase spans, active work labels, stale terminal bridge markers, and default sync-I/O tracing in `pnpm gateway:watch` so slow Gateway turns are easier to attribute from logs and stability diagnostics.
+- Plugins/loader: preserve real compiled plugin module evaluation errors on the native fast path instead of treating every thrown `.js` module as a source-transform fallback miss. Thanks @vincentkoc.
+- QA/Mantis: add `pnpm openclaw qa mantis slack-desktop-smoke` to run Slack live QA inside a Crabbox VNC desktop, open Slack Web, and capture desktop screenshots beside the Slack QA artifacts.
+- QA/Mantis: add visual desktop tasks with Crabbox MP4 recording, screenshot capture, and optional image-understanding assertions, and preserve video artifacts in Mantis before/after reports.
+- QA/WhatsApp: add `pnpm openclaw qa whatsapp` for live DM canary and pairing-gate coverage using two pre-linked WhatsApp Web sessions from the QA credential pool.
+- QA/Mantis: pass the runtime env through desktop-browser Crabbox and artifact-copy child commands, so embedded Mantis callers can provide Crabbox credentials without mutating the parent process. Thanks @vincentkoc.
+- QA/Mantis: return the copied Slack desktop screenshot path even when remote Slack QA fails, so the CLI still prints the failure screenshot artifact. Thanks @vincentkoc.
+- QA/Mantis: accept Blacksmith Testbox `tbx_...` lease ids from desktop smoke warmup, so provider overrides do not fail before inspect/run. Thanks @vincentkoc.
+- QA/Codex harness: add targeted live Docker/Testbox diagnostics, auth preflight checks, cache mount fixes, and app-server protocol checkout discovery so maintainer harness failures are easier to reproduce. Thanks @vincentkoc.
 - Control UI/cron: make the New Job sidebar collapsible so the jobs list can reclaim space while keeping the form one click away. Thanks @BunsDev.
 - Control UI/header: show the active agent name in dashboard breadcrumbs without adding the current session key, keeping non-chat views oriented without crowding the topbar.
 - Plugins/migration: emit catalog-backed install hints when `plugins.entries` or `plugins.allow` references an official external plugin that is not installed, so upgraded configs point operators to `openclaw plugins install <spec>` instead of telling them to remove valid plugin config. (#77483) Thanks @hclsys.
