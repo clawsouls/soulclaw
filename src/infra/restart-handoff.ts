@@ -54,10 +54,21 @@ function formatShortDuration(ms: number): string {
 }
 
 function formatDiagnosticValue(value: string): string {
-  return value
-    .replace(/[\u0000-\u001f\u007f]+/gu, " ")
-    .replace(/\s+/gu, " ")
-    .trim();
+  let normalized = "";
+  let previousWasSpace = true;
+  for (const char of value) {
+    const code = char.charCodeAt(0);
+    if (code <= 0x1f || code === 0x7f || /\s/u.test(char)) {
+      if (!previousWasSpace) {
+        normalized += " ";
+        previousWasSpace = true;
+      }
+      continue;
+    }
+    normalized += char;
+    previousWasSpace = false;
+  }
+  return normalized.trimEnd();
 }
 
 export function formatGatewayRestartHandoffDiagnostic(
