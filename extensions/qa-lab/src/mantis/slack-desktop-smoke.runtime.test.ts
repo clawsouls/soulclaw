@@ -472,10 +472,16 @@ describe("mantis Slack desktop smoke runtime", () => {
     expect(result.status).toBe("pass");
     const summary = JSON.parse(await fs.readFile(result.summaryPath, "utf8")) as {
       status: string;
+      timings: { phases: { name: string; status: string }[] };
       warning?: string;
     };
     expect(summary.status).toBe("pass");
     expect(summary.warning).toBeUndefined();
+    expect(summary.timings.phases).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "crabbox.remote_run", status: "accepted" }),
+      ]),
+    );
   });
 
   it("copies the screenshot before reporting a failed remote Slack QA run", async () => {
