@@ -237,6 +237,7 @@ describe("mantis Slack desktop smoke runtime", () => {
         PATH: process.env.PATH,
       },
       gatewaySetup: true,
+      keepLease: false,
       now: () => new Date("2026-05-04T14:00:00.000Z"),
       outputDir: ".artifacts/qa-e2e/mantis/slack-desktop-convex",
       repoRoot,
@@ -264,6 +265,9 @@ describe("mantis Slack desktop smoke runtime", () => {
       "https://example.convex.site/qa-credentials/v1/acquire",
       "https://example.convex.site/qa-credentials/v1/release",
     ]);
+    expect(
+      commands.some((entry) => entry.command === "/tmp/crabbox" && entry.args[0] === "stop"),
+    ).toBe(true);
     const summary = JSON.parse(await fs.readFile(result.summaryPath, "utf8")) as {
       slackUrl: string;
     };
