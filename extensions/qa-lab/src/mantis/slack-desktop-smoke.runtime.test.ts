@@ -208,7 +208,15 @@ describe("mantis Slack desktop smoke runtime", () => {
           await fs.mkdir(outputDir as string, { recursive: true });
           if (!String(outputDir).endsWith("slack-qa/")) {
             await fs.writeFile(path.join(outputDir as string, "slack-desktop-smoke.png"), "png");
-            await fs.writeFile(path.join(outputDir as string, "remote-metadata.json"), "{}\n");
+            await fs.writeFile(
+              path.join(outputDir as string, "remote-metadata.json"),
+              `${JSON.stringify({
+                gatewayAlive: true,
+                gatewayPid: "1234",
+                openedUrl: "https://app.slack.com/client/TLEASED/CLEASED",
+                qaExitCode: 0,
+              })}\n`,
+            );
             await fs.writeFile(path.join(outputDir as string, "slack-desktop-command.log"), "qa\n");
           }
         }
@@ -249,10 +257,82 @@ describe("mantis Slack desktop smoke runtime", () => {
     const remoteScript = runCommand?.args.at(-1);
     expect(remoteScript).toContain("setup_gateway=1");
     expect(remoteScript).toContain("openclaw gateway run");
+    expect(remoteScript).toContain('</dev/null >"$out/openclaw-gateway.log"');
+    expect(remoteScript).toContain('kill -0 "$gateway_pid"');
+    expect(remoteScript).toContain('disown "$gateway_pid"');
     expect(fetchMock.mock.calls.map(([url]) => describeFetchInput(url))).toEqual([
       "https://example.convex.site/qa-credentials/v1/acquire",
       "https://example.convex.site/qa-credentials/v1/release",
     ]);
+    const summary = JSON.parse(await fs.readFile(result.summaryPath, "utf8")) as {
+      slackUrl: string;
+    };
+    expect(summary.slackUrl).toBe("https://app.slack.com/client/TLEASED/CLEASED");
+  });
+
+  it("passes gateway setup when Crabbox returns non-zero after remote metadata proves success", async () => {
+    const runner = vi.fn(async (command: string, args: readonly string[]) => {
+      if (command === "/tmp/crabbox" && args[0] === "warmup") {
+        return { stdout: "ready lease cbx_cafe123\n", stderr: "" };
+      }
+      if (command === "/tmp/crabbox" && args[0] === "inspect") {
+        return {
+          stdout: `${JSON.stringify({
+            host: "203.0.113.10",
+            id: "cbx_cafe123",
+            provider: "hetzner",
+            sshKey: "/tmp/key",
+            sshPort: "2222",
+            sshUser: "crabbox",
+            state: "active",
+          })}\n`,
+          stderr: "",
+        };
+      }
+      if (command === "/tmp/crabbox" && args[0] === "run") {
+        throw new Error("remote command exited 1");
+      }
+      if (command === "rsync") {
+        const outputDir = args.at(-1);
+        await fs.mkdir(outputDir as string, { recursive: true });
+        if (!String(outputDir).endsWith("slack-qa/")) {
+          await fs.writeFile(path.join(outputDir as string, "slack-desktop-smoke.png"), "png");
+          await fs.writeFile(
+            path.join(outputDir as string, "remote-metadata.json"),
+            `${JSON.stringify({
+              gatewayAlive: true,
+              gatewayPid: "4321",
+              openedUrl: "https://app.slack.com/client/TOK/COK",
+              qaExitCode: 0,
+            })}\n`,
+          );
+        }
+      }
+      return { stdout: "", stderr: "" };
+    });
+
+    const result = await runMantisSlackDesktopSmoke({
+      commandRunner: runner,
+      crabboxBin: "/tmp/crabbox",
+      env: {
+        OPENAI_API_KEY: "openai-runtime-key",
+        OPENCLAW_MANTIS_SLACK_APP_TOKEN: "xapp-direct",
+        OPENCLAW_MANTIS_SLACK_BOT_TOKEN: "xoxb-direct",
+        PATH: process.env.PATH,
+      },
+      gatewaySetup: true,
+      now: () => new Date("2026-05-04T14:30:00.000Z"),
+      outputDir: ".artifacts/qa-e2e/mantis/slack-desktop-gateway-metadata",
+      repoRoot,
+    });
+
+    expect(result.status).toBe("pass");
+    const summary = JSON.parse(await fs.readFile(result.summaryPath, "utf8")) as {
+      status: string;
+      warning?: string;
+    };
+    expect(summary.status).toBe("pass");
+    expect(summary.warning).toContain("remote command exited 1");
   });
 
   it("copies the screenshot before reporting a failed remote Slack QA run", async () => {

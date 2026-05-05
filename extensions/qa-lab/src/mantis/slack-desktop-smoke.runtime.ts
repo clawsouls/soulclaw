@@ -100,6 +100,14 @@ type MantisSlackDesktopSmokeSummary = {
   slackUrl?: string;
   startedAt: string;
   status: "pass" | "fail";
+  warning?: string;
+};
+
+type SlackDesktopRemoteMetadata = {
+  gatewayAlive?: boolean;
+  gatewayPid?: string;
+  openedUrl?: string;
+  qaExitCode?: number;
 };
 
 const DEFAULT_PROVIDER = "hetzner";
@@ -180,6 +188,31 @@ async function pathExists(filePath: string) {
     return true;
   } catch {
     return false;
+  }
+}
+
+async function readRemoteMetadata(
+  outputDir: string,
+): Promise<SlackDesktopRemoteMetadata | undefined> {
+  const metadataPath = path.join(outputDir, "remote-metadata.json");
+  if (!(await pathExists(metadataPath))) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(await fs.readFile(metadataPath, "utf8")) as unknown;
+    if (!parsed || typeof parsed !== "object") {
+      return undefined;
+    }
+    const candidate = parsed as Record<string, unknown>;
+    return {
+      gatewayAlive:
+        typeof candidate.gatewayAlive === "boolean" ? candidate.gatewayAlive : undefined,
+      gatewayPid: typeof candidate.gatewayPid === "string" ? candidate.gatewayPid : undefined,
+      openedUrl: typeof candidate.openedUrl === "string" ? candidate.openedUrl : undefined,
+      qaExitCode: typeof candidate.qaExitCode === "number" ? candidate.qaExitCode : undefined,
+    };
+  } catch {
+    return undefined;
   }
 }
 
@@ -444,7 +477,8 @@ if [ "$setup_gateway" = "1" ]; then
     --window-size=1440,1000 \
     --window-position=0,0 \
     --class=mantis-slack-desktop-smoke \
-    "$slack_url" >"$out/chrome.log" 2>&1 &
+    "$slack_url" </dev/null >"$out/chrome.log" 2>&1 &
+  disown "$!" >/dev/null 2>&1 || true
 else
   "$browser_bin" \
   --user-data-dir="$profile" \
@@ -496,9 +530,16 @@ qa_status=0
 MANTIS_SLACK_PATCH
     pnpm openclaw config patch --file "$out/slack.socket.patch.json5" --dry-run
     pnpm openclaw config patch --file "$out/slack.socket.patch.json5"
-    nohup pnpm openclaw gateway run --dev --allow-unconfigured --port 38973 --cli-backend-logs >"$out/openclaw-gateway.log" 2>&1 &
-    echo "$!" >"$out/openclaw-gateway.pid"
+    nohup pnpm openclaw gateway run --dev --allow-unconfigured --port 38973 --cli-backend-logs </dev/null >"$out/openclaw-gateway.log" 2>&1 &
+    gateway_pid="$!"
+    echo "$gateway_pid" >"$out/openclaw-gateway.pid"
     sleep 12
+    if ! kill -0 "$gateway_pid" >/dev/null 2>&1; then
+      echo "OpenClaw gateway exited during startup." >&2
+      wait "$gateway_pid" || true
+      exit 1
+    fi
+    disown "$gateway_pid" >/dev/null 2>&1 || true
   else
     qa_args=(openclaw qa slack --repo-root . --output-dir "$out/slack-qa" --provider-mode "$provider_mode" --model "$primary_model" --alt-model "$alternate_model" --credential-source "$credential_source" --credential-role "$credential_role")
     if [ "$fast_mode" = "1" ]; then
@@ -522,6 +563,8 @@ cat >"$out/remote-metadata.json" <<MANTIS_REMOTE_METADATA
   "display": "$DISPLAY",
   "openedUrl": "$slack_url",
   "gatewaySetup": $setup_gateway,
+  "gatewayAlive": $(if [ "$setup_gateway" = "1" ] && [ -f "$out/openclaw-gateway.pid" ] && kill -0 "$(cat "$out/openclaw-gateway.pid")" >/dev/null 2>&1; then echo true; else echo false; fi),
+  "gatewayPid": "$(if [ -f "$out/openclaw-gateway.pid" ]; then cat "$out/openclaw-gateway.pid"; fi)",
   "gatewayPort": 38973,
   "qaExitCode": $qa_status,
   "credentialSource": "$credential_source",
@@ -776,6 +819,7 @@ export async function runMantisSlackDesktopSmoke(
   let screenshotPath: string | undefined;
   let slackQaDir: string | undefined;
   let videoPath: string | undefined;
+  let remoteMetadata: SlackDesktopRemoteMetadata | undefined;
 
   try {
     const preparedCredentialEnv = await prepareGatewayCredentialEnv({
@@ -855,13 +899,22 @@ export async function runMantisSlackDesktopSmoke(
     if (!(await pathExists(videoPath))) {
       videoPath = undefined;
     }
+    remoteMetadata = await readRemoteMetadata(outputDir);
     slackQaDir = path.join(outputDir, "slack-qa");
     if (!(await pathExists(screenshotPath))) {
       throw new Error("Slack desktop screenshot was not copied back from Crabbox.");
     }
-    if (remoteRunError) {
+    const gatewaySetupCompleted =
+      gatewaySetup && remoteMetadata?.qaExitCode === 0 && remoteMetadata.gatewayAlive === true;
+    if (remoteRunError && !gatewaySetupCompleted) {
       throw remoteRunError;
     }
+    if (gatewaySetup && !gatewaySetupCompleted) {
+      throw new Error("Slack desktop gateway setup did not report a live OpenClaw gateway.");
+    }
+    const ignoredRemoteRunError = remoteRunError
+      ? `Crabbox returned a non-zero command status after the gateway setup completed: ${formatErrorMessage(remoteRunError)}`
+      : undefined;
     summary = {
       artifacts: {
         reportPath,
@@ -882,9 +935,10 @@ export async function runMantisSlackDesktopSmoke(
       finishedAt: new Date().toISOString(),
       outputDir,
       remoteOutputDir,
-      slackUrl,
+      slackUrl: trimToValue(remoteMetadata?.openedUrl) ?? slackUrl,
       startedAt: startedAt.toISOString(),
       status: "pass",
+      warning: ignoredRemoteRunError,
     };
     return {
       outputDir,
