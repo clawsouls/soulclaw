@@ -11,6 +11,7 @@ import {
   readZipCentralDirectoryEntryCount,
   resolvePackedRootDir,
 } from "./archive.js";
+import type { FsSafeError } from "./fs-safe.js";
 
 const fixtureRootTracker = createSuiteTempRootTracker({ prefix: "openclaw-archive-" });
 const directorySymlinkType = process.platform === "win32" ? "junction" : undefined;
@@ -280,8 +281,8 @@ describe("archive utils", () => {
               timeoutMs: ARCHIVE_EXTRACT_TIMEOUT_MS,
             }),
           ).rejects.toMatchObject({
-            code: "destination-symlink-traversal",
-          } satisfies Partial<ArchiveSecurityError>);
+            code: "hardlink",
+          } satisfies Partial<FsSafeError>);
         } finally {
           lstatSpy.mockRestore();
         }
