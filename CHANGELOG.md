@@ -104,6 +104,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Providers/xAI: stop sending OpenAI-style reasoning effort controls to native Grok Responses models, so `xai/grok-4.3` no longer fails live Docker/Gateway runs with `Invalid reasoning effort`.
+- Providers/xAI: clamp the bundled xAI thinking profile to `off` so live Gateway runs cannot send unsupported reasoning levels to native Grok Responses models.
 - Discord/gateway: measure heartbeat ACK timeouts from the actual heartbeat send, preventing late initial heartbeats from triggering false reconnect loops while the channel is still awaiting readiness. Fixes #77668. (#78087) Thanks @bryce-d-greybeard and @NikolaFC.
 - Discord/guilds: route plain text control commands such as `/steer` through the normal authorization and mention gate instead of silently dropping them before an agent session can see them. Fixes #78080. Thanks @ramitrkar-hash.
 - Control UI/Sessions: make the compaction count a compact `N Checkpoint(s)` disclosure and show expanded session-level details with modern checkpoint history cards across responsive table layouts. Thanks @BunsDev.
