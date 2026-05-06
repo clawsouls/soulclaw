@@ -8,7 +8,6 @@ import {
   type EmbeddedRunAttemptParams,
 } from "openclaw/plugin-sdk/agent-harness";
 import {
-  buildAgentRuntimePlan,
   embeddedAgentLog,
   nativeHookRelayTesting,
   onAgentEvent,
@@ -62,21 +61,25 @@ function createParamsWithRuntimePlan(
   workspaceDir: string,
 ): EmbeddedRunAttemptParams {
   const params = createParams(sessionFile, workspaceDir);
-  return {
-    ...params,
-    runtimePlan: buildAgentRuntimePlan({
-      provider: params.provider,
-      modelId: params.modelId,
-      model: params.model,
-      modelApi: params.model.api,
+  useLightweightCodexRuntimePlan(params);
+  return params;
+}
+
+function useLightweightCodexRuntimePlan(params: EmbeddedRunAttemptParams): void {
+  params.runtimePlan = {
+    auth: {},
+    prompt: {
+      resolveSystemPromptContribution: () => undefined,
+    },
+    tools: {
+      normalize: (tools: unknown) => tools,
+      logDiagnostics: () => undefined,
+    },
+    observability: {
+      resolvedRef: `${params.provider}/${params.modelId}`,
       harnessId: "codex",
-      harnessRuntime: "codex",
-      config: params.config,
-      workspaceDir,
-      agentDir: tempDir,
-      thinkingLevel: params.thinkLevel,
-    }),
-  } as EmbeddedRunAttemptParams;
+    },
+  } as NonNullable<EmbeddedRunAttemptParams["runtimePlan"]>;
 }
 
 function threadStartResult(threadId = "thread-1") {
@@ -364,6 +367,7 @@ function extractRelayIdFromThreadRequest(params: unknown): string {
 describe("runCodexAppServerAttempt", () => {
   beforeEach(async () => {
     resetAgentEventsForTest();
+    vi.stubEnv("OPENCLAW_TRAJECTORY", "0");
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-codex-run-"));
   });
 
@@ -376,6 +380,7 @@ describe("runCodexAppServerAttempt", () => {
     resetGlobalHookRunner();
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
@@ -476,6 +481,7 @@ describe("runCodexAppServerAttempt", () => {
     params.config = { tools: { profile: "coding" } };
     params.sourceReplyDeliveryMode = "message_tool_only";
     params.messageProvider = "whatsapp";
+    useLightweightCodexRuntimePlan(params);
     let seenForceMessageTool: boolean | undefined;
     __testing.setOpenClawCodingToolsFactoryForTests((options) => {
       seenForceMessageTool = options?.forceMessageTool;
@@ -516,6 +522,7 @@ describe("runCodexAppServerAttempt", () => {
       session: { store: sessionsPath, mainKey: "main", scope: "per-sender" },
       tools: { profile: "coding" },
     };
+    useLightweightCodexRuntimePlan(params);
     await fs.writeFile(
       sessionsPath,
       JSON.stringify({
@@ -1450,7 +1457,7 @@ describe("runCodexAppServerAttempt", () => {
     );
     await waitForMethod("turn/start");
 
-    expect(queueAgentHarnessMessage("session-1", "more context")).toBe(true);
+    expect(queueAgentHarnessMessage("session-1", "more context", { debounceMs: 1 })).toBe(true);
     await vi.waitFor(
       () => expect(requests.some((entry) => entry.method === "turn/steer")).toBe(true),
       { interval: 1 },
