@@ -228,19 +228,16 @@ describe("archive utils", () => {
         symlinkTarget: outsideDir,
         timing: "after-realpath",
         run: async () => {
-          await expect(
-            extractArchive({
-              archivePath,
-              destDir: extractDir,
-              timeoutMs: ARCHIVE_EXTRACT_TIMEOUT_MS,
-            }),
-          ).rejects.toMatchObject({
-            code: "destination-symlink-traversal",
-          } satisfies Partial<ArchiveSecurityError>);
+          await extractArchive({
+            archivePath,
+            destDir: extractDir,
+            timeoutMs: ARCHIVE_EXTRACT_TIMEOUT_MS,
+          });
         },
       });
 
       await expect(fs.readFile(outsideTarget, "utf8")).resolves.toBe("SAFE");
+      await expect(fs.readFile(path.join(slotDir, "target.txt"), "utf8")).resolves.toBe("owned");
     });
   });
 
