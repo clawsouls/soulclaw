@@ -27,6 +27,10 @@ vi.mock("../plugins/provider-runtime.js", () => ({
   resolveExternalAuthProfilesWithPlugins: () => [],
 }));
 
+vi.mock("../plugins/manifest-model-id-normalization.js", () => ({
+  normalizeProviderModelIdWithManifest: () => undefined,
+}));
+
 const authSourceCheckMock = vi.hoisted(() => ({
   hasAnyAuthProfileStoreSource: vi.fn(() => false),
 }));
@@ -951,7 +955,7 @@ describe("runWithModelFallback", () => {
       }),
     ).toEqual([
       { provider: "anthropic", model: "claude-haiku-3-5" },
-      { provider: "openrouter", model: "openrouter/deepseek-chat" },
+      { provider: "openrouter", model: "deepseek-chat" },
       { provider: "openai", model: "gpt-4.1-mini" },
     ]);
   });
