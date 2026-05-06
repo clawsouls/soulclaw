@@ -329,8 +329,10 @@ jobs:
 
           run_lane() {
             local lane="$1"
-            local repo_root="$worktree_root/$lane"
-            local output_dir=".artifacts/qa-e2e/mantis/discord-thread-attachment/$lane"
+            local repo_root="${GITHUB_WORKSPACE}/${worktree_root}/${lane}"
+            local output_dir="${GITHUB_WORKSPACE}/${root}/${lane}"
+            rm -rf "$output_dir"
+            mkdir -p "$output_dir"
             pnpm --dir "$repo_root" openclaw qa discord \
               --repo-root "$repo_root" \
               --output-dir "$output_dir" \
@@ -339,9 +341,6 @@ jobs:
               --credential-role ci \
               --scenario discord-thread-reply-filepath-attachment \
               --allow-failures
-            rm -rf "$root/$lane"
-            mkdir -p "$root/$lane"
-            cp -a "$repo_root/$output_dir/." "$root/$lane/"
           }
 
           run_lane baseline
@@ -444,12 +443,16 @@ jobs:
           set -euo pipefail
 
           root=".artifacts/qa-e2e/mantis/discord-thread-attachment"
+          artifact_url_args=()
+          if [[ -n "${ARTIFACT_URL:-}" ]]; then
+            artifact_url_args=(--artifact-url "$ARTIFACT_URL")
+          fi
           node scripts/mantis/publish-pr-evidence.mjs \
             --manifest "$root/mantis-evidence.json" \
             --target-pr "$TARGET_PR" \
             --artifact-root "mantis/discord-thread-attachment/pr-${TARGET_PR}/run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
             --marker "<!-- mantis-discord-thread-attachment -->" \
-            --artifact-url "$ARTIFACT_URL" \
+            "${artifact_url_args[@]}" \
             --run-url "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             --request-source "$REQUEST_SOURCE"
 
