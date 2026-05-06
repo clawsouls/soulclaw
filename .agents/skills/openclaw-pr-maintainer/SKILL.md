@@ -1,6 +1,6 @@
 ---
 name: openclaw-pr-maintainer
-description: Review, triage, close, label, comment on, or land OpenClaw PRs/issues with maintainer evidence checks.
+description: Use immediately for any pasted OpenClaw GitHub issue or PR URL/number, and for OpenClaw issue/PR review, triage, duplicate search, opener identity/who wrote it, author account age/activity, comments, labels, close, land, or maintainer evidence checks.
 ---
 
 # OpenClaw PR Maintainer
