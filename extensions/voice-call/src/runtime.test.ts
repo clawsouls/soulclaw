@@ -88,10 +88,6 @@ vi.mock("openclaw/plugin-sdk/memory-host-search", () => ({
   getActiveMemorySearchManager: mocks.getActiveMemorySearchManager,
 }));
 
-vi.mock("../../../src/plugins/memory-runtime.js", () => ({
-  getActiveMemorySearchManager: mocks.getActiveMemorySearchManager,
-}));
-
 vi.mock("./tunnel.js", () => ({
   startTunnel: mocks.startTunnel,
 }));
