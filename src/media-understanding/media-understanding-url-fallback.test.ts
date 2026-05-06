@@ -20,9 +20,11 @@ async function withBlockedLocalAttachmentFallback(
 ) {
   await withTempDir({ prefix }, async (base) => {
     const allowedRoot = path.join(base, "allowed");
-    const attachmentPath = path.join(allowedRoot, "voice-note.m4a");
+    const blockedRoot = path.join(base, "blocked");
+    const attachmentPath = path.join(blockedRoot, "voice-note.m4a");
     const fallbackUrl = "https://example.com/fallback.jpg";
     await fs.mkdir(allowedRoot, { recursive: true });
+    await fs.mkdir(blockedRoot, { recursive: true });
     await fs.writeFile(attachmentPath, "ok");
 
     const cache = new MediaAttachmentCache(

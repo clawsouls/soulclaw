@@ -23,12 +23,14 @@ describe("image-ops temp dir", () => {
 
   it("creates sips temp dirs under the secured OpenClaw tmp root", async () => {
     const secureRoot = resolvePreferredOpenClawTmpDir();
+    const secureRootReal = await fs.realpath(secureRoot);
 
     await getImageMetadata(Buffer.from("image"));
 
     expect(fs.mkdtemp).toHaveBeenCalledTimes(1);
-    expect(fs.mkdtemp).toHaveBeenCalledWith(path.join(secureRoot, "openclaw-img-"));
-    expect(createdTempDir.startsWith(path.join(secureRoot, "openclaw-img-"))).toBe(true);
+    const mkdtempPrefix = vi.mocked(fs.mkdtemp).mock.calls[0]?.[0];
+    expect(mkdtempPrefix.startsWith(path.join(secureRootReal, "openclaw-img-"))).toBe(true);
+    expect(createdTempDir.startsWith(path.join(secureRootReal, "openclaw-img-"))).toBe(true);
     await expect(fs.access(createdTempDir)).rejects.toMatchObject({ code: "ENOENT" });
   });
 });
