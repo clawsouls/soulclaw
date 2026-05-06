@@ -222,22 +222,25 @@ describe("archive utils", () => {
       zip.file("slot/target.txt", "owned");
       await fs.writeFile(archivePath, await zip.generateAsync({ type: "nodebuffer" }));
 
-      await withRealpathSymlinkRebindRace({
-        shouldFlip: (realpathInput) => realpathInput === slotDir,
-        symlinkPath: slotDir,
-        symlinkTarget: outsideDir,
-        timing: "after-realpath",
-        run: async () => {
-          await extractArchive({
-            archivePath,
-            destDir: extractDir,
-            timeoutMs: ARCHIVE_EXTRACT_TIMEOUT_MS,
-          });
-        },
-      });
+      await expect(
+        withRealpathSymlinkRebindRace({
+          shouldFlip: (realpathInput) => realpathInput === slotDir,
+          symlinkPath: slotDir,
+          symlinkTarget: outsideDir,
+          timing: "after-realpath",
+          run: async () => {
+            await extractArchive({
+              archivePath,
+              destDir: extractDir,
+              timeoutMs: ARCHIVE_EXTRACT_TIMEOUT_MS,
+            });
+          },
+        }),
+      ).rejects.toMatchObject({
+        code: "destination-symlink-traversal",
+      } satisfies Partial<ArchiveSecurityError>);
 
       await expect(fs.readFile(outsideTarget, "utf8")).resolves.toBe("SAFE");
-      await expect(fs.readFile(path.join(slotDir, "target.txt"), "utf8")).resolves.toBe("owned");
     });
   });
 
