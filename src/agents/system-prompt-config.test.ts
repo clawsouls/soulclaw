@@ -21,9 +21,9 @@ describe("resolveAgentSystemPromptConfig", () => {
       },
     } satisfies OpenClawConfig;
 
-    expect(resolveAgentSystemPromptConfig({ config, agentId: "main" })).toMatchObject({
-      subagentDelegationMode: "prefer",
-    });
+    expect(resolveAgentSystemPromptConfig({ config, agentId: "main" }).subagentDelegationMode).toBe(
+      "prefer",
+    );
   });
 
   it("lets per-agent sub-agent delegation mode override defaults", () => {
@@ -45,9 +45,9 @@ describe("resolveAgentSystemPromptConfig", () => {
       },
     } satisfies OpenClawConfig;
 
-    expect(resolveAgentSystemPromptConfig({ config, agentId: "coordinator" })).toMatchObject({
-      subagentDelegationMode: "prefer",
-    });
+    expect(
+      resolveAgentSystemPromptConfig({ config, agentId: "coordinator" }).subagentDelegationMode,
+    ).toBe("prefer");
   });
 });
 
