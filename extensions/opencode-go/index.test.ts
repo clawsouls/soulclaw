@@ -78,8 +78,6 @@ describe("opencode-go provider plugin", () => {
       "glm-5.1",
       "kimi-k2.5",
       "kimi-k2.6",
-      "mimo-v2-omni",
-      "mimo-v2-pro",
       "mimo-v2.5",
       "mimo-v2.5-pro",
       "minimax-m2.5",
@@ -129,18 +127,6 @@ describe("opencode-go provider plugin", () => {
     expect(mimo.reasoning).toBe(true);
     expect(mimo.contextWindow).toBe(1_000_000);
     expect(mimo.maxTokens).toBe(128_000);
-
-    const mimoOmni = requireMapEntry(models, "mimo-v2-omni");
-    expect(mimoOmni.input).toEqual(["text", "image"]);
-    expect(mimoOmni.reasoning).toBe(true);
-    expect(mimoOmni.contextWindow).toBe(262_144);
-    expect(mimoOmni.maxTokens).toBe(128_000);
-
-    const mimoV2Pro = requireMapEntry(models, "mimo-v2-pro");
-    expect(mimoV2Pro.input).toEqual(["text"]);
-    expect(mimoV2Pro.reasoning).toBe(true);
-    expect(mimoV2Pro.contextWindow).toBe(1_048_576);
-    expect(mimoV2Pro.maxTokens).toBe(128_000);
 
     const dynamicModel = requireRecord(
       provider.resolveDynamicModel?.({
