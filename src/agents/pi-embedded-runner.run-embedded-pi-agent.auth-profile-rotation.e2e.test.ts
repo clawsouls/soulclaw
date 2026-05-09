@@ -965,7 +965,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
     expect(sleepWithAbortMock).not.toHaveBeenCalled();
   });
 
-  it("waits for prompt failure cooldown marking before retrying", async () => {
+  it("does not wait for prompt failure cooldown marking before retrying", async () => {
     let releaseMark: (() => void) | undefined;
     const markCanFinish = new Promise<void>((resolve) => {
       releaseMark = resolve;
@@ -991,11 +991,10 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
           runId: "run:prompt-deferred-mark",
         });
 
-        await vi.waitFor(() => expect(markStarted).toBe(true));
-        expect(runEmbeddedAttemptMock).toHaveBeenCalledTimes(1);
+        await vi.waitFor(() => expect(runEmbeddedAttemptMock).toHaveBeenCalledTimes(2));
+        expect(markStarted).toBe(true);
         releaseMark?.();
         releaseMark = undefined;
-        await vi.waitFor(() => expect(runEmbeddedAttemptMock).toHaveBeenCalledTimes(2));
         await runPromise;
 
         const usageStats = await readUsageStats(agentDir);
