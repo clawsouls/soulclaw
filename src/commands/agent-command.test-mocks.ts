@@ -87,6 +87,13 @@ vi.mock("../agents/model-selection.js", () => {
   });
   const modelKey = (provider: string, model: string) =>
     `${provider.trim().toLowerCase()}/${model.trim().toLowerCase()}`;
+  const isModelKeyAllowedBySet = (allowedKeys: ReadonlySet<string>, key: string) => {
+    if (allowedKeys.has(key)) {
+      return true;
+    }
+    const slash = key.indexOf("/");
+    return slash > 0 && allowedKeys.has(`${key.slice(0, slash)}/*`);
+  };
   const resolvePrimary = (cfg?: ConfigWithModels): string | undefined => {
     const primary = cfg?.agents?.defaults?.model;
     if (typeof primary === "string") {
@@ -132,6 +139,7 @@ vi.mock("../agents/model-selection.js", () => {
       };
     }),
     buildConfiguredModelCatalog: vi.fn(() => []),
+    isModelKeyAllowedBySet,
     isCliProvider: vi.fn(() => false),
     modelKey,
     normalizeModelRef,
