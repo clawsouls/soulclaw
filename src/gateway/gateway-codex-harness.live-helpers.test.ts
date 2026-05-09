@@ -132,6 +132,15 @@ describe("gateway codex harness live helpers", () => {
     ).toBe(true);
   });
 
+  it("accepts the normal-work status emitted by current codex", () => {
+    const text =
+      "Working normally. Current cwd is `/tmp/openclaw-live-codex-harness/workspace/dev`, sandbox is workspace-write, network is restricted, and the current date is 2026-05-09 UTC.";
+
+    expect(
+      EXPECTED_CODEX_STATUS_COMMAND_TEXT.some((expectedText) => text.includes(expectedText)),
+    ).toBe(true);
+  });
+
   it("accepts the ready status emitted by current codex", () => {
     const text = "Ready.";
 
