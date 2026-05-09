@@ -441,7 +441,7 @@ const TELEGRAM_QA_SCENARIOS: TelegramQaScenarioDefinition[] = [
         input: `@${sutUsername} Telegram long final QA check. Use the scripted long final response.`,
         expectedTextIncludes: ["TELEGRAM-LONG-FINAL-BEGIN"],
         expectedJoinedSutTextIncludes: ["TELEGRAM-LONG-FINAL-BEGIN", "TELEGRAM-LONG-FINAL-END"],
-        expectedSutMessageCount: 2,
+        expectedSutMessageCount: 1,
         replyToLatestSutMessage: true,
         settleMs: 4_000,
       }),

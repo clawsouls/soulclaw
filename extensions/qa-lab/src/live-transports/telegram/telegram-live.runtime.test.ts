@@ -422,7 +422,7 @@ describe("telegram live qa runtime", () => {
         ?.buildRun("sut_bot").steps[0],
     ).toMatchObject({
       expectedJoinedSutTextIncludes: ["TELEGRAM-LONG-FINAL-BEGIN", "TELEGRAM-LONG-FINAL-END"],
-      expectedSutMessageCount: 2,
+      expectedSutMessageCount: 1,
       replyToLatestSutMessage: true,
     });
     expect(
@@ -513,7 +513,7 @@ describe("telegram live qa runtime", () => {
     expect(
       __testing.assertTelegramScenarioMessageSet({
         expectedJoinedSutTextIncludes: ["TELEGRAM-LONG-FINAL-BEGIN", "TELEGRAM-LONG-FINAL-END"],
-        expectedSutMessageCount: 2,
+        expectedSutMessageCount: 1,
         groupId: "-100123",
         scenarioId: "telegram-long-final-reuses-preview",
         sutBotId: 99,
@@ -527,22 +527,8 @@ describe("telegram live qa runtime", () => {
             scenarioId: "telegram-long-final-reuses-preview",
             scenarioTitle: "Telegram long final reuses the preview message",
             matchedScenario: true,
-            text: "TELEGRAM-LONG-FINAL-BEGIN part one ",
+            text: "TELEGRAM-LONG-FINAL-BEGIN part one part two TELEGRAM-LONG-FINAL-END",
             timestamp: 1_700_000_000_000,
-            inlineButtons: [],
-            mediaKinds: [],
-          },
-          {
-            updateId: 2,
-            messageId: 11,
-            chatId: -100123,
-            senderId: 99,
-            senderIsBot: true,
-            scenarioId: "telegram-long-final-reuses-preview",
-            scenarioTitle: "Telegram long final reuses the preview message",
-            matchedScenario: true,
-            text: "part two TELEGRAM-LONG-FINAL-END",
-            timestamp: 1_700_000_001_000,
             inlineButtons: [],
             mediaKinds: [],
           },
@@ -552,7 +538,7 @@ describe("telegram live qa runtime", () => {
 
     expect(() =>
       __testing.assertTelegramScenarioMessageSet({
-        expectedSutMessageCount: 2,
+        expectedSutMessageCount: 1,
         groupId: "-100123",
         scenarioId: "telegram-long-final-reuses-preview",
         sutBotId: 99,
@@ -601,7 +587,7 @@ describe("telegram live qa runtime", () => {
           },
         ],
       }),
-    ).toThrow("expected 2 SUT message(s), observed 3");
+    ).toThrow("expected 1 SUT message(s), observed 3");
   });
 
   it("accepts legitimate three-chunk Telegram final replies", () => {
