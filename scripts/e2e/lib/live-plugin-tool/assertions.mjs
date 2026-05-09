@@ -146,7 +146,7 @@ function configure() {
         baseUrl: (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").trim(),
         apiKey: { source: "env", provider: "default", id: "OPENAI_API_KEY" },
         agentRuntime: { id: "pi" },
-        timeoutSeconds: 300,
+        timeoutSeconds: 600,
         models: [
           {
             id: modelId,
@@ -178,7 +178,7 @@ function configure() {
       },
       workspace: path.join(stateDir(), "workspace"),
       skipBootstrap: true,
-      timeoutSeconds: 420,
+      timeoutSeconds: 720,
     },
   };
   writeJson(cfgPath, cfg);

@@ -138,7 +138,7 @@ openclaw agent --local \
   --model "$MODEL_REF" \
   --message "Call the tool named ${TOOL_NAME}. Reply with only the exact text returned by that tool. Do not compute, transform, or explain it." \
   --thinking off \
-  --timeout 420 \
+  --timeout 720 \
   --json >/tmp/openclaw-agent.json 2>/tmp/openclaw-agent.err
 
 node scripts/e2e/lib/live-plugin-tool/assertions.mjs assert-agent-turn
