@@ -606,7 +606,7 @@ run_profile() {
     agent_model="$(set_agent_model "$profile" \
       "openai/gpt-5.5" \
       "openai/gpt-5.4-mini")"
-    openclaw --profile "$profile" config set models.providers.openai.agentRuntime '{"id":"pi"}' --strict-json >/dev/null
+    openclaw --profile "$profile" config set models.providers.openai '{"baseUrl":"https://api.openai.com/v1","models":[],"agentRuntime":{"id":"pi"}}' --strict-json >/dev/null
     image_model="$(set_image_model "$profile" \
       "openai/gpt-5.4-image-2")"
   else

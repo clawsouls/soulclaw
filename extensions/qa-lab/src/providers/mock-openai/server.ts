@@ -1202,7 +1202,7 @@ function splitMockStreamingText(text: string, parts = 3) {
 
 function buildTelegramLongFinalText({
   endMarker = "TELEGRAM-LONG-FINAL-END",
-  segmentCount = 54,
+  segmentCount = 42,
   startMarker = "TELEGRAM-LONG-FINAL-BEGIN",
 }: {
   endMarker?: string;
