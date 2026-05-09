@@ -150,10 +150,11 @@ describe("gateway codex harness live helpers", () => {
   });
 
   it("accepts the idle-ready status emitted by current codex", () => {
-    const text = "Idle and ready.";
+    const text = "I'm idle and ready.";
 
     expect(
-      EXPECTED_CODEX_STATUS_COMMAND_TEXT.some((expectedText) => text.includes(expectedText)),
+      EXPECTED_CODEX_STATUS_COMMAND_TEXT.some((expectedText) => text.includes(expectedText)) ||
+        isExpectedCodexStatusCommandText(text),
     ).toBe(true);
   });
 

@@ -137,11 +137,13 @@ export function isExpectedCodexStatusCommandText(text: string): boolean {
     normalized.includes("no compactions") &&
     (normalized.includes("current session is") || normalized.includes("cache hit")) &&
     mentionsModel;
+  const isIdleReadyStatus = normalized.includes("idle and ready");
 
   return (
     isCurrentSessionStatus ||
     isCompactSessionStatus ||
     isRunningSessionStatus ||
+    isIdleReadyStatus ||
     (mentionsOpenClawStatus && mentionsHarnessSession && mentionsModel)
   );
 }
