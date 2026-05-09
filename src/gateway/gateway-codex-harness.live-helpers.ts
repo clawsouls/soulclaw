@@ -92,6 +92,7 @@ export const EXPECTED_CODEX_STATUS_COMMAND_TEXT = [
   "No active task is running.",
   "No active work is running.",
   "Working normally.",
+  "Idle and ready.",
   "Ready.",
 ] as const;
 
