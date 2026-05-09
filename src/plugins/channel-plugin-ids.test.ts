@@ -72,11 +72,12 @@ import {
   listConfiguredAnnounceChannelIdsForConfig,
   listConfiguredChannelIdsForReadOnlyScope,
   listExplicitConfiguredChannelIdsForConfig,
-  loadGatewayStartupPluginPlan,
   resolveConfiguredChannelPresencePolicy,
   resolveConfiguredDeferredChannelPluginIds,
   resolveConfiguredChannelPluginIds,
   resolveGatewayStartupPluginIds,
+  resolveGatewayStartupPluginIdsFromRegistry,
+  resolveGatewayStartupPluginPlanFromRegistry,
 } from "./channel-plugin-ids.js";
 
 function withManifestLoadPaths<T extends { id: string }>(
@@ -451,17 +452,18 @@ function expectStartupPluginIds(params: {
   env?: NodeJS.ProcessEnv;
   expected: readonly string[];
 }) {
+  const manifestRegistry = loadPluginManifestRegistry() as PluginManifestRegistry;
   expect(
-    resolveGatewayStartupPluginIds({
+    resolveGatewayStartupPluginIdsFromRegistry({
       config: params.config,
       ...(params.activationSourceConfig !== undefined
         ? { activationSourceConfig: params.activationSourceConfig }
         : {}),
-      workspaceDir: "/tmp",
       env: createPluginPlanningTestEnv(params.env),
+      index: createInstalledPluginIndexFixture(manifestRegistry),
+      manifestRegistry,
     }),
   ).toEqual(params.expected);
-  expect(loadPluginManifestRegistry).toHaveBeenCalled();
 }
 
 function expectStartupPluginIdsCase(params: {
@@ -1274,13 +1276,11 @@ describe("resolveGatewayStartupPluginIds", () => {
     ).toStrictEqual([]);
   });
 
-  it("loads channel, deferred, and startup plugin ids from one manifest registry", () => {
+  it("resolves channel, deferred, and startup plugin ids from one manifest registry", () => {
     const registry = createManifestRegistryFixture();
     const index = createInstalledPluginIndexFixture(registry);
-    loadPluginRegistrySnapshot.mockReset().mockReturnValue(index);
-    loadPluginManifestRegistryForInstalledIndex.mockReset().mockReturnValue(registry);
 
-    const plan = loadGatewayStartupPluginPlan({
+    const plan = resolveGatewayStartupPluginPlanFromRegistry({
       config: {
         channels: {
           "demo-channel": {
@@ -1288,15 +1288,14 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
       } as OpenClawConfig,
-      workspaceDir: "/tmp",
       env: createPluginPlanningTestEnv(),
+      index,
+      manifestRegistry: registry,
     });
 
     expect(plan.channelPluginIds).toContain("demo-channel");
     expect(plan.pluginIds).toContain("demo-channel");
     expect(plan.configuredDeferredChannelPluginIds).toStrictEqual([]);
-    expect(loadPluginRegistrySnapshot).toHaveBeenCalledOnce();
-    expect(loadPluginManifestRegistryForInstalledIndex).toHaveBeenCalledOnce();
   });
 
   it("does not treat explicitly disabled stale channel config as deferred startup intent", () => {
