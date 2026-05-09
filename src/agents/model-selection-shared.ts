@@ -107,6 +107,21 @@ export function parseConfiguredModelVisibilityEntries(params: { cfg?: OpenClawCo
   };
 }
 
+export function providerWildcardModelKey(provider: string): string {
+  return modelKey(normalizeProviderId(provider), "*");
+}
+
+export function isModelKeyAllowedBySet(allowedKeys: ReadonlySet<string>, key: string): boolean {
+  if (allowedKeys.has(key)) {
+    return true;
+  }
+  const separator = key.indexOf("/");
+  if (separator <= 0) {
+    return false;
+  }
+  return allowedKeys.has(providerWildcardModelKey(key.slice(0, separator)));
+}
+
 export function inferUniqueProviderFromConfiguredModels(params: {
   cfg: OpenClawConfig;
   model: string;
@@ -689,6 +704,9 @@ export function buildAllowedModelSetWithFallbacks(params: {
   const allowedKeys = new Set<string>();
   const allowedRefs: ModelRef[] = [];
   const syntheticCatalogEntries = new Map<string, ModelCatalogEntry>();
+  for (const provider of visibility.providerWildcards) {
+    allowedKeys.add(providerWildcardModelKey(provider));
+  }
   const addAllowedCatalogRef = (ref: ModelRef) => {
     if (
       !allowedRefs.some(
@@ -816,7 +834,7 @@ function getModelRefStatusFromAllowedSet(params: {
       }),
     ),
     allowAny: params.allowed.allowAny,
-    allowed: params.allowed.allowAny || params.allowed.allowedKeys.has(key),
+    allowed: params.allowed.allowAny || isModelKeyAllowedBySet(params.allowed.allowedKeys, key),
   };
 }
 

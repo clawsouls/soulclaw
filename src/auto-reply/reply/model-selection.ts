@@ -7,6 +7,7 @@ import type { ModelCatalogEntry } from "../../agents/model-catalog.js";
 import {
   buildConfiguredModelCatalog,
   buildAllowedModelSet,
+  isModelKeyAllowedBySet,
   modelKey,
   normalizeModelRef,
   normalizeProviderId,
@@ -180,7 +181,7 @@ export async function createModelSelectionState(params: {
       directStoredOverride.model,
     );
     const key = modelKey(normalizedOverride.provider, normalizedOverride.model);
-    if (allowedModelKeys.size > 0 && !allowedModelKeys.has(key)) {
+    if (allowedModelKeys.size > 0 && !isModelKeyAllowedBySet(allowedModelKeys, key)) {
       const { updated } = applyModelOverrideToSessionEntry({
         entry: sessionEntry,
         selection: { provider: defaultProvider, model: defaultModel, isDefault: true },
@@ -220,7 +221,7 @@ export async function createModelSelectionState(params: {
       storedOverride.model,
     );
     const key = modelKey(normalizedStoredOverride.provider, normalizedStoredOverride.model);
-    if (allowedModelKeys.size === 0 || allowedModelKeys.has(key)) {
+    if (allowedModelKeys.size === 0 || isModelKeyAllowedBySet(allowedModelKeys, key)) {
       provider = normalizedStoredOverride.provider;
       model = normalizedStoredOverride.model;
     }

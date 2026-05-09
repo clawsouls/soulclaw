@@ -62,6 +62,7 @@ import { runWithModelFallback } from "./model-fallback.js";
 import {
   buildAllowedModelSet,
   buildConfiguredModelCatalog,
+  isModelKeyAllowedBySet,
   modelKey,
   normalizeModelRef,
   parseModelRef,
@@ -778,7 +779,7 @@ async function agentCommandInternal(
       if (overrideModel) {
         const normalizedOverride = normalizeModelRef(overrideProvider, overrideModel);
         const key = modelKey(normalizedOverride.provider, normalizedOverride.model);
-        if (!allowAnyModel && !allowedModelKeys.has(key)) {
+        if (!allowAnyModel && !isModelKeyAllowedBySet(allowedModelKeys, key)) {
           const { updated } = applyModelOverrideToSessionEntry({
             entry,
             selection: { provider: defaultProvider, model: defaultModel, isDefault: true },
@@ -801,7 +802,7 @@ async function agentCommandInternal(
       const candidateProvider = storedProviderOverride || defaultProvider;
       const normalizedStored = normalizeModelRef(candidateProvider, storedModelOverride);
       const key = modelKey(normalizedStored.provider, normalizedStored.model);
-      if (allowAnyModel || allowedModelKeys.has(key)) {
+      if (allowAnyModel || isModelKeyAllowedBySet(allowedModelKeys, key)) {
         provider = normalizedStored.provider;
         model = normalizedStored.model;
       }
@@ -819,7 +820,7 @@ async function agentCommandInternal(
         throw new Error("Invalid model override.");
       }
       const explicitKey = modelKey(explicitRef.provider, explicitRef.model);
-      if (!allowAnyModel && !allowedModelKeys.has(explicitKey)) {
+      if (!allowAnyModel && !isModelKeyAllowedBySet(allowedModelKeys, explicitKey)) {
         throw new Error(
           `Model override "${sanitizeForLog(explicitRef.provider)}/${sanitizeForLog(explicitRef.model)}" is not allowed for agent "${sessionAgentId}".`,
         );
@@ -1125,7 +1126,7 @@ async function agentCommandInternal(
           }
           const switchRef = normalizeModelRef(err.provider, err.model);
           const switchKey = modelKey(switchRef.provider, switchRef.model);
-          if (!allowAnyModel && !allowedModelKeys.has(switchKey)) {
+          if (!allowAnyModel && !isModelKeyAllowedBySet(allowedModelKeys, switchKey)) {
             log.info(
               `Live session model switch in subagent run ${runId}: ` +
                 `rejected ${sanitizeForLog(err.provider)}/${sanitizeForLog(err.model)} (not in allowlist)`,

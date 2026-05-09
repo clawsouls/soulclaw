@@ -396,6 +396,13 @@ vi.mock("./model-selection.js", () => ({
         : [],
     );
   },
+  isModelKeyAllowedBySet: (allowedKeys: ReadonlySet<string>, key: string) => {
+    if (allowedKeys.has(key)) {
+      return true;
+    }
+    const slash = key.indexOf("/");
+    return slash > 0 && allowedKeys.has(`${key.slice(0, slash)}/*`);
+  },
   modelKey: (p: string, m: string) => `${p}/${m}`,
   normalizeModelRef: (p: string, m: string) => ({ provider: p, model: m }),
   parseModelRef: (m: string, p: string) => ({ provider: p, model: m }),

@@ -659,6 +659,45 @@ describe("createModelSelectionState respects session model override", () => {
     expect(sessionStore[sessionKey]?.providerOverride).toBeUndefined();
   });
 
+  it("keeps wildcard-provider overrides when configured catalog rows are unavailable", async () => {
+    const cfg = {
+      agents: {
+        defaults: {
+          model: { primary: "anthropic/claude-sonnet-4-6" },
+          models: {
+            "anthropic/claude-sonnet-4-6": {},
+            "openai-codex/*": {},
+          },
+        },
+      },
+    } as OpenClawConfig;
+    const sessionKey = "agent:main:telegram:direct:1";
+    const sessionEntry = makeEntry({
+      providerOverride: "openai-codex",
+      modelOverride: "gpt-added-after-startup",
+    });
+    const sessionStore = { [sessionKey]: sessionEntry };
+
+    const state = await createModelSelectionState({
+      cfg,
+      agentCfg: cfg.agents?.defaults,
+      sessionEntry,
+      sessionStore,
+      sessionKey,
+      defaultProvider: "anthropic",
+      defaultModel: "claude-sonnet-4-6",
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      hasModelDirective: false,
+    });
+
+    expect(state.provider).toBe("openai-codex");
+    expect(state.model).toBe("gpt-added-after-startup");
+    expect(state.resetModelOverride).toBe(false);
+    expect(sessionStore[sessionKey]?.providerOverride).toBe("openai-codex");
+    expect(sessionStore[sessionKey]?.modelOverride).toBe("gpt-added-after-startup");
+  });
+
   it("keeps allowed legacy combined session overrides after normalization", async () => {
     const cfg = {
       agents: {

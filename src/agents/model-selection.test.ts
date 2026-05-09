@@ -7,12 +7,14 @@ import {
   buildAllowedModelSet,
   buildConfiguredModelCatalog,
   inferUniqueProviderFromConfiguredModels,
+  isModelKeyAllowedBySet,
   parseModelRef,
   buildModelAliasIndex,
   normalizeModelSelection,
   normalizeProviderId,
   normalizeProviderIdForAuth,
   modelKey,
+  providerWildcardModelKey,
   resolvePersistedOverrideModelRef,
   resolvePersistedModelRef,
   resolvePersistedSelectedModelRef,
@@ -975,6 +977,31 @@ describe("model-selection", () => {
       expect(result.allowedKeys.has("openai-codex/gpt-5.5-codex")).toBe(true);
       expect(result.allowedKeys.has("vllm/local-added-after-startup")).toBe(true);
       expect(result.allowedKeys.has("anthropic/claude-sonnet-4-6")).toBe(false);
+    });
+
+    it("preserves provider wildcard intent when catalog rows are unavailable", () => {
+      const cfg: OpenClawConfig = {
+        agents: {
+          defaults: {
+            models: {
+              "openai-codex/*": {},
+            },
+          },
+        },
+      } as unknown as OpenClawConfig;
+
+      const result = buildAllowedModelSet({
+        cfg,
+        catalog: [],
+        defaultProvider: "anthropic",
+        defaultModel: "claude-sonnet-4-6",
+      });
+
+      expect(result.allowAny).toBe(false);
+      expect(result.allowedCatalog).toEqual([]);
+      expect(result.allowedKeys.has(providerWildcardModelKey("openai-codex"))).toBe(true);
+      expect(isModelKeyAllowedBySet(result.allowedKeys, "openai-codex/gpt-added-later")).toBe(true);
+      expect(isModelKeyAllowedBySet(result.allowedKeys, "anthropic/claude-sonnet-4-6")).toBe(false);
     });
 
     it("unions exact model entries with provider wildcard entries", () => {

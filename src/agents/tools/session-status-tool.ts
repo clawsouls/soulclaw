@@ -31,6 +31,7 @@ import {
   buildAllowedModelSet,
   buildConfiguredModelCatalog,
   buildModelAliasIndex,
+  isModelKeyAllowedBySet,
   modelKey,
   resolveDefaultModelForAgent,
   resolveModelRefFromString,
@@ -305,7 +306,7 @@ async function resolveModelOverride(params: {
     throw new Error(`Unrecognized model "${raw}".`);
   }
   const key = modelKey(resolved.ref.provider, resolved.ref.model);
-  if (allowed.allowedKeys.size > 0 && !allowed.allowedKeys.has(key)) {
+  if (allowed.allowedKeys.size > 0 && !isModelKeyAllowedBySet(allowed.allowedKeys, key)) {
     throw new Error(`Model "${key}" is not allowed.`);
   }
   const isDefault =
