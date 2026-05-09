@@ -139,10 +139,12 @@ export async function runMemoryAtomicReindex<T>(params: {
       await params.beforeTempCleanup?.();
       await removeMemoryIndexFiles(params.tempPath, params.fileOptions);
     } catch (cleanupErr) {
-      throw new AggregateError(
+      const aggregateErr = new AggregateError(
         [err, cleanupErr],
         "memory atomic reindex failed and temp cleanup failed",
+        { cause: cleanupErr },
       );
+      throw aggregateErr;
     }
     throw err;
   }

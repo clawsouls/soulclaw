@@ -142,8 +142,8 @@ describe("memory manager atomic reindex", () => {
     "retries transient %s rm failures during index file cleanup",
     async (code) => {
       const calls: string[] = [];
-      const rm = vi.fn(async (filePath: string) => {
-        calls.push(filePath);
+      const rm: typeof fs.rm = vi.fn(async (filePath) => {
+        calls.push(String(filePath));
         if (calls.length === 1) {
           throw Object.assign(new Error("busy"), { code });
         }
@@ -204,8 +204,8 @@ describe("memory manager atomic reindex", () => {
   it("closes temp resources before removing temp files after build failure", async () => {
     const events: string[] = [];
     let tempClosed = false;
-    const rm = vi.fn(async (filePath: string) => {
-      events.push(tempClosed ? `rm:${filePath}:closed` : `rm:${filePath}:open`);
+    const rm: typeof fs.rm = vi.fn(async (filePath) => {
+      events.push(tempClosed ? `rm:${String(filePath)}:closed` : `rm:${String(filePath)}:open`);
     });
 
     await expect(
