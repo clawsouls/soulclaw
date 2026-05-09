@@ -177,6 +177,28 @@ function createTaskRegistryMaintenanceHarness(params: {
   return { currentTasks };
 }
 
+function expectMaintenanceCounts(
+  result: Awaited<ReturnType<typeof runTaskRegistryMaintenance>>,
+  expected: { reconciled: number; recovered?: number },
+): void {
+  expect(result.reconciled).toBe(expected.reconciled);
+  if (expected.recovered !== undefined) {
+    expect(result.recovered).toBe(expected.recovered);
+  }
+}
+
+function expectTaskStatus(
+  tasks: Map<string, TaskRecord>,
+  taskId: string,
+  status: TaskRecord["status"],
+): void {
+  const task = tasks.get(taskId);
+  if (!task) {
+    throw new Error(`Expected task ${taskId}`);
+  }
+  expect(task.status).toBe(status);
+}
+
 describe("task-registry maintenance issue #60299", () => {
   it("reuses session store reads across stale subagent task checks in one pass", async () => {
     const tasks = Array.from({ length: 10 }, (_, index) =>
@@ -194,7 +216,7 @@ describe("task-registry maintenance issue #60299", () => {
       resolveStorePath: () => "/tmp/openclaw-test-sessions-main.json",
     });
 
-    expect(await runTaskRegistryMaintenance()).toMatchObject({ reconciled: tasks.length });
+    expectMaintenanceCounts(await runTaskRegistryMaintenance(), { reconciled: tasks.length });
     expect(loadSessionStoreMock).toHaveBeenCalledTimes(1);
   });
 
@@ -214,7 +236,7 @@ describe("task-registry maintenance issue #60299", () => {
       deriveSessionChatTypeFromKey: deriveSessionChatTypeMock,
     });
 
-    expect(await runTaskRegistryMaintenance()).toMatchObject({ reconciled: tasks.length });
+    expectMaintenanceCounts(await runTaskRegistryMaintenance(), { reconciled: tasks.length });
     expect(deriveSessionChatTypeMock).toHaveBeenCalledTimes(1);
   });
 
@@ -231,8 +253,8 @@ describe("task-registry maintenance issue #60299", () => {
       sessionStore: { [childSessionKey]: { sessionId: childSessionKey, updatedAt: Date.now() } },
     });
 
-    expect(await runTaskRegistryMaintenance()).toMatchObject({ reconciled: 1 });
-    expect(currentTasks.get(task.taskId)).toMatchObject({ status: "lost" });
+    expectMaintenanceCounts(await runTaskRegistryMaintenance(), { reconciled: 1 });
+    expectTaskStatus(currentTasks, task.taskId, "lost");
   });
 
   it("keeps active cron tasks live while the cron runtime still owns the job", async () => {
@@ -247,8 +269,8 @@ describe("task-registry maintenance issue #60299", () => {
       activeCronJobIds: ["cron-job-2"],
     });
 
-    expect(await runTaskRegistryMaintenance()).toMatchObject({ reconciled: 0 });
-    expect(currentTasks.get(task.taskId)).toMatchObject({ status: "running" });
+    expectMaintenanceCounts(await runTaskRegistryMaintenance(), { reconciled: 0 });
+    expectTaskStatus(currentTasks, task.taskId, "running");
   });
 
   it("only treats started non-ended running tasks as restart blockers", () => {
