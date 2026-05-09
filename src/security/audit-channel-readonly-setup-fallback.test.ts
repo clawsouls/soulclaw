@@ -27,18 +27,18 @@ vi.mock("./dangerous-config-flags.js", () => ({
 
 vi.mock("../channels/plugins/read-only.js", () => ({
   listReadOnlyChannelPluginsForConfig: (...args: unknown[]) =>
-    listReadOnlyChannelPluginsForConfigMock(...args),
+    (listReadOnlyChannelPluginsForConfigMock as (...params: unknown[]) => unknown)(...args),
 }));
 
 vi.mock("../plugins/channel-plugin-ids.js", () => ({
   hasConfiguredChannelsForReadOnlyScope: (...args: unknown[]) =>
-    hasConfiguredChannelsForReadOnlyScopeMock(...args),
+    (hasConfiguredChannelsForReadOnlyScopeMock as (...params: unknown[]) => unknown)(...args),
   resolveConfiguredChannelPluginIds: () => [],
 }));
 
 vi.mock("./audit-channel.collect.runtime.js", () => ({
   collectChannelSecurityFindings: (...args: unknown[]) =>
-    collectChannelSecurityFindingsMock(...args),
+    (collectChannelSecurityFindingsMock as (...params: unknown[]) => unknown)(...args),
 }));
 
 const collectNoFindings = vi.hoisted(() => vi.fn(() => []));
