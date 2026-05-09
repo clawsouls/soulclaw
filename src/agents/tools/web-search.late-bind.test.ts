@@ -24,6 +24,28 @@ vi.mock("../../secrets/runtime.js", () => ({
   getActiveSecretsRuntimeSnapshot: mocks.getActiveSecretsRuntimeSnapshot,
 }));
 
+type RunWebSearchParams = {
+  config?: unknown;
+  preferRuntimeProviders?: boolean;
+  runtimeWebSearch?: {
+    selectedProvider?: string;
+  };
+};
+
+type ProviderResolutionParams = {
+  value?: string;
+};
+
+function firstRunWebSearchParams(): RunWebSearchParams | undefined {
+  return mocks.runWebSearch.mock.calls[0]?.[0] as RunWebSearchParams | undefined;
+}
+
+function firstProviderResolutionParams(): ProviderResolutionParams | undefined {
+  return mocks.resolveManifestContractOwnerPluginId.mock.calls[0]?.[0] as
+    | ProviderResolutionParams
+    | undefined;
+}
+
 describe("web_search late-bound runtime fallback", () => {
   beforeEach(() => {
     mocks.runWebSearch.mockReset();
@@ -54,11 +76,7 @@ describe("web_search late-bound runtime fallback", () => {
 
     await tool?.execute("call-search", { query: "openclaw" }, undefined);
 
-    expect(mocks.runWebSearch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        runtimeWebSearch: expect.objectContaining({ selectedProvider: "brave" }),
-      }),
-    );
+    expect(firstRunWebSearchParams()?.runtimeWebSearch?.selectedProvider).toBe("brave");
   });
 
   it("falls back to options.config when getActiveSecretsRuntimeSnapshot is null", async () => {
@@ -73,11 +91,7 @@ describe("web_search late-bound runtime fallback", () => {
 
     await tool?.execute("call-search", { query: "openclaw" }, undefined);
 
-    expect(mocks.runWebSearch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        config: fallbackConfig,
-      }),
-    );
+    expect(firstRunWebSearchParams()?.config).toBe(fallbackConfig);
   });
 
   it("uses configured provider id from config when no runtime selection is present", async () => {
@@ -92,12 +106,8 @@ describe("web_search late-bound runtime fallback", () => {
 
     await tool?.execute("call-search", { query: "openclaw" }, undefined);
 
-    expect(mocks.resolveManifestContractOwnerPluginId).toHaveBeenCalledWith(
-      expect.objectContaining({ value: "brave" }),
-    );
-    expect(mocks.runWebSearch).toHaveBeenCalledWith(
-      expect.objectContaining({ preferRuntimeProviders: true }),
-    );
+    expect(firstProviderResolutionParams()?.value).toBe("brave");
+    expect(firstRunWebSearchParams()?.preferRuntimeProviders).toBe(true);
   });
 
   it("keeps runtime provider discovery enabled when no provider id is selected anywhere", async () => {
@@ -110,9 +120,7 @@ describe("web_search late-bound runtime fallback", () => {
     await tool?.execute("call-search", { query: "openclaw" }, undefined);
 
     expect(mocks.resolveManifestContractOwnerPluginId).not.toHaveBeenCalled();
-    expect(mocks.runWebSearch).toHaveBeenCalledWith(
-      expect.objectContaining({ preferRuntimeProviders: true }),
-    );
+    expect(firstRunWebSearchParams()?.preferRuntimeProviders).toBe(true);
   });
 
   it("does not prefer runtime providers when the configured provider is a bundled manifest owner", async () => {
@@ -128,9 +136,7 @@ describe("web_search late-bound runtime fallback", () => {
 
     await tool?.execute("call-search", { query: "openclaw" }, undefined);
 
-    expect(mocks.runWebSearch).toHaveBeenCalledWith(
-      expect.objectContaining({ preferRuntimeProviders: false }),
-    );
+    expect(firstRunWebSearchParams()?.preferRuntimeProviders).toBe(false);
   });
 
   it("prefers active runtime metadata over options.runtimeWebSearch when present", async () => {
@@ -156,11 +162,7 @@ describe("web_search late-bound runtime fallback", () => {
 
     await tool?.execute("call-search", { query: "openclaw" }, undefined);
 
-    expect(mocks.runWebSearch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        runtimeWebSearch: expect.objectContaining({ selectedProvider: "perplexity" }),
-      }),
-    );
+    expect(firstRunWebSearchParams()?.runtimeWebSearch?.selectedProvider).toBe("perplexity");
   });
 
   it("honors late-bound disabled search config at execute time", async () => {
