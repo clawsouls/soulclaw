@@ -124,6 +124,14 @@ describe("gateway codex harness live helpers", () => {
     ).toBe(true);
   });
 
+  it("accepts the completed-work status emitted by current codex", () => {
+    const text = "No active work is running. Ready for the next task.";
+
+    expect(
+      EXPECTED_CODEX_STATUS_COMMAND_TEXT.some((expectedText) => text.includes(expectedText)),
+    ).toBe(true);
+  });
+
   it("accepts the ready status emitted by current codex", () => {
     const text = "Ready.";
 

@@ -90,6 +90,7 @@ export const EXPECTED_CODEX_STATUS_COMMAND_TEXT = [
   "OpenClaw status shown above.",
   "Status shown above.",
   "No active task is running.",
+  "No active work is running.",
   "Ready.",
 ] as const;
 
