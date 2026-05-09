@@ -359,6 +359,8 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain(
       "inputs.live_suite_filter == '' || inputs.live_suite_filter == matrix.suite_id",
     );
+    expect(workflow).not.toContain("openai-ws-stream-live-e2e");
+    expect(workflow).not.toContain("src/agents/openai-ws-stream.e2e.test.ts");
     expect(workflow).toContain("suite_id: live-gateway-advisory-docker-deepseek-fireworks");
     expect(workflow).toContain("suite_id: live-gateway-advisory-docker-opencode-openrouter");
     expect(workflow).toContain("suite_id: live-gateway-advisory-docker-xai-zai");

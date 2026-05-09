@@ -429,6 +429,13 @@ function filterManifestRegistryForInstalledIndex(params: {
   };
 }
 
+function createPluginPlanningTestEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+  return {
+    OPENCLAW_DISABLE_PERSISTED_PLUGIN_REGISTRY: "1",
+    ...overrides,
+  };
+}
+
 function useManifestRegistryFixture(
   registry: PluginManifestRegistry = createManifestRegistryFixture(),
 ) {
@@ -451,7 +458,7 @@ function expectStartupPluginIds(params: {
         ? { activationSourceConfig: params.activationSourceConfig }
         : {}),
       workspaceDir: "/tmp",
-      env: params.env ?? process.env,
+      env: createPluginPlanningTestEnv(params.env),
     }),
   ).toEqual(params.expected);
   expect(loadPluginManifestRegistry).toHaveBeenCalled();
@@ -1156,18 +1163,18 @@ describe("resolveGatewayStartupPluginIds", () => {
 
     expectStartupPluginIdsCase({
       config,
-      env: {
+      env: createPluginPlanningTestEnv({
         DEMO_CHANNEL_ANYTHING: "1",
-      } as NodeJS.ProcessEnv,
+      }),
       expected: ["demo-channel", "browser", "memory-core"],
     });
     expect(
       resolveConfiguredDeferredChannelPluginIds({
         config,
         workspaceDir: "/tmp",
-        env: {
+        env: createPluginPlanningTestEnv({
           DEMO_CHANNEL_ANYTHING: "1",
-        } as NodeJS.ProcessEnv,
+        }),
       }),
     ).toStrictEqual([]);
   });
@@ -1187,7 +1194,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         } as OpenClawConfig,
         workspaceDir: "/tmp",
-        env: {},
+        env: createPluginPlanningTestEnv(),
       }),
     ).toEqual(["workspace-demo-channel-plugin"]);
   });
@@ -1204,7 +1211,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           allow: ["browser"],
         },
       } as OpenClawConfig,
-      env: {},
+      env: createPluginPlanningTestEnv(),
       expected: ["demo-channel", "browser"],
     });
   });
@@ -1219,7 +1226,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         },
       } as OpenClawConfig,
-      env: {},
+      env: createPluginPlanningTestEnv(),
       expected: ["browser", "memory-core"],
     });
   });
@@ -1235,9 +1242,9 @@ describe("resolveGatewayStartupPluginIds", () => {
 
     expectStartupPluginIdsCase({
       config: {} as OpenClawConfig,
-      env: {
+      env: createPluginPlanningTestEnv({
         OPENCLAW_STATE_DIR: "/tmp/openclaw-with-persisted-demo-channel",
-      } as NodeJS.ProcessEnv,
+      }),
       expected: ["browser", "memory-core"],
     });
   });
@@ -1260,9 +1267,9 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         } as OpenClawConfig,
         workspaceDir: "/tmp",
-        env: {
+        env: createPluginPlanningTestEnv({
           OPENCLAW_STATE_DIR: "/tmp/openclaw-with-persisted-demo-channel",
-        } as NodeJS.ProcessEnv,
+        }),
       }),
     ).toStrictEqual([]);
   });
@@ -1282,7 +1289,7 @@ describe("resolveGatewayStartupPluginIds", () => {
         },
       } as OpenClawConfig,
       workspaceDir: "/tmp",
-      env: {},
+      env: createPluginPlanningTestEnv(),
     });
 
     expect(plan.channelPluginIds).toContain("demo-channel");
@@ -1309,7 +1316,7 @@ describe("resolveGatewayStartupPluginIds", () => {
           },
         } as OpenClawConfig,
         workspaceDir: "/tmp",
-        env: {},
+        env: createPluginPlanningTestEnv(),
       }),
     ).toStrictEqual([]);
   });
