@@ -113,7 +113,9 @@ export function createClickClackClient(options: ClientOptions) {
     },
     events: async (workspaceId: string, afterCursor?: string): Promise<ClickClackEvent[]> => {
       const query = new URLSearchParams({ workspace_id: workspaceId });
-      if (afterCursor) query.set("after_cursor", afterCursor);
+      if (afterCursor) {
+        query.set("after_cursor", afterCursor);
+      }
       const data = await request<{ events: ClickClackEvent[] }>(
         `/api/realtime/events?${query.toString()}`,
       );
@@ -123,7 +125,9 @@ export function createClickClackClient(options: ClientOptions) {
       const url = new URL(`${baseUrl}/api/realtime/ws`);
       url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
       url.searchParams.set("workspace_id", workspaceId);
-      if (afterCursor) url.searchParams.set("after_cursor", afterCursor);
+      if (afterCursor) {
+        url.searchParams.set("after_cursor", afterCursor);
+      }
       return new WebSocket(url, {
         headers: {
           Authorization: `Bearer ${options.token}`,

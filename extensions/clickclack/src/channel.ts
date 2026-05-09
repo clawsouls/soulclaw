@@ -139,7 +139,9 @@ export const clickClackPlugin: ChannelPlugin<ResolvedClickClackAccount> = create
       },
       resolveSessionConversation: ({ rawId }) => {
         const parsed = parseClickClackTarget(rawId);
-        if (parsed.kind === "dm") return null;
+        if (parsed.kind === "dm") {
+          return null;
+        }
         return {
           id: parsed.id,
           threadId: parsed.kind === "thread" ? parsed.id : undefined,

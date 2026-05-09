@@ -1,4 +1,5 @@
 import type { ChannelGatewayContext } from "openclaw/plugin-sdk/channel-contract";
+import type { RawData } from "ws";
 import { resolveClickClackAccount } from "./accounts.js";
 import { createClickClackClient } from "./http-client.js";
 import { handleClickClackInbound } from "./inbound.js";
@@ -20,7 +21,9 @@ async function resolveEventMessage(params: {
   event: ClickClackEvent;
 }): Promise<ClickClackMessage | null> {
   const messageId = payloadString(params.event, "message_id");
-  if (!messageId) return null;
+  if (!messageId) {
+    return null;
+  }
   const directConversationId = payloadString(params.event, "direct_conversation_id");
   if (directConversationId && typeof params.event.seq === "number") {
     const messages = await params.client.directMessages(
@@ -32,7 +35,9 @@ async function resolveEventMessage(params: {
   }
   if (params.event.type === "thread.reply_created") {
     const rootId = payloadString(params.event, "root_message_id");
-    if (!rootId) return null;
+    if (!rootId) {
+      return null;
+    }
     const thread = await params.client.thread(rootId);
     return thread.replies.find((message) => message.id === messageId) ?? null;
   }
@@ -45,6 +50,19 @@ async function resolveEventMessage(params: {
     return messages.find((message) => message.id === messageId) ?? null;
   }
   return null;
+}
+
+function decodeSocketMessage(data: RawData): string {
+  if (typeof data === "string") {
+    return data;
+  }
+  if (Buffer.isBuffer(data)) {
+    return data.toString("utf8");
+  }
+  if (data instanceof ArrayBuffer) {
+    return Buffer.from(data).toString("utf8");
+  }
+  return Buffer.concat(data).toString("utf8");
 }
 
 async function processEvent(params: {
@@ -128,7 +146,7 @@ export async function startClickClackGatewayAccount(
       ctx.abortSignal.addEventListener("abort", abort, { once: true });
       socket.on("message", (data) => {
         void (async () => {
-          const event = JSON.parse(String(data)) as ClickClackEvent;
+          const event = JSON.parse(decodeSocketMessage(data)) as ClickClackEvent;
           afterCursor = event.cursor || afterCursor;
           await processEvent({
             account,

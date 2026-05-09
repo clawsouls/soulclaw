@@ -176,7 +176,9 @@ export async function handleClickClackInbound(params: {
               payload && typeof payload === "object" && "text" in payload
                 ? ((payload as { text?: string }).text ?? "")
                 : "";
-            if (!text.trim()) return;
+            if (!text.trim()) {
+              return;
+            }
             await sendClickClackText({
               cfg: params.config,
               accountId: params.account.accountId,
