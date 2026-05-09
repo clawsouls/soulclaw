@@ -552,7 +552,7 @@ describe("package artifact reuse", () => {
       "artifact_name: ${{ needs.prepare_release_package.outputs.artifact_name }}",
     );
     expect(workflow).toContain(
-      "package_sha256: ${{ needs.prepare_release_package.outputs.package_sha256 }}",
+      "package_sha256: ${{ needs.resolve_target.outputs.package_acceptance_package_spec == '' && needs.prepare_release_package.outputs.package_sha256 || '' }}",
     );
     expect(workflow).toContain("suite_profile: custom");
     expect(workflow).toContain(
