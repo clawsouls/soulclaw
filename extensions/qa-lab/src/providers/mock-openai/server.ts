@@ -390,6 +390,32 @@ function extractLatestToolOutput(input: ResponsesInputItem[]) {
   return "";
 }
 
+function extractAllToolOutputText(input: ResponsesInputItem[]) {
+  return input
+    .map((item) => extractFunctionCallOutputText(item))
+    .filter(Boolean)
+    .join("\n");
+}
+
+function extractUserTextAfterLatestToolOutput(input: ResponsesInputItem[]) {
+  let latestToolOutputIndex = -1;
+  for (let index = input.length - 1; index >= 0; index -= 1) {
+    if (extractFunctionCallOutputText(input[index])) {
+      latestToolOutputIndex = index;
+      break;
+    }
+  }
+  if (latestToolOutputIndex < 0) {
+    return "";
+  }
+  return input
+    .slice(latestToolOutputIndex + 1)
+    .filter((item) => item.role === "user" && Array.isArray(item.content))
+    .map((item) => extractInputText(item.content as unknown[]))
+    .filter(Boolean)
+    .join("\n");
+}
+
 function extractInputText(content: unknown[]): string {
   return content
     .filter(
@@ -1797,19 +1823,20 @@ async function buildResponsesPayload(
     }
   }
   if (/thread memory check/i.test(allInputText)) {
-    const transcriptOrbitCode =
-      extractOrbitCode(allInputText) ??
-      (scenarioToolOutput ? extractOrbitCode(extractSystemInputText(input)) : null);
-    if (transcriptOrbitCode) {
-      return buildAssistantEvents(
-        `Protocol note: I checked memory in-thread and the hidden thread codename is ${transcriptOrbitCode}.`,
-      );
-    }
     if (!scenarioToolOutput) {
       return buildToolCallEventsWithArgs("memory_search", {
         query: "hidden thread codename ORBIT-22",
         maxResults: 3,
       });
+    }
+    const transcriptOrbitCode =
+      extractOrbitCode(scenarioToolOutput) ??
+      extractOrbitCode(extractUserTextAfterLatestToolOutput(input)) ??
+      extractOrbitCode(extractSystemInputText(input));
+    if (transcriptOrbitCode) {
+      return buildAssistantEvents(
+        `Protocol note: I checked memory in-thread and the hidden thread codename is ${transcriptOrbitCode}.`,
+      );
     }
     const results = Array.isArray(toolJson?.results)
       ? (toolJson.results as Array<Record<string, unknown>>)
@@ -1873,7 +1900,12 @@ async function buildResponsesPayload(
     return buildToolCallEventsWithArgs("read", { path: "QA_KICKOFF_TASK.md" });
   }
   if (/repo contract followthrough check/i.test(allInputText)) {
-    const repoEvidenceText = [scenarioToolOutput, allInputText].filter(Boolean).join("\n");
+    const repoEvidenceText = [
+      extractAllToolOutputText(input),
+      extractUserTextAfterLatestToolOutput(input),
+    ]
+      .filter(Boolean)
+      .join("\n");
     if (
       /successfully (?:wrote|created|updated|replaced)/i.test(repoEvidenceText) ||
       /status:\s*complete/i.test(repoEvidenceText)
@@ -1886,26 +1918,7 @@ async function buildResponsesPayload(
         ].join("\n"),
       );
     }
-    if (!scenarioToolOutput) {
-      if (
-        repoEvidenceText.includes("Mission: prove you followed the repo contract.") &&
-        repoEvidenceText.includes("Evidence path: AGENT.md -> SOUL.md -> FOLLOWTHROUGH_INPUT.md")
-      ) {
-        return buildToolCallEventsWithArgs("write", {
-          path: "repo-contract-summary.txt",
-          content: [
-            "Mission: prove you followed the repo contract.",
-            "Evidence: AGENT.md -> SOUL.md -> FOLLOWTHROUGH_INPUT.md",
-            "Status: complete",
-          ].join("\n"),
-        });
-      }
-      if (/# Execution style/i.test(repoEvidenceText)) {
-        return buildToolCallEventsWithArgs("read", { path: "FOLLOWTHROUGH_INPUT.md" });
-      }
-      if (/# Repo contract/i.test(repoEvidenceText)) {
-        return buildToolCallEventsWithArgs("read", { path: "SOUL.md" });
-      }
+    if (!repoEvidenceText) {
       return buildToolCallEventsWithArgs("read", { path: "AGENT.md" });
     }
     if (
