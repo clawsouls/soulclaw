@@ -10,7 +10,6 @@
     "./runtime-api.js": "./runtime-api.ts"
   },
   "dependencies": {
-    "typebox": "1.1.38",
     "ws": "^8.20.0"
   },
   "devDependencies": {

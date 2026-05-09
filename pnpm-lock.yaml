@@ -487,9 +487,6 @@ importers:
 
   extensions/clickclack:
     dependencies:
-      typebox:
-        specifier: 1.1.38
-        version: 1.1.38
       ws:
         specifier: ^8.20.0
         version: 8.20.0
