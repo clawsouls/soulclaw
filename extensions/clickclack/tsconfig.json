@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../dist/extensions/clickclack",
+    "tsBuildInfoFile": "../../dist/extensions/clickclack/.tsbuildinfo"
+  },
+  "include": ["**/*.ts", "../../src/types/global-agent.d.ts"]
+}
