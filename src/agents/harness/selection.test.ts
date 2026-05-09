@@ -1,5 +1,5 @@
 import type { Api, Model } from "@mariozechner/pi-ai";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../../config/config.js";
 import type {
   EmbeddedRunAttemptParams,
@@ -25,6 +25,10 @@ vi.mock("./builtin-pi.js", () => ({
 }));
 
 const originalRuntime = process.env.OPENCLAW_AGENT_RUNTIME;
+
+beforeEach(() => {
+  clearAgentHarnesses();
+});
 
 afterEach(() => {
   clearAgentHarnesses();
