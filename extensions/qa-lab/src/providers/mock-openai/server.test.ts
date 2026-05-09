@@ -694,6 +694,43 @@ describe("qa mock openai server", () => {
     expect(payload.output?.[0]?.content?.[0]?.text).toContain("Status: complete");
   });
 
+  it("continues repo-contract followthrough when a retry user item follows tool output", async () => {
+    const server = await startQaMockOpenAiServer({
+      host: "127.0.0.1",
+      port: 0,
+    });
+    cleanups.push(async () => {
+      await server.stop();
+    });
+
+    const prompt =
+      "Repo contract followthrough check. Read AGENT.md, SOUL.md, and FOLLOWTHROUGH_INPUT.md first. Then follow the repo contract exactly, write ./repo-contract-summary.txt, and reply with three labeled lines: Read, Wrote, Status.";
+
+    const response = await fetch(`${server.baseUrl}/v1/responses`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        stream: true,
+        model: "gpt-5.5",
+        input: [
+          { role: "user", content: [{ type: "input_text", text: prompt }] },
+          {
+            type: "function_call_output",
+            output:
+              "# Repo contract\n\nStep order:\n1. Read AGENT.md.\n2. Read SOUL.md.\n3. Read FOLLOWTHROUGH_INPUT.md.\n4. Write ./repo-contract-summary.txt.\n",
+          },
+          {
+            role: "user",
+            content: [{ type: "input_text", text: "Continue after compaction." }],
+          },
+        ],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('"arguments":"{\\"path\\":\\"SOUL.md\\"}"');
+  });
+
   it("drives the compaction retry mutating tool parity flow", async () => {
     const server = await startQaMockOpenAiServer({
       host: "127.0.0.1",

@@ -281,12 +281,40 @@ function findLastUserIndex(input: ResponsesInputItem[]) {
   return -1;
 }
 
+function isToolOutputContinuationText(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return false;
+  }
+  return (
+    /^(?:continue|keep going|resume|retry|carry on)(?:[.!?])?$/i.test(trimmed) ||
+    /\b(?:continue|continuation|compaction|post-compaction|retry|resume)\b/i.test(trimmed)
+  );
+}
+
 function extractToolOutput(input: ResponsesInputItem[]) {
   const lastUserIndex = findLastUserIndex(input);
   for (let index = input.length - 1; index > lastUserIndex; index -= 1) {
     const item = input[index];
     if (item.type === "function_call_output" && typeof item.output === "string" && item.output) {
       return item.output;
+    }
+  }
+  for (let index = input.length - 1; index >= 0; index -= 1) {
+    const item = input[index];
+    if (item.type === "function_call_output" && typeof item.output === "string" && item.output) {
+      const laterUserTexts = input
+        .slice(index + 1)
+        .filter((laterItem) => laterItem.role === "user" && Array.isArray(laterItem.content))
+        .map((laterItem) => extractInputText(laterItem.content as unknown[]))
+        .filter(Boolean);
+      if (
+        laterUserTexts.length > 0 &&
+        laterUserTexts.every((text) => isToolOutputContinuationText(text))
+      ) {
+        return item.output;
+      }
+      continue;
     }
   }
   return "";
@@ -788,7 +816,7 @@ function buildAssistantText(
   if (/tool continuity check/i.test(prompt) && toolOutput) {
     return `Protocol note: model switch handoff confirmed on ${model || "the requested model"}. QA mission from QA_KICKOFF_TASK.md still applies: understand this OpenClaw repo from source + docs before acting.`;
   }
-  if (toolOutput && /repo contract followthrough check/i.test(prompt)) {
+  if (toolOutput && /repo contract followthrough check/i.test(allInputText)) {
     if (
       /successfully (?:wrote|created|updated|replaced)/i.test(toolOutput) ||
       /status:\s*complete/i.test(toolOutput)
@@ -1723,7 +1751,7 @@ async function buildResponsesPayload(
   if (/tool continuity check/i.test(prompt) && !toolOutput) {
     return buildToolCallEventsWithArgs("read", { path: "QA_KICKOFF_TASK.md" });
   }
-  if (/repo contract followthrough check/i.test(prompt)) {
+  if (/repo contract followthrough check/i.test(allInputText)) {
     if (!toolOutput) {
       return buildToolCallEventsWithArgs("read", { path: "AGENT.md" });
     }
