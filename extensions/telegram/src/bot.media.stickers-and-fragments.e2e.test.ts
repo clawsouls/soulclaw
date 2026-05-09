@@ -58,6 +58,7 @@ describe("telegram stickers", () => {
         maxBytes: 2 * 1024 * 1024,
         token: "tok",
         transport: {
+          close: async () => {},
           fetch: proxyFetch as unknown as typeof fetch,
           sourceFetch: proxyFetch as unknown as typeof fetch,
         } satisfies TelegramTransport,
