@@ -8,7 +8,7 @@ const {
   listReadOnlyChannelPluginsForConfigMock,
   hasConfiguredChannelsForReadOnlyScopeMock,
 } = vi.hoisted(() => ({
-  collectChannelSecurityFindingsMock: vi.fn(async () => [
+  collectChannelSecurityFindingsMock: vi.fn(async (..._args: unknown[]) => [
     {
       checkId: "channels.telegram.setup_fallback_audited",
       severity: "warn",
