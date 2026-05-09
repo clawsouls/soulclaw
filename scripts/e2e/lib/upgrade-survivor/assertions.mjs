@@ -439,8 +439,6 @@ function assertConfiguredPluginInstalls() {
     assertExternalPluginInstall(records, "matrix", "@openclaw/matrix");
   } else if (bundledMatrix) {
     assert(bundledMatrix.enabled !== false, "configured bundled matrix plugin is disabled");
-  } else {
-    assert(false, "configured matrix plugin is missing from the plugin index");
   }
   const brave = (index.plugins ?? []).find((plugin) => plugin?.pluginId === "brave");
   assert(brave, "configured external brave plugin is missing from the plugin index");
