@@ -73,7 +73,7 @@ import {
   listConfiguredChannelIdsForReadOnlyScope,
   listExplicitConfiguredChannelIdsForConfig,
   resolveConfiguredChannelPresencePolicy,
-  resolveConfiguredDeferredChannelPluginIds,
+  resolveConfiguredDeferredChannelPluginIdsFromRegistry,
   resolveConfiguredChannelPluginIds,
   resolveGatewayStartupPluginIds,
   resolveGatewayStartupPluginIdsFromRegistry,
@@ -473,6 +473,19 @@ function expectStartupPluginIdsCase(params: {
   expected: readonly string[];
 }) {
   expectStartupPluginIds(params);
+}
+
+function resolveConfiguredDeferredChannelPluginIdsForFixture(params: {
+  config: OpenClawConfig;
+  env?: NodeJS.ProcessEnv;
+}): string[] {
+  const manifestRegistry = loadPluginManifestRegistry() as PluginManifestRegistry;
+  return resolveConfiguredDeferredChannelPluginIdsFromRegistry({
+    config: params.config,
+    env: createPluginPlanningTestEnv(params.env),
+    index: createInstalledPluginIndexFixture(manifestRegistry),
+    manifestRegistry,
+  });
 }
 
 function createStartupConfig(params: {
@@ -1171,9 +1184,8 @@ describe("resolveGatewayStartupPluginIds", () => {
       expected: ["demo-channel", "browser", "memory-core"],
     });
     expect(
-      resolveConfiguredDeferredChannelPluginIds({
+      resolveConfiguredDeferredChannelPluginIdsForFixture({
         config,
-        workspaceDir: "/tmp",
         env: createPluginPlanningTestEnv({
           DEMO_CHANNEL_ANYTHING: "1",
         }),
@@ -1184,7 +1196,7 @@ describe("resolveGatewayStartupPluginIds", () => {
   it("keeps explicitly trusted deferred channel owners eligible at startup", () => {
     useManifestRegistryFixture(createManifestRegistryFixtureWithWorkspaceDemoChannel());
     expect(
-      resolveConfiguredDeferredChannelPluginIds({
+      resolveConfiguredDeferredChannelPluginIdsForFixture({
         config: {
           channels: {
             "demo-channel": {
@@ -1195,7 +1207,6 @@ describe("resolveGatewayStartupPluginIds", () => {
             allow: ["workspace-demo-channel-plugin"],
           },
         } as OpenClawConfig,
-        workspaceDir: "/tmp",
         env: createPluginPlanningTestEnv(),
       }),
     ).toEqual(["workspace-demo-channel-plugin"]);
@@ -1262,13 +1273,12 @@ describe("resolveGatewayStartupPluginIds", () => {
     );
 
     expect(
-      resolveConfiguredDeferredChannelPluginIds({
+      resolveConfiguredDeferredChannelPluginIdsForFixture({
         config: {
           plugins: {
             allow: ["workspace-demo-channel-plugin"],
           },
         } as OpenClawConfig,
-        workspaceDir: "/tmp",
         env: createPluginPlanningTestEnv({
           OPENCLAW_STATE_DIR: "/tmp/openclaw-with-persisted-demo-channel",
         }),
@@ -1302,7 +1312,7 @@ describe("resolveGatewayStartupPluginIds", () => {
     useManifestRegistryFixture(createManifestRegistryFixtureWithWorkspaceDemoChannel());
 
     expect(
-      resolveConfiguredDeferredChannelPluginIds({
+      resolveConfiguredDeferredChannelPluginIdsForFixture({
         config: {
           channels: {
             "demo-channel": {
@@ -1314,7 +1324,6 @@ describe("resolveGatewayStartupPluginIds", () => {
             allow: ["workspace-demo-channel-plugin"],
           },
         } as OpenClawConfig,
-        workspaceDir: "/tmp",
         env: createPluginPlanningTestEnv(),
       }),
     ).toStrictEqual([]);
