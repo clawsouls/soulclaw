@@ -633,6 +633,11 @@ export function isPluginStateDatabaseOpen(): boolean {
   return cachedDatabase !== null;
 }
 
+export function clearPluginStateSqliteStoreForTests(): void {
+  const store = openPluginStateDatabase("clear");
+  store.db.exec("DELETE FROM plugin_state_entries;");
+}
+
 export function probePluginStateStore(): PluginStateStoreProbeResult {
   const dbPath = resolvePluginStateSqlitePath(process.env);
   const steps: PluginStateStoreProbeStep[] = [];
