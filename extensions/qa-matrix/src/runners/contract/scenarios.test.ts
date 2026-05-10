@@ -5208,28 +5208,31 @@ describe("matrix live qa scenarios", () => {
         "matrix-e2ee-cli-encryption-setup-bootstrap-failure",
       );
 
-      await expect(
-        runMatrixQaScenario(scenario, {
-          ...matrixQaScenarioContext(),
-          driverDeviceId: "DRIVERDEVICE",
-          driverPassword: "driver-password",
-          gatewayRuntimeEnv: {
-            OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
-            OPENCLAW_STATE_DIR: "/tmp/gateway-state",
-            PATH: process.env.PATH,
-          },
-          outputDir,
-        }),
-      ).resolves.toMatchObject({
-        artifacts: {
-          accountId: "cli-encryption-failure",
-          bootstrapSuccess: false,
-          cliDeviceId: "CLIFAILUREDEVICE",
-          faultedEndpoint: "/_matrix/client/v3/room_keys/version",
-          faultHitCount: 1,
-          faultRuleId: "room-key-backup-version-unavailable",
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        driverDeviceId: "DRIVERDEVICE",
+        driverPassword: "driver-password",
+        gatewayRuntimeEnv: {
+          OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
+          OPENCLAW_STATE_DIR: "/tmp/gateway-state",
+          PATH: process.env.PATH,
         },
+        outputDir,
       });
+      const artifacts = result.artifacts as {
+        accountId?: unknown;
+        bootstrapSuccess?: unknown;
+        cliDeviceId?: unknown;
+        faultedEndpoint?: unknown;
+        faultHitCount?: unknown;
+        faultRuleId?: unknown;
+      };
+      expect(artifacts.accountId).toBe("cli-encryption-failure");
+      expect(artifacts.bootstrapSuccess).toBe(false);
+      expect(artifacts.cliDeviceId).toBe("CLIFAILUREDEVICE");
+      expect(artifacts.faultedEndpoint).toBe("/_matrix/client/v3/room_keys/version");
+      expect(artifacts.faultHitCount).toBe(1);
+      expect(artifacts.faultRuleId).toBe("room-key-backup-version-unavailable");
 
       const proxyArgs = startMatrixQaFaultProxy.mock.calls[0]?.[0];
       if (!proxyArgs) {
@@ -5263,18 +5266,12 @@ describe("matrix live qa scenarios", () => {
       expect(output).toHaveBeenCalledTimes(1);
       expect(wait).toHaveBeenCalledTimes(1);
       expect(kill).toHaveBeenCalledTimes(1);
-      expect(registerWithToken).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceName: "OpenClaw Matrix QA CLI Encryption Failure Owner",
-          registrationToken: "registration-token",
-        }),
+      expect(registerWithToken.mock.calls[0]?.[0]?.deviceName).toBe(
+        "OpenClaw Matrix QA CLI Encryption Failure Owner",
       );
-      expect(loginWithPassword).toHaveBeenCalledWith(
-        expect.objectContaining({
-          password: "cli-failure-password",
-          userId: "@cli-failure:matrix-qa.test",
-        }),
-      );
+      expect(registerWithToken.mock.calls[0]?.[0]?.registrationToken).toBe("registration-token");
+      expect(loginWithPassword.mock.calls[0]?.[0]?.password).toBe("cli-failure-password");
+      expect(loginWithPassword.mock.calls[0]?.[0]?.userId).toBe("@cli-failure:matrix-qa.test");
       expect(proxyStop).toHaveBeenCalledTimes(1);
       const [cliRunDir] = await readdir(
         path.join(outputDir, "cli-encryption-setup-bootstrap-failure"),
@@ -5382,40 +5379,47 @@ describe("matrix live qa scenarios", () => {
 
       const scenario = requireMatrixQaScenario("matrix-e2ee-cli-recovery-key-setup");
 
-      await expect(
-        runMatrixQaScenario(scenario, {
-          ...matrixQaScenarioContext(),
-          driverDeviceId: "DRIVERDEVICE",
-          driverPassword: "driver-password",
-          gatewayRuntimeEnv: {
-            OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
-            OPENCLAW_STATE_DIR: "/tmp/gateway-state",
-            PATH: process.env.PATH,
-          },
-          outputDir,
-        }),
-      ).resolves.toMatchObject({
-        artifacts: {
-          accountId: "cli-recovery-key-setup",
-          backupVersion: "backup-v1",
-          cliDeviceId: "CLIRECOVERYDEVICE",
-          encryptionChanged: true,
-          recoveryKeyId: "SSSS",
-          recoveryKeyStored: true,
-          setupSuccess: true,
-          verificationBootstrapSuccess: true,
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        driverDeviceId: "DRIVERDEVICE",
+        driverPassword: "driver-password",
+        gatewayRuntimeEnv: {
+          OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
+          OPENCLAW_STATE_DIR: "/tmp/gateway-state",
+          PATH: process.env.PATH,
         },
+        outputDir,
       });
+      const artifacts = result.artifacts as {
+        accountId?: unknown;
+        backupVersion?: unknown;
+        cliDeviceId?: unknown;
+        encryptionChanged?: unknown;
+        recoveryKeyId?: unknown;
+        recoveryKeyStored?: unknown;
+        setupSuccess?: unknown;
+        verificationBootstrapSuccess?: unknown;
+      };
+      expect(artifacts.accountId).toBe("cli-recovery-key-setup");
+      expect(artifacts.backupVersion).toBe("backup-v1");
+      expect(artifacts.cliDeviceId).toBe("CLIRECOVERYDEVICE");
+      expect(artifacts.encryptionChanged).toBe(true);
+      expect(artifacts.recoveryKeyId).toBe("SSSS");
+      expect(artifacts.recoveryKeyStored).toBe(true);
+      expect(artifacts.setupSuccess).toBe(true);
+      expect(artifacts.verificationBootstrapSuccess).toBe(true);
 
-      expect(initialAccountConfig).toMatchObject({
-        accessToken: "cli-recovery-token",
-        deviceId: "CLIRECOVERYDEVICE",
-        encryption: false,
-        homeserver: "http://127.0.0.1:28008/",
-        password: "cli-recovery-password",
-        startupVerification: "off",
-        userId: "@cli-recovery:matrix-qa.test",
-      });
+      if (!initialAccountConfig) {
+        throw new Error("expected initial CLI recovery key account config");
+      }
+      const capturedInitialAccountConfig = initialAccountConfig as Record<string, unknown>;
+      expect(capturedInitialAccountConfig.accessToken).toBe("cli-recovery-token");
+      expect(capturedInitialAccountConfig.deviceId).toBe("CLIRECOVERYDEVICE");
+      expect(capturedInitialAccountConfig.encryption).toBe(false);
+      expect(capturedInitialAccountConfig.homeserver).toBe("http://127.0.0.1:28008/");
+      expect(capturedInitialAccountConfig.password).toBe("cli-recovery-password");
+      expect(capturedInitialAccountConfig.startupVerification).toBe("off");
+      expect(capturedInitialAccountConfig.userId).toBe("@cli-recovery:matrix-qa.test");
       expect(bootstrapOwnDeviceVerification).toHaveBeenCalledWith({
         allowAutomaticCrossSigningReset: false,
       });
@@ -5431,18 +5435,12 @@ describe("matrix live qa scenarios", () => {
           "--json",
         ],
       ]);
-      expect(registerWithToken).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceName: "OpenClaw Matrix QA CLI Recovery Key Owner",
-          registrationToken: "registration-token",
-        }),
+      expect(registerWithToken.mock.calls[0]?.[0]?.deviceName).toBe(
+        "OpenClaw Matrix QA CLI Recovery Key Owner",
       );
-      expect(loginWithPassword).toHaveBeenCalledWith(
-        expect.objectContaining({
-          password: "cli-recovery-password",
-          userId: "@cli-recovery:matrix-qa.test",
-        }),
-      );
+      expect(registerWithToken.mock.calls[0]?.[0]?.registrationToken).toBe("registration-token");
+      expect(loginWithPassword.mock.calls[0]?.[0]?.password).toBe("cli-recovery-password");
+      expect(loginWithPassword.mock.calls[0]?.[0]?.userId).toBe("@cli-recovery:matrix-qa.test");
       expect(deleteOwnDevices).toHaveBeenCalledWith(["CLIRECOVERYDEVICE"]);
       expect(stop).toHaveBeenCalledTimes(1);
       const [cliRunDir] = await readdir(path.join(outputDir, "cli-recovery-key-setup"));
@@ -5523,29 +5521,33 @@ describe("matrix live qa scenarios", () => {
 
       const scenario = requireMatrixQaScenario("matrix-e2ee-cli-recovery-key-invalid");
 
-      await expect(
-        runMatrixQaScenario(scenario, {
-          ...matrixQaScenarioContext(),
-          driverDeviceId: "DRIVERDEVICE",
-          driverPassword: "driver-password",
-          gatewayRuntimeEnv: {
-            OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
-            OPENCLAW_STATE_DIR: "/tmp/gateway-state",
-            PATH: process.env.PATH,
-          },
-          outputDir,
-        }),
-      ).resolves.toMatchObject({
-        artifacts: {
-          accountId: "cli-invalid-recovery-key",
-          bootstrapSuccess: false,
-          cliDeviceId: "CLIINVALIDDEVICE",
-          encryptionChanged: true,
-          recoveryKeyAccepted: false,
-          recoveryKeyRejected: true,
-          setupSuccess: false,
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        driverDeviceId: "DRIVERDEVICE",
+        driverPassword: "driver-password",
+        gatewayRuntimeEnv: {
+          OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
+          OPENCLAW_STATE_DIR: "/tmp/gateway-state",
+          PATH: process.env.PATH,
         },
+        outputDir,
       });
+      const artifacts = result.artifacts as {
+        accountId?: unknown;
+        bootstrapSuccess?: unknown;
+        cliDeviceId?: unknown;
+        encryptionChanged?: unknown;
+        recoveryKeyAccepted?: unknown;
+        recoveryKeyRejected?: unknown;
+        setupSuccess?: unknown;
+      };
+      expect(artifacts.accountId).toBe("cli-invalid-recovery-key");
+      expect(artifacts.bootstrapSuccess).toBe(false);
+      expect(artifacts.cliDeviceId).toBe("CLIINVALIDDEVICE");
+      expect(artifacts.encryptionChanged).toBe(true);
+      expect(artifacts.recoveryKeyAccepted).toBe(false);
+      expect(artifacts.recoveryKeyRejected).toBe(true);
+      expect(artifacts.setupSuccess).toBe(false);
 
       expect(startMatrixQaOpenClawCli.mock.calls[0]?.[0].args).toEqual([
         "matrix",
@@ -5560,18 +5562,12 @@ describe("matrix live qa scenarios", () => {
       expect(output).toHaveBeenCalledTimes(1);
       expect(wait).toHaveBeenCalledTimes(1);
       expect(kill).toHaveBeenCalledTimes(1);
-      expect(registerWithToken).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceName: "OpenClaw Matrix QA CLI Invalid Recovery Key Owner",
-          registrationToken: "registration-token",
-        }),
+      expect(registerWithToken.mock.calls[0]?.[0]?.deviceName).toBe(
+        "OpenClaw Matrix QA CLI Invalid Recovery Key Owner",
       );
-      expect(loginWithPassword).toHaveBeenCalledWith(
-        expect.objectContaining({
-          password: "cli-invalid-password",
-          userId: "@cli-invalid:matrix-qa.test",
-        }),
-      );
+      expect(registerWithToken.mock.calls[0]?.[0]?.registrationToken).toBe("registration-token");
+      expect(loginWithPassword.mock.calls[0]?.[0]?.password).toBe("cli-invalid-password");
+      expect(loginWithPassword.mock.calls[0]?.[0]?.userId).toBe("@cli-invalid:matrix-qa.test");
       expect(deleteOwnDevices).toHaveBeenCalledWith(["CLIINVALIDDEVICE"]);
       expect(stop).toHaveBeenCalledTimes(1);
       const [cliRunDir] = await readdir(path.join(outputDir, "cli-recovery-key-invalid"));
@@ -5646,45 +5642,43 @@ describe("matrix live qa scenarios", () => {
 
       const scenario = requireMatrixQaScenario("matrix-e2ee-cli-encryption-setup-multi-account");
 
-      await expect(
-        runMatrixQaScenario(scenario, {
-          ...matrixQaScenarioContext(),
-          driverDeviceId: "DRIVERDEVICE",
-          driverPassword: "driver-password",
-          gatewayRuntimeEnv: {
-            OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
-            OPENCLAW_STATE_DIR: "/tmp/gateway-state",
-            PATH: process.env.PATH,
-          },
-          outputDir,
-        }),
-      ).resolves.toMatchObject({
-        artifacts: {
-          accountId: "cli-multi-target",
-          cliDeviceId: "CLIMULTIDEVICE",
-          decoyAccountPreserved: true,
-          defaultAccountPreserved: true,
-          encryptionChanged: true,
-          setupSuccess: true,
-          verificationBootstrapSuccess: true,
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        driverDeviceId: "DRIVERDEVICE",
+        driverPassword: "driver-password",
+        gatewayRuntimeEnv: {
+          OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
+          OPENCLAW_STATE_DIR: "/tmp/gateway-state",
+          PATH: process.env.PATH,
         },
+        outputDir,
       });
+      const artifacts = result.artifacts as {
+        accountId?: unknown;
+        cliDeviceId?: unknown;
+        decoyAccountPreserved?: unknown;
+        defaultAccountPreserved?: unknown;
+        encryptionChanged?: unknown;
+        setupSuccess?: unknown;
+        verificationBootstrapSuccess?: unknown;
+      };
+      expect(artifacts.accountId).toBe("cli-multi-target");
+      expect(artifacts.cliDeviceId).toBe("CLIMULTIDEVICE");
+      expect(artifacts.decoyAccountPreserved).toBe(true);
+      expect(artifacts.defaultAccountPreserved).toBe(true);
+      expect(artifacts.encryptionChanged).toBe(true);
+      expect(artifacts.setupSuccess).toBe(true);
+      expect(artifacts.verificationBootstrapSuccess).toBe(true);
 
       expect(runMatrixQaOpenClawCli.mock.calls.map(([params]) => params.args)).toEqual([
         ["matrix", "encryption", "setup", "--account", "cli-multi-target", "--json"],
       ]);
-      expect(registerWithToken).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceName: "OpenClaw Matrix QA CLI Multi Account Owner",
-          registrationToken: "registration-token",
-        }),
+      expect(registerWithToken.mock.calls[0]?.[0]?.deviceName).toBe(
+        "OpenClaw Matrix QA CLI Multi Account Owner",
       );
-      expect(loginWithPassword).toHaveBeenCalledWith(
-        expect.objectContaining({
-          password: "cli-multi-password",
-          userId: "@cli-multi:matrix-qa.test",
-        }),
-      );
+      expect(registerWithToken.mock.calls[0]?.[0]?.registrationToken).toBe("registration-token");
+      expect(loginWithPassword.mock.calls[0]?.[0]?.password).toBe("cli-multi-password");
+      expect(loginWithPassword.mock.calls[0]?.[0]?.userId).toBe("@cli-multi:matrix-qa.test");
       const [cliRunDir] = await readdir(path.join(outputDir, "cli-encryption-setup-multi-account"));
       const cliArtifactDir = path.join(
         outputDir,
