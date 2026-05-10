@@ -693,6 +693,8 @@ jobs:
           install-bun: "true"
 
       - name: Build private QA runtime
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: pnpm build
 
       - name: Run parity lane
@@ -770,6 +772,8 @@ jobs:
           merge-multiple: true
 
       - name: Build private QA runtime
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: pnpm build
 
       - name: Generate parity report
@@ -821,6 +825,8 @@ jobs:
           install-bun: "true"
 
       - name: Build private QA runtime
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: pnpm build
 
       - name: Run Matrix live lane
@@ -918,6 +924,8 @@ jobs:
           require_var OPENCLAW_QA_CONVEX_SECRET_CI
 
       - name: Build private QA runtime
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: pnpm build
 
       - name: Run Telegram live lane
@@ -1012,6 +1020,8 @@ jobs:
           require_var OPENCLAW_QA_CONVEX_SECRET_CI
 
       - name: Build private QA runtime
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: pnpm build
 
       - name: Run Discord live lane
@@ -1106,6 +1116,8 @@ jobs:
           require_var OPENCLAW_QA_CONVEX_SECRET_CI
 
       - name: Build private QA runtime
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: pnpm build
 
       - name: Run WhatsApp live lane
@@ -1200,6 +1212,8 @@ jobs:
           require_var OPENCLAW_QA_CONVEX_SECRET_CI
 
       - name: Build private QA runtime
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: pnpm build
 
       - name: Run Slack live lane

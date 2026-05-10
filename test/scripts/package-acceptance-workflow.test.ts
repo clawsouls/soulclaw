@@ -649,6 +649,21 @@ describe("package artifact reuse", () => {
     expect(workflow).not.toContain("npm_telegram:");
   });
 
+  it("gives release build steps enough Node heap", () => {
+    for (const workflowPath of [LIVE_E2E_WORKFLOW, RELEASE_CHECKS_WORKFLOW]) {
+      const jobs = readWorkflow(workflowPath).jobs ?? {};
+      for (const [jobName, job] of Object.entries(jobs)) {
+        for (const step of job.steps ?? []) {
+          if (step.run === "pnpm build") {
+            expect(step.env, `${workflowPath}:${jobName}:${step.name}`).toMatchObject({
+              NODE_OPTIONS: "--max-old-space-size=6144",
+            });
+          }
+        }
+      }
+    }
+  });
+
   it("runs full release children from the trusted workflow ref", () => {
     const workflow = readFileSync(FULL_RELEASE_VALIDATION_WORKFLOW, "utf8");
     const preparePackageJob = workflowJob(

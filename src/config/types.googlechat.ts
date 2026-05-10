@@ -4,7 +4,7 @@ import type {
   GroupPolicy,
   ReplyToMode,
 } from "./types.base.js";
-import type { ChannelHealthMonitorConfig } from "./types.channels.js";
+import type { ChannelHealthMonitorConfig } from "./types.channel-health.js";
 import type { DmConfig } from "./types.messages.js";
 import type { SecretRef } from "./types.secrets.js";
 

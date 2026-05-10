@@ -1,4 +1,8 @@
 import type { ContextVisibilityMode, GroupPolicy } from "./types.base.js";
+import type {
+  ChannelHealthMonitorConfig,
+  ChannelHeartbeatVisibilityConfig,
+} from "./types.channel-health.js";
 import type { DiscordConfig } from "./types.discord.js";
 import type { GoogleChatConfig } from "./types.googlechat.js";
 import type { IMessageConfig } from "./types.imessage.js";
@@ -9,22 +13,10 @@ import type { SlackConfig } from "./types.slack.js";
 import type { TelegramConfig } from "./types.telegram.js";
 import type { WhatsAppConfig } from "./types.whatsapp.js";
 
-export type ChannelHeartbeatVisibilityConfig = {
-  /** Show HEARTBEAT_OK acknowledgments in chat (default: false). */
-  showOk?: boolean;
-  /** Show heartbeat alerts with actual content (default: true). */
-  showAlerts?: boolean;
-  /** Emit indicator events for UI status display (default: true). */
-  useIndicator?: boolean;
-};
-
-export type ChannelHealthMonitorConfig = {
-  /**
-   * Enable channel-health-monitor restarts for this channel or account.
-   * Inherits the global gateway setting when omitted.
-   */
-  enabled?: boolean;
-};
+export type {
+  ChannelHealthMonitorConfig,
+  ChannelHeartbeatVisibilityConfig,
+} from "./types.channel-health.js";
 
 export type ChannelDefaultsConfig = {
   groupPolicy?: GroupPolicy;
