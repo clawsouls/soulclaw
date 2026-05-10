@@ -344,6 +344,20 @@ function clawHubInstallCall(index = 0): Record<string, unknown> | undefined {
   return calls[index]?.[0];
 }
 
+function marketplaceInstallCall(index = 0): Record<string, unknown> | undefined {
+  const calls = installPluginFromMarketplaceMock.mock.calls as unknown as Array<
+    [Record<string, unknown>]
+  >;
+  return calls[index]?.[0];
+}
+
+function gitInstallCall(index = 0): Record<string, unknown> | undefined {
+  const calls = installPluginFromGitSpecMock.mock.calls as unknown as Array<
+    [Record<string, unknown>]
+  >;
+  return calls[index]?.[0];
+}
+
 function npmViewCall(): [unknown, Record<string, unknown>] | undefined {
   const calls = runCommandWithTimeoutMock.mock.calls as unknown as Array<
     [unknown, Record<string, unknown>]
@@ -2267,13 +2281,10 @@ describe("updateNpmInstalledPlugins", () => {
 
     expect(installPluginFromClawHubMock).not.toHaveBeenCalled();
     expect(result.changed).toBe(false);
-    expect(result.outcomes).toEqual([
-      expect.objectContaining({
-        pluginId: "whatsapp",
-        status: "skipped",
-        message: expect.stringContaining("bundled version 2026.4.20 is newer"),
-      }),
-    ]);
+    expect(result.outcomes).toHaveLength(1);
+    expect(result.outcomes[0]?.pluginId).toBe("whatsapp");
+    expect(result.outcomes[0]?.status).toBe("skipped");
+    expect(result.outcomes[0]?.message).toContain("bundled version 2026.4.20 is newer");
     expect(warnMessages).toEqual([expect.stringContaining("bundled version 2026.4.20 is newer")]);
   });
 
@@ -2405,12 +2416,8 @@ describe("updateNpmInstalledPlugins", () => {
       pluginIds: ["voice-call"],
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@openclaw/voice-call",
-        expectedPluginId: "voice-call",
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("@openclaw/voice-call");
+    expect(npmInstallCall()?.expectedPluginId).toBe("voice-call");
     expect(result.config.plugins?.allow).toEqual(["@openclaw/voice-call"]);
     expect(result.config.plugins?.deny).toEqual(["@openclaw/voice-call"]);
     expect(result.config.plugins?.slots?.memory).toBe("@openclaw/voice-call");
@@ -2419,7 +2426,7 @@ describe("updateNpmInstalledPlugins", () => {
       hooks: { allowPromptInjection: false },
     });
     expect(result.config.plugins?.entries?.["voice-call"]).toBeUndefined();
-    expect(result.config.plugins?.installs?.["@openclaw/voice-call"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["@openclaw/voice-call"], {
       source: "npm",
       spec: "@openclaw/voice-call",
       installPath: "/tmp/openclaw-voice-call",
@@ -2454,7 +2461,7 @@ describe("updateNpmInstalledPlugins", () => {
     });
 
     expect(result.config.plugins?.slots?.contextEngine).toBe("@openclaw/context-engine");
-    expect(result.config.plugins?.installs?.["@openclaw/context-engine"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["@openclaw/context-engine"], {
       source: "npm",
       spec: "@openclaw/context-engine",
       installPath: "/tmp/openclaw-context-engine",
@@ -2486,15 +2493,11 @@ describe("updateNpmInstalledPlugins", () => {
       dryRun: true,
     });
 
-    expect(installPluginFromMarketplaceMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        marketplace: "vincentkoc/claude-marketplace",
-        plugin: "claude-bundle",
-        expectedPluginId: "claude-bundle",
-        dryRun: true,
-        timeoutMs: 1_800_000,
-      }),
-    );
+    expect(marketplaceInstallCall()?.marketplace).toBe("vincentkoc/claude-marketplace");
+    expect(marketplaceInstallCall()?.plugin).toBe("claude-bundle");
+    expect(marketplaceInstallCall()?.expectedPluginId).toBe("claude-bundle");
+    expect(marketplaceInstallCall()?.dryRun).toBe(true);
+    expect(marketplaceInstallCall()?.timeoutMs).toBe(1_800_000);
     expect(result.outcomes).toEqual([
       {
         pluginId: "claude-bundle",
@@ -2530,7 +2533,7 @@ describe("updateNpmInstalledPlugins", () => {
     });
 
     expect(result.changed).toBe(true);
-    expect(result.config.plugins?.installs?.["claude-bundle"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["claude-bundle"], {
       source: "marketplace",
       installPath: "/tmp/claude-bundle",
       version: "1.3.0",
@@ -2565,15 +2568,11 @@ describe("updateNpmInstalledPlugins", () => {
       pluginIds: ["demo"],
     });
 
-    expect(installPluginFromGitSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "git:github.com/acme/demo@main",
-        expectedPluginId: "demo",
-        mode: "update",
-      }),
-    );
+    expect(gitInstallCall()?.spec).toBe("git:github.com/acme/demo@main");
+    expect(gitInstallCall()?.expectedPluginId).toBe("demo");
+    expect(gitInstallCall()?.mode).toBe("update");
     expect(result.changed).toBe(true);
-    expect(result.config.plugins?.installs?.demo).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.demo, {
       source: "git",
       spec: "git:github.com/acme/demo@main",
       installPath: "/tmp/demo",
@@ -2601,13 +2600,9 @@ describe("updateNpmInstalledPlugins", () => {
       dangerouslyForceUnsafeInstall: true,
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "openclaw-codex-app-server@beta",
-        dangerouslyForceUnsafeInstall: true,
-        expectedPluginId: "openclaw-codex-app-server",
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("openclaw-codex-app-server@beta");
+    expect(npmInstallCall()?.dangerouslyForceUnsafeInstall).toBe(true);
+    expect(npmInstallCall()?.expectedPluginId).toBe("openclaw-codex-app-server");
   });
 
   it("reuses the recorded managed extensions root when updating external plugins", async () => {
@@ -2696,18 +2691,10 @@ describe("updateNpmInstalledPlugins", () => {
       pluginIds: ["demo"],
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({ extensionsDir }),
-    );
-    expect(installPluginFromClawHubMock).toHaveBeenCalledWith(
-      expect.objectContaining({ extensionsDir }),
-    );
-    expect(installPluginFromMarketplaceMock).toHaveBeenCalledWith(
-      expect.objectContaining({ extensionsDir }),
-    );
-    expect(installPluginFromGitSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({ extensionsDir }),
-    );
+    expect(npmInstallCall()?.extensionsDir).toBe(extensionsDir);
+    expect(clawHubInstallCall()?.extensionsDir).toBe(extensionsDir);
+    expect(marketplaceInstallCall()?.extensionsDir).toBe(extensionsDir);
+    expect(gitInstallCall()?.extensionsDir).toBe(extensionsDir);
   });
 });
 
