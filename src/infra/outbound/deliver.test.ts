@@ -1937,18 +1937,14 @@ describe("deliverOutboundPayloads", () => {
     });
 
     expect(sendMatrix).toHaveBeenCalledTimes(2);
-    expect(sendMatrix).toHaveBeenNthCalledWith(
-      1,
-      "!room:example",
-      "Line one",
-      expect.objectContaining({ cfg }),
-    );
-    expect(sendMatrix).toHaveBeenNthCalledWith(
-      2,
-      "!room:example",
-      "Line two",
-      expect.objectContaining({ cfg }),
-    );
+    const firstChunkCall = sendMatrix.mock.calls[0];
+    expect(firstChunkCall?.[0]).toBe("!room:example");
+    expect(firstChunkCall?.[1]).toBe("Line one");
+    expect((firstChunkCall?.[2] as { cfg?: unknown } | undefined)?.cfg).toBe(cfg);
+    const secondChunkCall = sendMatrix.mock.calls[1];
+    expect(secondChunkCall?.[0]).toBe("!room:example");
+    expect(secondChunkCall?.[1]).toBe("Line two");
+    expect((secondChunkCall?.[2] as { cfg?: unknown } | undefined)?.cfg).toBe(cfg);
   });
 
   it("lets explicit formatting options override configured chunking", async () => {
@@ -2137,14 +2133,13 @@ describe("deliverOutboundPayloads", () => {
       deps: { matrix: sendMatrix },
     });
 
-    expect(sendMatrix).toHaveBeenCalledWith(
-      "!room:example",
-      "hello",
-      expect.objectContaining({
-        cfg,
-        mediaUrl: "https://example.com/a.png",
-      }),
-    );
+    const sendMatrixOptions = sendMatrix.mock.calls[0]?.[2] as
+      | { cfg?: unknown; mediaUrl?: unknown }
+      | undefined;
+    expect(sendMatrix.mock.calls[0]?.[0]).toBe("!room:example");
+    expect(sendMatrix.mock.calls[0]?.[1]).toBe("hello");
+    expect(sendMatrixOptions?.cfg).toBe(cfg);
+    expect(sendMatrixOptions?.mediaUrl).toBe("https://example.com/a.png");
   });
 
   it("keeps markdown images as text for channels that do not opt in", async () => {
@@ -2158,11 +2153,12 @@ describe("deliverOutboundPayloads", () => {
       deps: { matrix: sendMatrix },
     });
 
-    expect(sendMatrix).toHaveBeenCalledWith(
-      "!room:example",
+    const sendMatrixOptions = sendMatrix.mock.calls[0]?.[2] as { mediaUrl?: unknown } | undefined;
+    expect(sendMatrix.mock.calls[0]?.[0]).toBe("!room:example");
+    expect(sendMatrix.mock.calls[0]?.[1]).toBe(
       "Tech: ![Node.js](https://img.shields.io/badge/Node.js-339933)",
-      expect.not.objectContaining({ mediaUrl: expect.any(String) }),
     );
+    expect(sendMatrixOptions?.mediaUrl).toBeUndefined();
   });
 
   it("extracts markdown images for channels that opt in", async () => {
@@ -2188,11 +2184,10 @@ describe("deliverOutboundPayloads", () => {
       deps: { matrix: sendMatrix },
     });
 
-    expect(sendMatrix).toHaveBeenCalledWith(
-      "!room:example",
-      "Chart now",
-      expect.objectContaining({ mediaUrl: "https://example.com/chart.png" }),
-    );
+    const sendMatrixOptions = sendMatrix.mock.calls[0]?.[2] as { mediaUrl?: unknown } | undefined;
+    expect(sendMatrix.mock.calls[0]?.[0]).toBe("!room:example");
+    expect(sendMatrix.mock.calls[0]?.[1]).toBe("Chart now");
+    expect(sendMatrixOptions?.mediaUrl).toBe("https://example.com/chart.png");
   });
 
   it("normalizes payloads and drops empty entries", () => {
