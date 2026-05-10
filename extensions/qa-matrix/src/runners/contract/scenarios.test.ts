@@ -4642,26 +4642,27 @@ describe("matrix live qa scenarios", () => {
 
       const scenario = requireMatrixQaScenario("matrix-e2ee-cli-self-verification");
 
-      await expect(
-        runMatrixQaScenario(scenario, {
-          ...matrixQaScenarioContext(),
-          driverDeviceId: "DRIVERDEVICE",
-          driverPassword: "driver-password",
-          gatewayRuntimeEnv: {
-            OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
-            OPENCLAW_STATE_DIR: "/tmp/gateway-state",
-            PATH: process.env.PATH,
-          },
-          outputDir,
-        }),
-      ).resolves.toMatchObject({
-        artifacts: {
-          completedVerificationIds: ["verification-1", "owner-request"],
-          currentDeviceId: "CLIDEVICE",
-          sasEmoji: ["🐶 Dog"],
-          secondaryDeviceId: "CLIDEVICE",
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        driverDeviceId: "DRIVERDEVICE",
+        driverPassword: "driver-password",
+        gatewayRuntimeEnv: {
+          OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
+          OPENCLAW_STATE_DIR: "/tmp/gateway-state",
+          PATH: process.env.PATH,
         },
+        outputDir,
       });
+      const artifacts = result.artifacts as {
+        completedVerificationIds?: unknown;
+        currentDeviceId?: unknown;
+        sasEmoji?: unknown;
+        secondaryDeviceId?: unknown;
+      };
+      expect(artifacts.completedVerificationIds).toEqual(["verification-1", "owner-request"]);
+      expect(artifacts.currentDeviceId).toBe("CLIDEVICE");
+      expect(artifacts.sasEmoji).toEqual(["🐶 Dog"]);
+      expect(artifacts.secondaryDeviceId).toBe("CLIDEVICE");
 
       expect(startMatrixQaOpenClawCli).toHaveBeenCalledTimes(1);
       expect(startMatrixQaOpenClawCli.mock.calls[0]?.[0].args).toEqual([
@@ -4690,15 +4691,12 @@ describe("matrix live qa scenarios", () => {
         password: "cli-owner-password",
         userId: "@cli-owner:matrix-qa.test",
       });
-      expect(createMatrixQaE2eeScenarioClient).toHaveBeenCalledWith(
-        expect.objectContaining({
-          accessToken: "cli-owner-token",
-          deviceId: "OWNERDEVICE",
-          password: "cli-owner-password",
-          scenarioId: "matrix-e2ee-cli-self-verification",
-          userId: "@cli-owner:matrix-qa.test",
-        }),
-      );
+      const e2eeClientOptions = createMatrixQaE2eeScenarioClient.mock.calls[0]?.[0];
+      expect(e2eeClientOptions?.accessToken).toBe("cli-owner-token");
+      expect(e2eeClientOptions?.deviceId).toBe("OWNERDEVICE");
+      expect(e2eeClientOptions?.password).toBe("cli-owner-password");
+      expect(e2eeClientOptions?.scenarioId).toBe("matrix-e2ee-cli-self-verification");
+      expect(e2eeClientOptions?.userId).toBe("@cli-owner:matrix-qa.test");
       expect(runMatrixQaOpenClawCli).toHaveBeenCalledTimes(2);
       expect(runMatrixQaOpenClawCli.mock.calls.map(([params]) => params.args)).toEqual([
         [
@@ -4718,16 +4716,18 @@ describe("matrix live qa scenarios", () => {
       expect(cliEnv?.OPENCLAW_STATE_DIR).toContain("openclaw-matrix-cli-qa-");
       expect(cliEnv?.OPENCLAW_CONFIG_PATH).toContain("openclaw-matrix-cli-qa-");
       const configPath = String(cliEnv?.OPENCLAW_CONFIG_PATH);
-      expect(cliAccountConfigDuringRun).toMatchObject({
-        accessToken: "cli-token",
-        deviceId: "CLIDEVICE",
-        encryption: true,
-        homeserver: "http://127.0.0.1:28008/",
-        pluginAllow: expect.arrayContaining(["matrix"]),
-        pluginEnabled: true,
-        startupVerification: "off",
-        userId: "@cli-owner:matrix-qa.test",
-      });
+      if (!cliAccountConfigDuringRun) {
+        throw new Error("expected CLI account config to be captured");
+      }
+      const cliAccountConfig = cliAccountConfigDuringRun as Record<string, unknown>;
+      expect(cliAccountConfig.accessToken).toBe("cli-token");
+      expect(cliAccountConfig.deviceId).toBe("CLIDEVICE");
+      expect(cliAccountConfig.encryption).toBe(true);
+      expect(cliAccountConfig.homeserver).toBe("http://127.0.0.1:28008/");
+      expect(cliAccountConfig.pluginAllow).toContain("matrix");
+      expect(cliAccountConfig.pluginEnabled).toBe(true);
+      expect(cliAccountConfig.startupVerification).toBe("off");
+      expect(cliAccountConfig.userId).toBe("@cli-owner:matrix-qa.test");
       await expectPathMissing(configPath);
       await expectPathMissing(String(cliEnv?.OPENCLAW_STATE_DIR));
       expect(acceptVerification).toHaveBeenCalledWith("owner-request");
@@ -4735,8 +4735,9 @@ describe("matrix live qa scenarios", () => {
       expect(deleteOwnDevices).toHaveBeenCalledWith(["CLIDEVICE"]);
       const [cliRunDir] = await readdir(path.join(outputDir, "cli-self-verification"));
       const cliArtifactDir = path.join(outputDir, "cli-self-verification", cliRunDir ?? "");
-      await expect(stat(cliArtifactDir)).resolves.toMatchObject({ mode: expect.any(Number) });
-      expect((await stat(cliArtifactDir)).mode & 0o777).toBe(0o700);
+      const cliArtifactMode = (await stat(cliArtifactDir)).mode;
+      expect(typeof cliArtifactMode).toBe("number");
+      expect(cliArtifactMode & 0o777).toBe(0o700);
       await expect(
         readFile(path.join(cliArtifactDir, "verify-backup-restore.stdout.txt"), "utf8"),
       ).resolves.toContain('"success":true');
