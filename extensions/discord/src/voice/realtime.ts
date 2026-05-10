@@ -461,7 +461,8 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
           `discord voice: realtime input audio started guild=${this.params.entry.guildId} channel=${this.params.entry.channelId} user=${turn.context.userId} speaker=${turn.context.speakerLabel} discordBytes=${discordPcm48kStereo.length} realtimeBytes=${realtimePcm.length} outputAudioMs=${Math.floor(this.outputAudioTimestampMs)} outputActive=${this.isOutputAudioActive()}`,
         );
       }
-      if (!turn.interruptedPlayback && this.isBargeInEnabled()) {
+      const outputActive = this.hasInterruptibleOutputAudio();
+      if (!turn.interruptedPlayback && this.isBargeInEnabled() && outputActive) {
         turn.interruptedPlayback = true;
         logVoiceVerbose(
           `realtime barge-in from active speaker audio: guild ${this.params.entry.guildId} channel ${this.params.entry.channelId} user ${turn.context.userId}`,
@@ -482,7 +483,13 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
       );
       return;
     }
-    this.syncOutputAudioTimestamp();
+    const outputActive = this.hasInterruptibleOutputAudio();
+    if (!outputActive) {
+      logger.info(
+        `discord voice: realtime barge-in ignored reason=${reason} outputActive=false guild=${this.params.entry.guildId} channel=${this.params.entry.channelId} playbackChunks=${this.outputAudioChunks}`,
+      );
+      return;
+    }
     logger.info(
       `discord voice: realtime barge-in requested reason=${reason} guild=${this.params.entry.guildId} channel=${this.params.entry.channelId} outputAudioMs=${Math.floor(this.outputAudioTimestampMs)} outputActive=${this.isOutputAudioActive()} playbackChunks=${this.outputAudioChunks}`,
     );
@@ -495,6 +502,13 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
       realtimeConfig: this.realtimeConfig,
       providerId,
     });
+  }
+
+  private hasInterruptibleOutputAudio(): boolean {
+    this.syncOutputAudioTimestamp();
+    return (
+      this.isOutputAudioActive() || this.outputAudioChunks > 0 || this.outputAudioTimestampMs > 0
+    );
   }
 
   private get realtimeConfig(): DiscordRealtimeVoiceConfig {

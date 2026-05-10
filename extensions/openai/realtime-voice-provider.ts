@@ -741,7 +741,7 @@ class OpenAIRealtimeVoiceBridge implements RealtimeVoiceBridge {
       }
 
       case "input_audio_buffer.speech_started":
-        if (this.config.autoRespondToAudio ?? true) {
+        if (this.config.interruptResponseOnInputAudio ?? this.config.autoRespondToAudio ?? true) {
           this.handleBargeIn();
         }
         return;

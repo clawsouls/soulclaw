@@ -579,7 +579,15 @@ describe("DiscordVoiceManager", () => {
 
     const player = getLastAudioPlayer();
     const entry = getSessionEntry(manager);
+    const bridgeParams = createRealtimeVoiceBridgeSessionMock.mock.calls.at(-1)?.[0] as
+      | {
+          audioSink?: {
+            sendAudio: (audio: Buffer) => void;
+          };
+        }
+      | undefined;
     player.state.status = "playing";
+    bridgeParams?.audioSink?.sendAudio(Buffer.alloc(480));
 
     await (
       manager as unknown as {
@@ -652,7 +660,7 @@ describe("DiscordVoiceManager", () => {
     expect(realtimeSessionMock.sendAudio).toHaveBeenCalled();
   });
 
-  it("interrupts provider response state even after local realtime playback has ended", async () => {
+  it("does not interrupt realtime provider state when local playback is already idle", async () => {
     const manager = createManager({
       groupPolicy: "open",
       allowFrom: ["discord:u1"],
@@ -689,7 +697,7 @@ describe("DiscordVoiceManager", () => {
 
     turn?.sendInputAudio(Buffer.alloc(3840));
 
-    expect(realtimeSessionMock.handleBargeIn).toHaveBeenCalled();
+    expect(realtimeSessionMock.handleBargeIn).not.toHaveBeenCalled();
     expect(player.stop).not.toHaveBeenCalled();
     expect(realtimeSessionMock.sendAudio).toHaveBeenCalled();
   });
