@@ -267,8 +267,7 @@ describe("ollama setup", () => {
     });
 
     const requestUrls = fetchMock.mock.calls.map((call) => requestUrl(call[0]));
-    expect(requestUrls).not.toEqual(expect.arrayContaining([expect.stringContaining("127.0.0.1")]));
-    expect(requestUrls).toEqual(expect.arrayContaining([expect.stringContaining("ollama.com")]));
+    expect(requestUrls).toEqual(["https://ollama.com/api/tags"]);
   });
 
   it("rejects the local marker during cloud-only setup", async () => {
@@ -298,11 +297,10 @@ describe("ollama setup", () => {
       prompter,
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[0]?.[0]).toContain("/api/tags");
-    expect(fetchMock.mock.calls.map((call) => requestUrl(call[0]))).not.toEqual(
-      expect.arrayContaining([expect.stringContaining("/api/me")]),
-    );
+    expect(fetchMock.mock.calls.map((call) => requestUrl(call[0]))).toEqual([
+      "http://127.0.0.1:11434/api/tags",
+      "http://127.0.0.1:11434/api/show",
+    ]);
   });
 
   it("asks for Ollama mode before cloud api key", async () => {
