@@ -46,7 +46,7 @@ pnpm qa:telegram-user:crabbox -- start \
 ```
 
 The runner defaults to `--class standard`, `--record-fps 24`,
-`--preview-fps 24`, and `--preview-width 1280`. Keep those defaults unless the
+`--preview-fps 24`, and `--preview-width 1920`. Keep those defaults unless the
 proof needs something else.
 
 ## While Testing

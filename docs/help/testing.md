@@ -480,7 +480,7 @@ alive, an agent can keep testing until satisfied:
 
 For deterministic visual repros, pass `--mock-response-file <path>` to `start`
 or to the one-command `probe` shorthand. The runner defaults to a standard
-Crabbox class, 24fps recording, 24fps motion GIF previews, and 1280px GIF
+Crabbox class, 24fps recording, 24fps motion GIF previews, and 1920px GIF
 width. Override with `--class`, `--record-fps`, `--preview-fps`, and
 `--preview-width` only when the proof needs different capture settings.
 
