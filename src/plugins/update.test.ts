@@ -337,11 +337,27 @@ function npmInstallCall(index = 0): Record<string, unknown> | undefined {
   return calls[index]?.[0];
 }
 
+function clawHubInstallCall(index = 0): Record<string, unknown> | undefined {
+  const calls = installPluginFromClawHubMock.mock.calls as unknown as Array<
+    [Record<string, unknown>]
+  >;
+  return calls[index]?.[0];
+}
+
 function npmViewCall(): [unknown, Record<string, unknown>] | undefined {
   const calls = runCommandWithTimeoutMock.mock.calls as unknown as Array<
     [unknown, Record<string, unknown>]
   >;
   return calls.find(([argv]) => Array.isArray(argv) && argv[0] === "npm" && argv[1] === "view");
+}
+
+function expectRecordFields(
+  actual: Record<string, unknown> | undefined,
+  expected: Record<string, unknown>,
+) {
+  for (const [key, value] of Object.entries(expected)) {
+    expect(actual?.[key]).toEqual(value);
+  }
 }
 
 function expectNpmUpdateCall(params: {
@@ -1115,13 +1131,13 @@ describe("updateNpmInstalledPlugins", () => {
 
     expect(installPluginFromNpmSpecMock).toHaveBeenCalledTimes(1);
     expect(result.changed).toBe(true);
-    expect(result.outcomes[0]).toMatchObject({
+    expectRecordFields(result.outcomes[0], {
       pluginId: "lossless-claw",
       status: "unchanged",
       currentVersion: "0.9.0",
       nextVersion: "0.9.0",
     });
-    expect(result.config.plugins?.installs?.["lossless-claw"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["lossless-claw"], {
       source: "npm",
       resolvedName: "@martian-engineering/lossless-claw",
       resolvedVersion: "0.9.0",
@@ -1163,13 +1179,12 @@ describe("updateNpmInstalledPlugins", () => {
 
     expect(installPluginFromNpmSpecMock).not.toHaveBeenCalled();
     expect(result.changed).toBe(false);
-    expect(result.outcomes).toEqual([
-      expect.objectContaining({
-        pluginId: "lossless-claw",
-        status: "unchanged",
-        currentVersion: "0.9.0",
-      }),
-    ]);
+    expect(result.outcomes).toHaveLength(1);
+    expectRecordFields(result.outcomes[0], {
+      pluginId: "lossless-claw",
+      status: "unchanged",
+      currentVersion: "0.9.0",
+    });
   });
 
   it("falls through to npm reinstall when the recorded integrity differs", async () => {
@@ -1216,7 +1231,7 @@ describe("updateNpmInstalledPlugins", () => {
 
     expect(installPluginFromNpmSpecMock).toHaveBeenCalledTimes(1);
     expect(result.changed).toBe(true);
-    expect(result.outcomes[0]).toMatchObject({
+    expectRecordFields(result.outcomes[0], {
       pluginId: "lossless-claw",
       status: "unchanged",
       currentVersion: "0.9.0",
@@ -1404,19 +1419,15 @@ describe("updateNpmInstalledPlugins", () => {
       syncOfficialPluginInstalls: true,
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@openclaw/codex",
-        expectedPluginId: "codex",
-        trustedSourceLinkedOfficialInstall: true,
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("@openclaw/codex");
+    expect(npmInstallCall()?.expectedPluginId).toBe("codex");
+    expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).toBe(true);
     expect(result.changed).toBe(true);
     expect(result.config.plugins?.entries?.codex).toEqual({
       enabled: false,
       config: { preserved: true },
     });
-    expect(result.config.plugins?.installs?.codex).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.codex, {
       source: "npm",
       spec: "@openclaw/codex",
       version: "2026.5.4",
@@ -1424,7 +1435,7 @@ describe("updateNpmInstalledPlugins", () => {
       resolvedVersion: "2026.5.4",
       resolvedSpec: "@openclaw/codex@2026.5.4",
     });
-    expect(result.outcomes[0]).toMatchObject({
+    expectRecordFields(result.outcomes[0], {
       pluginId: "codex",
       status: "updated",
       currentVersion: "2026.5.3",
@@ -1456,12 +1467,8 @@ describe("updateNpmInstalledPlugins", () => {
       syncOfficialPluginInstalls: true,
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@acme/demo@1.2.3",
-        expectedPluginId: "demo",
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("@acme/demo@1.2.3");
+    expect(npmInstallCall()?.expectedPluginId).toBe("demo");
   });
 
   it("uses exact npm spec selectors as dry-run target versions when probes omit metadata", async () => {
@@ -1486,7 +1493,7 @@ describe("updateNpmInstalledPlugins", () => {
       dryRun: true,
     });
 
-    expect(result.outcomes[0]).toMatchObject({
+    expectRecordFields(result.outcomes[0], {
       pluginId: "demo",
       status: "updated",
       currentVersion: "1.2.3",
@@ -1517,7 +1524,7 @@ describe("updateNpmInstalledPlugins", () => {
       dryRun: true,
     });
 
-    expect(result.outcomes[0]).toMatchObject({
+    expectRecordFields(result.outcomes[0], {
       pluginId: "demo",
       status: "unchanged",
       currentVersion: "1.2.3",
@@ -1562,13 +1569,9 @@ describe("updateNpmInstalledPlugins", () => {
       syncOfficialPluginInstalls: true,
     });
 
-    expect(installPluginFromClawHubMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "clawhub:@openclaw/diagnostics-otel",
-        expectedPluginId: "diagnostics-otel",
-      }),
-    );
-    expect(result.config.plugins?.installs?.["diagnostics-otel"]).toMatchObject({
+    expect(clawHubInstallCall()?.spec).toBe("clawhub:@openclaw/diagnostics-otel");
+    expect(clawHubInstallCall()?.expectedPluginId).toBe("diagnostics-otel");
+    expectRecordFields(result.config.plugins?.installs?.["diagnostics-otel"], {
       source: "clawhub",
       spec: "clawhub:@openclaw/diagnostics-otel",
       version: "2026.5.4",
@@ -1606,13 +1609,9 @@ describe("updateNpmInstalledPlugins", () => {
       syncOfficialPluginInstalls: true,
     });
 
-    expect(installPluginFromClawHubMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "clawhub:@openclaw/diagnostics-prometheus",
-        expectedPluginId: "diagnostics-prometheus",
-      }),
-    );
-    expect(result.config.plugins?.installs?.["diagnostics-prometheus"]).toMatchObject({
+    expect(clawHubInstallCall()?.spec).toBe("clawhub:@openclaw/diagnostics-prometheus");
+    expect(clawHubInstallCall()?.expectedPluginId).toBe("diagnostics-prometheus");
+    expectRecordFields(result.config.plugins?.installs?.["diagnostics-prometheus"], {
       source: "clawhub",
       spec: "clawhub:@openclaw/diagnostics-prometheus",
       version: "2026.5.4",
