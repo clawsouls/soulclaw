@@ -62,6 +62,11 @@ export type SlackSendIdentity = {
   iconEmoji?: string;
 };
 
+type SlackUnfurlOptions = {
+  unfurlLinks?: boolean;
+  unfurlMedia?: boolean;
+};
+
 type SlackSendOpts = {
   cfg: OpenClawConfig;
   token?: string;
@@ -96,6 +101,13 @@ type SlackWebApiError = Error & {
 
 function hasCustomIdentity(identity?: SlackSendIdentity): boolean {
   return Boolean(identity?.username || identity?.iconUrl || identity?.iconEmoji);
+}
+
+function buildSlackUnfurlPayload(options?: SlackUnfurlOptions) {
+  return {
+    ...(typeof options?.unfurlLinks === "boolean" ? { unfurl_links: options.unfurlLinks } : {}),
+    ...(typeof options?.unfurlMedia === "boolean" ? { unfurl_media: options.unfurlMedia } : {}),
+  };
 }
 
 function normalizeSlackApiString(value: unknown): string | undefined {
@@ -242,11 +254,13 @@ async function postSlackMessageBestEffort(params: {
   threadTs?: string;
   identity?: SlackSendIdentity;
   blocks?: (Block | KnownBlock)[];
+  unfurl?: SlackUnfurlOptions;
 }) {
   const basePayload = {
     channel: params.channelId,
     text: params.text,
     thread_ts: params.threadTs,
+    ...buildSlackUnfurlPayload(params.unfurl),
     ...(params.blocks?.length ? { blocks: params.blocks } : {}),
   };
   const postChatMessage = params.client.chat.postMessage.bind(params.client.chat);
@@ -618,6 +632,10 @@ async function sendMessageSlackQueuedInner(params: {
 }): Promise<SlackSendResult> {
   const { opts, cfg, account, token, recipient, blocks, trimmedMessage } = params;
   const client = opts.client ?? getSlackWriteClient(token);
+  const unfurl = {
+    unfurlLinks: account.config.unfurlLinks,
+    unfurlMedia: account.config.unfurlMedia,
+  };
   const directUserPostChannelId = resolveDirectUserPostChannelId({
     recipient,
     hasMedia: Boolean(opts.mediaUrl),
@@ -644,6 +662,7 @@ async function sendMessageSlackQueuedInner(params: {
       threadTs: opts.threadTs,
       identity: opts.identity,
       blocks,
+      unfurl,
     });
     const messageId = response.ts ?? "unknown";
     return {
@@ -705,6 +724,7 @@ async function sendMessageSlackQueuedInner(params: {
         text: chunk,
         threadTs: opts.threadTs,
         identity: opts.identity,
+        unfurl,
       });
       lastMessageId = response.ts ?? lastMessageId;
       if (response.ts) {
@@ -719,6 +739,7 @@ async function sendMessageSlackQueuedInner(params: {
         text: chunk,
         threadTs: opts.threadTs,
         identity: opts.identity,
+        unfurl,
       });
       lastMessageId = response.ts ?? lastMessageId;
       if (response.ts) {
