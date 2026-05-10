@@ -2933,14 +2933,13 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-tool-progress-preview-opt-out");
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        driverEventId: "$tool-progress-optout-trigger",
-        reply: {
-          eventId: "$tool-progress-optout-final",
-        },
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as {
+      driverEventId?: unknown;
+      reply?: { eventId?: unknown };
+    };
+    expect(artifacts.driverEventId).toBe("$tool-progress-optout-trigger");
+    expect(artifacts.reply?.eventId).toBe("$tool-progress-optout-final");
 
     expect(waitForRoomEvent).toHaveBeenCalledTimes(1);
   });
@@ -2984,21 +2983,27 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-tool-progress-error");
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        driverEventId: "$tool-progress-error-trigger",
-        previewBodyPreview:
-          "Pearling...\n`📖 Read: from /tmp/qa/workspace/missing-matrix-tool-progress-target.txt`",
-        previewEventId: "$tool-progress-error-preview",
-        reply: {
-          eventId: "$tool-progress-error-final",
-          relatesTo: {
-            eventId: "$tool-progress-error-preview",
-            relType: "m.replace",
-          },
-        },
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as {
+      driverEventId?: unknown;
+      previewBodyPreview?: unknown;
+      previewEventId?: unknown;
+      reply?: {
+        eventId?: unknown;
+        relatesTo?: {
+          eventId?: unknown;
+          relType?: unknown;
+        };
+      };
+    };
+    expect(artifacts.driverEventId).toBe("$tool-progress-error-trigger");
+    expect(artifacts.previewBodyPreview).toBe(
+      "Pearling...\n`📖 Read: from /tmp/qa/workspace/missing-matrix-tool-progress-target.txt`",
+    );
+    expect(artifacts.previewEventId).toBe("$tool-progress-error-preview");
+    expect(artifacts.reply?.eventId).toBe("$tool-progress-error-final");
+    expect(artifacts.reply?.relatesTo?.eventId).toBe("$tool-progress-error-preview");
+    expect(artifacts.reply?.relatesTo?.relType).toBe("m.replace");
 
     expect(waitForRoomEvent.mock.calls[0]?.[0].predicate(progressEvent)).toBe(true);
     expect(sendTextMessage).toHaveBeenCalledWith({
@@ -3043,19 +3048,25 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-tool-progress-error");
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        previewBodyPreview: "Nautiling...\n`📖 Read: from…ng-matrix-tool-progress-target.txt`",
-        previewEventId,
-        reply: {
-          eventId: "$tool-progress-error-short-final",
-          relatesTo: {
-            eventId: previewEventId,
-            relType: "m.replace",
-          },
-        },
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as {
+      previewBodyPreview?: unknown;
+      previewEventId?: unknown;
+      reply?: {
+        eventId?: unknown;
+        relatesTo?: {
+          eventId?: unknown;
+          relType?: unknown;
+        };
+      };
+    };
+    expect(artifacts.previewBodyPreview).toBe(
+      "Nautiling...\n`📖 Read: from…ng-matrix-tool-progress-target.txt`",
+    );
+    expect(artifacts.previewEventId).toBe(previewEventId);
+    expect(artifacts.reply?.eventId).toBe("$tool-progress-error-short-final");
+    expect(artifacts.reply?.relatesTo?.eventId).toBe(previewEventId);
+    expect(artifacts.reply?.relatesTo?.relType).toBe("m.replace");
 
     expect(waitForRoomEvent).toHaveBeenCalledTimes(2);
   });
@@ -3109,16 +3120,17 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-tool-progress-mention-safety");
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        driverEventId: "$tool-progress-mention-trigger",
-        previewEventId: "$tool-progress-mention-preview",
-        previewMentions: {},
-        reply: {
-          eventId: "$tool-progress-mention-final",
-        },
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as {
+      driverEventId?: unknown;
+      previewEventId?: unknown;
+      previewMentions?: unknown;
+      reply?: { eventId?: unknown };
+    };
+    expect(artifacts.driverEventId).toBe("$tool-progress-mention-trigger");
+    expect(artifacts.previewEventId).toBe("$tool-progress-mention-preview");
+    expect(artifacts.previewMentions).toEqual({});
+    expect(artifacts.reply?.eventId).toBe("$tool-progress-mention-final");
   });
 
   it("preserves separate finalized block events when Matrix block streaming is enabled", async () => {
