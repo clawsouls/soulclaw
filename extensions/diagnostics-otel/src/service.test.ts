@@ -453,22 +453,15 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    expect(telemetryState.histograms.get("openclaw.run.duration_ms")?.record).toHaveBeenCalledWith(
-      100,
-      expect.objectContaining({
-        "openclaw.provider": "openai",
-        "openclaw.model": "gpt-5.4",
-      }),
-    );
-    expect(telemetryState.tracer.startSpan).toHaveBeenCalledWith(
-      "openclaw.run",
-      expect.objectContaining({
-        attributes: expect.objectContaining({
-          "openclaw.outcome": "completed",
-        }),
-      }),
-      undefined,
-    );
+    const runDurationRecordCall = telemetryState.histograms
+      .get("openclaw.run.duration_ms")
+      ?.record.mock.calls.at(-1);
+    expect(runDurationRecordCall?.[0]).toBe(100);
+    const runDurationAttributes = runDurationRecordCall?.[1] as Record<string, unknown> | undefined;
+    expect(runDurationAttributes?.["openclaw.provider"]).toBe("openai");
+    expect(runDurationAttributes?.["openclaw.model"]).toBe("gpt-5.4");
+    const runSpanOptions = startedSpanOptions("openclaw.run");
+    expect(runSpanOptions?.attributes?.["openclaw.outcome"]).toBe("completed");
     expect(logEmit).toHaveBeenCalled();
 
     await service.stop?.(ctx);
@@ -488,31 +481,14 @@ describe("diagnostics-otel service", () => {
 
     await service.start(ctx);
 
-    expect(events).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          type: "telemetry.exporter",
-          exporter: "diagnostics-otel",
-          signal: "traces",
-          status: "started",
-          reason: "configured",
-        }),
-        expect.objectContaining({
-          type: "telemetry.exporter",
-          exporter: "diagnostics-otel",
-          signal: "metrics",
-          status: "started",
-          reason: "configured",
-        }),
-        expect.objectContaining({
-          type: "telemetry.exporter",
-          exporter: "diagnostics-otel",
-          signal: "logs",
-          status: "started",
-          reason: "configured",
-        }),
-      ]),
-    );
+    const exporterEvents = events.filter((event) => event.type === "telemetry.exporter");
+    for (const signal of ["traces", "metrics", "logs"]) {
+      const event = exporterEvents.find((entry) => entry.signal === signal);
+      expect(event?.type).toBe("telemetry.exporter");
+      expect(event?.exporter).toBe("diagnostics-otel");
+      expect(event?.status).toBe("started");
+      expect(event?.reason).toBe("configured");
+    }
     expect(
       telemetryState.counters.get("openclaw.telemetry.exporter.events")?.add,
     ).toHaveBeenCalledWith(1, {
