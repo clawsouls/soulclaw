@@ -1333,91 +1333,50 @@ describe("diagnostics-otel service", () => {
     expect(toolOptions?.startTime).toBeTypeOf("number");
     expect(toolCall?.[2]).toBeUndefined();
 
-    expect(
-      telemetryState.histograms.get("openclaw.model_call.duration_ms")?.record,
-    ).toHaveBeenCalledWith(
-      80,
-      expect.objectContaining({
-        "openclaw.provider": "openai",
-        "openclaw.model": "gpt-5.4",
-      }),
-    );
-    expect(
-      telemetryState.histograms.get("openclaw.model_call.request_bytes")?.record,
-    ).toHaveBeenCalledWith(
-      1234,
-      expect.objectContaining({
-        "openclaw.provider": "openai",
-        "openclaw.model": "gpt-5.4",
-      }),
-    );
-    expect(
-      telemetryState.histograms.get("openclaw.model_call.response_bytes")?.record,
-    ).toHaveBeenCalledWith(
-      567,
-      expect.objectContaining({
-        "openclaw.provider": "openai",
-        "openclaw.model": "gpt-5.4",
-      }),
-    );
-    expect(
-      telemetryState.histograms.get("openclaw.model_call.time_to_first_byte_ms")?.record,
-    ).toHaveBeenCalledWith(
-      45,
-      expect.objectContaining({
-        "openclaw.provider": "openai",
-        "openclaw.model": "gpt-5.4",
-      }),
-    );
+    const modelCallDuration = lastHistogramRecord("openclaw.model_call.duration_ms");
+    expect(modelCallDuration?.[0]).toBe(80);
+    expect(modelCallDuration?.[1]?.["openclaw.provider"]).toBe("openai");
+    expect(modelCallDuration?.[1]?.["openclaw.model"]).toBe("gpt-5.4");
+    const requestBytes = lastHistogramRecord("openclaw.model_call.request_bytes");
+    expect(requestBytes?.[0]).toBe(1234);
+    expect(requestBytes?.[1]?.["openclaw.provider"]).toBe("openai");
+    expect(requestBytes?.[1]?.["openclaw.model"]).toBe("gpt-5.4");
+    const responseBytes = lastHistogramRecord("openclaw.model_call.response_bytes");
+    expect(responseBytes?.[0]).toBe(567);
+    expect(responseBytes?.[1]?.["openclaw.provider"]).toBe("openai");
+    expect(responseBytes?.[1]?.["openclaw.model"]).toBe("gpt-5.4");
+    const timeToFirstByte = lastHistogramRecord("openclaw.model_call.time_to_first_byte_ms");
+    expect(timeToFirstByte?.[0]).toBe(45);
+    expect(timeToFirstByte?.[1]?.["openclaw.provider"]).toBe("openai");
+    expect(timeToFirstByte?.[1]?.["openclaw.model"]).toBe("gpt-5.4");
     const modelCallSpan = telemetryState.spans.find((span) => span.name === "openclaw.model.call");
-    expect(modelCallSpan?.setAttributes).toHaveBeenCalledWith(
-      expect.objectContaining({
-        "openclaw.model_call.request_bytes": 1234,
-        "openclaw.model_call.response_bytes": 567,
-        "openclaw.model_call.time_to_first_byte_ms": 45,
-      }),
-    );
-    expect(telemetryState.histograms.get("openclaw.run.duration_ms")?.record).toHaveBeenCalledWith(
-      100,
-      expect.not.objectContaining({
-        "openclaw.runId": expect.anything(),
-      }),
-    );
-    expect(
-      telemetryState.histograms.get("openclaw.harness.duration_ms")?.record,
-    ).toHaveBeenCalledWith(
-      90,
-      expect.objectContaining({
-        "openclaw.harness.id": "codex",
-        "openclaw.harness.plugin": "codex-plugin",
-        "openclaw.outcome": "completed",
-      }),
-    );
-    expect(
-      telemetryState.histograms.get("openclaw.harness.duration_ms")?.record,
-    ).toHaveBeenCalledWith(
-      90,
-      expect.not.objectContaining({
-        "openclaw.runId": expect.anything(),
-        "openclaw.sessionKey": expect.anything(),
-      }),
-    );
-    expect(
-      telemetryState.histograms.get("openclaw.tool.execution.duration_ms")?.record,
-    ).toHaveBeenCalledWith(
-      20,
-      expect.not.objectContaining({
-        "openclaw.errorCode": expect.anything(),
-        "openclaw.runId": expect.anything(),
-      }),
-    );
+    const modelSpanAttributes = modelCallSpan?.setAttributes.mock.calls[0]?.[0] as
+      | Record<string, unknown>
+      | undefined;
+    expect(modelSpanAttributes?.["openclaw.model_call.request_bytes"]).toBe(1234);
+    expect(modelSpanAttributes?.["openclaw.model_call.response_bytes"]).toBe(567);
+    expect(modelSpanAttributes?.["openclaw.model_call.time_to_first_byte_ms"]).toBe(45);
+    const runDuration = lastHistogramRecord("openclaw.run.duration_ms");
+    expect(runDuration?.[0]).toBe(100);
+    expect(Object.hasOwn(runDuration?.[1] ?? {}, "openclaw.runId")).toBe(false);
+    const harnessDuration = lastHistogramRecord("openclaw.harness.duration_ms");
+    expect(harnessDuration?.[0]).toBe(90);
+    expect(harnessDuration?.[1]?.["openclaw.harness.id"]).toBe("codex");
+    expect(harnessDuration?.[1]?.["openclaw.harness.plugin"]).toBe("codex-plugin");
+    expect(harnessDuration?.[1]?.["openclaw.outcome"]).toBe("completed");
+    expect(Object.hasOwn(harnessDuration?.[1] ?? {}, "openclaw.runId")).toBe(false);
+    expect(Object.hasOwn(harnessDuration?.[1] ?? {}, "openclaw.sessionKey")).toBe(false);
+    const toolDuration = lastHistogramRecord("openclaw.tool.execution.duration_ms");
+    expect(toolDuration?.[0]).toBe(20);
+    expect(Object.hasOwn(toolDuration?.[1] ?? {}, "openclaw.errorCode")).toBe(false);
+    expect(Object.hasOwn(toolDuration?.[1] ?? {}, "openclaw.runId")).toBe(false);
 
     const toolSpan = telemetryState.spans.find((span) => span.name === "openclaw.tool.execution");
     expect(toolSpan?.setStatus).toHaveBeenCalledWith({
       code: 2,
       message: "TypeError",
     });
-    expect(toolSpan?.end).toHaveBeenCalledWith(expect.any(Number));
+    expect(toolSpan?.end.mock.calls[0]?.[0]).toBeTypeOf("number");
     expect(telemetryState.tracer.setSpanContext).not.toHaveBeenCalled();
     await service.stop?.(ctx);
   });
