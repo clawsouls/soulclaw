@@ -60,6 +60,7 @@ import {
   type ConfigSetOptions,
 } from "./config-set-input.js";
 import { resolveConfigSetMode } from "./config-set-parser.js";
+import { formatStrictJsonParseFailure } from "./error-format.js";
 import { setCommandJsonMode } from "./program/json-mode.js";
 
 type PathSegment = string;
@@ -266,7 +267,7 @@ function parseValue(raw: string, opts: ConfigSetParseOpts): unknown {
     try {
       return JSON.parse(trimmed);
     } catch (err) {
-      throw new Error(`Failed to parse JSON value: ${String(err)}`, { cause: err });
+      throw new Error(formatStrictJsonParseFailure({ value: raw, cause: err }), { cause: err });
     }
   }
 
