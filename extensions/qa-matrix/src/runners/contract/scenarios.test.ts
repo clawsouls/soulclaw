@@ -4080,56 +4080,51 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-e2ee-verification-notice-no-trigger");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverDeviceId: "DRIVERDEVICE",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        outputDir: "/tmp/matrix-qa",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              key: matrixQaE2eeRoomKey("matrix-e2ee-verification-notice-no-trigger"),
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "E2EE",
-              requireMention: true,
-              roomId: "!e2ee:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        noticeEventId: "$verification-notice",
-        roomId: "!e2ee:matrix-qa.test",
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverDeviceId: "DRIVERDEVICE",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      outputDir: "/tmp/matrix-qa",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            key: matrixQaE2eeRoomKey("matrix-e2ee-verification-notice-no-trigger"),
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "E2EE",
+            requireMention: true,
+            roomId: "!e2ee:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as {
+      noticeEventId?: unknown;
+      roomId?: unknown;
+    };
+    expect(artifacts.noticeEventId).toBe("$verification-notice");
+    expect(artifacts.roomId).toBe("!e2ee:matrix-qa.test");
 
     expect(noticeToken).toMatch(/^MATRIX_QA_E2EE_VERIFY_NOTICE_[A-Z0-9]+$/);
-    expect(waitForOptionalRoomEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        roomId: "!e2ee:matrix-qa.test",
-      }),
-    );
+    expect(waitForOptionalRoomEvent.mock.calls[0]?.[0]?.roomId).toBe("!e2ee:matrix-qa.test");
   });
 
   it("applies a recovery key before restoring backed up room keys", async () => {
@@ -4203,55 +4198,58 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-e2ee-recovery-key-lifecycle");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverDeviceId: "DRIVERDEVICE",
-        driverPassword: "driver-password",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        outputDir: "/tmp/matrix-qa",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              encrypted: true,
-              key: matrixQaE2eeRoomKey("matrix-e2ee-recovery-key-lifecycle"),
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "E2EE",
-              requireMention: true,
-              roomId: "!e2ee:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        backupRestored: true,
-        recoveryDeviceId: "RECOVERYDEVICE",
-        recoveryKeyUsable: true,
-        recoveryVerified: true,
-        restoreImported: 1,
-        restoreTotal: 1,
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverDeviceId: "DRIVERDEVICE",
+      driverPassword: "driver-password",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      outputDir: "/tmp/matrix-qa",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            encrypted: true,
+            key: matrixQaE2eeRoomKey("matrix-e2ee-recovery-key-lifecycle"),
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "E2EE",
+            requireMention: true,
+            roomId: "!e2ee:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as {
+      backupRestored?: unknown;
+      recoveryDeviceId?: unknown;
+      recoveryKeyUsable?: unknown;
+      recoveryVerified?: unknown;
+      restoreImported?: unknown;
+      restoreTotal?: unknown;
+    };
+    expect(artifacts.backupRestored).toBe(true);
+    expect(artifacts.recoveryDeviceId).toBe("RECOVERYDEVICE");
+    expect(artifacts.recoveryKeyUsable).toBe(true);
+    expect(artifacts.recoveryVerified).toBe(true);
+    expect(artifacts.restoreImported).toBe(1);
+    expect(artifacts.restoreTotal).toBe(1);
 
     expect(ownerBootstrapOwnDeviceVerification).toHaveBeenCalledWith({
       allowAutomaticCrossSigningReset: false,
