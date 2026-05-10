@@ -1717,23 +1717,18 @@ describe("diagnostics-otel service", () => {
       "openclaw.memory.level": "critical",
       "openclaw.memory.reason": "rss_growth",
     });
-    const pressureCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.memory.pressure",
-    );
-    expect(pressureCall?.[1]).toMatchObject({
-      attributes: {
-        "openclaw.memory.level": "critical",
-        "openclaw.memory.reason": "rss_growth",
-        "openclaw.memory.rss_bytes": 200,
-        "openclaw.memory.heap_used_bytes": 50,
-        "openclaw.memory.heap_total_bytes": 90,
-        "openclaw.memory.external_bytes": 20,
-        "openclaw.memory.array_buffers_bytes": 6,
-        "openclaw.memory.threshold_bytes": 512,
-        "openclaw.memory.rss_growth_bytes": 256,
-        "openclaw.memory.window_ms": 60_000,
-      },
-    });
+    const pressureCall = startedSpanCall("openclaw.memory.pressure");
+    const pressureOptions = pressureCall?.[1];
+    expect(pressureOptions?.attributes?.["openclaw.memory.level"]).toBe("critical");
+    expect(pressureOptions?.attributes?.["openclaw.memory.reason"]).toBe("rss_growth");
+    expect(pressureOptions?.attributes?.["openclaw.memory.rss_bytes"]).toBe(200);
+    expect(pressureOptions?.attributes?.["openclaw.memory.heap_used_bytes"]).toBe(50);
+    expect(pressureOptions?.attributes?.["openclaw.memory.heap_total_bytes"]).toBe(90);
+    expect(pressureOptions?.attributes?.["openclaw.memory.external_bytes"]).toBe(20);
+    expect(pressureOptions?.attributes?.["openclaw.memory.array_buffers_bytes"]).toBe(6);
+    expect(pressureOptions?.attributes?.["openclaw.memory.threshold_bytes"]).toBe(512);
+    expect(pressureOptions?.attributes?.["openclaw.memory.rss_growth_bytes"]).toBe(256);
+    expect(pressureOptions?.attributes?.["openclaw.memory.window_ms"]).toBe(60_000);
     const pressureSpan = telemetryState.spans.find(
       (span) => span.name === "openclaw.memory.pressure",
     );
