@@ -3428,10 +3428,9 @@ describe("runCodexAppServerAttempt", () => {
       appServer,
     });
 
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
-      dynamicToolsFingerprint: fingerprint,
-      threadId: "thread-1",
-    });
+    const binding = await readCodexAppServerBinding(sessionFile);
+    expect(binding?.dynamicToolsFingerprint).toBe(fingerprint);
+    expect(binding?.threadId).toBe("thread-1");
     expect(request.mock.calls.map(([method]) => method)).toEqual([
       "thread/start",
       "thread/start",
@@ -3462,9 +3461,8 @@ describe("runCodexAppServerAttempt", () => {
     ).rejects.toThrow("codex app-server client is closed");
 
     expect(request.mock.calls.map(([method]) => method)).toEqual(["thread/resume"]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
-      threadId: "thread-existing",
-    });
+    const binding = await readCodexAppServerBinding(sessionFile);
+    expect(binding?.threadId).toBe("thread-existing");
   });
 
   it("restarts the app-server once when a shared client closes during startup", async () => {
@@ -3511,7 +3509,8 @@ describe("runCodexAppServerAttempt", () => {
       },
     });
 
-    await expect(run).resolves.toMatchObject({ aborted: false });
+    const result = await run;
+    expect(result.aborted).toBe(false);
     expect(requests).toEqual([["thread/resume"], ["thread/resume", "turn/start"]]);
   });
 
@@ -3559,7 +3558,8 @@ describe("runCodexAppServerAttempt", () => {
       },
     });
 
-    await expect(run).resolves.toMatchObject({ aborted: false });
+    const result = await run;
+    expect(result.aborted).toBe(false);
     expect(requests).toEqual([
       ["thread/resume"],
       ["thread/resume"],
