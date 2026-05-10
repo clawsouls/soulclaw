@@ -822,13 +822,9 @@ describe("diagnostics-otel service", () => {
       },
     });
 
-    expect(emitCall?.attributes).toEqual(
-      expect.not.objectContaining({
-        "openclaw.traceId": expect.anything(),
-        "openclaw.spanId": expect.anything(),
-        "openclaw.traceFlags": expect.anything(),
-      }),
-    );
+    expect(Object.hasOwn(emitCall?.attributes ?? {}, "openclaw.traceId")).toBe(false);
+    expect(Object.hasOwn(emitCall?.attributes ?? {}, "openclaw.spanId")).toBe(false);
+    expect(Object.hasOwn(emitCall?.attributes ?? {}, "openclaw.traceFlags")).toBe(false);
     expect(telemetryState.tracer.setSpanContext).not.toHaveBeenCalled();
     expect(emitCall?.context).toBeUndefined();
   });
@@ -847,21 +843,18 @@ describe("diagnostics-otel service", () => {
       { trusted: true },
     );
 
-    expect(telemetryState.tracer.setSpanContext).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        traceId: TRACE_ID,
-        spanId: SPAN_ID,
-        traceFlags: 1,
-        isRemote: true,
-      }),
-    );
-    expect(emitCall?.context).toEqual({
-      spanContext: expect.objectContaining({
-        traceId: TRACE_ID,
-        spanId: SPAN_ID,
-      }),
-    });
+    expect(telemetryState.tracer.setSpanContext).toHaveBeenCalledTimes(1);
+    const trustedSpanContext = telemetryState.tracer.setSpanContext.mock.calls[0]?.[1] as
+      | Record<string, unknown>
+      | undefined;
+    expect(trustedSpanContext?.traceId).toBe(TRACE_ID);
+    expect(trustedSpanContext?.spanId).toBe(SPAN_ID);
+    expect(trustedSpanContext?.traceFlags).toBe(1);
+    expect(trustedSpanContext?.isRemote).toBe(true);
+    const emitContext = emitCall?.context as { spanContext?: Record<string, unknown> } | undefined;
+    const emitSpanContext = emitContext?.spanContext;
+    expect(emitSpanContext?.traceId).toBe(TRACE_ID);
+    expect(emitSpanContext?.spanId).toBe(SPAN_ID);
   });
 
   test("bounds plugin-emitted log attributes and omits source paths", async () => {
@@ -893,11 +886,9 @@ describe("diagnostics-otel service", () => {
 
     const emitCall = logEmit.mock.calls[0]?.[0];
     expect(emitCall?.body.length).toBeLessThanOrEqual(4200);
-    expect(emitCall?.attributes).toMatchObject({
-      "openclaw.good": expect.stringMatching(/^y+/),
-      "code.lineno": 42,
-      "code.function": "handler",
-    });
+    expect(String(emitCall?.attributes?.["openclaw.good"])).toMatch(/^y+/);
+    expect(emitCall?.attributes?.["code.lineno"]).toBe(42);
+    expect(emitCall?.attributes?.["code.function"]).toBe("handler");
     expect(String(emitCall?.attributes?.["openclaw.good"]).length).toBeLessThanOrEqual(4200);
     expect(Object.hasOwn(emitCall?.attributes ?? {}, `openclaw.${PROTO_KEY}`)).toBe(false);
     expect(Object.hasOwn(emitCall?.attributes ?? {}, "openclaw.constructor")).toBe(false);
@@ -908,13 +899,9 @@ describe("diagnostics-otel service", () => {
         "openclaw.sk-1234567890abcdef1234567890abcdef", // pragma: allowlist secret
       ),
     ).toBe(false);
-    expect(emitCall?.attributes).toEqual(
-      expect.not.objectContaining({
-        "openclaw.bad key": expect.anything(),
-        "code.filepath": expect.anything(),
-        "openclaw.code.location": expect.anything(),
-      }),
-    );
+    expect(Object.hasOwn(emitCall?.attributes ?? {}, "openclaw.bad key")).toBe(false);
+    expect(Object.hasOwn(emitCall?.attributes ?? {}, "code.filepath")).toBe(false);
+    expect(Object.hasOwn(emitCall?.attributes ?? {}, "openclaw.code.location")).toBe(false);
     await service.stop?.(ctx);
   });
 
