@@ -1699,13 +1699,12 @@ describe("deliverOutboundPayloads", () => {
     });
 
     expect(sendFormattedText).toHaveBeenCalledTimes(1);
-    expect(sendFormattedText).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "U123",
-        text: "hello **boss**",
-        accountId: "default",
-      }),
-    );
+    const formattedTextOptions = sendFormattedText.mock.calls[0]?.[0] as
+      | { accountId?: unknown; text?: unknown; to?: unknown }
+      | undefined;
+    expect(formattedTextOptions?.to).toBe("U123");
+    expect(formattedTextOptions?.text).toBe("hello **boss**");
+    expect(formattedTextOptions?.accountId).toBe("default");
     expect(sendText).not.toHaveBeenCalled();
     expect(textResults.map((entry) => entry.messageId)).toEqual([
       "fmt:hello **boss**:1",
@@ -1722,17 +1721,13 @@ describe("deliverOutboundPayloads", () => {
     });
 
     expect(sendFormattedMedia).toHaveBeenCalledTimes(1);
-    expect(sendFormattedMedia).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "U123",
-        text: "photo",
-        mediaUrl: "file:///tmp/f.png",
-        mediaLocalRoots: expect.arrayContaining([expectedPreferredTmpRoot]),
-      }),
-    );
     const sendFormattedMediaCall = sendFormattedMedia.mock.calls[0]?.[0] as
-      | { mediaLocalRoots?: string[] }
+      | { mediaLocalRoots?: string[]; mediaUrl?: unknown; text?: unknown; to?: unknown }
       | undefined;
+    expect(sendFormattedMediaCall?.to).toBe("U123");
+    expect(sendFormattedMediaCall?.text).toBe("photo");
+    expect(sendFormattedMediaCall?.mediaUrl).toBe("file:///tmp/f.png");
+    expect(sendFormattedMediaCall?.mediaLocalRoots).toContain(expectedPreferredTmpRoot);
     expect(
       sendFormattedMediaCall?.mediaLocalRoots?.some((root) =>
         root.endsWith(path.join(".openclaw", "workspace-work")),
@@ -1752,13 +1747,12 @@ describe("deliverOutboundPayloads", () => {
       deps: { matrix: sendMatrix },
     });
 
-    expect(sendMatrix).toHaveBeenCalledWith(
-      "!room:example",
-      "hi",
-      expect.objectContaining({
-        mediaLocalRoots: expect.arrayContaining([expectedPreferredTmpRoot]),
-      }),
-    );
+    expect(sendMatrix.mock.calls[0]?.[0]).toBe("!room:example");
+    expect(sendMatrix.mock.calls[0]?.[1]).toBe("hi");
+    const sendMatrixOptions = sendMatrix.mock.calls[0]?.[2] as
+      | { mediaLocalRoots?: string[] }
+      | undefined;
+    expect(sendMatrixOptions?.mediaLocalRoots).toContain(expectedPreferredTmpRoot);
   });
 
   it("sends plugin media to an explicit target once instead of fanning out over allowFrom", async () => {
@@ -1795,14 +1789,23 @@ describe("deliverOutboundPayloads", () => {
     });
 
     expect(sendMedia).toHaveBeenCalledTimes(1);
-    expect(sendMedia).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "!explicit:example",
-        text: "HEARTBEAT_OK",
-        mediaUrl: "https://example.com/img.png",
-        accountId: undefined,
-      }),
-    );
+    const sendMediaOptions = (
+      sendMedia.mock.calls as Array<
+        [
+          {
+            accountId?: unknown;
+            audioAsVoice?: unknown;
+            mediaUrl?: unknown;
+            text?: unknown;
+            to?: unknown;
+          },
+        ]
+      >
+    )[0]?.[0];
+    expect(sendMediaOptions?.to).toBe("!explicit:example");
+    expect(sendMediaOptions?.text).toBe("HEARTBEAT_OK");
+    expect(sendMediaOptions?.mediaUrl).toBe("https://example.com/img.png");
+    expect(sendMediaOptions?.accountId).toBeUndefined();
   });
 
   it("forwards audioAsVoice through generic plugin media delivery", async () => {
@@ -1838,14 +1841,15 @@ describe("deliverOutboundPayloads", () => {
       payloads: [{ text: "voice caption", mediaUrl: "file:///tmp/clip.mp3", audioAsVoice: true }],
     });
 
-    expect(sendMedia).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "room:!room:example",
-        text: "voice caption",
-        mediaUrl: "file:///tmp/clip.mp3",
-        audioAsVoice: true,
-      }),
-    );
+    const sendMediaOptions = (
+      sendMedia.mock.calls as unknown as Array<
+        [{ audioAsVoice?: unknown; mediaUrl?: unknown; text?: unknown; to?: unknown }]
+      >
+    )[0]?.[0];
+    expect(sendMediaOptions?.to).toBe("room:!room:example");
+    expect(sendMediaOptions?.text).toBe("voice caption");
+    expect(sendMediaOptions?.mediaUrl).toBe("file:///tmp/clip.mp3");
+    expect(sendMediaOptions?.audioAsVoice).toBe(true);
   });
 
   it("exposes audio-only spokenText to hooks without rendering it as media caption", async () => {
@@ -1888,26 +1892,25 @@ describe("deliverOutboundPayloads", () => {
       ],
     });
 
-    expect(hookMocks.runner.runMessageSending).toHaveBeenCalledWith(
-      expect.objectContaining({
-        content: "original hidden transcript",
-      }),
-      expect.objectContaining({ channelId: "matrix" }),
-    );
-    expect(sendMedia).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: "",
-        mediaUrl: "file:///tmp/clip.opus",
-        audioAsVoice: true,
-      }),
-    );
-    expect(hookMocks.runner.runMessageSent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        content: "rewritten hidden transcript",
-        success: true,
-      }),
-      expect.objectContaining({ channelId: "matrix" }),
-    );
+    const sendingCall = hookMocks.runner.runMessageSending.mock.calls[0] as
+      | [{ content?: unknown }, { channelId?: unknown }]
+      | undefined;
+    expect(sendingCall?.[0]?.content).toBe("original hidden transcript");
+    expect(sendingCall?.[1]?.channelId).toBe("matrix");
+    const sendMediaOptions = (
+      sendMedia.mock.calls as unknown as Array<
+        [{ audioAsVoice?: unknown; mediaUrl?: unknown; text?: unknown }]
+      >
+    )[0]?.[0];
+    expect(sendMediaOptions?.text).toBe("");
+    expect(sendMediaOptions?.mediaUrl).toBe("file:///tmp/clip.opus");
+    expect(sendMediaOptions?.audioAsVoice).toBe(true);
+    const sentCall = hookMocks.runner.runMessageSent.mock.calls[0] as
+      | [{ content?: unknown; success?: unknown }, { channelId?: unknown }]
+      | undefined;
+    expect(sentCall?.[0]?.content).toBe("rewritten hidden transcript");
+    expect(sentCall?.[0]?.success).toBe(true);
+    expect(sentCall?.[1]?.channelId).toBe("matrix");
   });
 
   it("chunks plugin text and returns all results", async () => {
