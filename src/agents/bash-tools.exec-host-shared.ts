@@ -16,7 +16,7 @@ import {
   type ExecSecurity,
 } from "../infra/exec-approvals.js";
 import { logWarn } from "../logger.js";
-import { registerExecApprovalFollowupElevatedDefaults } from "./bash-tools.exec-approval-followup-state.js";
+import { registerExecApprovalFollowupRuntimeHandoff } from "./bash-tools.exec-approval-followup-state.js";
 import { sendExecApprovalFollowup } from "./bash-tools.exec-approval-followup.js";
 import {
   type ExecApprovalRegistration,
@@ -411,10 +411,11 @@ export async function sendExecApprovalFollowupResult(
 ): Promise<void> {
   const send = deps.sendExecApprovalFollowup ?? sendExecApprovalFollowup;
   const warn = deps.logWarn ?? logWarn;
-  const execApprovalFollowupToken =
+  const runtimeHandoff =
     target.direct === true || !target.sessionKey
       ? undefined
-      : registerExecApprovalFollowupElevatedDefaults({
+      : registerExecApprovalFollowupRuntimeHandoff({
+          approvalId: target.approvalId,
           sessionKey: target.sessionKey,
           bashElevated: target.bashElevated,
         });
@@ -427,7 +428,12 @@ export async function sendExecApprovalFollowupResult(
     turnSourceThreadId: target.turnSourceThreadId,
     resultText,
     direct: target.direct,
-    execApprovalFollowupToken,
+    ...(runtimeHandoff
+      ? {
+          internalRuntimeHandoffId: runtimeHandoff.handoffId,
+          idempotencyKey: runtimeHandoff.idempotencyKey,
+        }
+      : {}),
   }).catch((error) => {
     const message = formatErrorMessage(error);
     const key = `${target.approvalId}:${message}`;

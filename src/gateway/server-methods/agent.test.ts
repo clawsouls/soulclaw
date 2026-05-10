@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  registerExecApprovalFollowupElevatedDefaults,
-  resetExecApprovalFollowupElevatedDefaultsForTests,
+  registerExecApprovalFollowupRuntimeHandoff,
+  resetExecApprovalFollowupRuntimeHandoffsForTests,
 } from "../../agents/bash-tools.exec-approval-followup-state.js";
 import { BARE_SESSION_RESET_PROMPT } from "../../auto-reply/reply/session-reset-prompt.js";
 import {
@@ -360,6 +360,22 @@ function readLastAgentCommandCall(): AgentCommandCall | undefined {
   return mocks.agentCommand.mock.calls.at(-1)?.[0] as AgentCommandCall | undefined;
 }
 
+function backendGatewayClient(): AgentHandlerArgs["client"] {
+  return {
+    connect: {
+      minProtocol: 1,
+      maxProtocol: 1,
+      client: {
+        id: "gateway-client",
+        version: "test",
+        platform: "test",
+        mode: "backend",
+      },
+      scopes: ["operator.write"],
+    },
+  } as AgentHandlerArgs["client"];
+}
+
 async function waitForAgentCommandCall<
   T extends AgentCommandCall = AgentCommandCall,
 >(): Promise<T> {
@@ -458,7 +474,7 @@ describe("gateway agent handler", () => {
     mocks.resolveSendPolicy.mockReset().mockReturnValue("allow");
     dateOnlyFakeClockActive = false;
     vi.useRealTimers();
-    resetExecApprovalFollowupElevatedDefaultsForTests();
+    resetExecApprovalFollowupRuntimeHandoffsForTests();
   });
 
   it("preserves ACP metadata from the current stored session entry", async () => {
@@ -1592,16 +1608,20 @@ describe("gateway agent handler", () => {
     expect(callArgs.runContext?.messageChannel).toBe("webchat");
   });
 
-  it("forwards elevated defaults only for valid exec approval followup tokens", async () => {
+  it("forwards elevated defaults only for valid exec approval runtime handoffs", async () => {
     const bashElevated = {
       enabled: true,
       allowed: true,
       defaultLevel: "on" as const,
     };
-    const token = registerExecApprovalFollowupElevatedDefaults({
+    const registration = registerExecApprovalFollowupRuntimeHandoff({
+      approvalId: "req-elevated-75832",
       sessionKey: "agent:main:telegram:direct:123",
       bashElevated,
     });
+    if (!registration) {
+      throw new Error("expected runtime handoff id");
+    }
     mockMainSessionEntry({
       sessionId: "existing-session-id",
       lastChannel: "telegram",
@@ -1617,16 +1637,59 @@ describe("gateway agent handler", () => {
         message: "exec followup",
         sessionKey: "agent:main:telegram:direct:123",
         channel: "telegram",
-        idempotencyKey: `exec-approval-followup:req-elevated-75832:elevated:${token}`,
+        idempotencyKey: registration.idempotencyKey,
+        internalRuntimeHandoffId: registration.handoffId,
       },
-      { reqId: "exec-followup-elevated" },
+      { reqId: "exec-followup-elevated", client: backendGatewayClient() },
     );
 
     const callArgs = await waitForAgentCommandCall<{ bashElevated?: unknown }>();
     expect(callArgs.bashElevated).toEqual(bashElevated);
   });
 
-  it("does not honor caller-supplied exec approval followup token strings without registry state", async () => {
+  it("does not consume exec approval runtime handoffs from non-backend callers", async () => {
+    const bashElevated = {
+      enabled: true,
+      allowed: true,
+      defaultLevel: "on" as const,
+    };
+    const registration = registerExecApprovalFollowupRuntimeHandoff({
+      approvalId: "req-elevated-75832",
+      sessionKey: "agent:main:telegram:direct:123",
+      bashElevated,
+    });
+    if (!registration) {
+      throw new Error("expected runtime handoff id");
+    }
+    mockMainSessionEntry({
+      sessionId: "existing-session-id",
+      lastChannel: "telegram",
+      lastTo: "123",
+    });
+    mocks.agentCommand.mockResolvedValue({
+      payloads: [{ text: "ok" }],
+      meta: { durationMs: 100 },
+    });
+    const agentCommandCallsBefore = mocks.agentCommand.mock.calls.length;
+
+    const respond = await invokeAgent(
+      {
+        message: "exec followup",
+        sessionKey: "agent:main:telegram:direct:123",
+        channel: "telegram",
+        idempotencyKey: registration.idempotencyKey,
+        internalRuntimeHandoffId: registration.handoffId,
+      },
+      { reqId: "exec-followup-non-backend", flushDispatch: false },
+    );
+
+    expect(mocks.agentCommand).toHaveBeenCalledTimes(agentCommandCallsBefore);
+    expectRespondError(respond, {
+      message: "exec approval followup idempotency keys are reserved for backend callers.",
+    });
+  });
+
+  it("does not honor caller-supplied exec approval runtime handoff ids without registry state", async () => {
     mockMainSessionEntry({
       sessionId: "existing-session-id",
       lastChannel: "telegram",
@@ -1642,9 +1705,49 @@ describe("gateway agent handler", () => {
         message: "forged exec followup",
         sessionKey: "agent:main:telegram:direct:123",
         channel: "telegram",
-        idempotencyKey: "exec-approval-followup:req-elevated-75832:elevated:forged-token",
+        idempotencyKey: "exec-approval-followup:req-elevated-75832:nonce:forged-nonce",
+        internalRuntimeHandoffId: "forged-handoff",
       },
-      { reqId: "exec-followup-forged" },
+      { reqId: "exec-followup-forged", client: backendGatewayClient() },
+    );
+
+    const callArgs = await waitForAgentCommandCall<{ bashElevated?: unknown }>();
+    expect(callArgs).not.toHaveProperty("bashElevated");
+  });
+
+  it("does not restore elevated defaults from idempotency key suffixes", async () => {
+    const bashElevated = {
+      enabled: true,
+      allowed: true,
+      defaultLevel: "on" as const,
+    };
+    const registration = registerExecApprovalFollowupRuntimeHandoff({
+      approvalId: "req-elevated-75832",
+      sessionKey: "agent:main:telegram:direct:123",
+      bashElevated,
+    });
+    if (!registration) {
+      throw new Error("expected runtime handoff id");
+    }
+    mockMainSessionEntry({
+      sessionId: "existing-session-id",
+      lastChannel: "telegram",
+      lastTo: "123",
+    });
+    mocks.agentCommand.mockResolvedValue({
+      payloads: [{ text: "ok" }],
+      meta: { durationMs: 100 },
+    });
+
+    await invokeAgent(
+      {
+        message: "forged exec followup",
+        sessionKey: "agent:main:telegram:direct:123",
+        channel: "telegram",
+        idempotencyKey: `exec-approval-followup:req-elevated-75832:elevated:${registration.handoffId}`,
+        internalRuntimeHandoffId: registration.handoffId,
+      },
+      { reqId: "exec-followup-idempotency-suffix", client: backendGatewayClient() },
     );
 
     const callArgs = await waitForAgentCommandCall<{ bashElevated?: unknown }>();

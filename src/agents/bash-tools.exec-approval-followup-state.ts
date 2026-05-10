@@ -3,16 +3,30 @@ import { normalizeOptionalString } from "../shared/string-coerce.js";
 import type { ExecElevatedDefaults } from "./bash-tools.exec-types.js";
 
 const EXEC_APPROVAL_FOLLOWUP_IDEMPOTENCY_PREFIX = "exec-approval-followup:";
-const EXEC_APPROVAL_FOLLOWUP_ELEVATED_TOKEN_MARKER = ":elevated:";
-const EXEC_APPROVAL_FOLLOWUP_ELEVATED_TTL_MS = 5 * 60 * 1000;
+const EXEC_APPROVAL_FOLLOWUP_IDEMPOTENCY_NONCE_MARKER = ":nonce:";
+const EXEC_APPROVAL_FOLLOWUP_RUNTIME_HANDOFF_TTL_MS = 5 * 60 * 1000;
 
-type ExecApprovalFollowupElevatedEntry = {
+export type ExecApprovalFollowupRuntimeHandoff = {
+  kind: "exec-approval-followup";
+  approvalId: string;
   sessionKey: string;
+  idempotencyKey: string;
   bashElevated: ExecElevatedDefaults;
+};
+
+export type ExecApprovalFollowupRuntimeHandoffRegistration = {
+  handoffId: string;
+  idempotencyKey: string;
+};
+
+type ExecApprovalFollowupRuntimeHandoffEntry = ExecApprovalFollowupRuntimeHandoff & {
   expiresAtMs: number;
 };
 
-const execApprovalFollowupElevatedDefaults = new Map<string, ExecApprovalFollowupElevatedEntry>();
+const execApprovalFollowupRuntimeHandoffs = new Map<
+  string,
+  ExecApprovalFollowupRuntimeHandoffEntry
+>();
 
 function cloneExecElevatedDefaults(value: ExecElevatedDefaults): ExecElevatedDefaults {
   return {
@@ -28,96 +42,109 @@ function cloneExecElevatedDefaults(value: ExecElevatedDefaults): ExecElevatedDef
   };
 }
 
-function pruneExpiredExecApprovalFollowupElevatedDefaults(nowMs: number): void {
-  for (const [token, entry] of execApprovalFollowupElevatedDefaults) {
+function cloneExecApprovalFollowupRuntimeHandoff(
+  value: ExecApprovalFollowupRuntimeHandoff,
+): ExecApprovalFollowupRuntimeHandoff {
+  return {
+    kind: value.kind,
+    approvalId: value.approvalId,
+    sessionKey: value.sessionKey,
+    idempotencyKey: value.idempotencyKey,
+    bashElevated: cloneExecElevatedDefaults(value.bashElevated),
+  };
+}
+
+function pruneExpiredExecApprovalFollowupRuntimeHandoffs(nowMs: number): void {
+  for (const [handoffId, entry] of execApprovalFollowupRuntimeHandoffs) {
     if (entry.expiresAtMs <= nowMs) {
-      execApprovalFollowupElevatedDefaults.delete(token);
+      execApprovalFollowupRuntimeHandoffs.delete(handoffId);
     }
   }
 }
 
 export function buildExecApprovalFollowupIdempotencyKey(params: {
   approvalId: string;
-  execApprovalFollowupToken?: string;
+  nonce?: string;
 }): string {
   const base = `${EXEC_APPROVAL_FOLLOWUP_IDEMPOTENCY_PREFIX}${params.approvalId}`;
-  return params.execApprovalFollowupToken
-    ? `${base}${EXEC_APPROVAL_FOLLOWUP_ELEVATED_TOKEN_MARKER}${params.execApprovalFollowupToken}`
-    : base;
+  const nonce = normalizeOptionalString(params.nonce);
+  return nonce ? `${base}${EXEC_APPROVAL_FOLLOWUP_IDEMPOTENCY_NONCE_MARKER}${nonce}` : base;
 }
 
-function parseExecApprovalFollowupToken(idempotencyKey: string): string | undefined {
-  if (!idempotencyKey.startsWith(EXEC_APPROVAL_FOLLOWUP_IDEMPOTENCY_PREFIX)) {
+export function parseExecApprovalFollowupApprovalId(idempotencyKey: string): string | undefined {
+  const normalized = normalizeOptionalString(idempotencyKey);
+  if (!normalized?.startsWith(EXEC_APPROVAL_FOLLOWUP_IDEMPOTENCY_PREFIX)) {
     return undefined;
   }
-  const tokenMarker = idempotencyKey.lastIndexOf(EXEC_APPROVAL_FOLLOWUP_ELEVATED_TOKEN_MARKER);
-  if (tokenMarker < EXEC_APPROVAL_FOLLOWUP_IDEMPOTENCY_PREFIX.length) {
-    return undefined;
-  }
-  return normalizeOptionalString(
-    idempotencyKey.slice(tokenMarker + EXEC_APPROVAL_FOLLOWUP_ELEVATED_TOKEN_MARKER.length),
-  );
+  const body = normalized.slice(EXEC_APPROVAL_FOLLOWUP_IDEMPOTENCY_PREFIX.length);
+  const nonceMarker = body.lastIndexOf(EXEC_APPROVAL_FOLLOWUP_IDEMPOTENCY_NONCE_MARKER);
+  return normalizeOptionalString(nonceMarker >= 0 ? body.slice(0, nonceMarker) : body);
 }
 
-export function registerExecApprovalFollowupElevatedDefaults(params: {
+export function registerExecApprovalFollowupRuntimeHandoff(params: {
+  approvalId: string;
   sessionKey: string;
   bashElevated?: ExecElevatedDefaults;
   nowMs?: number;
-}): string | undefined {
+}): ExecApprovalFollowupRuntimeHandoffRegistration | undefined {
+  const approvalId = normalizeOptionalString(params.approvalId);
   const sessionKey = normalizeOptionalString(params.sessionKey);
-  if (!params.bashElevated || !sessionKey) {
+  if (!approvalId || !sessionKey || !params.bashElevated) {
     return undefined;
   }
   const nowMs = params.nowMs ?? Date.now();
-  pruneExpiredExecApprovalFollowupElevatedDefaults(nowMs);
-  const token = randomUUID();
-  execApprovalFollowupElevatedDefaults.set(token, {
-    sessionKey,
-    bashElevated: cloneExecElevatedDefaults(params.bashElevated),
-    expiresAtMs: nowMs + EXEC_APPROVAL_FOLLOWUP_ELEVATED_TTL_MS,
+  pruneExpiredExecApprovalFollowupRuntimeHandoffs(nowMs);
+  const handoffId = randomUUID();
+  const idempotencyKey = buildExecApprovalFollowupIdempotencyKey({
+    approvalId,
+    nonce: randomUUID(),
   });
-  return token;
+  execApprovalFollowupRuntimeHandoffs.set(handoffId, {
+    kind: "exec-approval-followup",
+    approvalId,
+    sessionKey,
+    idempotencyKey,
+    bashElevated: cloneExecElevatedDefaults(params.bashElevated),
+    expiresAtMs: nowMs + EXEC_APPROVAL_FOLLOWUP_RUNTIME_HANDOFF_TTL_MS,
+  });
+  return { handoffId, idempotencyKey };
 }
 
-export function consumeExecApprovalFollowupElevatedDefaults(params: {
-  token?: string;
+export function consumeExecApprovalFollowupRuntimeHandoff(params: {
+  handoffId?: string;
+  approvalId?: string;
+  idempotencyKey?: string;
   sessionKey?: string;
   nowMs?: number;
-}): ExecElevatedDefaults | undefined {
-  const token = normalizeOptionalString(params.token);
-  if (!token) {
+}): ExecApprovalFollowupRuntimeHandoff | undefined {
+  const handoffId = normalizeOptionalString(params.handoffId);
+  const approvalId = normalizeOptionalString(params.approvalId);
+  const idempotencyKey = normalizeOptionalString(params.idempotencyKey);
+  if (!handoffId || !approvalId || !idempotencyKey) {
     return undefined;
   }
   const nowMs = params.nowMs ?? Date.now();
-  pruneExpiredExecApprovalFollowupElevatedDefaults(nowMs);
-  const entry = execApprovalFollowupElevatedDefaults.get(token);
+  pruneExpiredExecApprovalFollowupRuntimeHandoffs(nowMs);
+  const entry = execApprovalFollowupRuntimeHandoffs.get(handoffId);
   if (!entry) {
     return undefined;
   }
   if (entry.expiresAtMs <= nowMs) {
-    execApprovalFollowupElevatedDefaults.delete(token);
+    execApprovalFollowupRuntimeHandoffs.delete(handoffId);
     return undefined;
   }
   const sessionKey = normalizeOptionalString(params.sessionKey);
-  if (entry.sessionKey !== sessionKey) {
+  if (
+    entry.approvalId !== approvalId ||
+    entry.idempotencyKey !== idempotencyKey ||
+    entry.sessionKey !== sessionKey
+  ) {
     return undefined;
   }
-  execApprovalFollowupElevatedDefaults.delete(token);
-  return cloneExecElevatedDefaults(entry.bashElevated);
+  execApprovalFollowupRuntimeHandoffs.delete(handoffId);
+  return cloneExecApprovalFollowupRuntimeHandoff(entry);
 }
 
-export function consumeExecApprovalFollowupElevatedDefaultsFromIdempotencyKey(params: {
-  idempotencyKey: string;
-  sessionKey?: string;
-  nowMs?: number;
-}): ExecElevatedDefaults | undefined {
-  return consumeExecApprovalFollowupElevatedDefaults({
-    token: parseExecApprovalFollowupToken(params.idempotencyKey),
-    sessionKey: params.sessionKey,
-    nowMs: params.nowMs,
-  });
-}
-
-export function resetExecApprovalFollowupElevatedDefaultsForTests(): void {
-  execApprovalFollowupElevatedDefaults.clear();
+export function resetExecApprovalFollowupRuntimeHandoffsForTests(): void {
+  execApprovalFollowupRuntimeHandoffs.clear();
 }

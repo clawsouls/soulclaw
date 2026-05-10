@@ -4,7 +4,10 @@ import {
   resolveDefaultAgentId,
   resolveAgentWorkspaceDir,
 } from "../../agents/agent-scope.js";
-import { consumeExecApprovalFollowupElevatedDefaultsFromIdempotencyKey } from "../../agents/bash-tools.exec-approval-followup-state.js";
+import {
+  consumeExecApprovalFollowupRuntimeHandoff,
+  parseExecApprovalFollowupApprovalId,
+} from "../../agents/bash-tools.exec-approval-followup-state.js";
 import { isTimeoutError } from "../../agents/failover-error.js";
 import {
   resolveAgentAvatar,
@@ -100,7 +103,11 @@ import {
 } from "../chat-attachments.js";
 import { resolveAssistantAvatarUrl } from "../control-ui-shared.js";
 import { ADMIN_SCOPE } from "../method-scopes.js";
-import { GATEWAY_CLIENT_CAPS, hasGatewayClientCap } from "../protocol/client-info.js";
+import {
+  GATEWAY_CLIENT_CAPS,
+  GATEWAY_CLIENT_MODES,
+  hasGatewayClientCap,
+} from "../protocol/client-info.js";
 import {
   ErrorCodes,
   errorShape,
@@ -174,6 +181,12 @@ function resolveAllowModelOverrideFromClient(
 
 function resolveCanResetSessionFromClient(client: GatewayRequestHandlerOptions["client"]): boolean {
   return resolveSenderIsOwnerFromClient(client);
+}
+
+function resolveCanUseInternalRuntimeHandoff(
+  client: GatewayRequestHandlerOptions["client"],
+): boolean {
+  return client?.connect?.client?.mode === GATEWAY_CLIENT_MODES.BACKEND;
 }
 
 async function runSessionResetFromAgent(params: {
@@ -583,6 +596,7 @@ export const agentHandlers: GatewayRequestHandlers = {
       bootstrapContextMode?: "full" | "lightweight";
       bootstrapContextRunKind?: "default" | "heartbeat" | "cron";
       acpTurnSource?: "manual_spawn";
+      internalRuntimeHandoffId?: string;
       internalEvents?: AgentInternalEvent[];
       idempotencyKey: string;
       timeout?: number;
@@ -596,6 +610,7 @@ export const agentHandlers: GatewayRequestHandlers = {
     const senderIsOwner = resolveSenderIsOwnerFromClient(client);
     const allowModelOverride = resolveAllowModelOverrideFromClient(client);
     const canResetSession = resolveCanResetSessionFromClient(client);
+    const canUseInternalRuntimeHandoff = resolveCanUseInternalRuntimeHandoff(client);
     const requestedModelOverride = Boolean(request.provider || request.model);
     const isRawModelRun = request.modelRun === true || request.promptMode === "none";
     if (requestedModelOverride && !allowModelOverride) {
@@ -613,6 +628,18 @@ export const agentHandlers: GatewayRequestHandlers = {
     const modelOverride = allowModelOverride ? request.model : undefined;
     const cfg = context.getRuntimeConfig();
     const idem = request.idempotencyKey;
+    const execApprovalFollowupApprovalId = parseExecApprovalFollowupApprovalId(idem);
+    if (execApprovalFollowupApprovalId && !canUseInternalRuntimeHandoff) {
+      respond(
+        false,
+        undefined,
+        errorShape(
+          ErrorCodes.INVALID_REQUEST,
+          "exec approval followup idempotency keys are reserved for backend callers.",
+        ),
+      );
+      return;
+    }
     const normalizedSpawned = normalizeSpawnedRunMetadata({
       groupId: request.groupId,
       groupChannel: request.groupChannel,
@@ -1392,22 +1419,31 @@ export const agentHandlers: GatewayRequestHandlers = {
           (!resolvedSessionKey || resolveAgentIdFromSessionKey(resolvedSessionKey) === agentId)
             ? agentId
             : undefined;
-        let execApprovalFollowupElevatedDefaults =
-          consumeExecApprovalFollowupElevatedDefaultsFromIdempotencyKey({
-            idempotencyKey: idem,
-            sessionKey: resolvedSessionKey,
-          });
+        let execApprovalFollowupRuntimeHandoff =
+          canUseInternalRuntimeHandoff && execApprovalFollowupApprovalId
+            ? consumeExecApprovalFollowupRuntimeHandoff({
+                handoffId: request.internalRuntimeHandoffId,
+                approvalId: execApprovalFollowupApprovalId,
+                idempotencyKey: idem,
+                sessionKey: resolvedSessionKey,
+              })
+            : undefined;
         if (
-          !execApprovalFollowupElevatedDefaults &&
+          !execApprovalFollowupRuntimeHandoff &&
+          canUseInternalRuntimeHandoff &&
+          execApprovalFollowupApprovalId &&
           requestedSessionKeyRaw &&
           requestedSessionKeyRaw !== resolvedSessionKey
         ) {
-          execApprovalFollowupElevatedDefaults =
-            consumeExecApprovalFollowupElevatedDefaultsFromIdempotencyKey({
-              idempotencyKey: idem,
-              sessionKey: requestedSessionKeyRaw,
-            });
+          execApprovalFollowupRuntimeHandoff = consumeExecApprovalFollowupRuntimeHandoff({
+            handoffId: request.internalRuntimeHandoffId,
+            approvalId: execApprovalFollowupApprovalId,
+            idempotencyKey: idem,
+            sessionKey: requestedSessionKeyRaw,
+          });
         }
+        const execApprovalFollowupElevatedDefaults =
+          execApprovalFollowupRuntimeHandoff?.bashElevated;
 
         dispatchAgentRunFromGateway({
           ingressOpts: {

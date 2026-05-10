@@ -24,7 +24,8 @@ type ExecApprovalFollowupParams = {
   turnSourceThreadId?: string | number;
   resultText: string;
   direct?: boolean;
-  execApprovalFollowupToken?: string;
+  internalRuntimeHandoffId?: string;
+  idempotencyKey?: string;
 };
 
 function buildExecDeniedFollowupPrompt(resultText: string): string {
@@ -151,7 +152,8 @@ function buildAgentFollowupArgs(params: {
   turnSourceTo?: string;
   turnSourceAccountId?: string;
   turnSourceThreadId?: string | number;
-  execApprovalFollowupToken?: string;
+  internalRuntimeHandoffId?: string;
+  idempotencyKey?: string;
 }) {
   const { deliveryTarget, sessionOnlyOriginChannel } = params;
   // When the followup run has no deliverable route and no gateway-internal channel,
@@ -179,10 +181,14 @@ function buildAgentFollowupArgs(params: {
       : sessionOnlyOriginChannel
         ? params.turnSourceThreadId
         : undefined,
-    idempotencyKey: buildExecApprovalFollowupIdempotencyKey({
-      approvalId: params.approvalId,
-      execApprovalFollowupToken: params.execApprovalFollowupToken,
-    }),
+    idempotencyKey:
+      params.idempotencyKey ??
+      buildExecApprovalFollowupIdempotencyKey({
+        approvalId: params.approvalId,
+      }),
+    ...(params.internalRuntimeHandoffId
+      ? { internalRuntimeHandoffId: params.internalRuntimeHandoffId }
+      : {}),
   };
 }
 
@@ -256,7 +262,8 @@ export async function sendExecApprovalFollowup(
           turnSourceTo: params.turnSourceTo,
           turnSourceAccountId: params.turnSourceAccountId,
           turnSourceThreadId: params.turnSourceThreadId,
-          execApprovalFollowupToken: params.execApprovalFollowupToken,
+          internalRuntimeHandoffId: params.internalRuntimeHandoffId,
+          idempotencyKey: params.idempotencyKey,
         }),
         { expectFinal: true },
       );
