@@ -3174,47 +3174,46 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-block-streaming");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              key: "block",
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "Block",
-              requireMention: true,
-              roomId: "!block:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        blockEventIds: ["$block-one", "$block-two"],
-        driverEventId: "$block-stream-trigger",
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            key: "block",
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "Block",
+            requireMention: true,
+            roomId: "!block:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as {
+      blockEventIds?: unknown;
+      driverEventId?: unknown;
+    };
+    expect(artifacts.blockEventIds).toEqual(["$block-one", "$block-two"]);
+    expect(artifacts.driverEventId).toBe("$block-stream-trigger");
 
     expect(sendTextMessage).toHaveBeenCalledWith({
       body: expect.stringContaining("Block streaming QA check"),
@@ -3225,12 +3224,7 @@ describe("matrix live qa scenarios", () => {
     expect(body).toMatch(
       /reply with exactly this two-line body and no extra text:\nMATRIX_QA_BLOCK_ONE_[A-F0-9]{8}\nMATRIX_QA_BLOCK_TWO_[A-F0-9]{8}$/,
     );
-    expect(waitForRoomEvent).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        since: "driver-sync-block-one",
-      }),
-    );
+    expect(waitForRoomEvent.mock.calls[1]?.[0]?.since).toBe("driver-sync-block-one");
   });
 
   it("sends a real Matrix image attachment for image-understanding prompts", async () => {
@@ -3274,67 +3268,57 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-image-understanding-attachment");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              key: scenarioTesting.MATRIX_QA_MEDIA_ROOM_KEY,
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "Media",
-              requireMention: true,
-              roomId: "!media:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        attachmentFilename: "red-top-blue-bottom.png",
-        driverEventId: "$image-understanding-trigger",
-        reply: {
-          eventId: "$sut-image-reply",
-        },
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            key: scenarioTesting.MATRIX_QA_MEDIA_ROOM_KEY,
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "Media",
+            requireMention: true,
+            roomId: "!media:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as {
+      attachmentFilename?: unknown;
+      driverEventId?: unknown;
+      reply?: { eventId?: unknown };
+    };
+    expect(artifacts.attachmentFilename).toBe("red-top-blue-bottom.png");
+    expect(artifacts.driverEventId).toBe("$image-understanding-trigger");
+    expect(artifacts.reply?.eventId).toBe("$sut-image-reply");
 
-    expect(sendMediaMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.stringContaining("Image understanding check"),
-        contentType: "image/png",
-        fileName: "red-top-blue-bottom.png",
-        kind: "image",
-        mentionUserIds: ["@sut:matrix-qa.test"],
-        roomId: "!media:matrix-qa.test",
-      }),
-    );
-    expect(waitForRoomEvent).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        since: "driver-sync-attachment",
-      }),
-    );
+    const mediaMessage = sendMediaMessage.mock.calls[0]?.[0];
+    expect(String(mediaMessage?.body)).toContain("Image understanding check");
+    expect(mediaMessage?.contentType).toBe("image/png");
+    expect(mediaMessage?.fileName).toBe("red-top-blue-bottom.png");
+    expect(mediaMessage?.kind).toBe("image");
+    expect(mediaMessage?.mentionUserIds).toEqual(["@sut:matrix-qa.test"]);
+    expect(mediaMessage?.roomId).toBe("!media:matrix-qa.test");
+    expect(waitForRoomEvent.mock.calls[1]?.[0]?.since).toBe("driver-sync-attachment");
   });
 
   it("waits for a real Matrix image attachment after image generation", async () => {
@@ -3372,50 +3356,52 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-generated-image-delivery");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              key: scenarioTesting.MATRIX_QA_MEDIA_ROOM_KEY,
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "Media",
-              requireMention: true,
-              roomId: "!media:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        attachmentEventId: "$sut-image",
-        attachmentFilename: "qa-lighthouse.png",
-        attachmentKind: "image",
-        attachmentMsgtype: "m.image",
-        driverEventId: "$image-generate-trigger",
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            key: scenarioTesting.MATRIX_QA_MEDIA_ROOM_KEY,
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "Media",
+            requireMention: true,
+            roomId: "!media:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as {
+      attachmentEventId?: unknown;
+      attachmentFilename?: unknown;
+      attachmentKind?: unknown;
+      attachmentMsgtype?: unknown;
+      driverEventId?: unknown;
+    };
+    expect(artifacts.attachmentEventId).toBe("$sut-image");
+    expect(artifacts.attachmentFilename).toBe("qa-lighthouse.png");
+    expect(artifacts.attachmentKind).toBe("image");
+    expect(artifacts.attachmentMsgtype).toBe("m.image");
+    expect(artifacts.driverEventId).toBe("$image-generate-trigger");
 
     expect(sendTextMessage).toHaveBeenCalledWith({
       body: expect.stringContaining("/tool image_generate action=generate"),
