@@ -1889,8 +1889,8 @@ describe("dispatchReplyFromConfig", () => {
     });
 
     expect(dispatcher.sendToolResult).toHaveBeenCalledTimes(1);
-    expect(dispatcher.sendToolResult).toHaveBeenCalledWith(
-      expect.objectContaining({ mediaUrl: "https://example.com/tts-preview.opus" }),
+    expect(firstToolResultPayload(dispatcher)?.mediaUrl).toBe(
+      "https://example.com/tts-preview.opus",
     );
     expect(dispatcher.sendFinalReply).toHaveBeenCalledWith({ text: "done" });
   });
@@ -1931,17 +1931,13 @@ describe("dispatchReplyFromConfig", () => {
     });
 
     expect(dispatcher.sendToolResult).toHaveBeenCalledTimes(1);
-    expect(firstToolResultPayload(dispatcher)).toEqual(
-      expect.objectContaining({
-        channelData: {
-          execApproval: {
-            approvalId: "117ba06d-1111-2222-3333-444444444444",
-            approvalSlug: "117ba06d",
-            allowedDecisions: ["allow-once", "allow-always", "deny"],
-          },
-        },
-      }),
-    );
+    expect(firstToolResultPayload(dispatcher)?.channelData).toStrictEqual({
+      execApproval: {
+        approvalId: "117ba06d-1111-2222-3333-444444444444",
+        approvalSlug: "117ba06d",
+        allowedDecisions: ["allow-once", "allow-always", "deny"],
+      },
+    });
     expect(dispatcher.sendFinalReply).toHaveBeenCalledWith({ text: "NO_REPLY" });
   });
 
@@ -2059,21 +2055,21 @@ describe("dispatchReplyFromConfig", () => {
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
     expect(replyResolver).not.toHaveBeenCalled();
-    expect(runtime.ensureSession).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sessionKey: "agent:codex-acp:session-1",
-        agent: "codex",
-        mode: "persistent",
-      }),
-    );
+    const ensureSessionOptions = runtime.ensureSession.mock.calls[0]?.[0] as
+      | { agent?: unknown; mode?: unknown; sessionKey?: unknown }
+      | undefined;
+    expect(ensureSessionOptions?.sessionKey).toBe("agent:codex-acp:session-1");
+    expect(ensureSessionOptions?.agent).toBe("codex");
+    expect(ensureSessionOptions?.mode).toBe("persistent");
     const blockCalls = (dispatcher.sendBlockReply as ReturnType<typeof vi.fn>).mock.calls;
     expect(blockCalls.length).toBeGreaterThan(0);
     const streamedText = blockCalls.map((call) => (call[0] as ReplyPayload).text ?? "").join("");
     expect(streamedText).toContain("hello");
     expect(streamedText).toContain("world");
-    expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "hello world" }),
-    );
+    const finalPayload = (dispatcher.sendFinalReply as Mock).mock.calls[0]?.[0] as
+      | ReplyPayload
+      | undefined;
+    expect(finalPayload?.text).toBe("hello world");
   });
 
   it("emits lifecycle end for ACP turns using the current run id", async () => {
@@ -2122,16 +2118,20 @@ describe("dispatchReplyFromConfig", () => {
       },
     });
 
-    expect(agentEventMocks.emitAgentEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        runId: "run-acp-lifecycle-end",
-        sessionKey: "agent:codex-acp:session-1",
-        stream: "lifecycle",
-        data: expect.objectContaining({
-          phase: "end",
-        }),
-      }),
-    );
+    const lifecycleEvent = agentEventMocks.emitAgentEvent.mock.calls
+      .map(
+        (call) =>
+          call[0] as {
+            data?: { phase?: unknown };
+            runId?: unknown;
+            sessionKey?: unknown;
+            stream?: unknown;
+          },
+      )
+      .find((event) => event.runId === "run-acp-lifecycle-end");
+    expect(lifecycleEvent?.sessionKey).toBe("agent:codex-acp:session-1");
+    expect(lifecycleEvent?.stream).toBe("lifecycle");
+    expect(lifecycleEvent?.data?.phase).toBe("end");
   });
 
   it("emits lifecycle error for ACP turn failures using the current run id", async () => {
@@ -2184,17 +2184,21 @@ describe("dispatchReplyFromConfig", () => {
       },
     });
 
-    expect(agentEventMocks.emitAgentEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        runId: "run-acp-lifecycle-error",
-        sessionKey: "agent:codex-acp:session-1",
-        stream: "lifecycle",
-        data: expect.objectContaining({
-          phase: "error",
-          error: expect.stringContaining("ACP exploded"),
-        }),
-      }),
-    );
+    const lifecycleEvent = agentEventMocks.emitAgentEvent.mock.calls
+      .map(
+        (call) =>
+          call[0] as {
+            data?: { error?: unknown; phase?: unknown };
+            runId?: unknown;
+            sessionKey?: unknown;
+            stream?: unknown;
+          },
+      )
+      .find((event) => event.runId === "run-acp-lifecycle-error");
+    expect(lifecycleEvent?.sessionKey).toBe("agent:codex-acp:session-1");
+    expect(lifecycleEvent?.stream).toBe("lifecycle");
+    expect(lifecycleEvent?.data?.phase).toBe("error");
+    expect(String(lifecycleEvent?.data?.error)).toContain("ACP exploded");
   });
 
   it("posts a one-time resolved-session-id notice in thread after the first ACP turn", async () => {
