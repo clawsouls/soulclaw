@@ -591,6 +591,17 @@ export async function prepareSlackMessage(params: {
   const shouldRequireMention = isRoom
     ? (channelConfig?.requireMention ?? ctx.defaultRequireMention)
     : false;
+  if (message._ambiguousThreadReply) {
+    ctx.logger.info(
+      {
+        channel: message.channel,
+        ts: message.ts,
+        parentUserId: message.parent_user_id,
+      },
+      "skipping ambiguous slack thread reply",
+    );
+    return null;
+  }
   const canDetectMention = Boolean(ctx.botUserId) || mentionRegexes.length > 0;
   // Strip Slack mentions (<@U123>) before command detection so "@Labrador /new" is recognized
   const textForCommandDetection = stripSlackMentionsForCommandDetection(message.text ?? "");
