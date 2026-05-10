@@ -4828,28 +4828,31 @@ describe("matrix live qa scenarios", () => {
 
       const scenario = requireMatrixQaScenario("matrix-e2ee-cli-account-add-enable-e2ee");
 
-      await expect(
-        runMatrixQaScenario(scenario, {
-          ...matrixQaScenarioContext(),
-          driverDeviceId: "DRIVERDEVICE",
-          driverPassword: "driver-password",
-          gatewayRuntimeEnv: {
-            OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
-            OPENCLAW_STATE_DIR: "/tmp/gateway-state",
-            PATH: process.env.PATH,
-          },
-          outputDir,
-        }),
-      ).resolves.toMatchObject({
-        artifacts: {
-          accountId: "cli-add-e2ee",
-          backupVersion: "backup-v1",
-          cliDeviceId: "CLIADDDEVICE",
-          encryptionEnabled: true,
-          verificationBootstrapAttempted: true,
-          verificationBootstrapSuccess: true,
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        driverDeviceId: "DRIVERDEVICE",
+        driverPassword: "driver-password",
+        gatewayRuntimeEnv: {
+          OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
+          OPENCLAW_STATE_DIR: "/tmp/gateway-state",
+          PATH: process.env.PATH,
         },
+        outputDir,
       });
+      const artifacts = result.artifacts as {
+        accountId?: unknown;
+        backupVersion?: unknown;
+        cliDeviceId?: unknown;
+        encryptionEnabled?: unknown;
+        verificationBootstrapAttempted?: unknown;
+        verificationBootstrapSuccess?: unknown;
+      };
+      expect(artifacts.accountId).toBe("cli-add-e2ee");
+      expect(artifacts.backupVersion).toBe("backup-v1");
+      expect(artifacts.cliDeviceId).toBe("CLIADDDEVICE");
+      expect(artifacts.encryptionEnabled).toBe(true);
+      expect(artifacts.verificationBootstrapAttempted).toBe(true);
+      expect(artifacts.verificationBootstrapSuccess).toBe(true);
 
       expect(runMatrixQaOpenClawCli.mock.calls.map(([params]) => params.args)).toEqual([
         [
@@ -4874,12 +4877,10 @@ describe("matrix live qa scenarios", () => {
         ],
         ["matrix", "verify", "status", "--account", "cli-add-e2ee", "--json"],
       ]);
-      expect(registerWithToken).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceName: "OpenClaw Matrix QA CLI Account Add Owner",
-          registrationToken: "registration-token",
-        }),
+      expect(registerWithToken.mock.calls[0]?.[0]?.deviceName).toBe(
+        "OpenClaw Matrix QA CLI Account Add Owner",
       );
+      expect(registerWithToken.mock.calls[0]?.[0]?.registrationToken).toBe("registration-token");
       const [cliRunDir] = await readdir(path.join(outputDir, "cli-account-add-enable-e2ee"));
       const cliArtifactDir = path.join(outputDir, "cli-account-add-enable-e2ee", cliRunDir ?? "");
       await expect(
