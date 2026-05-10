@@ -44,6 +44,7 @@ Docs: https://docs.openclaw.ai
 - CLI/config: explain strict JSON parse failures with a valid example and the plain-string escape hatch.
 - CLI/secrets: turn offline Gateway reload failures into actionable recovery text.
 - CLI/channels: explain missing or ambiguous channel selections with next commands.
+- CLI/channels: defer guided channel status collection until a channel is selected, keeping `openclaw channels add` first screen quieter.
 - Browser/Docker: detect Playwright-managed Chromium from `PLAYWRIGHT_BROWSERS_PATH` and the default Playwright cache on Linux, so Docker installs that persist `/home/node/.cache/ms-playwright` no longer need `browser.executablePath`.
 - Ollama: keep DeepSeek V4 cloud models thinking-capable even when Ollama Cloud `/api/show` omits the `thinking` capability, so `/think high` no longer rejects `ollama/deepseek-v4-*:cloud`.
 - ACPX/Claude ACP: keep foreground prompts waiting for their own result when autonomous task-notification results arrive during the same session, and retarget the patch for Claude Agent ACP `0.33.1`.
