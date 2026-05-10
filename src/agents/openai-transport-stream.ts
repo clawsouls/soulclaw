@@ -1520,7 +1520,8 @@ async function processOpenAICompletionsStream(
       }
     }
     const choiceDelta =
-      choice.delta ?? (choice as unknown as { message?: ChatCompletionChunk["delta"] }).message;
+      choice.delta ??
+      (choice as unknown as { message?: ChatCompletionChunk["choices"][number]["delta"] }).message;
     if (!choiceDelta) {
       continue;
     }
