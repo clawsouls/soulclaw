@@ -3811,51 +3811,47 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-dm-per-room-session-override");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              key: scenarioTesting.MATRIX_QA_DRIVER_DM_ROOM_KEY,
-              kind: "dm",
-              memberRoles: ["driver", "sut"],
-              memberUserIds: ["@driver:matrix-qa.test", "@sut:matrix-qa.test"],
-              name: "DM",
-              requireMention: false,
-              roomId: "!dm:matrix-qa.test",
-            },
-            {
-              key: scenarioTesting.MATRIX_QA_DRIVER_DM_SHARED_ROOM_KEY,
-              kind: "dm",
-              memberRoles: ["driver", "sut"],
-              memberUserIds: ["@driver:matrix-qa.test", "@sut:matrix-qa.test"],
-              name: "Shared DM",
-              requireMention: false,
-              roomId: "!dm-shared:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        roomKey: scenarioTesting.MATRIX_QA_DRIVER_DM_SHARED_ROOM_KEY,
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            key: scenarioTesting.MATRIX_QA_DRIVER_DM_ROOM_KEY,
+            kind: "dm",
+            memberRoles: ["driver", "sut"],
+            memberUserIds: ["@driver:matrix-qa.test", "@sut:matrix-qa.test"],
+            name: "DM",
+            requireMention: false,
+            roomId: "!dm:matrix-qa.test",
+          },
+          {
+            key: scenarioTesting.MATRIX_QA_DRIVER_DM_SHARED_ROOM_KEY,
+            kind: "dm",
+            memberRoles: ["driver", "sut"],
+            memberUserIds: ["@driver:matrix-qa.test", "@sut:matrix-qa.test"],
+            name: "Shared DM",
+            requireMention: false,
+            roomId: "!dm-shared:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as { roomKey?: unknown };
+    expect(artifacts.roomKey).toBe(scenarioTesting.MATRIX_QA_DRIVER_DM_SHARED_ROOM_KEY);
 
     expect(waitSecondaryNotice).toHaveBeenCalledTimes(1);
   });
@@ -3902,33 +3898,32 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-autojoin-invite");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        joinedRoomId: "!autojoin:matrix-qa.test",
-        membershipJoinEventId: "$autojoin-join",
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [],
       },
     });
+    const artifacts = result.artifacts as {
+      joinedRoomId?: unknown;
+      membershipJoinEventId?: unknown;
+    };
+    expect(artifacts.joinedRoomId).toBe("!autojoin:matrix-qa.test");
+    expect(artifacts.membershipJoinEventId).toBe("$autojoin-join");
 
     expect(createPrivateRoom).toHaveBeenCalledWith({
       inviteUserIds: ["@observer:matrix-qa.test", "@sut:matrix-qa.test"],
@@ -3966,70 +3961,62 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-secondary-room-reply");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              key: "main",
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "Main",
-              requireMention: true,
-              roomId: "!main:matrix-qa.test",
-            },
-            {
-              key: scenarioTesting.MATRIX_QA_SECONDARY_ROOM_KEY,
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "Secondary",
-              requireMention: true,
-              roomId: "!secondary:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        actorUserId: "@driver:matrix-qa.test",
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            key: "main",
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "Main",
+            requireMention: true,
+            roomId: "!main:matrix-qa.test",
+          },
+          {
+            key: scenarioTesting.MATRIX_QA_SECONDARY_ROOM_KEY,
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "Secondary",
+            requireMention: true,
+            roomId: "!secondary:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as { actorUserId?: unknown };
+    expect(artifacts.actorUserId).toBe("@driver:matrix-qa.test");
 
     expect(sendTextMessage).toHaveBeenCalledWith({
       body: expect.stringContaining("@sut:matrix-qa.test"),
       mentionUserIds: ["@sut:matrix-qa.test"],
       roomId: "!secondary:matrix-qa.test",
     });
-    expect(waitForRoomEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        roomId: "!secondary:matrix-qa.test",
-      }),
-    );
+    expect(waitForRoomEvent.mock.calls[0]?.[0]?.roomId).toBe("!secondary:matrix-qa.test");
   });
 
   it("ignores stale E2EE replies when checking a verification notice", async () => {
