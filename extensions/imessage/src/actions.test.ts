@@ -636,11 +636,18 @@ describe("imessage message actions", () => {
         },
       } as never);
 
-      expect(runtimeMock.sendRichMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chatGuid: "iMessage;-;+18001234567",
-        }),
-      );
+      expect(runtimeMock.sendRichMessage.mock.calls).toStrictEqual([
+        [
+          {
+            chatGuid: "iMessage;-;+18001234567",
+            text: "first contact",
+            replyToMessageId: "parent-guid",
+            partIndex: undefined,
+            attachment: undefined,
+            options: imsgOptions("iMessage;-;+18001234567"),
+          },
+        ],
+      ]);
     });
 
     it("removes a tapback by fanning out across all known kinds when emoji is empty/unknown and remove:true", async () => {
