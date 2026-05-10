@@ -52,6 +52,17 @@ function createDriveToolApi(params: {
   });
 }
 
+function mockCallArg<T>(
+  mock: { mock: { calls: unknown[][] } },
+  callIndex: number,
+  argIndex: number,
+  _type?: (value: unknown) => value is T,
+): T {
+  const call = mock.mock.calls[callIndex];
+  expect(call).toBeDefined();
+  return call?.[argIndex] as T;
+}
+
 describe("registerFeishuDriveTools", () => {
   const requestMock = vi.fn();
 
@@ -154,25 +165,28 @@ describe("registerFeishuDriveTools", () => {
       file_token: "doc_1",
       file_type: "docx",
     });
-    expect(requestMock).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        method: "GET",
-        url: "/open-apis/drive/v1/files/doc_1/comments?file_type=docx&user_id_type=open_id",
-      }),
+    const listRequest = mockCallArg<{ method?: string; url?: string }>(requestMock, 0, 0);
+    expect(listRequest.method).toBe("GET");
+    expect(listRequest.url).toBe(
+      "/open-apis/drive/v1/files/doc_1/comments?file_type=docx&user_id_type=open_id",
     );
-    expect(listResult.details).toEqual(
-      expect.objectContaining({
-        comments: [
-          expect.objectContaining({
-            comment_id: "c1",
-            text: "root comment",
-            quote: "quoted text",
-            replies: [expect.objectContaining({ reply_id: "r2", text: "reply text" })],
-          }),
-        ],
-      }),
-    );
+    const listDetails = listResult.details as
+      | {
+          comments?: Array<{
+            comment_id?: string;
+            quote?: string;
+            replies?: Array<{ reply_id?: string; text?: string }>;
+            text?: string;
+          }>;
+        }
+      | undefined;
+    expect(listDetails?.comments).toHaveLength(1);
+    expect(listDetails?.comments?.[0]?.comment_id).toBe("c1");
+    expect(listDetails?.comments?.[0]?.text).toBe("root comment");
+    expect(listDetails?.comments?.[0]?.quote).toBe("quoted text");
+    expect(listDetails?.comments?.[0]?.replies).toHaveLength(1);
+    expect(listDetails?.comments?.[0]?.replies?.[0]?.reply_id).toBe("r2");
+    expect(listDetails?.comments?.[0]?.replies?.[0]?.text).toBe("reply text");
 
     requestMock.mockResolvedValueOnce({
       code: 0,
@@ -201,18 +215,17 @@ describe("registerFeishuDriveTools", () => {
       file_type: "docx",
       comment_id: "c1",
     });
-    expect(requestMock).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        method: "GET",
-        url: "/open-apis/drive/v1/files/doc_1/comments/c1/replies?file_type=docx&user_id_type=open_id",
-      }),
+    const repliesRequest = mockCallArg<{ method?: string; url?: string }>(requestMock, 1, 0);
+    expect(repliesRequest.method).toBe("GET");
+    expect(repliesRequest.url).toBe(
+      "/open-apis/drive/v1/files/doc_1/comments/c1/replies?file_type=docx&user_id_type=open_id",
     );
-    expect(repliesResult.details).toEqual(
-      expect.objectContaining({
-        replies: [expect.objectContaining({ reply_id: "r3", text: "reply from api" })],
-      }),
-    );
+    const repliesDetails = repliesResult.details as
+      | { replies?: Array<{ reply_id?: string; text?: string }> }
+      | undefined;
+    expect(repliesDetails?.replies).toHaveLength(1);
+    expect(repliesDetails?.replies?.[0]?.reply_id).toBe("r3");
+    expect(repliesDetails?.replies?.[0]?.text).toBe("reply from api");
 
     requestMock.mockResolvedValueOnce({
       code: 0,
@@ -225,21 +238,26 @@ describe("registerFeishuDriveTools", () => {
       block_id: "blk_1",
       content: "please update this section",
     });
-    expect(requestMock).toHaveBeenNthCalledWith(
-      3,
-      expect.objectContaining({
-        method: "POST",
-        url: "/open-apis/drive/v1/files/doc_1/new_comments",
-        data: {
-          file_type: "docx",
-          reply_elements: [{ type: "text", text: "please update this section" }],
-          anchor: { block_id: "blk_1" },
-        },
-      }),
+    const addRequest = mockCallArg<{
+      data?: {
+        anchor?: { block_id?: string };
+        file_type?: string;
+        reply_elements?: Array<{ text?: string; type?: string }>;
+      };
+      method?: string;
+      url?: string;
+    }>(requestMock, 2, 0);
+    expect(addRequest.method).toBe("POST");
+    expect(addRequest.url).toBe("/open-apis/drive/v1/files/doc_1/new_comments");
+    expect(addRequest.data).toEqual({
+      file_type: "docx",
+      reply_elements: [{ type: "text", text: "please update this section" }],
+      anchor: { block_id: "blk_1" },
+    });
+    expect((addCommentResult.details as { comment_id?: string; success?: boolean }).success).toBe(
+      true,
     );
-    expect(addCommentResult.details).toEqual(
-      expect.objectContaining({ success: true, comment_id: "c2" }),
-    );
+    expect((addCommentResult.details as { comment_id?: string }).comment_id).toBe("c2");
 
     requestMock
       .mockResolvedValueOnce({
@@ -259,39 +277,41 @@ describe("registerFeishuDriveTools", () => {
       comment_id: "c1",
       content: "handled",
     });
-    expect(requestMock).toHaveBeenNthCalledWith(
-      4,
-      expect.objectContaining({
-        method: "POST",
-        url: "/open-apis/drive/v1/files/doc_1/comments/batch_query?file_type=docx&user_id_type=open_id",
-        data: {
-          comment_ids: ["c1"],
-        },
-      }),
+    const batchRequest = mockCallArg<{
+      data?: { comment_ids?: string[] };
+      method?: string;
+      url?: string;
+    }>(requestMock, 3, 0);
+    expect(batchRequest.method).toBe("POST");
+    expect(batchRequest.url).toBe(
+      "/open-apis/drive/v1/files/doc_1/comments/batch_query?file_type=docx&user_id_type=open_id",
     );
-    expect(requestMock).toHaveBeenNthCalledWith(
-      5,
-      expect.objectContaining({
-        method: "POST",
-        url: "/open-apis/drive/v1/files/doc_1/comments/c1/replies",
-        params: { file_type: "docx" },
-        data: {
-          content: {
-            elements: [
-              {
-                type: "text_run",
-                text_run: {
-                  text: "handled",
-                },
-              },
-            ],
+    expect(batchRequest.data).toEqual({ comment_ids: ["c1"] });
+    const replyRequest = mockCallArg<{
+      data?: { content?: { elements?: Array<{ text_run?: { text?: string }; type?: string }> } };
+      method?: string;
+      params?: { file_type?: string };
+      url?: string;
+    }>(requestMock, 4, 0);
+    expect(replyRequest.method).toBe("POST");
+    expect(replyRequest.url).toBe("/open-apis/drive/v1/files/doc_1/comments/c1/replies");
+    expect(replyRequest.params).toEqual({ file_type: "docx" });
+    expect(replyRequest.data).toEqual({
+      content: {
+        elements: [
+          {
+            type: "text_run",
+            text_run: {
+              text: "handled",
+            },
           },
-        },
-      }),
+        ],
+      },
+    });
+    expect((replyCommentResult.details as { reply_id?: string; success?: boolean }).success).toBe(
+      true,
     );
-    expect(replyCommentResult.details).toEqual(
-      expect.objectContaining({ success: true, reply_id: "r4" }),
-    );
+    expect((replyCommentResult.details as { reply_id?: string }).reply_id).toBe("r4");
   });
 
   it("defaults add_comment file_type to docx when omitted", async () => {
