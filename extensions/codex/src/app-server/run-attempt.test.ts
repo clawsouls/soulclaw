@@ -915,77 +915,67 @@ describe("runCodexAppServerAttempt", () => {
     const run = runCodexAppServerAttempt(params);
     await harness.waitForMethod("turn/start");
 
-    await expect(
-      harness.handleServerRequest({
-        id: "request-tool-1",
-        method: "item/tool/call",
-        params: {
-          threadId: "thread-1",
-          turnId: "turn-1",
-          callId: "call-1",
-          namespace: null,
-          tool: "message",
-          arguments: {
-            action: "send",
-            token: "plain-secret-value-12345",
-            text: "hello",
-          },
+    const toolResult = (await harness.handleServerRequest({
+      id: "request-tool-1",
+      method: "item/tool/call",
+      params: {
+        threadId: "thread-1",
+        turnId: "turn-1",
+        callId: "call-1",
+        namespace: null,
+        tool: "message",
+        arguments: {
+          action: "send",
+          token: "plain-secret-value-12345",
+          text: "hello",
         },
-      }),
-    ).resolves.toMatchObject({
-      success: false,
-      contentItems: [
-        {
-          type: "inputText",
-          text: expect.stringMatching(
-            /^(Unknown OpenClaw tool: message|Action send requires a target\.)$/u,
-          ),
-        },
-      ],
-    });
+      },
+    })) as {
+      contentItems?: Array<{ text?: string; type?: string }>;
+      success?: boolean;
+    };
+    expect(toolResult.success).toBe(false);
+    expect(toolResult.contentItems?.[0]?.type).toBe("inputText");
+    expect(toolResult.contentItems?.[0]?.text).toMatch(
+      /^(Unknown OpenClaw tool: message|Action send requires a target\.)$/u,
+    );
 
     await harness.completeTurn({ threadId: "thread-1", turnId: "turn-1" });
     await run;
 
-    const agentEvents = onRunAgentEvent.mock.calls.map(([event]) => event);
-    expect(agentEvents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          stream: "tool",
-          data: expect.objectContaining({
-            phase: "start",
-            name: "message",
-            toolCallId: "call-1",
-            args: expect.objectContaining({
-              action: "send",
-              token: "plain-…2345",
-              text: "hello",
-            }),
-          }),
-        }),
-        expect.objectContaining({
-          stream: "tool",
-          data: expect.objectContaining({
-            phase: "result",
-            name: "message",
-            toolCallId: "call-1",
-            isError: true,
-            result: expect.objectContaining({ success: false }),
-          }),
-        }),
-      ]),
+    const agentEvents = onRunAgentEvent.mock.calls.map(([event]) => event) as Array<{
+      data?: {
+        args?: Record<string, unknown>;
+        isError?: boolean;
+        name?: string;
+        phase?: string;
+        result?: { success?: boolean };
+        toolCallId?: string;
+      };
+      stream?: string;
+    }>;
+    const startEvent = agentEvents.find(
+      (event) => event.stream === "tool" && event.data?.phase === "start",
     );
+    expect(startEvent?.data?.name).toBe("message");
+    expect(startEvent?.data?.toolCallId).toBe("call-1");
+    expect(startEvent?.data?.args?.action).toBe("send");
+    expect(startEvent?.data?.args?.token).toBe("plain-…2345");
+    expect(startEvent?.data?.args?.text).toBe("hello");
+    const resultEvent = agentEvents.find(
+      (event) => event.stream === "tool" && event.data?.phase === "result",
+    );
+    expect(resultEvent?.data?.name).toBe("message");
+    expect(resultEvent?.data?.toolCallId).toBe("call-1");
+    expect(resultEvent?.data?.isError).toBe(true);
+    expect(resultEvent?.data?.result?.success).toBe(false);
     expect(JSON.stringify(agentEvents)).not.toContain("plain-secret-value-12345");
-    expect(globalAgentEvents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          runId: "run-1",
-          sessionKey: "agent:main:session-1",
-          stream: "tool",
-          data: expect.objectContaining({ phase: "start", name: "message" }),
-        }),
-      ]),
+    const globalStartEvent = globalAgentEvents.find(
+      (event) => event.stream === "tool" && event.data.phase === "start",
     );
+    expect(globalStartEvent?.runId).toBe("run-1");
+    expect(globalStartEvent?.sessionKey).toBe("agent:main:session-1");
+    expect(globalStartEvent?.data.name).toBe("message");
   });
 
   it("releases the session when Codex never completes after a dynamic tool response", async () => {
