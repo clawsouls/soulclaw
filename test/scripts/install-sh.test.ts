@@ -155,6 +155,64 @@ describe("install.sh", () => {
     expect(output).toContain("version=v22.22.0");
   });
 
+  it("persists a supported Linux Node path before noninteractive shell guards", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "openclaw-install-linux-node-path-"));
+    const home = join(tmp, "home");
+    const oldBin = join(tmp, "old/bin");
+    const installedBin = join(tmp, "usr/bin");
+    mkdirSync(home, { recursive: true });
+    mkdirSync(oldBin, { recursive: true });
+    mkdirSync(installedBin, { recursive: true });
+
+    const oldNode = join(oldBin, "node");
+    const installedNode = join(installedBin, "node");
+    writeFileSync(
+      join(home, ".bashrc"),
+      ["case $- in", "  *i*) ;;", "  *) return ;;", "esac", ""].join("\n"),
+    );
+    writeFileSync(
+      oldNode,
+      [
+        "#!/usr/bin/env bash",
+        'if [[ "${1:-}" == "-p" ]]; then echo "20 20"; exit 0; fi',
+        'if [[ "${1:-}" == "-v" ]]; then echo "v20.20.0"; exit 0; fi',
+        "",
+      ].join("\n"),
+    );
+    writeFileSync(
+      installedNode,
+      [
+        "#!/usr/bin/env bash",
+        'if [[ "${1:-}" == "-p" ]]; then echo "24 13"; exit 0; fi',
+        'if [[ "${1:-}" == "-v" ]]; then echo "v24.13.0"; exit 0; fi',
+        "",
+      ].join("\n"),
+    );
+    chmodSync(oldNode, 0o755);
+    chmodSync(installedNode, 0o755);
+
+    let result: ReturnType<typeof runInstallShell> | undefined;
+    try {
+      result = runInstallShell(`
+        set -euo pipefail
+        source "${SCRIPT_PATH}"
+        OS=linux
+        HOME=${JSON.stringify(home)}
+        PATH=${JSON.stringify(`${oldBin}:${installedBin}:/usr/bin:/bin`)}
+        ui_info() { :; }
+        activate_supported_node_on_path
+        printf 'first=%s\\n' "$(sed -n '1p' "$HOME/.bashrc")"
+        HOME=${JSON.stringify(home)} PATH=${JSON.stringify(`${oldBin}:${installedBin}:/usr/bin:/bin`)} bash -lc '. "$HOME/.bashrc"; printf "node=%s\\n" "$(command -v node)"'
+      `);
+    } finally {
+      rmSync(tmp, { force: true, recursive: true });
+    }
+
+    expect(result?.status).toBe(0);
+    expect(result?.stdout).toContain(`first=export PATH="${installedBin}:$PATH"`);
+    expect(result?.stdout).toContain(`node=${installedNode}`);
+  });
+
   it("warns before redirecting an unwritable npm prefix", () => {
     const tmp = mkdtempSync(join(tmpdir(), "openclaw-install-npm-prefix-"));
     const home = join(tmp, "home");
@@ -206,6 +264,50 @@ describe("install.sh", () => {
     expect(result?.stdout).toContain("npm i -g openclaw@latest");
     expect(result?.stdout).toContain("using this user prefix");
     expect(result?.stdout).not.toContain("has been saved");
+  });
+
+  it("persists npm prefix PATH before noninteractive shell guards", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "openclaw-install-npm-prefix-shell-"));
+    const home = join(tmp, "home");
+    mkdirSync(home, { recursive: true });
+    writeFileSync(
+      join(home, ".bashrc"),
+      ["case $- in", "  *i*) ;;", "  *) return ;;", "esac", ""].join("\n"),
+    );
+
+    let result: ReturnType<typeof runInstallShell> | undefined;
+    try {
+      result = runInstallShell(`
+        set -euo pipefail
+        source "${SCRIPT_PATH}"
+        OS=linux
+        HOME=${JSON.stringify(home)}
+        PATH=/usr/bin:/bin
+        prefix=${JSON.stringify(join(tmp, "root-owned-prefix"))}
+        npm() {
+          if [[ "$1" == "config" && "$2" == "get" && "$3" == "prefix" ]]; then
+            printf '%s\\n' "$prefix"
+            return 0
+          fi
+          if [[ "$1" == "config" && "$2" == "set" && "$3" == "prefix" ]]; then
+            return 0
+          fi
+          return 1
+        }
+        ui_info() { :; }
+        ui_warn() { :; }
+        ui_success() { :; }
+        fix_npm_permissions
+        printf 'first=%s\\n' "$(sed -n '1p' "$HOME/.bashrc")"
+        HOME=${JSON.stringify(home)} PATH=/usr/bin:/bin bash -lc '. "$HOME/.bashrc"; printf "path=%s\\n" "\${PATH%%:*}"'
+      `);
+    } finally {
+      rmSync(tmp, { force: true, recursive: true });
+    }
+
+    expect(result?.status).toBe(0);
+    expect(result?.stdout).toContain('first=export PATH="$HOME/.npm-global/bin:$PATH"');
+    expect(result?.stdout).toContain(`path=${home}/.npm-global/bin`);
   });
 
   it("uses a quoted absolute openclaw path in follow-up commands when npm bin is not on the original PATH", () => {
