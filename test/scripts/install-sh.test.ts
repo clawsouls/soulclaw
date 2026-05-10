@@ -202,7 +202,7 @@ describe("install.sh", () => {
         ui_info() { :; }
         activate_supported_node_on_path
         printf 'first=%s\\n' "$(sed -n '1p' "$HOME/.bashrc")"
-        HOME=${JSON.stringify(home)} PATH=${JSON.stringify(`${oldBin}:${installedBin}:/usr/bin:/bin`)} bash -lc '. "$HOME/.bashrc"; printf "node=%s\\n" "$(command -v node)"'
+        HOME=${JSON.stringify(home)} PATH=${JSON.stringify(`${oldBin}:${installedBin}:/usr/bin:/bin`)} bash -lc 'source_rc() { . "$HOME/.bashrc"; }; source_rc; printf "node=%s\\n" "$(command -v node)"'
       `);
     } finally {
       rmSync(tmp, { force: true, recursive: true });
@@ -299,7 +299,7 @@ describe("install.sh", () => {
         ui_success() { :; }
         fix_npm_permissions
         printf 'first=%s\\n' "$(sed -n '1p' "$HOME/.bashrc")"
-        HOME=${JSON.stringify(home)} PATH=/usr/bin:/bin bash -lc '. "$HOME/.bashrc"; printf "path=%s\\n" "\${PATH%%:*}"'
+        HOME=${JSON.stringify(home)} PATH=/usr/bin:/bin bash -lc 'source_rc() { . "$HOME/.bashrc"; }; source_rc; printf "path=%s\\n" "\${PATH%%:*}"'
       `);
     } finally {
       rmSync(tmp, { force: true, recursive: true });
