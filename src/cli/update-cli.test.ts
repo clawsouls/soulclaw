@@ -359,12 +359,44 @@ describe("update-cli", () => {
     return call;
   };
 
+  const commandCall = (index = 0) => {
+    const calls = vi.mocked(runCommandWithTimeout).mock.calls as unknown as Array<
+      [string[], Record<string, unknown>]
+    >;
+    return calls[index];
+  };
+
+  const spawnCall = (index = 0) => {
+    const calls = spawn.mock.calls as unknown as Array<
+      [string, string[], { env?: NodeJS.ProcessEnv; stdio?: unknown }]
+    >;
+    return calls[index];
+  };
+
+  const spawnSyncCall = (index = 0) => {
+    const calls = vi.mocked(spawnSync).mock.calls as unknown as Array<
+      [string, string[], { env?: NodeJS.ProcessEnv; timeout?: number }]
+    >;
+    return calls[index];
+  };
+
   const expectPackageInstallSpec = (spec: string) => {
     expect(runGatewayUpdate).not.toHaveBeenCalled();
-    expect(runCommandWithTimeout).toHaveBeenCalledWith(
-      ["npm", "i", "-g", spec, "--no-fund", "--no-audit", "--loglevel=error"],
-      expect.any(Object),
-    );
+    const call = (
+      vi.mocked(runCommandWithTimeout).mock.calls as unknown as Array<
+        [string[], Record<string, unknown>]
+      >
+    ).find(([argv]) => argv[0] === "npm" && argv[1] === "i" && argv[2] === "-g");
+    expect(call?.[0]).toEqual([
+      "npm",
+      "i",
+      "-g",
+      spec,
+      "--no-fund",
+      "--no-audit",
+      "--loglevel=error",
+    ]);
+    expect(call?.[1]).toBeDefined();
   };
 
   const statfsFixture = (params: {
@@ -616,16 +648,11 @@ describe("update-cli", () => {
 
     await updateCliShared.tryWriteCompletionCache(root, false);
 
-    expect(spawnSync).toHaveBeenCalledWith(
-      expect.any(String),
-      [path.join(root, "openclaw.mjs"), "completion", "--write-state"],
-      expect.objectContaining({
-        env: expect.objectContaining({
-          OPENCLAW_COMPLETION_SKIP_PLUGIN_COMMANDS: "1",
-        }),
-        timeout: 30_000,
-      }),
-    );
+    const call = spawnSyncCall();
+    expect(typeof call?.[0]).toBe("string");
+    expect(call?.[1]).toEqual([path.join(root, "openclaw.mjs"), "completion", "--write-state"]);
+    expect(call?.[2]?.env?.OPENCLAW_COMPLETION_SKIP_PLUGIN_COMMANDS).toBe("1");
+    expect(call?.[2]?.timeout).toBe(30_000);
   });
 
   it("refuses mutating updates in Nix mode before update side effects", async () => {
@@ -658,11 +685,9 @@ describe("update-cli", () => {
     await updateCliShared.tryWriteCompletionCache(root, false);
 
     const logs = vi.mocked(runtimeCapture.log).mock.calls.map((call) => String(call[0]));
-    expect(logs).toEqual(expect.arrayContaining([expect.stringContaining("timed out after 30s")]));
-    expect(logs).toEqual(
-      expect.arrayContaining([expect.stringContaining("openclaw completion --write-state")]),
-    );
-    expect(logs).not.toEqual(expect.arrayContaining([expect.stringContaining("Error: spawnSync")]));
+    expect(logs.some((line) => line.includes("timed out after 30s"))).toBe(true);
+    expect(logs.some((line) => line.includes("openclaw completion --write-state"))).toBe(true);
+    expect(logs.some((line) => line.includes("Error: spawnSync"))).toBe(false);
   });
 
   it("respawns into the updated package root before running post-update tasks", async () => {
@@ -670,18 +695,13 @@ describe("update-cli", () => {
 
     await updateCommand({ yes: true, timeout: "1800" });
 
-    expect(spawn).toHaveBeenCalledWith(
-      expect.stringMatching(/node/),
-      [entrypoints[0], "update", "--yes", "--timeout", "1800"],
-      expect.objectContaining({
-        stdio: "inherit",
-        env: expect.objectContaining({
-          NODE_DISABLE_COMPILE_CACHE: "1",
-          OPENCLAW_UPDATE_POST_CORE: "1",
-          OPENCLAW_UPDATE_POST_CORE_CHANNEL: "dev",
-        }),
-      }),
-    );
+    const call = spawnCall();
+    expect(call?.[0]).toMatch(/node/);
+    expect(call?.[1]).toEqual([entrypoints[0], "update", "--yes", "--timeout", "1800"]);
+    expect(call?.[2]?.stdio).toBe("inherit");
+    expect(call?.[2]?.env?.NODE_DISABLE_COMPILE_CACHE).toBe("1");
+    expect(call?.[2]?.env?.OPENCLAW_UPDATE_POST_CORE).toBe("1");
+    expect(call?.[2]?.env?.OPENCLAW_UPDATE_POST_CORE_CHANNEL).toBe("dev");
     expect(updateNpmInstalledPlugins).not.toHaveBeenCalled();
     expect(runDaemonInstall).not.toHaveBeenCalled();
     expect(runDaemonRestart).not.toHaveBeenCalled();
