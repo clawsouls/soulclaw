@@ -376,6 +376,62 @@ function extractFirstTextBlock(payload: unknown): string | undefined {
   return typeof firstText === "string" ? firstText : undefined;
 }
 
+function getMessage(payload: unknown): Record<string, any> | undefined {
+  if (!payload || typeof payload !== "object") {
+    return undefined;
+  }
+  const message = (payload as { message?: unknown }).message;
+  return message && typeof message === "object" ? (message as Record<string, any>) : undefined;
+}
+
+function getMessageContent(payload: unknown): Array<Record<string, any>> {
+  const content = getMessage(payload)?.content;
+  return Array.isArray(content) ? (content as Array<Record<string, any>>) : [];
+}
+
+function lastRespondCall(respond: ReturnType<typeof vi.fn>) {
+  return respond.mock.calls.at(-1) as
+    | [boolean, Record<string, any> | undefined, Record<string, any> | undefined]
+    | undefined;
+}
+
+function lastBroadcastPayload(context: ChatContext): Record<string, any> | undefined {
+  const chatCall = (context.broadcast as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1);
+  expect(chatCall?.[0]).toBe("chat");
+  return chatCall?.[1] as Record<string, any> | undefined;
+}
+
+function lastNodeSendCall(context: ChatContext) {
+  return (context.nodeSendToSession as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1) as
+    | [string, string, Record<string, any>]
+    | undefined;
+}
+
+function findAssistantUpdateWithBlock(predicate: (block: Record<string, any>) => boolean) {
+  return mockState.emittedTranscriptUpdates.find((update) => {
+    const message = update.message as { role?: unknown; content?: unknown } | undefined;
+    return (
+      message?.role === "assistant" &&
+      Array.isArray(message.content) &&
+      (message.content as Array<Record<string, any>>).some(predicate)
+    );
+  });
+}
+
+function expectDispatchContextFields(expected: {
+  OriginatingChannel?: unknown;
+  OriginatingTo?: unknown;
+  ExplicitDeliverRoute?: unknown;
+  AccountId?: unknown;
+  MessageThreadId?: unknown;
+  BodyForCommands?: unknown;
+  CommandSource?: unknown;
+}) {
+  for (const [key, value] of Object.entries(expected)) {
+    expect((mockState.lastDispatchCtx as Record<string, unknown> | undefined)?.[key]).toBe(value);
+  }
+}
+
 function createScopedCliClient(
   scopes?: string[],
   client: Partial<{
@@ -656,33 +712,17 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
     });
 
     await waitForAssertion(() => {
-      const assistantUpdate = mockState.emittedTranscriptUpdates.find(
-        (update) =>
-          typeof update.message === "object" &&
-          update.message !== null &&
-          (update.message as { role?: unknown }).role === "assistant" &&
-          Array.isArray((update.message as { content?: unknown }).content) &&
-          ((update.message as { content: Array<{ type?: string }> }).content.some(
-            (block) => block?.type === "audio",
-          ) ??
-            false),
-      );
-      expect(assistantUpdate).toMatchObject({
-        message: {
-          role: "assistant",
-          idempotencyKey: "idem-agent-audio:assistant-media",
-          content: [
-            { type: "text", text: "Audio reply" },
-            {
-              type: "audio",
-              source: {
-                type: "base64",
-                media_type: "audio/mpeg",
-              },
-            },
-          ],
-        },
-      });
+      const assistantUpdate = findAssistantUpdateWithBlock((block) => block.type === "audio");
+      const message = assistantUpdate?.message as Record<string, any> | undefined;
+      const content = Array.isArray(message?.content)
+        ? (message.content as Array<Record<string, any>>)
+        : [];
+      expect(message?.role).toBe("assistant");
+      expect(message?.idempotencyKey).toBe("idem-agent-audio:assistant-media");
+      expect(content[0]).toEqual({ type: "text", text: "Audio reply" });
+      expect(content[1]?.type).toBe("audio");
+      expect(content[1]?.source?.type).toBe("base64");
+      expect(content[1]?.source?.media_type).toBe("audio/mpeg");
     });
   });
 
@@ -729,22 +769,16 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
         (update.message as { role?: unknown }).role === "assistant",
     );
     expect(assistantUpdates).toHaveLength(1);
-    expect(assistantUpdates[0]).toMatchObject({
-      message: {
-        role: "assistant",
-        idempotencyKey: "idem-agent-tts:assistant-media",
-        content: [
-          { type: "text", text: "Audio reply" },
-          {
-            type: "audio",
-            source: {
-              type: "base64",
-              media_type: "audio/mpeg",
-            },
-          },
-        ],
-      },
-    });
+    const message = assistantUpdates[0]?.message as Record<string, any> | undefined;
+    const content = Array.isArray(message?.content)
+      ? (message.content as Array<Record<string, any>>)
+      : [];
+    expect(message?.role).toBe("assistant");
+    expect(message?.idempotencyKey).toBe("idem-agent-tts:assistant-media");
+    expect(content[0]).toEqual({ type: "text", text: "Audio reply" });
+    expect(content[1]?.type).toBe("audio");
+    expect(content[1]?.source?.type).toBe("base64");
+    expect(content[1]?.source?.media_type).toBe("audio/mpeg");
     expect(JSON.stringify(assistantUpdates[0]?.message)).not.toContain(
       "This text is already in the model transcript.",
     );
@@ -876,19 +910,12 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       idempotencyKey: "idem-command-tts",
     });
 
-    expect(payload?.message).toMatchObject({
-      role: "assistant",
-      content: [
-        { type: "text", text: "Command result with TTS." },
-        {
-          type: "audio",
-          source: {
-            type: "base64",
-            media_type: "audio/mpeg",
-          },
-        },
-      ],
-    });
+    const content = getMessageContent(payload);
+    expect(getMessage(payload)?.role).toBe("assistant");
+    expect(content[0]).toEqual({ type: "text", text: "Command result with TTS." });
+    expect(content[1]?.type).toBe("audio");
+    expect(content[1]?.source?.type).toBe("base64");
+    expect(content[1]?.source?.media_type).toBe("audio/mpeg");
     const assistantUpdates = mockState.emittedTranscriptUpdates.filter(
       (update) =>
         typeof update.message === "object" &&
@@ -914,13 +941,13 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       idempotencyKey: "idem-agent-image",
     });
 
-    expect(payload?.message).toMatchObject({
-      role: "assistant",
-      content: [
-        { type: "text", text: "Scan this QR code with the OpenClaw iOS app:" },
-        { type: "input_image", image_url: "data:image/png;base64,cG5n" },
-      ],
+    const content = getMessageContent(payload);
+    expect(getMessage(payload)?.role).toBe("assistant");
+    expect(content[0]).toEqual({
+      type: "text",
+      text: "Scan this QR code with the OpenClaw iOS app:",
     });
+    expect(content[1]).toEqual({ type: "input_image", image_url: "data:image/png;base64,cG5n" });
     expect(JSON.stringify(payload?.message)).not.toContain("MEDIA:data:image/png;base64,cG5n");
   });
 
@@ -964,18 +991,13 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
     });
 
     expect(respond).toHaveBeenCalled();
-    const [ok, payload] = respond.mock.calls.at(-1) ?? [];
+    const [ok, payload] = lastRespondCall(respond) ?? [];
     expect(ok).toBe(true);
-    expect(payload).toMatchObject({ ok: true });
-    const chatCall = (context.broadcast as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1);
-    expect(chatCall?.[0]).toBe("chat");
-    expect(chatCall?.[1]).toEqual(
-      expect.objectContaining({
-        state: "final",
-        message: expect.any(Object),
-      }),
-    );
-    expect(extractFirstTextBlock(chatCall?.[1])).toBe("");
+    expect(payload?.ok).toBe(true);
+    const broadcastPayload = lastBroadcastPayload(context);
+    expect(broadcastPayload?.state).toBe("final");
+    expect(getMessage(broadcastPayload)).toBeDefined();
+    expect(extractFirstTextBlock(broadcastPayload)).toBe("");
   });
 
   it("chat.send non-streaming final keeps message defined for directive-only assistant text", async () => {
@@ -990,13 +1012,9 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       idempotencyKey: "idem-directive-only",
     });
 
-    expect(payload).toEqual(
-      expect.objectContaining({
-        runId: "idem-directive-only",
-        state: "final",
-        message: expect.any(Object),
-      }),
-    );
+    expect(payload?.runId).toBe("idem-directive-only");
+    expect(payload?.state).toBe("final");
+    expect(getMessage(payload)).toBeDefined();
     expect(extractFirstTextBlock(payload)).toBe("");
   });
 
@@ -1018,13 +1036,10 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       context: context as GatewayRequestContext,
     });
 
-    expect(respond).toHaveBeenCalledWith(
-      false,
-      undefined,
-      expect.objectContaining({
-        code: ErrorCodes.INVALID_REQUEST,
-      }),
-    );
+    const response = lastRespondCall(respond);
+    expect(response?.[0]).toBe(false);
+    expect(response?.[1]).toBeUndefined();
+    expect(response?.[2]?.code).toBe(ErrorCodes.INVALID_REQUEST);
     expect(context.broadcast).not.toHaveBeenCalled();
   });
 
@@ -1071,20 +1086,14 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       context: context as GatewayRequestContext,
     });
 
-    expect(respond).toHaveBeenCalledWith(true, expect.objectContaining({ ok: true }));
-    expect(context.broadcast).toHaveBeenCalledWith(
-      "chat",
-      expect.objectContaining({
-        sessionKey: "agent:main:canon",
-      }),
-    );
-    expect(context.nodeSendToSession).toHaveBeenCalledWith(
-      "agent:main:canon",
-      "chat",
-      expect.objectContaining({
-        sessionKey: "agent:main:canon",
-      }),
-    );
+    const response = lastRespondCall(respond);
+    expect(response?.[0]).toBe(true);
+    expect(response?.[1]?.ok).toBe(true);
+    expect(lastBroadcastPayload(context)?.sessionKey).toBe("agent:main:canon");
+    const nodeSend = lastNodeSendCall(context);
+    expect(nodeSend?.[0]).toBe("agent:main:canon");
+    expect(nodeSend?.[1]).toBe("chat");
+    expect(nodeSend?.[2].sessionKey).toBe("agent:main:canon");
   });
 
   it("chat.send non-streaming final strips external untrusted wrapper metadata from final payload text", async () => {
@@ -1117,18 +1126,11 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       sessionKey: "legacy-key",
     });
 
-    expect(payload).toEqual(
-      expect.objectContaining({
-        sessionKey: "agent:main:canon",
-      }),
-    );
-    expect(context.nodeSendToSession).toHaveBeenCalledWith(
-      "agent:main:canon",
-      "chat",
-      expect.objectContaining({
-        sessionKey: "agent:main:canon",
-      }),
-    );
+    expect(payload?.sessionKey).toBe("agent:main:canon");
+    const nodeSend = lastNodeSendCall(context);
+    expect(nodeSend?.[0]).toBe("agent:main:canon");
+    expect(nodeSend?.[1]).toBe("chat");
+    expect(nodeSend?.[2].sessionKey).toBe("agent:main:canon");
   });
 
   it("chat.send broadcasts final replies for telegram-shaped session keys", async () => {
@@ -1145,20 +1147,16 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       sessionKey,
     });
 
-    expect(payload).toEqual(
-      expect.objectContaining({
-        runId: "idem-telegram-final",
-        sessionKey,
-        state: "final",
-        message: expect.any(Object),
-      }),
-    );
+    expect(payload?.runId).toBe("idem-telegram-final");
+    expect(payload?.sessionKey).toBe(sessionKey);
+    expect(payload?.state).toBe("final");
+    expect(getMessage(payload)).toBeDefined();
     expect(extractFirstTextBlock(payload)).toBe("telegram ok");
-    expect(context.nodeSendToSession).toHaveBeenCalledWith(
-      sessionKey,
-      "chat",
-      expect.objectContaining({ sessionKey, state: "final" }),
-    );
+    const nodeSend = lastNodeSendCall(context);
+    expect(nodeSend?.[0]).toBe(sessionKey);
+    expect(nodeSend?.[1]).toBe("chat");
+    expect(nodeSend?.[2].sessionKey).toBe(sessionKey);
+    expect(nodeSend?.[2].state).toBe("final");
   });
 
   it("chat.send keeps explicit delivery routes for channel-scoped sessions", async () => {
@@ -1188,15 +1186,13 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expectBroadcast: false,
     });
 
-    expect(mockState.lastDispatchCtx).toEqual(
-      expect.objectContaining({
-        OriginatingChannel: "telegram",
-        OriginatingTo: "telegram:6812765697",
-        ExplicitDeliverRoute: true,
-        AccountId: "default",
-        MessageThreadId: 42,
-      }),
-    );
+    expectDispatchContextFields({
+      OriginatingChannel: "telegram",
+      OriginatingTo: "telegram:6812765697",
+      ExplicitDeliverRoute: true,
+      AccountId: "default",
+      MessageThreadId: 42,
+    });
   });
 
   it("chat.send marks user slash commands as text command sources", async () => {
@@ -1213,12 +1209,10 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expectBroadcast: false,
     });
 
-    expect(mockState.lastDispatchCtx).toEqual(
-      expect.objectContaining({
-        BodyForCommands: "/codex status",
-        CommandSource: "text",
-      }),
-    );
+    expectDispatchContextFields({
+      BodyForCommands: "/codex status",
+      CommandSource: "text",
+    });
   });
 
   it("chat.send keeps explicit delivery routes for Feishu channel-scoped sessions", async () => {
@@ -1246,14 +1240,12 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expectBroadcast: false,
     });
 
-    expect(mockState.lastDispatchCtx).toEqual(
-      expect.objectContaining({
-        OriginatingChannel: "feishu",
-        OriginatingTo: "ou_feishu_direct_123",
-        ExplicitDeliverRoute: true,
-        AccountId: "default",
-      }),
-    );
+    expectDispatchContextFields({
+      OriginatingChannel: "feishu",
+      OriginatingTo: "ou_feishu_direct_123",
+      ExplicitDeliverRoute: true,
+      AccountId: "default",
+    });
   });
 
   it("chat.send keeps explicit delivery routes for per-account channel-peer sessions", async () => {
@@ -1281,14 +1273,12 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expectBroadcast: false,
     });
 
-    expect(mockState.lastDispatchCtx).toEqual(
-      expect.objectContaining({
-        OriginatingChannel: "telegram",
-        OriginatingTo: "telegram:6812765697",
-        ExplicitDeliverRoute: true,
-        AccountId: "account-a",
-      }),
-    );
+    expectDispatchContextFields({
+      OriginatingChannel: "telegram",
+      OriginatingTo: "telegram:6812765697",
+      ExplicitDeliverRoute: true,
+      AccountId: "account-a",
+    });
   });
 
   it("chat.send keeps explicit delivery routes for legacy channel-peer sessions", async () => {
@@ -1316,14 +1306,12 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expectBroadcast: false,
     });
 
-    expect(mockState.lastDispatchCtx).toEqual(
-      expect.objectContaining({
-        OriginatingChannel: "telegram",
-        OriginatingTo: "telegram:6812765697",
-        ExplicitDeliverRoute: true,
-        AccountId: "default",
-      }),
-    );
+    expectDispatchContextFields({
+      OriginatingChannel: "telegram",
+      OriginatingTo: "telegram:6812765697",
+      ExplicitDeliverRoute: true,
+      AccountId: "default",
+    });
   });
 
   it("chat.send keeps explicit delivery routes for legacy thread sessions", async () => {
@@ -1353,15 +1341,13 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expectBroadcast: false,
     });
 
-    expect(mockState.lastDispatchCtx).toEqual(
-      expect.objectContaining({
-        OriginatingChannel: "telegram",
-        OriginatingTo: "telegram:6812765697",
-        ExplicitDeliverRoute: true,
-        AccountId: "default",
-        MessageThreadId: "42",
-      }),
-    );
+    expectDispatchContextFields({
+      OriginatingChannel: "telegram",
+      OriginatingTo: "telegram:6812765697",
+      ExplicitDeliverRoute: true,
+      AccountId: "default",
+      MessageThreadId: "42",
+    });
   });
 
   it("chat.send does not inherit external delivery context for shared main sessions", async () => {
@@ -1388,14 +1374,12 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expectBroadcast: false,
     });
 
-    expect(mockState.lastDispatchCtx).toEqual(
-      expect.objectContaining({
-        OriginatingChannel: "webchat",
-        OriginatingTo: undefined,
-        ExplicitDeliverRoute: false,
-        AccountId: undefined,
-      }),
-    );
+    expectDispatchContextFields({
+      OriginatingChannel: "webchat",
+      OriginatingTo: undefined,
+      ExplicitDeliverRoute: false,
+      AccountId: undefined,
+    });
   });
 
   it("chat.send does not inherit external delivery context for UI clients on main sessions", async () => {
@@ -1430,13 +1414,11 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expectBroadcast: false,
     });
 
-    expect(mockState.lastDispatchCtx).toEqual(
-      expect.objectContaining({
-        OriginatingChannel: "webchat",
-        OriginatingTo: undefined,
-        AccountId: undefined,
-      }),
-    );
+    expectDispatchContextFields({
+      OriginatingChannel: "webchat",
+      OriginatingTo: undefined,
+      AccountId: undefined,
+    });
   });
 
   it("chat.send does not inherit external delivery context for UI clients on main sessions when deliver is enabled", async () => {
@@ -1472,14 +1454,12 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
       expectBroadcast: false,
     });
 
-    expect(mockState.lastDispatchCtx).toEqual(
-      expect.objectContaining({
-        OriginatingChannel: "webchat",
-        OriginatingTo: undefined,
-        ExplicitDeliverRoute: false,
-        AccountId: undefined,
-      }),
-    );
+    expectDispatchContextFields({
+      OriginatingChannel: "webchat",
+      OriginatingTo: undefined,
+      ExplicitDeliverRoute: false,
+      AccountId: undefined,
+    });
   });
 
   it("chat.send inherits external delivery context for CLI clients on configured main sessions", async () => {
