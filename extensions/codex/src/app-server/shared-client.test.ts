@@ -5,7 +5,9 @@ import { createClientHarness } from "./test-support.js";
 
 const mocks = vi.hoisted(() => ({
   bridgeCodexAppServerStartOptions: vi.fn(async ({ startOptions }) => startOptions),
-  applyCodexAppServerAuthProfile: vi.fn(async () => undefined),
+  applyCodexAppServerAuthProfile: vi.fn(
+    async (_params?: { agentDir?: string; authProfileId?: string; config?: unknown }) => undefined,
+  ),
   resolveCodexAppServerAuthProfileIdForAgent: vi.fn(
     (params?: { authProfileId?: string }) => params?.authProfileId,
   ),

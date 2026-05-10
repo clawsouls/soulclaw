@@ -161,7 +161,7 @@ describe("maybeCompactCodexAppServerSession", () => {
     const fake = createFakeCodexClient();
     __testing.setCodexAppServerClientFactoryForTests(async () => fake.client);
     const sessionFile = await writeTestBinding();
-    const compact = vi.fn(async () => ({
+    const compact = vi.fn(async (_params: unknown) => ({
       ok: true,
       compacted: true,
       result: {
@@ -171,7 +171,13 @@ describe("maybeCompactCodexAppServerSession", () => {
         details: { engine: "lossless-claw" },
       },
     }));
-    const maintain = vi.fn(async () => ({ changed: false, bytesFreed: 0, rewrittenEntries: 0 }));
+    const maintain = vi.fn(
+      async (_params: Parameters<NonNullable<ContextEngine["maintain"]>>[0]) => ({
+        changed: false,
+        bytesFreed: 0,
+        rewrittenEntries: 0,
+      }),
+    );
     const contextEngine: ContextEngine = {
       info: { id: "lossless-claw", name: "Lossless Claw", ownsCompaction: true },
       assemble: vi.fn() as never,
@@ -234,11 +240,19 @@ describe("maybeCompactCodexAppServerSession", () => {
     });
     expect(maintain).toHaveBeenCalledTimes(1);
     const [maintainCall] = maintain.mock.calls[0] ?? [];
-    expect(maintainCall?.sessionId).toBe("session-1");
-    expect(maintainCall?.sessionKey).toBe("agent:main:session-1");
-    expect(maintainCall?.sessionFile).toBe(sessionFile);
-    expect(maintainCall?.runtimeContext?.workspaceDir).toBe(tempDir);
-    expect(maintainCall?.runtimeContext?.provider).toBe("codex");
+    const maintainParams = maintainCall as
+      | {
+          sessionId?: string;
+          sessionKey?: string;
+          sessionFile?: string;
+          runtimeContext?: { workspaceDir?: string; provider?: string };
+        }
+      | undefined;
+    expect(maintainParams?.sessionId).toBe("session-1");
+    expect(maintainParams?.sessionKey).toBe("agent:main:session-1");
+    expect(maintainParams?.sessionFile).toBe(sessionFile);
+    expect(maintainParams?.runtimeContext?.workspaceDir).toBe(tempDir);
+    expect(maintainParams?.runtimeContext?.provider).toBe("codex");
   });
 
   it("still runs native compaction when context-engine maintenance fails", async () => {
