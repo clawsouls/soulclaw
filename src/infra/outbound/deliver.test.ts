@@ -1115,13 +1115,10 @@ describe("deliverOutboundPayloads", () => {
       },
     });
 
-    expect(resolveMediaAccessSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sessionKey: "agent:main:matrix:room:ops",
-        messageProvider: undefined,
-        requesterSenderId: "attacker",
-      }),
-    );
+    const [mediaAccessOptions] = resolveMediaAccessSpy.mock.calls[0] ?? [];
+    expect(mediaAccessOptions?.sessionKey).toBe("agent:main:matrix:room:ops");
+    expect(mediaAccessOptions?.messageProvider).toBeUndefined();
+    expect(mediaAccessOptions?.requesterSenderId).toBe("attacker");
     resolveMediaAccessSpy.mockRestore();
   });
 
@@ -1147,14 +1144,11 @@ describe("deliverOutboundPayloads", () => {
       },
     });
 
-    expect(resolveMediaAccessSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        requesterSenderId: "id:matrix:123",
-        requesterSenderName: "Alice",
-        requesterSenderUsername: "alice_u",
-        requesterSenderE164: "+15551234567",
-      }),
-    );
+    const [mediaAccessOptions] = resolveMediaAccessSpy.mock.calls[0] ?? [];
+    expect(mediaAccessOptions?.requesterSenderId).toBe("id:matrix:123");
+    expect(mediaAccessOptions?.requesterSenderName).toBe("Alice");
+    expect(mediaAccessOptions?.requesterSenderUsername).toBe("alice_u");
+    expect(mediaAccessOptions?.requesterSenderE164).toBe("+15551234567");
     resolveMediaAccessSpy.mockRestore();
   });
 
@@ -1179,13 +1173,10 @@ describe("deliverOutboundPayloads", () => {
       },
     });
 
-    expect(resolveMediaAccessSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sessionKey: "agent:main:matrix:room:ops",
-        accountId: "source-account",
-        requesterSenderId: "attacker",
-      }),
-    );
+    const [mediaAccessOptions] = resolveMediaAccessSpy.mock.calls[0] ?? [];
+    expect(mediaAccessOptions?.sessionKey).toBe("agent:main:matrix:room:ops");
+    expect(mediaAccessOptions?.accountId).toBe("source-account");
+    expect(mediaAccessOptions?.requesterSenderId).toBe("attacker");
     resolveMediaAccessSpy.mockRestore();
   });
 
@@ -1252,12 +1243,8 @@ describe("deliverOutboundPayloads", () => {
 
     expect(sendText).toHaveBeenCalledTimes(2);
     for (const call of sendText.mock.calls) {
-      expect(call[0]).toEqual(
-        expect.objectContaining({
-          accountId: "default",
-          replyToId: "777",
-        }),
-      );
+      expect(call[0]?.accountId).toBe("default");
+      expect(call[0]?.replyToId).toBe("777");
     }
     expect(results.map((entry) => entry.messageId)).toEqual(["ab", "cd"]);
   });
