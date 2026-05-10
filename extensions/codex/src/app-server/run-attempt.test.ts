@@ -2094,35 +2094,29 @@ describe("runCodexAppServerAttempt", () => {
 
     expect(result.promptError).toBe("codex exploded");
     expect(agentEnd).toHaveBeenCalledTimes(1);
-    const agentEvents = onRunAgentEvent.mock.calls.map(([event]) => event);
-    expect(agentEvents).toEqual(
-      expect.arrayContaining([
-        {
-          stream: "lifecycle",
-          data: expect.objectContaining({ phase: "start", startedAt: expect.any(Number) }),
-        },
-        {
-          stream: "lifecycle",
-          data: expect.objectContaining({
-            phase: "error",
-            startedAt: expect.any(Number),
-            endedAt: expect.any(Number),
-            error: "codex exploded",
-          }),
-        },
-      ]),
+    const agentEvents = onRunAgentEvent.mock.calls.map(([event]) => event) as Array<{
+      data: { endedAt?: number; error?: string; phase?: string; startedAt?: number };
+      stream: string;
+    }>;
+    const startEvent = agentEvents.find(
+      (event) => event.stream === "lifecycle" && event.data.phase === "start",
     );
+    expect(typeof startEvent?.data.startedAt).toBe("number");
+    const errorEvent = agentEvents.find(
+      (event) => event.stream === "lifecycle" && event.data.phase === "error",
+    );
+    expect(typeof errorEvent?.data.startedAt).toBe("number");
+    expect(typeof errorEvent?.data.endedAt).toBe("number");
+    expect(errorEvent?.data.error).toBe("codex exploded");
     expect(agentEvents.some((event) => event.stream === "assistant")).toBe(false);
-    expect(agentEnd).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: false,
-        error: "codex exploded",
-      }),
-      expect.objectContaining({
-        runId: "run-1",
-        sessionId: "session-1",
-      }),
-    );
+    const [agentEndPayload, agentEndContext] = agentEnd.mock.calls[0] as unknown as [
+      { error?: string; success?: boolean },
+      { runId?: string; sessionId?: string },
+    ];
+    expect(agentEndPayload.success).toBe(false);
+    expect(agentEndPayload.error).toBe("codex exploded");
+    expect(agentEndContext.runId).toBe("run-1");
+    expect(agentEndContext.sessionId).toBe("session-1");
   });
 
   it("fires llm_output and agent_end when turn/start fails", async () => {
