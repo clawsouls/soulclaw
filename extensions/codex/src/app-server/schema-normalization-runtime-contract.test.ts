@@ -104,7 +104,7 @@ describe("Codex app-server dynamic tool schema boundary contract", () => {
       description: parameterFreeTool.description,
       inputSchema: normalizedParameterFreeSchema(),
     };
-    const request = vi.fn(async (method: string) => {
+    const request = vi.fn(async (method: string, _payload?: unknown) => {
       if (method === "thread/start") {
         return threadStartResult();
       }
@@ -122,7 +122,7 @@ describe("Codex app-server dynamic tool schema boundary contract", () => {
     expect(request).toHaveBeenCalledTimes(1);
     const [method, payload] = request.mock.calls[0] ?? [];
     if (method !== "thread/start") {
-      throw new Error(`expected thread/start request, got ${String(method)}`);
+      throw new Error(`expected thread/start request, got ${method}`);
     }
     const startPayload = payload as CodexThreadStartParams | undefined;
     expect(startPayload?.dynamicTools).toStrictEqual([dynamicTool]);
