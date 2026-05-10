@@ -861,10 +861,11 @@ describe("dispatchReplyFromConfig", () => {
     const replyResolver = async () => ({ text: "hi" }) satisfies ReplyPayload;
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
-    expect(runtimePluginMocks.ensureRuntimePluginsLoaded).toHaveBeenCalledWith({
-      config: cfg,
-      workspaceDir: expect.any(String),
-    });
+    const pluginLoadOptions = runtimePluginMocks.ensureRuntimePluginsLoaded.mock.calls[0]?.[0] as
+      | { config?: unknown; workspaceDir?: unknown }
+      | undefined;
+    expect(pluginLoadOptions?.config).toBe(cfg);
+    expect(typeof pluginLoadOptions?.workspaceDir).toBe("string");
     expect(runtimePluginMocks.ensureRuntimePluginsLoaded.mock.invocationCallOrder[0]).toBeLessThan(
       hookMocks.runner.hasHooks.mock.invocationCallOrder[0],
     );
@@ -915,16 +916,22 @@ describe("dispatchReplyFromConfig", () => {
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
     expect(dispatcher.sendFinalReply).not.toHaveBeenCalled();
-    expect(mocks.routeReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "telegram",
-        to: "telegram:999",
-        accountId: "acc-1",
-        threadId: 123,
-        isGroup: true,
-        groupId: "telegram:999",
-      }),
-    );
+    const routeCall = mocks.routeReply.mock.calls[0]?.[0] as
+      | {
+          accountId?: unknown;
+          channel?: unknown;
+          groupId?: unknown;
+          isGroup?: unknown;
+          threadId?: unknown;
+          to?: unknown;
+        }
+      | undefined;
+    expect(routeCall?.channel).toBe("telegram");
+    expect(routeCall?.to).toBe("telegram:999");
+    expect(routeCall?.accountId).toBe("acc-1");
+    expect(routeCall?.threadId).toBe(123);
+    expect(routeCall?.isGroup).toBe(true);
+    expect(routeCall?.groupId).toBe("telegram:999");
   });
 
   it("routes exec-event replies using persisted session delivery context when current turn has no originating route", async () => {
@@ -956,27 +963,30 @@ describe("dispatchReplyFromConfig", () => {
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
     expect(dispatcher.sendFinalReply).not.toHaveBeenCalled();
-    expect(mocks.routeReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "telegram",
-        to: "telegram:999",
-        accountId: "acc-1",
-      }),
-    );
-    expect(replyMediaPathMocks.createReplyMediaPathNormalizer).toHaveBeenCalledWith(
-      expect.objectContaining({
-        messageProvider: "telegram",
-        accountId: "acc-1",
-      }),
-    );
-    expect(hookMocks.runner.runReplyDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        shouldRouteToOriginating: true,
-        originatingChannel: "telegram",
-        originatingTo: "telegram:999",
-      }),
-      expect.any(Object),
-    );
+    const routeCall = mocks.routeReply.mock.calls[0]?.[0] as
+      | { accountId?: unknown; channel?: unknown; to?: unknown }
+      | undefined;
+    expect(routeCall?.channel).toBe("telegram");
+    expect(routeCall?.to).toBe("telegram:999");
+    expect(routeCall?.accountId).toBe("acc-1");
+    const normalizerOptions = replyMediaPathMocks.createReplyMediaPathNormalizer.mock
+      .calls[0]?.[0] as { accountId?: unknown; messageProvider?: unknown } | undefined;
+    expect(normalizerOptions?.messageProvider).toBe("telegram");
+    expect(normalizerOptions?.accountId).toBe("acc-1");
+    const replyDispatchCall = hookMocks.runner.runReplyDispatch.mock.calls[0] as
+      | [
+          {
+            originatingChannel?: unknown;
+            originatingTo?: unknown;
+            shouldRouteToOriginating?: unknown;
+          },
+          unknown,
+        ]
+      | undefined;
+    expect(replyDispatchCall?.[0]?.shouldRouteToOriginating).toBe(true);
+    expect(replyDispatchCall?.[0]?.originatingChannel).toBe("telegram");
+    expect(replyDispatchCall?.[0]?.originatingTo).toBe("telegram:999");
+    expect(typeof replyDispatchCall?.[1]).toBe("object");
   });
 
   it("routes exec-event replies using last route fields when delivery context is missing", async () => {
@@ -1002,13 +1012,12 @@ describe("dispatchReplyFromConfig", () => {
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
     expect(dispatcher.sendFinalReply).not.toHaveBeenCalled();
-    expect(mocks.routeReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "discord",
-        to: "channel:123",
-        accountId: "default",
-      }),
-    );
+    const routeCall = mocks.routeReply.mock.calls[0]?.[0] as
+      | { accountId?: unknown; channel?: unknown; to?: unknown }
+      | undefined;
+    expect(routeCall?.channel).toBe("discord");
+    expect(routeCall?.to).toBe("channel:123");
+    expect(routeCall?.accountId).toBe("default");
   });
 
   it("honors sendPolicy deny for recovered exec-event delivery channel", async () => {
@@ -1049,16 +1058,24 @@ describe("dispatchReplyFromConfig", () => {
     expect(mocks.routeReply).not.toHaveBeenCalled();
     expect(dispatcher.sendFinalReply).not.toHaveBeenCalled();
     expect(result.queuedFinal).toBe(false);
-    expect(hookMocks.runner.runReplyDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sendPolicy: "deny",
-        suppressUserDelivery: true,
-        shouldRouteToOriginating: true,
-        originatingChannel: "telegram",
-        originatingTo: "telegram:999",
-      }),
-      expect.any(Object),
-    );
+    const replyDispatchCall = hookMocks.runner.runReplyDispatch.mock.calls[0] as
+      | [
+          {
+            originatingChannel?: unknown;
+            originatingTo?: unknown;
+            sendPolicy?: unknown;
+            shouldRouteToOriginating?: unknown;
+            suppressUserDelivery?: unknown;
+          },
+          unknown,
+        ]
+      | undefined;
+    expect(replyDispatchCall?.[0]?.sendPolicy).toBe("deny");
+    expect(replyDispatchCall?.[0]?.suppressUserDelivery).toBe(true);
+    expect(replyDispatchCall?.[0]?.shouldRouteToOriginating).toBe(true);
+    expect(replyDispatchCall?.[0]?.originatingChannel).toBe("telegram");
+    expect(replyDispatchCall?.[0]?.originatingTo).toBe("telegram:999");
+    expect(typeof replyDispatchCall?.[1]).toBe("object");
   });
 
   it("falls back to thread-scoped session key when current ctx has no MessageThreadId", async () => {
@@ -1091,13 +1108,12 @@ describe("dispatchReplyFromConfig", () => {
     const replyResolver = async () => ({ text: "hi" }) satisfies ReplyPayload;
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
-    expect(mocks.routeReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "discord",
-        to: "channel:CHAN1",
-        threadId: "post-root",
-      }),
-    );
+    const routeCall = mocks.routeReply.mock.calls[0]?.[0] as
+      | { channel?: unknown; threadId?: unknown; to?: unknown }
+      | undefined;
+    expect(routeCall?.channel).toBe("discord");
+    expect(routeCall?.to).toBe("channel:CHAN1");
+    expect(routeCall?.threadId).toBe("post-root");
   });
 
   it("does not resurrect a cleared route thread from origin metadata", async () => {
@@ -1136,10 +1152,8 @@ describe("dispatchReplyFromConfig", () => {
     const routeCall = mocks.routeReply.mock.calls[0]?.[0] as
       | { channel?: string; to?: string; threadId?: string | number }
       | undefined;
-    expect(routeCall).toMatchObject({
-      channel: "mattermost",
-      to: "channel:CHAN1",
-    });
+    expect(routeCall?.channel).toBe("mattermost");
+    expect(routeCall?.to).toBe("channel:CHAN1");
     expect(routeCall?.threadId).toBeUndefined();
   });
 
