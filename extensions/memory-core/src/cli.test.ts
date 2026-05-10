@@ -327,7 +327,7 @@ describe("memory cli", () => {
   });
 
   it("resolves configured memory SecretRefs through gateway snapshot", async () => {
-    getRuntimeConfig.mockReturnValue({
+    const config = {
       agents: {
         defaults: {
           memorySearch: {
@@ -337,7 +337,8 @@ describe("memory cli", () => {
           },
         },
       },
-    });
+    };
+    getRuntimeConfig.mockReturnValue(config);
     const close = vi.fn(async () => {});
     mockManager({
       probeVectorAvailability: vi.fn(async () => true),
@@ -347,14 +348,14 @@ describe("memory cli", () => {
 
     await runMemoryCli(["status"]);
 
-    expect(resolveCommandSecretRefsViaGateway).toHaveBeenCalledWith(
-      expect.objectContaining({
-        commandName: "memory status",
-        targetIds: new Set([
-          "agents.defaults.memorySearch.remote.apiKey",
-          "agents.list[].memorySearch.remote.apiKey",
-        ]),
-      }),
+    const secretRefsCall = resolveCommandSecretRefsViaGateway.mock.calls[0]?.[0];
+    expect(secretRefsCall?.config).toBe(config);
+    expect(secretRefsCall?.commandName).toBe("memory status");
+    expect(secretRefsCall?.targetIds).toStrictEqual(
+      new Set([
+        "agents.defaults.memorySearch.remote.apiKey",
+        "agents.list[].memorySearch.remote.apiKey",
+      ]),
     );
   });
 
@@ -878,7 +879,7 @@ describe("memory cli", () => {
 
     expect(search).toHaveBeenCalled();
     expect(close).toHaveBeenCalled();
-    expect(error).toHaveBeenCalledWith(expect.stringContaining("Memory search failed: boom"));
+    expect(error).toHaveBeenCalledWith("Memory search failed: boom");
     expect(process.exitCode).toBe(1);
   });
 
@@ -1674,8 +1675,8 @@ describe("memory cli", () => {
       expect(memoryText).toContain("Promoted From Short-Term Memory");
       expect(memoryText).toContain("openclaw-memory-promotion:");
       expect(memoryText).toContain("memory/2026-04-01.md:10-10");
-      expect(log).toHaveBeenCalledWith(expect.stringContaining("Processed 1 candidate(s) for"));
-      expect(log).toHaveBeenCalledWith(expect.stringContaining("appended=1 reconciledExisting=0"));
+      expectLogged(log, `Processed 1 candidate(s) for ${memoryPath}.`);
+      expectLogged(log, "appended=1 reconciledExisting=0");
       expect(close).toHaveBeenCalled();
     });
   });
