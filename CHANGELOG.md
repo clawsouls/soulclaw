@@ -67,6 +67,7 @@ Docs: https://docs.openclaw.ai
 - Models/OpenRouter: hide missing-auth direct provider rows in `/model status` when they are only duplicated by a nested OpenRouter model id such as `openrouter/google/...`, while preserving explicitly configured direct providers. Fixes #62317.
 - Models: preserve an explicitly selected provider/model such as `opencode-go/deepseek-v4-pro` when another provider owns the same bare model alias. Fixes #79325.
 - Models/config: explain missing `models.providers.<provider>.models[]` registration when a model exists only in `agents.defaults.models`, instead of returning a bare unknown-model error. Fixes #80089.
+- MCP/tools: prefix bundle MCP server/tool fragments that would start with digits, keeping generated tool names valid for Moonshot/Kimi and other strict providers. Fixes #79179.
 - Kimi Code: use Kimi's stable `kimi-for-coding` API model id in bundled catalog, onboarding, and docs while normalizing legacy `kimi-code` and `k2p5` refs. Fixes #79965.
 - Volcengine/Kimi: strip provider-unsupported tool schema length and item constraint keywords for direct and coding-plan models so hosted Kimi runs do not reject message tools with `minLength`. Fixes #38817.
 - DeepSeek: backfill V4 `reasoning_content` replay fields for unowned OpenAI-compatible proxy providers, preventing follow-up request failures outside the bundled DeepSeek and OpenRouter routes. Fixes #79608.
