@@ -348,7 +348,9 @@ describe("memory cli", () => {
 
     await runMemoryCli(["status"]);
 
-    const secretRefsCall = resolveCommandSecretRefsViaGateway.mock.calls[0]?.[0];
+    const secretRefsCall = resolveCommandSecretRefsViaGateway.mock.calls[0]?.[0] as
+      | { config?: unknown; commandName?: unknown; targetIds?: unknown }
+      | undefined;
     expect(secretRefsCall?.config).toBe(config);
     expect(secretRefsCall?.commandName).toBe("memory status");
     expect(secretRefsCall?.targetIds).toStrictEqual(
