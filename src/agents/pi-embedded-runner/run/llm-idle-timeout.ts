@@ -205,15 +205,35 @@ export function streamWithIdleTimeout(
   onIdleTimeout?: (error: Error) => void,
 ): StreamFn {
   return (model, context, options) => {
-    const maybeStream = baseFn(model, context, options);
-
     const createIdleTimeoutError = () =>
       new Error(`LLM idle timeout (${Math.floor(timeoutMs / 1000)}s): no response from model`);
+
+    const streamAbortController = new AbortController();
+    const sourceSignal = options?.signal;
+    const abortStream = (reason?: unknown) => {
+      if (!streamAbortController.signal.aborted) {
+        streamAbortController.abort(reason);
+      }
+    };
+    const abortFromSourceSignal = () => abortStream(sourceSignal?.reason);
+    if (sourceSignal?.aborted) {
+      abortFromSourceSignal();
+    } else {
+      sourceSignal?.addEventListener("abort", abortFromSourceSignal, { once: true });
+    }
+    const cleanupSourceSignal = () => {
+      sourceSignal?.removeEventListener("abort", abortFromSourceSignal);
+    };
+    const wrappedOptions = {
+      ...(options ?? {}),
+      signal: streamAbortController.signal,
+    } as typeof options;
 
     const createTimeoutPromise = (setTimer: (timer: NodeJS.Timeout) => void): Promise<never> => {
       return new Promise((_, reject) => {
         const timer = setTimeout(() => {
           const error = createIdleTimeoutError();
+          abortStream(error);
           onIdleTimeout?.(error);
           reject(error);
         }, timeoutMs);
@@ -221,6 +241,14 @@ export function streamWithIdleTimeout(
         setTimer(timer);
       });
     };
+
+    let maybeStream: ReturnType<StreamFn>;
+    try {
+      maybeStream = baseFn(model, context, wrappedOptions);
+    } catch (error) {
+      cleanupSourceSignal();
+      throw error;
+    }
 
     const wrapStream = (stream: ReturnType<typeof streamSimple>) => {
       const originalAsyncIterator = stream[Symbol.asyncIterator].bind(stream);
@@ -252,6 +280,7 @@ export function streamWithIdleTimeout(
 
                 if (result.done) {
                   clearTimer();
+                  cleanupSourceSignal();
                   return result;
                 }
 
@@ -264,10 +293,12 @@ export function streamWithIdleTimeout(
             },
             onReturn(streamIterator) {
               clearTimer();
+              cleanupSourceSignal();
               return streamIterator.return?.() ?? Promise.resolve({ done: true, value: undefined });
             },
             onThrow(streamIterator, error) {
               clearTimer();
+              cleanupSourceSignal();
               return streamIterator.throw?.(error) ?? Promise.reject(error);
             },
           });
@@ -297,6 +328,7 @@ export function streamWithIdleTimeout(
         },
         (error) => {
           clearStreamPromiseTimer();
+          cleanupSourceSignal();
           throw error;
         },
       );
