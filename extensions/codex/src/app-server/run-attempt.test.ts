@@ -1908,12 +1908,10 @@ describe("runCodexAppServerAttempt", () => {
     );
     const secondRelayId = extractRelayIdFromThreadRequest(resumeRequest?.params);
     expect(secondRelayId).toBe(firstRelayId);
-    expect(
-      nativeHookRelayTesting.getNativeHookRelayRegistrationForTests(firstRelayId),
-    ).toMatchObject({
-      runId: "run-2",
-      allowedEvents: ["pre_tool_use"],
-    });
+    const resumedRegistration =
+      nativeHookRelayTesting.getNativeHookRelayRegistrationForTests(firstRelayId);
+    expect(resumedRegistration?.runId).toBe("run-2");
+    expect(resumedRegistration?.allowedEvents).toEqual(["pre_tool_use"]);
 
     await secondHarness.completeTurn({ threadId: "thread-existing", turnId: "turn-1" });
     await secondRun;
@@ -1947,17 +1945,13 @@ describe("runCodexAppServerAttempt", () => {
     await run;
 
     const startRequest = harness.requests.find((request) => request.method === "thread/start");
-    expect(startRequest?.params).toEqual(
-      expect.objectContaining({
-        config: expect.objectContaining({
-          "features.codex_hooks": false,
-          "hooks.PreToolUse": [],
-          "hooks.PostToolUse": [],
-          "hooks.PermissionRequest": [],
-          "hooks.Stop": [],
-        }),
-      }),
-    );
+    const startConfig = (startRequest?.params as { config?: Record<string, unknown> } | undefined)
+      ?.config;
+    expect(startConfig?.["features.codex_hooks"]).toBe(false);
+    expect(startConfig?.["hooks.PreToolUse"]).toEqual([]);
+    expect(startConfig?.["hooks.PostToolUse"]).toEqual([]);
+    expect(startConfig?.["hooks.PermissionRequest"]).toEqual([]);
+    expect(startConfig?.["hooks.Stop"]).toEqual([]);
   });
 
   it("cleans up native hook relay state when turn/start fails", async () => {
