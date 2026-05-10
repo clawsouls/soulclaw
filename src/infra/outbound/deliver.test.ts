@@ -551,19 +551,14 @@ describe("deliverOutboundPayloads", () => {
       payloads: [{ text: "hello" }],
     });
 
-    expect(messageSendText).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "!room:example",
-        text: "hello",
-      }),
-    );
+    const [[sendTextParams]] = messageSendText.mock.calls as unknown as Array<
+      [Record<string, unknown>]
+    >;
+    expect(sendTextParams?.to).toBe("!room:example");
+    expect(sendTextParams?.text).toBe("hello");
     expect(outboundSendText).not.toHaveBeenCalled();
-    expect(results).toMatchObject([
-      {
-        channel: "matrix",
-        messageId: "message-adapter-1",
-      },
-    ]);
+    expect(results[0]?.channel).toBe("matrix");
+    expect(results[0]?.messageId).toBe("message-adapter-1");
     expect(results[0]?.receipt?.platformMessageIds).toEqual(["message-adapter-1"]);
   });
 
@@ -652,28 +647,26 @@ describe("deliverOutboundPayloads", () => {
       "ack",
       "commit:pending-1:message-adapter-1",
     ]);
-    expect(beforeSendAttempt).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: "text",
-        to: "!room:example",
-        text: "hello",
-      }),
-    );
-    expect(afterSendSuccess).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: "text",
-        attemptToken: "pending-1",
-        result: expect.objectContaining({ messageId: "message-adapter-1" }),
-      }),
-    );
-    expect(afterCommit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: "text",
-        attemptToken: "pending-1",
-        result: expect.objectContaining({ messageId: "message-adapter-1" }),
-      }),
-    );
-    expect(results).toMatchObject([{ channel: "matrix", messageId: "message-adapter-1" }]);
+    const [[beforeParams]] = beforeSendAttempt.mock.calls as unknown as Array<
+      [Record<string, unknown>]
+    >;
+    expect(beforeParams?.kind).toBe("text");
+    expect(beforeParams?.to).toBe("!room:example");
+    expect(beforeParams?.text).toBe("hello");
+    const [[successParams]] = afterSendSuccess.mock.calls as unknown as Array<
+      [Record<string, unknown> & { result?: { messageId?: string } }]
+    >;
+    expect(successParams?.kind).toBe("text");
+    expect(successParams?.attemptToken).toBe("pending-1");
+    expect(successParams?.result?.messageId).toBe("message-adapter-1");
+    const [[commitParams]] = afterCommit.mock.calls as unknown as Array<
+      [Record<string, unknown> & { result?: { messageId?: string } }]
+    >;
+    expect(commitParams?.kind).toBe("text");
+    expect(commitParams?.attemptToken).toBe("pending-1");
+    expect(commitParams?.result?.messageId).toBe("message-adapter-1");
+    expect(results[0]?.channel).toBe("matrix");
+    expect(results[0]?.messageId).toBe("message-adapter-1");
   });
 
   it("does not mark queued delivery as unknown when hooks cancel before platform send", async () => {
@@ -745,13 +738,12 @@ describe("deliverOutboundPayloads", () => {
       }),
     ).rejects.toThrow("native send failed");
 
-    expect(afterSendFailure).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: "text",
-        attemptToken: "pending-2",
-        error: expect.any(Error),
-      }),
-    );
+    const [[failureParams]] = afterSendFailure.mock.calls as unknown as Array<
+      [Record<string, unknown>]
+    >;
+    expect(failureParams?.kind).toBe("text");
+    expect(failureParams?.attemptToken).toBe("pending-2");
+    expect(failureParams?.error).toBeInstanceOf(Error);
     expect(queueMocks.failDelivery).toHaveBeenCalledWith(
       "mock-queue-id",
       expect.stringContaining("native send failed"),
@@ -803,13 +795,12 @@ describe("deliverOutboundPayloads", () => {
       }),
     ).rejects.toThrow("native send failed");
 
-    expect(afterSendFailure).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: "text",
-        attemptToken: "pending-2",
-        error: expect.any(Error),
-      }),
-    );
+    const [[failureParams]] = afterSendFailure.mock.calls as unknown as Array<
+      [Record<string, unknown>]
+    >;
+    expect(failureParams?.kind).toBe("text");
+    expect(failureParams?.attemptToken).toBe("pending-2");
+    expect(failureParams?.error).toBeInstanceOf(Error);
     expect(queueMocks.failDelivery).toHaveBeenCalledWith(
       "mock-queue-id",
       expect.stringContaining("native send failed"),
@@ -865,14 +856,14 @@ describe("deliverOutboundPayloads", () => {
       queuePolicy: "required",
     });
 
-    expect(results).toMatchObject([{ channel: "matrix", messageId: "message-adapter-1" }]);
+    expect(results[0]?.channel).toBe("matrix");
+    expect(results[0]?.messageId).toBe("message-adapter-1");
     expect(afterSendFailure).not.toHaveBeenCalled();
-    expect(afterCommit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: "text",
-        result: expect.objectContaining({ messageId: "message-adapter-1" }),
-      }),
-    );
+    const [[commitParams]] = afterCommit.mock.calls as unknown as Array<
+      [Record<string, unknown> & { result?: { messageId?: string } }]
+    >;
+    expect(commitParams?.kind).toBe("text");
+    expect(commitParams?.result?.messageId).toBe("message-adapter-1");
     expect(queueMocks.ackDelivery).toHaveBeenCalledWith("mock-queue-id");
     expect(queueMocks.failDelivery).not.toHaveBeenCalled();
   });
@@ -899,16 +890,15 @@ describe("deliverOutboundPayloads", () => {
     queueMocks.enqueueDelivery.mockRejectedValueOnce(new Error("queue offline"));
     const sendMatrix = vi.fn().mockResolvedValue({ messageId: "m1" });
 
-    await expect(
-      deliverOutboundPayloads({
-        cfg: {},
-        channel: "matrix",
-        to: "!room:example",
-        payloads: [{ text: "hi" }],
-        deps: { matrix: sendMatrix },
-        queuePolicy: "best_effort",
-      }),
-    ).resolves.toEqual([expect.objectContaining({ messageId: "m1" })]);
+    const results = await deliverOutboundPayloads({
+      cfg: {},
+      channel: "matrix",
+      to: "!room:example",
+      payloads: [{ text: "hi" }],
+      deps: { matrix: sendMatrix },
+      queuePolicy: "best_effort",
+    });
+    expect(results[0]?.messageId).toBe("m1");
 
     expect(sendMatrix).toHaveBeenCalled();
   });
