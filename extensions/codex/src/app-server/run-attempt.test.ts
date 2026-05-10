@@ -1273,20 +1273,19 @@ describe("runCodexAppServerAttempt", () => {
     });
     await vi.waitFor(() => expect(handleRequest).toBeTypeOf("function"), { interval: 1 });
 
-    await expect(
-      handleRequest?.({
-        id: "request-tool-1",
-        method: "item/tool/call",
-        params: {
-          threadId: "thread-1",
-          turnId: "turn-1",
-          callId: "call-1",
-          namespace: null,
-          tool: "message",
-          arguments: { action: "send", text: "already sent" },
-        },
-      }),
-    ).resolves.toMatchObject({ success: false });
+    const toolResult = (await handleRequest?.({
+      id: "request-tool-1",
+      method: "item/tool/call",
+      params: {
+        threadId: "thread-1",
+        turnId: "turn-1",
+        callId: "call-1",
+        namespace: null,
+        tool: "message",
+        arguments: { action: "send", text: "already sent" },
+      },
+    })) as { success?: boolean };
+    expect(toolResult.success).toBe(false);
     await notify({
       method: "rawResponseItem/completed",
       params: {
@@ -1301,29 +1300,42 @@ describe("runCodexAppServerAttempt", () => {
       },
     });
 
-    await expect(run).resolves.toMatchObject({
-      aborted: true,
-      timedOut: true,
-      promptError: "codex app-server turn idle timed out waiting for turn/completed",
-    });
-    expect(warn).toHaveBeenCalledWith(
-      "codex app-server turn idle timed out waiting for terminal event",
-      expect.objectContaining({
-        threadId: "thread-1",
-        turnId: "turn-1",
-        timeoutMs: 5,
-        lastActivityReason: "notification:rawResponseItem/completed",
-        lastNotificationMethod: "rawResponseItem/completed",
-        lastNotificationItemId: "raw-status-1",
-        lastNotificationItemType: "message",
-        lastNotificationItemRole: "assistant",
-        lastAssistantTextPreview: "I'm writing the report now.",
-      }),
+    const result = await run;
+    expect(result.aborted).toBe(true);
+    expect(result.timedOut).toBe(true);
+    expect(result.promptError).toBe(
+      "codex app-server turn idle timed out waiting for turn/completed",
     );
-    expect(warn).not.toHaveBeenCalledWith(
-      "codex app-server turn idle timed out waiting for completion",
-      expect.anything(),
+    const terminalWarnCall = warn.mock.calls.find(
+      ([message]) => message === "codex app-server turn idle timed out waiting for terminal event",
     );
+    const terminalWarnData = terminalWarnCall?.[1] as
+      | {
+          lastActivityReason?: string;
+          lastAssistantTextPreview?: string;
+          lastNotificationItemId?: string;
+          lastNotificationItemRole?: string;
+          lastNotificationItemType?: string;
+          lastNotificationMethod?: string;
+          threadId?: string;
+          timeoutMs?: number;
+          turnId?: string;
+        }
+      | undefined;
+    expect(terminalWarnData?.threadId).toBe("thread-1");
+    expect(terminalWarnData?.turnId).toBe("turn-1");
+    expect(terminalWarnData?.timeoutMs).toBe(5);
+    expect(terminalWarnData?.lastActivityReason).toBe("notification:rawResponseItem/completed");
+    expect(terminalWarnData?.lastNotificationMethod).toBe("rawResponseItem/completed");
+    expect(terminalWarnData?.lastNotificationItemId).toBe("raw-status-1");
+    expect(terminalWarnData?.lastNotificationItemType).toBe("message");
+    expect(terminalWarnData?.lastNotificationItemRole).toBe("assistant");
+    expect(terminalWarnData?.lastAssistantTextPreview).toBe("I'm writing the report now.");
+    expect(
+      warn.mock.calls.some(
+        ([message]) => message === "codex app-server turn idle timed out waiting for completion",
+      ),
+    ).toBe(false);
   });
 
   it("releases the session when Codex accepts a turn but never sends progress", async () => {
@@ -1337,11 +1349,12 @@ describe("runCodexAppServerAttempt", () => {
     const run = runCodexAppServerAttempt(params, { turnTerminalIdleTimeoutMs: 5 });
     await harness.waitForMethod("turn/start");
 
-    await expect(run).resolves.toMatchObject({
-      aborted: true,
-      timedOut: true,
-      promptError: "codex app-server turn idle timed out waiting for turn/completed",
-    });
+    const result = await run;
+    expect(result.aborted).toBe(true);
+    expect(result.timedOut).toBe(true);
+    expect(result.promptError).toBe(
+      "codex app-server turn idle timed out waiting for turn/completed",
+    );
     await vi.waitFor(
       () =>
         expect(harness.request).toHaveBeenCalledWith("turn/interrupt", {
