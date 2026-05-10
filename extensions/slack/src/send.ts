@@ -67,6 +67,28 @@ type SlackUnfurlOptions = {
   unfurlMedia?: boolean;
 };
 
+type SlackPostThreadPayload =
+  | {
+      thread_ts: string;
+      reply_broadcast: true;
+    }
+  | {
+      thread_ts: string;
+      reply_broadcast?: never;
+    }
+  | {
+      thread_ts?: never;
+      reply_broadcast?: never;
+    };
+
+type SlackBasePostMessagePayload = SlackPostThreadPayload & {
+  channel: string;
+  text: string;
+  blocks?: (Block | KnownBlock)[];
+  unfurl_links?: boolean;
+  unfurl_media?: boolean;
+};
+
 type SlackSendOpts = {
   cfg: OpenClawConfig;
   token?: string;
@@ -82,6 +104,7 @@ type SlackSendOpts = {
   mediaReadFile?: (filePath: string) => Promise<Buffer>;
   client?: WebClient;
   threadTs?: string;
+  replyBroadcast?: boolean;
   identity?: SlackSendIdentity;
   blocks?: (Block | KnownBlock)[];
 };
@@ -107,6 +130,38 @@ function buildSlackUnfurlPayload(options?: SlackUnfurlOptions) {
   return {
     ...(typeof options?.unfurlLinks === "boolean" ? { unfurl_links: options.unfurlLinks } : {}),
     ...(typeof options?.unfurlMedia === "boolean" ? { unfurl_media: options.unfurlMedia } : {}),
+  };
+}
+
+function buildSlackPostMessagePayload(params: {
+  channelId: string;
+  text: string;
+  threadTs?: string;
+  replyBroadcast?: boolean;
+  blocks?: (Block | KnownBlock)[];
+  unfurl?: SlackUnfurlOptions;
+}): SlackBasePostMessagePayload {
+  const threadPayload =
+    params.replyBroadcast && params.threadTs
+      ? { thread_ts: params.threadTs, reply_broadcast: true as const }
+      : params.threadTs
+        ? { thread_ts: params.threadTs }
+        : {};
+  const unfurlPayload = buildSlackUnfurlPayload(params.unfurl);
+  if (params.blocks?.length) {
+    return {
+      channel: params.channelId,
+      text: params.text,
+      blocks: params.blocks,
+      ...threadPayload,
+      ...unfurlPayload,
+    };
+  }
+  return {
+    channel: params.channelId,
+    text: params.text,
+    ...threadPayload,
+    ...unfurlPayload,
   };
 }
 
@@ -252,17 +307,12 @@ async function postSlackMessageBestEffort(params: {
   channelId: string;
   text: string;
   threadTs?: string;
+  replyBroadcast?: boolean;
   identity?: SlackSendIdentity;
   blocks?: (Block | KnownBlock)[];
   unfurl?: SlackUnfurlOptions;
 }) {
-  const basePayload = {
-    channel: params.channelId,
-    text: params.text,
-    thread_ts: params.threadTs,
-    ...buildSlackUnfurlPayload(params.unfurl),
-    ...(params.blocks?.length ? { blocks: params.blocks } : {}),
-  };
+  const basePayload = buildSlackPostMessagePayload(params);
   const postChatMessage = params.client.chat.postMessage.bind(params.client.chat);
   try {
     // Slack Web API types model icon_url and icon_emoji as mutually exclusive.
@@ -632,6 +682,9 @@ async function sendMessageSlackQueuedInner(params: {
 }): Promise<SlackSendResult> {
   const { opts, cfg, account, token, recipient, blocks, trimmedMessage } = params;
   const client = opts.client ?? getSlackWriteClient(token);
+  if (opts.replyBroadcast && opts.mediaUrl) {
+    throw new Error("Slack replyBroadcast is only supported for text or block thread replies.");
+  }
   const unfurl = {
     unfurlLinks: account.config.unfurlLinks,
     unfurlMedia: account.config.unfurlMedia,
@@ -660,6 +713,7 @@ async function sendMessageSlackQueuedInner(params: {
       channelId,
       text: fallbackText,
       threadTs: opts.threadTs,
+      replyBroadcast: opts.replyBroadcast,
       identity: opts.identity,
       blocks,
       unfurl,
@@ -723,6 +777,7 @@ async function sendMessageSlackQueuedInner(params: {
         channelId,
         text: chunk,
         threadTs: opts.threadTs,
+        replyBroadcast: sentMessageIds.length === 0 ? opts.replyBroadcast : undefined,
         identity: opts.identity,
         unfurl,
       });
@@ -738,6 +793,7 @@ async function sendMessageSlackQueuedInner(params: {
         channelId,
         text: chunk,
         threadTs: opts.threadTs,
+        replyBroadcast: sentMessageIds.length === 0 ? opts.replyBroadcast : undefined,
         identity: opts.identity,
         unfurl,
       });
