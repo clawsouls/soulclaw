@@ -186,6 +186,20 @@ function sendStructuredCardCall(index = 0): Record<string, any> | undefined {
   return calls[index]?.[0];
 }
 
+function commentThreadParams(index = 0): Record<string, any> | undefined {
+  const calls = deliverCommentThreadTextMock.mock.calls as unknown as Array<
+    [unknown, Record<string, any>]
+  >;
+  return calls[index]?.[1];
+}
+
+function cleanupReactionCall(index = 0): Record<string, any> | undefined {
+  const calls = cleanupAmbientCommentTypingReactionMock.mock.calls as unknown as Array<
+    [Record<string, any>]
+  >;
+  return calls[index]?.[0];
+}
+
 function expectFeishuResult(result: unknown, messageId: string) {
   const typedResult = result as { channel?: string; messageId?: string } | undefined;
   expect(typedResult?.channel).toBe("feishu");
@@ -530,25 +544,19 @@ describe("feishuOutbound.sendPayload native cards", () => {
     });
 
     const card = sendCardFeishuMock.mock.calls[0][0].card;
-    expect(card.body.elements).toEqual(
-      expect.arrayContaining([
-        { tag: "markdown", content: 'Choose &lt;at id="ou_1"&gt;' },
-        {
-          tag: "markdown",
-          content:
-            "<font color='grey'>&lt;/font&gt;&lt;at id=\"ou_2\"&gt;Injected&lt;/at&gt;</font>",
-        },
-        {
-          tag: "action",
-          actions: [
-            expect.objectContaining({
-              text: { tag: "plain_text", content: "Open" },
-              url: "https://example.com/path",
-            }),
-          ],
-        },
-      ]),
+    expect(card.body.elements[0]).toEqual({
+      tag: "markdown",
+      content: 'Choose &lt;at id="ou_1"&gt;',
+    });
+    expect(card.body.elements[1]).toEqual({
+      tag: "markdown",
+      content: "<font color='grey'>&lt;/font&gt;&lt;at id=\"ou_2\"&gt;Injected&lt;/at&gt;</font>",
+    });
+    const actionElement = card.body.elements.find(
+      (element: { tag?: string }) => element.tag === "action",
     );
+    expect(actionElement?.actions[0]?.text).toEqual({ tag: "plain_text", content: "Open" });
+    expect(actionElement?.actions[0]?.url).toBe("https://example.com/path");
     expect(JSON.stringify(card)).not.toContain("javascript:");
   });
 
@@ -602,10 +610,12 @@ describe("feishuOutbound.sendPayload native cards", () => {
       {
         tag: "action",
         actions: [
-          expect.objectContaining({
+          {
+            tag: "button",
             text: { tag: "plain_text", content: "Good link" },
+            type: "default",
             url: "https://example.com",
-          }),
+          },
         ],
       },
     ]);
@@ -629,23 +639,13 @@ describe("feishuOutbound.sendPayload native cards", () => {
       },
     });
 
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "chat_1",
-        mediaUrl: "/tmp/image.png",
-        mediaLocalRoots: ["/tmp"],
-        accountId: "main",
-      }),
-    );
-    expect(sendCardFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "chat_1",
-        accountId: "main",
-      }),
-    );
-    expect(result).toEqual(
-      expect.objectContaining({ channel: "feishu", messageId: "native_card_msg" }),
-    );
+    expect(sendMediaCall()?.to).toBe("chat_1");
+    expect(sendMediaCall()?.mediaUrl).toBe("/tmp/image.png");
+    expect(sendMediaCall()?.mediaLocalRoots).toEqual(["/tmp"]);
+    expect(sendMediaCall()?.accountId).toBe("main");
+    expect(sendCardCall()?.to).toBe("chat_1");
+    expect(sendCardCall()?.accountId).toBe("main");
+    expectFeishuResult(result, "native_card_msg");
   });
 
   it("keeps text/media fallback behavior for non-card payloads, including local image text", async () => {
@@ -661,18 +661,12 @@ describe("feishuOutbound.sendPayload native cards", () => {
       });
 
       expect(sendCardFeishuMock).not.toHaveBeenCalled();
-      expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          to: "chat_1",
-          mediaUrl: file,
-          mediaLocalRoots: [dir],
-          accountId: "main",
-        }),
-      );
+      expect(sendMediaCall()?.to).toBe("chat_1");
+      expect(sendMediaCall()?.mediaUrl).toBe(file);
+      expect(sendMediaCall()?.mediaLocalRoots).toEqual([dir]);
+      expect(sendMediaCall()?.accountId).toBe("main");
       expect(sendMessageFeishuMock).not.toHaveBeenCalled();
-      expect(result).toEqual(
-        expect.objectContaining({ channel: "feishu", messageId: "media_msg" }),
-      );
+      expectFeishuResult(result, "media_msg");
     } finally {
       await fs.rm(dir, { recursive: true, force: true });
     }
@@ -693,13 +687,8 @@ describe("feishuOutbound.sendPayload native cards", () => {
     });
 
     expect(sendCardFeishuMock).not.toHaveBeenCalled();
-    expect(deliverCommentThreadTextMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        content: "Review this\n\n- Approve",
-      }),
-    );
-    expect(result).toEqual(expect.objectContaining({ channel: "feishu", messageId: "reply_msg" }));
+    expect(commentThreadParams()?.content).toBe("Review this\n\n- Approve");
+    expectFeishuResult(result, "reply_msg");
   });
 });
 
@@ -716,17 +705,12 @@ describe("feishuOutbound comment-thread routing", () => {
       accountId: "main",
     });
 
-    expect(deliverCommentThreadTextMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        file_token: "doxcn123",
-        file_type: "docx",
-        comment_id: "7623358762119646411",
-        content: "handled in thread",
-      }),
-    );
+    expect(commentThreadParams()?.file_token).toBe("doxcn123");
+    expect(commentThreadParams()?.file_type).toBe("docx");
+    expect(commentThreadParams()?.comment_id).toBe("7623358762119646411");
+    expect(commentThreadParams()?.content).toBe("handled in thread");
     expect(sendMessageFeishuMock).not.toHaveBeenCalled();
-    expect(result).toEqual(expect.objectContaining({ channel: "feishu", messageId: "reply_msg" }));
+    expectFeishuResult(result, "reply_msg");
   });
 
   it("routes comment-thread code-block replies through deliverCommentThreadText instead of IM cards", async () => {
@@ -737,18 +721,13 @@ describe("feishuOutbound comment-thread routing", () => {
       accountId: "main",
     });
 
-    expect(deliverCommentThreadTextMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        file_token: "doxcn123",
-        file_type: "docx",
-        comment_id: "7623358762119646411",
-        content: "```ts\nconst x = 1\n```",
-      }),
-    );
+    expect(commentThreadParams()?.file_token).toBe("doxcn123");
+    expect(commentThreadParams()?.file_type).toBe("docx");
+    expect(commentThreadParams()?.comment_id).toBe("7623358762119646411");
+    expect(commentThreadParams()?.content).toBe("```ts\nconst x = 1\n```");
     expect(sendStructuredCardFeishuMock).not.toHaveBeenCalled();
     expect(sendMarkdownCardFeishuMock).not.toHaveBeenCalled();
-    expect(result).toEqual(expect.objectContaining({ channel: "feishu", messageId: "reply_msg" }));
+    expectFeishuResult(result, "reply_msg");
   });
 
   it("routes comment-thread replies through deliverCommentThreadText even when renderMode=card", async () => {
@@ -759,18 +738,13 @@ describe("feishuOutbound comment-thread routing", () => {
       accountId: "main",
     });
 
-    expect(deliverCommentThreadTextMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        file_token: "doxcn123",
-        file_type: "docx",
-        comment_id: "7623358762119646411",
-        content: "handled in thread",
-      }),
-    );
+    expect(commentThreadParams()?.file_token).toBe("doxcn123");
+    expect(commentThreadParams()?.file_type).toBe("docx");
+    expect(commentThreadParams()?.comment_id).toBe("7623358762119646411");
+    expect(commentThreadParams()?.content).toBe("handled in thread");
     expect(sendStructuredCardFeishuMock).not.toHaveBeenCalled();
     expect(sendMarkdownCardFeishuMock).not.toHaveBeenCalled();
-    expect(result).toEqual(expect.objectContaining({ channel: "feishu", messageId: "reply_msg" }));
+    expectFeishuResult(result, "reply_msg");
   });
 
   it("falls back to a text-only comment reply for media payloads", async () => {
@@ -782,14 +756,9 @@ describe("feishuOutbound comment-thread routing", () => {
       accountId: "main",
     });
 
-    expect(deliverCommentThreadTextMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        content: "see attachment\n\nhttps://example.com/file.png",
-      }),
-    );
+    expect(commentThreadParams()?.content).toBe("see attachment\n\nhttps://example.com/file.png");
     expect(sendMediaFeishuMock).not.toHaveBeenCalled();
-    expect(result).toEqual(expect.objectContaining({ channel: "feishu", messageId: "reply_msg" }));
+    expectFeishuResult(result, "reply_msg");
   });
 
   it("preserves comment-thread routing when deliverCommentThreadText falls back to add_comment", async () => {
@@ -806,21 +775,11 @@ describe("feishuOutbound comment-thread routing", () => {
       accountId: "main",
     });
 
-    expect(deliverCommentThreadTextMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        file_token: "doxcn123",
-        file_type: "docx",
-        comment_id: "7623358762119646411",
-        content: "whole-comment follow-up",
-      }),
-    );
-    expect(result).toEqual(
-      expect.objectContaining({
-        channel: "feishu",
-        messageId: "reply_from_add_comment",
-      }),
-    );
+    expect(commentThreadParams()?.file_token).toBe("doxcn123");
+    expect(commentThreadParams()?.file_type).toBe("docx");
+    expect(commentThreadParams()?.comment_id).toBe("7623358762119646411");
+    expect(commentThreadParams()?.content).toBe("whole-comment follow-up");
+    expectFeishuResult(result, "reply_from_add_comment");
   });
 
   it("does not wait for ambient comment typing cleanup before sending comment-thread replies", async () => {
@@ -844,13 +803,11 @@ describe("feishuOutbound comment-thread routing", () => {
 
     expect(status).toBe("done");
     expect(deliverCommentThreadTextMock).toHaveBeenCalled();
-    expect(cleanupAmbientCommentTypingReactionMock).toHaveBeenCalledWith({
-      client: expect.anything(),
-      deliveryContext: {
-        channel: "feishu",
-        to: "comment:docx:doxcn123:7623358762119646411",
-        threadId: "reply_ambient_1",
-      },
+    expect(cleanupReactionCall()?.client).toBeDefined();
+    expect(cleanupReactionCall()?.deliveryContext).toEqual({
+      channel: "feishu",
+      to: "comment:docx:doxcn123:7623358762119646411",
+      threadId: "reply_ambient_1",
     });
 
     resolveCleanup?.(false);
@@ -872,14 +829,10 @@ describe("feishuOutbound.sendText replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendMessageFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "chat_1",
-        text: "hello",
-        replyToMessageId: "om_reply_target",
-        accountId: "main",
-      }),
-    );
+    expect(sendMessageCall()?.to).toBe("chat_1");
+    expect(sendMessageCall()?.text).toBe("hello");
+    expect(sendMessageCall()?.replyToMessageId).toBe("om_reply_target");
+    expect(sendMessageCall()?.accountId).toBe("main");
   });
 
   it("forwards replyToId to sendStructuredCardFeishu when renderMode=card", async () => {
@@ -891,11 +844,7 @@ describe("feishuOutbound.sendText replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendStructuredCardFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        replyToMessageId: "om_reply_target",
-      }),
-    );
+    expect(sendStructuredCardCall()?.replyToMessageId).toBe("om_reply_target");
   });
 
   it("does not pass replyToMessageId when replyToId is absent", async () => {
