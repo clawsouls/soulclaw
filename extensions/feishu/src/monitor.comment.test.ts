@@ -8,7 +8,7 @@ import {
   type FeishuDriveCommentNoticeEvent,
 } from "./monitor.comment.js";
 
-const handleFeishuCommentEventMock = vi.hoisted(() => vi.fn(async () => {}));
+const handleFeishuCommentEventMock = vi.hoisted(() => vi.fn(async (_params?: unknown) => {}));
 const createFeishuClientMock = vi.hoisted(() => vi.fn());
 
 let lastRuntime = createNonExitingRuntimeEnv();
