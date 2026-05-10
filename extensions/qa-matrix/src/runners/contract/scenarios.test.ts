@@ -1907,52 +1907,49 @@ describe("matrix live qa scenarios", () => {
 
       const scenario = requireMatrixQaScenario("matrix-e2ee-sync-state-loss-crypto-intact");
 
-      await expect(
-        runMatrixQaScenario(scenario, {
-          ...matrixQaScenarioContext(),
-          driverDeviceId: "DRIVER",
-          gatewayRuntimeEnv: {
-            OPENCLAW_CONFIG_PATH: gatewayConfigPath,
-            PATH: process.env.PATH,
-          },
-          gatewayStateDir: stateRoot,
-          observerDeviceId: "OBSERVER",
-          outputDir: stateRoot,
-          restartGatewayAfterStateMutation: async (mutateState) => {
-            callOrder.push("hard-restart");
-            await mutateState({ stateDir: stateRoot });
-            const config = JSON.parse(await readFile(gatewayConfigPath, "utf8")) as {
-              channels: {
-                matrix: {
-                  accounts: Record<string, { groups?: Record<string, unknown>; userId?: string }>;
-                  defaultAccount?: string;
-                };
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        driverDeviceId: "DRIVER",
+        gatewayRuntimeEnv: {
+          OPENCLAW_CONFIG_PATH: gatewayConfigPath,
+          PATH: process.env.PATH,
+        },
+        gatewayStateDir: stateRoot,
+        observerDeviceId: "OBSERVER",
+        outputDir: stateRoot,
+        restartGatewayAfterStateMutation: async (mutateState) => {
+          callOrder.push("hard-restart");
+          await mutateState({ stateDir: stateRoot });
+          const config = JSON.parse(await readFile(gatewayConfigPath, "utf8")) as {
+            channels: {
+              matrix: {
+                accounts: Record<string, { groups?: Record<string, unknown>; userId?: string }>;
+                defaultAccount?: string;
               };
             };
-            hardRestartAccounts.push({
-              accounts: config.channels.matrix.accounts,
-              defaultAccount: config.channels.matrix.defaultAccount,
-            });
-          },
-          sutAccountId: "sut",
-          sutDeviceId: "SUT",
-          waitGatewayAccountReady,
-        }),
-      ).resolves.toMatchObject({
-        artifacts: {
-          deletedSyncStorePath: syncStorePath,
-          driverEventId: "$driver-trigger",
-          replyEventId: "$sut-decrypted-reply",
-          roomKey: "e2ee-sync-state-loss-crypto-intact-recovery",
+          };
+          hardRestartAccounts.push({
+            accounts: config.channels.matrix.accounts,
+            defaultAccount: config.channels.matrix.defaultAccount,
+          });
         },
+        sutAccountId: "sut",
+        sutDeviceId: "SUT",
+        waitGatewayAccountReady,
       });
+      const artifacts = result.artifacts as {
+        deletedSyncStorePath?: unknown;
+        driverEventId?: unknown;
+        replyEventId?: unknown;
+        roomKey?: unknown;
+      };
+      expect(artifacts.deletedSyncStorePath).toBe(syncStorePath);
+      expect(artifacts.driverEventId).toBe("$driver-trigger");
+      expect(artifacts.replyEventId).toBe("$sut-decrypted-reply");
+      expect(artifacts.roomKey).toBe("e2ee-sync-state-loss-crypto-intact-recovery");
 
       await expectPathMissing(syncStorePath);
-      expect(registerWithToken).toHaveBeenCalledWith(
-        expect.objectContaining({
-          registrationToken: "registration-token",
-        }),
-      );
+      expect(registerWithToken.mock.calls[0]?.[0]?.registrationToken).toBe("registration-token");
       expect(createPrivateRoom).toHaveBeenCalledWith({
         encrypted: true,
         inviteUserIds: ["@observer:matrix-qa.test", "@sync-gateway:matrix-qa.test"],
@@ -1960,45 +1957,30 @@ describe("matrix live qa scenarios", () => {
       });
       expect(observerJoinRoom).toHaveBeenCalledWith("!recovery:matrix-qa.test");
       expect(sutJoinRoom).toHaveBeenCalledWith("!recovery:matrix-qa.test");
-      expect(hardRestartAccounts).toEqual([
-        {
-          accounts: {
-            "sync-state-loss-gateway": expect.objectContaining({
-              groups: {
-                "!recovery:matrix-qa.test": {
-                  enabled: true,
-                  requireMention: true,
-                },
-              },
-              userId: "@sync-gateway:matrix-qa.test",
-            }),
-          },
-          defaultAccount: "sync-state-loss-gateway",
+      expect(hardRestartAccounts).toHaveLength(3);
+      const recoveryGroup = {
+        "!recovery:matrix-qa.test": {
+          enabled: true,
+          requireMention: true,
         },
-        {
-          accounts: {
-            "sync-state-loss-gateway": expect.objectContaining({
-              groups: {
-                "!recovery:matrix-qa.test": {
-                  enabled: true,
-                  requireMention: true,
-                },
-              },
-              userId: "@sync-gateway:matrix-qa.test",
-            }),
-          },
-          defaultAccount: "sync-state-loss-gateway",
-        },
-        {
-          accounts: {
-            sut: expect.objectContaining({
-              groups: originalGroups,
-              userId: "@sut:matrix-qa.test",
-            }),
-          },
-          defaultAccount: "sut",
-        },
-      ]);
+      };
+      expect(hardRestartAccounts[0]?.defaultAccount).toBe("sync-state-loss-gateway");
+      expect(hardRestartAccounts[0]?.accounts["sync-state-loss-gateway"]?.groups).toEqual(
+        recoveryGroup,
+      );
+      expect(hardRestartAccounts[0]?.accounts["sync-state-loss-gateway"]?.userId).toBe(
+        "@sync-gateway:matrix-qa.test",
+      );
+      expect(hardRestartAccounts[1]?.defaultAccount).toBe("sync-state-loss-gateway");
+      expect(hardRestartAccounts[1]?.accounts["sync-state-loss-gateway"]?.groups).toEqual(
+        recoveryGroup,
+      );
+      expect(hardRestartAccounts[1]?.accounts["sync-state-loss-gateway"]?.userId).toBe(
+        "@sync-gateway:matrix-qa.test",
+      );
+      expect(hardRestartAccounts[2]?.defaultAccount).toBe("sut");
+      expect(hardRestartAccounts[2]?.accounts.sut?.groups).toEqual(originalGroups);
+      expect(hardRestartAccounts[2]?.accounts.sut?.userId).toBe("@sut:matrix-qa.test");
       expect(callOrder).toEqual([
         "create-room",
         "observer-join",
@@ -2017,12 +1999,9 @@ describe("matrix live qa scenarios", () => {
         mentionUserIds: ["@sync-gateway:matrix-qa.test"],
         roomId: "!recovery:matrix-qa.test",
       });
-      expect(rawWaitForRoomEvent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          roomId: "!recovery:matrix-qa.test",
-          since: "raw-driver-sync-start",
-        }),
-      );
+      const waitParams = rawWaitForRoomEvent.mock.calls[0]?.[0];
+      expect(waitParams?.roomId).toBe("!recovery:matrix-qa.test");
+      expect(waitParams?.since).toBe("raw-driver-sync-start");
       const finalConfig = JSON.parse(await readFile(gatewayConfigPath, "utf8")) as {
         channels: {
           matrix: {
