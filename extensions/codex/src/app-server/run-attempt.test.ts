@@ -2889,41 +2889,31 @@ describe("runCodexAppServerAttempt", () => {
       content: null,
       _meta: null,
     });
-    expect(bridgeSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        threadId: "thread-1",
-        turnId: "turn-1",
-        pluginAppPolicyContext: expect.objectContaining({
-          apps: {
-            "google-calendar-app": expect.objectContaining({
-              pluginName: "google-calendar",
-              mcpServerNames: ["google-calendar"],
-            }),
-          },
-        }),
-      }),
-    );
-    expect(request).toHaveBeenCalledWith(
-      "thread/start",
-      expect.objectContaining({
-        approvalPolicy: {
-          granular: expect.objectContaining({
-            mcp_elicitations: true,
-          }),
-        },
-      }),
-    );
-    expect(request).toHaveBeenCalledWith(
-      "turn/start",
-      expect.objectContaining({
-        approvalPolicy: {
-          granular: expect.objectContaining({
-            mcp_elicitations: true,
-          }),
-        },
-      }),
-      expect.anything(),
-    );
+    const [bridgeCall] = bridgeSpy.mock.calls[0] as unknown as [
+      {
+        pluginAppPolicyContext?: {
+          apps?: Record<string, { mcpServerNames?: string[]; pluginName?: string }>;
+        };
+        threadId?: string;
+        turnId?: string;
+      },
+    ];
+    expect(bridgeCall.threadId).toBe("thread-1");
+    expect(bridgeCall.turnId).toBe("turn-1");
+    const calendarPolicy = bridgeCall.pluginAppPolicyContext?.apps?.["google-calendar-app"];
+    expect(calendarPolicy?.pluginName).toBe("google-calendar");
+    expect(calendarPolicy?.mcpServerNames).toEqual(["google-calendar"]);
+    const requestCalls = request.mock.calls as unknown as Array<[string, unknown, unknown?]>;
+    const threadStart = requestCalls.find(([method]) => method === "thread/start");
+    const threadStartParams = threadStart?.[1] as
+      | { approvalPolicy?: { granular?: { mcp_elicitations?: boolean } } }
+      | undefined;
+    expect(threadStartParams?.approvalPolicy?.granular?.mcp_elicitations).toBe(true);
+    const turnStart = requestCalls.find(([method]) => method === "turn/start");
+    const turnStartParams = turnStart?.[1] as
+      | { approvalPolicy?: { granular?: { mcp_elicitations?: boolean } } }
+      | undefined;
+    expect(turnStartParams?.approvalPolicy?.granular?.mcp_elicitations).toBe(true);
 
     await notify({
       method: "turn/completed",
