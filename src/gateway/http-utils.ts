@@ -1,12 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
-import {
-  createModelVisibilityPolicy,
-  modelKey,
-  parseModelRef,
-  resolveDefaultModelForAgent,
-} from "../agents/model-selection.js";
+import { modelKey, parseModelRef, resolveDefaultModelForAgent } from "../agents/model-selection.js";
+import { createModelVisibilityPolicy } from "../agents/model-visibility-policy.js";
 import { getRuntimeConfig } from "../config/io.js";
 import { buildAgentMainSessionKey, normalizeAgentId } from "../routing/session-key.js";
 import {

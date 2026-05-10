@@ -30,12 +30,12 @@ import { loadModelCatalog } from "../model-catalog.js";
 import {
   buildConfiguredModelCatalog,
   buildModelAliasIndex,
-  createModelVisibilityPolicy,
   modelKey,
   resolveDefaultModelForAgent,
   resolveModelRefFromString,
   resolveThinkingDefault,
 } from "../model-selection.js";
+import { createModelVisibilityPolicy } from "../model-visibility-policy.js";
 import {
   describeSessionStatusTool,
   SESSION_STATUS_TOOL_DISPLAY_SUMMARY,

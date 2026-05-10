@@ -486,6 +486,66 @@ vi.mock("./model-selection.js", () => {
   };
 });
 
+vi.mock("./model-visibility-policy.js", () => ({
+  createModelVisibilityPolicy: ({
+    cfg,
+    catalog,
+    defaultProvider,
+    defaultModel,
+  }: {
+    cfg?: unknown;
+    catalog?: Array<{ provider: string; id: string }>;
+    defaultProvider: string;
+    defaultModel?: string;
+  }) => {
+    const modelMap =
+      (cfg as { agents?: { defaults?: { models?: Record<string, unknown> } } } | undefined)?.agents
+        ?.defaults?.models ?? {};
+    const allowedKeys = new Set<string>(
+      Object.keys(modelMap).map((ref) => {
+        const [provider, ...modelParts] = ref.split("/");
+        return `${provider}/${modelParts.join("/")}`;
+      }),
+    );
+    if (defaultModel) {
+      allowedKeys.add(`${defaultProvider}/${defaultModel}`);
+    }
+    const allowAny = Object.keys(modelMap).length === 0;
+    const allowedCatalog = allowAny
+      ? (catalog ?? [])
+      : (catalog ?? []).filter((entry) => allowedKeys.has(`${entry.provider}/${entry.id}`));
+    const allowsKey = (key: string) => {
+      if (allowAny || allowedKeys.has(key)) {
+        return true;
+      }
+      const slash = key.indexOf("/");
+      return slash > 0 && allowedKeys.has(`${key.slice(0, slash)}/*`);
+    };
+    return {
+      allowAny,
+      allowedKeys,
+      allowedCatalog,
+      exactModelRefs: [],
+      providerWildcards: new Set<string>(),
+      hasConfiguredEntries: !allowAny,
+      hasProviderWildcards: [...allowedKeys].some((key) => key.endsWith("/*")),
+      allowsKey,
+      allows: ({ provider, model }: { provider: string; model: string }) =>
+        allowsKey(`${provider}/${model}`),
+      resolveSelection: ({ provider, model }: { provider: string; model: string }) => {
+        const key = `${provider}/${model}`;
+        if (allowsKey(key)) {
+          return { provider, model };
+        }
+        const fallback = allowedCatalog[0];
+        return fallback ? { provider: fallback.provider, model: fallback.id } : null;
+      },
+      visibleCatalog: ({ catalog }: { catalog: Array<{ provider: string; id: string }> }) =>
+        catalog,
+    };
+  },
+}));
+
 vi.mock("./provider-auth-aliases.js", () => ({
   resolveProviderAuthAliasMap: () => ({}),
   resolveProviderIdForAuth: (provider: string) =>

@@ -34,15 +34,10 @@ import {
   buildConfiguredAllowlistKeys,
   buildConfiguredModelCatalog,
   buildModelAliasIndex,
-  createModelVisibilityPolicyWithFallbacks,
   getModelRefStatusWithFallbackModels,
   inferUniqueProviderFromCatalog,
   inferUniqueProviderFromConfiguredModels,
-  isModelKeyAllowedBySet,
   normalizeModelSelection,
-  parseConfiguredModelVisibilityEntries,
-  providerWildcardModelKey,
-  resolveAllowedModelSelection,
   resolveBareModelDefaultProvider,
   resolveAllowedModelRefFromAliasIndex,
   resolveAllowlistModelKey as resolveAllowlistModelKeyFromShared,
@@ -51,11 +46,10 @@ import {
   resolveHooksGmailModel,
   resolveModelRefFromString,
   type ModelAliasIndex,
-  type ModelVisibilityPolicy,
   type ModelRefStatus,
 } from "./model-selection-shared.js";
 
-export type { ModelAliasIndex, ModelRef, ModelRefStatus, ModelVisibilityPolicy };
+export type { ModelAliasIndex, ModelRef, ModelRefStatus };
 
 export type ThinkLevel =
   | "off"
@@ -71,22 +65,17 @@ export {
   buildConfiguredAllowlistKeys,
   buildConfiguredModelCatalog,
   buildModelAliasIndex,
-  createModelVisibilityPolicyWithFallbacks,
   findNormalizedProviderKey,
   findNormalizedProviderValue,
   inferUniqueProviderFromConfiguredModels,
   inferUniqueProviderFromCatalog,
-  isModelKeyAllowedBySet,
   legacyModelKey,
   modelKey,
   normalizeModelRef,
   normalizeModelSelection,
   normalizeProviderId,
   normalizeProviderIdForAuth,
-  parseConfiguredModelVisibilityEntries,
   parseModelRef,
-  providerWildcardModelKey,
-  resolveAllowedModelSelection,
   resolveBareModelDefaultProvider,
   resolveConfiguredModelRef,
   resolveHooksGmailModel,
@@ -391,25 +380,6 @@ export function buildAllowedModelSet(params: {
   allowedKeys: Set<string>;
 } {
   return buildAllowedModelSetWithFallbacks({
-    cfg: params.cfg,
-    catalog: params.catalog,
-    defaultProvider: params.defaultProvider,
-    defaultModel: params.defaultModel,
-    fallbackModels: resolveAllowedFallbacks({
-      cfg: params.cfg,
-      agentId: params.agentId,
-    }),
-  });
-}
-
-export function createModelVisibilityPolicy(params: {
-  cfg: OpenClawConfig;
-  catalog: ModelCatalogEntry[];
-  defaultProvider: string;
-  defaultModel?: string;
-  agentId?: string;
-}): ModelVisibilityPolicy {
-  return createModelVisibilityPolicyWithFallbacks({
     cfg: params.cfg,
     catalog: params.catalog,
     defaultProvider: params.defaultProvider,

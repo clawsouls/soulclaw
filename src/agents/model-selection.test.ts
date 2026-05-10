@@ -3,19 +3,17 @@ import type { OpenClawConfig } from "../config/types.js";
 import { resetLogger, setLoggerOverride } from "../logging/logger.js";
 import { createWarnLogCapture } from "../logging/test-helpers/warn-log-capture.js";
 import { migrateLegacyRuntimeModelRef } from "./model-runtime-aliases.js";
+import { isModelKeyAllowedBySet, providerWildcardModelKey } from "./model-selection-shared.js";
 import {
   buildAllowedModelSet,
   buildConfiguredModelCatalog,
-  createModelVisibilityPolicy,
   inferUniqueProviderFromConfiguredModels,
-  isModelKeyAllowedBySet,
   parseModelRef,
   buildModelAliasIndex,
   normalizeModelSelection,
   normalizeProviderId,
   normalizeProviderIdForAuth,
   modelKey,
-  providerWildcardModelKey,
   resolvePersistedOverrideModelRef,
   resolvePersistedModelRef,
   resolvePersistedSelectedModelRef,
@@ -27,6 +25,7 @@ import {
   resolveThinkingDefault,
   resolveModelRefFromString,
 } from "./model-selection.js";
+import { createModelVisibilityPolicy } from "./model-visibility-policy.js";
 
 const manifestNormalizationSnapshot = vi.hoisted(() => ({
   configFingerprint: "model-selection-test-normalizers",
@@ -1043,6 +1042,37 @@ describe("model-selection", () => {
         { provider: "openai-codex", id: "gpt-added-later", name: "GPT Added Later" },
         { provider: "anthropic", id: "claude-sonnet-4-6", name: "Claude Sonnet" },
       ]);
+    });
+
+    it("does not re-add a default outside mixed wildcard and exact filters", () => {
+      const cfg: OpenClawConfig = {
+        agents: {
+          defaults: {
+            models: {
+              "openai-codex/*": {},
+              "google/gemini-test": {},
+            },
+          },
+        },
+      } as unknown as OpenClawConfig;
+
+      const result = buildAllowedModelSet({
+        cfg,
+        catalog: [
+          { provider: "anthropic", id: "claude-sonnet-4-6", name: "Claude Sonnet" },
+          { provider: "openai-codex", id: "gpt-codex", name: "GPT Codex" },
+          { provider: "google", id: "gemini-test", name: "Gemini Test" },
+        ],
+        defaultProvider: "anthropic",
+        defaultModel: "claude-sonnet-4-6",
+      });
+
+      expect(result.allowedCatalog).toEqual([
+        { provider: "openai-codex", id: "gpt-codex", name: "GPT Codex" },
+        { provider: "google", id: "gemini-test", name: "Gemini Test" },
+      ]);
+      expect(result.allowedKeys.has("anthropic/claude-sonnet-4-6")).toBe(false);
+      expect(result.allowedKeys.has(providerWildcardModelKey("openai-codex"))).toBe(true);
     });
 
     it("unions exact model entries with provider wildcard entries", () => {
