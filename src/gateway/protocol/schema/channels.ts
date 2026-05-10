@@ -254,6 +254,7 @@ export const TalkSessionSubmitToolResultParamsSchema = Type.Object(
     options: Type.Optional(
       Type.Object(
         {
+          suppressResponse: Type.Optional(Type.Boolean()),
           willContinue: Type.Optional(Type.Boolean()),
         },
         { additionalProperties: false },

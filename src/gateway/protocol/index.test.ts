@@ -409,7 +409,7 @@ describe("validateTalkSessionRelayParams", () => {
         sessionId: "session-1",
         callId: "call-1",
         result: { ok: true },
-        options: { willContinue: true },
+        options: { suppressResponse: true, willContinue: true },
       }),
     ).toBe(true);
   });

@@ -567,7 +567,7 @@ describe("talk.session unified handlers", () => {
         sessionId: "relay-unified-1",
         callId: "call-1",
         result: { status: "working" },
-        options: { willContinue: true },
+        options: { suppressResponse: true, willContinue: true },
       },
       client: { connId: "conn-1" } as never,
       isWebchatConnect: () => false,
@@ -579,7 +579,7 @@ describe("talk.session unified handlers", () => {
       connId: "conn-1",
       callId: "call-1",
       result: { status: "working" },
-      options: { willContinue: true },
+      options: { suppressResponse: true, willContinue: true },
     });
 
     const closeRespond = vi.fn();
