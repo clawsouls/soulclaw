@@ -92,8 +92,13 @@ function beginForegroundReplyFence(
   };
 }
 
-function isForegroundReplyFenceSuperseded(snapshot: ForegroundReplyFenceSnapshot): boolean {
-  return (foregroundReplyFenceByKey.get(snapshot.key)?.generation ?? 0) !== snapshot.generation;
+function isForegroundReplyFenceSuperseded(
+  snapshot: ForegroundReplyFenceSnapshot | undefined,
+): boolean {
+  return Boolean(
+    snapshot &&
+    (foregroundReplyFenceByKey.get(snapshot.key)?.generation ?? 0) !== snapshot.generation,
+  );
 }
 
 function endForegroundReplyFence(snapshot: ForegroundReplyFenceSnapshot): void {
@@ -283,26 +288,24 @@ export async function dispatchInboundMessageWithBufferedDispatcher(params: {
 }): Promise<DispatchInboundResult> {
   const finalized = finalizeInboundContext(params.ctx);
   const foregroundReplyFence = beginForegroundReplyFence(finalized);
-  let foregroundReplyFenceActive = true;
   const silentReplyContext = resolveDispatcherSilentReplyContext(finalized, params.cfg);
   const configuredBeforeDeliver =
     params.dispatcherOptions.beforeDeliver ?? buildMessageSendingBeforeDeliver(finalized);
-  const beforeDeliver: ReplyDispatchBeforeDeliver | undefined = foregroundReplyFence
-    ? async (payload, info) => {
-        const isSuperseded = () =>
-          foregroundReplyFenceActive && isForegroundReplyFenceSuperseded(foregroundReplyFence);
-        if (isSuperseded()) {
-          return null;
+  const beforeDeliver: ReplyDispatchBeforeDeliver | undefined =
+    foregroundReplyFence || configuredBeforeDeliver
+      ? async (payload, info) => {
+          if (isForegroundReplyFenceSuperseded(foregroundReplyFence)) {
+            return null;
+          }
+          const deliverPayload = configuredBeforeDeliver
+            ? await configuredBeforeDeliver(payload, info)
+            : payload;
+          if (!deliverPayload || isForegroundReplyFenceSuperseded(foregroundReplyFence)) {
+            return null;
+          }
+          return deliverPayload;
         }
-        const deliverPayload = configuredBeforeDeliver
-          ? await configuredBeforeDeliver(payload, info)
-          : payload;
-        if (!deliverPayload || isSuperseded()) {
-          return null;
-        }
-        return deliverPayload;
-      }
-    : configuredBeforeDeliver;
+      : undefined;
   const { dispatcher, replyOptions, markDispatchIdle, markRunComplete } =
     createReplyDispatcherWithTyping({
       ...params.dispatcherOptions,
@@ -322,7 +325,6 @@ export async function dispatchInboundMessageWithBufferedDispatcher(params: {
     });
   } finally {
     if (foregroundReplyFence) {
-      foregroundReplyFenceActive = false;
       endForegroundReplyFence(foregroundReplyFence);
     }
     markRunComplete();
