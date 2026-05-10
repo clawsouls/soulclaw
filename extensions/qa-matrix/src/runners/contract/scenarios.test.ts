@@ -1048,33 +1048,29 @@ describe("matrix live qa scenarios", () => {
       driver: "driver-sync-next",
     };
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        roomId: "!room:matrix-qa.test",
-        restartGateway: undefined,
-        syncState,
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!room:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        actorUserId: "@observer:matrix-qa.test",
-        expectedNoReplyWindowMs: 8_000,
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      roomId: "!room:matrix-qa.test",
+      restartGateway: undefined,
+      syncState,
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!room:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [],
       },
     });
+    const artifacts = result.artifacts as Record<string, unknown>;
+    expect(artifacts.actorUserId).toBe("@observer:matrix-qa.test");
+    expect(artifacts.expectedNoReplyWindowMs).toBe(8_000);
 
     expect(createMatrixQaClient).toHaveBeenCalledWith({
       accessToken: "observer-token",
@@ -1115,36 +1111,34 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-observer-allowlist-override");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        roomId: "!room:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!room:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        actorUserId: "@observer:matrix-qa.test",
-        driverEventId: "$observer-allow-trigger",
-        reply: {
-          tokenMatched: true,
-        },
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      roomId: "!room:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!room:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [],
       },
     });
+    const artifacts = result.artifacts as {
+      actorUserId?: unknown;
+      driverEventId?: unknown;
+      reply?: { tokenMatched?: unknown };
+    };
+    expect(artifacts.actorUserId).toBe("@observer:matrix-qa.test");
+    expect(artifacts.driverEventId).toBe("$observer-allow-trigger");
+    expect(artifacts.reply?.tokenMatched).toBe(true);
 
     expect(createMatrixQaClient).toHaveBeenCalledWith({
       accessToken: "observer-token",
