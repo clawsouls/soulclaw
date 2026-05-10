@@ -1733,8 +1733,8 @@ describe("memory cli", () => {
         "0",
       ]);
 
-      expect(log).toHaveBeenCalledWith(expect.stringContaining("consolidate="));
-      expect(log).toHaveBeenCalledWith(expect.stringContaining("concepts="));
+      expectLogged(log, "recalls=2 avg=0.890 queries=2 age=1.0d consolidate=0.30 conceptual=1.00");
+      expectLogged(log, "concepts=backup, glacier, qmd, router, vlan, configured");
       expect(close).toHaveBeenCalled();
     });
   });
