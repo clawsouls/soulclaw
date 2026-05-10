@@ -179,19 +179,24 @@ async function runMessageActionRequest(
   return { respond };
 }
 
+function deliveryCall(index = 0): Record<string, any> | undefined {
+  const calls = mocks.deliverOutboundPayloads.mock.calls as unknown as Array<[Record<string, any>]>;
+  return calls[index]?.[0];
+}
+
+function firstRespondCall(respond: ReturnType<typeof vi.fn>) {
+  const calls = respond.mock.calls as unknown as Array<
+    [boolean, Record<string, any>, unknown, Record<string, any>]
+  >;
+  return calls[0];
+}
+
 function expectDeliverySessionMirror(params: { agentId: string; sessionKey: string }) {
-  expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-    expect.objectContaining({
-      session: expect.objectContaining({
-        agentId: params.agentId,
-        key: params.sessionKey,
-      }),
-      mirror: expect.objectContaining({
-        sessionKey: params.sessionKey,
-        agentId: params.agentId,
-      }),
-    }),
-  );
+  const call = deliveryCall();
+  expect(call?.session?.agentId).toBe(params.agentId);
+  expect(call?.session?.key).toBe(params.sessionKey);
+  expect(call?.mirror?.sessionKey).toBe(params.sessionKey);
+  expect(call?.mirror?.agentId).toBe(params.agentId);
 }
 
 function mockDeliverySuccess(messageId: string) {
@@ -241,17 +246,14 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-media-only",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        payloads: [{ text: "", mediaUrl: "https://example.com/a.png", mediaUrls: undefined }],
-      }),
-    );
-    expect(respond).toHaveBeenCalledWith(
-      true,
-      expect.objectContaining({ messageId: "m-media" }),
-      undefined,
-      expect.objectContaining({ channel: "slack" }),
-    );
+    expect(deliveryCall()?.payloads).toEqual([
+      { text: "", mediaUrl: "https://example.com/a.png", mediaUrls: undefined },
+    ]);
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(true);
+    expect(response?.[1]?.messageId).toBe("m-media");
+    expect(response?.[2]).toBeUndefined();
+    expect(response?.[3]?.channel).toBe("slack");
   });
 
   it("passes outbound session context for gateway media sends", async () => {
@@ -266,22 +268,16 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-whatsapp-media",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "whatsapp",
-        payloads: [
-          {
-            text: "caption",
-            mediaUrl: "file:///tmp/workspace/photo.png",
-            mediaUrls: undefined,
-          },
-        ],
-        session: expect.objectContaining({
-          agentId: "work",
-          key: "agent:work:whatsapp:resolved",
-        }),
-      }),
-    );
+    expect(deliveryCall()?.channel).toBe("whatsapp");
+    expect(deliveryCall()?.payloads).toEqual([
+      {
+        text: "caption",
+        mediaUrl: "file:///tmp/workspace/photo.png",
+        mediaUrls: undefined,
+      },
+    ]);
+    expect(deliveryCall()?.session?.agentId).toBe("work");
+    expect(deliveryCall()?.session?.key).toBe("agent:work:whatsapp:resolved");
   });
 
   it("maps gateway asVoice sends onto outbound audioAsVoice payloads", async () => {
@@ -296,23 +292,14 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-voice",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        payloads: [
-          expect.objectContaining({
-            text: "voice note",
-            mediaUrl: "file:///tmp/openclaw-voice.ogg",
-            audioAsVoice: true,
-          }),
-        ],
-      }),
-    );
-    expect(respond).toHaveBeenCalledWith(
-      true,
-      expect.objectContaining({ messageId: "m-voice" }),
-      undefined,
-      expect.objectContaining({ channel: "slack" }),
-    );
+    expect(deliveryCall()?.payloads?.[0]?.text).toBe("voice note");
+    expect(deliveryCall()?.payloads?.[0]?.mediaUrl).toBe("file:///tmp/openclaw-voice.ogg");
+    expect(deliveryCall()?.payloads?.[0]?.audioAsVoice).toBe(true);
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(true);
+    expect(response?.[1]?.messageId).toBe("m-voice");
+    expect(response?.[2]).toBeUndefined();
+    expect(response?.[3]?.channel).toBe("slack");
   });
 
   it("forwards gateway client scopes into outbound delivery", async () => {
