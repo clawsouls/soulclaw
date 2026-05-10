@@ -60,6 +60,15 @@ function cfg(actions?: Record<string, boolean | undefined>): OpenClawConfig {
   } as OpenClawConfig;
 }
 
+function imsgOptions(chatGuid = "") {
+  return {
+    cliPath: "imsg",
+    dbPath: "/tmp/messages.db",
+    timeoutMs: undefined,
+    chatGuid,
+  };
+}
+
 describe("imessage message actions", () => {
   beforeEach(() => {
     runtimeMock.resolveIMessageMessageId.mockClear();
@@ -227,16 +236,18 @@ describe("imessage message actions", () => {
       },
     } as never);
 
-    expect(runtimeMock.sendReaction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        chatGuid: "iMessage;+;chat0000",
-        messageId: "message-guid",
-        reaction: "like",
-        options: expect.objectContaining({
-          dbPath: "/tmp/messages.db",
-        }),
-      }),
-    );
+    expect(runtimeMock.sendReaction.mock.calls).toStrictEqual([
+      [
+        {
+          chatGuid: "iMessage;+;chat0000",
+          messageId: "message-guid",
+          reaction: "like",
+          remove: undefined,
+          partIndex: undefined,
+          options: imsgOptions("iMessage;+;chat0000"),
+        },
+      ],
+    ]);
   });
 
   it("resolves chat_id targets before invoking bridge actions", async () => {
@@ -258,16 +269,26 @@ describe("imessage message actions", () => {
       },
     } as never);
 
-    expect(runtimeMock.resolveChatGuidForTarget).toHaveBeenCalledWith(
-      expect.objectContaining({
-        target: { kind: "chat_id", chatId: 42 },
-      }),
-    );
-    expect(runtimeMock.sendReaction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        chatGuid: "iMessage;+;resolved",
-      }),
-    );
+    expect(runtimeMock.resolveChatGuidForTarget.mock.calls).toStrictEqual([
+      [
+        {
+          target: { kind: "chat_id", chatId: 42 },
+          options: imsgOptions(),
+        },
+      ],
+    ]);
+    expect(runtimeMock.sendReaction.mock.calls).toStrictEqual([
+      [
+        {
+          chatGuid: "iMessage;+;resolved",
+          messageId: "message-guid",
+          reaction: "like",
+          remove: undefined,
+          partIndex: undefined,
+          options: imsgOptions("iMessage;+;resolved"),
+        },
+      ],
+    ]);
   });
 
   it("resolves short message ids before invoking bridge actions", async () => {
@@ -297,11 +318,18 @@ describe("imessage message actions", () => {
         chatId: undefined,
       },
     });
-    expect(runtimeMock.sendReaction).toHaveBeenCalledWith(
-      expect.objectContaining({
-        messageId: "full-guid",
-      }),
-    );
+    expect(runtimeMock.sendReaction.mock.calls).toStrictEqual([
+      [
+        {
+          chatGuid: "iMessage;+;chat0000",
+          messageId: "full-guid",
+          reaction: "like",
+          remove: undefined,
+          partIndex: undefined,
+          options: imsgOptions("iMessage;+;chat0000"),
+        },
+      ],
+    ]);
   });
 
   it("resolves chat_identifier targets before invoking bridge actions", async () => {
@@ -323,16 +351,26 @@ describe("imessage message actions", () => {
       },
     } as never);
 
-    expect(runtimeMock.resolveChatGuidForTarget).toHaveBeenCalledWith(
-      expect.objectContaining({
-        target: { kind: "chat_identifier", chatIdentifier: "team-thread" },
-      }),
-    );
-    expect(runtimeMock.sendRichMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        chatGuid: "iMessage;+;resolved-ident",
-      }),
-    );
+    expect(runtimeMock.resolveChatGuidForTarget.mock.calls).toStrictEqual([
+      [
+        {
+          target: { kind: "chat_identifier", chatIdentifier: "team-thread" },
+          options: imsgOptions(),
+        },
+      ],
+    ]);
+    expect(runtimeMock.sendRichMessage.mock.calls).toStrictEqual([
+      [
+        {
+          chatGuid: "iMessage;+;resolved-ident",
+          text: "reply",
+          replyToMessageId: "message-guid",
+          partIndex: undefined,
+          attachment: undefined,
+          options: imsgOptions("iMessage;+;resolved-ident"),
+        },
+      ],
+    ]);
   });
 
   describe("reply with attachment (openclaw/imsg#114 plumbing)", () => {
