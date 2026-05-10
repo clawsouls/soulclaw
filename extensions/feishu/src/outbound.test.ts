@@ -186,6 +186,11 @@ function sendStructuredCardCall(index = 0): Record<string, any> | undefined {
   return calls[index]?.[0];
 }
 
+function sendMarkdownCardCall(index = 0): Record<string, any> | undefined {
+  const calls = sendMarkdownCardFeishuMock.mock.calls as unknown as Array<[Record<string, any>]>;
+  return calls[index]?.[0];
+}
+
 function commentThreadParams(index = 0): Record<string, any> | undefined {
   const calls = deliverCommentThreadTextMock.mock.calls as unknown as Array<
     [unknown, Record<string, any>]
@@ -855,13 +860,9 @@ describe("feishuOutbound.sendText replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendMessageFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "chat_1",
-        text: "hello",
-        accountId: "main",
-      }),
-    );
+    expect(sendMessageCall()?.to).toBe("chat_1");
+    expect(sendMessageCall()?.text).toBe("hello");
+    expect(sendMessageCall()?.accountId).toBe("main");
     expect(sendMessageFeishuMock.mock.calls[0][0].replyToMessageId).toBeUndefined();
   });
 
@@ -874,12 +875,8 @@ describe("feishuOutbound.sendText replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendMessageFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        replyToMessageId: "om_topic_root",
-        replyInThread: true,
-      }),
-    );
+    expect(sendMessageCall()?.replyToMessageId).toBe("om_topic_root");
+    expect(sendMessageCall()?.replyInThread).toBe(true);
   });
 
   it("propagates threadId as replyInThread=true to sendStructuredCardFeishu when renderMode=card", async () => {
@@ -891,12 +888,8 @@ describe("feishuOutbound.sendText replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendStructuredCardFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        replyToMessageId: "om_topic_root",
-        replyInThread: true,
-      }),
-    );
+    expect(sendStructuredCardCall()?.replyToMessageId).toBe("om_topic_root");
+    expect(sendStructuredCardCall()?.replyInThread).toBe(true);
   });
 
   it("prefers replyToId over threadId for plain text (inline reply, no auto-thread)", async () => {
@@ -909,12 +902,8 @@ describe("feishuOutbound.sendText replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendMessageFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        replyToMessageId: "om_inline",
-        replyInThread: false,
-      }),
-    );
+    expect(sendMessageCall()?.replyToMessageId).toBe("om_inline");
+    expect(sendMessageCall()?.replyInThread).toBe(false);
   });
 });
 
@@ -933,12 +922,8 @@ describe("feishuOutbound.sendMedia replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        replyToMessageId: "om_reply_target",
-        replyInThread: false,
-      }),
-    );
+    expect(sendMediaCall()?.replyToMessageId).toBe("om_reply_target");
+    expect(sendMediaCall()?.replyInThread).toBe(false);
   });
 
   it("forwards threadId as replyInThread=true to sendMediaFeishu", async () => {
@@ -951,12 +936,8 @@ describe("feishuOutbound.sendMedia replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        replyToMessageId: "om_topic_root",
-        replyInThread: true,
-      }),
-    );
+    expect(sendMediaCall()?.replyToMessageId).toBe("om_topic_root");
+    expect(sendMediaCall()?.replyInThread).toBe(true);
   });
 
   it("prefers replyToId over threadId (inline reply) when both are set", async () => {
@@ -970,12 +951,8 @@ describe("feishuOutbound.sendMedia replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        replyToMessageId: "om_inline",
-        replyInThread: false,
-      }),
-    );
+    expect(sendMediaCall()?.replyToMessageId).toBe("om_inline");
+    expect(sendMediaCall()?.replyInThread).toBe(false);
   });
 
   it("treats whitespace-only replyToId as absent for replyInThread (falls back to threadId)", async () => {
@@ -989,12 +966,8 @@ describe("feishuOutbound.sendMedia replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        replyToMessageId: "om_topic_root",
-        replyInThread: true,
-      }),
-    );
+    expect(sendMediaCall()?.replyToMessageId).toBe("om_topic_root");
+    expect(sendMediaCall()?.replyInThread).toBe(true);
   });
 
   it("forwards audioAsVoice to sendMediaFeishu", async () => {
@@ -1007,12 +980,8 @@ describe("feishuOutbound.sendMedia replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mediaUrl: "https://example.com/reply.mp3",
-        audioAsVoice: true,
-      }),
-    );
+    expect(sendMediaCall()?.mediaUrl).toBe("https://example.com/reply.mp3");
+    expect(sendMediaCall()?.audioAsVoice).toBe(true);
   });
 
   it("suppresses duplicate text when sending voice media", async () => {
@@ -1026,12 +995,8 @@ describe("feishuOutbound.sendMedia replyToId forwarding", () => {
     });
 
     expect(sendMessageFeishuMock).not.toHaveBeenCalled();
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mediaUrl: "https://example.com/reply.mp3",
-        audioAsVoice: true,
-      }),
-    );
+    expect(sendMediaCall()?.mediaUrl).toBe("https://example.com/reply.mp3");
+    expect(sendMediaCall()?.audioAsVoice).toBe(true);
   });
 
   it("sends skipped voice text when voice media degrades to a file attachment", async () => {
@@ -1049,18 +1014,10 @@ describe("feishuOutbound.sendMedia replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mediaUrl: "https://example.com/reply.mp3",
-        audioAsVoice: true,
-      }),
-    );
+    expect(sendMediaCall()?.mediaUrl).toBe("https://example.com/reply.mp3");
+    expect(sendMediaCall()?.audioAsVoice).toBe(true);
     expect(sendMessageFeishuMock).toHaveBeenCalledTimes(1);
-    expect(sendMessageFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: "spoken reply",
-      }),
-    );
+    expect(sendMessageCall()?.text).toBe("spoken reply");
   });
 
   it("suppresses duplicate text for native voice media without audioAsVoice", async () => {
@@ -1073,11 +1030,7 @@ describe("feishuOutbound.sendMedia replyToId forwarding", () => {
     });
 
     expect(sendMessageFeishuMock).not.toHaveBeenCalled();
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mediaUrl: "https://example.com/reply.ogg?download=1",
-      }),
-    );
+    expect(sendMediaCall()?.mediaUrl).toBe("https://example.com/reply.ogg?download=1");
   });
 
   it("keeps captions for regular audio file attachments", async () => {
@@ -1089,16 +1042,8 @@ describe("feishuOutbound.sendMedia replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendMessageFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: "caption text",
-      }),
-    );
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mediaUrl: "https://example.com/song.mp3",
-      }),
-    );
+    expect(sendMessageCall()?.text).toBe("caption text");
+    expect(sendMediaCall()?.mediaUrl).toBe("https://example.com/song.mp3");
   });
 
   it("keeps skipped voice text in the upload failure fallback", async () => {
@@ -1114,11 +1059,7 @@ describe("feishuOutbound.sendMedia replyToId forwarding", () => {
     });
 
     expect(sendMessageFeishuMock).toHaveBeenCalledTimes(1);
-    expect(sendMessageFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: "spoken reply\n\n📎 https://example.com/reply.mp3",
-      }),
-    );
+    expect(sendMessageCall()?.text).toBe("spoken reply\n\n📎 https://example.com/reply.mp3");
   });
 
   it("forwards replyToId to text caption send", async () => {
@@ -1131,11 +1072,7 @@ describe("feishuOutbound.sendMedia replyToId forwarding", () => {
       accountId: "main",
     });
 
-    expect(sendMessageFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        replyToMessageId: "om_reply_target",
-      }),
-    );
+    expect(sendMessageCall()?.replyToMessageId).toBe("om_reply_target");
   });
 });
 
@@ -1153,22 +1090,14 @@ describe("feishuOutbound.sendMedia renderMode", () => {
       accountId: "main",
     });
 
-    expect(sendMarkdownCardFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "chat_1",
-        text: "| a | b |\n| - | - |",
-        accountId: "main",
-      }),
-    );
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "chat_1",
-        mediaUrl: "https://example.com/image.png",
-        accountId: "main",
-      }),
-    );
+    expect(sendMarkdownCardCall()?.to).toBe("chat_1");
+    expect(sendMarkdownCardCall()?.text).toBe("| a | b |\n| - | - |");
+    expect(sendMarkdownCardCall()?.accountId).toBe("main");
+    expect(sendMediaCall()?.to).toBe("chat_1");
+    expect(sendMediaCall()?.mediaUrl).toBe("https://example.com/image.png");
+    expect(sendMediaCall()?.accountId).toBe("main");
     expect(sendMessageFeishuMock).not.toHaveBeenCalled();
-    expect(result).toEqual(expect.objectContaining({ channel: "feishu", messageId: "media_msg" }));
+    expectFeishuResult(result, "media_msg");
   });
 
   it("uses threadId fallback as replyToMessageId on sendMedia", async () => {
@@ -1181,21 +1110,13 @@ describe("feishuOutbound.sendMedia renderMode", () => {
       accountId: "main",
     });
 
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "chat_1",
-        mediaUrl: "https://example.com/image.png",
-        replyToMessageId: "om_thread_1",
-        accountId: "main",
-      }),
-    );
-    expect(sendMessageFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "chat_1",
-        text: "caption",
-        replyToMessageId: "om_thread_1",
-        accountId: "main",
-      }),
-    );
+    expect(sendMediaCall()?.to).toBe("chat_1");
+    expect(sendMediaCall()?.mediaUrl).toBe("https://example.com/image.png");
+    expect(sendMediaCall()?.replyToMessageId).toBe("om_thread_1");
+    expect(sendMediaCall()?.accountId).toBe("main");
+    expect(sendMessageCall()?.to).toBe("chat_1");
+    expect(sendMessageCall()?.text).toBe("caption");
+    expect(sendMessageCall()?.replyToMessageId).toBe("om_thread_1");
+    expect(sendMessageCall()?.accountId).toBe("main");
   });
 });
