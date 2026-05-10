@@ -4331,59 +4331,66 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-e2ee-recovery-owner-verification-required");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverDeviceId: "DRIVERDEVICE",
-        driverPassword: "driver-password",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        outputDir: "/tmp/matrix-qa",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              encrypted: true,
-              key: matrixQaE2eeRoomKey("matrix-e2ee-recovery-owner-verification-required"),
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "E2EE",
-              requireMention: true,
-              roomId: "!e2ee:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        backupRestored: true,
-        backupUsable: true,
-        faultHitCount: 1,
-        faultRuleId: "owner-signature-upload-blocked",
-        recoveryDeviceId: "RECOVERYDEVICE",
-        recoveryKeyAccepted: true,
-        recoveryVerified: false,
-        restoreImported: 1,
-        restoreTotal: 1,
-        verificationSuccess: false,
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverDeviceId: "DRIVERDEVICE",
+      driverPassword: "driver-password",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      outputDir: "/tmp/matrix-qa",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            encrypted: true,
+            key: matrixQaE2eeRoomKey("matrix-e2ee-recovery-owner-verification-required"),
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "E2EE",
+            requireMention: true,
+            roomId: "!e2ee:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as {
+      backupRestored?: unknown;
+      backupUsable?: unknown;
+      faultHitCount?: unknown;
+      faultRuleId?: unknown;
+      recoveryDeviceId?: unknown;
+      recoveryKeyAccepted?: unknown;
+      recoveryVerified?: unknown;
+      restoreImported?: unknown;
+      restoreTotal?: unknown;
+      verificationSuccess?: unknown;
+    };
+    expect(artifacts.backupRestored).toBe(true);
+    expect(artifacts.backupUsable).toBe(true);
+    expect(artifacts.faultHitCount).toBe(1);
+    expect(artifacts.faultRuleId).toBe("owner-signature-upload-blocked");
+    expect(artifacts.recoveryDeviceId).toBe("RECOVERYDEVICE");
+    expect(artifacts.recoveryKeyAccepted).toBe(true);
+    expect(artifacts.recoveryVerified).toBe(false);
+    expect(artifacts.restoreImported).toBe(1);
+    expect(artifacts.restoreTotal).toBe(1);
+    expect(artifacts.verificationSuccess).toBe(false);
 
     const proxyArgs = startMatrixQaFaultProxy.mock.calls[0]?.[0];
     if (!proxyArgs) {
@@ -4412,13 +4419,12 @@ describe("matrix live qa scenarios", () => {
         search: "",
       }),
     ).toBe(false);
-    expect(createMatrixQaE2eeScenarioClient).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        accessToken: "recovery-token",
-        baseUrl: "http://127.0.0.1:39877",
-        deviceId: "RECOVERYDEVICE",
-        scenarioId: "matrix-e2ee-recovery-owner-verification-required",
-      }),
+    const recoveryClientOptions = createMatrixQaE2eeScenarioClient.mock.calls.at(-1)?.[0];
+    expect(recoveryClientOptions?.accessToken).toBe("recovery-token");
+    expect(recoveryClientOptions?.baseUrl).toBe("http://127.0.0.1:39877");
+    expect(recoveryClientOptions?.deviceId).toBe("RECOVERYDEVICE");
+    expect(recoveryClientOptions?.scenarioId).toBe(
+      "matrix-e2ee-recovery-owner-verification-required",
     );
     expect(ownerBootstrapOwnDeviceVerification).toHaveBeenCalledWith({
       allowAutomaticCrossSigningReset: false,
