@@ -1827,7 +1827,7 @@ describe("short-term promotion", () => {
         path: "memory/2026-04-03.md",
         snippet: "Move backups to S3 Glacier and sync QMD router notes.",
       }),
-    ).toEqual(expect.arrayContaining(["glacier", "router", "backups"]));
+    ).toStrictEqual(["backup", "backups", "glacier", "qmd", "router", "sync"]);
   });
 
   it("extracts multilingual concept tags across latin and cjk snippets", () => {
@@ -1836,12 +1836,21 @@ describe("short-term promotion", () => {
         path: "memory/2026-04-03.md",
         snippet: "Configuración du routeur et sauvegarde Glacier.",
       }),
-    ).toEqual(expect.arrayContaining(["configuración", "routeur", "sauvegarde", "glacier"]));
+    ).toStrictEqual(["glacier", "sauvegarde", "routeur", "configuración"]);
     expect(
       __testing.deriveConceptTags({
         path: "memory/2026-04-03.md",
         snippet: "障害対応ルーター設定とバックアップ確認。路由器备份与网关同步。",
       }),
-    ).toEqual(expect.arrayContaining(["障害対応", "ルーター", "バックアップ", "路由器", "备份"]));
+    ).toStrictEqual([
+      "バックアップ",
+      "ルーター",
+      "障害対応",
+      "路由器",
+      "备份",
+      "网关",
+      "障害",
+      "対応",
+    ]);
   });
 });
