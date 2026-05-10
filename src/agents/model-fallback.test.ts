@@ -485,6 +485,26 @@ describe("runWithModelFallback", () => {
         model: "mimo-v2-pro-mit",
         expected: ["openai", "xiaomi/mimo-v2-pro-mit"],
       },
+      {
+        name: "keeps explicit provider when a different provider owns the bare alias",
+        cfg: makeCfg({
+          agents: {
+            defaults: {
+              model: {
+                primary: "openrouter/deepseek/deepseek-v4-pro",
+                fallbacks: [],
+              },
+              models: {
+                "openrouter/deepseek/deepseek-v4-pro": { alias: "deepseek-v4-pro" },
+                "opencode-go/deepseek-v4-pro": { alias: "OpenCode Go DeepSeek V4 Pro" },
+              },
+            },
+          },
+        }),
+        provider: "opencode-go",
+        model: "deepseek-v4-pro",
+        expected: ["opencode-go", "deepseek-v4-pro"],
+      },
     ] satisfies Array<{
       name: string;
       cfg: OpenClawConfig;
