@@ -205,9 +205,15 @@ function createTraceOnlyContext(endpoint: string): OpenClawPluginServiceContext 
   return createOtelContext(endpoint, { traces: true });
 }
 
+function startedSpanCall(name: string) {
+  const calls = telemetryState.tracer.startSpan.mock.calls as unknown as Array<
+    [string, { attributes?: Record<string, unknown>; startTime?: unknown }?, unknown?]
+  >;
+  return calls.find(([spanName]) => spanName === name);
+}
+
 function startedSpanOptions(name: string) {
-  const call = telemetryState.tracer.startSpan.mock.calls.find(([spanName]) => spanName === name);
-  return call?.[1] as { attributes?: Record<string, unknown>; startTime?: unknown } | undefined;
+  return startedSpanCall(name)?.[1];
 }
 
 function lastHistogramRecord(name: string) {
@@ -1263,109 +1269,68 @@ describe("diagnostics-otel service", () => {
     await flushDiagnosticEvents();
 
     const spanNames = telemetryState.tracer.startSpan.mock.calls.map((call) => call[0]);
-    expect(spanNames).toEqual(
-      expect.arrayContaining([
-        "openclaw.run",
-        "openclaw.model.call",
-        "openclaw.harness.run",
-        "openclaw.tool.execution",
-      ]),
-    );
+    expect(spanNames).toContain("openclaw.run");
+    expect(spanNames).toContain("openclaw.model.call");
+    expect(spanNames).toContain("openclaw.harness.run");
+    expect(spanNames).toContain("openclaw.tool.execution");
 
-    const runCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.run",
-    );
-    expect(runCall?.[1]).toMatchObject({
-      attributes: {
-        "openclaw.outcome": "completed",
-        "openclaw.provider": "openai",
-        "openclaw.model": "gpt-5.4",
-        "openclaw.channel": "webchat",
-      },
-      startTime: expect.any(Number),
-    });
-    expect(runCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "gen_ai.system": expect.anything(),
-        "gen_ai.request.model": expect.anything(),
-        "openclaw.runId": expect.anything(),
-        "openclaw.sessionKey": expect.anything(),
-        "openclaw.traceId": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
+    const runOptions = startedSpanOptions("openclaw.run");
+    expect(runOptions?.attributes?.["openclaw.outcome"]).toBe("completed");
+    expect(runOptions?.attributes?.["openclaw.provider"]).toBe("openai");
+    expect(runOptions?.attributes?.["openclaw.model"]).toBe("gpt-5.4");
+    expect(runOptions?.attributes?.["openclaw.channel"]).toBe("webchat");
+    expect(Object.hasOwn(runOptions?.attributes ?? {}, "gen_ai.system")).toBe(false);
+    expect(Object.hasOwn(runOptions?.attributes ?? {}, "gen_ai.request.model")).toBe(false);
+    expect(Object.hasOwn(runOptions?.attributes ?? {}, "openclaw.runId")).toBe(false);
+    expect(Object.hasOwn(runOptions?.attributes ?? {}, "openclaw.sessionKey")).toBe(false);
+    expect(Object.hasOwn(runOptions?.attributes ?? {}, "openclaw.traceId")).toBe(false);
+    expect(runOptions?.startTime).toBeTypeOf("number");
 
-    const modelCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.model.call",
-    );
-    expect(modelCall?.[1]).toMatchObject({
-      attributes: {
-        "gen_ai.system": "openai",
-        "gen_ai.request.model": "gpt-5.4",
-        "gen_ai.operation.name": "text_completion",
-      },
-    });
-    expect(modelCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "gen_ai.provider.name": expect.anything(),
-        "openclaw.callId": expect.anything(),
-        "openclaw.runId": expect.anything(),
-        "openclaw.sessionKey": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
+    const modelCall = startedSpanCall("openclaw.model.call");
+    const modelOptions = modelCall?.[1];
+    expect(modelOptions?.attributes?.["gen_ai.system"]).toBe("openai");
+    expect(modelOptions?.attributes?.["gen_ai.request.model"]).toBe("gpt-5.4");
+    expect(modelOptions?.attributes?.["gen_ai.operation.name"]).toBe("text_completion");
+    expect(Object.hasOwn(modelOptions?.attributes ?? {}, "gen_ai.provider.name")).toBe(false);
+    expect(Object.hasOwn(modelOptions?.attributes ?? {}, "openclaw.callId")).toBe(false);
+    expect(Object.hasOwn(modelOptions?.attributes ?? {}, "openclaw.runId")).toBe(false);
+    expect(Object.hasOwn(modelOptions?.attributes ?? {}, "openclaw.sessionKey")).toBe(false);
+    expect(modelOptions?.startTime).toBeTypeOf("number");
     expect(modelCall?.[2]).toBeUndefined();
 
-    const harnessCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.harness.run",
+    const harnessCall = startedSpanCall("openclaw.harness.run");
+    const harnessOptions = harnessCall?.[1];
+    expect(harnessOptions?.attributes?.["openclaw.harness.id"]).toBe("codex");
+    expect(harnessOptions?.attributes?.["openclaw.harness.plugin"]).toBe("codex-plugin");
+    expect(harnessOptions?.attributes?.["openclaw.outcome"]).toBe("completed");
+    expect(harnessOptions?.attributes?.["openclaw.provider"]).toBe("codex");
+    expect(harnessOptions?.attributes?.["openclaw.model"]).toBe("gpt-5.4");
+    expect(harnessOptions?.attributes?.["openclaw.channel"]).toBe("qa");
+    expect(harnessOptions?.attributes?.["openclaw.harness.result_classification"]).toBe(
+      "reasoning-only",
     );
-    expect(harnessCall?.[1]).toMatchObject({
-      attributes: {
-        "openclaw.harness.id": "codex",
-        "openclaw.harness.plugin": "codex-plugin",
-        "openclaw.outcome": "completed",
-        "openclaw.provider": "codex",
-        "openclaw.model": "gpt-5.4",
-        "openclaw.channel": "qa",
-        "openclaw.harness.result_classification": "reasoning-only",
-        "openclaw.harness.yield_detected": true,
-        "openclaw.harness.items.started": 3,
-        "openclaw.harness.items.completed": 2,
-        "openclaw.harness.items.active": 1,
-      },
-      startTime: expect.any(Number),
-    });
-    expect(harnessCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "openclaw.runId": expect.anything(),
-        "openclaw.sessionId": expect.anything(),
-        "openclaw.sessionKey": expect.anything(),
-        "openclaw.traceId": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
+    expect(harnessOptions?.attributes?.["openclaw.harness.yield_detected"]).toBe(true);
+    expect(harnessOptions?.attributes?.["openclaw.harness.items.started"]).toBe(3);
+    expect(harnessOptions?.attributes?.["openclaw.harness.items.completed"]).toBe(2);
+    expect(harnessOptions?.attributes?.["openclaw.harness.items.active"]).toBe(1);
+    expect(Object.hasOwn(harnessOptions?.attributes ?? {}, "openclaw.runId")).toBe(false);
+    expect(Object.hasOwn(harnessOptions?.attributes ?? {}, "openclaw.sessionId")).toBe(false);
+    expect(Object.hasOwn(harnessOptions?.attributes ?? {}, "openclaw.sessionKey")).toBe(false);
+    expect(Object.hasOwn(harnessOptions?.attributes ?? {}, "openclaw.traceId")).toBe(false);
+    expect(harnessOptions?.startTime).toBeTypeOf("number");
     expect(harnessCall?.[2]).toBeUndefined();
 
-    const toolCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.tool.execution",
-    );
-    expect(toolCall?.[1]).toMatchObject({
-      attributes: {
-        "openclaw.toolName": "read",
-        "openclaw.errorCategory": "TypeError",
-        "openclaw.errorCode": "429",
-        "openclaw.tool.params.kind": "object",
-        "gen_ai.tool.name": "read",
-      },
-    });
-    expect(toolCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "openclaw.toolCallId": expect.anything(),
-        "openclaw.runId": expect.anything(),
-        "openclaw.sessionKey": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
+    const toolCall = startedSpanCall("openclaw.tool.execution");
+    const toolOptions = toolCall?.[1];
+    expect(toolOptions?.attributes?.["openclaw.toolName"]).toBe("read");
+    expect(toolOptions?.attributes?.["openclaw.errorCategory"]).toBe("TypeError");
+    expect(toolOptions?.attributes?.["openclaw.errorCode"]).toBe("429");
+    expect(toolOptions?.attributes?.["openclaw.tool.params.kind"]).toBe("object");
+    expect(toolOptions?.attributes?.["gen_ai.tool.name"]).toBe("read");
+    expect(Object.hasOwn(toolOptions?.attributes ?? {}, "openclaw.toolCallId")).toBe(false);
+    expect(Object.hasOwn(toolOptions?.attributes ?? {}, "openclaw.runId")).toBe(false);
+    expect(Object.hasOwn(toolOptions?.attributes ?? {}, "openclaw.sessionKey")).toBe(false);
+    expect(toolOptions?.startTime).toBeTypeOf("number");
     expect(toolCall?.[2]).toBeUndefined();
 
     expect(
