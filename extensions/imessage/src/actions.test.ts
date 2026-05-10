@@ -722,11 +722,16 @@ describe("imessage message actions", () => {
         },
       } as never);
 
-      expect(runtimeMock.sendRichMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          effectId: "com.apple.MobileSMS.expressivesend.impact",
-        }),
-      );
+      expect(runtimeMock.sendRichMessage.mock.calls).toStrictEqual([
+        [
+          {
+            chatGuid: "iMessage;+;chat0000",
+            text: "boom",
+            effectId: "com.apple.MobileSMS.expressivesend.impact",
+            options: imsgOptions("iMessage;+;chat0000"),
+          },
+        ],
+      ]);
     });
 
     it.each([
@@ -759,9 +764,16 @@ describe("imessage message actions", () => {
           },
         } as never);
 
-        expect(runtimeMock.sendRichMessage).toHaveBeenCalledWith(
-          expect.objectContaining({ effectId: canonical }),
-        );
+        expect(runtimeMock.sendRichMessage.mock.calls).toStrictEqual([
+          [
+            {
+              chatGuid: "iMessage;+;chat0000",
+              text: "boom",
+              effectId: canonical,
+              options: imsgOptions("iMessage;+;chat0000"),
+            },
+          ],
+        ]);
       },
     );
 
@@ -810,13 +822,17 @@ describe("imessage message actions", () => {
         },
       } as never);
 
-      expect(runtimeMock.sendAttachment).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chatGuid: "iMessage;+;chat0000",
-          filename: "photo.jpg",
-          asVoice: true,
-        }),
-      );
+      expect(runtimeMock.sendAttachment.mock.calls).toStrictEqual([
+        [
+          {
+            chatGuid: "iMessage;+;chat0000",
+            buffer: Uint8Array.from(Buffer.from("image")),
+            filename: "photo.jpg",
+            asVoice: true,
+            options: imsgOptions("iMessage;+;chat0000"),
+          },
+        ],
+      ]);
       expect(result?.details).toEqual({ ok: true, messageId: "sent-guid" });
     },
   );
