@@ -3060,20 +3060,11 @@ describe("runCodexAppServerAttempt", () => {
     await completeTurn({ threadId: "thread-1", turnId: "turn-1" });
     await run;
 
-    expect(requests).toEqual(
-      expect.arrayContaining([
-        {
-          method: "thread/start",
-          params: expect.objectContaining({
-            config: expect.objectContaining({
-              apps: expect.objectContaining({
-                "google-calendar-app": expect.objectContaining({ enabled: true }),
-              }),
-            }),
-          }),
-        },
-      ]),
-    );
+    const threadStart = requests.find((entry) => entry.method === "thread/start");
+    const threadStartParams = threadStart?.params as
+      | { config?: { apps?: Record<string, { enabled?: boolean }> } }
+      | undefined;
+    expect(threadStartParams?.config?.apps?.["google-calendar-app"]?.enabled).toBe(true);
     expect(requests.map((entry) => entry.method)).not.toContain("app/list");
   });
 
@@ -3219,20 +3210,11 @@ describe("runCodexAppServerAttempt", () => {
     await run;
 
     expect(requests.map((entry) => entry.method)).toContain("app/list");
-    expect(requests).toEqual(
-      expect.arrayContaining([
-        {
-          method: "thread/start",
-          params: expect.objectContaining({
-            config: expect.objectContaining({
-              apps: expect.objectContaining({
-                "google-calendar-app": expect.objectContaining({ enabled: true }),
-              }),
-            }),
-          }),
-        },
-      ]),
-    );
+    const threadStart = requests.find((entry) => entry.method === "thread/start");
+    const threadStartParams = threadStart?.params as
+      | { config?: { apps?: Record<string, { enabled?: boolean }> } }
+      | undefined;
+    expect(threadStartParams?.config?.apps?.["google-calendar-app"]?.enabled).toBe(true);
   });
 
   it("times out app-server startup before thread setup can hang forever", async () => {
