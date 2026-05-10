@@ -208,7 +208,7 @@ describe("createConfiguredOllamaCompatStreamWrapper", () => {
         };
         expect(requestBody.think).toBe(false);
         expect(requestBody.options?.think).toBeUndefined();
-        expect(requestBody.options?.num_ctx).toBe(131072);
+        expect(requestBody.options?.num_ctx).toBeUndefined();
       },
     );
   });
@@ -310,7 +310,7 @@ describe("createConfiguredOllamaCompatStreamWrapper", () => {
         };
         expect(requestBody.think).toBe("low");
         expect(requestBody.options?.think).toBeUndefined();
-        expect(requestBody.options?.num_ctx).toBe(131072);
+        expect(requestBody.options?.num_ctx).toBeUndefined();
       },
     );
   });
@@ -405,7 +405,7 @@ describe("createConfiguredOllamaCompatStreamWrapper", () => {
         };
         expect(requestBody.think).toBe("high");
         expect(requestBody.options?.think).toBeUndefined();
-        expect(requestBody.options?.num_ctx).toBe(131072);
+        expect(requestBody.options?.num_ctx).toBeUndefined();
       },
     );
   });
@@ -1609,9 +1609,7 @@ describe("createOllamaStreamFn", () => {
         if (!requestBody.options) {
           throw new Error("Expected Ollama request options");
         }
-        // Catalog `contextWindow` flows through as `num_ctx` so the request
-        // does not silently truncate to Ollama's small Modelfile default.
-        expect(requestBody.options?.num_ctx).toBe(131072);
+        expect(requestBody.options?.num_ctx).toBeUndefined();
         expect(requestBody.options.num_predict).toBe(123);
       },
     );
@@ -1694,7 +1692,7 @@ describe("createOllamaStreamFn", () => {
     );
   });
 
-  it("falls back to catalog contextWindow as num_ctx when params.num_ctx is unset", async () => {
+  it("does not fall back to catalog contextWindow as native Ollama num_ctx", async () => {
     await withMockNdjsonFetch(
       [
         '{"model":"m","created_at":"t","message":{"role":"assistant","content":"ok"},"done":false}',
@@ -1715,12 +1713,12 @@ describe("createOllamaStreamFn", () => {
         const requestBody = JSON.parse(requestInit.body) as {
           options?: { num_ctx?: number };
         };
-        expect(requestBody.options?.num_ctx).toBe(32768);
+        expect(requestBody.options?.num_ctx).toBeUndefined();
       },
     );
   });
 
-  it("falls back to catalog maxTokens as num_ctx when contextWindow is absent", async () => {
+  it("does not fall back to catalog maxTokens as native Ollama num_ctx", async () => {
     await withMockNdjsonFetch(
       [
         '{"model":"m","created_at":"t","message":{"role":"assistant","content":"ok"},"done":false}',
@@ -1744,7 +1742,7 @@ describe("createOllamaStreamFn", () => {
         const requestBody = JSON.parse(requestInit.body) as {
           options?: { num_ctx?: number };
         };
-        expect(requestBody.options?.num_ctx).toBe(65536);
+        expect(requestBody.options?.num_ctx).toBeUndefined();
       },
     );
   });
