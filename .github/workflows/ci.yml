@@ -520,6 +520,8 @@ jobs:
           install-bun: "false"
 
       - name: Build dist
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: pnpm build:ci-artifacts
 
       - name: Build Control UI
