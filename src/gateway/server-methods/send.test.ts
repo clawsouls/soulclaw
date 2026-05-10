@@ -186,9 +186,19 @@ function deliveryCall(index = 0): Record<string, any> | undefined {
 
 function firstRespondCall(respond: ReturnType<typeof vi.fn>) {
   const calls = respond.mock.calls as unknown as Array<
-    [boolean, Record<string, any>, unknown, Record<string, any>]
+    [
+      boolean,
+      Record<string, any> | undefined,
+      Record<string, any> | undefined,
+      Record<string, any> | undefined,
+    ]
   >;
   return calls[0];
+}
+
+function pollCall(index = 0): Record<string, any> | undefined {
+  const calls = mocks.sendPoll.mock.calls as unknown as Array<[Record<string, any>]>;
+  return calls[index]?.[0];
 }
 
 function expectDeliverySessionMirror(params: { agentId: string; sessionKey: string }) {
@@ -315,12 +325,8 @@ describe("gateway send mirroring", () => {
       { connect: { scopes: ["operator.write"] } },
     );
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "slack",
-        gatewayClientScopes: ["operator.write"],
-      }),
-    );
+    expect(deliveryCall()?.channel).toBe("slack");
+    expect(deliveryCall()?.gatewayClientScopes).toEqual(["operator.write"]);
   });
 
   it("forwards an empty gateway scope array into outbound delivery", async () => {
@@ -336,12 +342,8 @@ describe("gateway send mirroring", () => {
       { connect: { scopes: [] } },
     );
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "slack",
-        gatewayClientScopes: [],
-      }),
-    );
+    expect(deliveryCall()?.channel).toBe("slack");
+    expect(deliveryCall()?.gatewayClientScopes).toEqual([]);
   });
 
   it("rejects empty sends when neither text nor media is present", async () => {
@@ -353,13 +355,10 @@ describe("gateway send mirroring", () => {
     });
 
     expect(mocks.deliverOutboundPayloads).not.toHaveBeenCalled();
-    expect(respond).toHaveBeenCalledWith(
-      false,
-      undefined,
-      expect.objectContaining({
-        message: expect.stringContaining("text or media is required"),
-      }),
-    );
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(false);
+    expect(response?.[1]).toBeUndefined();
+    expect(response?.[2]?.message).toContain("text or media is required");
   });
 
   it("returns actionable guidance when channel is internal webchat", async () => {
@@ -371,20 +370,11 @@ describe("gateway send mirroring", () => {
     });
 
     expect(mocks.deliverOutboundPayloads).not.toHaveBeenCalled();
-    expect(respond).toHaveBeenCalledWith(
-      false,
-      undefined,
-      expect.objectContaining({
-        message: expect.stringContaining("unsupported channel: webchat"),
-      }),
-    );
-    expect(respond).toHaveBeenCalledWith(
-      false,
-      undefined,
-      expect.objectContaining({
-        message: expect.stringContaining("Use `chat.send`"),
-      }),
-    );
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(false);
+    expect(response?.[1]).toBeUndefined();
+    expect(response?.[2]?.message).toContain("unsupported channel: webchat");
+    expect(response?.[2]?.message).toContain("Use `chat.send`");
   });
 
   it("auto-picks the single configured channel for send", async () => {
@@ -398,12 +388,11 @@ describe("gateway send mirroring", () => {
 
     expect(mocks.resolveMessageChannelSelection).toHaveBeenCalled();
     expect(mocks.deliverOutboundPayloads).toHaveBeenCalled();
-    expect(respond).toHaveBeenCalledWith(
-      true,
-      expect.objectContaining({ messageId: "m-single-send" }),
-      undefined,
-      expect.objectContaining({ channel: "slack" }),
-    );
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(true);
+    expect(response?.[1]?.messageId).toBe("m-single-send");
+    expect(response?.[2]).toBeUndefined();
+    expect(response?.[3]?.channel).toBe("slack");
   });
 
   it("auto-picks the single configured channel from the auto-enabled config snapshot for send", async () => {
@@ -428,12 +417,11 @@ describe("gateway send mirroring", () => {
     expect(mocks.resolveMessageChannelSelection).toHaveBeenCalledWith({
       cfg: autoEnabledConfig,
     });
-    expect(respond).toHaveBeenCalledWith(
-      true,
-      expect.objectContaining({ messageId: "m-single-send-auto" }),
-      undefined,
-      expect.objectContaining({ channel: "slack" }),
-    );
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(true);
+    expect(response?.[1]?.messageId).toBe("m-single-send-auto");
+    expect(response?.[2]).toBeUndefined();
+    expect(response?.[3]?.channel).toBe("slack");
   });
 
   it("returns invalid request when send channel selection is ambiguous", async () => {
@@ -448,13 +436,10 @@ describe("gateway send mirroring", () => {
     });
 
     expect(mocks.deliverOutboundPayloads).not.toHaveBeenCalled();
-    expect(respond).toHaveBeenCalledWith(
-      false,
-      undefined,
-      expect.objectContaining({
-        message: expect.stringContaining("Channel is required"),
-      }),
-    );
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(false);
+    expect(response?.[1]).toBeUndefined();
+    expect(response?.[2]?.message).toContain("Channel is required");
   });
 
   it("forwards gateway client scopes into outbound poll delivery", async () => {
@@ -469,13 +454,9 @@ describe("gateway send mirroring", () => {
       { connect: { scopes: ["operator.admin"] } },
     );
 
-    expect(mocks.sendPoll).toHaveBeenCalledWith(
-      expect.objectContaining({
-        cfg: expect.any(Object),
-        to: "resolved",
-        gatewayClientScopes: ["operator.admin"],
-      }),
-    );
+    expect(pollCall()?.cfg).toBeDefined();
+    expect(pollCall()?.to).toBe("resolved");
+    expect(pollCall()?.gatewayClientScopes).toEqual(["operator.admin"]);
   });
 
   it("forwards an empty gateway scope array into outbound poll delivery", async () => {
@@ -490,13 +471,9 @@ describe("gateway send mirroring", () => {
       { connect: { scopes: [] } },
     );
 
-    expect(mocks.sendPoll).toHaveBeenCalledWith(
-      expect.objectContaining({
-        cfg: expect.any(Object),
-        to: "resolved",
-        gatewayClientScopes: [],
-      }),
-    );
+    expect(pollCall()?.cfg).toBeDefined();
+    expect(pollCall()?.to).toBe("resolved");
+    expect(pollCall()?.gatewayClientScopes).toEqual([]);
   });
 
   it("includes optional poll delivery identifiers in the gateway payload", async () => {
@@ -516,20 +493,19 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-poll-rich",
     });
 
-    expect(respond).toHaveBeenCalledWith(
-      true,
-      expect.objectContaining({
-        runId: "idem-poll-rich",
-        messageId: "poll-rich",
-        channel: "slack",
-        channelId: "C123",
-        conversationId: "conv-1",
-        toJid: "jid-1",
-        pollId: "poll-meta-1",
-      }),
-      undefined,
-      expect.objectContaining({ channel: "slack" }),
-    );
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(true);
+    expect(response?.[1]).toEqual({
+      runId: "idem-poll-rich",
+      messageId: "poll-rich",
+      channel: "slack",
+      channelId: "C123",
+      conversationId: "conv-1",
+      toJid: "jid-1",
+      pollId: "poll-meta-1",
+    });
+    expect(response?.[2]).toBeUndefined();
+    expect(response?.[3]?.channel).toBe("slack");
   });
 
   it("auto-picks the single configured channel for poll", async () => {
@@ -541,9 +517,11 @@ describe("gateway send mirroring", () => {
     });
 
     expect(mocks.resolveMessageChannelSelection).toHaveBeenCalled();
-    expect(respond).toHaveBeenCalledWith(true, expect.any(Object), undefined, {
-      channel: "slack",
-    });
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(true);
+    expect(response?.[1]).toBeDefined();
+    expect(response?.[2]).toBeUndefined();
+    expect(response?.[3]).toEqual({ channel: "slack" });
   });
 
   it("returns invalid request when poll channel selection is ambiguous", async () => {
