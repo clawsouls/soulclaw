@@ -2401,18 +2401,11 @@ describe("dispatchReplyFromConfig", () => {
 
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
-    expect(sessionBindingMocks.resolveByConversation).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "discord",
-        accountId: "work",
-        conversationId: "thread-1",
-      }),
-    );
-    expect(dispatcher.sendToolResult).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: expect.stringContaining("not currently loaded"),
-      }),
-    );
+    const bindingLookup = sessionBindingMocks.resolveByConversation.mock.calls[0]?.[0];
+    expect(bindingLookup?.channel).toBe("discord");
+    expect(bindingLookup?.accountId).toBe("work");
+    expect(bindingLookup?.conversationId).toBe("thread-1");
+    expect(firstToolResultPayload(dispatcher)?.text).toContain("not currently loaded");
     expect(replyResolver).toHaveBeenCalled();
   });
 
@@ -2493,21 +2486,18 @@ describe("dispatchReplyFromConfig", () => {
       conversationId: "C123",
     });
     expect(sessionBindingMocks.touch).toHaveBeenCalledWith("binding-acp-current");
-    expect(runtime.ensureSession).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sessionKey: boundSessionKey,
-        agent: "opencode",
-      }),
-    );
-    expect(runtime.runTurn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: "continue",
-      }),
-    );
+    const ensureSessionOptions = runtime.ensureSession.mock.calls[0]?.[0] as
+      | { agent?: unknown; sessionKey?: unknown }
+      | undefined;
+    expect(ensureSessionOptions?.sessionKey).toBe(boundSessionKey);
+    expect(ensureSessionOptions?.agent).toBe("opencode");
+    const runTurnOptions = runtime.runTurn.mock.calls[0]?.[0] as { text?: unknown } | undefined;
+    expect(runTurnOptions?.text).toBe("continue");
     expect(replyResolver).not.toHaveBeenCalled();
-    expect(dispatcher.sendBlockReply).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "Bound ACP reply" }),
-    );
+    const blockPayload = (dispatcher.sendBlockReply as Mock).mock.calls[0]?.[0] as
+      | ReplyPayload
+      | undefined;
+    expect(blockPayload?.text).toBe("Bound ACP reply");
   });
 
   it("coalesces tiny ACP token deltas into normal Discord text spacing", async () => {
@@ -2567,9 +2557,10 @@ describe("dispatchReplyFromConfig", () => {
       }
     }
     expect(blockTexts).toEqual(["What do you want to work on?"]);
-    expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "What do you want to work on?" }),
-    );
+    const finalPayload = (dispatcher.sendFinalReply as Mock).mock.calls[0]?.[0] as
+      | ReplyPayload
+      | undefined;
+    expect(finalPayload?.text).toBe("What do you want to work on?");
   });
 
   it("generates final-mode TTS audio after ACP block streaming completes", async () => {
@@ -2648,19 +2639,16 @@ describe("dispatchReplyFromConfig", () => {
 
     await dispatchReplyFromConfig({ ctx, cfg: emptyConfig, dispatcher, replyResolver });
 
-    expect(replyMediaPathMocks.createReplyMediaPathNormalizer).toHaveBeenCalledWith(
-      expect.objectContaining({
-        messageProvider: "feishu",
-      }),
-    );
-    expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mediaUrl: "/tmp/openclaw-media/normalized-tts.ogg",
-        mediaUrls: ["/tmp/openclaw-media/normalized-tts.ogg"],
-        audioAsVoice: true,
-        spokenText: "Hello from block streaming.",
-      }),
-    );
+    const normalizerOptions = replyMediaPathMocks.createReplyMediaPathNormalizer.mock
+      .calls[0]?.[0] as { messageProvider?: unknown } | undefined;
+    expect(normalizerOptions?.messageProvider).toBe("feishu");
+    const finalPayload = (dispatcher.sendFinalReply as Mock).mock.calls[0]?.[0] as
+      | ReplyPayload
+      | undefined;
+    expect(finalPayload?.mediaUrl).toBe("/tmp/openclaw-media/normalized-tts.ogg");
+    expect(finalPayload?.mediaUrls).toStrictEqual(["/tmp/openclaw-media/normalized-tts.ogg"]);
+    expect(finalPayload?.audioAsVoice).toBe(true);
+    expect(finalPayload?.spokenText).toBe("Hello from block streaming.");
   });
 
   it("closes oneshot ACP sessions after the turn completes", async () => {
@@ -2702,11 +2690,8 @@ describe("dispatchReplyFromConfig", () => {
 
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher });
 
-    expect(runtime.close).toHaveBeenCalledWith(
-      expect.objectContaining({
-        reason: "oneshot-complete",
-      }),
-    );
+    const closeOptions = runtime.close.mock.calls[0]?.[0] as { reason?: unknown } | undefined;
+    expect(closeOptions?.reason).toBe("oneshot-complete");
   });
 
   it("deduplicates inbound messages by MessageSid and origin", async () => {
