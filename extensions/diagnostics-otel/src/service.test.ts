@@ -1109,31 +1109,23 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    const modelUsageCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.model.usage",
+    const modelUsageOptions = startedSpanOptions("openclaw.model.usage");
+    expect(modelUsageOptions?.attributes?.["gen_ai.operation.name"]).toBe("chat");
+    expect(modelUsageOptions?.attributes?.["gen_ai.system"]).toBe("anthropic");
+    expect(modelUsageOptions?.attributes?.["gen_ai.request.model"]).toBe("claude-sonnet-4.6");
+    expect(modelUsageOptions?.attributes?.["gen_ai.usage.input_tokens"]).toBe(150);
+    expect(modelUsageOptions?.attributes?.["gen_ai.usage.output_tokens"]).toBe(40);
+    expect(modelUsageOptions?.attributes?.["gen_ai.usage.cache_read.input_tokens"]).toBe(30);
+    expect(modelUsageOptions?.attributes?.["gen_ai.usage.cache_creation.input_tokens"]).toBe(20);
+    expect(Object.hasOwn(modelUsageOptions?.attributes ?? {}, "openclaw.sessionKey")).toBe(false);
+    expect(Object.hasOwn(modelUsageOptions?.attributes ?? {}, "openclaw.sessionId")).toBe(false);
+    expect(Object.hasOwn(modelUsageOptions?.attributes ?? {}, "gen_ai.provider.name")).toBe(false);
+    expect(Object.hasOwn(modelUsageOptions?.attributes ?? {}, "gen_ai.input.messages")).toBe(false);
+    expect(Object.hasOwn(modelUsageOptions?.attributes ?? {}, "gen_ai.output.messages")).toBe(
+      false,
     );
-    expect(modelUsageCall?.[1]).toMatchObject({
-      attributes: {
-        "gen_ai.operation.name": "chat",
-        "gen_ai.system": "anthropic",
-        "gen_ai.request.model": "claude-sonnet-4.6",
-        "gen_ai.usage.input_tokens": 150,
-        "gen_ai.usage.output_tokens": 40,
-        "gen_ai.usage.cache_read.input_tokens": 30,
-        "gen_ai.usage.cache_creation.input_tokens": 20,
-      },
-    });
-    expect(modelUsageCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "openclaw.sessionKey": expect.anything(),
-        "openclaw.sessionId": expect.anything(),
-        "gen_ai.provider.name": expect.anything(),
-        "gen_ai.input.messages": expect.anything(),
-        "gen_ai.output.messages": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
-    expect(JSON.stringify(modelUsageCall)).not.toContain("session-key");
+    expect(modelUsageOptions?.startTime).toBeTypeOf("number");
+    expect(JSON.stringify(modelUsageOptions)).not.toContain("session-key");
     await service.stop?.(ctx);
   });
 
