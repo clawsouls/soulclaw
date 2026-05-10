@@ -265,10 +265,8 @@ describe("tasks commands", () => {
       };
       expect(payload.maintenance.sessions.pruned).toBe(1);
       expect(payload.maintenance.sessions.runningCronJobs).toBe(1);
-      expect(payload.maintenance.sessions.stores[0]).toMatchObject({
-        pruned: 1,
-        preservedRunning: 1,
-      });
+      expect(payload.maintenance.sessions.stores[0]?.pruned).toBe(1);
+      expect(payload.maintenance.sessions.stores[0]?.preservedRunning).toBe(1);
 
       const updated = JSON.parse(await fs.readFile(storePath, "utf-8")) as Record<string, unknown>;
       expect(updated["agent:main:cron:done-job:run:old-run"]).toBeUndefined();
