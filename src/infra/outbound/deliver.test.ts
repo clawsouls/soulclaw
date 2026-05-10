@@ -1436,18 +1436,13 @@ describe("deliverOutboundPayloads", () => {
       },
     });
 
-    expect(results).toEqual([
-      expect.objectContaining({
-        channel: "matrix",
-        messageId: "visible",
-      }),
-    ]);
-    expect(payloadOutcomes).toEqual([
-      expect.objectContaining({
-        index: 1,
-        status: "sent",
-      }),
-    ]);
+    expect(results).toHaveLength(1);
+    expect(results[0]?.channel).toBe("matrix");
+    expect(results[0]?.messageId).toBe("visible");
+    expect(payloadOutcomes).toHaveLength(1);
+    const payloadOutcome = payloadOutcomes[0] as { index?: unknown; status?: unknown } | undefined;
+    expect(payloadOutcome?.index).toBe(1);
+    expect(payloadOutcome?.status).toBe("sent");
   });
 
   it("strips internal runtime scaffolding added by message_sending hooks before delivery", async () => {
@@ -1486,7 +1481,7 @@ describe("deliverOutboundPayloads", () => {
       payloads: [{ text: "original" }],
     });
 
-    expect(sendText).toHaveBeenCalledWith(expect.objectContaining({ text: "visible" }));
+    expect(sendText.mock.calls[0]?.[0]?.text).toBe("visible");
   });
 
   it("strips internal runtime scaffolding before adapter payload normalization copies text", async () => {
@@ -1530,14 +1525,11 @@ describe("deliverOutboundPayloads", () => {
       payloads: [{ text: "original" }],
     });
 
-    expect(sendPayload).toHaveBeenCalledWith(
-      expect.objectContaining({
-        payload: expect.objectContaining({
-          text: "visible",
-          channelData: { copiedText: "visible" },
-        }),
-      }),
-    );
+    const deliveredPayload = sendPayload.mock.calls[0]?.[0]?.payload as
+      | { channelData?: unknown; text?: unknown }
+      | undefined;
+    expect(deliveredPayload?.text).toBe("visible");
+    expect(deliveredPayload?.channelData).toStrictEqual({ copiedText: "visible" });
   });
 
   it("strips internal runtime scaffolding copied into rendered and normalized nested payloads", async () => {
@@ -1602,21 +1594,18 @@ describe("deliverOutboundPayloads", () => {
     expect(JSON.stringify(sendPayload.mock.calls[0]?.[0]?.payload)).not.toContain(
       "previous_response",
     );
-    expect(sendPayload).toHaveBeenCalledWith(
-      expect.objectContaining({
-        payload: expect.objectContaining({
-          text: "visible",
-          channelData: {
-            renderedText: "visible",
-            renderedBlocks: [{ text: "visible" }],
-            normalizedText: "visible",
-          },
-          interactive: {
-            blocks: [{ type: "text", text: "visible" }],
-          },
-        }),
-      }),
-    );
+    const deliveredPayload = sendPayload.mock.calls[0]?.[0]?.payload as
+      | { channelData?: unknown; interactive?: unknown; text?: unknown }
+      | undefined;
+    expect(deliveredPayload?.text).toBe("visible");
+    expect(deliveredPayload?.channelData).toStrictEqual({
+      renderedText: "visible",
+      renderedBlocks: [{ text: "visible" }],
+      normalizedText: "visible",
+    });
+    expect(deliveredPayload?.interactive).toStrictEqual({
+      blocks: [{ type: "text", text: "visible" }],
+    });
   });
 
   it("runs adapter after-delivery hooks with the payload delivery results", async () => {
@@ -1648,13 +1637,19 @@ describe("deliverOutboundPayloads", () => {
       payloads: [{ text: "hello" }],
     });
 
-    expect(afterDeliverPayload).toHaveBeenCalledWith(
-      expect.objectContaining({
-        target: expect.objectContaining({ channel: "matrix", to: "!room" }),
-        payload: expect.objectContaining({ text: "hello" }),
-        results: [{ channel: "matrix", messageId: "hello" }],
-      }),
-    );
+    const afterDeliveryOptions = afterDeliverPayload.mock.calls[0]?.[0] as
+      | {
+          payload?: { text?: unknown };
+          results?: unknown;
+          target?: { channel?: unknown; to?: unknown };
+        }
+      | undefined;
+    expect(afterDeliveryOptions?.target?.channel).toBe("matrix");
+    expect(afterDeliveryOptions?.target?.to).toBe("!room");
+    expect(afterDeliveryOptions?.payload?.text).toBe("hello");
+    expect(afterDeliveryOptions?.results).toStrictEqual([
+      { channel: "matrix", messageId: "hello" },
+    ]);
   });
 
   it("uses adapter-provided formatted senders and scoped media roots when available", async () => {
