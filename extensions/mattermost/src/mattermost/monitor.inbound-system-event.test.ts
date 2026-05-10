@@ -276,7 +276,26 @@ function createRuntimeCore(cfg: OpenClawConfig) {
       },
       session: {
         resolveStorePath: () => "/tmp/openclaw-test-sessions.json",
-        recordInboundSession: vi.fn(async () => {}),
+        recordInboundSession: vi.fn(
+          async (_params: {
+            createIfMissing?: unknown;
+            groupResolution?: unknown;
+            onRecordError?: unknown;
+            sessionKey?: string;
+            storePath?: string;
+            updateLastRoute?: {
+              accountId?: string;
+              channel?: string;
+              mainDmOwnerPin?: {
+                onSkip?: unknown;
+                ownerRecipient?: string;
+                senderRecipient?: string;
+              };
+              sessionKey?: string;
+              to?: string;
+            };
+          }) => {},
+        ),
         updateLastRoute: vi.fn(async () => {}),
       },
       turn: {
