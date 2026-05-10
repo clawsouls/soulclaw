@@ -845,6 +845,7 @@ async function agentCommandInternal(
     model = allowedInitialSelection.model;
     providerForAuthProfileValidation = provider;
 
+    let sessionEntryForAttempt = sessionEntry;
     if (sessionEntry) {
       const authProfileId = sessionEntry.authProfileOverride;
       if (authProfileId) {
@@ -868,7 +869,14 @@ async function agentCommandInternal(
           resolveProviderIdForAuth(candidateProvider, { config: cfg, workspaceDir }),
         );
         if (!profile || !acceptedAuthProviders.includes(profileAuthProvider ?? "")) {
-          if (sessionStore && sessionKey) {
+          if (hasExplicitRunOverride) {
+            sessionEntryForAttempt = {
+              ...entry,
+              authProfileOverride: undefined,
+              authProfileOverrideSource: undefined,
+              authProfileOverrideCompactionCount: undefined,
+            };
+          } else if (sessionStore && sessionKey) {
             await clearSessionAuthProfileOverride({
               sessionEntry: entry,
               sessionStore,
@@ -1034,7 +1042,7 @@ async function agentCommandInternal(
               modelFallbacksOverride: effectiveFallbacksOverride,
               originalProvider: provider,
               cfg,
-              sessionEntry,
+              sessionEntry: sessionEntryForAttempt,
               sessionId,
               sessionKey,
               sessionAgentId,
