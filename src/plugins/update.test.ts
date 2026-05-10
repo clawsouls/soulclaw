@@ -1648,13 +1648,9 @@ describe("updateNpmInstalledPlugins", () => {
       dryRun: true,
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@acme/demo",
-        expectedPluginId: "demo",
-        dryRun: true,
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("@acme/demo");
+    expect(npmInstallCall()?.expectedPluginId).toBe("demo");
+    expect(npmInstallCall()?.dryRun).toBe(true);
     expect(result.changed).toBe(false);
     expect(result.config).toBe(config);
     expect(result.outcomes).toEqual([
@@ -1697,12 +1693,8 @@ describe("updateNpmInstalledPlugins", () => {
       logger: { warn },
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@acme/demo",
-        expectedPluginId: "demo",
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("@acme/demo");
+    expect(npmInstallCall()?.expectedPluginId).toBe("demo");
     const message =
       'Disabled "demo" after plugin update failure; OpenClaw will continue without it. Failed to update demo: registry timeout';
     expect(warn).toHaveBeenCalledWith(message);
@@ -1961,18 +1953,8 @@ describe("updateNpmInstalledPlugins", () => {
       logger: { warn: (msg) => warnMessages.push(msg) },
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        spec: "openclaw-codex-app-server@beta",
-      }),
-    );
-    expect(installPluginFromNpmSpecMock).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        spec: "openclaw-codex-app-server",
-      }),
-    );
+    expect(npmInstallCall(0)?.spec).toBe("openclaw-codex-app-server@beta");
+    expect(npmInstallCall(1)?.spec).toBe("openclaw-codex-app-server");
     expect(warnMessages).toEqual([expect.stringContaining("has no beta npm release")]);
     expectCodexAppServerInstallState({
       result,
@@ -2011,18 +1993,8 @@ describe("updateNpmInstalledPlugins", () => {
       logger: { warn: (msg) => warnMessages.push(msg) },
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        spec: "openclaw-codex-app-server@beta",
-      }),
-    );
-    expect(installPluginFromNpmSpecMock).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        spec: "openclaw-codex-app-server",
-      }),
-    );
+    expect(npmInstallCall(0)?.spec).toBe("openclaw-codex-app-server@beta");
+    expect(npmInstallCall(1)?.spec).toBe("openclaw-codex-app-server");
     expect(warnMessages).toEqual([expect.stringContaining("failed beta npm update")]);
     expectCodexAppServerInstallState({
       result,
@@ -2126,16 +2098,12 @@ describe("updateNpmInstalledPlugins", () => {
       timeoutMs: 1_800_000,
     });
 
-    expect(installPluginFromClawHubMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "clawhub:demo",
-        baseUrl: "https://clawhub.ai",
-        expectedPluginId: "demo",
-        mode: "update",
-        timeoutMs: 1_800_000,
-      }),
-    );
-    expect(result.config.plugins?.installs?.demo).toMatchObject({
+    expect(clawHubInstallCall()?.spec).toBe("clawhub:demo");
+    expect(clawHubInstallCall()?.baseUrl).toBe("https://clawhub.ai");
+    expect(clawHubInstallCall()?.expectedPluginId).toBe("demo");
+    expect(clawHubInstallCall()?.mode).toBe("update");
+    expect(clawHubInstallCall()?.timeoutMs).toBe(1_800_000);
+    expectRecordFields(result.config.plugins?.installs?.demo, {
       source: "clawhub",
       spec: "clawhub:demo",
       installPath: "/tmp/demo",
@@ -2179,14 +2147,10 @@ describe("updateNpmInstalledPlugins", () => {
       updateChannel: "beta",
     });
 
-    expect(installPluginFromClawHubMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "clawhub:demo@beta",
-        baseUrl: "https://clawhub.ai",
-        expectedPluginId: "demo",
-      }),
-    );
-    expect(result.config.plugins?.installs?.demo).toMatchObject({
+    expect(clawHubInstallCall()?.spec).toBe("clawhub:demo@beta");
+    expect(clawHubInstallCall()?.baseUrl).toBe("https://clawhub.ai");
+    expect(clawHubInstallCall()?.expectedPluginId).toBe("demo");
+    expectRecordFields(result.config.plugins?.installs?.demo, {
       source: "clawhub",
       spec: "clawhub:demo",
       installPath: "/tmp/demo",
@@ -2226,20 +2190,10 @@ describe("updateNpmInstalledPlugins", () => {
       logger: { warn: (msg) => warnMessages.push(msg) },
     });
 
-    expect(installPluginFromClawHubMock).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        spec: "clawhub:demo@beta",
-      }),
-    );
-    expect(installPluginFromClawHubMock).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        spec: "clawhub:demo",
-      }),
-    );
+    expect(clawHubInstallCall(0)?.spec).toBe("clawhub:demo@beta");
+    expect(clawHubInstallCall(1)?.spec).toBe("clawhub:demo");
     expect(warnMessages).toEqual([expect.stringContaining("has no beta ClawHub release")]);
-    expect(result.config.plugins?.installs?.demo).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.demo, {
       source: "clawhub",
       spec: "clawhub:demo",
       installPath: "/tmp/demo",
