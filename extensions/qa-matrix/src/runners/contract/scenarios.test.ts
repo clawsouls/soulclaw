@@ -2142,60 +2142,61 @@ describe("matrix live qa scenarios", () => {
 
       const scenario = requireMatrixQaScenario("matrix-e2ee-restart-resume");
 
-      await expect(
-        runMatrixQaScenario(scenario, {
-          ...matrixQaScenarioContext(),
-          gatewayRuntimeEnv: {
-            OPENCLAW_CONFIG_PATH: gatewayConfigPath,
-            PATH: process.env.PATH,
-          },
-          outputDir,
-          restartGateway,
-          restartGatewayAfterStateMutation,
-          sutAccountId: "sut",
-          topology: {
-            defaultRoomId: "!main:matrix-qa.test",
-            defaultRoomKey: "main",
-            rooms: [
-              {
-                key: "main",
-                kind: "group",
-                memberRoles: ["driver", "observer", "sut"],
-                memberUserIds: [
-                  "@driver:matrix-qa.test",
-                  "@observer:matrix-qa.test",
-                  "@sut:matrix-qa.test",
-                ],
-                name: "Main",
-                requireMention: true,
-                roomId: "!main:matrix-qa.test",
-              },
-              {
-                encrypted: true,
-                key: matrixQaE2eeRoomKey("matrix-e2ee-restart-resume"),
-                kind: "group",
-                memberRoles: ["driver", "observer", "sut"],
-                memberUserIds: [
-                  "@driver:matrix-qa.test",
-                  "@observer:matrix-qa.test",
-                  "@sut:matrix-qa.test",
-                ],
-                name: "Restart",
-                requireMention: true,
-                roomId: "!restart:matrix-qa.test",
-              },
-            ],
-          },
-          waitGatewayAccountReady,
-        }),
-      ).resolves.toMatchObject({
-        artifacts: {
-          driverUserId: "@isolated-driver:matrix-qa.test",
-          firstDriverEventId: "$before-trigger",
-          recoveredDriverEventId: "$after-trigger",
-          roomId: "!isolated-restart:matrix-qa.test",
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        gatewayRuntimeEnv: {
+          OPENCLAW_CONFIG_PATH: gatewayConfigPath,
+          PATH: process.env.PATH,
         },
+        outputDir,
+        restartGateway,
+        restartGatewayAfterStateMutation,
+        sutAccountId: "sut",
+        topology: {
+          defaultRoomId: "!main:matrix-qa.test",
+          defaultRoomKey: "main",
+          rooms: [
+            {
+              key: "main",
+              kind: "group",
+              memberRoles: ["driver", "observer", "sut"],
+              memberUserIds: [
+                "@driver:matrix-qa.test",
+                "@observer:matrix-qa.test",
+                "@sut:matrix-qa.test",
+              ],
+              name: "Main",
+              requireMention: true,
+              roomId: "!main:matrix-qa.test",
+            },
+            {
+              encrypted: true,
+              key: matrixQaE2eeRoomKey("matrix-e2ee-restart-resume"),
+              kind: "group",
+              memberRoles: ["driver", "observer", "sut"],
+              memberUserIds: [
+                "@driver:matrix-qa.test",
+                "@observer:matrix-qa.test",
+                "@sut:matrix-qa.test",
+              ],
+              name: "Restart",
+              requireMention: true,
+              roomId: "!restart:matrix-qa.test",
+            },
+          ],
+        },
+        waitGatewayAccountReady,
       });
+      const artifacts = result.artifacts as {
+        driverUserId?: unknown;
+        firstDriverEventId?: unknown;
+        recoveredDriverEventId?: unknown;
+        roomId?: unknown;
+      };
+      expect(artifacts.driverUserId).toBe("@isolated-driver:matrix-qa.test");
+      expect(artifacts.firstDriverEventId).toBe("$before-trigger");
+      expect(artifacts.recoveredDriverEventId).toBe("$after-trigger");
+      expect(artifacts.roomId).toBe("!isolated-restart:matrix-qa.test");
 
       const restoredConfig = JSON.parse(await readFile(gatewayConfigPath, "utf8")) as {
         channels: {
@@ -2226,11 +2227,16 @@ describe("matrix live qa scenarios", () => {
         "hard-restart",
       ]);
       expect(restartGatewayAfterStateMutation).toHaveBeenCalledTimes(2);
-      expect(restartGatewayAfterStateMutation).toHaveBeenNthCalledWith(1, expect.any(Function), {
+      const restartCalls = restartGatewayAfterStateMutation.mock.calls as unknown as Array<
+        [unknown, { timeoutMs: number; waitAccountId: string }]
+      >;
+      expect(typeof restartCalls[0]?.[0]).toBe("function");
+      expect(restartCalls[0]?.[1]).toEqual({
         timeoutMs: 8_000,
         waitAccountId: "sut",
       });
-      expect(restartGatewayAfterStateMutation).toHaveBeenNthCalledWith(2, expect.any(Function), {
+      expect(typeof restartCalls[1]?.[0]).toBe("function");
+      expect(restartCalls[1]?.[1]).toEqual({
         timeoutMs: 8_000,
         waitAccountId: "sut",
       });
@@ -2243,15 +2249,12 @@ describe("matrix live qa scenarios", () => {
       });
       expect(observerJoinRoom).toHaveBeenCalledWith("!isolated-restart:matrix-qa.test");
       expect(sutJoinRoom).toHaveBeenCalledWith("!isolated-restart:matrix-qa.test");
-      expect(createMatrixQaE2eeScenarioClient).toHaveBeenCalledWith(
-        expect.objectContaining({
-          accessToken: "isolated-driver-token",
-          actorId: "driver-restart-resume",
-          deviceId: "ISOLATEDDRIVER",
-          password: "isolated-driver-password",
-          userId: "@isolated-driver:matrix-qa.test",
-        }),
-      );
+      const clientOptions = createMatrixQaE2eeScenarioClient.mock.calls[0]?.[0];
+      expect(clientOptions?.accessToken).toBe("isolated-driver-token");
+      expect(clientOptions?.actorId).toBe("driver-restart-resume");
+      expect(clientOptions?.deviceId).toBe("ISOLATEDDRIVER");
+      expect(clientOptions?.password).toBe("isolated-driver-password");
+      expect(clientOptions?.userId).toBe("@isolated-driver:matrix-qa.test");
     } finally {
       await rm(outputDir, { recursive: true, force: true });
     }
