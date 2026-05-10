@@ -821,6 +821,40 @@ describe("slackPlugin outbound", () => {
     expect(result).toEqual({ channel: "slack", messageId: "m-media-local" });
   });
 
+  it("normalizes slack button directives for direct outbound delivery", () => {
+    const normalized = slackPlugin.outbound?.normalizePayload?.({
+      cfg: {
+        channels: {
+          slack: {
+            botToken: "xoxb-test",
+            appToken: "xapp-test",
+            capabilities: { interactiveReplies: true },
+          },
+        },
+      },
+      accountId: "default",
+      payload: {
+        text: "Slack interactive minimal test\n[[slack_buttons: Test:test-value]]",
+      },
+    });
+
+    expect(normalized).toEqual({
+      text: "Slack interactive minimal test",
+      interactive: {
+        blocks: [
+          {
+            type: "text",
+            text: "Slack interactive minimal test",
+          },
+          {
+            type: "buttons",
+            buttons: [{ label: "Test", value: "test-value" }],
+          },
+        ],
+      },
+    });
+  });
+
   it("sends block payload media first, then the final block message", async () => {
     const sendSlack = vi
       .fn()
