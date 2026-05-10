@@ -1361,11 +1361,9 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-mxid-prefixed-command-block");
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        driverEventId: "$observer-command-trigger",
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as Record<string, unknown>;
+    expect(artifacts.driverEventId).toBe("$observer-command-trigger");
   });
 
   it("hot-reloads group allowlist removals inside one running Matrix gateway", async () => {
@@ -1406,39 +1404,36 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-allowlist-hot-reload");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        ...matrixQaScenarioContext(),
-        patchGatewayConfig,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              key: "main",
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "Main",
-              requireMention: true,
-              roomId: "!main:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        secondDriverEventId: "$group-removed",
-        firstReply: {
-          eventId: "$group-reply",
-          tokenMatched: true,
-        },
+    const result = await runMatrixQaScenario(scenario, {
+      ...matrixQaScenarioContext(),
+      patchGatewayConfig,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            key: "main",
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "Main",
+            requireMention: true,
+            roomId: "!main:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as {
+      firstReply?: { eventId?: unknown; tokenMatched?: unknown };
+      secondDriverEventId?: unknown;
+    };
+    expect(artifacts.secondDriverEventId).toBe("$group-removed");
+    expect(artifacts.firstReply?.eventId).toBe("$group-reply");
+    expect(artifacts.firstReply?.tokenMatched).toBe(true);
 
     expect(patchGatewayConfig).toHaveBeenCalledWith(
       {
@@ -1461,20 +1456,10 @@ describe("matrix live qa scenarios", () => {
         restartDelayMs: MATRIX_QA_HOT_RELOAD_RESTART_DELAY_MS,
       },
     );
-    expect(sendTextMessage).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        mentionUserIds: ["@sut:matrix-qa.test"],
-        roomId: "!main:matrix-qa.test",
-      }),
-    );
-    expect(sendTextMessage).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        mentionUserIds: ["@sut:matrix-qa.test"],
-        roomId: "!main:matrix-qa.test",
-      }),
-    );
+    expect(sendTextMessage.mock.calls[0]?.[0]?.mentionUserIds).toEqual(["@sut:matrix-qa.test"]);
+    expect(sendTextMessage.mock.calls[0]?.[0]?.roomId).toBe("!main:matrix-qa.test");
+    expect(sendTextMessage.mock.calls[1]?.[0]?.mentionUserIds).toEqual(["@sut:matrix-qa.test"]);
+    expect(sendTextMessage.mock.calls[1]?.[0]?.roomId).toBe("!main:matrix-qa.test");
   });
 
   it("queues a Matrix trigger during restart before proving incremental sync continues", async () => {
