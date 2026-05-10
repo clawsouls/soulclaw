@@ -2150,29 +2150,33 @@ describe("runCodexAppServerAttempt", () => {
     expect(llmInput).toHaveBeenCalledTimes(1);
     expect(llmOutput).toHaveBeenCalledTimes(1);
     expect(agentEnd).toHaveBeenCalledTimes(1);
-    expect(llmOutput).toHaveBeenCalledWith(
-      expect.objectContaining({
-        assistantTexts: [],
-        model: "gpt-5.4-codex",
-        provider: "codex",
-        resolvedRef: "codex/gpt-5.4-codex",
-        harnessId: "codex",
-        runId: "run-1",
-        sessionId: "session-1",
-      }),
-      expect.any(Object),
-    );
-    expect(agentEnd).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: false,
-        error: "turn start exploded",
-        messages: expect.arrayContaining([
-          expect.objectContaining({ role: "assistant" }),
-          expect.objectContaining({ role: "user" }),
-        ]),
-      }),
-      expect.any(Object),
-    );
+    const [llmOutputPayload] = llmOutput.mock.calls[0] as unknown as [
+      {
+        assistantTexts?: string[];
+        harnessId?: string;
+        model?: string;
+        provider?: string;
+        resolvedRef?: string;
+        runId?: string;
+        sessionId?: string;
+      },
+      unknown,
+    ];
+    expect(llmOutputPayload.assistantTexts).toEqual([]);
+    expect(llmOutputPayload.model).toBe("gpt-5.4-codex");
+    expect(llmOutputPayload.provider).toBe("codex");
+    expect(llmOutputPayload.resolvedRef).toBe("codex/gpt-5.4-codex");
+    expect(llmOutputPayload.harnessId).toBe("codex");
+    expect(llmOutputPayload.runId).toBe("run-1");
+    expect(llmOutputPayload.sessionId).toBe("session-1");
+    const [agentEndPayload] = agentEnd.mock.calls[0] as unknown as [
+      { error?: string; messages?: Array<{ role?: string }>; success?: boolean },
+      unknown,
+    ];
+    expect(agentEndPayload.success).toBe(false);
+    expect(agentEndPayload.error).toBe("turn start exploded");
+    expect(agentEndPayload.messages?.some((message) => message.role === "assistant")).toBe(true);
+    expect(agentEndPayload.messages?.some((message) => message.role === "user")).toBe(true);
   });
 
   it("fires agent_end with success false when the codex turn is aborted", async () => {
@@ -2192,12 +2196,8 @@ describe("runCodexAppServerAttempt", () => {
     const result = await run;
     expect(result.aborted).toBe(true);
     expect(agentEnd).toHaveBeenCalledTimes(1);
-    expect(agentEnd).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: false,
-      }),
-      expect.any(Object),
-    );
+    const [agentEndPayload] = agentEnd.mock.calls[0] as unknown as [{ success?: boolean }, unknown];
+    expect(agentEndPayload.success).toBe(false);
   });
 
   it("forwards queued user input and aborts the active app-server turn", async () => {
@@ -2221,32 +2221,29 @@ describe("runCodexAppServerAttempt", () => {
 
     const result = await run;
     expect(result.aborted).toBe(true);
-    expect(requests).toEqual(
-      expect.arrayContaining([
-        {
-          method: "thread/start",
-          params: expect.objectContaining({
-            model: "gpt-5.4-codex",
-            approvalPolicy: "never",
-            sandbox: "danger-full-access",
-            approvalsReviewer: "user",
-            developerInstructions: expect.stringContaining(CODEX_GPT5_BEHAVIOR_CONTRACT),
-          }),
-        },
-        {
-          method: "turn/steer",
-          params: {
-            threadId: "thread-1",
-            expectedTurnId: "turn-1",
-            input: [{ type: "text", text: "more context", text_elements: [] }],
-          },
-        },
-        {
-          method: "turn/interrupt",
-          params: { threadId: "thread-1", turnId: "turn-1" },
-        },
-      ]),
-    );
+    const threadStart = requests.find((entry) => entry.method === "thread/start");
+    const threadStartParams = threadStart?.params as
+      | {
+          approvalPolicy?: string;
+          approvalsReviewer?: string;
+          developerInstructions?: string;
+          model?: string;
+          sandbox?: string;
+        }
+      | undefined;
+    expect(threadStartParams?.model).toBe("gpt-5.4-codex");
+    expect(threadStartParams?.approvalPolicy).toBe("never");
+    expect(threadStartParams?.sandbox).toBe("danger-full-access");
+    expect(threadStartParams?.approvalsReviewer).toBe("user");
+    expect(threadStartParams?.developerInstructions).toContain(CODEX_GPT5_BEHAVIOR_CONTRACT);
+    const steer = requests.find((entry) => entry.method === "turn/steer");
+    expect(steer?.params).toEqual({
+      threadId: "thread-1",
+      expectedTurnId: "turn-1",
+      input: [{ type: "text", text: "more context", text_elements: [] }],
+    });
+    const interrupt = requests.find((entry) => entry.method === "turn/interrupt");
+    expect(interrupt?.params).toEqual({ threadId: "thread-1", turnId: "turn-1" });
   });
 
   it("batches default queued steering before sending turn/steer", async () => {
