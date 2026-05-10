@@ -2285,65 +2285,57 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-dm-reply-shape");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              key: "main",
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "Main",
-              requireMention: true,
-              roomId: "!main:matrix-qa.test",
-            },
-            {
-              key: scenarioTesting.MATRIX_QA_DRIVER_DM_ROOM_KEY,
-              kind: "dm",
-              memberRoles: ["driver", "sut"],
-              memberUserIds: ["@driver:matrix-qa.test", "@sut:matrix-qa.test"],
-              name: "DM",
-              requireMention: false,
-              roomId: "!dm:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        actorUserId: "@driver:matrix-qa.test",
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            key: "main",
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "Main",
+            requireMention: true,
+            roomId: "!main:matrix-qa.test",
+          },
+          {
+            key: scenarioTesting.MATRIX_QA_DRIVER_DM_ROOM_KEY,
+            kind: "dm",
+            memberRoles: ["driver", "sut"],
+            memberUserIds: ["@driver:matrix-qa.test", "@sut:matrix-qa.test"],
+            name: "DM",
+            requireMention: false,
+            roomId: "!dm:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as { actorUserId?: unknown };
+    expect(artifacts.actorUserId).toBe("@driver:matrix-qa.test");
 
     expect(sendTextMessage).toHaveBeenCalledWith({
       body: expect.stringContaining("reply with only this exact marker:"),
       roomId: "!dm:matrix-qa.test",
     });
-    expect(waitForRoomEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        roomId: "!dm:matrix-qa.test",
-      }),
-    );
+    expect(waitForRoomEvent.mock.calls[0]?.[0]?.roomId).toBe("!dm:matrix-qa.test");
   });
 
   it("uses room thread override scenarios against the main room", async () => {
@@ -2378,17 +2370,19 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-thread-reply-override");
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        driverEventId: "$room-thread-trigger",
-        reply: {
-          relatesTo: {
-            relType: "m.thread",
-            eventId: "$room-thread-trigger",
-          },
-        },
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as {
+      driverEventId?: unknown;
+      reply?: {
+        relatesTo?: {
+          eventId?: unknown;
+          relType?: unknown;
+        };
+      };
+    };
+    expect(artifacts.driverEventId).toBe("$room-thread-trigger");
+    expect(artifacts.reply?.relatesTo?.relType).toBe("m.thread");
+    expect(artifacts.reply?.relatesTo?.eventId).toBe("$room-thread-trigger");
   });
 
   it("runs the subagent thread spawn scenario against a child thread", async () => {
