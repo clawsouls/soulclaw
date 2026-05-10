@@ -517,6 +517,75 @@ describe("/model chat UX", () => {
     expect(reply?.text).not.toContain("missing (missing)");
   });
 
+  it("hides missing-auth direct provider rows covered by OpenRouter nested model ids", async () => {
+    const reply = await resolveModelInfoReply({
+      directives: parseInlineDirectives("/model status"),
+      provider: "openrouter",
+      model: "google/gemini-3-flash-preview",
+      defaultProvider: "openrouter",
+      defaultModel: "google/gemini-3-flash-preview",
+      cfg: {
+        commands: { text: true },
+        models: {
+          providers: {
+            openrouter: {
+              models: [{ id: "google/gemini-3-flash-preview", name: "Gemini via OpenRouter" }],
+            },
+          },
+        },
+      } as OpenClawConfig,
+      allowedModelCatalog: [
+        { provider: "google", id: "gemini-3-flash-preview", name: "Gemini 3 Flash" },
+        {
+          provider: "openrouter",
+          id: "google/gemini-3-flash-preview",
+          name: "Gemini via OpenRouter",
+        },
+      ],
+    });
+
+    expect(reply?.text).toContain("[openrouter]");
+    expect(reply?.text).toContain("openrouter/google/gemini-3-flash-preview");
+    expect(reply?.text).not.toContain("\n[google]");
+    expect(reply?.text).not.toContain("\n  • google/gemini-3-flash-preview");
+  });
+
+  it("keeps explicitly configured direct provider rows next to OpenRouter nested ids", async () => {
+    const reply = await resolveModelInfoReply({
+      directives: parseInlineDirectives("/model status"),
+      provider: "openrouter",
+      model: "google/gemini-3-flash-preview",
+      defaultProvider: "openrouter",
+      defaultModel: "google/gemini-3-flash-preview",
+      cfg: {
+        commands: { text: true },
+        models: {
+          providers: {
+            google: {
+              models: [{ id: "gemini-3-flash-preview", name: "Gemini 3 Flash" }],
+            },
+            openrouter: {
+              models: [{ id: "google/gemini-3-flash-preview", name: "Gemini via OpenRouter" }],
+            },
+          },
+        },
+      } as OpenClawConfig,
+      allowedModelCatalog: [
+        { provider: "google", id: "gemini-3-flash-preview", name: "Gemini 3 Flash" },
+        {
+          provider: "openrouter",
+          id: "google/gemini-3-flash-preview",
+          name: "Gemini via OpenRouter",
+        },
+      ],
+    });
+
+    expect(reply?.text).toContain("[google]");
+    expect(reply?.text).toContain("google/gemini-3-flash-preview");
+    expect(reply?.text).toContain("[openrouter]");
+    expect(reply?.text).toContain("openrouter/google/gemini-3-flash-preview");
+  });
+
   it("reports Codex runtime auth for OpenAI status rows", async () => {
     setAuthProfiles({
       "openai-codex:patrick@example.test": {
