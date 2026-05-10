@@ -1400,33 +1400,22 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    const failoverCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.model.failover",
-    );
-    expect(failoverCall?.[1]).toMatchObject({
-      attributes: {
-        "openclaw.provider": "anthropic",
-        "openclaw.model": "claude-opus-4-6",
-        "openclaw.failover.to_provider": "openai",
-        "openclaw.failover.to_model": "gpt-5.4",
-        "openclaw.failover.reason": "overloaded",
-        "openclaw.failover.suspended": true,
-        "openclaw.failover.cascade_depth": 1,
-        "openclaw.lane": "main",
-      },
-      startTime: expect.any(Number),
-    });
-    expect(failoverCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "openclaw.sessionId": expect.anything(),
-        "openclaw.sessionKey": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
+    const failoverOptions = startedSpanOptions("openclaw.model.failover");
+    expect(failoverOptions?.attributes?.["openclaw.provider"]).toBe("anthropic");
+    expect(failoverOptions?.attributes?.["openclaw.model"]).toBe("claude-opus-4-6");
+    expect(failoverOptions?.attributes?.["openclaw.failover.to_provider"]).toBe("openai");
+    expect(failoverOptions?.attributes?.["openclaw.failover.to_model"]).toBe("gpt-5.4");
+    expect(failoverOptions?.attributes?.["openclaw.failover.reason"]).toBe("overloaded");
+    expect(failoverOptions?.attributes?.["openclaw.failover.suspended"]).toBe(true);
+    expect(failoverOptions?.attributes?.["openclaw.failover.cascade_depth"]).toBe(1);
+    expect(failoverOptions?.attributes?.["openclaw.lane"]).toBe("main");
+    expect(Object.hasOwn(failoverOptions?.attributes ?? {}, "openclaw.sessionId")).toBe(false);
+    expect(Object.hasOwn(failoverOptions?.attributes ?? {}, "openclaw.sessionKey")).toBe(false);
+    expect(failoverOptions?.startTime).toBeTypeOf("number");
     const span = telemetryState.spans.find(
       (candidate) => candidate.name === "openclaw.model.failover",
     );
-    expect(span?.end).toHaveBeenCalledWith(expect.any(Number));
+    expect(span?.end.mock.calls[0]?.[0]).toBeTypeOf("number");
     await service.stop?.(ctx);
   });
 
@@ -1468,24 +1457,17 @@ describe("diagnostics-otel service", () => {
     const modelCallAttrs = telemetryState.tracer.startSpan.mock.calls
       .filter((call) => call[0] === "openclaw.model.call")
       .map((call) => (call[1] as { attributes?: Record<string, unknown> }).attributes);
-    expect(modelCallAttrs).toEqual([
-      expect.objectContaining({
-        "gen_ai.system": "openai",
-        "gen_ai.request.model": "gpt-5.4",
-        "gen_ai.operation.name": "text_completion",
-      }),
-      expect.objectContaining({
-        "gen_ai.system": "google",
-        "gen_ai.request.model": "gemini-2.5-flash",
-        "gen_ai.operation.name": "generate_content",
-      }),
-      expect.objectContaining({
-        "gen_ai.system": "openai",
-        "gen_ai.request.model": "gpt-5.4",
-        "gen_ai.operation.name": "chat",
-        "error.type": "TimeoutError",
-      }),
-    ]);
+    expect(modelCallAttrs).toHaveLength(3);
+    expect(modelCallAttrs[0]?.["gen_ai.system"]).toBe("openai");
+    expect(modelCallAttrs[0]?.["gen_ai.request.model"]).toBe("gpt-5.4");
+    expect(modelCallAttrs[0]?.["gen_ai.operation.name"]).toBe("text_completion");
+    expect(modelCallAttrs[1]?.["gen_ai.system"]).toBe("google");
+    expect(modelCallAttrs[1]?.["gen_ai.request.model"]).toBe("gemini-2.5-flash");
+    expect(modelCallAttrs[1]?.["gen_ai.operation.name"]).toBe("generate_content");
+    expect(modelCallAttrs[2]?.["gen_ai.system"]).toBe("openai");
+    expect(modelCallAttrs[2]?.["gen_ai.request.model"]).toBe("gpt-5.4");
+    expect(modelCallAttrs[2]?.["gen_ai.operation.name"]).toBe("chat");
+    expect(modelCallAttrs[2]?.["error.type"]).toBe("TimeoutError");
     await service.stop?.(ctx);
   });
 
