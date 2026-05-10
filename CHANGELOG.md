@@ -21,6 +21,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- OpenAI-compatible models: strip prior assistant reasoning fields from replayed Chat Completions history by default, preventing oMLX/vLLM Qwen follow-up turns from rejecting or stalling on stale `reasoning` payloads. Fixes #46637. Thanks @zipzagster and @lexhoefsloot.
 - CLI/onboarding: give non-Azure custom providers a safe generated context window and heal legacy 4k wizard entries without overwriting explicit valid small model limits, preventing first-turn compaction loops. Fixes #79428. (#79911) Thanks @Jefsky.
 - OpenAI-compatible models: add `compat.strictMessageKeys` to strip Chat Completions replay messages to `role` and `content` for strict providers that reject OpenAI-style tool and metadata keys. Fixes #50374. Thanks @choutos.
 - Ollama: stop native `/api/chat` requests from copying catalog `contextWindow` or `maxTokens` into `options.num_ctx` unless `params.num_ctx` is explicitly configured, avoiding pathological prompt-ingestion latency on local large-context models. Fixes #62267. Thanks @BenSHPD.
