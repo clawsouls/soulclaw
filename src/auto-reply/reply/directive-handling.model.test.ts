@@ -515,7 +515,7 @@ describe("/model chat UX", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as unknown as OpenClawConfig,
       allowedModelCatalog: [
         { provider: "anthropic", id: "claude-opus-4-6", name: "Claude Opus 4.5" },
         { provider: "openai", id: "gpt-4.1-mini", name: "GPT-4.1 mini" },
@@ -546,7 +546,7 @@ describe("/model chat UX", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as unknown as OpenClawConfig,
       allowedModelCatalog: [
         { provider: "google", id: "gemini-3-flash-preview", name: "Gemini 3 Flash" },
         {
@@ -584,7 +584,7 @@ describe("/model chat UX", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as unknown as OpenClawConfig,
       allowedModelCatalog: [
         { provider: "google", id: "gemini-3-flash-preview", name: "Gemini 3 Flash" },
         {
