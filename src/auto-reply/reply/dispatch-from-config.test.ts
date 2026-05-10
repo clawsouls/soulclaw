@@ -3702,13 +3702,11 @@ describe("dispatchReplyFromConfig", () => {
     });
 
     expect(replyResolver).toHaveBeenCalledTimes(1);
-    expect(diagnosticMocks.logMessageProcessed).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "whatsapp",
-        outcome: "skipped",
-        reason: "duplicate",
-      }),
-    );
+    const skippedEvent = diagnosticMocks.logMessageProcessed.mock.calls
+      .map(([event]) => event as { channel?: unknown; outcome?: unknown; reason?: unknown })
+      .find((event) => event.outcome === "skipped");
+    expect(skippedEvent?.channel).toBe("whatsapp");
+    expect(skippedEvent?.reason).toBe("duplicate");
   });
 
   it("releases inbound dedupe when dispatch fails before completion", async () => {
@@ -3750,13 +3748,11 @@ describe("dispatchReplyFromConfig", () => {
     });
 
     expect(replyResolver).toHaveBeenCalledTimes(2);
-    expect(diagnosticMocks.logMessageProcessed).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "whatsapp",
-        outcome: "error",
-        error: "Error: dispatch failed",
-      }),
-    );
+    const errorEvent = diagnosticMocks.logMessageProcessed.mock.calls
+      .map(([event]) => event as { channel?: unknown; error?: unknown; outcome?: unknown })
+      .find((event) => event.outcome === "error");
+    expect(errorEvent?.channel).toBe("whatsapp");
+    expect(errorEvent?.error).toBe("Error: dispatch failed");
   });
 
   it("poisons inbound dedupe when dispatch fails after a block reply", async () => {
@@ -3914,7 +3910,7 @@ describe("dispatchReplyFromConfig", () => {
     await dispatchReplyFromConfig({ ctx, cfg: emptyConfig, dispatcher, replyResolver });
     const finalCalls = (dispatcher.sendFinalReply as ReturnType<typeof vi.fn>).mock.calls;
     expect(finalCalls).toHaveLength(1);
-    expect(finalCalls[0][0]).toMatchObject({ text: "The answer is 42" });
+    expect((finalCalls[0]?.[0] as ReplyPayload | undefined)?.text).toBe("The answer is 42");
   });
 
   it("suppresses isReasoning payloads from block replies (generic dispatch path)", async () => {
@@ -3973,15 +3969,14 @@ describe("dispatchReplyFromConfig", () => {
     expect(blockReplySentTexts).toEqual(["Intro ", " visible"]);
     expect(blockReplySentTexts.join("")).not.toContain("[[tts");
     expect(blockReplySentTexts.join("")).not.toContain("hidden");
-    expect(ttsMocks.maybeApplyTtsToPayload).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: "final",
-        payload: { text: "Intro [[tts:text]]hidden[[/tts:text]] visible" },
-      }),
-    );
-    expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-      expect.objectContaining({ mediaUrl: "https://example.com/tts-synth.opus" }),
-    );
+    const ttsCall = ttsMocks.maybeApplyTtsToPayload.mock.calls
+      .map(([call]) => call as { kind?: unknown; payload?: ReplyPayload })
+      .find((call) => call.kind === "final");
+    expect(ttsCall?.kind).toBe("final");
+    expect(ttsCall?.payload).toEqual({ text: "Intro [[tts:text]]hidden[[/tts:text]] visible" });
+    const finalPayload = (dispatcher.sendFinalReply as ReturnType<typeof vi.fn>).mock
+      .calls[0]?.[0] as ReplyPayload | undefined;
+    expect(finalPayload?.mediaUrl).toBe("https://example.com/tts-synth.opus");
   });
 
   it("forwards generated-media block replies in WhatsApp group sessions", async () => {
@@ -4080,7 +4075,7 @@ describe("dispatchReplyFromConfig", () => {
 
     expect(onBlockReplyQueued).toHaveBeenCalledWith(
       { text: "Alpha" },
-      expect.objectContaining({ assistantMessageIndex: 7 }),
+      { assistantMessageIndex: 7 },
     );
   });
 });
@@ -4160,32 +4155,36 @@ describe("before_dispatch hook", () => {
 
     const result = await dispatchReplyFromConfig({ ctx, cfg: emptyConfig, dispatcher });
 
-    expect(hookMocks.runner.runBeforeDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        content: "command body",
-        body: "agent body",
-        channel: "telegram",
-        senderId: "signal:user:alice",
-        isGroup: true,
-        timestamp: 123,
-      }),
-      expect.objectContaining({
-        channelId: "telegram",
-        senderId: "signal:user:alice",
-      }),
-    );
+    const beforeDispatchCall = hookMocks.runner.runBeforeDispatch.mock.calls[0] as
+      | [
+          {
+            body?: unknown;
+            channel?: unknown;
+            content?: unknown;
+            isGroup?: unknown;
+            senderId?: unknown;
+            timestamp?: unknown;
+          },
+          { channelId?: unknown; senderId?: unknown },
+        ]
+      | undefined;
+    expect(beforeDispatchCall?.[0]?.content).toBe("command body");
+    expect(beforeDispatchCall?.[0]?.body).toBe("agent body");
+    expect(beforeDispatchCall?.[0]?.channel).toBe("telegram");
+    expect(beforeDispatchCall?.[0]?.senderId).toBe("signal:user:alice");
+    expect(beforeDispatchCall?.[0]?.isGroup).toBe(true);
+    expect(beforeDispatchCall?.[0]?.timestamp).toBe(123);
+    expect(beforeDispatchCall?.[1]?.channelId).toBe("telegram");
+    expect(beforeDispatchCall?.[1]?.senderId).toBe("signal:user:alice");
     expect(dispatcher.sendFinalReply).not.toHaveBeenCalled();
-    expect(mocks.routeReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "telegram",
-        to: "telegram:999",
-        payload: expect.objectContaining({
-          text: "Blocked",
-          mediaUrl: "https://example.com/tts-synth.opus",
-          audioAsVoice: true,
-        }),
-      }),
-    );
+    const routeCall = mocks.routeReply.mock.calls[0]?.[0] as
+      | { channel?: unknown; payload?: ReplyPayload; to?: unknown }
+      | undefined;
+    expect(routeCall?.channel).toBe("telegram");
+    expect(routeCall?.to).toBe("telegram:999");
+    expect(routeCall?.payload?.text).toBe("Blocked");
+    expect(routeCall?.payload?.mediaUrl).toBe("https://example.com/tts-synth.opus");
+    expect(routeCall?.payload?.audioAsVoice).toBe(true);
     expect(result.queuedFinal).toBe(true);
   });
 
@@ -4301,15 +4300,22 @@ describe("sendPolicy deny — suppress delivery, not processing (#53328)", () =>
       replyResolver: async () => ({ text: "agent reply" }),
     });
 
-    expect(hookMocks.runner.runReplyDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        isTailDispatch: true,
-        sendPolicy: "deny",
-        suppressUserDelivery: true,
-        suppressReplyLifecycle: true,
-      }),
-      expect.any(Object),
+    const tailDispatchCall = hookMocks.runner.runReplyDispatch.mock.calls.find(
+      ([event]) => (event as { isTailDispatch?: boolean }).isTailDispatch === true,
     );
+    const tailDispatchEvent = tailDispatchCall?.[0] as
+      | {
+          isTailDispatch?: unknown;
+          sendPolicy?: unknown;
+          suppressReplyLifecycle?: unknown;
+          suppressUserDelivery?: unknown;
+        }
+      | undefined;
+    expect(tailDispatchEvent?.isTailDispatch).toBe(true);
+    expect(tailDispatchEvent?.sendPolicy).toBe("deny");
+    expect(tailDispatchEvent?.suppressUserDelivery).toBe(true);
+    expect(tailDispatchEvent?.suppressReplyLifecycle).toBe(true);
+    expect(tailDispatchCall?.[1]).toBeDefined();
   });
 
   it("suppresses final reply delivery when sendPolicy is deny", async () => {
@@ -4633,15 +4639,24 @@ describe("sendPolicy deny — suppress delivery, not processing (#53328)", () =>
       }
       expect(callback).not.toHaveBeenCalled();
     }
-    expect(hookMocks.runner.runReplyDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        suppressUserDelivery: true,
-        suppressReplyLifecycle: false,
-        sourceReplyDeliveryMode: "message_tool_only",
-        sendPolicy: "allow",
-      }),
-      expect.any(Object),
+    const replyDispatchCall = hookMocks.runner.runReplyDispatch.mock.calls.find(
+      ([event]) =>
+        (event as { sourceReplyDeliveryMode?: unknown }).sourceReplyDeliveryMode ===
+        "message_tool_only",
     );
+    const replyDispatchEvent = replyDispatchCall?.[0] as
+      | {
+          sendPolicy?: unknown;
+          sourceReplyDeliveryMode?: unknown;
+          suppressReplyLifecycle?: unknown;
+          suppressUserDelivery?: unknown;
+        }
+      | undefined;
+    expect(replyDispatchEvent?.suppressUserDelivery).toBe(true);
+    expect(replyDispatchEvent?.suppressReplyLifecycle).toBe(false);
+    expect(replyDispatchEvent?.sourceReplyDeliveryMode).toBe("message_tool_only");
+    expect(replyDispatchEvent?.sendPolicy).toBe("allow");
+    expect(replyDispatchCall?.[1]).toBeDefined();
   });
 
   it("preserves hook-blocked metadata when source delivery is message-tool-only", async () => {
@@ -4817,8 +4832,8 @@ describe("sendPolicy deny — suppress delivery, not processing (#53328)", () =>
 
     expect(replyResolver).toHaveBeenCalledTimes(1);
     expect(result.queuedFinal).toBe(true);
-    expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "visible direct reply" }),
+    expect((dispatcher.sendFinalReply as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]?.text).toBe(
+      "visible direct reply",
     );
   });
 
@@ -4879,8 +4894,8 @@ describe("sendPolicy deny — suppress delivery, not processing (#53328)", () =>
 
     expect(replyResolver).toHaveBeenCalledTimes(1);
     expect(result.queuedFinal).toBe(true);
-    expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "visible fallback" }),
+    expect((dispatcher.sendFinalReply as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]?.text).toBe(
+      "visible fallback",
     );
   });
 
@@ -4915,8 +4930,8 @@ describe("sendPolicy deny — suppress delivery, not processing (#53328)", () =>
 
     expect(replyResolver).toHaveBeenCalledTimes(1);
     expect(result.queuedFinal).toBe(true);
-    expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "group policy fallback" }),
+    expect((dispatcher.sendFinalReply as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]?.text).toBe(
+      "group policy fallback",
     );
   });
 
@@ -4943,8 +4958,8 @@ describe("sendPolicy deny — suppress delivery, not processing (#53328)", () =>
 
     expect(replyResolver).toHaveBeenCalledTimes(1);
     expect(result.queuedFinal).toBe(true);
-    expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "requested fallback" }),
+    expect((dispatcher.sendFinalReply as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]?.text).toBe(
+      "requested fallback",
     );
   });
 
@@ -4972,8 +4987,8 @@ describe("sendPolicy deny — suppress delivery, not processing (#53328)", () =>
 
     expect(replyResolver).toHaveBeenCalledTimes(1);
     expect(result.queuedFinal).toBe(true);
-    expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "status reply" }),
+    expect((dispatcher.sendFinalReply as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]?.text).toBe(
+      "status reply",
     );
   });
 
@@ -4998,8 +5013,8 @@ describe("sendPolicy deny — suppress delivery, not processing (#53328)", () =>
 
     expect(replyResolver).toHaveBeenCalledTimes(1);
     expect(result.queuedFinal).toBe(true);
-    expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "final reply" }),
+    expect((dispatcher.sendFinalReply as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]?.text).toBe(
+      "final reply",
     );
   });
 });
