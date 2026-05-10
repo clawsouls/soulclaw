@@ -2433,44 +2433,46 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-subagent-thread-spawn");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        driverEventId: "$subagent-spawn-trigger",
-        subagentCompletion: {
-          eventId: "$subagent-completion",
-          relatesTo: {
-            relType: "m.thread",
-            eventId: "$subagent-thread-root",
-          },
-          tokenMatched: true,
-        },
-        subagentIntro: {
-          eventId: "$subagent-thread-root",
-        },
-        threadRootEventId: "$subagent-thread-root",
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [],
       },
     });
+    const artifacts = result.artifacts as {
+      driverEventId?: unknown;
+      subagentCompletion?: {
+        eventId?: unknown;
+        relatesTo?: {
+          eventId?: unknown;
+          relType?: unknown;
+        };
+        tokenMatched?: unknown;
+      };
+      subagentIntro?: { eventId?: unknown };
+      threadRootEventId?: unknown;
+    };
+    expect(artifacts.driverEventId).toBe("$subagent-spawn-trigger");
+    expect(artifacts.subagentCompletion?.eventId).toBe("$subagent-completion");
+    expect(artifacts.subagentCompletion?.relatesTo?.relType).toBe("m.thread");
+    expect(artifacts.subagentCompletion?.relatesTo?.eventId).toBe("$subagent-thread-root");
+    expect(artifacts.subagentCompletion?.tokenMatched).toBe(true);
+    expect(artifacts.subagentIntro?.eventId).toBe("$subagent-thread-root");
+    expect(artifacts.threadRootEventId).toBe("$subagent-thread-root");
 
     expect(sendTextMessage).toHaveBeenCalledWith({
       body: expect.stringContaining("Call sessions_spawn now for this QA check"),
@@ -2482,19 +2484,10 @@ describe("matrix live qa scenarios", () => {
       mentionUserIds: ["@sut:matrix-qa.test"],
       roomId: "!main:matrix-qa.test",
     });
-    expect(waitForRoomEvent).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        since: "driver-sync-start",
-      }),
-    );
-    expect(waitForRoomEvent).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        predicate: expect.any(Function),
-        since: "driver-sync-intro",
-      }),
-    );
+    expect(waitForRoomEvent.mock.calls[0]?.[0]?.since).toBe("driver-sync-start");
+    const completionWaitOptions = waitForRoomEvent.mock.calls[1]?.[0];
+    expect(typeof completionWaitOptions?.predicate).toBe("function");
+    expect(completionWaitOptions?.since).toBe("driver-sync-intro");
     const introPredicate = waitForRoomEvent.mock.calls[0]?.[0]?.predicate as
       | ((event: MatrixQaObservedEvent) => boolean)
       | undefined;
