@@ -660,6 +660,46 @@ describe("image tool implicit imageModel config", () => {
     });
   });
 
+  it("honors a per-call model override when no imageModel is configured", async () => {
+    await withTempAgentDir(async (agentDir) => {
+      const describeImage = vi.fn(async (params: ImageDescriptionRequest) => ({
+        text: `ok ${params.provider}/${params.model}`,
+        model: params.model,
+      }));
+      installImageUnderstandingProviderStubs({
+        id: "opencode-go",
+        capabilities: ["image"],
+        describeImage,
+      });
+      const cfg: OpenClawConfig = {
+        agents: { defaults: { model: { primary: "opencode-go/kimi-k2.6" } } },
+      };
+      const tool = createRequiredImageTool({
+        config: cfg,
+        agentDir,
+        deferAutoModelResolution: true,
+      });
+
+      const result = await tool.execute("t1", {
+        prompt: "Describe this image.",
+        image: `data:image/png;base64,${ONE_PIXEL_PNG_B64}`,
+        model: "opencode-go/mimo-v2-omni",
+      });
+
+      expect(describeImage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "opencode-go",
+          model: "mimo-v2-omni",
+        }),
+      );
+      expect(result.content).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "text", text: "ok opencode-go/mimo-v2-omni" }),
+        ]),
+      );
+    });
+  });
+
   it("pairs minimax primary with MiniMax-VL-01 (and fallbacks) when auth exists", async () => {
     await withTempAgentDir(async (agentDir) => {
       vi.stubEnv("MINIMAX_API_KEY", "minimax-test");
