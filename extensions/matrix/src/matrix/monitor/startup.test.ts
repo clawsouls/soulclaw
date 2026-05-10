@@ -159,15 +159,19 @@ describe("runMatrixStartupMaintenance", () => {
     if (!profileSyncParams) {
       throw new Error("profile sync params missing");
     }
+    const loadAvatarFromUrl = profileSyncParams.loadAvatarFromUrl;
+    if (!loadAvatarFromUrl) {
+      throw new Error("profile sync params missing loadAvatarFromUrl");
+    }
     expect(profileSyncParams).toStrictEqual({
       client: params.client,
       userId: "@bot:example.org",
       displayName: "Ops Bot",
       avatarUrl: "https://example.org/avatar.png",
-      loadAvatarFromUrl: profileSyncParams.loadAvatarFromUrl,
+      loadAvatarFromUrl,
     });
     await expect(
-      profileSyncParams.loadAvatarFromUrl("https://example.org/new-avatar.png", 123),
+      loadAvatarFromUrl("https://example.org/new-avatar.png", 123),
     ).resolves.toStrictEqual({
       buffer: Buffer.from("avatar"),
       contentType: "image/png",
@@ -180,7 +184,11 @@ describe("runMatrixStartupMaintenance", () => {
       { avatarUrl: "mxc://avatar" },
     );
     expect(params.replaceConfigFile).toHaveBeenCalledWith(updatedCfg as never);
-    expect(params.logVerboseMessage).toHaveBeenCalledWith(
+    const logVerboseMessage = params.logVerboseMessage;
+    if (!logVerboseMessage) {
+      throw new Error("expected logVerboseMessage");
+    }
+    expect(logVerboseMessage).toHaveBeenCalledWith(
       "matrix: persisted converted avatar URL for account ops (mxc://avatar)",
     );
   });
