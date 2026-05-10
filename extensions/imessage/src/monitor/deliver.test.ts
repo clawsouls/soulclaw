@@ -152,11 +152,17 @@ describe("deliverReplies", () => {
       accountId: "acct-ignored",
     });
 
-    expect(sendMessageIMessageMock).toHaveBeenCalledWith(
-      "chat_id:50",
-      "durable hello",
-      expect.objectContaining({ client }),
-    );
+    expect(sendMessageIMessageMock.mock.calls).toStrictEqual([
+      [
+        "chat_id:50",
+        "durable hello",
+        {
+          config: IMESSAGE_TEST_CFG,
+          accountId: "acct-ignored",
+          client,
+        },
+      ],
+    ]);
     expect(remember).toHaveBeenCalledWith("acct-5:chat_id:50", {
       text: "durable hello",
       messageId: "imsg-durable-1",
@@ -180,11 +186,17 @@ describe("deliverReplies", () => {
       accountId: "acct-ignored",
     });
 
-    expect(sendMessageIMessageMock).toHaveBeenCalledWith(
-      "chat_id:60",
-      "Visible reply",
-      expect.objectContaining({ client }),
-    );
+    expect(sendMessageIMessageMock.mock.calls).toStrictEqual([
+      [
+        "chat_id:60",
+        "Visible reply",
+        {
+          config: IMESSAGE_TEST_CFG,
+          accountId: "acct-ignored",
+          client,
+        },
+      ],
+    ]);
     expect(remember).toHaveBeenCalledWith("acct-6:chat_id:60", {
       text: "Visible reply",
       messageId: "imsg-durable-2",
