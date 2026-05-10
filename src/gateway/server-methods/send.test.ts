@@ -201,6 +201,20 @@ function pollCall(index = 0): Record<string, any> | undefined {
   return calls[index]?.[0];
 }
 
+function outboundRouteCall(index = 0): Record<string, any> | undefined {
+  const calls = mocks.resolveOutboundSessionRoute.mock.calls as unknown as Array<
+    [Record<string, any>]
+  >;
+  return calls[index]?.[0];
+}
+
+function ensureSessionEntryCall(index = 0): Record<string, any> | undefined {
+  const calls = mocks.ensureOutboundSessionEntry.mock.calls as unknown as Array<
+    [Record<string, any>]
+  >;
+  return calls[index]?.[0];
+}
+
 function expectDeliverySessionMirror(params: { agentId: string; sessionKey: string }) {
   const call = deliveryCall();
   expect(call?.session?.agentId).toBe(params.agentId);
@@ -536,13 +550,10 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-poll-missing-channel-ambiguous",
     });
 
-    expect(respond).toHaveBeenCalledWith(
-      false,
-      undefined,
-      expect.objectContaining({
-        message: expect.stringContaining("Channel is required"),
-      }),
-    );
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(false);
+    expect(response?.[1]).toBeUndefined();
+    expect(response?.[2]?.message).toContain("Channel is required");
   });
 
   it("does not mirror when delivery returns no results", async () => {
@@ -556,13 +567,7 @@ describe("gateway send mirroring", () => {
       sessionKey: "agent:main:main",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mirror: expect.objectContaining({
-          sessionKey: "agent:main:main",
-        }),
-      }),
-    );
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:main");
   });
 
   it("mirrors media filenames when delivery succeeds", async () => {
@@ -577,16 +582,12 @@ describe("gateway send mirroring", () => {
       sessionKey: "agent:main:main",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mirror: expect.objectContaining({
-          sessionKey: "agent:main:main",
-          text: "caption",
-          mediaUrls: ["https://example.com/files/report.pdf?sig=1"],
-          idempotencyKey: "idem-2",
-        }),
-      }),
-    );
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:main");
+    expect(deliveryCall()?.mirror?.text).toBe("caption");
+    expect(deliveryCall()?.mirror?.mediaUrls).toEqual([
+      "https://example.com/files/report.pdf?sig=1",
+    ]);
+    expect(deliveryCall()?.mirror?.idempotencyKey).toBe("idem-2");
   });
 
   it("mirrors MEDIA tags as attachments", async () => {
@@ -600,15 +601,9 @@ describe("gateway send mirroring", () => {
       sessionKey: "agent:main:main",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mirror: expect.objectContaining({
-          sessionKey: "agent:main:main",
-          text: "Here",
-          mediaUrls: ["https://example.com/image.png"],
-        }),
-      }),
-    );
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:main");
+    expect(deliveryCall()?.mirror?.text).toBe("Here");
+    expect(deliveryCall()?.mirror?.mediaUrls).toEqual(["https://example.com/image.png"]);
   });
 
   it("lowercases provided session keys for mirroring", async () => {
@@ -622,13 +617,7 @@ describe("gateway send mirroring", () => {
       sessionKey: "agent:main:slack:channel:C123",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mirror: expect.objectContaining({
-          sessionKey: "agent:main:slack:channel:c123",
-        }),
-      }),
-    );
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:slack:channel:c123");
   });
 
   it("derives a target session key when none is provided", async () => {
@@ -641,14 +630,8 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-4",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mirror: expect.objectContaining({
-          sessionKey: "agent:main:slack:channel:resolved",
-          agentId: "main",
-        }),
-      }),
-    );
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:slack:channel:resolved");
+    expect(deliveryCall()?.mirror?.agentId).toBe("main");
   });
 
   it("uses explicit agentId for delivery when sessionKey is not provided", async () => {
@@ -662,18 +645,10 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-agent-explicit",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        session: expect.objectContaining({
-          agentId: "work",
-          key: "agent:work:slack:channel:resolved",
-        }),
-        mirror: expect.objectContaining({
-          sessionKey: "agent:work:slack:channel:resolved",
-          agentId: "work",
-        }),
-      }),
-    );
+    expect(deliveryCall()?.session?.agentId).toBe("work");
+    expect(deliveryCall()?.session?.key).toBe("agent:work:slack:channel:resolved");
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:work:slack:channel:resolved");
+    expect(deliveryCall()?.mirror?.agentId).toBe("work");
   });
 
   it("uses sessionKey agentId when explicit agentId is omitted", async () => {
@@ -712,22 +687,18 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-matrix-session-route",
     });
 
-    expect(mocks.resolveOutboundSessionRoute).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "matrix",
-        target: "resolved",
-        currentSessionKey: "agent:main:matrix:channel:!dm:example.org",
-      }),
+    expect(outboundRouteCall()?.channel).toBe("matrix");
+    expect(outboundRouteCall()?.target).toBe("resolved");
+    expect(outboundRouteCall()?.currentSessionKey).toBe(
+      "agent:main:matrix:channel:!dm:example.org",
     );
-    expect(mocks.ensureOutboundSessionEntry).toHaveBeenCalledWith(
-      expect.objectContaining({
-        route: expect.objectContaining({
-          sessionKey: "agent:main:matrix:channel:!dm:example.org",
-          baseSessionKey: "agent:main:matrix:channel:!dm:example.org",
-          to: "room:!dm:example.org",
-        }),
-      }),
+    expect(ensureSessionEntryCall()?.route?.sessionKey).toBe(
+      "agent:main:matrix:channel:!dm:example.org",
     );
+    expect(ensureSessionEntryCall()?.route?.baseSessionKey).toBe(
+      "agent:main:matrix:channel:!dm:example.org",
+    );
+    expect(ensureSessionEntryCall()?.route?.to).toBe("room:!dm:example.org");
     expectDeliverySessionMirror({
       agentId: "main",
       sessionKey: "agent:main:matrix:channel:!dm:example.org",
@@ -747,18 +718,10 @@ describe("gateway send mirroring", () => {
     });
 
     expect(mocks.ensureOutboundSessionEntry).not.toHaveBeenCalled();
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        session: expect.objectContaining({
-          agentId: "work",
-          key: "agent:work:slack:channel:c1",
-        }),
-        mirror: expect.objectContaining({
-          sessionKey: "agent:work:slack:channel:c1",
-          agentId: "work",
-        }),
-      }),
-    );
+    expect(deliveryCall()?.session?.agentId).toBe("work");
+    expect(deliveryCall()?.session?.key).toBe("agent:work:slack:channel:c1");
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:work:slack:channel:c1");
+    expect(deliveryCall()?.mirror?.agentId).toBe("work");
   });
 
   it("prefers explicit agentId over sessionKey agent for delivery and mirror", async () => {
@@ -773,18 +736,10 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-agent-precedence",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        session: expect.objectContaining({
-          agentId: "work",
-          key: "agent:main:slack:channel:c1",
-        }),
-        mirror: expect.objectContaining({
-          sessionKey: "agent:main:slack:channel:c1",
-          agentId: "work",
-        }),
-      }),
-    );
+    expect(deliveryCall()?.session?.agentId).toBe("work");
+    expect(deliveryCall()?.session?.key).toBe("agent:main:slack:channel:c1");
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:slack:channel:c1");
+    expect(deliveryCall()?.mirror?.agentId).toBe("work");
   });
 
   it("ignores blank explicit agentId and falls back to sessionKey agent", async () => {
@@ -816,11 +771,7 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-thread",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        threadId: "1710000000.9999",
-      }),
-    );
+    expect(deliveryCall()?.threadId).toBe("1710000000.9999");
   });
 
   it("updates mirror session keys and delivery thread ids when Slack routing derives a thread", async () => {
@@ -843,22 +794,14 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-thread-derived",
     });
 
-    expect(mocks.ensureOutboundSessionEntry).toHaveBeenCalledWith(
-      expect.objectContaining({
-        route: expect.objectContaining({
-          sessionKey: "agent:main:slack:channel:c1:thread:1710000000.9999",
-          baseSessionKey: "agent:main:slack:channel:c1",
-          threadId: "1710000000.9999",
-        }),
-      }),
+    expect(ensureSessionEntryCall()?.route?.sessionKey).toBe(
+      "agent:main:slack:channel:c1:thread:1710000000.9999",
     );
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        threadId: "1710000000.9999",
-        mirror: expect.objectContaining({
-          sessionKey: "agent:main:slack:channel:c1:thread:1710000000.9999",
-        }),
-      }),
+    expect(ensureSessionEntryCall()?.route?.baseSessionKey).toBe("agent:main:slack:channel:c1");
+    expect(ensureSessionEntryCall()?.route?.threadId).toBe("1710000000.9999");
+    expect(deliveryCall()?.threadId).toBe("1710000000.9999");
+    expect(deliveryCall()?.mirror?.sessionKey).toBe(
+      "agent:main:slack:channel:c1:thread:1710000000.9999",
     );
   });
 
@@ -883,17 +826,9 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-thread-mismatch",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        threadId: "1710000000.9999",
-        session: expect.objectContaining({
-          key: "agent:main:slack:channel:c1",
-        }),
-        mirror: expect.objectContaining({
-          sessionKey: "agent:main:slack:channel:c1",
-        }),
-      }),
-    );
+    expect(deliveryCall()?.threadId).toBe("1710000000.9999");
+    expect(deliveryCall()?.session?.key).toBe("agent:main:slack:channel:c1");
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:slack:channel:c1");
   });
 
   it("preserves derived thread delivery for existing thread-scoped Slack session keys", async () => {
@@ -916,14 +851,8 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-thread-session",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        threadId: "1710000000.9999",
-        session: expect.objectContaining({
-          key: "agent:main:slack:channel:c1:thread:1710000000.9999",
-        }),
-      }),
-    );
+    expect(deliveryCall()?.threadId).toBe("1710000000.9999");
+    expect(deliveryCall()?.session?.key).toBe("agent:main:slack:channel:c1:thread:1710000000.9999");
   });
 
   it("preserves numeric derived thread ids for non-Slack channels", async () => {
@@ -945,11 +874,7 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-topic-derived",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        threadId: 77,
-      }),
-    );
+    expect(deliveryCall()?.threadId).toBe(77);
   });
 
   it("returns invalid request when outbound target resolution fails", async () => {
@@ -966,16 +891,11 @@ describe("gateway send mirroring", () => {
     });
 
     expect(mocks.deliverOutboundPayloads).not.toHaveBeenCalled();
-    expect(respond).toHaveBeenCalledWith(
-      false,
-      undefined,
-      expect.objectContaining({
-        message: expect.stringContaining("target not found"),
-      }),
-      expect.objectContaining({
-        channel: "slack",
-      }),
-    );
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(false);
+    expect(response?.[1]).toBeUndefined();
+    expect(response?.[2]?.message).toContain("target not found");
+    expect(response?.[3]?.channel).toBe("slack");
   });
 
   it("recovers cold plugin resolution for threaded sends", async () => {
@@ -997,19 +917,14 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-cold-thread",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "slack",
-        to: "123",
-        threadId: "1710000000.9999",
-      }),
-    );
-    expect(respond).toHaveBeenCalledWith(
-      true,
-      expect.objectContaining({ messageId: "m-threaded" }),
-      undefined,
-      expect.objectContaining({ channel: "slack" }),
-    );
+    expect(deliveryCall()?.channel).toBe("slack");
+    expect(deliveryCall()?.to).toBe("123");
+    expect(deliveryCall()?.threadId).toBe("1710000000.9999");
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(true);
+    expect(response?.[1]?.messageId).toBe("m-threaded");
+    expect(response?.[2]).toBeUndefined();
+    expect(response?.[3]?.channel).toBe("slack");
   });
 
   it("forwards replyToId on gateway sends", async () => {
@@ -1026,26 +941,17 @@ describe("gateway send mirroring", () => {
       idempotencyKey: "idem-reply-to",
     });
 
-    expect(mocks.deliverOutboundPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "slack",
-        to: "123",
-        replyToId: "wamid.42",
-      }),
-    );
-    expect(mocks.resolveOutboundSessionRoute).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "slack",
-        target: "123",
-        replyToId: "wamid.42",
-      }),
-    );
-    expect(respond).toHaveBeenCalledWith(
-      true,
-      expect.objectContaining({ messageId: "m-reply" }),
-      undefined,
-      expect.objectContaining({ channel: "slack" }),
-    );
+    expect(deliveryCall()?.channel).toBe("slack");
+    expect(deliveryCall()?.to).toBe("123");
+    expect(deliveryCall()?.replyToId).toBe("wamid.42");
+    expect(outboundRouteCall()?.channel).toBe("slack");
+    expect(outboundRouteCall()?.target).toBe("123");
+    expect(outboundRouteCall()?.replyToId).toBe("wamid.42");
+    const response = firstRespondCall(respond);
+    expect(response?.[0]).toBe(true);
+    expect(response?.[1]?.messageId).toBe("m-reply");
+    expect(response?.[2]).toBeUndefined();
+    expect(response?.[3]?.channel).toBe("slack");
   });
 
   it("dispatches message actions through the gateway for plugin-owned channels", async () => {
