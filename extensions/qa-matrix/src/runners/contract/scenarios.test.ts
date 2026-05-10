@@ -69,7 +69,12 @@ function requireMatrixQaScenario(id: string): (typeof MATRIX_QA_SCENARIOS)[numbe
 }
 
 async function expectPathMissing(targetPath: string): Promise<void> {
-  await expect(stat(targetPath)).rejects.toMatchObject({ code: "ENOENT" });
+  try {
+    await stat(targetPath);
+    throw new Error(`Expected missing path: ${targetPath}`);
+  } catch (error) {
+    expect((error as { code?: unknown }).code).toBe("ENOENT");
+  }
 }
 
 function matrixQaScenarioContext(): MatrixQaScenarioContext {
@@ -446,22 +451,18 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-e2ee-device-sas-verification");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        ...matrixQaScenarioContext(),
-        driverDeviceId: "DRIVERDEVICE",
-        driverPassword: "driver-password",
-        observerDeviceId: "OBSERVERDEVICE",
-        observerPassword: "observer-password",
-        outputDir: "/tmp/matrix-qa",
-        timeoutMs: 80,
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        driverTrustsObserverDevice: true,
-        observerTrustsDriverDevice: true,
-      },
+    const result = await runMatrixQaScenario(scenario, {
+      ...matrixQaScenarioContext(),
+      driverDeviceId: "DRIVERDEVICE",
+      driverPassword: "driver-password",
+      observerDeviceId: "OBSERVERDEVICE",
+      observerPassword: "observer-password",
+      outputDir: "/tmp/matrix-qa",
+      timeoutMs: 80,
     });
+    const artifacts = result.artifacts as Record<string, unknown>;
+    expect(artifacts.driverTrustsObserverDevice).toBe(true);
+    expect(artifacts.observerTrustsDriverDevice).toBe(true);
 
     expect(driverGetDeviceVerificationStatus).toHaveBeenCalledTimes(2);
     expect(driverStop).toHaveBeenCalledTimes(1);
@@ -593,12 +594,10 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-approval-thread-target");
 
-    await expect(runMatrixQaScenario(scenario, context)).resolves.toMatchObject({
-      artifacts: {
-        reactionEventId: "$driver-approval-reaction",
-        reactionTargetEventId: approvalEventId,
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, context);
+    const artifacts = result.artifacts as Record<string, unknown>;
+    expect(artifacts.reactionEventId).toBe("$driver-approval-reaction");
+    expect(artifacts.reactionTargetEventId).toBe(approvalEventId);
     expect(waitForRoomEvent).toHaveBeenCalledTimes(3);
     expect(gatewayCall.mock.calls.at(-1)?.[0]).toBe("exec.approval.waitDecision");
   });
@@ -691,18 +690,20 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-approval-channel-target-both");
 
-    await expect(runMatrixQaScenario(scenario, context)).resolves.toMatchObject({
-      artifacts: {
-        approvals: [
-          { eventId: "$approval-both-channel", roomId: "!main:matrix-qa.test" },
-          { eventId: "$approval-both-dm", roomId: "!driver-shared-dm:matrix-qa.test" },
-        ],
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, context);
+    const artifacts = result.artifacts as {
+      approvals?: Array<{ eventId?: string; roomId?: string }>;
+    };
+    expect(artifacts.approvals?.[0]?.eventId).toBe("$approval-both-channel");
+    expect(artifacts.approvals?.[0]?.roomId).toBe("!main:matrix-qa.test");
+    expect(artifacts.approvals?.[1]?.eventId).toBe("$approval-both-dm");
+    expect(artifacts.approvals?.[1]?.roomId).toBe("!driver-shared-dm:matrix-qa.test");
 
     expect(waitForRoomEvent).toHaveBeenCalledTimes(1);
     expect(gatewayCall.mock.calls.at(-1)?.[0]).toBe("exec.approval.resolve");
-    expect(gatewayCall.mock.calls.at(-1)?.[2]).toMatchObject({ expectFinal: false });
+    expect((gatewayCall.mock.calls.at(-1)?.[2] as { expectFinal?: unknown }).expectFinal).toBe(
+      false,
+    );
     expect(createMatrixQaClient).toHaveBeenCalledTimes(3);
   });
 
