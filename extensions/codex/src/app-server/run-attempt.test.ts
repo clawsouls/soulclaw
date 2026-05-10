@@ -3822,15 +3822,14 @@ describe("runCodexAppServerAttempt", () => {
       },
     });
 
-    expect(request.mock.calls).toEqual([
-      ["thread/resume", expect.not.objectContaining({ config: expect.anything() })],
-    ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
-      threadId: "thread-existing",
-      pluginAppsFingerprint: "plugin-apps-config-1",
-      pluginAppsInputFingerprint: "plugin-apps-input-1",
-      pluginAppPolicyContext,
-    });
+    const requestCalls = request.mock.calls as unknown as Array<[string, { config?: unknown }]>;
+    expect(requestCalls.map(([method]) => method)).toEqual(["thread/resume"]);
+    expect("config" in (requestCalls[0]?.[1] ?? {})).toBe(false);
+    const binding = await readCodexAppServerBinding(sessionFile);
+    expect(binding?.threadId).toBe("thread-existing");
+    expect(binding?.pluginAppsFingerprint).toBe("plugin-apps-config-1");
+    expect(binding?.pluginAppsInputFingerprint).toBe("plugin-apps-input-1");
+    expect(binding?.pluginAppPolicyContext).toEqual(pluginAppPolicyContext);
   });
 
   it("rebuilds an empty plugin app binding after app inventory recovers", async () => {
@@ -3874,19 +3873,13 @@ describe("runCodexAppServerAttempt", () => {
     });
 
     expect(buildPluginThreadConfig).toHaveBeenCalledTimes(1);
-    expect(request.mock.calls).toEqual([
-      [
-        "thread/start",
-        expect.objectContaining({
-          config: createPluginAppConfigPatch(),
-        }),
-      ],
-    ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
-      threadId: "thread-recovered",
-      pluginAppsFingerprint: "plugin-apps-config-1",
-      pluginAppPolicyContext,
-    });
+    const requestCalls = request.mock.calls as unknown as Array<[string, { config?: unknown }]>;
+    expect(requestCalls.map(([method]) => method)).toEqual(["thread/start"]);
+    expect(requestCalls[0]?.[1].config).toEqual(createPluginAppConfigPatch());
+    const binding = await readCodexAppServerBinding(sessionFile);
+    expect(binding?.threadId).toBe("thread-recovered");
+    expect(binding?.pluginAppsFingerprint).toBe("plugin-apps-config-1");
+    expect(binding?.pluginAppPolicyContext).toEqual(pluginAppPolicyContext);
   });
 
   it("keeps an empty plugin app binding when recovery still produces the same config", async () => {
@@ -3938,9 +3931,9 @@ describe("runCodexAppServerAttempt", () => {
     });
 
     expect(buildPluginThreadConfig).toHaveBeenCalledTimes(1);
-    expect(request.mock.calls).toEqual([
-      ["thread/resume", expect.not.objectContaining({ config: expect.anything() })],
-    ]);
+    const requestCalls = request.mock.calls as unknown as Array<[string, { config?: unknown }]>;
+    expect(requestCalls.map(([method]) => method)).toEqual(["thread/resume"]);
+    expect("config" in (requestCalls[0]?.[1] ?? {})).toBe(false);
   });
 
   it("rebuilds a partial plugin app binding after another plugin recovers", async () => {
@@ -3985,19 +3978,13 @@ describe("runCodexAppServerAttempt", () => {
     });
 
     expect(buildPluginThreadConfig).toHaveBeenCalledTimes(1);
-    expect(request.mock.calls).toEqual([
-      [
-        "thread/start",
-        expect.objectContaining({
-          config: createTwoPluginAppConfigPatch(),
-        }),
-      ],
-    ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
-      threadId: "thread-recovered",
-      pluginAppsFingerprint: "plugin-apps-config-2",
-      pluginAppPolicyContext: recoveredPolicyContext,
-    });
+    const requestCalls = request.mock.calls as unknown as Array<[string, { config?: unknown }]>;
+    expect(requestCalls.map(([method]) => method)).toEqual(["thread/start"]);
+    expect(requestCalls[0]?.[1].config).toEqual(createTwoPluginAppConfigPatch());
+    const binding = await readCodexAppServerBinding(sessionFile);
+    expect(binding?.threadId).toBe("thread-recovered");
+    expect(binding?.pluginAppsFingerprint).toBe("plugin-apps-config-2");
+    expect(binding?.pluginAppPolicyContext).toEqual(recoveredPolicyContext);
   });
 
   it("rebuilds a partial plugin app binding after another app from the same plugin recovers", async () => {
@@ -4047,19 +4034,13 @@ describe("runCodexAppServerAttempt", () => {
     });
 
     expect(buildPluginThreadConfig).toHaveBeenCalledTimes(1);
-    expect(request.mock.calls).toEqual([
-      [
-        "thread/start",
-        expect.objectContaining({
-          config: createTwoCalendarAppConfigPatch(),
-        }),
-      ],
-    ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
-      threadId: "thread-recovered",
-      pluginAppsFingerprint: "plugin-apps-config-calendar-2",
-      pluginAppPolicyContext: recoveredPolicyContext,
-    });
+    const requestCalls = request.mock.calls as unknown as Array<[string, { config?: unknown }]>;
+    expect(requestCalls.map(([method]) => method)).toEqual(["thread/start"]);
+    expect(requestCalls[0]?.[1].config).toEqual(createTwoCalendarAppConfigPatch());
+    const binding = await readCodexAppServerBinding(sessionFile);
+    expect(binding?.threadId).toBe("thread-recovered");
+    expect(binding?.pluginAppsFingerprint).toBe("plugin-apps-config-calendar-2");
+    expect(binding?.pluginAppPolicyContext).toEqual(recoveredPolicyContext);
   });
 
   it("starts a new configured thread for legacy bindings missing plugin app metadata", async () => {
@@ -4096,19 +4077,13 @@ describe("runCodexAppServerAttempt", () => {
       },
     });
 
-    expect(request.mock.calls).toEqual([
-      [
-        "thread/start",
-        expect.objectContaining({
-          config: createPluginAppConfigPatch(),
-        }),
-      ],
-    ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
-      threadId: "thread-plugins",
-      pluginAppsFingerprint: "plugin-apps-config-1",
-      pluginAppPolicyContext,
-    });
+    const requestCalls = request.mock.calls as unknown as Array<[string, { config?: unknown }]>;
+    expect(requestCalls.map(([method]) => method)).toEqual(["thread/start"]);
+    expect(requestCalls[0]?.[1].config).toEqual(createPluginAppConfigPatch());
+    const binding = await readCodexAppServerBinding(sessionFile);
+    expect(binding?.threadId).toBe("thread-plugins");
+    expect(binding?.pluginAppsFingerprint).toBe("plugin-apps-config-1");
+    expect(binding?.pluginAppPolicyContext).toEqual(pluginAppPolicyContext);
   });
 
   it("starts a new Codex thread when dynamic tool schemas change", async () => {
