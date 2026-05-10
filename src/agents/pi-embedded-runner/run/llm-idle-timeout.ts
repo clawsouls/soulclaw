@@ -225,9 +225,22 @@ export function streamWithIdleTimeout(
       sourceSignal?.removeEventListener("abort", abortFromSourceSignal);
     };
     const wrappedOptions = {
-      ...(options ?? {}),
+      ...options,
       signal: streamAbortController.signal,
     } as typeof options;
+    const existingRequestTimeoutMs =
+      typeof (model as { requestTimeoutMs?: unknown })?.requestTimeoutMs === "number" &&
+      Number.isFinite((model as { requestTimeoutMs?: number }).requestTimeoutMs) &&
+      (model as { requestTimeoutMs?: number }).requestTimeoutMs! > 0
+        ? Math.floor((model as { requestTimeoutMs?: number }).requestTimeoutMs!)
+        : timeoutMs;
+    const wrappedModel =
+      typeof model === "object" && model !== null
+        ? ({
+            ...model,
+            requestTimeoutMs: Math.min(existingRequestTimeoutMs, timeoutMs),
+          } as typeof model)
+        : model;
 
     const createTimeoutPromise = (setTimer: (timer: NodeJS.Timeout) => void): Promise<never> => {
       return new Promise((_, reject) => {
@@ -244,7 +257,7 @@ export function streamWithIdleTimeout(
 
     let maybeStream: ReturnType<StreamFn>;
     try {
-      maybeStream = baseFn(model, context, wrappedOptions);
+      maybeStream = baseFn(wrappedModel, context, wrappedOptions);
     } catch (error) {
       cleanupSourceSignal();
       throw error;

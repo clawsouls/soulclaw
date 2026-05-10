@@ -277,16 +277,34 @@ describe("streamWithIdleTimeout", () => {
     const baseFn = vi.fn().mockReturnValue(mockStream);
     const wrapped = streamWithIdleTimeout(baseFn, 1000);
 
-    const model = { api: "openai" } as Parameters<typeof baseFn>[0];
+    const model = { api: "openai", requestTimeoutMs: 5000 } as Parameters<typeof baseFn>[0];
     const context = {} as Parameters<typeof baseFn>[1];
     const options = {} as Parameters<typeof baseFn>[2];
 
     void wrapped(model, context, options);
 
     expect(baseFn).toHaveBeenCalledWith(
-      model,
+      expect.objectContaining({ api: "openai", requestTimeoutMs: 1000 }),
       context,
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it("keeps model request timeouts that are shorter than the idle watchdog", () => {
+    const mockStream = createMockAsyncIterable([]);
+    const baseFn = vi.fn().mockReturnValue(mockStream);
+    const wrapped = streamWithIdleTimeout(baseFn, 1000);
+
+    const model = { requestTimeoutMs: 250 } as Parameters<typeof baseFn>[0];
+    const context = {} as Parameters<typeof baseFn>[1];
+    const options = {} as Parameters<typeof baseFn>[2];
+
+    void wrapped(model, context, options);
+
+    expect(baseFn).toHaveBeenCalledWith(
+      expect.objectContaining({ requestTimeoutMs: 250 }),
+      context,
+      expect.any(Object),
     );
   });
 
