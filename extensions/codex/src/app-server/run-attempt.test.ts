@@ -280,14 +280,11 @@ function expectResumeRequest(
   requests: Array<{ method: string; params: unknown }>,
   params: Record<string, unknown>,
 ) {
-  expect(requests).toEqual(
-    expect.arrayContaining([
-      {
-        method: "thread/resume",
-        params: expect.objectContaining(params),
-      },
-    ]),
-  );
+  const request = requests.find((entry) => entry.method === "thread/resume");
+  expect(request).toBeDefined();
+  for (const [key, value] of Object.entries(params)) {
+    expect((request?.params as Record<string, unknown> | undefined)?.[key]).toEqual(value);
+  }
 }
 
 function createResumeHarness() {
@@ -624,17 +621,17 @@ describe("runCodexAppServerAttempt", () => {
 
     expect(dynamicToolNames).toContain("message");
     expect(dynamicToolNames).toContain("web_search");
-    expect(dynamicToolNames).not.toEqual(
-      expect.arrayContaining([
-        "read",
-        "write",
-        "edit",
-        "apply_patch",
-        "exec",
-        "process",
-        "update_plan",
-      ]),
-    );
+    for (const toolName of [
+      "read",
+      "write",
+      "edit",
+      "apply_patch",
+      "exec",
+      "process",
+      "update_plan",
+    ]) {
+      expect(dynamicToolNames).not.toContain(toolName);
+    }
   });
 
   it("normalizes Codex dynamic toolsAllow entries before filtering", () => {
@@ -691,18 +688,10 @@ describe("runCodexAppServerAttempt", () => {
 
     expect(message).not.toHaveProperty("namespace");
     expect(message).not.toHaveProperty("deferLoading");
-    expect(webSearch).toEqual(
-      expect.objectContaining({
-        namespace: CODEX_OPENCLAW_DYNAMIC_TOOL_NAMESPACE,
-        deferLoading: true,
-      }),
-    );
-    expect(heartbeat).toEqual(
-      expect.objectContaining({
-        namespace: CODEX_OPENCLAW_DYNAMIC_TOOL_NAMESPACE,
-        deferLoading: true,
-      }),
-    );
+    expect(webSearch?.namespace).toBe(CODEX_OPENCLAW_DYNAMIC_TOOL_NAMESPACE);
+    expect(webSearch?.deferLoading).toBe(true);
+    expect(heartbeat?.namespace).toBe(CODEX_OPENCLAW_DYNAMIC_TOOL_NAMESPACE);
+    expect(heartbeat?.deferLoading).toBe(true);
   });
 
   it("passes the live run session key to Codex dynamic tools when sandbox policy uses another key", () => {
