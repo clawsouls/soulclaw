@@ -205,6 +205,11 @@ function createTraceOnlyContext(endpoint: string): OpenClawPluginServiceContext 
   return createOtelContext(endpoint, { traces: true });
 }
 
+function startedSpanOptions(name: string) {
+  const call = telemetryState.tracer.startSpan.mock.calls.find(([spanName]) => spanName === name);
+  return call?.[1] as { attributes?: Record<string, unknown>; startTime?: unknown } | undefined;
+}
+
 async function emitAndCaptureLog(
   event: Omit<Extract<Parameters<typeof emitDiagnosticEvent>[0], { type: "log.record" }>, "type">,
   options: { trusted?: boolean } = {},
@@ -366,33 +371,16 @@ describe("diagnostics-otel service", () => {
     expect(spanNames).toContain("openclaw.webhook.processed");
     expect(spanNames).toContain("openclaw.message.processed");
     expect(spanNames).toContain("openclaw.session.stuck");
-    const webhookSpanCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.webhook.processed",
-    );
-    expect(webhookSpanCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "openclaw.chatId": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
-    const messageSpanCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.message.processed",
-    );
-    expect(messageSpanCall?.[1]).toEqual({
-      attributes: expect.objectContaining({
-        "openclaw.channel": "telegram",
-        "openclaw.outcome": "completed",
-        "openclaw.reason": "unknown",
-      }),
-      startTime: expect.any(Number),
-    });
-    expect(messageSpanCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "openclaw.chatId": expect.anything(),
-        "openclaw.messageId": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
+    const webhookSpanOptions = startedSpanOptions("openclaw.webhook.processed");
+    expect(webhookSpanOptions?.attributes).not.toHaveProperty("openclaw.chatId");
+    expect(webhookSpanOptions?.startTime).toBeTypeOf("number");
+    const messageSpanOptions = startedSpanOptions("openclaw.message.processed");
+    expect(messageSpanOptions?.attributes?.["openclaw.channel"]).toBe("telegram");
+    expect(messageSpanOptions?.attributes?.["openclaw.outcome"]).toBe("completed");
+    expect(messageSpanOptions?.attributes?.["openclaw.reason"]).toBe("unknown");
+    expect(messageSpanOptions?.attributes).not.toHaveProperty("openclaw.chatId");
+    expect(messageSpanOptions?.attributes).not.toHaveProperty("openclaw.messageId");
+    expect(messageSpanOptions?.startTime).toBeTypeOf("number");
 
     emitDiagnosticEvent({
       type: "log.record",
