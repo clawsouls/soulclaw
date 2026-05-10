@@ -548,29 +548,41 @@ describe("imessage message actions", () => {
 
       // resolveChatGuid synthesizes the chat_identifier; the runtime then
       // does the chats.list lookup against it.
-      expect(runtimeMock.resolveChatGuidForTarget).toHaveBeenCalledWith(
-        expect.objectContaining({
-          target: {
-            kind: "chat_identifier",
-            chatIdentifier: "iMessage;-;+12069106512",
+      expect(runtimeMock.resolveChatGuidForTarget.mock.calls).toStrictEqual([
+        [
+          {
+            target: {
+              kind: "chat_identifier",
+              chatIdentifier: "iMessage;-;+12069106512",
+            },
+            options: imsgOptions(),
           },
-        }),
-      );
+        ],
+      ]);
       // The cache lookup uses the synthesized chat_identifier as scope so
       // cross-chat checks have something to match against.
       expect(runtimeMock.resolveIMessageMessageId).toHaveBeenCalledWith("5", {
         requireKnownShortId: true,
-        chatContext: expect.objectContaining({
+        chatContext: {
+          chatGuid: undefined,
           chatIdentifier: "iMessage;-;+12069106512",
-        }),
+          chatId: undefined,
+        },
       });
       // sendReaction lands on the real registered chat guid, not the
       // synthesized stand-in.
-      expect(runtimeMock.sendReaction).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chatGuid: "any;-;+12069106512",
-        }),
-      );
+      expect(runtimeMock.sendReaction.mock.calls).toStrictEqual([
+        [
+          {
+            chatGuid: "any;-;+12069106512",
+            messageId: "full-guid",
+            reaction: "like",
+            remove: undefined,
+            partIndex: undefined,
+            options: imsgOptions("any;-;+12069106512"),
+          },
+        ],
+      ]);
     });
 
     it("rejects react/edit/unsend when the synthesized chat is not registered", async () => {
