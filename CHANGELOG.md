@@ -52,6 +52,7 @@ Docs: https://docs.openclaw.ai
 - CLI/secrets: turn offline Gateway reload failures into actionable recovery text.
 - CLI/channels: explain missing or ambiguous channel selections with next commands.
 - CLI/channels: defer guided channel status collection until a channel is selected, keeping `openclaw channels add` first screen quieter.
+- CLI/channels: exit guided channel setup cleanly on cancellation instead of printing the internal wizard error.
 - Plugins/CLI: route disabled Matrix and LanceDB memory command roots to plugin-enable guidance instead of generic unknown-command errors.
 - Browser/Docker: detect Playwright-managed Chromium from `PLAYWRIGHT_BROWSERS_PATH` and the default Playwright cache on Linux, so Docker installs that persist `/home/node/.cache/ms-playwright` no longer need `browser.executablePath`.
 - Ollama: keep DeepSeek V4 cloud models thinking-capable even when Ollama Cloud `/api/show` omits the `thinking` capability, so `/think high` no longer rejects `ollama/deepseek-v4-*:cloud`.
