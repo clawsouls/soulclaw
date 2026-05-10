@@ -158,7 +158,7 @@ jobs:
     name: Publish plugins, then OpenClaw
     needs: [resolve_release_target]
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 90
     steps:
       - name: Dispatch publish workflows
         env:
@@ -274,15 +274,22 @@ jobs:
             changelog_file="${RUNNER_TEMP}/CHANGELOG.md"
             notes_file="${RUNNER_TEMP}/release-notes.md"
 
-            gh api --repo "$GITHUB_REPOSITORY" "repos/${GITHUB_REPOSITORY}/contents/CHANGELOG.md?ref=${TARGET_SHA}" \
+            gh api "repos/${GITHUB_REPOSITORY}/contents/CHANGELOG.md?ref=${TARGET_SHA}" \
               --jq '.content' | base64 --decode > "${changelog_file}"
             awk -v version="${notes_version}" '
               $0 == "## " version { in_section = 1; next }
               /^## / && in_section { exit }
               in_section { print }
             ' "${changelog_file}" > "${notes_file}"
+            if [[ ! -s "${notes_file}" ]] && [[ "${RELEASE_TAG}" == *"-alpha."* || "${RELEASE_TAG}" == *"-beta."* ]]; then
+              awk '
+                $0 == "## Unreleased" { in_section = 1; next }
+                /^## / && in_section { exit }
+                in_section { print }
+              ' "${changelog_file}" > "${notes_file}"
+            fi
             if [[ ! -s "${notes_file}" ]]; then
-              echo "CHANGELOG.md does not contain release notes for ${notes_version}." >&2
+              echo "CHANGELOG.md does not contain release notes for ${notes_version} or an Unreleased prerelease fallback." >&2
               exit 1
             fi
 

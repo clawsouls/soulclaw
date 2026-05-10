@@ -7,6 +7,7 @@ const LIVE_E2E_WORKFLOW = ".github/workflows/openclaw-live-and-e2e-checks-reusab
 const NPM_TELEGRAM_WORKFLOW = ".github/workflows/npm-telegram-beta-e2e.yml";
 const PACKAGE_JSON = "package.json";
 const RELEASE_CHECKS_WORKFLOW = ".github/workflows/openclaw-release-checks.yml";
+const RELEASE_PUBLISH_WORKFLOW = ".github/workflows/openclaw-release-publish.yml";
 const FULL_RELEASE_VALIDATION_WORKFLOW = ".github/workflows/full-release-validation.yml";
 const QA_LIVE_TRANSPORTS_WORKFLOW = ".github/workflows/qa-live-transports-convex.yml";
 const UPDATE_MIGRATION_WORKFLOW = ".github/workflows/update-migration.yml";
@@ -828,5 +829,18 @@ describe("package artifact reuse", () => {
     );
     expect(workflow).toContain("(.started_at | ts) - (.created_at | ts)");
     expect(workflow).not.toContain('gh run view "$run_id" --json createdAt,jobs');
+  });
+
+  it("keeps release publish creation compatible with gh api and prerelease notes", () => {
+    const workflow = readFileSync(RELEASE_PUBLISH_WORKFLOW, "utf8");
+
+    expect(workflow).toContain("timeout-minutes: 90");
+    expect(workflow).toContain(
+      'gh api "repos/${GITHUB_REPOSITORY}/contents/CHANGELOG.md?ref=${TARGET_SHA}"',
+    );
+    expect(workflow).toContain('$0 == "## Unreleased" { in_section = 1; next }');
+    expect(workflow).toContain("Unreleased prerelease fallback");
+    expect(workflow).not.toContain("gh api --repo");
+    expect(workflow).not.toContain("timeout-minutes: 360");
   });
 });
