@@ -1685,24 +1685,16 @@ describe("runCodexAppServerAttempt", () => {
     await run;
 
     const startRequest = harness.requests.find((request) => request.method === "thread/start");
-    expect(startRequest?.params).toEqual(
-      expect.objectContaining({
-        config: expect.objectContaining({
-          "features.codex_hooks": true,
-          "hooks.PreToolUse": [
-            expect.objectContaining({
-              hooks: [
-                expect.objectContaining({
-                  type: "command",
-                  timeout: 9,
-                  command: expect.stringContaining("--event pre_tool_use --timeout 4321"),
-                }),
-              ],
-            }),
-          ],
-        }),
-      }),
-    );
+    const startConfig = (startRequest?.params as { config?: Record<string, unknown> } | undefined)
+      ?.config;
+    expect(startConfig?.["features.codex_hooks"]).toBe(true);
+    const preToolUseHooks = startConfig?.["hooks.PreToolUse"] as
+      | Array<{ hooks?: Array<{ command?: string; timeout?: number; type?: string }> }>
+      | undefined;
+    const preToolUseCommand = preToolUseHooks?.[0]?.hooks?.[0];
+    expect(preToolUseCommand?.type).toBe("command");
+    expect(preToolUseCommand?.timeout).toBe(9);
+    expect(preToolUseCommand?.command).toContain("--event pre_tool_use --timeout 4321");
     const relayId = extractRelayIdFromThreadRequest(startRequest?.params);
     expect(nativeHookRelayTesting.getNativeHookRelayRegistrationForTests(relayId)).toBeUndefined();
   });
@@ -1777,27 +1769,17 @@ describe("runCodexAppServerAttempt", () => {
     await harness.waitForMethod("turn/start");
 
     const startRequest = harness.requests.find((request) => request.method === "thread/start");
-    expect(startRequest?.params).toEqual(
-      expect.objectContaining({
-        config: expect.objectContaining({
-          "features.codex_hooks": true,
-          "hooks.PreToolUse": expect.any(Array),
-          "hooks.PostToolUse": expect.any(Array),
-          "hooks.Stop": expect.any(Array),
-        }),
-      }),
-    );
-    expect(startRequest?.params).toEqual(
-      expect.objectContaining({
-        config: expect.not.objectContaining({
-          "hooks.PermissionRequest": expect.anything(),
-        }),
-      }),
-    );
+    const startConfig = (startRequest?.params as { config?: Record<string, unknown> } | undefined)
+      ?.config;
+    expect(startConfig?.["features.codex_hooks"]).toBe(true);
+    expect(Array.isArray(startConfig?.["hooks.PreToolUse"])).toBe(true);
+    expect(Array.isArray(startConfig?.["hooks.PostToolUse"])).toBe(true);
+    expect(Array.isArray(startConfig?.["hooks.Stop"])).toBe(true);
+    expect(startConfig).not.toHaveProperty("hooks.PermissionRequest");
     const relayId = extractRelayIdFromThreadRequest(startRequest?.params);
-    expect(nativeHookRelayTesting.getNativeHookRelayRegistrationForTests(relayId)).toMatchObject({
-      allowedEvents: ["pre_tool_use", "post_tool_use", "before_agent_finalize"],
-    });
+    expect(
+      nativeHookRelayTesting.getNativeHookRelayRegistrationForTests(relayId)?.allowedEvents,
+    ).toEqual(["pre_tool_use", "post_tool_use", "before_agent_finalize"]);
 
     await harness.completeTurn({ threadId: "thread-1", turnId: "turn-1" });
     await run;
@@ -1823,18 +1805,14 @@ describe("runCodexAppServerAttempt", () => {
     await harness.waitForMethod("turn/start");
 
     const startRequest = harness.requests.find((request) => request.method === "thread/start");
-    expect(startRequest?.params).toEqual(
-      expect.objectContaining({
-        config: expect.objectContaining({
-          "features.codex_hooks": true,
-          "hooks.PermissionRequest": expect.any(Array),
-        }),
-      }),
-    );
+    const startConfig = (startRequest?.params as { config?: Record<string, unknown> } | undefined)
+      ?.config;
+    expect(startConfig?.["features.codex_hooks"]).toBe(true);
+    expect(Array.isArray(startConfig?.["hooks.PermissionRequest"])).toBe(true);
     const relayId = extractRelayIdFromThreadRequest(startRequest?.params);
-    expect(nativeHookRelayTesting.getNativeHookRelayRegistrationForTests(relayId)).toMatchObject({
-      allowedEvents: ["permission_request"],
-    });
+    expect(
+      nativeHookRelayTesting.getNativeHookRelayRegistrationForTests(relayId)?.allowedEvents,
+    ).toEqual(["permission_request"]);
 
     await harness.completeTurn({ threadId: "thread-1", turnId: "turn-1" });
     await run;
