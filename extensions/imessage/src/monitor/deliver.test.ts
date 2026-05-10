@@ -62,30 +62,30 @@ describe("deliverReplies", () => {
     });
 
     expect(sendMessageIMessageMock).toHaveBeenCalledTimes(2);
-    expect(sendMessageIMessageMock).toHaveBeenNthCalledWith(
-      1,
-      "chat_id:10",
-      "first",
-      expect.objectContaining({
-        client,
-        config: IMESSAGE_TEST_CFG,
-        maxBytes: 4096,
-        accountId: "default",
-        replyToId: "reply-1",
-      }),
-    );
-    expect(sendMessageIMessageMock).toHaveBeenNthCalledWith(
-      2,
-      "chat_id:10",
-      "second",
-      expect.objectContaining({
-        client,
-        config: IMESSAGE_TEST_CFG,
-        maxBytes: 4096,
-        accountId: "default",
-        replyToId: "reply-1",
-      }),
-    );
+    expect(sendMessageIMessageMock.mock.calls).toStrictEqual([
+      [
+        "chat_id:10",
+        "first",
+        {
+          config: IMESSAGE_TEST_CFG,
+          maxBytes: 4096,
+          client,
+          accountId: "default",
+          replyToId: "reply-1",
+        },
+      ],
+      [
+        "chat_id:10",
+        "second",
+        {
+          config: IMESSAGE_TEST_CFG,
+          maxBytes: 4096,
+          client,
+          accountId: "default",
+          replyToId: "reply-1",
+        },
+      ],
+    ]);
   });
 
   it("propagates payload replyToId through media sends", async () => {
@@ -107,32 +107,32 @@ describe("deliverReplies", () => {
     });
 
     expect(sendMessageIMessageMock).toHaveBeenCalledTimes(2);
-    expect(sendMessageIMessageMock).toHaveBeenNthCalledWith(
-      1,
-      "chat_id:20",
-      "caption",
-      expect.objectContaining({
-        mediaUrl: "https://example.com/a.jpg",
-        client,
-        config: IMESSAGE_TEST_CFG,
-        maxBytes: 8192,
-        accountId: "acct-2",
-        replyToId: "reply-2",
-      }),
-    );
-    expect(sendMessageIMessageMock).toHaveBeenNthCalledWith(
-      2,
-      "chat_id:20",
-      "",
-      expect.objectContaining({
-        mediaUrl: "https://example.com/b.jpg",
-        client,
-        config: IMESSAGE_TEST_CFG,
-        maxBytes: 8192,
-        accountId: "acct-2",
-        replyToId: "reply-2",
-      }),
-    );
+    expect(sendMessageIMessageMock.mock.calls).toStrictEqual([
+      [
+        "chat_id:20",
+        "caption",
+        {
+          config: IMESSAGE_TEST_CFG,
+          mediaUrl: "https://example.com/a.jpg",
+          maxBytes: 8192,
+          client,
+          accountId: "acct-2",
+          replyToId: "reply-2",
+        },
+      ],
+      [
+        "chat_id:20",
+        "",
+        {
+          config: IMESSAGE_TEST_CFG,
+          mediaUrl: "https://example.com/b.jpg",
+          maxBytes: 8192,
+          client,
+          accountId: "acct-2",
+          replyToId: "reply-2",
+        },
+      ],
+    ]);
   });
 
   it("records durable outbound sends in the sent-message cache", async () => {
