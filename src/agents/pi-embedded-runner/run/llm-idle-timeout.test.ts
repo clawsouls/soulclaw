@@ -42,12 +42,20 @@ describe("resolveLlmIdleTimeoutMs", () => {
     expect(resolveLlmIdleTimeoutMs({ runTimeoutMs: 2_147_000_000 })).toBe(0);
   });
 
-  it("uses the provider request timeout as the model idle watchdog", () => {
-    expect(resolveLlmIdleTimeoutMs({ modelRequestTimeoutMs: 300_000 })).toBe(300_000);
+  it("caps remote provider request timeouts at the default idle watchdog", () => {
+    expect(resolveLlmIdleTimeoutMs({ modelRequestTimeoutMs: 300_000 })).toBe(
+      DEFAULT_LLM_IDLE_TIMEOUT_MS,
+    );
+  });
+
+  it("uses remote provider request timeouts when shorter than the default idle watchdog", () => {
+    expect(resolveLlmIdleTimeoutMs({ modelRequestTimeoutMs: 30_000 })).toBe(30_000);
   });
 
   it("caps provider request timeout at the max safe timeout", () => {
-    expect(resolveLlmIdleTimeoutMs({ modelRequestTimeoutMs: 10_000_000_000 })).toBe(2_147_000_000);
+    expect(
+      resolveLlmIdleTimeoutMs({ trigger: "cron", modelRequestTimeoutMs: 10_000_000_000 }),
+    ).toBe(2_147_000_000);
   });
 
   it("ignores invalid provider request timeout values", () => {
@@ -294,6 +302,23 @@ describe("streamWithIdleTimeout", () => {
     const next = expect(iterator.next()).rejects.toThrow(/LLM idle timeout/);
     await vi.advanceTimersByTimeAsync(50);
     await next;
+  });
+
+  it("throws when a promise stream never resolves", async () => {
+    vi.useFakeTimers();
+    const baseFn = vi.fn().mockReturnValue(new Promise<AsyncIterable<unknown>>(() => {}));
+    const onIdleTimeout = vi.fn();
+    const wrapped = streamWithIdleTimeout(baseFn, 50, onIdleTimeout);
+
+    const model = {} as Parameters<typeof baseFn>[0];
+    const context = {} as Parameters<typeof baseFn>[1];
+    const options = {} as Parameters<typeof baseFn>[2];
+
+    const stream = expect(wrapped(model, context, options)).rejects.toThrow(/LLM idle timeout/);
+    await vi.advanceTimersByTimeAsync(50);
+    await stream;
+
+    expect(onIdleTimeout).toHaveBeenCalledTimes(1);
   });
 
   it("resets timer on each chunk", async () => {
