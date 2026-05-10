@@ -660,6 +660,24 @@ const primaryReleasePathChunks = {
   openwebui: [],
 };
 
+const primaryReleasePathChunkProfiles = {
+  core: ["stable", "full"],
+  "package-update-openai": ["beta", "stable", "full"],
+  "package-update-anthropic": ["beta", "stable", "full"],
+  "package-update-core": ["beta", "stable", "full"],
+  "plugins-runtime-plugins": ["stable", "full"],
+  "plugins-runtime-services": ["stable", "full"],
+  "plugins-runtime-install-a": ["stable", "full"],
+  "plugins-runtime-install-b": ["stable", "full"],
+  "plugins-runtime-install-c": ["stable", "full"],
+  "plugins-runtime-install-d": ["stable", "full"],
+  "plugins-runtime-install-e": ["stable", "full"],
+  "plugins-runtime-install-f": ["stable", "full"],
+  "plugins-runtime-install-g": ["stable", "full"],
+  "plugins-runtime-install-h": ["stable", "full"],
+  openwebui: ["stable", "full"],
+};
+
 const legacyReleasePathChunks = {
   "package-update": [
     ...releasePathPackageInstallOpenAiLanes,
@@ -671,6 +689,24 @@ const legacyReleasePathChunks = {
   "plugins-integrations": [...releasePathPluginRuntimeLanes, ...releasePathBundledChannelLanes],
   "bundled-channels": releasePathBundledChannelLanes,
 };
+
+export function normalizeReleaseProfile(raw) {
+  const profile = String(raw ?? "stable").trim() || "stable";
+  if (profile === "minimum") {
+    return "beta";
+  }
+  if (profile === "beta" || profile === "stable" || profile === "full") {
+    return profile;
+  }
+  throw new Error(
+    `release profile must be one of: beta, stable, full. Got: ${JSON.stringify(raw)}`,
+  );
+}
+
+function chunkMatchesReleaseProfile(chunk, releaseProfile) {
+  const profiles = primaryReleasePathChunkProfiles[chunk];
+  return !profiles || profiles.includes(releaseProfile);
+}
 
 function openWebUILane() {
   return liveLane("openwebui", RELEASE_OPENWEBUI_COMMAND, {
@@ -693,6 +729,10 @@ export function releasePathChunkLanes(chunk, options = {}) {
       ].join(", ")}. Got: ${JSON.stringify(chunk)}`,
     );
   }
+  const releaseProfile = normalizeReleaseProfile(options.releaseProfile);
+  if (!chunkMatchesReleaseProfile(chunk, releaseProfile)) {
+    return [];
+  }
   if (chunk === "openwebui") {
     return options.includeOpenWebUI ? [openWebUILane()] : [];
   }
@@ -709,11 +749,13 @@ export function releasePathChunkLanes(chunk, options = {}) {
 }
 
 export function allReleasePathLanes(options = {}) {
+  const releaseProfile = normalizeReleaseProfile(options.releaseProfile);
   return Object.keys(primaryReleasePathChunks)
     .filter((chunk) => chunk !== "openwebui")
     .flatMap((chunk) =>
       releasePathChunkLanes(chunk, {
         includeOpenWebUI: options.includeOpenWebUI,
+        releaseProfile,
       }),
     );
 }

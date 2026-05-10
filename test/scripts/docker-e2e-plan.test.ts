@@ -144,6 +144,36 @@ describe("scripts/lib/docker-e2e-plan", () => {
     expect(withOpenWebUI.lanes.map((lane) => lane.name)).toContain("openwebui");
   });
 
+  it("keeps beta release-path coverage to install, provider, and update proof lanes", () => {
+    const plan = planFor({
+      includeOpenWebUI: true,
+      planReleaseAll: true,
+      profile: RELEASE_PATH_PROFILE,
+      releaseProfile: "beta",
+    });
+
+    const laneNames = plan.lanes.map((lane) => lane.name);
+    expect(plan.releaseProfile).toBe("beta");
+    expect(laneNames).toContain("install-e2e-openai");
+    expect(laneNames).toContain("install-e2e-anthropic");
+    expect(laneNames).toContain("update-channel-switch");
+    expect(laneNames).not.toContain("plugins");
+    expect(laneNames).not.toContain("live-plugin-tool");
+    expect(laneNames).not.toContain("bundled-plugin-install-uninstall-0");
+    expect(laneNames).not.toContain("openwebui");
+  });
+
+  it("still allows explicit selected lanes outside the beta release profile", () => {
+    const plan = planFor({
+      includeOpenWebUI: true,
+      profile: RELEASE_PATH_PROFILE,
+      releaseProfile: "beta",
+      selectedLaneNames: ["live-plugin-tool"],
+    });
+
+    expect(plan.lanes.map((lane) => lane.name)).toEqual(["live-plugin-tool"]);
+  });
+
   it("splits release-path package and plugin chunks across shorter CI jobs", () => {
     const packageInstallOpenAi = planFor({
       includeOpenWebUI: true,

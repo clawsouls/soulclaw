@@ -240,6 +240,7 @@ describe("package artifact reuse", () => {
       OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SPECS:
         "${{ inputs.published_upgrade_survivor_baselines }}",
       OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS: "${{ inputs.published_upgrade_survivor_scenarios }}",
+      RELEASE_TEST_PROFILE: "${{ inputs.release_test_profile }}",
     });
     expect(workflow).toContain("plan_docker_lane_groups:");
     expect(workflow).toContain("targeted_docker_lane_group_size:");
@@ -342,12 +343,12 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain(
       "live_suite_filter '${LIVE_SUITE_FILTER}' does not match any runnable suite",
     );
-    expect(workflow).toContain('add_profile_suite docker-live-models "minimum stable full"');
+    expect(workflow).toContain('add_profile_suite docker-live-models "beta minimum stable full"');
     expect(workflow).toContain(
-      'add_profile_suite native-live-src-gateway-core "minimum stable full"',
+      'add_profile_suite native-live-src-gateway-core "beta minimum stable full"',
     );
     expect(workflow).toContain('add_profile_suite native-live-src-infra "stable full"');
-    expect(workflow).toContain('add_profile_suite live-gateway-docker "minimum stable full"');
+    expect(workflow).toContain('add_profile_suite live-gateway-docker "beta minimum stable full"');
     expect(workflow).toContain('add_profile_suite live-gateway-anthropic-docker "stable full"');
     expect(workflow).toContain('add_profile_suite live-gateway-advisory-docker "full"');
     expect(workflow).toContain(
@@ -833,8 +834,14 @@ describe("package artifact reuse", () => {
 
   it("keeps release publish creation compatible with gh api and prerelease notes", () => {
     const workflow = readFileSync(RELEASE_PUBLISH_WORKFLOW, "utf8");
+    const npmWorkflow = readFileSync(".github/workflows/openclaw-npm-release.yml", "utf8");
 
-    expect(workflow).toContain("timeout-minutes: 90");
+    expect(workflow).toContain("timeout-minutes: 60");
+    expect(workflow).toContain("Download OpenClaw npm preflight manifest");
+    expect(workflow).toContain("Validate OpenClaw npm preflight manifest");
+    expect(workflow).toContain("preflight-manifest.json");
+    expect(npmWorkflow).toContain("preflight-manifest.json");
+    expect(npmWorkflow).toContain("tarballSha256");
     expect(workflow).toContain(
       'gh api "repos/${GITHUB_REPOSITORY}/contents/CHANGELOG.md?ref=${TARGET_SHA}"',
     );
