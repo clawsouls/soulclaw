@@ -401,6 +401,9 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain("suite_group: native-live-src-gateway-profiles-anthropic");
     expect(workflow).toContain("anthropic/claude-opus-4-7,anthropic/claude-opus-4-6");
     expect(workflow).toContain("anthropic/claude-sonnet-4-6,anthropic/claude-haiku-4-5");
+    expect(workflow).toMatch(
+      /suite_id: native-live-src-gateway-profiles-fireworks[\s\S]*?advisory: true/u,
+    );
     expect(workflow).toContain("suite_id: native-live-src-gateway-profiles-deepseek");
     expect(workflow).toContain("suite_id: native-live-src-gateway-profiles-opencode-go");
     expect(workflow).toContain("suite_id: native-live-src-gateway-profiles-openrouter");
@@ -418,6 +421,12 @@ describe("package artifact reuse", () => {
     expect(workflow).toMatch(/suite_id: native-live-extensions-moonshot[\s\S]*?advisory: true/u);
     expect(workflow).toContain("OPENCLAW_LIVE_SUITE_ADVISORY: ${{ matrix.advisory }}");
     expect(workflow).toContain("Advisory live suite failed with exit code");
+    expect(workflow).toMatch(
+      /suite_id: live-gateway-advisory-docker-deepseek-fireworks[\s\S]*?advisory: true/u,
+    );
+    expect(workflow).toMatch(
+      /validate_live_media_provider_suites:[\s\S]*?OPENCLAW_LIVE_SUITE_ADVISORY: \$\{\{ matrix\.advisory \}\}/u,
+    );
     expect(workflow).toContain("suite_id: native-live-extensions-openai");
     expect(workflow).toContain("suite_id: native-live-extensions-o-z-other");
     expect(workflow).toContain("validate_live_media_provider_suites:");
