@@ -461,7 +461,21 @@ describe("capability cli", () => {
   }
 
   function firstAudioTranscriptionCall() {
-    const calls = mocks.transcribeAudioFile.mock.calls as unknown as Array<[{ filePath?: string }]>;
+    const calls = mocks.transcribeAudioFile.mock.calls as unknown as Array<
+      [{ filePath?: string; language?: unknown; prompt?: unknown }]
+    >;
+    return calls[0]?.[0];
+  }
+
+  function firstTextToSpeechCall() {
+    const calls = mocks.textToSpeech.mock.calls as unknown as Array<[Record<string, unknown>]>;
+    return calls[0]?.[0];
+  }
+
+  function firstEmbeddingProviderCall() {
+    const calls = mocks.createEmbeddingProvider.mock.calls as unknown as Array<
+      [Record<string, unknown>]
+    >;
     return calls[0]?.[0];
   }
 
@@ -1692,13 +1706,10 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.transcribeAudioFile).toHaveBeenCalledWith(
-      expect.objectContaining({
-        filePath: expect.stringMatching(/memo\.m4a$/),
-        language: "en",
-        prompt: "Focus on names",
-      }),
-    );
+    const transcribeCall = firstAudioTranscriptionCall();
+    expect(path.basename(transcribeCall?.filePath ?? "")).toBe("memo.m4a");
+    expect(transcribeCall?.language).toBe("en");
+    expect(transcribeCall?.prompt).toBe("Focus on names");
   });
 
   it("uses request-scoped TTS overrides without mutating prefs", async () => {
@@ -1718,19 +1729,16 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.textToSpeech).toHaveBeenCalledWith(
-      expect.objectContaining({
-        overrides: expect.objectContaining({
-          provider: "openai",
-          providerOverrides: expect.objectContaining({
-            openai: expect.objectContaining({
-              modelId: "gpt-4o-mini-tts",
-              voiceId: "alloy",
-            }),
-          }),
-        }),
-      }),
-    );
+    const ttsCall = firstTextToSpeechCall();
+    const overrides = ttsCall?.overrides as
+      | {
+          provider?: unknown;
+          providerOverrides?: { openai?: { modelId?: unknown; voiceId?: unknown } };
+        }
+      | undefined;
+    expect(overrides?.provider).toBe("openai");
+    expect(overrides?.providerOverrides?.openai?.modelId).toBe("gpt-4o-mini-tts");
+    expect(overrides?.providerOverrides?.openai?.voiceId).toBe("alloy");
     expect(mocks.setTtsProvider).not.toHaveBeenCalled();
   });
 
@@ -1751,11 +1759,7 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.textToSpeech).toHaveBeenCalledWith(
-      expect.objectContaining({
-        disableFallback: true,
-      }),
-    );
+    expect(firstTextToSpeechCall()?.disableFallback).toBe(true);
   });
 
   it("does not infer and forward a local provider guess for gateway TTS overrides", async () => {
@@ -1774,15 +1778,9 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.callGateway).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "tts.convert",
-        params: expect.objectContaining({
-          provider: undefined,
-          voiceId: "alloy",
-        }),
-      }),
-    );
+    expect(firstGatewayCall()?.method).toBe("tts.convert");
+    expect(firstGatewayCall()?.params?.provider).toBeUndefined();
+    expect(firstGatewayCall()?.params?.voiceId).toBe("alloy");
   });
 
   it("fails clearly when gateway TTS output is requested against a remote gateway", async () => {
@@ -1821,19 +1819,11 @@ describe("capability cli", () => {
       argv: ["capability", "embedding", "create", "--text", "hello", "--json"],
     });
 
-    expect(mocks.createEmbeddingProvider).toHaveBeenCalledWith(
-      expect.objectContaining({
-        provider: "auto",
-        fallback: "none",
-      }),
-    );
-    expect(mocks.runtime.writeJson).toHaveBeenCalledWith(
-      expect.objectContaining({
-        capability: "embedding.create",
-        provider: "openai",
-        model: "text-embedding-3-small",
-      }),
-    );
+    expect(firstEmbeddingProviderCall()?.provider).toBe("auto");
+    expect(firstEmbeddingProviderCall()?.fallback).toBe("none");
+    expect(firstJsonOutput()?.capability).toBe("embedding.create");
+    expect(firstJsonOutput()?.provider).toBe("openai");
+    expect(firstJsonOutput()?.model).toBe("text-embedding-3-small");
   });
 
   it("derives the embedding provider from a provider/model override", async () => {
@@ -1851,13 +1841,9 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.createEmbeddingProvider).toHaveBeenCalledWith(
-      expect.objectContaining({
-        provider: "openai",
-        fallback: "none",
-        model: "text-embedding-3-large",
-      }),
-    );
+    expect(firstEmbeddingProviderCall()?.provider).toBe("openai");
+    expect(firstEmbeddingProviderCall()?.fallback).toBe("none");
+    expect(firstEmbeddingProviderCall()?.model).toBe("text-embedding-3-large");
   });
 
   it("cleans provider auth profiles and usage stats on logout", async () => {
@@ -1906,15 +1892,15 @@ describe("capability cli", () => {
       argv: ["capability", "model", "auth", "logout", "--provider", "openai", "--json"],
     });
 
-    expect(updatedStore).toMatchObject({
-      profiles: {
-        "anthropic:default": { id: "anthropic:default" },
-      },
-      order: {},
-      lastGood: {},
-      usageStats: {
-        "anthropic:default": { errorCount: 3 },
-      },
+    expect(updatedStore).not.toBeNull();
+    const storeSnapshot = updatedStore as unknown as Record<string, any>;
+    expect(storeSnapshot.profiles).toEqual({
+      "anthropic:default": { id: "anthropic:default" },
+    });
+    expect(storeSnapshot.order).toEqual({});
+    expect(storeSnapshot.lastGood).toEqual({});
+    expect(storeSnapshot.usageStats).toEqual({
+      "anthropic:default": { errorCount: 3 },
     });
     expect(mocks.runtime.writeJson).toHaveBeenCalledWith({
       provider: "openai",
@@ -2022,11 +2008,10 @@ describe("capability cli", () => {
       argv: ["capability", "embedding", "providers", "--json"],
     });
 
-    expect(mocks.registerBuiltInMemoryEmbeddingProviders).toHaveBeenCalledWith(
-      expect.objectContaining({
-        registerMemoryEmbeddingProvider: expect.any(Function),
-      }),
-    );
+    const bootstrapArg = mocks.registerBuiltInMemoryEmbeddingProviders.mock.calls[0]?.[0] as
+      | { registerMemoryEmbeddingProvider?: unknown }
+      | undefined;
+    expect(typeof bootstrapArg?.registerMemoryEmbeddingProvider).toBe("function");
   });
 
   it("marks env-backed audio providers as configured", async () => {
