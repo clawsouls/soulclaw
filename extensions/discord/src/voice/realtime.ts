@@ -273,8 +273,13 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
   private outputAudioRealtimeBytes = 0;
   private outputAudioChunks = 0;
   private outputAudioStartedAt: number | undefined;
+  private outputStreamEnding = false;
+  private queuedExactSpeechMessages: string[] = [];
+  private exactSpeechResponseActive = false;
+  private exactSpeechAudioStarted = false;
   private readonly playerIdleHandler = () => {
     this.resetOutputStream("player-idle");
+    this.completeExactSpeechResponse("player-idle");
   };
 
   constructor(
@@ -307,7 +312,7 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
           }),
         };
       },
-      deliver: (text) => this.bridge?.sendUserMessage(buildDiscordSpeakExactUserMessage(text)),
+      deliver: (text) => this.enqueueExactSpeechMessage(text),
     });
   }
 
@@ -333,6 +338,7 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
     const consultPolicy = this.realtimeConfig?.consultPolicy ?? (isAgentProxy ? "always" : "auto");
     this.consultPolicy = consultPolicy;
     const usesRealtimeAgentHandoff = this.params.mode === "bidi" || toolPolicy !== "none";
+    const autoRespondToAudio = !isAgentProxy || consultPolicy !== "always";
     const interruptResponseOnInputAudio = resolveDiscordRealtimeInterruptResponseOnInputAudio({
       realtimeConfig: this.realtimeConfig,
       providerId: resolved.provider.id,
@@ -348,7 +354,7 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
       providerConfig: resolved.providerConfig,
       audioFormat: REALTIME_VOICE_AUDIO_FORMAT_PCM16_24KHZ,
       instructions,
-      autoRespondToAudio: usesRealtimeAgentHandoff,
+      autoRespondToAudio,
       interruptResponseOnInputAudio,
       markStrategy: "ack-immediately",
       tools: usesRealtimeAgentHandoff ? resolveRealtimeVoiceAgentConsultTools(toolPolicy) : [],
@@ -376,6 +382,15 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
       onEvent: (event) => {
         const detail = event.detail ? ` ${event.detail}` : "";
         logVoiceVerbose(`realtime ${event.direction}:${event.type}${detail}`);
+        const responseEnded =
+          event.direction === "server" &&
+          (event.type === "response.done" || event.type === "response.cancelled");
+        if (responseEnded) {
+          if (this.exactSpeechResponseActive && !this.exactSpeechAudioStarted) {
+            this.completeExactSpeechResponse(event.type);
+          }
+          this.finishOutputAudioStream(event.type);
+        }
         const interruptionLog = formatRealtimeInterruptionLog(event);
         if (interruptionLog) {
           logger.info(interruptionLog);
@@ -389,7 +404,7 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
       readProviderConfigString(resolved.providerConfig, "model") ?? resolved.provider.defaultModel;
     const resolvedVoice = readProviderConfigString(resolved.providerConfig, "voice");
     logger.info(
-      `discord voice: realtime bridge starting mode=${this.params.mode} provider=${resolved.provider.id} model=${resolvedModel ?? "default"} voice=${resolvedVoice ?? "default"} consultPolicy=${consultPolicy} toolPolicy=${toolPolicy} autoRespond=${usesRealtimeAgentHandoff} interruptResponse=${interruptResponseOnInputAudio} bargeIn=${resolveDiscordRealtimeBargeIn(
+      `discord voice: realtime bridge starting mode=${this.params.mode} provider=${resolved.provider.id} model=${resolvedModel ?? "default"} voice=${resolvedVoice ?? "default"} consultPolicy=${consultPolicy} toolPolicy=${toolPolicy} autoRespond=${autoRespondToAudio} interruptResponse=${interruptResponseOnInputAudio} bargeIn=${resolveDiscordRealtimeBargeIn(
         {
           realtimeConfig: this.realtimeConfig,
           providerId: resolved.provider.id,
@@ -411,6 +426,9 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
     this.pendingAgentProxyConsultContexts = [];
     this.recentAgentProxyConsultContexts = [];
     this.pendingSpeakerTurns.length = 0;
+    this.queuedExactSpeechMessages = [];
+    this.exactSpeechResponseActive = false;
+    this.exactSpeechAudioStarted = false;
     this.clearOutputAudio("session-close");
     this.bridge?.close();
     this.bridge = null;
@@ -522,6 +540,9 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
     }
     this.syncOutputAudioTimestamp();
     const stream = this.ensureOutputStream();
+    if (this.exactSpeechResponseActive) {
+      this.exactSpeechAudioStarted = true;
+    }
     stream.write(discordPcm);
     this.outputAudioDiscordBytes += discordPcm.length;
     this.outputAudioRealtimeBytes += realtimePcm24kMono.length;
@@ -545,6 +566,7 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
         this.logOutputAudioStopped("stream-close");
         this.outputStream = null;
         this.resetOutputAudioStats();
+        this.completeExactSpeechResponse("stream-close");
       }
     });
     const resource = voiceSdk.createAudioResource(stream, {
@@ -572,6 +594,69 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
     stream?.destroy();
   }
 
+  private finishOutputAudioStream(reason: string): void {
+    const stream = this.outputStream;
+    if (!stream || stream.destroyed || this.outputStreamEnding) {
+      return;
+    }
+    this.outputStreamEnding = true;
+    logger.info(
+      `discord voice: realtime audio playback finishing reason=${reason} guild=${this.params.entry.guildId} channel=${this.params.entry.channelId} audioMs=${Math.floor(this.outputAudioTimestampMs)} chunks=${this.outputAudioChunks}`,
+    );
+    stream.end();
+  }
+
+  private enqueueExactSpeechMessage(text: string): void {
+    if (this.stopped || !text.trim()) {
+      return;
+    }
+    if (this.exactSpeechResponseActive || this.hasInterruptibleOutputAudio()) {
+      this.queuedExactSpeechMessages.push(text);
+      logger.info(
+        `discord voice: realtime exact speech queued guild=${this.params.entry.guildId} channel=${this.params.entry.channelId} queued=${this.queuedExactSpeechMessages.length} outputAudioMs=${Math.floor(this.outputAudioTimestampMs)} outputActive=${this.isOutputAudioActive()}`,
+      );
+      return;
+    }
+    this.sendExactSpeechMessage(text);
+  }
+
+  private sendExactSpeechMessage(text: string): void {
+    if (this.stopped || !text.trim()) {
+      return;
+    }
+    this.exactSpeechResponseActive = true;
+    this.exactSpeechAudioStarted = false;
+    this.bridge?.sendUserMessage(buildDiscordSpeakExactUserMessage(text));
+  }
+
+  private completeExactSpeechResponse(reason: string): void {
+    if (!this.exactSpeechResponseActive && this.queuedExactSpeechMessages.length === 0) {
+      return;
+    }
+    this.exactSpeechResponseActive = false;
+    this.exactSpeechAudioStarted = false;
+    this.drainQueuedExactSpeechMessages(reason);
+  }
+
+  private drainQueuedExactSpeechMessages(reason: string): void {
+    if (
+      this.stopped ||
+      this.exactSpeechResponseActive ||
+      this.queuedExactSpeechMessages.length === 0 ||
+      this.hasInterruptibleOutputAudio()
+    ) {
+      return;
+    }
+    const next = this.queuedExactSpeechMessages.shift();
+    if (!next) {
+      return;
+    }
+    logger.info(
+      `discord voice: realtime exact speech dequeued reason=${reason} guild=${this.params.entry.guildId} channel=${this.params.entry.channelId} queued=${this.queuedExactSpeechMessages.length}`,
+    );
+    this.sendExactSpeechMessage(next);
+  }
+
   private logOutputAudioStopped(reason: string): void {
     const audioMs = Math.floor(this.outputAudioTimestampMs);
     const chunks = this.outputAudioChunks;
@@ -591,6 +676,7 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
     this.outputAudioRealtimeBytes = 0;
     this.outputAudioChunks = 0;
     this.outputAudioStartedAt = undefined;
+    this.outputStreamEnding = false;
   }
 
   private syncOutputAudioTimestamp(): void {
@@ -802,12 +888,13 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
     logger.info(
       `discord voice: realtime forced agent consult starting chars=${question.length} voiceSession=${this.params.entry.voiceSessionKey} supervisorSession=${this.params.entry.route.sessionKey} agent=${this.params.entry.route.agentId} speaker=${context.speakerLabel} owner=${context.senderIsOwner}`,
     );
-    this.syncOutputAudioTimestamp();
-    logger.info(
-      `discord voice: realtime barge-in requested reason=forced-agent-consult guild=${this.params.entry.guildId} channel=${this.params.entry.channelId} outputAudioMs=${Math.floor(this.outputAudioTimestampMs)} outputActive=${this.isOutputAudioActive()} playbackChunks=${this.outputAudioChunks} force=true`,
-    );
-    this.bridge?.handleBargeIn({ audioPlaybackActive: true, force: true });
-    this.clearOutputAudio("forced-agent-consult");
+    if (this.hasInterruptibleOutputAudio()) {
+      logger.info(
+        `discord voice: realtime barge-in requested reason=forced-agent-consult guild=${this.params.entry.guildId} channel=${this.params.entry.channelId} outputAudioMs=${Math.floor(this.outputAudioTimestampMs)} outputActive=${this.isOutputAudioActive()} playbackChunks=${this.outputAudioChunks} force=true`,
+      );
+      this.bridge?.handleBargeIn({ audioPlaybackActive: true, force: true });
+      this.clearOutputAudio("forced-agent-consult");
+    }
     pending.recent.handledByForcedPlayback = true;
     try {
       const promise = this.runAgentTurn({
@@ -823,16 +910,13 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
         `discord voice: realtime forced agent consult answer (${text.length} chars) elapsedMs=${Date.now() - startedAt} voiceSession=${this.params.entry.voiceSessionKey} supervisorSession=${this.params.entry.route.sessionKey} agent=${this.params.entry.route.agentId}: ${formatRealtimeLogPreview(text)}`,
       );
       if (text.trim()) {
-        this.clearOutputAudio("forced-agent-consult-answer");
-        this.bridge?.sendUserMessage(buildDiscordSpeakExactUserMessage(text));
+        this.enqueueExactSpeechMessage(text);
       }
     } catch (error) {
       logger.warn(
         `discord voice: realtime forced agent consult failed elapsedMs=${Date.now() - startedAt}: ${formatErrorMessage(error)}`,
       );
-      this.bridge?.sendUserMessage(
-        buildDiscordSpeakExactUserMessage(DISCORD_REALTIME_FALLBACK_TEXT),
-      );
+      this.enqueueExactSpeechMessage(DISCORD_REALTIME_FALLBACK_TEXT);
     }
   }
 
