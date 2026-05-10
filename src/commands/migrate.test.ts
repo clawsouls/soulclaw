@@ -356,56 +356,39 @@ describe("migrateApplyCommand", () => {
     await migrateDefaultCommand(runtime, { provider: "codex" });
 
     expect(mocks.multiselect).toHaveBeenCalledTimes(2);
-    expect(mocks.multiselect).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        message: expect.stringContaining("Select Codex skills"),
-      }),
-    );
-    expect(mocks.multiselect).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        message: expect.stringContaining("Select native Codex plugins"),
-        initialValues: ["plugin:google-calendar", "plugin:gmail"],
-        required: false,
-        options: [
-          expect.objectContaining({
-            value: MIGRATION_SKILL_SELECTION_SKIP,
-            label: "Skip for now",
-          }),
-          expect.objectContaining({
-            value: MIGRATION_SKILL_SELECTION_TOGGLE_ALL_ON,
-            label: "Toggle all on",
-          }),
-          expect.objectContaining({
-            value: MIGRATION_SKILL_SELECTION_TOGGLE_ALL_OFF,
-            label: "Toggle all off",
-          }),
-          expect.objectContaining({ value: "plugin:google-calendar", label: "google-calendar" }),
-          expect.objectContaining({ value: "plugin:gmail", label: "gmail" }),
-        ],
-      }),
-    );
+    const skillPrompt = mocks.multiselect.mock.calls[0]?.[0] as { message?: unknown } | undefined;
+    expect(String(skillPrompt?.message)).toContain("Select Codex skills");
+    const pluginPrompt = mocks.multiselect.mock.calls[1]?.[0] as
+      | {
+          initialValues?: unknown;
+          message?: unknown;
+          options?: Array<{ label?: unknown; value?: unknown }>;
+          required?: unknown;
+        }
+      | undefined;
+    expect(String(pluginPrompt?.message)).toContain("Select native Codex plugins");
+    expect(pluginPrompt?.initialValues).toStrictEqual(["plugin:google-calendar", "plugin:gmail"]);
+    expect(pluginPrompt?.required).toBe(false);
+    expect(pluginPrompt?.options?.map(({ label, value }) => ({ label, value }))).toStrictEqual([
+      { value: MIGRATION_SKILL_SELECTION_SKIP, label: "Skip for now" },
+      { value: MIGRATION_SKILL_SELECTION_TOGGLE_ALL_ON, label: "Toggle all on" },
+      { value: MIGRATION_SKILL_SELECTION_TOGGLE_ALL_OFF, label: "Toggle all off" },
+      { value: "plugin:google-calendar", label: "google-calendar" },
+      { value: "plugin:gmail", label: "gmail" },
+    ]);
     expect(mocks.promptYesNo).toHaveBeenCalledWith("Apply this migration now?", false);
     const appliedPlan = mocks.provider.apply.mock.calls[0]?.[1] as MigrationPlan;
-    expect(appliedPlan.summary).toMatchObject({ planned: 4, skipped: 2, conflicts: 0 });
-    expect(appliedPlan.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: "skill:alpha", status: "planned" }),
-        expect.objectContaining({
-          id: "skill:beta",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-        expect.objectContaining({
-          id: "plugin:google-calendar",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-        expect.objectContaining({ id: "plugin:gmail", status: "planned" }),
-        expect.objectContaining({ id: "config:codex-plugins", status: "planned" }),
-      ]),
-    );
+    expect(appliedPlan.summary.planned).toBe(4);
+    expect(appliedPlan.summary.skipped).toBe(2);
+    expect(appliedPlan.summary.conflicts).toBe(0);
+    const itemsById = new Map(appliedPlan.items.map((item) => [item.id, item]));
+    expect(itemsById.get("skill:alpha")?.status).toBe("planned");
+    expect(itemsById.get("skill:beta")?.status).toBe("skipped");
+    expect(itemsById.get("skill:beta")?.reason).toBe("not selected for migration");
+    expect(itemsById.get("plugin:google-calendar")?.status).toBe("skipped");
+    expect(itemsById.get("plugin:google-calendar")?.reason).toBe("not selected for migration");
+    expect(itemsById.get("plugin:gmail")?.status).toBe("planned");
+    expect(itemsById.get("config:codex-plugins")?.status).toBe("planned");
     expect(
       Object.keys(
         (
