@@ -450,6 +450,21 @@ describe("capability cli", () => {
     return calls[0]?.[0];
   }
 
+  function firstImageGenerationCall() {
+    const calls = mocks.generateImage.mock.calls as unknown as Array<[Record<string, unknown>]>;
+    return calls[0]?.[0];
+  }
+
+  function firstVideoGenerationCall() {
+    const calls = mocks.generateVideo.mock.calls as unknown as Array<[Record<string, unknown>]>;
+    return calls[0]?.[0];
+  }
+
+  function firstAudioTranscriptionCall() {
+    const calls = mocks.transcribeAudioFile.mock.calls as unknown as Array<[{ filePath?: string }]>;
+    return calls[0]?.[0];
+  }
+
   function expectModelRunDispatch(transport: "local" | "gateway", modelRef: string) {
     if (transport === "gateway") {
       const slash = modelRef.indexOf("/");
@@ -1195,16 +1210,10 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.runtime.writeJson).toHaveBeenCalledWith(
-      expect.objectContaining({
-        outputs: [
-          expect.objectContaining({
-            path: tempOutput.replace(/\.png$/, ".jpg"),
-            mimeType: "image/jpeg",
-          }),
-        ],
-      }),
-    );
+    const outputs = firstJsonOutput()?.outputs as Array<Record<string, unknown>>;
+    expect(outputs).toHaveLength(1);
+    expect(outputs[0]?.path).toBe(tempOutput.replace(/\.png$/, ".jpg"));
+    expect(outputs[0]?.mimeType).toBe("image/jpeg");
   });
 
   it("passes image generation timeout through to runtime", async () => {
@@ -1235,12 +1244,8 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.generateImage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        prompt: "friendly lobster",
-        timeoutMs: 180000,
-      }),
-    );
+    expect(firstImageGenerationCall()?.prompt).toBe("friendly lobster");
+    expect(firstImageGenerationCall()?.timeoutMs).toBe(180000);
   });
 
   it("passes image output format and generic background hints through to generation runtime", async () => {
@@ -1275,15 +1280,12 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.generateImage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        prompt: "transparent sticker",
-        modelOverride: "openai/gpt-image-1.5",
-        outputFormat: "png",
-        background: "transparent",
-        providerOptions: undefined,
-      }),
-    );
+    const generationCall = firstImageGenerationCall();
+    expect(generationCall?.prompt).toBe("transparent sticker");
+    expect(generationCall?.modelOverride).toBe("openai/gpt-image-1.5");
+    expect(generationCall?.outputFormat).toBe("png");
+    expect(generationCall?.background).toBe("transparent");
+    expect(generationCall?.providerOptions).toBeUndefined();
   });
 
   it("passes image output format and OpenAI background hints through to edit runtime", async () => {
@@ -1322,24 +1324,19 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.generateImage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        prompt: "make background transparent",
-        modelOverride: "openai/gpt-image-1.5",
-        outputFormat: "png",
-        background: undefined,
-        providerOptions: {
-          openai: {
-            background: "transparent",
-          },
-        },
-        inputImages: [
-          expect.objectContaining({
-            fileName: path.basename(inputPath),
-          }),
-        ],
-      }),
-    );
+    const generationCall = firstImageGenerationCall();
+    const inputImages = generationCall?.inputImages as Array<Record<string, unknown>>;
+    expect(generationCall?.prompt).toBe("make background transparent");
+    expect(generationCall?.modelOverride).toBe("openai/gpt-image-1.5");
+    expect(generationCall?.outputFormat).toBe("png");
+    expect(generationCall?.background).toBeUndefined();
+    expect(generationCall?.providerOptions).toEqual({
+      openai: {
+        background: "transparent",
+      },
+    });
+    expect(inputImages).toHaveLength(1);
+    expect(inputImages[0]?.fileName).toBe(path.basename(inputPath));
   });
 
   it("rejects unsupported image output format and background hints", async () => {
@@ -1448,21 +1445,16 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.generateImage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        prompt: "remove the background object",
-        modelOverride: "openai/gpt-image-2",
-        size: "2160x3840",
-        aspectRatio: "9:16",
-        resolution: "4K",
-        inputImages: [
-          expect.objectContaining({
-            fileName: path.basename(tempInput),
-            mimeType: "image/png",
-          }),
-        ],
-      }),
-    );
+    const generationCall = firstImageGenerationCall();
+    const inputImages = generationCall?.inputImages as Array<Record<string, unknown>>;
+    expect(generationCall?.prompt).toBe("remove the background object");
+    expect(generationCall?.modelOverride).toBe("openai/gpt-image-2");
+    expect(generationCall?.size).toBe("2160x3840");
+    expect(generationCall?.aspectRatio).toBe("9:16");
+    expect(generationCall?.resolution).toBe("4K");
+    expect(inputImages).toHaveLength(1);
+    expect(inputImages[0]?.fileName).toBe(path.basename(tempInput));
+    expect(inputImages[0]?.mimeType).toBe("image/png");
   });
 
   it("reports the expanded image.edit flags in capability inspect", async () => {
@@ -1471,25 +1463,21 @@ describe("capability cli", () => {
       argv: ["capability", "inspect", "--name", "image.edit", "--json"],
     });
 
-    expect(mocks.runtime.writeJson).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "image.edit",
-        flags: [
-          "--file",
-          "--prompt",
-          "--model",
-          "--size",
-          "--aspect-ratio",
-          "--resolution",
-          "--output-format",
-          "--background",
-          "--openai-background",
-          "--timeout-ms",
-          "--output",
-          "--json",
-        ],
-      }),
-    );
+    expect(firstJsonOutput()?.id).toBe("image.edit");
+    expect(firstJsonOutput()?.flags).toEqual([
+      "--file",
+      "--prompt",
+      "--model",
+      "--size",
+      "--aspect-ratio",
+      "--resolution",
+      "--output-format",
+      "--background",
+      "--openai-background",
+      "--timeout-ms",
+      "--output",
+      "--json",
+    ]);
   });
 
   it("streams url-only generated videos to --output paths", async () => {
@@ -1532,24 +1520,20 @@ describe("capability cli", () => {
     });
 
     const outputPath = `${outputBase}.mp4`;
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://example.com/generated-video.mp4",
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
-    );
+    const fetchCall = fetchMock.mock.calls[0] as unknown as
+      | [string, { signal?: unknown }]
+      | undefined;
+    expect(fetchCall?.[0]).toBe("https://example.com/generated-video.mp4");
+    expect(fetchCall?.[1]?.signal).toBeInstanceOf(AbortSignal);
     expect(await fs.readFile(outputPath, "utf8")).toBe("video-bytes");
-    expect(mocks.runtime.writeJson).toHaveBeenCalledWith(
-      expect.objectContaining({
-        capability: "video.generate",
-        provider: "vydra",
-        outputs: [
-          expect.objectContaining({
-            path: outputPath,
-            mimeType: "video/mp4",
-            size: 11,
-          }),
-        ],
-      }),
-    );
+    const output = firstJsonOutput();
+    const outputs = output?.outputs as Array<Record<string, unknown>>;
+    expect(output?.capability).toBe("video.generate");
+    expect(output?.provider).toBe("vydra");
+    expect(outputs).toHaveLength(1);
+    expect(outputs[0]?.path).toBe(outputPath);
+    expect(outputs[0]?.mimeType).toBe("video/mp4");
+    expect(outputs[0]?.size).toBe(11);
   });
 
   it("passes video generation parameters through to runtime", async () => {
@@ -1592,19 +1576,16 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.generateVideo).toHaveBeenCalledWith(
-      expect.objectContaining({
-        prompt: "friendly lobster",
-        modelOverride: "minimax/MiniMax-Hailuo-2.3",
-        size: "1280x768",
-        aspectRatio: "16:9",
-        resolution: "768P",
-        durationSeconds: 6,
-        audio: true,
-        watermark: true,
-        timeoutMs: 300000,
-      }),
-    );
+    const videoCall = firstVideoGenerationCall();
+    expect(videoCall?.prompt).toBe("friendly lobster");
+    expect(videoCall?.modelOverride).toBe("minimax/MiniMax-Hailuo-2.3");
+    expect(videoCall?.size).toBe("1280x768");
+    expect(videoCall?.aspectRatio).toBe("16:9");
+    expect(videoCall?.resolution).toBe("768P");
+    expect(videoCall?.durationSeconds).toBe(6);
+    expect(videoCall?.audio).toBe(true);
+    expect(videoCall?.watermark).toBe(true);
+    expect(videoCall?.timeoutMs).toBe(300000);
   });
 
   it("fails video generate when a provider returns an undeliverable asset", async () => {
@@ -1632,15 +1613,12 @@ describe("capability cli", () => {
       argv: ["capability", "audio", "transcribe", "--file", "memo.m4a", "--json"],
     });
 
-    expect(mocks.transcribeAudioFile).toHaveBeenCalledWith(
-      expect.objectContaining({ filePath: expect.stringMatching(/memo\.m4a$/) }),
-    );
-    expect(mocks.runtime.writeJson).toHaveBeenCalledWith(
-      expect.objectContaining({
-        capability: "audio.transcribe",
-        outputs: [expect.objectContaining({ kind: "audio.transcription" })],
-      }),
-    );
+    expect(path.basename(firstAudioTranscriptionCall()?.filePath ?? "")).toBe("memo.m4a");
+    const output = firstJsonOutput();
+    const outputs = output?.outputs as Array<Record<string, unknown>>;
+    expect(output?.capability).toBe("audio.transcribe");
+    expect(outputs).toHaveLength(1);
+    expect(outputs[0]?.kind).toBe("audio.transcription");
   });
 
   it("fails audio transcribe when no transcript text is returned", async () => {
