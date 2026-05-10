@@ -524,7 +524,7 @@ jobs:
 
       - name: Build dist for repo E2E
         env:
-          NODE_OPTIONS: --max-old-space-size=6144
+          NODE_OPTIONS: --max-old-space-size=8192
         run: pnpm build
 
       - name: Run repo E2E suite
@@ -571,7 +571,7 @@ jobs:
           ) &&
           (inputs.live_suite_filter == '' || inputs.live_suite_filter == matrix.suite_id)
         env:
-          NODE_OPTIONS: --max-old-space-size=6144
+          NODE_OPTIONS: --max-old-space-size=8192
         run: pnpm build
 
       - name: Configure suite-specific env

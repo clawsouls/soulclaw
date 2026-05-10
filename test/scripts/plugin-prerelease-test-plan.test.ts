@@ -226,7 +226,7 @@ describe("scripts/lib/plugin-prerelease-test-plan.mjs", () => {
     expect(workflow.jobs["checks-node-extensions-shard"]).toBeUndefined();
     expect(preflight.outputs).not.toHaveProperty("run_plugin_prerelease_suite");
     expect(preflight.outputs).not.toHaveProperty("run_checks_node_extensions");
-    expect(buildDistStep.env).toEqual({ NODE_OPTIONS: "--max-old-space-size=6144" });
+    expect(buildDistStep.env).toEqual({ NODE_OPTIONS: "--max-old-space-size=8192" });
     expect(staticShard).toEqual({
       if: "needs.preflight.outputs.run_plugin_prerelease_static == 'true'",
       name: "${{ matrix.check_name }}",
