@@ -1848,7 +1848,7 @@ describe("discoverOpenClawPlugins", () => {
         const diagnostic = result.diagnostics.find(
           (entry) =>
             entry.pluginId === "actual-id" &&
-            /alias-dir$/u.test(entry.source ?? "") &&
+            (entry.source ?? "").endsWith("alias-dir") &&
             entry.message.includes("blocked plugin candidate: world-writable path"),
         );
         expect(diagnostic).toBeDefined();

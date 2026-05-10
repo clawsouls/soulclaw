@@ -492,7 +492,7 @@ describe("executeNodeHostCommand", () => {
     const details = result.details;
     expect(details?.status).toBe("completed");
     if (details?.status !== "completed") {
-      throw new Error(`expected completed details, got ${String(details?.status)}`);
+      throw new Error(`expected completed details, got ${details?.status ?? "missing"}`);
     }
     expect(details.exitCode).toBe(0);
     expect(details.aggregated).toBe("");
