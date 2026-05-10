@@ -1388,32 +1388,25 @@ describe("runCodexAppServerAttempt", () => {
     await harness.completeTurn({ threadId: "thread-1", turnId: "turn-1" });
     await run;
 
-    expect(beforePromptBuild).toHaveBeenCalledWith(
-      {
-        prompt: "hello",
-        messages: [expect.objectContaining({ role: "assistant" })],
-      },
-      expect.objectContaining({
-        runId: "run-1",
-        sessionId: "session-1",
-      }),
-    );
-    expect(harness.requests).toEqual(
-      expect.arrayContaining([
-        {
-          method: "thread/start",
-          params: expect.objectContaining({
-            developerInstructions: expect.stringContaining("pre system\n\ncustom codex system"),
-          }),
-        },
-        {
-          method: "turn/start",
-          params: expect.objectContaining({
-            input: [{ type: "text", text: "queued context\n\nhello", text_elements: [] }],
-          }),
-        },
-      ]),
-    );
+    expect(beforePromptBuild).toHaveBeenCalledOnce();
+    const [hookInput, hookContext] = beforePromptBuild.mock.calls[0] as unknown as [
+      { messages?: Array<{ role?: string }>; prompt?: string },
+      { runId?: string; sessionId?: string },
+    ];
+    expect(hookInput.prompt).toBe("hello");
+    expect(hookInput.messages?.[0]?.role).toBe("assistant");
+    expect(hookContext.runId).toBe("run-1");
+    expect(hookContext.sessionId).toBe("session-1");
+    const threadStart = harness.requests.find((request) => request.method === "thread/start");
+    const threadStartParams = threadStart?.params as { developerInstructions?: string } | undefined;
+    expect(threadStartParams?.developerInstructions).toContain("pre system\n\ncustom codex system");
+    const turnStart = harness.requests.find((request) => request.method === "turn/start");
+    const turnStartParams = turnStart?.params as
+      | { input?: Array<{ text?: string; text_elements?: unknown[]; type?: string }> }
+      | undefined;
+    expect(turnStartParams?.input).toEqual([
+      { type: "text", text: "queued context\n\nhello", text_elements: [] },
+    ]);
   });
 
   it("projects mirrored history when starting Codex without a native thread binding", async () => {
@@ -1501,27 +1494,30 @@ describe("runCodexAppServerAttempt", () => {
     expect(llmInput).toHaveBeenCalled();
     await new Promise<void>((resolve) => setImmediate(resolve));
 
-    expect(llmInput.mock.calls).toEqual(
-      expect.arrayContaining([
-        [
-          expect.objectContaining({
-            runId: "run-1",
-            sessionId: "session-1",
-            provider: "codex",
-            model: "gpt-5.4-codex",
-            prompt: "hello",
-            imagesCount: 0,
-            historyMessages: [expect.objectContaining({ role: "assistant" })],
-            systemPrompt: expect.stringContaining(CODEX_GPT5_BEHAVIOR_CONTRACT),
-          }),
-          expect.objectContaining({
-            runId: "run-1",
-            sessionId: "session-1",
-            sessionKey: "agent:main:session-1",
-          }),
-        ],
-      ]),
-    );
+    const [llmInputPayload, llmInputContext] = llmInput.mock.calls[0] as unknown as [
+      {
+        historyMessages?: Array<{ role?: string }>;
+        imagesCount?: number;
+        model?: string;
+        prompt?: string;
+        provider?: string;
+        runId?: string;
+        sessionId?: string;
+        systemPrompt?: string;
+      },
+      { runId?: string; sessionId?: string; sessionKey?: string },
+    ];
+    expect(llmInputPayload.runId).toBe("run-1");
+    expect(llmInputPayload.sessionId).toBe("session-1");
+    expect(llmInputPayload.provider).toBe("codex");
+    expect(llmInputPayload.model).toBe("gpt-5.4-codex");
+    expect(llmInputPayload.prompt).toBe("hello");
+    expect(llmInputPayload.imagesCount).toBe(0);
+    expect(llmInputPayload.historyMessages?.[0]?.role).toBe("assistant");
+    expect(llmInputPayload.systemPrompt).toContain(CODEX_GPT5_BEHAVIOR_CONTRACT);
+    expect(llmInputContext.runId).toBe("run-1");
+    expect(llmInputContext.sessionId).toBe("session-1");
+    expect(llmInputContext.sessionKey).toBe("agent:main:session-1");
 
     await harness.notify({
       method: "item/agentMessage/delta",
@@ -1538,30 +1534,26 @@ describe("runCodexAppServerAttempt", () => {
     expect(result.assistantTexts).toEqual(["hello back"]);
     expect(llmOutput).toHaveBeenCalledTimes(1);
     expect(agentEnd).toHaveBeenCalledTimes(1);
-    const agentEvents = onRunAgentEvent.mock.calls.map(([event]) => event);
-    expect(agentEvents).toEqual(
-      expect.arrayContaining([
-        {
-          stream: "lifecycle",
-          data: expect.objectContaining({
-            phase: "start",
-            startedAt: expect.any(Number),
-          }),
-        },
-        {
-          stream: "assistant",
-          data: { text: "hello back" },
-        },
-        {
-          stream: "lifecycle",
-          data: expect.objectContaining({
-            phase: "end",
-            startedAt: expect.any(Number),
-            endedAt: expect.any(Number),
-          }),
-        },
-      ]),
+    const agentEvents = onRunAgentEvent.mock.calls.map(([event]) => event) as Array<{
+      data: {
+        endedAt?: number;
+        phase?: string;
+        startedAt?: number;
+        text?: string;
+      };
+      stream: string;
+    }>;
+    const lifecycleStart = agentEvents.find(
+      (event) => event.stream === "lifecycle" && event.data.phase === "start",
     );
+    expect(typeof lifecycleStart?.data.startedAt).toBe("number");
+    const assistantEvent = agentEvents.find((event) => event.stream === "assistant");
+    expect(assistantEvent?.data).toEqual({ text: "hello back" });
+    const lifecycleEnd = agentEvents.find(
+      (event) => event.stream === "lifecycle" && event.data.phase === "end",
+    );
+    expect(typeof lifecycleEnd?.data.startedAt).toBe("number");
+    expect(typeof lifecycleEnd?.data.endedAt).toBe("number");
     const startIndex = agentEvents.findIndex(
       (event) => event.stream === "lifecycle" && event.data.phase === "start",
     );
@@ -1572,54 +1564,48 @@ describe("runCodexAppServerAttempt", () => {
     expect(startIndex).toBeGreaterThanOrEqual(0);
     expect(assistantIndex).toBeGreaterThan(startIndex);
     expect(endIndex).toBeGreaterThan(assistantIndex);
-    expect(globalAgentEvents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          runId: "run-1",
-          sessionKey: "agent:main:session-1",
-          stream: "assistant",
-          data: { text: "hello back" },
-        }),
-        expect.objectContaining({
-          runId: "run-1",
-          sessionKey: "agent:main:session-1",
-          stream: "lifecycle",
-          data: expect.objectContaining({ phase: "end" }),
-        }),
-      ]),
+    const globalAssistantEvent = globalAgentEvents.find((event) => event.stream === "assistant");
+    expect(globalAssistantEvent?.runId).toBe("run-1");
+    expect(globalAssistantEvent?.sessionKey).toBe("agent:main:session-1");
+    expect(globalAssistantEvent?.data).toEqual({ text: "hello back" });
+    const globalEndEvent = globalAgentEvents.find(
+      (event) => event.stream === "lifecycle" && event.data.phase === "end",
     );
+    expect(globalEndEvent?.runId).toBe("run-1");
+    expect(globalEndEvent?.sessionKey).toBe("agent:main:session-1");
 
-    expect(llmOutput).toHaveBeenCalledWith(
-      expect.objectContaining({
-        runId: "run-1",
-        sessionId: "session-1",
-        provider: "codex",
-        model: "gpt-5.4-codex",
-        resolvedRef: "codex/gpt-5.4-codex",
-        harnessId: "codex",
-        assistantTexts: ["hello back"],
-        lastAssistant: expect.objectContaining({
-          role: "assistant",
-        }),
-      }),
-      expect.objectContaining({
-        runId: "run-1",
-        sessionId: "session-1",
-      }),
-    );
-    expect(agentEnd).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: true,
-        messages: expect.arrayContaining([
-          expect.objectContaining({ role: "user" }),
-          expect.objectContaining({ role: "assistant" }),
-        ]),
-      }),
-      expect.objectContaining({
-        runId: "run-1",
-        sessionId: "session-1",
-      }),
-    );
+    const [llmOutputPayload, llmOutputContext] = llmOutput.mock.calls[0] as unknown as [
+      {
+        assistantTexts?: string[];
+        harnessId?: string;
+        lastAssistant?: { role?: string };
+        model?: string;
+        provider?: string;
+        resolvedRef?: string;
+        runId?: string;
+        sessionId?: string;
+      },
+      { runId?: string; sessionId?: string },
+    ];
+    expect(llmOutputPayload.runId).toBe("run-1");
+    expect(llmOutputPayload.sessionId).toBe("session-1");
+    expect(llmOutputPayload.provider).toBe("codex");
+    expect(llmOutputPayload.model).toBe("gpt-5.4-codex");
+    expect(llmOutputPayload.resolvedRef).toBe("codex/gpt-5.4-codex");
+    expect(llmOutputPayload.harnessId).toBe("codex");
+    expect(llmOutputPayload.assistantTexts).toEqual(["hello back"]);
+    expect(llmOutputPayload.lastAssistant?.role).toBe("assistant");
+    expect(llmOutputContext.runId).toBe("run-1");
+    expect(llmOutputContext.sessionId).toBe("session-1");
+    const [agentEndPayload, agentEndContext] = agentEnd.mock.calls[0] as unknown as [
+      { messages?: Array<{ role?: string }>; success?: boolean },
+      { runId?: string; sessionId?: string },
+    ];
+    expect(agentEndPayload.success).toBe(true);
+    expect(agentEndPayload.messages?.some((message) => message.role === "user")).toBe(true);
+    expect(agentEndPayload.messages?.some((message) => message.role === "assistant")).toBe(true);
+    expect(agentEndContext.runId).toBe("run-1");
+    expect(agentEndContext.sessionId).toBe("session-1");
   });
 
   it("forwards Codex app-server verbose tool summaries and completed output", async () => {
