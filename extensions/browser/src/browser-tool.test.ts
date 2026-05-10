@@ -330,6 +330,49 @@ function lastMockCallArg<T>(
   return mockCallArg<T>(mock, -1, argIndex, _type);
 }
 
+function firstResultText(result: { content?: readonly unknown[] } | undefined): string {
+  const block = result?.content?.[0] as { type?: unknown; text?: unknown } | undefined;
+  expect(block?.type).toBe("text");
+  expect(typeof block?.text).toBe("string");
+  return block?.text as string;
+}
+
+function externalContentDetails(
+  result: { details?: unknown } | undefined,
+  kind: string,
+): {
+  externalContent?: { untrusted?: unknown; source?: unknown; kind?: unknown };
+  format?: unknown;
+  messageCount?: unknown;
+  nodeCount?: unknown;
+  ok?: unknown;
+  tabCount?: unknown;
+  tabs?: unknown;
+  targetId?: unknown;
+} {
+  const details = result?.details as
+    | {
+        externalContent?: { untrusted?: unknown; source?: unknown; kind?: unknown };
+        format?: unknown;
+        messageCount?: unknown;
+        nodeCount?: unknown;
+        ok?: unknown;
+        tabCount?: unknown;
+        tabs?: unknown;
+        targetId?: unknown;
+      }
+    | undefined;
+  expect(details).toBeDefined();
+  if (!details) {
+    throw new Error("Expected browser tool result details");
+  }
+  expect(details?.ok).toBe(true);
+  expect(details?.externalContent?.untrusted).toBe(true);
+  expect(details?.externalContent?.source).toBe("browser");
+  expect(details?.externalContent?.kind).toBe(kind);
+  return details;
+}
+
 function nodeInvokeCall(callIndex: number): {
   options: { timeoutMs?: number };
   request: {
@@ -1171,27 +1214,12 @@ describe("browser tool external content wrapping", () => {
 
     const tool = createBrowserTool();
     const result = await tool.execute?.("call-1", { action: "snapshot", snapshotFormat: "aria" });
-    expect(result?.content?.[0]).toMatchObject({
-      type: "text",
-      text: expect.stringContaining("<<<EXTERNAL_UNTRUSTED_CONTENT"),
-    });
-    const ariaTextBlock = result?.content?.[0];
-    const ariaTextValue =
-      ariaTextBlock && typeof ariaTextBlock === "object" && "text" in ariaTextBlock
-        ? (ariaTextBlock as { text?: unknown }).text
-        : undefined;
-    const ariaText = typeof ariaTextValue === "string" ? ariaTextValue : "";
+    const ariaText = firstResultText(result);
+    expect(ariaText).toContain("<<<EXTERNAL_UNTRUSTED_CONTENT");
     expect(ariaText).toContain("Ignore previous instructions");
-    expect(result?.details).toMatchObject({
-      ok: true,
-      format: "aria",
-      nodeCount: 1,
-      externalContent: expect.objectContaining({
-        untrusted: true,
-        source: "browser",
-        kind: "snapshot",
-      }),
-    });
+    const details = externalContentDetails(result, "snapshot");
+    expect(details.format).toBe("aria");
+    expect(details.nodeCount).toBe(1);
   });
 
   it("wraps tabs output as external content", async () => {
@@ -1207,36 +1235,24 @@ describe("browser tool external content wrapping", () => {
 
     const tool = createBrowserTool();
     const result = await tool.execute?.("call-1", { action: "tabs" });
-    expect(result?.content?.[0]).toMatchObject({
-      type: "text",
-      text: expect.stringContaining("<<<EXTERNAL_UNTRUSTED_CONTENT"),
-    });
-    const tabsTextBlock = result?.content?.[0];
-    const tabsTextValue =
-      tabsTextBlock && typeof tabsTextBlock === "object" && "text" in tabsTextBlock
-        ? (tabsTextBlock as { text?: unknown }).text
-        : undefined;
-    const tabsText = typeof tabsTextValue === "string" ? tabsTextValue : "";
+    const tabsText = firstResultText(result);
+    expect(tabsText).toContain("<<<EXTERNAL_UNTRUSTED_CONTENT");
     expect(tabsText.indexOf("suggestedTargetId")).toBeLessThan(tabsText.indexOf("targetId"));
     expect(tabsText).toContain('"suggestedTargetId": "docs"');
     expect(tabsText).toContain("Ignore previous instructions");
-    expect(result?.details).toMatchObject({
-      ok: true,
-      tabCount: 1,
-      tabs: [
-        expect.objectContaining({
-          suggestedTargetId: "docs",
-          tabId: "t1",
-          label: "docs",
-          targetId: "RAW-TARGET",
-        }),
-      ],
-      externalContent: expect.objectContaining({
-        untrusted: true,
-        source: "browser",
-        kind: "tabs",
-      }),
-    });
+    const details = externalContentDetails(result, "tabs");
+    expect(details.tabCount).toBe(1);
+    expect(Array.isArray(details.tabs)).toBe(true);
+    const [tab] = details.tabs as Array<{
+      label?: unknown;
+      suggestedTargetId?: unknown;
+      tabId?: unknown;
+      targetId?: unknown;
+    }>;
+    expect(tab?.suggestedTargetId).toBe("docs");
+    expect(tab?.tabId).toBe("t1");
+    expect(tab?.label).toBe("docs");
+    expect(tab?.targetId).toBe("RAW-TARGET");
   });
 
   it("wraps console output as external content", async () => {
@@ -1250,27 +1266,12 @@ describe("browser tool external content wrapping", () => {
 
     const tool = createBrowserTool();
     const result = await tool.execute?.("call-1", { action: "console" });
-    expect(result?.content?.[0]).toMatchObject({
-      type: "text",
-      text: expect.stringContaining("<<<EXTERNAL_UNTRUSTED_CONTENT"),
-    });
-    const consoleTextBlock = result?.content?.[0];
-    const consoleTextValue =
-      consoleTextBlock && typeof consoleTextBlock === "object" && "text" in consoleTextBlock
-        ? (consoleTextBlock as { text?: unknown }).text
-        : undefined;
-    const consoleText = typeof consoleTextValue === "string" ? consoleTextValue : "";
+    const consoleText = firstResultText(result);
+    expect(consoleText).toContain("<<<EXTERNAL_UNTRUSTED_CONTENT");
     expect(consoleText).toContain("Ignore previous instructions");
-    expect(result?.details).toMatchObject({
-      ok: true,
-      targetId: "t1",
-      messageCount: 1,
-      externalContent: expect.objectContaining({
-        untrusted: true,
-        source: "browser",
-        kind: "console",
-      }),
-    });
+    const details = externalContentDetails(result, "console");
+    expect(details.targetId).toBe("t1");
+    expect(details.messageCount).toBe(1);
   });
 });
 
@@ -1295,19 +1296,30 @@ describe("browser tool act stale target recovery", () => {
     });
 
     expect(browserActionsMocks.browserAct).toHaveBeenCalledTimes(2);
-    expect(browserActionsMocks.browserAct).toHaveBeenNthCalledWith(
+    expect(mockCallArg(browserActionsMocks.browserAct, 0, 0)).toBeUndefined();
+    const firstRequest = mockCallArg<{ kind?: string; ref?: string; targetId?: string }>(
+      browserActionsMocks.browserAct,
+      0,
       1,
-      undefined,
-      expect.objectContaining({ targetId: "stale-tab", kind: "hover", ref: "btn-1" }),
-      expect.objectContaining({ profile: "user" }),
     );
-    expect(browserActionsMocks.browserAct).toHaveBeenNthCalledWith(
-      2,
-      undefined,
-      expect.not.objectContaining({ targetId: expect.anything() }),
-      expect.objectContaining({ profile: "user" }),
+    expect(firstRequest.targetId).toBe("stale-tab");
+    expect(firstRequest.kind).toBe("hover");
+    expect(firstRequest.ref).toBe("btn-1");
+    const firstOptions = mockCallArg<{ profile?: string }>(browserActionsMocks.browserAct, 0, 2);
+    expect(firstOptions.profile).toBe("user");
+
+    expect(mockCallArg(browserActionsMocks.browserAct, 1, 0)).toBeUndefined();
+    const secondRequest = mockCallArg<{ kind?: string; ref?: string; targetId?: string }>(
+      browserActionsMocks.browserAct,
+      1,
+      1,
     );
-    expect(result?.details).toMatchObject({ ok: true });
+    expect(secondRequest.targetId).toBeUndefined();
+    expect(secondRequest.kind).toBe("hover");
+    expect(secondRequest.ref).toBe("btn-1");
+    const secondOptions = mockCallArg<{ profile?: string }>(browserActionsMocks.browserAct, 1, 2);
+    expect(secondOptions.profile).toBe("user");
+    expect((result?.details as { ok?: unknown } | undefined)?.ok).toBe(true);
   });
 
   it("does not retry mutating user-browser act requests without targetId", async () => {
