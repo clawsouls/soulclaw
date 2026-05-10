@@ -23,7 +23,7 @@ describe("memory-wiki tools", () => {
     const evidenceArraySchema = asSchemaObject(evidenceSchema.items);
     const evidenceProperties = asSchemaObject(evidenceArraySchema.properties);
 
-    expect(Object.keys(evidenceProperties).sort()).toEqual([
+    expect(Object.keys(evidenceProperties).toSorted()).toEqual([
       "confidence",
       "kind",
       "lines",

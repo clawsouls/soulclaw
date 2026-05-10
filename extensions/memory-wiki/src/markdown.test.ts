@@ -109,6 +109,10 @@ describe("toWikiPageSummary", () => {
       relativePath: "entities/brad.md",
       raw,
     });
+    expect(summary).not.toBeNull();
+    if (!summary) {
+      throw new Error("expected wiki summary");
+    }
 
     expect(summary.entityType).toBe("person");
     expect(summary.canonicalId).toBe("maintainer.brad-groux");

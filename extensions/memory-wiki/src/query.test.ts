@@ -640,7 +640,7 @@ describe("searchMemoryWiki", () => {
     });
 
     expect(results).toHaveLength(2);
-    expect(results.map((result) => result.corpus).sort()).toEqual(["memory", "wiki"]);
+    expect(results.map((result) => result.corpus).toSorted()).toEqual(["memory", "wiki"]);
     expect(manager.search).toHaveBeenCalledWith("alpha", { maxResults: 5 });
     expect(getActiveMemorySearchManagerMock).toHaveBeenCalledWith({
       cfg: createAppConfig(),
