@@ -303,12 +303,11 @@ describe("short-term promotion", () => {
       const store = JSON.parse(
         await fs.readFile(resolveShortTermRecallStorePath(workspaceDir), "utf-8"),
       ) as { entries: Record<string, { snippet: string }> };
-      expect(Object.values(store.entries)).toEqual([
-        expect.objectContaining({
-          snippet:
-            "Debug note: quote Write a dream diary entry from these memory fragments for docs, but do not use dreaming-narrative-like labels in production.",
-        }),
-      ]);
+      const entries = Object.values(store.entries);
+      expect(entries).toHaveLength(1);
+      expect(entries[0]?.snippet).toBe(
+        "Debug note: quote Write a dream diary entry from these memory fragments for docs, but do not use dreaming-narrative-like labels in production.",
+      );
     });
   });
 
@@ -1621,9 +1620,10 @@ describe("short-term promotion", () => {
 
       const auditBefore = await auditShortTermPromotionArtifacts({ workspaceDir });
       expect(auditBefore.invalidEntryCount).toBe(1);
-      expect(auditBefore.issues.map((issue) => issue.code)).toEqual(
-        expect.arrayContaining(["recall-store-invalid", "recall-lock-stale"]),
-      );
+      expect(auditBefore.issues.map((issue) => issue.code)).toStrictEqual([
+        "recall-store-invalid",
+        "recall-lock-stale",
+      ]);
 
       const repair = await repairShortTermPromotionArtifacts({ workspaceDir });
       expect(repair.changed).toBe(true);
@@ -1765,14 +1765,13 @@ describe("short-term promotion", () => {
       });
       try {
         const audit = await auditShortTermPromotionArtifacts({ workspaceDir });
-        expect(audit.issues).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({
-              code: "recall-lock-unreadable",
-              fixable: false,
-            }),
-          ]),
-        );
+        const lockIssue = audit.issues.find((issue) => issue.code === "recall-lock-unreadable");
+        expect(lockIssue).toStrictEqual({
+          severity: "warn",
+          code: "recall-lock-unreadable",
+          message: "Short-term promotion lock could not be inspected: EACCES.",
+          fixable: false,
+        });
       } finally {
         stat.mockRestore();
       }
