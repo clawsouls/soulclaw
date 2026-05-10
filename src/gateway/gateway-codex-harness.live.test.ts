@@ -211,6 +211,7 @@ async function writeLiveGatewayConfig(params: {
         model: { primary: params.modelKey },
         sandbox: { mode: "off" },
       },
+      list: [{ id: "dev", default: true }],
     },
   };
   await fs.writeFile(params.configPath, `${JSON.stringify(cfg, null, 2)}\n`);
