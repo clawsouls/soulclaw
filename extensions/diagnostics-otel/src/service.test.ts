@@ -1592,38 +1592,32 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    const contextCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.context.assembled",
-    );
+    const contextCall = startedSpanCall("openclaw.context.assembled");
+    const contextOptions = contextCall?.[1];
     const runSpan = telemetryState.spans.find((span) => span.name === "openclaw.run");
     const runSpanId = runSpan?.spanContext.mock.results[0]?.value?.spanId;
-    expect(contextCall?.[1]).toMatchObject({
-      attributes: {
-        "openclaw.provider": "openai",
-        "openclaw.model": "gpt-5.4",
-        "openclaw.channel": "webchat",
-        "openclaw.trigger": "message",
-        "openclaw.context.message_count": 12,
-        "openclaw.context.history_text_chars": 1234,
-        "openclaw.context.history_image_blocks": 2,
-        "openclaw.context.max_message_text_chars": 456,
-        "openclaw.context.system_prompt_chars": 789,
-        "openclaw.context.prompt_chars": 42,
-        "openclaw.context.prompt_images": 1,
-        "openclaw.context.token_budget": 128_000,
-        "openclaw.context.reserve_tokens": 4096,
-      },
-    });
-    expect(contextCall?.[1]).toEqual({
-      attributes: expect.any(Object),
-      startTime: expect.any(Number),
-    });
+    expect(contextOptions?.attributes?.["openclaw.provider"]).toBe("openai");
+    expect(contextOptions?.attributes?.["openclaw.model"]).toBe("gpt-5.4");
+    expect(contextOptions?.attributes?.["openclaw.channel"]).toBe("webchat");
+    expect(contextOptions?.attributes?.["openclaw.trigger"]).toBe("message");
+    expect(contextOptions?.attributes?.["openclaw.context.message_count"]).toBe(12);
+    expect(contextOptions?.attributes?.["openclaw.context.history_text_chars"]).toBe(1234);
+    expect(contextOptions?.attributes?.["openclaw.context.history_image_blocks"]).toBe(2);
+    expect(contextOptions?.attributes?.["openclaw.context.max_message_text_chars"]).toBe(456);
+    expect(contextOptions?.attributes?.["openclaw.context.system_prompt_chars"]).toBe(789);
+    expect(contextOptions?.attributes?.["openclaw.context.prompt_chars"]).toBe(42);
+    expect(contextOptions?.attributes?.["openclaw.context.prompt_images"]).toBe(1);
+    expect(contextOptions?.attributes?.["openclaw.context.token_budget"]).toBe(128_000);
+    expect(contextOptions?.attributes?.["openclaw.context.reserve_tokens"]).toBe(4096);
+    expect(contextOptions?.attributes).toBeTypeOf("object");
+    expect(contextOptions?.startTime).toBeTypeOf("number");
     expect(JSON.stringify(contextCall)).not.toContain("session-key");
     expect(JSON.stringify(contextCall)).not.toContain("prompt text");
-    expect(telemetryState.tracer.setSpanContext).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ traceId: TRACE_ID, spanId: runSpanId }),
-    );
+    const linkedSpanContext = telemetryState.tracer.setSpanContext.mock.calls[0]?.[1] as
+      | Record<string, unknown>
+      | undefined;
+    expect(linkedSpanContext?.traceId).toBe(TRACE_ID);
+    expect(linkedSpanContext?.spanId).toBe(runSpanId);
     expect(
       (contextCall?.[2] as { spanContext?: { spanId?: string } } | undefined)?.spanContext?.spanId,
     ).toBe(runSpanId);
@@ -1657,19 +1651,14 @@ describe("diagnostics-otel service", () => {
       "openclaw.loop.count": 20,
       "openclaw.loop.paired_tool": "read",
     });
-    const loopSpanCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.tool.loop",
-    );
-    expect(loopSpanCall?.[1]).toMatchObject({
-      attributes: {
-        "openclaw.toolName": "process",
-        "openclaw.loop.level": "critical",
-        "openclaw.loop.action": "block",
-        "openclaw.loop.detector": "known_poll_no_progress",
-        "openclaw.loop.count": 20,
-        "openclaw.loop.paired_tool": "read",
-      },
-    });
+    const loopSpanCall = startedSpanCall("openclaw.tool.loop");
+    const loopOptions = loopSpanCall?.[1];
+    expect(loopOptions?.attributes?.["openclaw.toolName"]).toBe("process");
+    expect(loopOptions?.attributes?.["openclaw.loop.level"]).toBe("critical");
+    expect(loopOptions?.attributes?.["openclaw.loop.action"]).toBe("block");
+    expect(loopOptions?.attributes?.["openclaw.loop.detector"]).toBe("known_poll_no_progress");
+    expect(loopOptions?.attributes?.["openclaw.loop.count"]).toBe(20);
+    expect(loopOptions?.attributes?.["openclaw.loop.paired_tool"]).toBe("read");
     const loopSpan = telemetryState.spans.find((span) => span.name === "openclaw.tool.loop");
     expect(loopSpan?.setStatus).toHaveBeenCalledWith({
       code: 2,
