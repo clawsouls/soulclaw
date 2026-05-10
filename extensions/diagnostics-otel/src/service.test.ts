@@ -216,6 +216,16 @@ function lastHistogramRecord(name: string) {
     | undefined;
 }
 
+function histogramCreateOptions(name: string) {
+  const calls = telemetryState.meter.createHistogram.mock.calls as unknown as Array<
+    [string, unknown?]
+  >;
+  const call = calls.find(([histogramName]) => histogramName === name);
+  return call?.[1] as
+    | { unit?: unknown; advice?: { explicitBucketBoundaries?: unknown[] } }
+    | undefined;
+}
+
 async function emitAndCaptureLog(
   event: Omit<Extract<Parameters<typeof emitDiagnosticEvent>[0], { type: "log.record" }>, "type">,
   options: { trusted?: boolean } = {},
@@ -993,15 +1003,12 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    expect(telemetryState.meter.createHistogram).toHaveBeenCalledWith(
-      "gen_ai.client.token.usage",
-      expect.objectContaining({
-        unit: "{token}",
-        advice: {
-          explicitBucketBoundaries: expect.arrayContaining([1, 4, 16, 1024, 67108864]),
-        },
-      }),
-    );
+    const tokenUsageOptions = histogramCreateOptions("gen_ai.client.token.usage");
+    expect(tokenUsageOptions?.unit).toBe("{token}");
+    const tokenUsageBoundaries = tokenUsageOptions?.advice?.explicitBucketBoundaries;
+    for (const boundary of [1, 4, 16, 1024, 67108864]) {
+      expect(tokenUsageBoundaries).toContain(boundary);
+    }
     const genAiTokenUsage = telemetryState.histograms.get("gen_ai.client.token.usage");
     const tokens = telemetryState.counters.get("openclaw.tokens");
     expect(tokens?.add).toHaveBeenCalledWith(12, {
@@ -1158,15 +1165,12 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    expect(telemetryState.meter.createHistogram).toHaveBeenCalledWith(
-      "gen_ai.client.operation.duration",
-      expect.objectContaining({
-        unit: "s",
-        advice: {
-          explicitBucketBoundaries: expect.arrayContaining([0.01, 0.32, 2.56, 81.92]),
-        },
-      }),
-    );
+    const operationDurationOptions = histogramCreateOptions("gen_ai.client.operation.duration");
+    expect(operationDurationOptions?.unit).toBe("s");
+    const operationDurationBoundaries = operationDurationOptions?.advice?.explicitBucketBoundaries;
+    for (const boundary of [0.01, 0.32, 2.56, 81.92]) {
+      expect(operationDurationBoundaries).toContain(boundary);
+    }
     const genAiOperationDuration = telemetryState.histograms.get(
       "gen_ai.client.operation.duration",
     );
