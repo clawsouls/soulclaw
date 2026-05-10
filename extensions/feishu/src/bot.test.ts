@@ -1160,13 +1160,14 @@ describe("handleFeishuMessage command authorization", () => {
     await dispatchMessage({ cfg, event });
 
     expect(mockResolveCommandAuthorizedFromAuthorizers).not.toHaveBeenCalled();
-    expect(mockFinalizeInboundContext).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ChatType: "group",
-        CommandAuthorized: true,
-        SenderId: "ou-admin",
-      }),
-    );
+    const context = mockCallArg<{
+      ChatType?: string;
+      CommandAuthorized?: boolean;
+      SenderId?: string;
+    }>(mockFinalizeInboundContext, 0, 0);
+    expect(context.ChatType).toBe("group");
+    expect(context.CommandAuthorized).toBe(true);
+    expect(context.SenderId).toBe("ou-admin");
   });
 
   it("allows group sender when global groupSenderAllowFrom includes sender", async () => {
@@ -1203,12 +1204,13 @@ describe("handleFeishuMessage command authorization", () => {
 
     await dispatchMessage({ cfg, event });
 
-    expect(mockFinalizeInboundContext).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ChatType: "group",
-        SenderId: "ou-allowed",
-      }),
+    const context = mockCallArg<{ ChatType?: string; SenderId?: string }>(
+      mockFinalizeInboundContext,
+      0,
+      0,
     );
+    expect(context.ChatType).toBe("group");
+    expect(context.SenderId).toBe("ou-allowed");
     expect(mockDispatchReplyFromConfig).toHaveBeenCalledTimes(1);
   });
 
@@ -1246,24 +1248,28 @@ describe("handleFeishuMessage command authorization", () => {
 
     await dispatchMessage({ cfg, event });
 
-    const finalized = mockFinalizeInboundContext.mock.calls.at(-1)?.[0];
-    expect(finalized).toEqual(
-      expect.objectContaining({
-        ChatType: "group",
-        From: "feishu:ou-allowed",
-        To: "chat:oc-group",
-        OriginatingChannel: "feishu",
-        OriginatingTo: "chat:oc-group",
-        SenderId: "ou-allowed",
-      }),
-    );
-    expect(resolveGroupSessionKey(finalized as never)).toEqual(
-      expect.objectContaining({
-        channel: "feishu",
-        id: "oc-group",
-        key: "feishu:group:oc-group",
-      }),
-    );
+    const finalized = mockCallArg<{
+      ChatType?: string;
+      From?: string;
+      OriginatingChannel?: string;
+      OriginatingTo?: string;
+      SenderId?: string;
+      To?: string;
+    }>(mockFinalizeInboundContext, 0, 0);
+    expect(finalized.ChatType).toBe("group");
+    expect(finalized.From).toBe("feishu:ou-allowed");
+    expect(finalized.To).toBe("chat:oc-group");
+    expect(finalized.OriginatingChannel).toBe("feishu");
+    expect(finalized.OriginatingTo).toBe("chat:oc-group");
+    expect(finalized.SenderId).toBe("ou-allowed");
+    const groupSessionKey = resolveGroupSessionKey(finalized as never);
+    expect(groupSessionKey).not.toBeNull();
+    if (!groupSessionKey) {
+      throw new Error("Expected group session key");
+    }
+    expect(groupSessionKey.channel).toBe("feishu");
+    expect(groupSessionKey.id).toBe("oc-group");
+    expect(groupSessionKey.key).toBe("feishu:group:oc-group");
     expect(mockDispatchReplyFromConfig).toHaveBeenCalledTimes(1);
   });
 
@@ -1388,12 +1394,13 @@ describe("handleFeishuMessage command authorization", () => {
 
     await dispatchMessage({ cfg, event });
 
-    expect(mockFinalizeInboundContext).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ReplyToId: "om_parent_blocked",
-        ReplyToBody: undefined,
-      }),
+    const context = mockCallArg<{ ReplyToBody?: string; ReplyToId?: string }>(
+      mockFinalizeInboundContext,
+      0,
+      0,
     );
+    expect(context.ReplyToId).toBe("om_parent_blocked");
+    expect(context.ReplyToBody).toBeUndefined();
   });
 
   it("keeps quoted group context from non-allowlisted senders in default all mode", async () => {
@@ -1439,12 +1446,13 @@ describe("handleFeishuMessage command authorization", () => {
 
     await dispatchMessage({ cfg, event });
 
-    expect(mockFinalizeInboundContext).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ReplyToId: "om_parent_visible",
-        ReplyToBody: "visible quoted content",
-      }),
+    const context = mockCallArg<{ ReplyToBody?: string; ReplyToId?: string }>(
+      mockFinalizeInboundContext,
+      0,
+      0,
     );
+    expect(context.ReplyToId).toBe("om_parent_visible");
+    expect(context.ReplyToBody).toBe("visible quoted content");
   });
 
   it("dispatches group image message when groupPolicy is open (requireMention defaults to false)", async () => {
@@ -1727,37 +1735,40 @@ describe("handleFeishuMessage command authorization", () => {
 
     await dispatchMessage({ cfg, event });
 
-    expect(mockDownloadMessageResourceFeishu).toHaveBeenCalledWith(
-      expect.objectContaining({
-        messageId: "msg-audio-inbound",
-        fileKey: "file_audio_payload",
-        type: "file",
-      }),
+    const downloadRequest = mockCallArg<{ fileKey?: string; messageId?: string; type?: string }>(
+      mockDownloadMessageResourceFeishu,
+      0,
+      0,
     );
-    expect(mockTranscribeFirstAudio).toHaveBeenCalledWith({
-      ctx: {
-        MediaPaths: ["/tmp/inbound-voice.ogg"],
-        MediaTypes: ["audio/ogg"],
-        ChatType: "direct",
-      },
-      cfg: expect.objectContaining({
-        channels: expect.objectContaining({
-          feishu: expect.objectContaining({ dmPolicy: "open" }),
-        }),
-      }),
-    });
-    expect(mockFinalizeInboundContext).toHaveBeenCalledWith(
-      expect.objectContaining({
-        BodyForAgent: "[message_id: msg-audio-inbound]\nou-voice: voice transcript",
-        RawBody: "voice transcript",
-        CommandBody: "voice transcript",
-        Transcript: "voice transcript",
-        MediaPaths: ["/tmp/inbound-voice.ogg"],
-        MediaTypes: ["audio/ogg"],
-        MediaTranscribedIndexes: [0],
-      }),
+    expect(downloadRequest.messageId).toBe("msg-audio-inbound");
+    expect(downloadRequest.fileKey).toBe("file_audio_payload");
+    expect(downloadRequest.type).toBe("file");
+    const transcribeRequest = mockCallArg<{
+      cfg?: { channels?: { feishu?: { dmPolicy?: string } } };
+      ctx?: { ChatType?: string; MediaPaths?: string[]; MediaTypes?: string[] };
+    }>(mockTranscribeFirstAudio, 0, 0);
+    expect(transcribeRequest.ctx?.MediaPaths).toEqual(["/tmp/inbound-voice.ogg"]);
+    expect(transcribeRequest.ctx?.MediaTypes).toEqual(["audio/ogg"]);
+    expect(transcribeRequest.ctx?.ChatType).toBe("direct");
+    expect(transcribeRequest.cfg?.channels?.feishu?.dmPolicy).toBe("open");
+    const finalized = mockCallArg<{
+      BodyForAgent?: string;
+      CommandBody?: string;
+      MediaPaths?: string[];
+      MediaTranscribedIndexes?: number[];
+      MediaTypes?: string[];
+      RawBody?: string;
+      Transcript?: string;
+    }>(mockFinalizeInboundContext, 0, 0);
+    expect(finalized.BodyForAgent).toBe(
+      "[message_id: msg-audio-inbound]\nou-voice: voice transcript",
     );
-    const finalized = mockFinalizeInboundContext.mock.calls[0]?.[0];
+    expect(finalized.RawBody).toBe("voice transcript");
+    expect(finalized.CommandBody).toBe("voice transcript");
+    expect(finalized.Transcript).toBe("voice transcript");
+    expect(finalized.MediaPaths).toEqual(["/tmp/inbound-voice.ogg"]);
+    expect(finalized.MediaTypes).toEqual(["audio/ogg"]);
+    expect(finalized.MediaTranscribedIndexes).toEqual([0]);
     expect(finalized.BodyForAgent).not.toContain("file_audio_payload");
   });
 
@@ -1793,20 +1804,21 @@ describe("handleFeishuMessage command authorization", () => {
 
     await dispatchMessage({ cfg, event });
 
-    expect(mockDownloadMessageResourceFeishu).toHaveBeenCalledWith(
-      expect.objectContaining({
-        messageId: "msg-video-inbound",
-        fileKey: "file_video_payload",
-        type: "file",
-      }),
-    );
-    expect(mockSaveMediaBuffer).toHaveBeenCalledWith(
-      expect.any(Buffer),
-      "video/mp4",
-      "inbound",
-      expect.any(Number),
-      "clip.mp4",
-    );
+    const videoDownloadRequest = mockCallArg<{
+      fileKey?: string;
+      messageId?: string;
+      type?: string;
+    }>(mockDownloadMessageResourceFeishu, 0, 0);
+    expect(videoDownloadRequest.messageId).toBe("msg-video-inbound");
+    expect(videoDownloadRequest.fileKey).toBe("file_video_payload");
+    expect(videoDownloadRequest.type).toBe("file");
+    const mediaBuffer = mockCallArg<Buffer>(mockSaveMediaBuffer, 0, 0);
+    expect(Buffer.isBuffer(mediaBuffer)).toBe(true);
+    expect(mediaBuffer.toString()).toBe("video");
+    expect(mockCallArg(mockSaveMediaBuffer, 0, 1)).toBe("video/mp4");
+    expect(mockCallArg(mockSaveMediaBuffer, 0, 2)).toBe("inbound");
+    expect(typeof mockCallArg(mockSaveMediaBuffer, 0, 3)).toBe("number");
+    expect(mockCallArg(mockSaveMediaBuffer, 0, 4)).toBe("clip.mp4");
   });
 
   it("uses media message_type file_key (not thumbnail image_key) for inbound mobile video download", async () => {
@@ -1841,20 +1853,21 @@ describe("handleFeishuMessage command authorization", () => {
 
     await dispatchMessage({ cfg, event });
 
-    expect(mockDownloadMessageResourceFeishu).toHaveBeenCalledWith(
-      expect.objectContaining({
-        messageId: "msg-media-inbound",
-        fileKey: "file_media_payload",
-        type: "file",
-      }),
-    );
-    expect(mockSaveMediaBuffer).toHaveBeenCalledWith(
-      expect.any(Buffer),
-      "video/mp4",
-      "inbound",
-      expect.any(Number),
-      "clip.mp4",
-    );
+    const mediaDownloadRequest = mockCallArg<{
+      fileKey?: string;
+      messageId?: string;
+      type?: string;
+    }>(mockDownloadMessageResourceFeishu, 0, 0);
+    expect(mediaDownloadRequest.messageId).toBe("msg-media-inbound");
+    expect(mediaDownloadRequest.fileKey).toBe("file_media_payload");
+    expect(mediaDownloadRequest.type).toBe("file");
+    const mediaBuffer = mockCallArg<Buffer>(mockSaveMediaBuffer, 0, 0);
+    expect(Buffer.isBuffer(mediaBuffer)).toBe(true);
+    expect(mediaBuffer.toString()).toBe("video");
+    expect(mockCallArg(mockSaveMediaBuffer, 0, 1)).toBe("video/mp4");
+    expect(mockCallArg(mockSaveMediaBuffer, 0, 2)).toBe("inbound");
+    expect(typeof mockCallArg(mockSaveMediaBuffer, 0, 3)).toBe("number");
+    expect(mockCallArg(mockSaveMediaBuffer, 0, 4)).toBe("clip.mp4");
   });
 
   it("falls back to the message payload filename when download metadata omits it", async () => {
