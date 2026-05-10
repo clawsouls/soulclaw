@@ -330,20 +330,35 @@ function mockNpmViewMetadata(params: {
   });
 }
 
+function npmInstallCall(index = 0): Record<string, unknown> | undefined {
+  const calls = installPluginFromNpmSpecMock.mock.calls as unknown as Array<
+    [Record<string, unknown>]
+  >;
+  return calls[index]?.[0];
+}
+
+function npmViewCall(): [unknown, Record<string, unknown>] | undefined {
+  const calls = runCommandWithTimeoutMock.mock.calls as unknown as Array<
+    [unknown, Record<string, unknown>]
+  >;
+  return calls.find(([argv]) => Array.isArray(argv) && argv[0] === "npm" && argv[1] === "view");
+}
+
 function expectNpmUpdateCall(params: {
   spec: string;
   expectedIntegrity?: string;
   expectedPluginId?: string;
   timeoutMs?: number;
 }) {
-  expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-    expect.objectContaining({
-      spec: params.spec,
-      expectedIntegrity: params.expectedIntegrity,
-      ...(params.expectedPluginId ? { expectedPluginId: params.expectedPluginId } : {}),
-      ...(params.timeoutMs ? { timeoutMs: params.timeoutMs } : {}),
-    }),
-  );
+  const call = npmInstallCall();
+  expect(call?.spec).toBe(params.spec);
+  expect(call?.expectedIntegrity).toBe(params.expectedIntegrity);
+  if (params.expectedPluginId) {
+    expect(call?.expectedPluginId).toBe(params.expectedPluginId);
+  }
+  if (params.timeoutMs) {
+    expect(call?.timeoutMs).toBe(params.timeoutMs);
+  }
 }
 
 function createBundledSource(params?: { pluginId?: string; localPath?: string; npmSpec?: string }) {
@@ -367,12 +382,12 @@ function expectBundledPathInstall(params: {
   installPath: string;
   spec?: string;
 }) {
-  expect(params.install).toMatchObject({
-    source: "path",
-    sourcePath: params.sourcePath,
-    installPath: params.installPath,
-    ...(params.spec ? { spec: params.spec } : {}),
-  });
+  expect(params.install?.source).toBe("path");
+  expect(params.install?.sourcePath).toBe(params.sourcePath);
+  expect(params.install?.installPath).toBe(params.installPath);
+  if (params.spec) {
+    expect(params.install?.spec).toBe(params.spec);
+  }
 }
 
 function expectCodexAppServerInstallState(params: {
@@ -381,13 +396,14 @@ function expectCodexAppServerInstallState(params: {
   version: string;
   resolvedSpec?: string;
 }) {
-  expect(params.result.config.plugins?.installs?.["openclaw-codex-app-server"]).toMatchObject({
-    source: "npm",
-    spec: params.spec,
-    installPath: "/tmp/openclaw-codex-app-server",
-    version: params.version,
-    ...(params.resolvedSpec ? { resolvedSpec: params.resolvedSpec } : {}),
-  });
+  const install = params.result.config.plugins?.installs?.["openclaw-codex-app-server"];
+  expect(install?.source).toBe("npm");
+  expect(install?.spec).toBe(params.spec);
+  expect(install?.installPath).toBe("/tmp/openclaw-codex-app-server");
+  expect(install?.version).toBe(params.version);
+  if (params.resolvedSpec) {
+    expect(install?.resolvedSpec).toBe(params.resolvedSpec);
+  }
 }
 
 describe("updateNpmInstalledPlugins", () => {
@@ -510,10 +526,7 @@ describe("updateNpmInstalledPlugins", () => {
       timeoutMs: 1_800_000,
     });
 
-    const npmViewCall = runCommandWithTimeoutMock.mock.calls.find(
-      ([argv]) => Array.isArray(argv) && argv[0] === "npm" && argv[1] === "view",
-    );
-    expect(npmViewCall?.[1]).toEqual(expect.objectContaining({ timeoutMs: 1_800_000 }));
+    expect(npmViewCall()?.[1]?.timeoutMs).toBe(1_800_000);
     expectNpmUpdateCall({
       spec: "@martian-engineering/lossless-claw",
       expectedPluginId: "lossless-claw",
@@ -550,13 +563,9 @@ describe("updateNpmInstalledPlugins", () => {
       pluginIds: ["acpx"],
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@openclaw/acpx",
-        expectedPluginId: "acpx",
-        trustedSourceLinkedOfficialInstall: true,
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("@openclaw/acpx");
+    expect(npmInstallCall()?.expectedPluginId).toBe("acpx");
+    expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).toBe(true);
   });
 
   it("does not skip trusted official default updates when latest resolves to the installed prerelease", async () => {
@@ -597,19 +606,13 @@ describe("updateNpmInstalledPlugins", () => {
       pluginIds: ["acpx"],
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@openclaw/acpx",
-        expectedPluginId: "acpx",
-        trustedSourceLinkedOfficialInstall: true,
-      }),
-    );
-    expect(result.outcomes[0]).toMatchObject({
-      pluginId: "acpx",
-      status: "updated",
-      currentVersion: "2026.5.2-beta.2",
-      nextVersion: "2026.5.2",
-    });
+    expect(npmInstallCall()?.spec).toBe("@openclaw/acpx");
+    expect(npmInstallCall()?.expectedPluginId).toBe("acpx");
+    expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).toBe(true);
+    expect(result.outcomes[0]?.pluginId).toBe("acpx");
+    expect(result.outcomes[0]?.status).toBe("updated");
+    expect(result.outcomes[0]?.currentVersion).toBe("2026.5.2-beta.2");
+    expect(result.outcomes[0]?.nextVersion).toBe("2026.5.2");
   });
 
   it("updates trusted official npm plugins when latest resolves to a stable correction release", async () => {
@@ -648,19 +651,13 @@ describe("updateNpmInstalledPlugins", () => {
       pluginIds: ["acpx"],
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@openclaw/acpx",
-        expectedPluginId: "acpx",
-        trustedSourceLinkedOfficialInstall: true,
-      }),
-    );
-    expect(result.outcomes[0]).toMatchObject({
-      pluginId: "acpx",
-      status: "updated",
-      currentVersion: "2026.5.3",
-      nextVersion: "2026.5.3-1",
-    });
+    expect(npmInstallCall()?.spec).toBe("@openclaw/acpx");
+    expect(npmInstallCall()?.expectedPluginId).toBe("acpx");
+    expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).toBe(true);
+    expect(result.outcomes[0]?.pluginId).toBe("acpx");
+    expect(result.outcomes[0]?.status).toBe("updated");
+    expect(result.outcomes[0]?.currentVersion).toBe("2026.5.3");
+    expect(result.outcomes[0]?.nextVersion).toBe("2026.5.3-1");
   });
 
   it("does not trust official npm updates when the install record package mismatches", async () => {
@@ -692,11 +689,7 @@ describe("updateNpmInstalledPlugins", () => {
       pluginIds: ["acpx"],
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.not.objectContaining({
-        trustedSourceLinkedOfficialInstall: true,
-      }),
-    );
+    expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).not.toBe(true);
   });
 
   it("skips npm reinstall and config rewrite when the installed artifact is unchanged", async () => {
@@ -733,19 +726,17 @@ describe("updateNpmInstalledPlugins", () => {
       pluginIds: ["lossless-claw"],
     });
 
-    expect(runCommandWithTimeoutMock).toHaveBeenCalledWith(
-      [
-        "npm",
-        "view",
-        "@martian-engineering/lossless-claw",
-        "name",
-        "version",
-        "dist.integrity",
-        "dist.shasum",
-        "--json",
-      ],
-      expect.any(Object),
-    );
+    expect(npmViewCall()?.[0]).toEqual([
+      "npm",
+      "view",
+      "@martian-engineering/lossless-claw",
+      "name",
+      "version",
+      "dist.integrity",
+      "dist.shasum",
+      "--json",
+    ]);
+    expect(npmViewCall()?.[1]).toBeDefined();
     expect(installPluginFromNpmSpecMock).not.toHaveBeenCalled();
     expect(result.changed).toBe(false);
     expect(result.config).toBe(config);
@@ -806,13 +797,9 @@ describe("updateNpmInstalledPlugins", () => {
       pluginIds: ["codex"],
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@openclaw/codex",
-        mode: "update",
-        expectedPluginId: "codex",
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("@openclaw/codex");
+    expect(npmInstallCall()?.mode).toBe("update");
+    expect(npmInstallCall()?.expectedPluginId).toBe("codex");
     expect(result.changed).toBe(true);
     expect(result.outcomes).toEqual([
       {
