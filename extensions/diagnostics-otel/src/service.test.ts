@@ -1959,10 +1959,8 @@ describe("diagnostics-otel service", () => {
     const parentBySpanName = Object.fromEntries(
       telemetryState.tracer.startSpan.mock.calls.map((call) => [call[0], call[2]]),
     );
-    expect(parentBySpanName).toMatchObject({
-      "openclaw.run": undefined,
-      "openclaw.model.call": undefined,
-    });
+    expect(parentBySpanName["openclaw.run"]).toBeUndefined();
+    expect(parentBySpanName["openclaw.model.call"]).toBeUndefined();
     await service.stop?.(ctx);
   });
 
@@ -2003,10 +2001,8 @@ describe("diagnostics-otel service", () => {
     const parentBySpanName = Object.fromEntries(
       telemetryState.tracer.startSpan.mock.calls.map((call) => [call[0], call[2]]),
     );
-    expect(parentBySpanName).toMatchObject({
-      "openclaw.run": undefined,
-      "openclaw.model.call": undefined,
-    });
+    expect(parentBySpanName["openclaw.run"]).toBeUndefined();
+    expect(parentBySpanName["openclaw.model.call"]).toBeUndefined();
     await service.stop?.(ctx);
   });
 
@@ -2061,11 +2057,9 @@ describe("diagnostics-otel service", () => {
     const parentBySpanName = Object.fromEntries(
       telemetryState.tracer.startSpan.mock.calls.map((call) => [call[0], call[2]]),
     );
-    expect(parentBySpanName).toMatchObject({
-      "openclaw.run": undefined,
-      "openclaw.model.call": undefined,
-      "openclaw.tool.execution": undefined,
-    });
+    expect(parentBySpanName["openclaw.run"]).toBeUndefined();
+    expect(parentBySpanName["openclaw.model.call"]).toBeUndefined();
+    expect(parentBySpanName["openclaw.tool.execution"]).toBeUndefined();
     await service.stop?.(ctx);
   });
 
