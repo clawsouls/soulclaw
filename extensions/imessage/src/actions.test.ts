@@ -417,13 +417,22 @@ describe("imessage message actions", () => {
           filename: "card.png",
         },
       } as never);
-      expect(runtimeMock.sendRichMessage).toHaveBeenCalledWith(
-        expect.objectContaining({ replyToMessageId: "message-guid" }),
-      );
-      const attachment = readLastAttachment();
-      expect(attachment?.kind).toBe("buffer");
-      expect(attachment?.filename).toBe("card.png");
-      expect(Buffer.from(attachment?.buffer ?? new Uint8Array()).toString()).toBe("PNGDATA");
+      expect(runtimeMock.sendRichMessage.mock.calls).toStrictEqual([
+        [
+          {
+            chatGuid: "iMessage;+;resolved-ident",
+            text: "🦞 here it is",
+            replyToMessageId: "message-guid",
+            partIndex: undefined,
+            attachment: {
+              kind: "buffer",
+              buffer: Uint8Array.from(Buffer.from("PNGDATA")),
+              filename: "card.png",
+            },
+            options: imsgOptions("iMessage;+;resolved-ident"),
+          },
+        ],
+      ]);
     });
 
     it("falls back to attachment.bin when filename is missing (post-hydration)", async () => {
