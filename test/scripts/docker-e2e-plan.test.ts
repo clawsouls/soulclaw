@@ -363,7 +363,8 @@ describe("scripts/lib/docker-e2e-plan", () => {
         weight: 2,
       },
       {
-        command: "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-plugin-tool",
+        command:
+          "OPENCLAW_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS=300 OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-plugin-tool",
         imageKind: "bare",
         live: true,
         name: "live-plugin-tool",
@@ -679,7 +680,9 @@ describe("scripts/lib/docker-e2e-plan", () => {
     expect(plan.credentials).toEqual(["openai"]);
     expect(plan.lanes).toHaveLength(1);
     const lane = requireFirstLane(plan);
-    expect(lane.command).toBe("OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-plugin-tool");
+    expect(lane.command).toBe(
+      "OPENCLAW_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS=300 OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-plugin-tool",
+    );
     expect(lane.imageKind).toBe("bare");
     expect(lane.live).toBe(true);
     expect(lane.name).toBe("live-plugin-tool");
@@ -786,7 +789,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
     expect(plan.lanes.map(summarizeLane)).toEqual([
       {
         command:
-          "OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=openai OPENCLAW_INSTALL_E2E_IMAGE=openclaw-install-e2e-openai:local OPENCLAW_INSTALL_E2E_AGENT_TOOL_SMOKE=0 OPENCLAW_INSTALL_E2E_OPENAI_MODEL=openai/gpt-5.4-mini OPENCLAW_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS=120 OPENCLAW_INSTALL_E2E_OPENAI_PROVIDER_TIMEOUT_SECONDS=120 pnpm test:install:e2e",
+          "OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=openai OPENCLAW_INSTALL_E2E_IMAGE=openclaw-install-e2e-openai:local OPENCLAW_INSTALL_E2E_AGENT_TOOL_SMOKE=0 OPENCLAW_INSTALL_E2E_OPENAI_MODEL=openai/gpt-5.5 OPENCLAW_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS=120 OPENCLAW_INSTALL_E2E_OPENAI_PROVIDER_TIMEOUT_SECONDS=120 pnpm test:install:e2e",
         imageKind: "bare",
         live: false,
         name: "install-e2e-openai",

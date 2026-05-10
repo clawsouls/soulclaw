@@ -128,7 +128,7 @@ const bundledPluginInstallUninstallLanes = Array.from(
 function livePluginToolLane() {
   return liveLane(
     "live-plugin-tool",
-    "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-plugin-tool",
+    "OPENCLAW_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS=300 OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:live-plugin-tool",
     {
       cacheKey: "plugin-tool",
       e2eImageKind: "bare",
@@ -548,7 +548,7 @@ const releasePathBundledChannelLanes = [
 const releasePathPackageInstallOpenAiLanes = [
   npmLane(
     "install-e2e-openai",
-    "OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=openai OPENCLAW_INSTALL_E2E_IMAGE=openclaw-install-e2e-openai:local OPENCLAW_INSTALL_E2E_AGENT_TOOL_SMOKE=0 OPENCLAW_INSTALL_E2E_OPENAI_MODEL=openai/gpt-5.4-mini OPENCLAW_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS=120 OPENCLAW_INSTALL_E2E_OPENAI_PROVIDER_TIMEOUT_SECONDS=120 pnpm test:install:e2e",
+    "OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=openai OPENCLAW_INSTALL_E2E_IMAGE=openclaw-install-e2e-openai:local OPENCLAW_INSTALL_E2E_AGENT_TOOL_SMOKE=0 OPENCLAW_INSTALL_E2E_OPENAI_MODEL=openai/gpt-5.5 OPENCLAW_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS=120 OPENCLAW_INSTALL_E2E_OPENAI_PROVIDER_TIMEOUT_SECONDS=120 pnpm test:install:e2e",
     {
       resources: ["service"],
       timeoutMs: 15 * 60 * 1000,
