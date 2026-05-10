@@ -2168,46 +2168,33 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    expect(telemetryState.histograms.get("openclaw.exec.duration_ms")?.record).toHaveBeenCalledWith(
-      30,
-      expect.objectContaining({
-        "openclaw.exec.target": "host",
-        "openclaw.exec.mode": "child",
-        "openclaw.outcome": "failed",
-        "openclaw.failureKind": "runtime-error",
-      }),
-    );
+    const execDuration = lastHistogramRecord("openclaw.exec.duration_ms");
+    expect(execDuration?.[0]).toBe(30);
+    expect(execDuration?.[1]?.["openclaw.exec.target"]).toBe("host");
+    expect(execDuration?.[1]?.["openclaw.exec.mode"]).toBe("child");
+    expect(execDuration?.[1]?.["openclaw.outcome"]).toBe("failed");
+    expect(execDuration?.[1]?.["openclaw.failureKind"]).toBe("runtime-error");
 
-    const execCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.exec",
-    );
-    expect(execCall?.[1]).toMatchObject({
-      attributes: {
-        "openclaw.exec.target": "host",
-        "openclaw.exec.mode": "child",
-        "openclaw.outcome": "failed",
-        "openclaw.exec.command_length": 42,
-        "openclaw.exec.exit_code": 1,
-        "openclaw.exec.timed_out": false,
-        "openclaw.failureKind": "runtime-error",
-      },
-      startTime: expect.any(Number),
-    });
-    expect(execCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "openclaw.exec.command": expect.anything(),
-        "openclaw.exec.workdir": expect.anything(),
-        "openclaw.sessionKey": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
+    const execCall = startedSpanCall("openclaw.exec");
+    const execOptions = execCall?.[1];
+    expect(execOptions?.attributes?.["openclaw.exec.target"]).toBe("host");
+    expect(execOptions?.attributes?.["openclaw.exec.mode"]).toBe("child");
+    expect(execOptions?.attributes?.["openclaw.outcome"]).toBe("failed");
+    expect(execOptions?.attributes?.["openclaw.exec.command_length"]).toBe(42);
+    expect(execOptions?.attributes?.["openclaw.exec.exit_code"]).toBe(1);
+    expect(execOptions?.attributes?.["openclaw.exec.timed_out"]).toBe(false);
+    expect(execOptions?.attributes?.["openclaw.failureKind"]).toBe("runtime-error");
+    expect(Object.hasOwn(execOptions?.attributes ?? {}, "openclaw.exec.command")).toBe(false);
+    expect(Object.hasOwn(execOptions?.attributes ?? {}, "openclaw.exec.workdir")).toBe(false);
+    expect(Object.hasOwn(execOptions?.attributes ?? {}, "openclaw.sessionKey")).toBe(false);
+    expect(execOptions?.startTime).toBeTypeOf("number");
 
     const execSpan = telemetryState.spans.find((span) => span.name === "openclaw.exec");
     expect(execSpan?.setStatus).toHaveBeenCalledWith({
       code: 2,
       message: "runtime-error",
     });
-    expect(execSpan?.end).toHaveBeenCalledWith(expect.any(Number));
+    expect(execSpan?.end.mock.calls[0]?.[0]).toBeTypeOf("number");
     await service.stop?.(ctx);
   });
 
@@ -2246,62 +2233,48 @@ describe("diagnostics-otel service", () => {
       "openclaw.channel": "matrix",
       "openclaw.delivery.kind": "text",
     });
-    expect(
-      telemetryState.histograms.get("openclaw.message.delivery.duration_ms")?.record,
-    ).toHaveBeenCalledWith(
-      25,
-      expect.objectContaining({
-        "openclaw.channel": "matrix",
-        "openclaw.delivery.kind": "text",
-        "openclaw.outcome": "completed",
-      }),
-    );
-    expect(
-      telemetryState.histograms.get("openclaw.message.delivery.duration_ms")?.record,
-    ).toHaveBeenCalledWith(
-      40,
-      expect.objectContaining({
-        "openclaw.channel": "discord",
-        "openclaw.delivery.kind": "media",
-        "openclaw.outcome": "error",
-        "openclaw.errorCategory": "TypeError",
-      }),
-    );
+    const deliveryDurationRecords = telemetryState.histograms.get(
+      "openclaw.message.delivery.duration_ms",
+    )?.record.mock.calls as Array<[unknown, Record<string, unknown>]>;
+    expect(deliveryDurationRecords[0]?.[0]).toBe(25);
+    expect(deliveryDurationRecords[0]?.[1]["openclaw.channel"]).toBe("matrix");
+    expect(deliveryDurationRecords[0]?.[1]["openclaw.delivery.kind"]).toBe("text");
+    expect(deliveryDurationRecords[0]?.[1]["openclaw.outcome"]).toBe("completed");
+    expect(deliveryDurationRecords[1]?.[0]).toBe(40);
+    expect(deliveryDurationRecords[1]?.[1]["openclaw.channel"]).toBe("discord");
+    expect(deliveryDurationRecords[1]?.[1]["openclaw.delivery.kind"]).toBe("media");
+    expect(deliveryDurationRecords[1]?.[1]["openclaw.outcome"]).toBe("error");
+    expect(deliveryDurationRecords[1]?.[1]["openclaw.errorCategory"]).toBe("TypeError");
 
     const deliverySpanCalls = telemetryState.tracer.startSpan.mock.calls.filter(
       (call) => call[0] === "openclaw.message.delivery",
     );
     expect(deliverySpanCalls).toHaveLength(2);
-    expect(deliverySpanCalls[0]?.[1]).toMatchObject({
-      attributes: {
-        "openclaw.channel": "matrix",
-        "openclaw.delivery.kind": "text",
-        "openclaw.outcome": "completed",
-        "openclaw.delivery.result_count": 1,
-      },
-      startTime: expect.any(Number),
-    });
-    expect(deliverySpanCalls[1]?.[1]).toMatchObject({
-      attributes: {
-        "openclaw.channel": "discord",
-        "openclaw.delivery.kind": "media",
-        "openclaw.outcome": "error",
-        "openclaw.errorCategory": "TypeError",
-      },
-      startTime: expect.any(Number),
-    });
+    const firstDeliveryOptions = deliverySpanCalls[0]?.[1] as
+      | { attributes?: Record<string, unknown>; startTime?: unknown }
+      | undefined;
+    expect(firstDeliveryOptions?.attributes?.["openclaw.channel"]).toBe("matrix");
+    expect(firstDeliveryOptions?.attributes?.["openclaw.delivery.kind"]).toBe("text");
+    expect(firstDeliveryOptions?.attributes?.["openclaw.outcome"]).toBe("completed");
+    expect(firstDeliveryOptions?.attributes?.["openclaw.delivery.result_count"]).toBe(1);
+    expect(firstDeliveryOptions?.startTime).toBeTypeOf("number");
+    const secondDeliveryOptions = deliverySpanCalls[1]?.[1] as
+      | { attributes?: Record<string, unknown>; startTime?: unknown }
+      | undefined;
+    expect(secondDeliveryOptions?.attributes?.["openclaw.channel"]).toBe("discord");
+    expect(secondDeliveryOptions?.attributes?.["openclaw.delivery.kind"]).toBe("media");
+    expect(secondDeliveryOptions?.attributes?.["openclaw.outcome"]).toBe("error");
+    expect(secondDeliveryOptions?.attributes?.["openclaw.errorCategory"]).toBe("TypeError");
+    expect(secondDeliveryOptions?.startTime).toBeTypeOf("number");
     for (const call of deliverySpanCalls) {
-      expect(call[1]).toEqual({
-        attributes: expect.not.objectContaining({
-          "openclaw.chatId": expect.anything(),
-          "openclaw.sessionKey": expect.anything(),
-          "openclaw.messageId": expect.anything(),
-          "openclaw.conversationId": expect.anything(),
-          "openclaw.content": expect.anything(),
-          "openclaw.to": expect.anything(),
-        }),
-        startTime: expect.any(Number),
-      });
+      const options = call[1] as { attributes?: Record<string, unknown>; startTime?: unknown };
+      expect(Object.hasOwn(options.attributes ?? {}, "openclaw.chatId")).toBe(false);
+      expect(Object.hasOwn(options.attributes ?? {}, "openclaw.sessionKey")).toBe(false);
+      expect(Object.hasOwn(options.attributes ?? {}, "openclaw.messageId")).toBe(false);
+      expect(Object.hasOwn(options.attributes ?? {}, "openclaw.conversationId")).toBe(false);
+      expect(Object.hasOwn(options.attributes ?? {}, "openclaw.content")).toBe(false);
+      expect(Object.hasOwn(options.attributes ?? {}, "openclaw.to")).toBe(false);
+      expect(options.startTime).toBeTypeOf("number");
     }
     const errorSpan = telemetryState.spans.find(
       (span) => span.name === "openclaw.message.delivery" && span.setStatus.mock.calls.length > 0,
@@ -2328,28 +2301,18 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    expect(
-      telemetryState.histograms.get("openclaw.message.delivery.duration_ms")?.record,
-    ).toHaveBeenCalledWith(
-      20,
-      expect.objectContaining({
-        "openclaw.channel": "unknown",
-        "openclaw.delivery.kind": "other",
-        "openclaw.outcome": "completed",
-      }),
-    );
-    const deliverySpanCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.message.delivery",
-    );
-    expect(deliverySpanCall?.[1]).toMatchObject({
-      attributes: {
-        "openclaw.channel": "unknown",
-        "openclaw.delivery.kind": "other",
-        "openclaw.outcome": "completed",
-        "openclaw.delivery.result_count": 1,
-      },
-      startTime: expect.any(Number),
-    });
+    const deliveryDuration = lastHistogramRecord("openclaw.message.delivery.duration_ms");
+    expect(deliveryDuration?.[0]).toBe(20);
+    expect(deliveryDuration?.[1]?.["openclaw.channel"]).toBe("unknown");
+    expect(deliveryDuration?.[1]?.["openclaw.delivery.kind"]).toBe("other");
+    expect(deliveryDuration?.[1]?.["openclaw.outcome"]).toBe("completed");
+    const deliverySpanCall = startedSpanCall("openclaw.message.delivery");
+    const deliveryOptions = deliverySpanCall?.[1];
+    expect(deliveryOptions?.attributes?.["openclaw.channel"]).toBe("unknown");
+    expect(deliveryOptions?.attributes?.["openclaw.delivery.kind"]).toBe("other");
+    expect(deliveryOptions?.attributes?.["openclaw.outcome"]).toBe("completed");
+    expect(deliveryOptions?.attributes?.["openclaw.delivery.result_count"]).toBe(1);
+    expect(deliveryOptions?.startTime).toBeTypeOf("number");
     await service.stop?.(ctx);
   });
 
