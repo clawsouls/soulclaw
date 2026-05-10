@@ -2797,12 +2797,10 @@ describe("dispatchReplyFromConfig", () => {
 
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
-    expect(dispatcher.sendToolResult).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "Approval required." }),
-    );
-    expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "done" }),
-    );
+    expect(firstToolResultPayload(dispatcher)?.text).toBe("Approval required.");
+    expect(
+      ((dispatcher.sendFinalReply as Mock).mock.calls[0]?.[0] as ReplyPayload | undefined)?.text,
+    ).toBe("done");
   });
 
   it("suppresses local discord exec approval tool prompts when the native runtime is active", async () => {
@@ -2850,9 +2848,9 @@ describe("dispatchReplyFromConfig", () => {
       await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
       expect(dispatcher.sendToolResult).not.toHaveBeenCalled();
-      expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-        expect.objectContaining({ text: "done" }),
-      );
+      expect(
+        ((dispatcher.sendFinalReply as Mock).mock.calls[0]?.[0] as ReplyPayload | undefined)?.text,
+      ).toBe("done");
     } finally {
       await reporter.stop();
     }
@@ -2917,29 +2915,32 @@ describe("dispatchReplyFromConfig", () => {
     const replyResolver = async () => ({ text: "hi" }) satisfies ReplyPayload;
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
-    expect(hookMocks.runner.runMessageReceived).toHaveBeenCalledWith(
-      expect.objectContaining({
-        from: ctx.From,
-        content: "/search hello",
-        timestamp: 1710000000000,
-        metadata: expect.objectContaining({
-          originatingChannel: "Telegram",
-          originatingTo: "telegram:999",
-          messageId: "sid-full",
-          senderId: "user-1",
-          senderName: "Alice",
-          senderUsername: "alice",
-          senderE164: "+15555550123",
-          guildId: "guild-123",
-          channelName: "alerts",
-        }),
-      }),
-      expect.objectContaining({
-        channelId: "telegram",
-        accountId: "acc-1",
-        conversationId: "telegram:999",
-      }),
-    );
+    const [event, hookContext] = hookMocks.runner.runMessageReceived.mock.calls[0] as
+      | [
+          {
+            content?: unknown;
+            from?: unknown;
+            metadata?: Record<string, unknown>;
+            timestamp?: unknown;
+          },
+          { accountId?: unknown; channelId?: unknown; conversationId?: unknown },
+        ]
+      | [];
+    expect(event?.from).toBe(ctx.From);
+    expect(event?.content).toBe("/search hello");
+    expect(event?.timestamp).toBe(1710000000000);
+    expect(event?.metadata?.originatingChannel).toBe("Telegram");
+    expect(event?.metadata?.originatingTo).toBe("telegram:999");
+    expect(event?.metadata?.messageId).toBe("sid-full");
+    expect(event?.metadata?.senderId).toBe("user-1");
+    expect(event?.metadata?.senderName).toBe("Alice");
+    expect(event?.metadata?.senderUsername).toBe("alice");
+    expect(event?.metadata?.senderE164).toBe("+15555550123");
+    expect(event?.metadata?.guildId).toBe("guild-123");
+    expect(event?.metadata?.channelName).toBe("alerts");
+    expect(hookContext?.channelId).toBe("telegram");
+    expect(hookContext?.accountId).toBe("acc-1");
+    expect(hookContext?.conversationId).toBe("telegram:999");
   });
 
   it("does not broadcast inbound claims without a core-owned plugin binding", async () => {
@@ -2975,36 +2976,35 @@ describe("dispatchReplyFromConfig", () => {
 
     expect(result).toEqual({ queuedFinal: true, counts: { tool: 0, block: 0, final: 0 } });
     expect(hookMocks.runner.runInboundClaim).not.toHaveBeenCalled();
-    expect(hookMocks.runner.runMessageReceived).toHaveBeenCalledWith(
-      expect.objectContaining({
-        from: ctx.From,
-        content: "who are you",
-        metadata: expect.objectContaining({
-          messageId: "msg-claim-1",
-          originatingChannel: "telegram",
-          originatingTo: "telegram:-10099",
-          senderId: "user-9",
-          senderUsername: "ada",
-          threadId: 77,
-        }),
-      }),
-      expect.objectContaining({
-        channelId: "telegram",
-        accountId: "default",
-        conversationId: "telegram:-10099",
-      }),
-    );
-    expect(internalHookMocks.triggerInternalHook).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "message",
-        action: "received",
-        sessionKey: "agent:main:hook-test",
-      }),
-    );
+    const [event, hookContext] = hookMocks.runner.runMessageReceived.mock.calls[0] as
+      | [
+          { content?: unknown; from?: unknown; metadata?: Record<string, unknown> },
+          { accountId?: unknown; channelId?: unknown; conversationId?: unknown },
+        ]
+      | [];
+    expect(event?.from).toBe(ctx.From);
+    expect(event?.content).toBe("who are you");
+    expect(event?.metadata?.messageId).toBe("msg-claim-1");
+    expect(event?.metadata?.originatingChannel).toBe("telegram");
+    expect(event?.metadata?.originatingTo).toBe("telegram:-10099");
+    expect(event?.metadata?.senderId).toBe("user-9");
+    expect(event?.metadata?.senderUsername).toBe("ada");
+    expect(event?.metadata?.threadId).toBe(77);
+    expect(hookContext?.channelId).toBe("telegram");
+    expect(hookContext?.accountId).toBe("default");
+    expect(hookContext?.conversationId).toBe("telegram:-10099");
+    const internalHookEvent = (
+      internalHookMocks.triggerInternalHook.mock.calls as unknown as Array<
+        [{ action?: unknown; sessionKey?: unknown; type?: unknown }]
+      >
+    )[0]?.[0];
+    expect(internalHookEvent?.type).toBe("message");
+    expect(internalHookEvent?.action).toBe("received");
+    expect(internalHookEvent?.sessionKey).toBe("agent:main:hook-test");
     expect(replyResolver).toHaveBeenCalledTimes(1);
-    expect(dispatcher.sendFinalReply).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "core reply" }),
-    );
+    expect(
+      ((dispatcher.sendFinalReply as Mock).mock.calls[0]?.[0] as ReplyPayload | undefined)?.text,
+    ).toBe("core reply");
   });
 
   it("emits internal message:received hook when a session key is available", async () => {
