@@ -3,6 +3,10 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { chmod, copyFile, mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
+import {
+  TELEGRAM_USER_QA_CREDENTIAL_KIND,
+  parseTelegramUserQaCredentialPayload,
+} from "../../extensions/qa-lab/runtime-api.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -10,7 +14,6 @@ const DEFAULT_USER_DRIVER_DIR = "~/.codex/skills/custom/telegram-e2e-bot-to-bot/
 const DEFAULT_BOT_CREDENTIALS_FILE =
   "~/.codex/skills/custom/telegram-e2e-bot-to-bot/credentials.local.json";
 const DEFAULT_CONVEX_ENV_FILE = "~/.codex/skills/custom/telegram-e2e-bot-to-bot/convex.local.env";
-const TELEGRAM_USER_KIND = "telegram-user";
 const CHUNKED_PAYLOAD_MARKER = "__openclawQaCredentialPayloadChunksV1";
 
 function usage(): never {
@@ -165,7 +168,7 @@ async function tgzBase64(path: string) {
 
 async function writePrivateJson(path: string, payload: JsonObject) {
   const expanded = expandHome(path);
-  await mkdir(expanded.substring(0, expanded.lastIndexOf("/")), { recursive: true });
+  await mkdir(expanded.slice(0, expanded.lastIndexOf("/")), { recursive: true });
   await writeFile(expanded, `${JSON.stringify(payload, null, 2)}\n`, { mode: 0o600 });
   await chmodPrivate(expanded);
 }
@@ -325,7 +328,7 @@ async function hydratePayloadFromLease(params: {
       siteUrl: params.siteUrl,
       token: params.token,
       body: {
-        kind: TELEGRAM_USER_KIND,
+        kind: TELEGRAM_USER_QA_CREDENTIAL_KIND,
         ownerId: params.ownerId,
         actorRole: "ci",
         credentialId,
@@ -339,7 +342,7 @@ async function hydratePayloadFromLease(params: {
   if (serialized.length !== marker.byteLength) {
     throw new Error("Chunked payload length mismatch.");
   }
-  return JSON.parse(serialized) as JsonObject;
+  return parseTelegramUserQaCredentialPayload(JSON.parse(serialized)) as JsonObject;
 }
 
 async function createTelegramUserPayload(opts: Map<string, string>) {
@@ -411,7 +414,7 @@ async function createTelegramUserPayload(opts: Map<string, string>) {
       ]);
     }
 
-    await writePrivateJson(output, {
+    const payload = parseTelegramUserQaCredentialPayload({
       groupId,
       sutToken,
       testerUserId: requireString(config, "testerUserId"),
@@ -424,6 +427,7 @@ async function createTelegramUserPayload(opts: Map<string, string>) {
       desktopTdataArchiveBase64: await tgzBase64(desktopArchive),
       desktopTdataArchiveSha256: await fileSha256(desktopArchive),
     });
+    await writePrivateJson(output, payload);
   } finally {
     await rm(tempRoot, { force: true, recursive: true });
   }
@@ -451,7 +455,7 @@ async function restoreTelegramUserPayload(params: {
   if (!userDriverDir || !desktopWorkdir) {
     usage();
   }
-  const payload = params.payload;
+  const payload = parseTelegramUserQaCredentialPayload(params.payload);
   const tempRoot = `/tmp/openclaw-telegram-user-restore-${Date.now()}-${Math.random()
     .toString(16)
     .slice(2)}`;
@@ -507,7 +511,7 @@ async function leaseAndRestoreTelegramUser(opts: Map<string, string>) {
     siteUrl: config.siteUrl,
     token: config.token,
     body: {
-      kind: TELEGRAM_USER_KIND,
+      kind: TELEGRAM_USER_QA_CREDENTIAL_KIND,
       ownerId: config.ownerId,
       actorRole: "ci",
       leaseTtlMs: config.leaseTtlMs,
@@ -516,7 +520,7 @@ async function leaseAndRestoreTelegramUser(opts: Map<string, string>) {
   });
   const lease = {
     siteUrl: config.siteUrl,
-    kind: TELEGRAM_USER_KIND,
+    kind: TELEGRAM_USER_QA_CREDENTIAL_KIND,
     ownerId: config.ownerId,
     actorRole: "ci",
     credentialId: requireString(acquired, "credentialId"),
