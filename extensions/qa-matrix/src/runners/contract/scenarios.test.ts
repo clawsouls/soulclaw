@@ -1496,59 +1496,56 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-initial-catchup-then-incremental");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        restartGatewayWithQueuedMessage: async (queueMessage) => {
-          callOrder.push("restart");
-          await queueMessage();
-          callOrder.push("ready");
-        },
-        roomId: "!room:matrix-qa.test",
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!room:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              key: "restart",
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "Restart room",
-              requireMention: true,
-              roomId: "!restart:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        catchupDriverEventId: "$catchup-trigger",
-        catchupReply: {
-          eventId: "$catchup-reply",
-          tokenMatched: true,
-        },
-        incrementalDriverEventId: "$incremental-trigger",
-        incrementalReply: {
-          eventId: "$incremental-reply",
-          tokenMatched: true,
-        },
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      restartGatewayWithQueuedMessage: async (queueMessage) => {
+        callOrder.push("restart");
+        await queueMessage();
+        callOrder.push("ready");
+      },
+      roomId: "!room:matrix-qa.test",
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!room:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            key: "restart",
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "Restart room",
+            requireMention: true,
+            roomId: "!restart:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as {
+      catchupDriverEventId?: unknown;
+      catchupReply?: { eventId?: unknown; tokenMatched?: unknown };
+      incrementalDriverEventId?: unknown;
+      incrementalReply?: { eventId?: unknown; tokenMatched?: unknown };
+    };
+    expect(artifacts.catchupDriverEventId).toBe("$catchup-trigger");
+    expect(artifacts.catchupReply?.eventId).toBe("$catchup-reply");
+    expect(artifacts.catchupReply?.tokenMatched).toBe(true);
+    expect(artifacts.incrementalDriverEventId).toBe("$incremental-trigger");
+    expect(artifacts.incrementalReply?.eventId).toBe("$incremental-reply");
+    expect(artifacts.incrementalReply?.tokenMatched).toBe(true);
 
     expect(callOrder).toEqual([
       "restart",
@@ -1603,48 +1600,46 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-restart-replay-dedupe");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        ...matrixQaScenarioContext(),
-        restartGateway: async () => {
-          callOrder.push("restart");
-        },
-        roomId: "!room:matrix-qa.test",
-        topology: {
-          defaultRoomId: "!room:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              key: "restart",
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "Restart room",
-              requireMention: true,
-              roomId: "!restart:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        duplicateWindowMs: 8000,
-        firstDriverEventId: "$first-trigger",
-        firstReply: {
-          eventId: "$first-reply",
-          tokenMatched: true,
-        },
-        freshDriverEventId: "$fresh-trigger",
-        freshReply: {
-          eventId: "$fresh-reply",
-          tokenMatched: true,
-        },
+    const result = await runMatrixQaScenario(scenario, {
+      ...matrixQaScenarioContext(),
+      restartGateway: async () => {
+        callOrder.push("restart");
+      },
+      roomId: "!room:matrix-qa.test",
+      topology: {
+        defaultRoomId: "!room:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            key: "restart",
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "Restart room",
+            requireMention: true,
+            roomId: "!restart:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as {
+      duplicateWindowMs?: unknown;
+      firstDriverEventId?: unknown;
+      firstReply?: { eventId?: unknown; tokenMatched?: unknown };
+      freshDriverEventId?: unknown;
+      freshReply?: { eventId?: unknown; tokenMatched?: unknown };
+    };
+    expect(artifacts.duplicateWindowMs).toBe(8000);
+    expect(artifacts.firstDriverEventId).toBe("$first-trigger");
+    expect(artifacts.firstReply?.eventId).toBe("$first-reply");
+    expect(artifacts.firstReply?.tokenMatched).toBe(true);
+    expect(artifacts.freshDriverEventId).toBe("$fresh-trigger");
+    expect(artifacts.freshReply?.eventId).toBe("$fresh-reply");
+    expect(artifacts.freshReply?.tokenMatched).toBe(true);
 
     expect(callOrder).toEqual([
       "send:first",
@@ -1654,12 +1649,8 @@ describe("matrix live qa scenarios", () => {
       "send:fresh",
       "wait:fresh",
     ]);
-    expect(waitForOptionalRoomEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        roomId: "!restart:matrix-qa.test",
-        timeoutMs: 8000,
-      }),
-    );
+    expect(waitForOptionalRoomEvent.mock.calls[0]?.[0]?.roomId).toBe("!restart:matrix-qa.test");
+    expect(waitForOptionalRoomEvent.mock.calls[0]?.[0]?.timeoutMs).toBe(8000);
   });
 
   it("forces a stale persisted Matrix sync cursor and expects inbound dedupe to absorb replay", async () => {
