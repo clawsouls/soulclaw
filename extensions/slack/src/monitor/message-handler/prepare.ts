@@ -942,6 +942,21 @@ export async function prepareSlackMessage(params: {
     OriginatingTo: slackTo,
     NativeChannelId: message.channel,
   }) satisfies FinalizedMsgContext;
+
+  if (isRoomish && !shouldRequireMention) {
+    recordPendingHistoryEntryIfEnabled({
+      historyMap: ctx.channelHistories,
+      historyKey,
+      limit: ctx.historyLimit,
+      entry: {
+        sender: senderName,
+        body: rawBody,
+        timestamp: message.ts ? Math.round(Number(message.ts) * 1000) : undefined,
+        messageId: message.ts,
+      },
+    });
+  }
+
   const pinnedMainDmOwner = isDirectMessage
     ? resolvePinnedMainDmOwnerFromAllowlist({
         dmScope: cfg.session?.dmScope,
@@ -1014,6 +1029,7 @@ export async function prepareSlackMessage(params: {
       },
     },
     replyToMode,
+    requireMention: shouldRequireMention,
     isDirectMessage,
     isRoomish,
     historyKey,
