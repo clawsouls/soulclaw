@@ -634,6 +634,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
     expect(lane.name).toBe("codex-on-demand");
     expect(lane.resources).toEqual(["docker", "npm", "service"]);
     expect(lane.stateScenario).toBe("empty");
+    expect(lane.timeoutMs).toBe(1_800_000);
     expect(plan.needs.bareImage).toBe(true);
     expect(plan.needs.package).toBe(true);
   });
@@ -756,6 +757,7 @@ describe("scripts/lib/docker-e2e-plan", () => {
         live: false,
         name: "install-e2e-openai",
         resources: ["docker", "npm", "service"],
+        timeoutMs: 1_800_000,
         weight: 3,
       },
       {
