@@ -2365,34 +2365,21 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    expect(
-      telemetryState.counters.get("openclaw.session.recovery.requested")?.add,
-    ).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({
-        "openclaw.state": "processing",
-        "openclaw.action": "abort",
-        "openclaw.active_work_kind": "tool_call",
-      }),
-    );
-    expect(
-      telemetryState.counters.get("openclaw.session.recovery.completed")?.add,
-    ).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({
-        "openclaw.state": "processing",
-        "openclaw.status": "released",
-        "openclaw.action": "abort-active-run",
-      }),
-    );
-    expect(
-      telemetryState.histograms.get("openclaw.session.recovery.age_ms")?.record,
-    ).toHaveBeenCalledWith(
-      13_000,
-      expect.objectContaining({
-        "openclaw.status": "released",
-      }),
-    );
+    const recoveryRequestedCall = telemetryState.counters.get("openclaw.session.recovery.requested")
+      ?.add.mock.calls[0];
+    expect(recoveryRequestedCall?.[0]).toBe(1);
+    expect(recoveryRequestedCall?.[1]?.["openclaw.state"]).toBe("processing");
+    expect(recoveryRequestedCall?.[1]?.["openclaw.action"]).toBe("abort");
+    expect(recoveryRequestedCall?.[1]?.["openclaw.active_work_kind"]).toBe("tool_call");
+    const recoveryCompletedCall = telemetryState.counters.get("openclaw.session.recovery.completed")
+      ?.add.mock.calls[0];
+    expect(recoveryCompletedCall?.[0]).toBe(1);
+    expect(recoveryCompletedCall?.[1]?.["openclaw.state"]).toBe("processing");
+    expect(recoveryCompletedCall?.[1]?.["openclaw.status"]).toBe("released");
+    expect(recoveryCompletedCall?.[1]?.["openclaw.action"]).toBe("abort-active-run");
+    const recoveryAgeRecord = lastHistogramRecord("openclaw.session.recovery.age_ms");
+    expect(recoveryAgeRecord?.[0]).toBe(13_000);
+    expect(recoveryAgeRecord?.[1]?.["openclaw.status"]).toBe("released");
     expect(telemetryState.counters.get("openclaw.talk.event")?.add).toHaveBeenCalledWith(1, {
       "openclaw.talk.brain": "agent-consult",
       "openclaw.talk.event_type": "input.audio.delta",
@@ -2455,27 +2442,23 @@ describe("diagnostics-otel service", () => {
     } as Parameters<typeof emitDiagnosticEvent>[0]);
     await flushDiagnosticEvents();
 
-    const modelCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.model.call",
+    const modelOptions = startedSpanOptions("openclaw.model.call");
+    expect(Object.hasOwn(modelOptions?.attributes ?? {}, "openclaw.content.input_messages")).toBe(
+      false,
     );
-    const toolCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.tool.execution",
+    expect(Object.hasOwn(modelOptions?.attributes ?? {}, "openclaw.content.output_messages")).toBe(
+      false,
     );
-    expect(modelCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "openclaw.content.input_messages": expect.anything(),
-        "openclaw.content.output_messages": expect.anything(),
-        "openclaw.content.system_prompt": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
-    expect(toolCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "openclaw.content.tool_input": expect.anything(),
-        "openclaw.content.tool_output": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
+    expect(Object.hasOwn(modelOptions?.attributes ?? {}, "openclaw.content.system_prompt")).toBe(
+      false,
+    );
+    expect(modelOptions?.startTime).toBeTypeOf("number");
+    const toolOptions = startedSpanOptions("openclaw.tool.execution");
+    expect(Object.hasOwn(toolOptions?.attributes ?? {}, "openclaw.content.tool_input")).toBe(false);
+    expect(Object.hasOwn(toolOptions?.attributes ?? {}, "openclaw.content.tool_output")).toBe(
+      false,
+    );
+    expect(toolOptions?.startTime).toBeTypeOf("number");
     await service.stop?.(ctx);
   });
 
@@ -2528,16 +2511,12 @@ describe("diagnostics-otel service", () => {
     const toolAttrs = (toolCall?.[1] as { attributes?: Record<string, unknown> } | undefined)
       ?.attributes;
 
-    expect(modelAttrs).toMatchObject({
-      "openclaw.content.output_messages": "model reply",
-      "openclaw.content.system_prompt": "system prompt",
-    });
+    expect(modelAttrs?.["openclaw.content.output_messages"]).toBe("model reply");
+    expect(modelAttrs?.["openclaw.content.system_prompt"]).toBe("system prompt");
     expect(String(modelAttrs?.["openclaw.content.input_messages"])).not.toContain(
       "sk-1234567890abcdef1234567890abcdef", // pragma: allowlist secret
     );
-    expect(toolAttrs).toMatchObject({
-      "openclaw.content.tool_input": "tool input",
-    });
+    expect(toolAttrs?.["openclaw.content.tool_input"]).toBe("tool input");
     expect(String(toolAttrs?.["openclaw.content.tool_output"]).length).toBeLessThanOrEqual(
       MAX_TEST_OTEL_CONTENT_ATTRIBUTE_CHARS + OTEL_TRUNCATED_SUFFIX_MAX_CHARS,
     );
@@ -2583,13 +2562,9 @@ describe("diagnostics-otel service", () => {
     });
 
     const sessionCounter = telemetryState.counters.get("openclaw.session.state");
-    expect(sessionCounter?.add).toHaveBeenCalledWith(
-      1,
-      expect.objectContaining({
-        "openclaw.reason": expect.stringContaining("…"),
-      }),
-    );
     const attrs = sessionCounter?.add.mock.calls[0]?.[1] as Record<string, unknown> | undefined;
+    expect(sessionCounter?.add.mock.calls[0]?.[0]).toBe(1);
+    expect(String(attrs?.["openclaw.reason"])).toContain("…");
     expect(typeof attrs?.["openclaw.reason"]).toBe("string");
     expect(String(attrs?.["openclaw.reason"])).not.toContain(
       "ghp_abcdefghijklmnopqrstuvwxyz123456", // pragma: allowlist secret
