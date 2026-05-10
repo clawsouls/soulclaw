@@ -2268,10 +2268,15 @@ describe("deliverOutboundPayloads", () => {
       session: { agentId: "agent-main" },
     });
 
-    expect(logMocks.warn).toHaveBeenCalledWith(
+    expect(logMocks.warn.mock.calls[0]?.[0]).toBe(
       "deliverOutboundPayloads: session.agentId present without session key; internal message:sent hook will be skipped",
-      expect.objectContaining({ channel: "matrix", to: "!room:example", agentId: "agent-main" }),
     );
+    const warnContext = logMocks.warn.mock.calls[0]?.[1] as
+      | { agentId?: unknown; channel?: unknown; to?: unknown }
+      | undefined;
+    expect(warnContext?.channel).toBe("matrix");
+    expect(warnContext?.to).toBe("!room:example");
+    expect(warnContext?.agentId).toBe("agent-main");
   });
 
   it("calls failDelivery instead of ackDelivery on bestEffort partial failure", async () => {
@@ -2316,29 +2321,40 @@ describe("deliverOutboundPayloads", () => {
     });
 
     expect(queueMocks.enqueueDelivery).toHaveBeenCalledTimes(1);
-    expect(queueMocks.enqueueDelivery).toHaveBeenCalledWith(
-      expect.objectContaining({
-        payloads: [
-          { text: "NO_REPLY" },
-          { text: '{"action":"NO_REPLY"}' },
-          { text: "caption\nMEDIA:https://x.test/a.png" },
-          { text: "NO_REPLY", mediaUrl: " https://x.test/b.png " },
-        ],
-        renderedBatchPlan: expect.objectContaining({
-          payloadCount: 4,
-          textCount: 4,
-          mediaCount: 1,
-          items: expect.arrayContaining([
-            expect.objectContaining({
-              index: 3,
-              kinds: ["text", "media"],
-              text: "NO_REPLY",
-              mediaUrls: ["https://x.test/b.png"],
-            }),
-          ]),
-        }),
-      }),
-    );
+    const queuedDelivery = (
+      queueMocks.enqueueDelivery.mock.calls as unknown as Array<
+        [
+          {
+            payloads?: unknown;
+            renderedBatchPlan?: {
+              items?: Array<{
+                index?: unknown;
+                kinds?: unknown;
+                mediaUrls?: unknown;
+                text?: unknown;
+              }>;
+              mediaCount?: unknown;
+              payloadCount?: unknown;
+              textCount?: unknown;
+            };
+          },
+        ]
+      >
+    )[0]?.[0];
+    expect(queuedDelivery?.payloads).toStrictEqual([
+      { text: "NO_REPLY" },
+      { text: '{"action":"NO_REPLY"}' },
+      { text: "caption\nMEDIA:https://x.test/a.png" },
+      { text: "NO_REPLY", mediaUrl: " https://x.test/b.png " },
+    ]);
+    const renderedPlan = queuedDelivery?.renderedBatchPlan;
+    expect(renderedPlan?.payloadCount).toBe(4);
+    expect(renderedPlan?.textCount).toBe(4);
+    expect(renderedPlan?.mediaCount).toBe(1);
+    const noReplyMediaItem = renderedPlan?.items?.find((item) => item.index === 3);
+    expect(noReplyMediaItem?.kinds).toStrictEqual(["text", "media"]);
+    expect(noReplyMediaItem?.text).toBe("NO_REPLY");
+    expect(noReplyMediaItem?.mediaUrls).toStrictEqual(["https://x.test/b.png"]);
   });
 
   it("strips internal runtime scaffolding before queue persistence", async () => {
@@ -2374,27 +2390,31 @@ describe("deliverOutboundPayloads", () => {
       deps: { matrix: sendMatrix },
     });
 
-    expect(queueMocks.enqueueDelivery).toHaveBeenCalledWith(
-      expect.objectContaining({
-        payloads: [
+    const queuedDelivery = (
+      queueMocks.enqueueDelivery.mock.calls as unknown as Array<
+        [
           {
-            text: "visible\nafter",
-            channelData: {
-              internal: "",
-            },
+            payloads?: unknown;
+            renderedBatchPlan?: {
+              items?: Array<{ text?: unknown }>;
+              payloadCount?: unknown;
+              textCount?: unknown;
+            };
           },
-        ],
-        renderedBatchPlan: expect.objectContaining({
-          payloadCount: 1,
-          textCount: 1,
-          items: [
-            expect.objectContaining({
-              text: "visible\nafter",
-            }),
-          ],
-        }),
-      }),
-    );
+        ]
+      >
+    )[0]?.[0];
+    expect(queuedDelivery?.payloads).toStrictEqual([
+      {
+        text: "visible\nafter",
+        channelData: {
+          internal: "",
+        },
+      },
+    ]);
+    expect(queuedDelivery?.renderedBatchPlan?.payloadCount).toBe(1);
+    expect(queuedDelivery?.renderedBatchPlan?.textCount).toBe(1);
+    expect(queuedDelivery?.renderedBatchPlan?.items?.[0]?.text).toBe("visible\nafter");
   });
 
   it("persists rendered batch plans with queued deliveries", async () => {
@@ -2422,11 +2442,10 @@ describe("deliverOutboundPayloads", () => {
       renderedBatchPlan,
     });
 
-    expect(queueMocks.enqueueDelivery).toHaveBeenCalledWith(
-      expect.objectContaining({
-        renderedBatchPlan,
-      }),
-    );
+    const queuedDelivery = (
+      queueMocks.enqueueDelivery.mock.calls as unknown as Array<[{ renderedBatchPlan?: unknown }]>
+    )[0]?.[0];
+    expect(queuedDelivery?.renderedBatchPlan).toBe(renderedBatchPlan);
   });
 
   it("applies silent-reply rewrite policy from the outbound session", async () => {
