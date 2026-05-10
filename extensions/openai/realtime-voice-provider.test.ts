@@ -1059,6 +1059,73 @@ describe("buildOpenAIRealtimeVoiceProvider", () => {
     );
   });
 
+  it("forwards Codex-compatible legacy realtime audio and transcript events", async () => {
+    const provider = buildOpenAIRealtimeVoiceProvider();
+    const onAudio = vi.fn();
+    const onTranscript = vi.fn();
+    const bridge = provider.createBridge({
+      providerConfig: { apiKey: "sk-test" }, // pragma: allowlist secret
+      onAudio,
+      onClearAudio: vi.fn(),
+      onTranscript,
+    });
+    const connecting = bridge.connect();
+    const socket = FakeWebSocket.instances[0];
+    if (!socket) {
+      throw new Error("expected bridge to create a websocket");
+    }
+
+    socket.readyState = FakeWebSocket.OPEN;
+    socket.emit("open");
+    socket.emit("message", Buffer.from(JSON.stringify({ type: "session.updated" })));
+    await connecting;
+
+    const audio = Buffer.from("legacy assistant audio");
+    socket.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "conversation.output_audio.delta",
+          data: audio.toString("base64"),
+          sample_rate: 24000,
+          channels: 1,
+        }),
+      ),
+    );
+    socket.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "conversation.input_transcript.delta",
+          delta: "partial user",
+        }),
+      ),
+    );
+    socket.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "conversation.output_transcript.delta",
+          delta: "partial assistant",
+        }),
+      ),
+    );
+    socket.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          type: "response.output_text.done",
+          text: "final assistant text",
+        }),
+      ),
+    );
+
+    expect(onAudio).toHaveBeenCalledWith(audio);
+    expect(onTranscript).toHaveBeenCalledWith("user", "partial user", false);
+    expect(onTranscript).toHaveBeenCalledWith("assistant", "partial assistant", false);
+    expect(onTranscript).toHaveBeenCalledWith("assistant", "final assistant text", true);
+  });
+
   it("emits tool calls from realtime conversation item done events", async () => {
     const provider = buildOpenAIRealtimeVoiceProvider();
     const onToolCall = vi.fn();
