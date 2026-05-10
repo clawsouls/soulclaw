@@ -210,6 +210,12 @@ function startedSpanOptions(name: string) {
   return call?.[1] as { attributes?: Record<string, unknown>; startTime?: unknown } | undefined;
 }
 
+function lastHistogramRecord(name: string) {
+  return telemetryState.histograms.get(name)?.record.mock.calls.at(-1) as
+    | [unknown, Record<string, unknown>?]
+    | undefined;
+}
+
 async function emitAndCaptureLog(
   event: Omit<Extract<Parameters<typeof emitDiagnosticEvent>[0], { type: "log.record" }>, "type">,
   options: { trusted?: boolean } = {},
@@ -453,11 +459,9 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    const runDurationRecordCall = telemetryState.histograms
-      .get("openclaw.run.duration_ms")
-      ?.record.mock.calls.at(-1);
+    const runDurationRecordCall = lastHistogramRecord("openclaw.run.duration_ms");
     expect(runDurationRecordCall?.[0]).toBe(100);
-    const runDurationAttributes = runDurationRecordCall?.[1] as Record<string, unknown> | undefined;
+    const runDurationAttributes = runDurationRecordCall?.[1];
     expect(runDurationAttributes?.["openclaw.provider"]).toBe("openai");
     expect(runDurationAttributes?.["openclaw.model"]).toBe("gpt-5.4");
     const runSpanOptions = startedSpanOptions("openclaw.run");
@@ -537,16 +541,12 @@ describe("diagnostics-otel service", () => {
     ).toHaveBeenCalledWith(1.4, {
       "openclaw.liveness.reason": "event_loop_delay:cpu",
     });
-    const livenessSpan = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.liveness.warning",
+    const livenessSpanOptions = startedSpanOptions("openclaw.liveness.warning");
+    expect(livenessSpanOptions?.attributes?.["openclaw.liveness.reason"]).toBe(
+      "event_loop_delay:cpu",
     );
-    expect(livenessSpan?.[1]).toMatchObject({
-      attributes: {
-        "openclaw.liveness.reason": "event_loop_delay:cpu",
-        "openclaw.liveness.active": 2,
-        "openclaw.liveness.queued": 4,
-      },
-    });
+    expect(livenessSpanOptions?.attributes?.["openclaw.liveness.active"]).toBe(2);
+    expect(livenessSpanOptions?.attributes?.["openclaw.liveness.queued"]).toBe(4);
     const span = telemetryState.spans.find((item) => item.name === "openclaw.liveness.warning");
     expect(span?.setStatus).toHaveBeenCalledWith({
       code: 2,
@@ -577,18 +577,14 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    expect(events).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          type: "telemetry.exporter",
-          exporter: "diagnostics-otel",
-          signal: "logs",
-          status: "failure",
-          reason: "emit_failed",
-          errorCategory: "TypeError",
-        }),
-      ]),
-    );
+    const exporterEvents = events.filter((event) => event.type === "telemetry.exporter");
+    const failureEvent = exporterEvents.find((event) => event.status === "failure");
+    expect(failureEvent?.type).toBe("telemetry.exporter");
+    expect(failureEvent?.exporter).toBe("diagnostics-otel");
+    expect(failureEvent?.signal).toBe("logs");
+    expect(failureEvent?.status).toBe("failure");
+    expect(failureEvent?.reason).toBe("emit_failed");
+    expect(failureEvent?.errorCategory).toBe("TypeError");
     expect(
       telemetryState.counters.get("openclaw.telemetry.exporter.events")?.add,
     ).toHaveBeenCalledWith(1, {
@@ -640,13 +636,10 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    expect(telemetryState.histograms.get("openclaw.run.duration_ms")?.record).toHaveBeenCalledWith(
-      100,
-      expect.objectContaining({
-        "openclaw.outcome": "blocked",
-        "openclaw.blocked_by": "policy-plugin",
-      }),
-    );
+    const runDurationRecordCall = lastHistogramRecord("openclaw.run.duration_ms");
+    expect(runDurationRecordCall?.[0]).toBe(100);
+    expect(runDurationRecordCall?.[1]?.["openclaw.outcome"]).toBe("blocked");
+    expect(runDurationRecordCall?.[1]?.["openclaw.blocked_by"]).toBe("policy-plugin");
     expect(JSON.stringify(telemetryState)).not.toContain("matched secret prompt");
 
     await service.stop?.(ctx);
@@ -669,12 +662,9 @@ describe("diagnostics-otel service", () => {
     await flushDiagnosticEvents();
 
     expect(sdkStart).not.toHaveBeenCalled();
-    expect(telemetryState.histograms.get("openclaw.run.duration_ms")?.record).toHaveBeenCalledWith(
-      100,
-      expect.objectContaining({
-        "openclaw.provider": "openai",
-      }),
-    );
+    const runDurationRecordCall = lastHistogramRecord("openclaw.run.duration_ms");
+    expect(runDurationRecordCall?.[0]).toBe(100);
+    expect(runDurationRecordCall?.[1]?.["openclaw.provider"]).toBe("openai");
     expect(telemetryState.tracer.startSpan).not.toHaveBeenCalled();
 
     await service.stop?.(ctx);
