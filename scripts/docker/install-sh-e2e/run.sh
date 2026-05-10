@@ -652,7 +652,6 @@ run_profile() {
   trap cleanup_profile EXIT
   phase_mark_passed "Start gateway ($profile)"
 
-  TURN1_JSON="/tmp/agent-${profile}-1.json"
   TURN2_JSON="/tmp/agent-${profile}-2.json"
   TURN2B_JSON="/tmp/agent-${profile}-2b.json"
   TURN3_JSON="/tmp/agent-${profile}-3.json"
@@ -676,9 +675,6 @@ run_profile() {
 
   phase_mark_start "Agent turns ($profile)"
 
-  TURN1_SESSION_ID="${SESSION_ID_PREFIX}-read-proof"
-  local prompt1
-  prompt1="Use the read tool (not exec) to read ${PROOF_TXT}. Reply with the exact contents only (no extra whitespace)."
   local prompt2
   prompt2=$'Use the write tool (not exec) to write exactly this string into '"${PROOF_COPY}"$':\n'"${PROOF_VALUE}"$'\nReply with exactly: WROTE'
   local prompt3
@@ -691,10 +687,11 @@ run_profile() {
   TURN3_SESSION_ID="${SESSION_ID_PREFIX}-exec-hostname"
   TURN3B_SESSION_ID="${SESSION_ID_PREFIX}-write-hostname"
   TURN4_SESSION_ID="${SESSION_ID_PREFIX}-image-write"
+  # The read tool is verified below by reading the generated copy. Keep the
+  # initial parallel batch focused so slow hosted providers do not burn one
+  # redundant agent turn during release package acceptance.
   if [[ "$AGENT_TURNS_PARALLEL" == "1" ]]; then
     local turn_pids=()
-    run_agent_turn_bg "read proof" "$profile" "$TURN1_SESSION_ID" "$prompt1" "$TURN1_JSON"
-    turn_pids+=("$RUN_AGENT_TURN_BG_PID")
     run_agent_turn_bg "write proof copy" "$profile" "$TURN2_SESSION_ID" "$prompt2" "$TURN2_JSON"
     turn_pids+=("$RUN_AGENT_TURN_BG_PID")
     run_agent_turn_bg "exec hostname" "$profile" "$TURN3_SESSION_ID" "$prompt3" "$TURN3_JSON"
@@ -705,20 +702,10 @@ run_profile() {
     turn_pids+=("$RUN_AGENT_TURN_BG_PID")
     wait_agent_turn_batch "${turn_pids[@]}"
   else
-    run_agent_turn_logged "read proof" "$profile" "$TURN1_SESSION_ID" "$prompt1" "$TURN1_JSON"
     run_agent_turn_logged "write proof copy" "$profile" "$TURN2_SESSION_ID" "$prompt2" "$TURN2_JSON"
     run_agent_turn_logged "exec hostname" "$profile" "$TURN3_SESSION_ID" "$prompt3" "$TURN3_JSON"
     run_agent_turn_logged "write hostname" "$profile" "$TURN3B_SESSION_ID" "$prompt3b" "$TURN3B_JSON"
     run_agent_turn_logged "image write" "$profile" "$TURN4_SESSION_ID" "$prompt4" "$TURN4_JSON"
-  fi
-
-  assert_agent_json_has_text "$TURN1_JSON"
-  assert_agent_json_ok "$TURN1_JSON" "$agent_model_provider"
-  local reply1
-  reply1="$(extract_matching_text "$TURN1_JSON" "$PROOF_VALUE" | tr -d '\r\n')"
-  if [[ "$reply1" != "$PROOF_VALUE" ]]; then
-    echo "ERROR: agent did not read proof.txt correctly ($profile): $reply1" >&2
-    exit 1
   fi
 
   assert_agent_json_has_text "$TURN2_JSON"
@@ -774,7 +761,6 @@ run_profile() {
   phase_mark_start "Verify tool usage via session transcript ($profile)"
   # Give the gateway a moment to flush transcripts.
   sleep 1
-  assert_session_used_tools "$(session_jsonl_path "$profile" "$TURN1_SESSION_ID")" read
   assert_session_used_tools "$(session_jsonl_path "$profile" "$TURN2_SESSION_ID")" write
   assert_session_used_tools "$(session_jsonl_path "$profile" "$TURN2B_SESSION_ID")" read
   assert_session_used_tools "$(session_jsonl_path "$profile" "$TURN3_SESSION_ID")" exec

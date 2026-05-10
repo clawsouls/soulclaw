@@ -145,7 +145,7 @@ describe("docker build helper", () => {
     expect(runner).toContain("phase_mark_start");
     expect(runner).toContain("run_agent_turn_bg");
     expect(runner).toContain("wait_agent_turn_batch");
-    expect(runner).toContain('run_agent_turn_bg "read proof"');
+    expect(runner).not.toContain('run_agent_turn_bg "read proof"');
     expect(runner).toContain('run_agent_turn_bg "image write"');
     expect(runner).toContain('run_agent_turn_logged "read proof copy"');
     expect(wrapper).toContain("OPENCLAW_INSTALL_E2E_AGENT_TURNS_PARALLEL");
@@ -265,7 +265,7 @@ describe("docker build helper", () => {
     const runner = readFileSync(INSTALL_E2E_RUNNER_PATH, "utf8");
 
     expect(runner).toContain('SESSION_ID_PREFIX="e2e-tools-${profile}"');
-    expect(runner).toContain('TURN1_SESSION_ID="${SESSION_ID_PREFIX}-read-proof"');
+    expect(runner).toContain('TURN2B_SESSION_ID="${SESSION_ID_PREFIX}-read-copy"');
     expect(runner).toContain('TURN3_SESSION_ID="${SESSION_ID_PREFIX}-exec-hostname"');
     expect(runner).toContain('TURN4_SESSION_ID="${SESSION_ID_PREFIX}-image-write"');
   });
