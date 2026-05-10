@@ -2241,11 +2241,7 @@ describe("updateNpmInstalledPlugins", () => {
       dryRun: true,
     });
 
-    expect(installPluginFromClawHubMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "clawhub:demo@rc",
-      }),
-    );
+    expect(clawHubInstallCall()?.spec).toBe("clawhub:demo@rc");
   });
 
   it("skips ClawHub plugin update when bundled version is newer", async () => {
@@ -2285,7 +2281,8 @@ describe("updateNpmInstalledPlugins", () => {
     expect(result.outcomes[0]?.pluginId).toBe("whatsapp");
     expect(result.outcomes[0]?.status).toBe("skipped");
     expect(result.outcomes[0]?.message).toContain("bundled version 2026.4.20 is newer");
-    expect(warnMessages).toEqual([expect.stringContaining("bundled version 2026.4.20 is newer")]);
+    expect(warnMessages).toHaveLength(1);
+    expect(warnMessages[0]).toContain("bundled version 2026.4.20 is newer");
   });
 
   it("proceeds with ClawHub plugin update when bundled version is older", async () => {
@@ -2375,7 +2372,7 @@ describe("updateNpmInstalledPlugins", () => {
 
     expect(installPluginFromClawHubMock).toHaveBeenCalled();
     expect(result.changed).toBe(true);
-    expect(result.outcomes[0]).toMatchObject({
+    expectRecordFields(result.outcomes[0], {
       pluginId: "demo",
       status: "updated",
       currentVersion: undefined,
@@ -2861,23 +2858,15 @@ describe("syncPluginsForUpdateChannel", () => {
       },
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@openclaw/legacy-chat",
-        mode: "update",
-        expectedPluginId: "legacy-chat",
-      }),
-    );
-    expect(installPluginFromNpmSpecMock).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        trustedSourceLinkedOfficialInstall: true,
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("@openclaw/legacy-chat");
+    expect(npmInstallCall()?.mode).toBe("update");
+    expect(npmInstallCall()?.expectedPluginId).toBe("legacy-chat");
+    expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).not.toBe(true);
     expect(result.changed).toBe(true);
     expect(result.summary.switchedToNpm).toEqual(["legacy-chat"]);
     expect(result.summary.errors).toStrictEqual([]);
     expect(result.config.plugins?.load?.paths).toStrictEqual([]);
-    expect(result.config.plugins?.installs?.["legacy-chat"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["legacy-chat"], {
       source: "npm",
       spec: "@openclaw/legacy-chat",
       installPath: "/tmp/openclaw-plugins/legacy-chat",
@@ -2926,13 +2915,9 @@ describe("syncPluginsForUpdateChannel", () => {
       },
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@openclaw/voice-call",
-        expectedPluginId: "voice-call",
-        trustedSourceLinkedOfficialInstall: true,
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("@openclaw/voice-call");
+    expect(npmInstallCall()?.expectedPluginId).toBe("voice-call");
+    expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).toBe(true);
   });
 
   it("installs a ClawHub-preferred externalized bundled plugin", async () => {
@@ -2977,21 +2962,17 @@ describe("syncPluginsForUpdateChannel", () => {
       },
     });
 
-    expect(installPluginFromClawHubMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "clawhub:legacy-chat@2026.5.1-beta.2",
-        baseUrl: "https://clawhub.ai",
-        mode: "update",
-        expectedPluginId: "legacy-chat",
-      }),
-    );
+    expect(clawHubInstallCall()?.spec).toBe("clawhub:legacy-chat@2026.5.1-beta.2");
+    expect(clawHubInstallCall()?.baseUrl).toBe("https://clawhub.ai");
+    expect(clawHubInstallCall()?.mode).toBe("update");
+    expect(clawHubInstallCall()?.expectedPluginId).toBe("legacy-chat");
     expect(installPluginFromNpmSpecMock).not.toHaveBeenCalled();
     expect(result.changed).toBe(true);
     expect(result.summary.switchedToClawHub).toEqual(["legacy-chat"]);
     expect(result.summary.switchedToNpm).toStrictEqual([]);
     expect(result.summary.errors).toStrictEqual([]);
     expect(result.config.plugins?.load?.paths).toStrictEqual([]);
-    expect(result.config.plugins?.installs?.["legacy-chat"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["legacy-chat"], {
       source: "clawhub",
       spec: "clawhub:legacy-chat@2026.5.1-beta.2",
       installPath: "/tmp/openclaw-plugins/legacy-chat",
@@ -3058,18 +3039,10 @@ describe("syncPluginsForUpdateChannel", () => {
       },
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@openclaw/legacy-chat",
-        mode: "update",
-        expectedPluginId: "legacy-chat",
-      }),
-    );
-    expect(installPluginFromNpmSpecMock).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        trustedSourceLinkedOfficialInstall: true,
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("@openclaw/legacy-chat");
+    expect(npmInstallCall()?.mode).toBe("update");
+    expect(npmInstallCall()?.expectedPluginId).toBe("legacy-chat");
+    expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).not.toBe(true);
     expect(result.changed).toBe(true);
     expect(result.summary.switchedToClawHub).toStrictEqual([]);
     expect(result.summary.switchedToNpm).toEqual(["legacy-chat"]);
@@ -3077,7 +3050,7 @@ describe("syncPluginsForUpdateChannel", () => {
       "ClawHub clawhub:legacy-chat@2026.5.1-beta.2 unavailable for legacy-chat; falling back to npm @openclaw/legacy-chat.",
     ]);
     expect(result.summary.errors).toStrictEqual([]);
-    expect(result.config.plugins?.installs?.["legacy-chat"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["legacy-chat"], {
       source: "npm",
       spec: "@openclaw/legacy-chat",
       installPath: "/tmp/openclaw-plugins/legacy-chat",
@@ -3130,13 +3103,9 @@ describe("syncPluginsForUpdateChannel", () => {
       },
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@openclaw/voice-call",
-        expectedPluginId: "voice-call",
-        trustedSourceLinkedOfficialInstall: true,
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("@openclaw/voice-call");
+    expect(npmInstallCall()?.expectedPluginId).toBe("voice-call");
+    expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).toBe(true);
   });
 
   it("moves ClawHub-preferred externalized plugin fallbacks back to ClawHub", async () => {
@@ -3179,17 +3148,13 @@ describe("syncPluginsForUpdateChannel", () => {
       },
     });
 
-    expect(installPluginFromClawHubMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "clawhub:legacy-chat@2026.5.1-beta.2",
-        mode: "update",
-        expectedPluginId: "legacy-chat",
-      }),
-    );
+    expect(clawHubInstallCall()?.spec).toBe("clawhub:legacy-chat@2026.5.1-beta.2");
+    expect(clawHubInstallCall()?.mode).toBe("update");
+    expect(clawHubInstallCall()?.expectedPluginId).toBe("legacy-chat");
     expect(installPluginFromNpmSpecMock).not.toHaveBeenCalled();
     expect(result.changed).toBe(true);
     expect(result.summary.switchedToClawHub).toEqual(["legacy-chat"]);
-    expect(result.config.plugins?.installs?.["legacy-chat"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["legacy-chat"], {
       source: "clawhub",
       spec: "clawhub:legacy-chat@2026.5.1-beta.2",
       installPath: "/tmp/openclaw-plugins/legacy-chat",
@@ -3266,16 +3231,12 @@ describe("syncPluginsForUpdateChannel", () => {
       config: {},
     });
 
-    expect(installPluginFromNpmSpecMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        spec: "@openclaw/default-chat",
-        mode: "update",
-        expectedPluginId: "default-chat",
-      }),
-    );
+    expect(npmInstallCall()?.spec).toBe("@openclaw/default-chat");
+    expect(npmInstallCall()?.mode).toBe("update");
+    expect(npmInstallCall()?.expectedPluginId).toBe("default-chat");
     expect(result.changed).toBe(true);
     expect(result.summary.switchedToNpm).toEqual(["default-chat"]);
-    expect(result.config.plugins?.installs?.["default-chat"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["default-chat"], {
       source: "npm",
       spec: "@openclaw/default-chat",
       installPath: "/tmp/openclaw-plugins/default-chat",
@@ -3316,7 +3277,7 @@ describe("syncPluginsForUpdateChannel", () => {
 
     expect(installPluginFromNpmSpecMock).not.toHaveBeenCalled();
     expect(result.changed).toBe(false);
-    expect(result.config.plugins?.installs?.["legacy-chat"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["legacy-chat"], {
       source: "path",
     });
   });
@@ -3395,7 +3356,7 @@ describe("syncPluginsForUpdateChannel", () => {
 
     expect(installPluginFromNpmSpecMock).not.toHaveBeenCalled();
     expect(result.changed).toBe(false);
-    expect(result.config.plugins?.installs?.["legacy-chat"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["legacy-chat"], {
       source: "path",
       sourcePath: "/workspace/plugins/legacy-chat",
     });
@@ -3439,7 +3400,7 @@ describe("syncPluginsForUpdateChannel", () => {
 
     expect(installPluginFromNpmSpecMock).not.toHaveBeenCalled();
     expect(result.changed).toBe(false);
-    expect(result.config.plugins?.installs?.["legacy-chat"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["legacy-chat"], {
       source: "path",
     });
   });
@@ -3480,7 +3441,7 @@ describe("syncPluginsForUpdateChannel", () => {
     expect(installPluginFromNpmSpecMock).not.toHaveBeenCalled();
     expect(result.changed).toBe(true);
     expect(result.config.plugins?.load?.paths).toEqual(["/workspace/plugins/other"]);
-    expect(result.config.plugins?.installs?.["legacy-chat"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["legacy-chat"], {
       source: "npm",
       spec: "@openclaw/legacy-chat",
     });
@@ -3522,7 +3483,7 @@ describe("syncPluginsForUpdateChannel", () => {
     expect(installPluginFromNpmSpecMock).not.toHaveBeenCalled();
     expect(result.changed).toBe(true);
     expect(result.config.plugins?.load?.paths).toEqual(["/workspace/plugins/other"]);
-    expect(result.config.plugins?.installs?.["legacy-chat"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["legacy-chat"], {
       source: "npm",
       resolvedName: "@openclaw/legacy-chat",
     });
@@ -3565,7 +3526,7 @@ describe("syncPluginsForUpdateChannel", () => {
     expect(installPluginFromNpmSpecMock).not.toHaveBeenCalled();
     expect(result.changed).toBe(true);
     expect(result.config.plugins?.load?.paths).toEqual(["/workspace/plugins/other"]);
-    expect(result.config.plugins?.installs?.["legacy-chat"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["legacy-chat"], {
       source: "npm",
       spec: "@openclaw/legacy-chat@1.2.3",
     });
@@ -3611,7 +3572,7 @@ describe("syncPluginsForUpdateChannel", () => {
     expect(installPluginFromNpmSpecMock).not.toHaveBeenCalled();
     expect(result.changed).toBe(true);
     expect(result.config.plugins?.load?.paths).toEqual(["/workspace/plugins/other"]);
-    expect(result.config.plugins?.installs?.["legacy-chat"]).toMatchObject({
+    expectRecordFields(result.config.plugins?.installs?.["legacy-chat"], {
       source: "clawhub",
       spec: "clawhub:legacy-chat@2026.5.1",
     });
