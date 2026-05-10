@@ -5841,59 +5841,62 @@ describe("matrix live qa scenarios", () => {
 
       const scenario = requireMatrixQaScenario("matrix-e2ee-cli-setup-then-gateway-reply");
 
-      await expect(
-        runMatrixQaScenario(scenario, {
-          ...matrixQaScenarioContext(),
-          driverDeviceId: "DRIVERDEVICE",
-          driverPassword: "driver-password",
-          gatewayRuntimeEnv: {
-            OPENCLAW_CONFIG_PATH: gatewayConfigPath,
-            OPENCLAW_STATE_DIR: "/tmp/gateway-state",
-            PATH: process.env.PATH,
-          },
-          outputDir,
-          patchGatewayConfig,
-          restartGatewayAfterStateMutation,
-          waitGatewayAccountReady,
-          sutAccountId: "sut",
-          sutDeviceId: "SUTDEVICE",
-          sutPassword: "sut-password",
-          topology: {
-            defaultRoomId: "!main:matrix-qa.test",
-            defaultRoomKey: "main",
-            rooms: [
-              {
-                encrypted: true,
-                key: matrixQaE2eeRoomKey("matrix-e2ee-cli-setup-then-gateway-reply"),
-                kind: "group",
-                memberRoles: ["driver", "observer", "sut"],
-                memberUserIds: [
-                  "@driver:matrix-qa.test",
-                  "@observer:matrix-qa.test",
-                  "@sut:matrix-qa.test",
-                ],
-                name: "E2EE",
-                requireMention: true,
-                roomId: "!e2ee:matrix-qa.test",
-              },
-            ],
-          },
-        }),
-      ).resolves.toMatchObject({
-        artifacts: {
-          accountId: "cli-setup-gateway",
-          cliDeviceId: "CLIGATEWAYDEVICE",
-          driverUserId: "@cli-driver:matrix-qa.test",
-          gatewayReply: {
-            eventId: "$gateway-reply",
-            tokenMatched: true,
-          },
-          gatewayUserId: "@cli-gateway:matrix-qa.test",
-          roomId: "!isolated-e2ee:matrix-qa.test",
-          setupSuccess: true,
-          verificationBootstrapSuccess: true,
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        driverDeviceId: "DRIVERDEVICE",
+        driverPassword: "driver-password",
+        gatewayRuntimeEnv: {
+          OPENCLAW_CONFIG_PATH: gatewayConfigPath,
+          OPENCLAW_STATE_DIR: "/tmp/gateway-state",
+          PATH: process.env.PATH,
+        },
+        outputDir,
+        patchGatewayConfig,
+        restartGatewayAfterStateMutation,
+        waitGatewayAccountReady,
+        sutAccountId: "sut",
+        sutDeviceId: "SUTDEVICE",
+        sutPassword: "sut-password",
+        topology: {
+          defaultRoomId: "!main:matrix-qa.test",
+          defaultRoomKey: "main",
+          rooms: [
+            {
+              encrypted: true,
+              key: matrixQaE2eeRoomKey("matrix-e2ee-cli-setup-then-gateway-reply"),
+              kind: "group",
+              memberRoles: ["driver", "observer", "sut"],
+              memberUserIds: [
+                "@driver:matrix-qa.test",
+                "@observer:matrix-qa.test",
+                "@sut:matrix-qa.test",
+              ],
+              name: "E2EE",
+              requireMention: true,
+              roomId: "!e2ee:matrix-qa.test",
+            },
+          ],
         },
       });
+      const artifacts = result.artifacts as {
+        accountId?: unknown;
+        cliDeviceId?: unknown;
+        driverUserId?: unknown;
+        gatewayReply?: { eventId?: unknown; tokenMatched?: unknown };
+        gatewayUserId?: unknown;
+        roomId?: unknown;
+        setupSuccess?: unknown;
+        verificationBootstrapSuccess?: unknown;
+      };
+      expect(artifacts.accountId).toBe("cli-setup-gateway");
+      expect(artifacts.cliDeviceId).toBe("CLIGATEWAYDEVICE");
+      expect(artifacts.driverUserId).toBe("@cli-driver:matrix-qa.test");
+      expect(artifacts.gatewayReply?.eventId).toBe("$gateway-reply");
+      expect(artifacts.gatewayReply?.tokenMatched).toBe(true);
+      expect(artifacts.gatewayUserId).toBe("@cli-gateway:matrix-qa.test");
+      expect(artifacts.roomId).toBe("!isolated-e2ee:matrix-qa.test");
+      expect(artifacts.setupSuccess).toBe(true);
+      expect(artifacts.verificationBootstrapSuccess).toBe(true);
       const finalGatewayConfig = JSON.parse(await readFile(gatewayConfigPath, "utf8")) as {
         channels: {
           matrix: {
@@ -5906,26 +5909,28 @@ describe("matrix live qa scenarios", () => {
       expect(Object.keys(finalGatewayConfig.channels.matrix.accounts)).toEqual([
         "cli-setup-gateway",
       ]);
-      expect(finalGatewayConfig.channels.matrix.accounts["cli-setup-gateway"]).toMatchObject({
-        encryption: true,
-        setupBootstrapMarker: "preserved",
-      });
+      const finalGatewayAccount = finalGatewayConfig.channels.matrix.accounts["cli-setup-gateway"];
+      expect(finalGatewayAccount?.encryption).toBe(true);
+      expect(finalGatewayAccount?.setupBootstrapMarker).toBe("preserved");
 
       expect(runMatrixQaOpenClawCli.mock.calls.map(([params]) => params.args)).toEqual([
         ["matrix", "encryption", "setup", "--account", "cli-setup-gateway", "--json"],
       ]);
-      expect(registerWithToken).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceName: "OpenClaw Matrix QA CLI Setup Gateway",
-          registrationToken: "registration-token",
-        }),
-      );
-      expect(registerWithToken).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceName: "OpenClaw Matrix QA CLI Setup Driver",
-          registrationToken: "registration-token",
-        }),
-      );
+      const registrationRequests = registerWithToken.mock.calls.map(([request]) => request);
+      expect(
+        registrationRequests.some(
+          (request) =>
+            request.deviceName === "OpenClaw Matrix QA CLI Setup Gateway" &&
+            request.registrationToken === "registration-token",
+        ),
+      ).toBe(true);
+      expect(
+        registrationRequests.some(
+          (request) =>
+            request.deviceName === "OpenClaw Matrix QA CLI Setup Driver" &&
+            request.registrationToken === "registration-token",
+        ),
+      ).toBe(true);
       expect(createPrivateRoom).toHaveBeenCalledWith({
         encrypted: true,
         inviteUserIds: ["@cli-gateway:matrix-qa.test"],
@@ -5934,24 +5939,18 @@ describe("matrix live qa scenarios", () => {
       expect(joinRoom).toHaveBeenCalledWith("!isolated-e2ee:matrix-qa.test");
       expect(patchGatewayConfig).not.toHaveBeenCalled();
       expect(restartGatewayAfterStateMutation).toHaveBeenCalledTimes(2);
-      expect(driverClient.sendTextMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mentionUserIds: ["@cli-gateway:matrix-qa.test"],
-          roomId: "!isolated-e2ee:matrix-qa.test",
-        }),
-      );
+      const driverMessage = driverClient.sendTextMessage.mock.calls[0]?.[0];
+      expect(driverMessage?.mentionUserIds).toEqual(["@cli-gateway:matrix-qa.test"]);
+      expect(driverMessage?.roomId).toBe("!isolated-e2ee:matrix-qa.test");
       expect(driverClient.waitForJoinedMember).toHaveBeenCalledWith({
         roomId: "!isolated-e2ee:matrix-qa.test",
         timeoutMs: 8_000,
         userId: "@cli-gateway:matrix-qa.test",
       });
-      expect(createMatrixQaE2eeScenarioClient).toHaveBeenCalledWith(
-        expect.objectContaining({
-          accessToken: "cli-driver-token",
-          deviceId: "CLIDRIVERDEVICE",
-          userId: "@cli-driver:matrix-qa.test",
-        }),
-      );
+      const e2eeClientOptions = createMatrixQaE2eeScenarioClient.mock.calls[0]?.[0];
+      expect(e2eeClientOptions?.accessToken).toBe("cli-driver-token");
+      expect(e2eeClientOptions?.deviceId).toBe("CLIDRIVERDEVICE");
+      expect(e2eeClientOptions?.userId).toBe("@cli-driver:matrix-qa.test");
       expect(waitGatewayAccountReady).toHaveBeenCalledWith("cli-setup-gateway", {
         timeoutMs: 8_000,
       });
@@ -6008,52 +6007,54 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-e2ee-key-bootstrap-failure");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverDeviceId: "DRIVERDEVICE",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        outputDir: "/tmp/matrix-qa",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [
-            {
-              key: matrixQaE2eeRoomKey("matrix-e2ee-key-bootstrap-failure"),
-              kind: "group",
-              memberRoles: ["driver", "observer", "sut"],
-              memberUserIds: [
-                "@driver:matrix-qa.test",
-                "@observer:matrix-qa.test",
-                "@sut:matrix-qa.test",
-              ],
-              name: "E2EE",
-              requireMention: true,
-              roomId: "!e2ee:matrix-qa.test",
-            },
-          ],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        bootstrapActor: "driver",
-        bootstrapSuccess: false,
-        faultedEndpoint: "/_matrix/client/v3/room_keys/version",
-        faultHitCount: 1,
-        faultRuleId: "room-key-backup-version-unavailable",
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverDeviceId: "DRIVERDEVICE",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      outputDir: "/tmp/matrix-qa",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [
+          {
+            key: matrixQaE2eeRoomKey("matrix-e2ee-key-bootstrap-failure"),
+            kind: "group",
+            memberRoles: ["driver", "observer", "sut"],
+            memberUserIds: [
+              "@driver:matrix-qa.test",
+              "@observer:matrix-qa.test",
+              "@sut:matrix-qa.test",
+            ],
+            name: "E2EE",
+            requireMention: true,
+            roomId: "!e2ee:matrix-qa.test",
+          },
+        ],
       },
     });
+    const artifacts = result.artifacts as {
+      bootstrapActor?: unknown;
+      bootstrapSuccess?: unknown;
+      faultedEndpoint?: unknown;
+      faultHitCount?: unknown;
+      faultRuleId?: unknown;
+    };
+    expect(artifacts.bootstrapActor).toBe("driver");
+    expect(artifacts.bootstrapSuccess).toBe(false);
+    expect(artifacts.faultedEndpoint).toBe("/_matrix/client/v3/room_keys/version");
+    expect(artifacts.faultHitCount).toBe(1);
+    expect(artifacts.faultRuleId).toBe("room-key-backup-version-unavailable");
 
     const proxyArgs = startMatrixQaFaultProxy.mock.calls[0]?.[0];
     if (!proxyArgs) {
