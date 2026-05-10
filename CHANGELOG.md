@@ -24,6 +24,7 @@ Docs: https://docs.openclaw.ai
 - CLI/onboarding: improve setup, onboarding, configure, and channel command wayfinding so terminal flows explain the next useful command instead of relying on terse setup labels.
 - Agents/Codex: remove the configurable Codex dynamic-tools profile so Codex app-server always owns workspace, edit, patch, exec, process, and plan tools while OpenClaw integration tools remain available.
 - macOS app: update the Peekaboo bridge dependency to Peekaboo 3.0.0.
+- Dependencies: refresh workspace pins and move the WhatsApp plugin from `@whiskeysockets/baileys` to `baileys` while keeping the `7.0.0-rc10` runtime.
 
 ### Fixes
 
