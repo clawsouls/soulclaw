@@ -2421,10 +2421,14 @@ describe("runCodexAppServerAttempt", () => {
     await expect(response).resolves.toEqual({
       answers: { mode: { answers: ["Deep"] } },
     });
-    expect(request).not.toHaveBeenCalledWith(
-      "turn/steer",
-      expect.objectContaining({ expectedTurnId: "turn-1" }),
-    );
+    const requestCalls = request.mock.calls as unknown as Array<[string, unknown]>;
+    expect(
+      requestCalls.some(
+        ([method, callParams]) =>
+          method === "turn/steer" &&
+          (callParams as { expectedTurnId?: string } | undefined)?.expectedTurnId === "turn-1",
+      ),
+    ).toBe(false);
 
     await notify({
       method: "turn/completed",
@@ -2460,7 +2464,8 @@ describe("runCodexAppServerAttempt", () => {
       await waitForMethod("turn/start");
       abortController.abort("shutdown");
 
-      await expect(run).resolves.toMatchObject({ aborted: true });
+      const result = await run;
+      expect(result.aborted).toBe(true);
       await new Promise((resolve) => setImmediate(resolve));
       expect(unhandledRejections).toStrictEqual([]);
     } finally {
@@ -2488,19 +2493,14 @@ describe("runCodexAppServerAttempt", () => {
     await completeTurn({ threadId: "thread-1", turnId: "turn-1" });
     await run;
 
-    expect(requests).toEqual(
-      expect.arrayContaining([
-        {
-          method: "turn/start",
-          params: expect.objectContaining({
-            input: [
-              { type: "text", text: "hello", text_elements: [] },
-              { type: "image", url: "data:image/png;base64,aW1hZ2UtYnl0ZXM=" },
-            ],
-          }),
-        },
-      ]),
-    );
+    const turnStart = requests.find((entry) => entry.method === "turn/start");
+    const turnStartParams = turnStart?.params as
+      | { input?: Array<{ text?: string; text_elements?: unknown[]; type?: string; url?: string }> }
+      | undefined;
+    expect(turnStartParams?.input).toEqual([
+      { type: "text", text: "hello", text_elements: [] },
+      { type: "image", url: "data:image/png;base64,aW1hZ2UtYnl0ZXM=" },
+    ]);
   });
 
   it("does not drop turn completion notifications emitted while turn/start is in flight", async () => {
@@ -2516,14 +2516,11 @@ describe("runCodexAppServerAttempt", () => {
       return {};
     });
 
-    await expect(
-      runCodexAppServerAttempt(
-        createParams(path.join(tempDir, "session.jsonl"), path.join(tempDir, "workspace")),
-      ),
-    ).resolves.toMatchObject({
-      aborted: false,
-      timedOut: false,
-    });
+    const result = await runCodexAppServerAttempt(
+      createParams(path.join(tempDir, "session.jsonl"), path.join(tempDir, "workspace")),
+    );
+    expect(result.aborted).toBe(false);
+    expect(result.timedOut).toBe(false);
   });
 
   it("completes when turn/start returns a terminal turn without a follow-up notification", async () => {
@@ -2548,11 +2545,9 @@ describe("runCodexAppServerAttempt", () => {
     );
 
     expect(harness.requests.map((entry) => entry.method)).toContain("turn/start");
-    expect(result).toMatchObject({
-      assistantTexts: ["done from response"],
-      aborted: false,
-      timedOut: false,
-    });
+    expect(result.assistantTexts).toEqual(["done from response"]);
+    expect(result.aborted).toBe(false);
+    expect(result.timedOut).toBe(false);
   });
 
   it("does not complete on unscoped turn/completed notifications", async () => {
