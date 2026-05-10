@@ -1723,62 +1723,60 @@ describe("matrix live qa scenarios", () => {
 
       const scenario = requireMatrixQaScenario("matrix-stale-sync-replay-dedupe");
 
-      await expect(
-        runMatrixQaScenario(scenario, {
-          ...matrixQaScenarioContext(),
-          gatewayStateDir: stateRoot,
-          restartGatewayAfterStateMutation: async (mutateState) => {
-            callOrder.push("hard-restart");
-            await writeTestJsonFile(
-              syncStorePath,
-              matrixSyncStoreFixture("driver-sync-after-first"),
-            );
-            await mutateState({ stateDir: stateRoot });
-            const persisted = JSON.parse(await readFile(syncStorePath, "utf8")) as {
-              savedSync?: { nextBatch?: string };
-            };
-            expect(persisted.savedSync?.nextBatch).toBe("driver-sync-start");
-          },
-          roomId: "!room:matrix-qa.test",
-          sutAccountId: "sut",
-          topology: {
-            defaultRoomId: "!room:matrix-qa.test",
-            defaultRoomKey: "main",
-            rooms: [
-              {
-                key: "stale-sync",
-                kind: "group",
-                memberRoles: ["driver", "observer", "sut"],
-                memberUserIds: [
-                  "@driver:matrix-qa.test",
-                  "@observer:matrix-qa.test",
-                  "@sut:matrix-qa.test",
-                ],
-                name: "Stale sync room",
-                requireMention: true,
-                roomId: staleSyncRoomId,
-              },
-            ],
-          },
-        }),
-      ).resolves.toMatchObject({
-        artifacts: {
-          dedupeCommitObserved: true,
-          duplicateWindowMs: 8000,
-          firstDriverEventId: "$first-trigger",
-          firstReply: {
-            eventId: "$first-reply",
-            tokenMatched: true,
-          },
-          freshDriverEventId: "$fresh-trigger",
-          freshReply: {
-            eventId: "$fresh-reply",
-            tokenMatched: true,
-          },
-          restartSignal: "hard-restart",
-          staleSyncCursor: "driver-sync-start",
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        gatewayStateDir: stateRoot,
+        restartGatewayAfterStateMutation: async (mutateState) => {
+          callOrder.push("hard-restart");
+          await writeTestJsonFile(syncStorePath, matrixSyncStoreFixture("driver-sync-after-first"));
+          await mutateState({ stateDir: stateRoot });
+          const persisted = JSON.parse(await readFile(syncStorePath, "utf8")) as {
+            savedSync?: { nextBatch?: string };
+          };
+          expect(persisted.savedSync?.nextBatch).toBe("driver-sync-start");
+        },
+        roomId: "!room:matrix-qa.test",
+        sutAccountId: "sut",
+        topology: {
+          defaultRoomId: "!room:matrix-qa.test",
+          defaultRoomKey: "main",
+          rooms: [
+            {
+              key: "stale-sync",
+              kind: "group",
+              memberRoles: ["driver", "observer", "sut"],
+              memberUserIds: [
+                "@driver:matrix-qa.test",
+                "@observer:matrix-qa.test",
+                "@sut:matrix-qa.test",
+              ],
+              name: "Stale sync room",
+              requireMention: true,
+              roomId: staleSyncRoomId,
+            },
+          ],
         },
       });
+      const artifacts = result.artifacts as {
+        dedupeCommitObserved?: unknown;
+        duplicateWindowMs?: unknown;
+        firstDriverEventId?: unknown;
+        firstReply?: { eventId?: unknown; tokenMatched?: unknown };
+        freshDriverEventId?: unknown;
+        freshReply?: { eventId?: unknown; tokenMatched?: unknown };
+        restartSignal?: unknown;
+        staleSyncCursor?: unknown;
+      };
+      expect(artifacts.dedupeCommitObserved).toBe(true);
+      expect(artifacts.duplicateWindowMs).toBe(8000);
+      expect(artifacts.firstDriverEventId).toBe("$first-trigger");
+      expect(artifacts.firstReply?.eventId).toBe("$first-reply");
+      expect(artifacts.firstReply?.tokenMatched).toBe(true);
+      expect(artifacts.freshDriverEventId).toBe("$fresh-trigger");
+      expect(artifacts.freshReply?.eventId).toBe("$fresh-reply");
+      expect(artifacts.freshReply?.tokenMatched).toBe(true);
+      expect(artifacts.restartSignal).toBe("hard-restart");
+      expect(artifacts.staleSyncCursor).toBe("driver-sync-start");
 
       expect(callOrder).toEqual([
         "send:first",
