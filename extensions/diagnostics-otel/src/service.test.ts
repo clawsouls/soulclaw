@@ -1831,10 +1831,13 @@ describe("diagnostics-otel service", () => {
     const modelSpanId = modelSpan?.spanContext.mock.results[0]?.value?.spanId;
 
     expect(telemetryState.tracer.setSpanContext).toHaveBeenCalledTimes(2);
-    expect(telemetryState.tracer.setSpanContext.mock.calls.map((call) => call[1])).toEqual([
-      expect.objectContaining({ traceId: TRACE_ID, spanId: runSpanId }),
-      expect.objectContaining({ traceId: TRACE_ID, spanId: modelSpanId }),
-    ]);
+    const linkedSpanContexts = telemetryState.tracer.setSpanContext.mock.calls.map(
+      (call) => call[1] as Record<string, unknown>,
+    );
+    expect(linkedSpanContexts[0]?.traceId).toBe(TRACE_ID);
+    expect(linkedSpanContexts[0]?.spanId).toBe(runSpanId);
+    expect(linkedSpanContexts[1]?.traceId).toBe(TRACE_ID);
+    expect(linkedSpanContexts[1]?.spanId).toBe(modelSpanId);
 
     const parentBySpanName = Object.fromEntries(
       telemetryState.tracer.startSpan.mock.calls.map((call) => [
@@ -1842,11 +1845,9 @@ describe("diagnostics-otel service", () => {
         (call[2] as { spanContext?: { spanId?: string } } | undefined)?.spanContext?.spanId,
       ]),
     );
-    expect(parentBySpanName).toMatchObject({
-      "openclaw.run": undefined,
-      "openclaw.model.call": runSpanId,
-      "openclaw.tool.execution": modelSpanId,
-    });
+    expect(parentBySpanName["openclaw.run"]).toBeUndefined();
+    expect(parentBySpanName["openclaw.model.call"]).toBe(runSpanId);
+    expect(parentBySpanName["openclaw.tool.execution"]).toBe(modelSpanId);
     expect(toolSpan?.setStatus).toHaveBeenCalledWith({
       code: 2,
       message: "TypeError",
@@ -1906,15 +1907,16 @@ describe("diagnostics-otel service", () => {
       (call) => call[0] === "openclaw.model.usage",
     );
 
-    expect(telemetryState.tracer.setSpanContext).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ traceId: TRACE_ID, spanId: runSpanId }),
-    );
+    const linkedSpanContext = telemetryState.tracer.setSpanContext.mock.calls[0]?.[1] as
+      | Record<string, unknown>
+      | undefined;
+    expect(linkedSpanContext?.traceId).toBe(TRACE_ID);
+    expect(linkedSpanContext?.spanId).toBe(runSpanId);
     expect(
       (modelUsageCall?.[2] as { spanContext?: { spanId?: string } } | undefined)?.spanContext
         ?.spanId,
     ).toBe(runSpanId);
-    expect(runSpan?.end).toHaveBeenCalledWith(expect.any(Number));
+    expect(runSpan?.end.mock.calls[0]?.[0]).toBeTypeOf("number");
     await service.stop?.(ctx);
   });
 
