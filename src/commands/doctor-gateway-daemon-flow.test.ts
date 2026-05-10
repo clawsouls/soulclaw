@@ -338,7 +338,7 @@ describe("maybeRepairGatewayDaemon", () => {
 
     expect(isExpectedGatewayListeners).toHaveBeenCalledWith(listeners, 18789);
     expect(formatPortDiagnostics).not.toHaveBeenCalled();
-    expect(note).not.toHaveBeenCalledWith(expect.any(String), "Gateway port");
+    expect(note.mock.calls.some(([, label]) => label === "Gateway port")).toBe(false);
   });
 
   it("keeps busy-port note for unexpected Gateway listeners", async () => {
