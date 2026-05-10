@@ -3024,21 +3024,29 @@ describe("dispatchReplyFromConfig", () => {
     const replyResolver = async () => ({ text: "hi" }) satisfies ReplyPayload;
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
-    expect(internalHookMocks.createInternalHookEvent).toHaveBeenCalledWith(
-      "message",
-      "received",
-      "agent:main:main",
-      expect.objectContaining({
-        from: ctx.From,
-        content: "/help",
-        channelId: "telegram",
-        messageId: "msg-42",
-        metadata: expect.objectContaining({
-          guildId: "guild-456",
-          channelName: "ops-room",
-        }),
-      }),
-    );
+    const createHookCall = internalHookMocks.createInternalHookEvent.mock.calls[0] as
+      | [
+          unknown,
+          unknown,
+          unknown,
+          {
+            channelId?: unknown;
+            content?: unknown;
+            from?: unknown;
+            messageId?: unknown;
+            metadata?: Record<string, unknown>;
+          },
+        ]
+      | undefined;
+    expect(createHookCall?.[0]).toBe("message");
+    expect(createHookCall?.[1]).toBe("received");
+    expect(createHookCall?.[2]).toBe("agent:main:main");
+    expect(createHookCall?.[3]?.from).toBe(ctx.From);
+    expect(createHookCall?.[3]?.content).toBe("/help");
+    expect(createHookCall?.[3]?.channelId).toBe("telegram");
+    expect(createHookCall?.[3]?.messageId).toBe("msg-42");
+    expect(createHookCall?.[3]?.metadata?.guildId).toBe("guild-456");
+    expect(createHookCall?.[3]?.metadata?.channelName).toBe("ops-room");
     expect(internalHookMocks.triggerInternalHook).toHaveBeenCalledTimes(1);
   });
 
@@ -3076,15 +3084,14 @@ describe("dispatchReplyFromConfig", () => {
     const replyResolver = async () => ({ text: "reply" }) satisfies ReplyPayload;
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
-    expect(internalHookMocks.createInternalHookEvent).toHaveBeenCalledWith(
-      "message",
-      "received",
-      "agent:main:discord:guild:123",
-      expect.objectContaining({
-        content: "hello",
-        messageId: "msg-99",
-      }),
-    );
+    const createHookCall = internalHookMocks.createInternalHookEvent.mock.calls[0] as
+      | [unknown, unknown, unknown, { content?: unknown; messageId?: unknown }]
+      | undefined;
+    expect(createHookCall?.[0]).toBe("message");
+    expect(createHookCall?.[1]).toBe("received");
+    expect(createHookCall?.[2]).toBe("agent:main:discord:guild:123");
+    expect(createHookCall?.[3]?.content).toBe("hello");
+    expect(createHookCall?.[3]?.messageId).toBe("msg-99");
     expect(internalHookMocks.triggerInternalHook).toHaveBeenCalledTimes(1);
   });
 
@@ -3109,13 +3116,12 @@ describe("dispatchReplyFromConfig", () => {
       state: "processing",
       reason: "message_start",
     });
-    expect(diagnosticMocks.logMessageProcessed).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "slack",
-        outcome: "completed",
-        sessionKey: "agent:main:main",
-      }),
-    );
+    const processedEvent = diagnosticMocks.logMessageProcessed.mock.calls[0]?.[0] as
+      | { channel?: unknown; outcome?: unknown; sessionKey?: unknown }
+      | undefined;
+    expect(processedEvent?.channel).toBe("slack");
+    expect(processedEvent?.outcome).toBe("completed");
+    expect(processedEvent?.sessionKey).toBe("agent:main:main");
   });
 
   it("marks diagnostic progress for real reply events but not reply start callbacks", async () => {
@@ -3261,26 +3267,29 @@ describe("dispatchReplyFromConfig", () => {
 
     expect(result).toEqual({ queuedFinal: false, counts: { tool: 0, block: 0, final: 0 } });
     expect(sessionBindingMocks.touch).toHaveBeenCalledWith("binding-1");
-    expect(hookMocks.runner.runInboundClaimForPluginOutcome).toHaveBeenCalledWith(
-      "openclaw-codex-app-server",
-      expect.objectContaining({
-        channel: "discord",
-        accountId: "default",
-        conversationId: "channel:1481858418548412579",
-        content: "who are you",
-      }),
-      expect.objectContaining({
-        channelId: "discord",
-        accountId: "default",
-        conversationId: "channel:1481858418548412579",
-        pluginBinding: expect.objectContaining({
-          data: expect.objectContaining({
-            kind: "codex-app-server-session",
-            sessionFile: "/tmp/session.jsonl",
-          }),
-        }),
-      }),
-    );
+    const inboundClaimCall = hookMocks.runner.runInboundClaimForPluginOutcome.mock
+      .calls[0] as unknown as
+      | [
+          unknown,
+          { accountId?: unknown; channel?: unknown; content?: unknown; conversationId?: unknown },
+          {
+            accountId?: unknown;
+            channelId?: unknown;
+            conversationId?: unknown;
+            pluginBinding?: { data?: Record<string, unknown> };
+          },
+        ]
+      | undefined;
+    expect(inboundClaimCall?.[0]).toBe("openclaw-codex-app-server");
+    expect(inboundClaimCall?.[1]?.channel).toBe("discord");
+    expect(inboundClaimCall?.[1]?.accountId).toBe("default");
+    expect(inboundClaimCall?.[1]?.conversationId).toBe("channel:1481858418548412579");
+    expect(inboundClaimCall?.[1]?.content).toBe("who are you");
+    expect(inboundClaimCall?.[2]?.channelId).toBe("discord");
+    expect(inboundClaimCall?.[2]?.accountId).toBe("default");
+    expect(inboundClaimCall?.[2]?.conversationId).toBe("channel:1481858418548412579");
+    expect(inboundClaimCall?.[2]?.pluginBinding?.data?.kind).toBe("codex-app-server-session");
+    expect(inboundClaimCall?.[2]?.pluginBinding?.data?.sessionFile).toBe("/tmp/session.jsonl");
     expect(hookMocks.runner.runInboundClaim).not.toHaveBeenCalled();
     expect(replyResolver).not.toHaveBeenCalled();
   });
@@ -3395,20 +3404,22 @@ describe("dispatchReplyFromConfig", () => {
 
     expect(result).toEqual({ queuedFinal: false, counts: { tool: 0, block: 0, final: 0 } });
     expect(sessionBindingMocks.touch).toHaveBeenCalledWith("binding-dm-1");
-    expect(hookMocks.runner.runInboundClaimForPluginOutcome).toHaveBeenCalledWith(
-      "openclaw-codex-app-server",
-      expect.objectContaining({
-        channel: "discord",
-        accountId: "default",
-        conversationId: "1480574946919846079",
-        content: "who are you",
-      }),
-      expect.objectContaining({
-        channelId: "discord",
-        accountId: "default",
-        conversationId: "1480574946919846079",
-      }),
-    );
+    const inboundClaimCall = hookMocks.runner.runInboundClaimForPluginOutcome.mock
+      .calls[0] as unknown as
+      | [
+          unknown,
+          { accountId?: unknown; channel?: unknown; content?: unknown; conversationId?: unknown },
+          { accountId?: unknown; channelId?: unknown; conversationId?: unknown },
+        ]
+      | undefined;
+    expect(inboundClaimCall?.[0]).toBe("openclaw-codex-app-server");
+    expect(inboundClaimCall?.[1]?.channel).toBe("discord");
+    expect(inboundClaimCall?.[1]?.accountId).toBe("default");
+    expect(inboundClaimCall?.[1]?.conversationId).toBe("1480574946919846079");
+    expect(inboundClaimCall?.[1]?.content).toBe("who are you");
+    expect(inboundClaimCall?.[2]?.channelId).toBe("discord");
+    expect(inboundClaimCall?.[2]?.accountId).toBe("default");
+    expect(inboundClaimCall?.[2]?.conversationId).toBe("1480574946919846079");
     expect(hookMocks.runner.runInboundClaim).not.toHaveBeenCalled();
     expect(replyResolver).not.toHaveBeenCalled();
   });
