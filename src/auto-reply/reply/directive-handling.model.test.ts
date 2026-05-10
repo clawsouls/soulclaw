@@ -473,7 +473,7 @@ describe("/model chat UX", () => {
             cfg: {
               ...baseConfig(),
               plugins: { allow: ["workspace-model-list"] },
-            } as OpenClawConfig,
+            } as unknown as OpenClawConfig,
           });
 
           expect(reply?.text).toContain("- anthropic");
@@ -630,7 +630,7 @@ describe("/model chat UX", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as unknown as OpenClawConfig,
       allowedModelCatalog: [{ provider: "openai", id: "gpt-5.5", name: "GPT-5.5" }],
     });
 
@@ -673,7 +673,7 @@ describe("/model chat UX", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as unknown as OpenClawConfig,
       allowedModelCatalog: [{ provider: "openai", id: "gpt-5.5", name: "GPT-5.5" }],
     });
 
@@ -711,7 +711,7 @@ describe("/model chat UX", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as unknown as OpenClawConfig,
       allowedModelCatalog: [{ provider: "openai", id: "gpt-5.5", name: "GPT-5.5" }],
     });
 
@@ -779,7 +779,7 @@ describe("/model chat UX", () => {
                   },
                 },
               },
-            } as OpenClawConfig,
+            } as unknown as OpenClawConfig,
             allowedModelCatalog: [
               { provider: "anthropic", id: "claude-opus-4-6", name: "Claude Opus 4.6" },
             ],
@@ -1041,7 +1041,7 @@ describe("/model chat UX", () => {
             },
           },
         },
-      } as OpenClawConfig,
+      } as unknown as OpenClawConfig,
     });
 
     expect(persisted.provider).toBe("openai");
