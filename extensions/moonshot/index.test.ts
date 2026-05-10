@@ -20,8 +20,8 @@ describe("moonshot provider plugin", () => {
   it("mirrors Kimi web-search env credentials in manifest metadata", () => {
     const manifestEnvVars = readManifest().providerAuthEnvVars?.moonshot ?? [];
 
-    expect([...manifestEnvVars].sort()).toStrictEqual(
-      [...createKimiWebSearchProvider().envVars].sort(),
+    expect([...manifestEnvVars].toSorted()).toStrictEqual(
+      [...createKimiWebSearchProvider().envVars].toSorted(),
     );
   });
 
