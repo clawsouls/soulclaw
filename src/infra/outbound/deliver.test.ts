@@ -947,12 +947,11 @@ describe("deliverOutboundPayloads", () => {
       queuePolicy: "best_effort",
     });
 
-    expect(afterCommit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: "text",
-        result: expect.objectContaining({ messageId: "message-adapter-1" }),
-      }),
-    );
+    const [[commitParams]] = afterCommit.mock.calls as unknown as Array<
+      [Record<string, unknown> & { result?: { messageId?: string } }]
+    >;
+    expect(commitParams?.kind).toBe("text");
+    expect(commitParams?.result?.messageId).toBe("message-adapter-1");
     expect(queueMocks.ackDelivery).not.toHaveBeenCalled();
   });
 
@@ -1043,23 +1042,20 @@ describe("deliverOutboundPayloads", () => {
       unsubscribe();
     }
 
-    const deliveryEvents = events.filter((event) => event.type.startsWith("message.delivery."));
-    expect(deliveryEvents).toEqual([
-      expect.objectContaining({
-        type: "message.delivery.started",
-        channel: "matrix",
-        deliveryKind: "text",
-        sessionKey: "session-1",
-      }),
-      expect.objectContaining({
-        type: "message.delivery.completed",
-        channel: "matrix",
-        deliveryKind: "text",
-        durationMs: expect.any(Number),
-        resultCount: 1,
-        sessionKey: "session-1",
-      }),
-    ]);
+    const deliveryEvents = events.filter((event) =>
+      event.type.startsWith("message.delivery."),
+    ) as Array<Record<string, unknown>>;
+    expect(deliveryEvents).toHaveLength(2);
+    expect(deliveryEvents[0]?.type).toBe("message.delivery.started");
+    expect(deliveryEvents[0]?.channel).toBe("matrix");
+    expect(deliveryEvents[0]?.deliveryKind).toBe("text");
+    expect(deliveryEvents[0]?.sessionKey).toBe("session-1");
+    expect(deliveryEvents[1]?.type).toBe("message.delivery.completed");
+    expect(deliveryEvents[1]?.channel).toBe("matrix");
+    expect(deliveryEvents[1]?.deliveryKind).toBe("text");
+    expect(typeof deliveryEvents[1]?.durationMs).toBe("number");
+    expect(deliveryEvents[1]?.resultCount).toBe(1);
+    expect(deliveryEvents[1]?.sessionKey).toBe("session-1");
     expect(JSON.stringify(deliveryEvents)).not.toContain("secret delivery body");
     expect(JSON.stringify(deliveryEvents)).not.toContain("!room:example");
   });
@@ -1086,17 +1082,15 @@ describe("deliverOutboundPayloads", () => {
       unsubscribe();
     }
 
-    const errorEvent = events.find((event) => event.type === "message.delivery.error");
-    expect(errorEvent).toEqual(
-      expect.objectContaining({
-        type: "message.delivery.error",
-        channel: "matrix",
-        deliveryKind: "text",
-        durationMs: expect.any(Number),
-        errorCategory: "TypeError",
-        sessionKey: "session-1",
-      }),
-    );
+    const errorEvent = events.find((event) => event.type === "message.delivery.error") as
+      | Record<string, unknown>
+      | undefined;
+    expect(errorEvent?.type).toBe("message.delivery.error");
+    expect(errorEvent?.channel).toBe("matrix");
+    expect(errorEvent?.deliveryKind).toBe("text");
+    expect(typeof errorEvent?.durationMs).toBe("number");
+    expect(errorEvent?.errorCategory).toBe("TypeError");
+    expect(errorEvent?.sessionKey).toBe("session-1");
     expect(
       JSON.stringify(events.filter((event) => event.type.startsWith("message.delivery."))),
     ).not.toContain("secret delivery body");
