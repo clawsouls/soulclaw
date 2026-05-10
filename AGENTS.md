@@ -79,6 +79,7 @@ Telegraph style. Root rules only. Read scoped `AGENTS.md` before subtree work.
 - PR shortlist: `gh pr list ...`; then `gh pr view <n> --json number,title,body,closingIssuesReferences,files,statusCheckRollup,reviewDecision`.
 - After landing PR: search duplicate open issues/PRs. Before closing: comment why + canonical link.
 - If an issue/PR is already fixed on current `main` or solved by a new release: comment with proof + canonical commit/PR/release, then close.
+- `ship` that fixes an issue: after push, comment proof + commit link, then close the issue.
 - GH comments with markdown backticks, `$`, or shell snippets: avoid inline double-quoted `--body`; use single quotes or `--body-file`.
 - PR create: description/body always required. Include concise Summary + Verification sections; mention issue/PR refs, behavior changed, and exact local/Testbox/CI proof. Never open an empty-description, empty-body, or placeholder-body PR.
 - PR execution artifacts/screenshots: attach them to the PR, comment, or an external artifact store. Do not add `.github/pr-assets` or other PR-only assets to the repo.
