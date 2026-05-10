@@ -194,9 +194,3 @@ export type MSTeamsConfig = {
   /** Bot Framework OAuth SSO (signin/tokenExchange + signin/verifyState) settings. */
   sso?: MSTeamsSsoConfig;
 };
-
-declare module "./types.channels.js" {
-  interface ChannelsConfig {
-    msteams?: MSTeamsConfig;
-  }
-}
