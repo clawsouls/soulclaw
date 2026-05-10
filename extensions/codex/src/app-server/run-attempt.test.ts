@@ -2586,11 +2586,10 @@ describe("runCodexAppServerAttempt", () => {
       },
     });
 
-    await expect(run).resolves.toMatchObject({
-      assistantTexts: ["final completion"],
-      aborted: false,
-      timedOut: false,
-    });
+    const result = await run;
+    expect(result.assistantTexts).toEqual(["final completion"]);
+    expect(result.aborted).toBe(false);
+    expect(result.timedOut).toBe(false);
   });
 
   it("releases completion when a projector callback throws during turn/completed", async () => {
@@ -2641,10 +2640,9 @@ describe("runCodexAppServerAttempt", () => {
         },
       },
     });
-    await expect(run).resolves.toMatchObject({
-      aborted: false,
-      timedOut: false,
-    });
+    const result = await run;
+    expect(result.aborted).toBe(false);
+    expect(result.timedOut).toBe(false);
   });
 
   it("routes MCP approval elicitations through the native bridge", async () => {
@@ -2710,12 +2708,11 @@ describe("runCodexAppServerAttempt", () => {
       content: { approve: true },
       _meta: null,
     });
-    expect(bridgeSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        threadId: "thread-1",
-        turnId: "turn-1",
-      }),
-    );
+    const [bridgeCall] = bridgeSpy.mock.calls[0] as unknown as [
+      { threadId?: string; turnId?: string },
+    ];
+    expect(bridgeCall.threadId).toBe("thread-1");
+    expect(bridgeCall.turnId).toBe("turn-1");
 
     await notify({
       method: "turn/completed",
