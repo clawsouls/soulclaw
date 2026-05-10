@@ -1218,7 +1218,7 @@ describe("createFeishuReplyDispatcher streaming behavior", () => {
     );
     expect(updateTexts).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("🛠️ Exec: run tests, `pnpm test -- --watch=false`"),
+        expect.stringContaining("🛠️ run tests, `pnpm test -- --watch=false`"),
       ]),
     );
   });
