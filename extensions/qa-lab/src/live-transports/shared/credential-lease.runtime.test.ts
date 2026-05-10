@@ -126,11 +126,16 @@ describe("credential lease runtime", () => {
     expect(fetchImpl.mock.calls[1]?.[0]).toBe(
       "https://qa-cred.example.convex.site/qa-credentials/v1/payload-chunk",
     );
-    expect(JSON.parse(String(fetchImpl.mock.calls[1]?.[1]?.body))).toMatchObject({
-      credentialId: "cred-chunked",
-      index: 0,
-      leaseToken: "lease-chunked",
-    });
+    const chunkRequestBody = fetchImpl.mock.calls[1]?.[1]?.body;
+    expect(chunkRequestBody).toBeTypeOf("string");
+    const chunkRequest = JSON.parse(chunkRequestBody as string) as {
+      credentialId?: string;
+      index?: number;
+      leaseToken?: string;
+    };
+    expect(chunkRequest.credentialId).toBe("cred-chunked");
+    expect(chunkRequest.index).toBe(0);
+    expect(chunkRequest.leaseToken).toBe("lease-chunked");
   });
 
   it("defaults convex credential role to maintainer outside CI", async () => {
