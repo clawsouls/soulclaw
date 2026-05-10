@@ -1441,12 +1441,10 @@ describe("dispatchReplyFromConfig", () => {
 
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
-    expect(replyMediaPathMocks.createReplyMediaPathNormalizer).toHaveBeenCalledWith(
-      expect.objectContaining({
-        cfg,
-        messageProvider: "webchat",
-      }),
-    );
+    const normalizerOptions = replyMediaPathMocks.createReplyMediaPathNormalizer.mock
+      .calls[0]?.[0] as { cfg?: unknown; messageProvider?: unknown } | undefined;
+    expect(normalizerOptions?.cfg).toBe(cfg);
+    expect(normalizerOptions?.messageProvider).toBe("webchat");
     expect(dispatcher.sendToolResult).not.toHaveBeenCalled();
     expect(dispatcher.sendFinalReply).toHaveBeenCalledWith({ text: "done" });
   });
@@ -1472,9 +1470,7 @@ describe("dispatchReplyFromConfig", () => {
     };
 
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
-    expect(dispatcher.sendToolResult).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "🔧 exec: ls" }),
-    );
+    expect(firstToolResultPayload(dispatcher)?.text).toBe("🔧 exec: ls");
     expect(dispatcher.sendToolResult).toHaveBeenCalledTimes(1);
     expect(dispatcher.sendFinalReply).toHaveBeenCalledTimes(1);
   });
@@ -1509,18 +1505,17 @@ describe("dispatchReplyFromConfig", () => {
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
     expect(dispatcher.sendToolResult).toHaveBeenCalledTimes(1);
-    expect(firstToolResultPayload(dispatcher)).toEqual(
-      expect.objectContaining({
-        text: "Approval required.\n\n```txt\n/approve 117ba06d allow-once\n```",
-        channelData: {
-          execApproval: {
-            approvalId: "117ba06d-1111-2222-3333-444444444444",
-            approvalSlug: "117ba06d",
-            allowedDecisions: ["allow-once", "allow-always", "deny"],
-          },
-        },
-      }),
+    const toolPayload = firstToolResultPayload(dispatcher);
+    expect(toolPayload?.text).toBe(
+      "Approval required.\n\n```txt\n/approve 117ba06d allow-once\n```",
     );
+    expect(toolPayload?.channelData).toStrictEqual({
+      execApproval: {
+        approvalId: "117ba06d-1111-2222-3333-444444444444",
+        approvalSlug: "117ba06d",
+        allowedDecisions: ["allow-once", "allow-always", "deny"],
+      },
+    });
     expect(dispatcher.sendFinalReply).toHaveBeenCalledWith({ text: "NO_REPLY" });
   });
 
@@ -1544,9 +1539,7 @@ describe("dispatchReplyFromConfig", () => {
     };
 
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
-    expect(dispatcher.sendToolResult).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "🔧 exec: ls" }),
-    );
+    expect(firstToolResultPayload(dispatcher)?.text).toBe("🔧 exec: ls");
     expect(dispatcher.sendFinalReply).toHaveBeenCalledTimes(1);
   });
 
@@ -1576,10 +1569,7 @@ describe("dispatchReplyFromConfig", () => {
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
     expect(dispatcher.sendToolResult).toHaveBeenCalledTimes(2);
-    expect(dispatcher.sendToolResult).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ text: "🔧 tools/sessions_send" }),
-    );
+    expect(firstToolResultPayload(dispatcher)?.text).toBe("🔧 tools/sessions_send");
     const sent = (dispatcher.sendToolResult as Mock).mock.calls[1]?.[0] as ReplyPayload | undefined;
     expect(sent?.mediaUrl).toBe("https://example.com/tts-native.opus");
     expect(sent?.text).toBeUndefined();
@@ -1622,16 +1612,13 @@ describe("dispatchReplyFromConfig", () => {
 
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
-    expect(dispatcher.sendToolResult).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        text: "Inspect code, patch it, run tests.\n\n1. Inspect code\n2. Patch code\n3. Run tests",
-      }),
+    expect(firstToolResultPayload(dispatcher)?.text).toBe(
+      "Inspect code, patch it, run tests.\n\n1. Inspect code\n2. Patch code\n3. Run tests",
     );
-    expect(dispatcher.sendToolResult).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ text: "Working: awaiting approval: pnpm test" }),
-    );
+    const secondToolPayload = (dispatcher.sendToolResult as Mock).mock.calls[1]?.[0] as
+      | ReplyPayload
+      | undefined;
+    expect(secondToolPayload?.text).toBe("Working: awaiting approval: pnpm test");
     expect(dispatcher.sendToolResult).toHaveBeenCalledTimes(2);
     expect(dispatcher.sendFinalReply).toHaveBeenCalledWith({ text: "done" });
   });
@@ -1667,10 +1654,7 @@ describe("dispatchReplyFromConfig", () => {
 
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
-    expect(dispatcher.sendToolResult).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ text: "Working: 1 added, 2 modified" }),
-    );
+    expect(firstToolResultPayload(dispatcher)?.text).toBe("Working: 1 added, 2 modified");
     expect(dispatcher.sendToolResult).toHaveBeenCalledTimes(1);
     expect(dispatcher.sendFinalReply).toHaveBeenCalledWith({ text: "done" });
   });
