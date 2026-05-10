@@ -150,12 +150,19 @@ describe("ollama setup", () => {
       prompter,
     });
 
-    expect(prompter.text).toHaveBeenCalledWith(
-      expect.objectContaining({
-        initialValue: "http://host.docker.internal:11434",
-        placeholder: "http://host.docker.internal:11434",
-      }),
-    );
+    const baseUrlPrompt = prompter.text.mock.calls[0]?.[0] as {
+      message?: string;
+      initialValue?: string;
+      placeholder?: string;
+      validate?: unknown;
+    };
+    expect(baseUrlPrompt).toEqual({
+      message: "Ollama base URL",
+      initialValue: "http://host.docker.internal:11434",
+      placeholder: "http://host.docker.internal:11434",
+      validate: baseUrlPrompt.validate,
+    });
+    expect(typeof baseUrlPrompt.validate).toBe("function");
     expect(fetchMock.mock.calls[0]?.[0]).toBe("http://host.docker.internal:11434/api/tags");
     expect(result.config.models?.providers?.ollama?.baseUrl).toBe(
       "http://host.docker.internal:11434",
@@ -521,10 +528,13 @@ describe("ollama setup", () => {
         expect(fetchMock.mock.calls[1]?.[0]).toContain("/api/pull");
 
         await vi.advanceTimersByTimeAsync(300_000);
-        await expect(pullPromise).resolves.toEqual(
-          expect.objectContaining({ message: "Failed to download selected Ollama model" }),
+        const pullError = await pullPromise;
+        expect(pullError).toBeInstanceOf(Error);
+        expect((pullError as Error).name).toBe("WizardCancelledError");
+        expect((pullError as Error).message).toBe("Failed to download selected Ollama model");
+        expect(progress.stop).toHaveBeenCalledWith(
+          "Failed to download gemma4: Ollama pull stalled: no data received for 300s",
         );
-        expect(progress.stop).toHaveBeenCalledWith(expect.stringContaining("Ollama pull stalled"));
       } finally {
         vi.useRealTimers();
       }
@@ -675,9 +685,7 @@ describe("ollama setup", () => {
 
     const pullRequest = fetchMock.mock.calls[1]?.[1];
     expect(JSON.parse(requestBodyText(pullRequest?.body))).toEqual({ name: "llama3.2:latest" });
-    expect(result.agents?.defaults?.model).toEqual(
-      expect.objectContaining({ primary: "ollama/llama3.2:latest" }),
-    );
+    expect(result.agents?.defaults?.model).toEqual({ primary: "ollama/llama3.2:latest" });
   });
 
   it("uses the discovered latest tag as the non-interactive default without pulling", async () => {
@@ -699,9 +707,7 @@ describe("ollama setup", () => {
     expect(result.models?.providers?.ollama?.models?.map((model) => model.id)).toEqual([
       "gemma4:latest",
     ]);
-    expect(result.agents?.defaults?.model).toEqual(
-      expect.objectContaining({ primary: "ollama/gemma4:latest" }),
-    );
+    expect(result.agents?.defaults?.model).toEqual({ primary: "ollama/gemma4:latest" });
     expect(runtime.log).toHaveBeenCalledWith("Default Ollama model: gemma4:latest");
   });
 
@@ -723,9 +729,7 @@ describe("ollama setup", () => {
     expect(result.models?.providers?.ollama?.models?.map((model) => model.id)).toContain(
       "kimi-k2.5:cloud",
     );
-    expect(result.agents?.defaults?.model).toEqual(
-      expect.objectContaining({ primary: "ollama/kimi-k2.5:cloud" }),
-    );
+    expect(result.agents?.defaults?.model).toEqual({ primary: "ollama/kimi-k2.5:cloud" });
   });
 
   it("exits when Ollama is unreachable", async () => {
