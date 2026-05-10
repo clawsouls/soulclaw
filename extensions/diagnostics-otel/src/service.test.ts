@@ -1496,38 +1496,18 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    const modelCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.model.call",
-    );
-    expect(modelCall?.[1]).toMatchObject({
-      attributes: {
-        "gen_ai.provider.name": "openai",
-        "gen_ai.request.model": "gpt-5.4",
-        "gen_ai.operation.name": "text_completion",
-      },
-    });
-    expect(modelCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "gen_ai.system": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
-    const modelUsage = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.model.usage",
-    );
-    expect(modelUsage?.[1]).toMatchObject({
-      attributes: {
-        "gen_ai.provider.name": "openai",
-        "gen_ai.request.model": "gpt-5.4",
-        "gen_ai.operation.name": "chat",
-      },
-    });
-    expect(modelUsage?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "gen_ai.system": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
+    const modelCallOptions = startedSpanOptions("openclaw.model.call");
+    expect(modelCallOptions?.attributes?.["gen_ai.provider.name"]).toBe("openai");
+    expect(modelCallOptions?.attributes?.["gen_ai.request.model"]).toBe("gpt-5.4");
+    expect(modelCallOptions?.attributes?.["gen_ai.operation.name"]).toBe("text_completion");
+    expect(Object.hasOwn(modelCallOptions?.attributes ?? {}, "gen_ai.system")).toBe(false);
+    expect(modelCallOptions?.startTime).toBeTypeOf("number");
+    const modelUsageOptions = startedSpanOptions("openclaw.model.usage");
+    expect(modelUsageOptions?.attributes?.["gen_ai.provider.name"]).toBe("openai");
+    expect(modelUsageOptions?.attributes?.["gen_ai.request.model"]).toBe("gpt-5.4");
+    expect(modelUsageOptions?.attributes?.["gen_ai.operation.name"]).toBe("chat");
+    expect(Object.hasOwn(modelUsageOptions?.attributes ?? {}, "gen_ai.system")).toBe(false);
+    expect(modelUsageOptions?.startTime).toBeTypeOf("number");
     await service.stop?.(ctx);
   });
 
@@ -1550,40 +1530,21 @@ describe("diagnostics-otel service", () => {
     });
     await flushDiagnosticEvents();
 
-    const modelCall = telemetryState.tracer.startSpan.mock.calls.find(
-      (call) => call[0] === "openclaw.model.call",
-    );
-    expect(modelCall?.[1]).toEqual({
-      attributes: expect.objectContaining({
-        "openclaw.failureKind": "terminated",
-      }),
-      startTime: expect.any(Number),
-    });
-    expect(modelCall?.[1]).toEqual({
-      attributes: expect.not.objectContaining({
-        "openclaw.upstreamRequestIdHash": expect.anything(),
-      }),
-      startTime: expect.any(Number),
-    });
+    const modelCallOptions = startedSpanOptions("openclaw.model.call");
+    expect(modelCallOptions?.attributes?.["openclaw.failureKind"]).toBe("terminated");
+    expect(
+      Object.hasOwn(modelCallOptions?.attributes ?? {}, "openclaw.upstreamRequestIdHash"),
+    ).toBe(false);
+    expect(modelCallOptions?.startTime).toBeTypeOf("number");
     const span = telemetryState.spans.find((candidate) => candidate.name === "openclaw.model.call");
     expect(span?.addEvent).toHaveBeenCalledWith("openclaw.provider.request", {
       "openclaw.upstreamRequestIdHash": "sha256:123456abcdef",
     });
-    expect(
-      telemetryState.histograms.get("openclaw.model_call.duration_ms")?.record,
-    ).toHaveBeenCalledWith(
-      40,
-      expect.objectContaining({
-        "openclaw.failureKind": "terminated",
-      }),
-    );
-    expect(
-      telemetryState.histograms.get("openclaw.model_call.duration_ms")?.record,
-    ).toHaveBeenCalledWith(
-      40,
-      expect.not.objectContaining({
-        "openclaw.upstreamRequestIdHash": expect.anything(),
-      }),
+    const modelCallDuration = lastHistogramRecord("openclaw.model_call.duration_ms");
+    expect(modelCallDuration?.[0]).toBe(40);
+    expect(modelCallDuration?.[1]?.["openclaw.failureKind"]).toBe("terminated");
+    expect(Object.hasOwn(modelCallDuration?.[1] ?? {}, "openclaw.upstreamRequestIdHash")).toBe(
+      false,
     );
     await service.stop?.(ctx);
   });
