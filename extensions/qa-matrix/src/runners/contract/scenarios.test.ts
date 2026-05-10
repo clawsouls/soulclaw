@@ -4972,53 +4972,51 @@ describe("matrix live qa scenarios", () => {
 
       const scenario = requireMatrixQaScenario("matrix-e2ee-cli-encryption-setup");
 
-      await expect(
-        runMatrixQaScenario(scenario, {
-          ...matrixQaScenarioContext(),
-          driverDeviceId: "DRIVERDEVICE",
-          driverPassword: "driver-password",
-          gatewayRuntimeEnv: {
-            OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
-            OPENCLAW_STATE_DIR: "/tmp/gateway-state",
-            PATH: process.env.PATH,
-          },
-          outputDir,
-        }),
-      ).resolves.toMatchObject({
-        artifacts: {
-          accountId: "cli-encryption-setup",
-          cliDeviceId: "CLISETUPDEVICE",
-          encryptionChanged: true,
-          setupSuccess: true,
-          verificationBootstrapSuccess: true,
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        driverDeviceId: "DRIVERDEVICE",
+        driverPassword: "driver-password",
+        gatewayRuntimeEnv: {
+          OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
+          OPENCLAW_STATE_DIR: "/tmp/gateway-state",
+          PATH: process.env.PATH,
         },
+        outputDir,
       });
+      const artifacts = result.artifacts as {
+        accountId?: unknown;
+        cliDeviceId?: unknown;
+        encryptionChanged?: unknown;
+        setupSuccess?: unknown;
+        verificationBootstrapSuccess?: unknown;
+      };
+      expect(artifacts.accountId).toBe("cli-encryption-setup");
+      expect(artifacts.cliDeviceId).toBe("CLISETUPDEVICE");
+      expect(artifacts.encryptionChanged).toBe(true);
+      expect(artifacts.setupSuccess).toBe(true);
+      expect(artifacts.verificationBootstrapSuccess).toBe(true);
 
-      expect(initialAccountConfig).toMatchObject({
-        accessToken: "cli-setup-token",
-        deviceId: "CLISETUPDEVICE",
-        encryption: false,
-        homeserver: "http://127.0.0.1:28008/",
-        password: "cli-setup-password",
-        startupVerification: "off",
-        userId: "@cli-setup:matrix-qa.test",
-      });
+      if (!initialAccountConfig) {
+        throw new Error("expected initial CLI encryption setup account config");
+      }
+      const capturedInitialAccountConfig = initialAccountConfig as Record<string, unknown>;
+      expect(capturedInitialAccountConfig.accessToken).toBe("cli-setup-token");
+      expect(capturedInitialAccountConfig.deviceId).toBe("CLISETUPDEVICE");
+      expect(capturedInitialAccountConfig.encryption).toBe(false);
+      expect(capturedInitialAccountConfig.homeserver).toBe("http://127.0.0.1:28008/");
+      expect(capturedInitialAccountConfig.password).toBe("cli-setup-password");
+      expect(capturedInitialAccountConfig.startupVerification).toBe("off");
+      expect(capturedInitialAccountConfig.userId).toBe("@cli-setup:matrix-qa.test");
       expect(runMatrixQaOpenClawCli.mock.calls.map(([params]) => params.args)).toEqual([
         ["matrix", "encryption", "setup", "--account", "cli-encryption-setup", "--json"],
         ["matrix", "verify", "status", "--account", "cli-encryption-setup", "--json"],
       ]);
-      expect(registerWithToken).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceName: "OpenClaw Matrix QA CLI Encryption Setup Owner",
-          registrationToken: "registration-token",
-        }),
+      expect(registerWithToken.mock.calls[0]?.[0]?.deviceName).toBe(
+        "OpenClaw Matrix QA CLI Encryption Setup Owner",
       );
-      expect(loginWithPassword).toHaveBeenCalledWith(
-        expect.objectContaining({
-          password: "cli-setup-password",
-          userId: "@cli-setup:matrix-qa.test",
-        }),
-      );
+      expect(registerWithToken.mock.calls[0]?.[0]?.registrationToken).toBe("registration-token");
+      expect(loginWithPassword.mock.calls[0]?.[0]?.password).toBe("cli-setup-password");
+      expect(loginWithPassword.mock.calls[0]?.[0]?.userId).toBe("@cli-setup:matrix-qa.test");
       const [cliRunDir] = await readdir(path.join(outputDir, "cli-encryption-setup"));
       const cliArtifactDir = path.join(outputDir, "cli-encryption-setup", cliRunDir ?? "");
       await expect(
@@ -5092,54 +5090,53 @@ describe("matrix live qa scenarios", () => {
 
       const scenario = requireMatrixQaScenario("matrix-e2ee-cli-encryption-setup-idempotent");
 
-      await expect(
-        runMatrixQaScenario(scenario, {
-          ...matrixQaScenarioContext(),
-          driverDeviceId: "DRIVERDEVICE",
-          driverPassword: "driver-password",
-          gatewayRuntimeEnv: {
-            OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
-            OPENCLAW_STATE_DIR: "/tmp/gateway-state",
-            PATH: process.env.PATH,
-          },
-          outputDir,
-        }),
-      ).resolves.toMatchObject({
-        artifacts: {
-          accountId: "cli-encryption-idempotent",
-          cliDeviceId: "CLIIDEMPOTENTDEVICE",
-          firstEncryptionChanged: false,
-          secondEncryptionChanged: false,
-          setupSuccess: true,
-          verificationBootstrapSuccess: true,
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        driverDeviceId: "DRIVERDEVICE",
+        driverPassword: "driver-password",
+        gatewayRuntimeEnv: {
+          OPENCLAW_CONFIG_PATH: "/tmp/gateway-config.json",
+          OPENCLAW_STATE_DIR: "/tmp/gateway-state",
+          PATH: process.env.PATH,
         },
+        outputDir,
       });
+      const artifacts = result.artifacts as {
+        accountId?: unknown;
+        cliDeviceId?: unknown;
+        firstEncryptionChanged?: unknown;
+        secondEncryptionChanged?: unknown;
+        setupSuccess?: unknown;
+        verificationBootstrapSuccess?: unknown;
+      };
+      expect(artifacts.accountId).toBe("cli-encryption-idempotent");
+      expect(artifacts.cliDeviceId).toBe("CLIIDEMPOTENTDEVICE");
+      expect(artifacts.firstEncryptionChanged).toBe(false);
+      expect(artifacts.secondEncryptionChanged).toBe(false);
+      expect(artifacts.setupSuccess).toBe(true);
+      expect(artifacts.verificationBootstrapSuccess).toBe(true);
 
-      expect(initialAccountConfig).toMatchObject({
-        accessToken: "cli-idempotent-token",
-        deviceId: "CLIIDEMPOTENTDEVICE",
-        encryption: true,
-        homeserver: "http://127.0.0.1:28008/",
-        password: "cli-idempotent-password",
-        startupVerification: "off",
-        userId: "@cli-idempotent:matrix-qa.test",
-      });
+      if (!initialAccountConfig) {
+        throw new Error("expected initial CLI encryption idempotent account config");
+      }
+      const capturedInitialAccountConfig = initialAccountConfig as Record<string, unknown>;
+      expect(capturedInitialAccountConfig.accessToken).toBe("cli-idempotent-token");
+      expect(capturedInitialAccountConfig.deviceId).toBe("CLIIDEMPOTENTDEVICE");
+      expect(capturedInitialAccountConfig.encryption).toBe(true);
+      expect(capturedInitialAccountConfig.homeserver).toBe("http://127.0.0.1:28008/");
+      expect(capturedInitialAccountConfig.password).toBe("cli-idempotent-password");
+      expect(capturedInitialAccountConfig.startupVerification).toBe("off");
+      expect(capturedInitialAccountConfig.userId).toBe("@cli-idempotent:matrix-qa.test");
       expect(runMatrixQaOpenClawCli.mock.calls.map(([params]) => params.args)).toEqual([
         ["matrix", "encryption", "setup", "--account", "cli-encryption-idempotent", "--json"],
         ["matrix", "encryption", "setup", "--account", "cli-encryption-idempotent", "--json"],
       ]);
-      expect(registerWithToken).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceName: "OpenClaw Matrix QA CLI Encryption Idempotent Owner",
-          registrationToken: "registration-token",
-        }),
+      expect(registerWithToken.mock.calls[0]?.[0]?.deviceName).toBe(
+        "OpenClaw Matrix QA CLI Encryption Idempotent Owner",
       );
-      expect(loginWithPassword).toHaveBeenCalledWith(
-        expect.objectContaining({
-          password: "cli-idempotent-password",
-          userId: "@cli-idempotent:matrix-qa.test",
-        }),
-      );
+      expect(registerWithToken.mock.calls[0]?.[0]?.registrationToken).toBe("registration-token");
+      expect(loginWithPassword.mock.calls[0]?.[0]?.password).toBe("cli-idempotent-password");
+      expect(loginWithPassword.mock.calls[0]?.[0]?.userId).toBe("@cli-idempotent:matrix-qa.test");
       const [cliRunDir] = await readdir(path.join(outputDir, "cli-encryption-setup-idempotent"));
       const cliArtifactDir = path.join(
         outputDir,
