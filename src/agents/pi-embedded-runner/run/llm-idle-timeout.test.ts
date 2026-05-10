@@ -1,3 +1,4 @@
+import type { AssistantMessageEventStream } from "@mariozechner/pi-ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../../../config/config.js";
 import {
@@ -331,7 +332,7 @@ describe("streamWithIdleTimeout", () => {
     let streamSignal: AbortSignal | undefined;
     const baseFn = vi.fn((_model, _context, options) => {
       streamSignal = options?.signal;
-      return new Promise<AsyncIterable<unknown>>((_resolve, reject) => {
+      return new Promise<AssistantMessageEventStream>((_resolve, reject) => {
         streamSignal?.addEventListener("abort", () => {
           reject(streamSignal?.reason);
         });
