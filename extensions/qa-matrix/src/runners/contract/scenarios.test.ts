@@ -2613,55 +2613,44 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-quiet-streaming-preview");
 
-    await expect(
-      runMatrixQaScenario(scenario, {
-        baseUrl: "http://127.0.0.1:28008/",
-        canary: undefined,
-        driverAccessToken: "driver-token",
-        driverUserId: "@driver:matrix-qa.test",
-        observedEvents: [],
-        observerAccessToken: "observer-token",
-        observerUserId: "@observer:matrix-qa.test",
-        roomId: "!main:matrix-qa.test",
-        restartGateway: undefined,
-        syncState: {},
-        sutAccessToken: "sut-token",
-        sutUserId: "@sut:matrix-qa.test",
-        timeoutMs: 8_000,
-        topology: {
-          defaultRoomId: "!main:matrix-qa.test",
-          defaultRoomKey: "main",
-          rooms: [],
-        },
-      }),
-    ).resolves.toMatchObject({
-      artifacts: {
-        driverEventId: "$quiet-stream-trigger",
-        previewEventId: "$quiet-preview",
-        reply: {
-          eventId: "$quiet-final",
-        },
+    const result = await runMatrixQaScenario(scenario, {
+      baseUrl: "http://127.0.0.1:28008/",
+      canary: undefined,
+      driverAccessToken: "driver-token",
+      driverUserId: "@driver:matrix-qa.test",
+      observedEvents: [],
+      observerAccessToken: "observer-token",
+      observerUserId: "@observer:matrix-qa.test",
+      roomId: "!main:matrix-qa.test",
+      restartGateway: undefined,
+      syncState: {},
+      sutAccessToken: "sut-token",
+      sutUserId: "@sut:matrix-qa.test",
+      timeoutMs: 8_000,
+      topology: {
+        defaultRoomId: "!main:matrix-qa.test",
+        defaultRoomKey: "main",
+        rooms: [],
       },
     });
+    const artifacts = result.artifacts as {
+      driverEventId?: unknown;
+      previewEventId?: unknown;
+      reply?: { eventId?: unknown };
+    };
+    expect(artifacts.driverEventId).toBe("$quiet-stream-trigger");
+    expect(artifacts.previewEventId).toBe("$quiet-preview");
+    expect(artifacts.reply?.eventId).toBe("$quiet-final");
 
     expect(sendTextMessage).toHaveBeenCalledWith({
       body: expect.stringContaining("Quiet streaming QA check"),
       mentionUserIds: ["@sut:matrix-qa.test"],
       roomId: "!main:matrix-qa.test",
     });
-    expect(waitForRoomEvent).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        since: "driver-sync-start",
-      }),
-    );
-    expect(waitForRoomEvent).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        predicate: expect.any(Function),
-        since: "driver-sync-preview",
-      }),
-    );
+    expect(waitForRoomEvent.mock.calls[0]?.[0]?.since).toBe("driver-sync-start");
+    const finalWaitOptions = waitForRoomEvent.mock.calls[1]?.[0];
+    expect(typeof finalWaitOptions?.predicate).toBe("function");
+    expect(finalWaitOptions?.since).toBe("driver-sync-preview");
   });
 
   it("captures partial preview text messages before the finalized Matrix reply", async () => {
@@ -2699,15 +2688,15 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-partial-streaming-preview");
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        driverEventId: "$partial-stream-trigger",
-        previewEventId: "$partial-preview",
-        reply: {
-          eventId: "$partial-final",
-        },
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as {
+      driverEventId?: unknown;
+      previewEventId?: unknown;
+      reply?: { eventId?: unknown };
+    };
+    expect(artifacts.driverEventId).toBe("$partial-stream-trigger");
+    expect(artifacts.previewEventId).toBe("$partial-preview");
+    expect(artifacts.reply?.eventId).toBe("$partial-final");
 
     expect(sendTextMessage).toHaveBeenCalledWith({
       body: expect.stringContaining("Partial streaming QA check"),
@@ -2750,16 +2739,19 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-tool-progress-preview");
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        driverEventId: "$tool-progress-trigger",
-        previewBodyPreview: "Barnacling...\n`📖 Read: from /tmp/qa/workspace/QA_KICKOFF_TASK.md`",
-        previewEventId: "$tool-progress-preview",
-        reply: {
-          eventId: "$tool-progress-final",
-        },
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as {
+      driverEventId?: unknown;
+      previewBodyPreview?: unknown;
+      previewEventId?: unknown;
+      reply?: { eventId?: unknown };
+    };
+    expect(artifacts.driverEventId).toBe("$tool-progress-trigger");
+    expect(artifacts.previewBodyPreview).toBe(
+      "Barnacling...\n`📖 Read: from /tmp/qa/workspace/QA_KICKOFF_TASK.md`",
+    );
+    expect(artifacts.previewEventId).toBe("$tool-progress-preview");
+    expect(artifacts.reply?.eventId).toBe("$tool-progress-final");
     const prompt = String(sendTextMessage.mock.calls[0]?.[0]?.body);
     expect(prompt).toContain("use the read tool exactly once on `QA_KICKOFF_TASK.md`");
     expect(prompt).toContain("Do not read `HEARTBEAT.md`");
@@ -2812,16 +2804,17 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-room-tool-progress-preview");
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        driverEventId: "$tool-progress-generic-trigger",
-        previewBodyPreview: "- `tool: exec_command`",
-        previewEventId: "$tool-progress-generic-preview",
-        reply: {
-          eventId: "$tool-progress-generic-final",
-        },
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as {
+      driverEventId?: unknown;
+      previewBodyPreview?: unknown;
+      previewEventId?: unknown;
+      reply?: { eventId?: unknown };
+    };
+    expect(artifacts.driverEventId).toBe("$tool-progress-generic-trigger");
+    expect(artifacts.previewBodyPreview).toBe("- `tool: exec_command`");
+    expect(artifacts.previewEventId).toBe("$tool-progress-generic-preview");
+    expect(artifacts.reply?.eventId).toBe("$tool-progress-generic-final");
   });
 
   it("reports Matrix tool progress preview candidates when the progress wait times out", async () => {
