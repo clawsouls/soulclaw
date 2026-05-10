@@ -590,11 +590,8 @@ describe("migrateApplyCommand", () => {
 
     const result = await migrateDefaultCommand(runtime, { provider: "codex" });
 
-    expect(mocks.multiselect).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining("Select native Codex plugins"),
-      }),
-    );
+    const pluginPrompt = mocks.multiselect.mock.calls[0]?.[0] as { message?: unknown } | undefined;
+    expect(String(pluginPrompt?.message)).toContain("Select native Codex plugins");
     expect(mocks.promptYesNo).not.toHaveBeenCalled();
     expect(mocks.backupCreateCommand).not.toHaveBeenCalled();
     expect(mocks.provider.apply).not.toHaveBeenCalled();
@@ -802,7 +799,9 @@ describe("migrateApplyCommand", () => {
     await migrateDefaultCommand(runtime, { provider: "codex" });
 
     let appliedPlan = mocks.provider.apply.mock.calls[0]?.[1] as MigrationPlan;
-    expect(appliedPlan.summary).toMatchObject({ planned: 3, skipped: 0, conflicts: 0 });
+    expect(appliedPlan.summary.planned).toBe(3);
+    expect(appliedPlan.summary.skipped).toBe(0);
+    expect(appliedPlan.summary.conflicts).toBe(0);
 
     mocks.provider.plan.mockResolvedValue(planned);
     mocks.multiselect.mockResolvedValue([
@@ -879,22 +878,25 @@ describe("migrateApplyCommand", () => {
 
     expect(result).toBe(planned);
     expect(logs).toHaveLength(1);
-    expect(JSON.parse(logs[0] ?? "{}")).toMatchObject({
-      providerId: "hermes",
-      summary: { planned: 1 },
-      items: [
-        {
-          details: {
-            value: {
-              time: {
-                env: { OPENAI_API_KEY: "[redacted]", SAFE_FLAG: "visible" },
-                headers: { Authorization: "[redacted]" },
-              },
-            },
-          },
-        },
-      ],
-    });
+    const logPayload = JSON.parse(logs[0] ?? "{}") as {
+      items?: Array<{
+        details?: {
+          value?: {
+            time?: {
+              env?: Record<string, unknown>;
+              headers?: Record<string, unknown>;
+            };
+          };
+        };
+      }>;
+      providerId?: unknown;
+      summary?: { planned?: unknown };
+    };
+    expect(logPayload.providerId).toBe("hermes");
+    expect(logPayload.summary?.planned).toBe(1);
+    expect(logPayload.items?.[0]?.details?.value?.time?.env?.OPENAI_API_KEY).toBe("[redacted]");
+    expect(logPayload.items?.[0]?.details?.value?.time?.env?.SAFE_FLAG).toBe("visible");
+    expect(logPayload.items?.[0]?.details?.value?.time?.headers?.Authorization).toBe("[redacted]");
     expect(logs[0]).not.toContain("short-dev-key");
     expect(mocks.promptYesNo).not.toHaveBeenCalled();
     expect(mocks.backupCreateCommand).not.toHaveBeenCalled();
@@ -978,17 +980,13 @@ describe("migrateApplyCommand", () => {
     await migrateApplyCommand(runtime, { provider: "codex", yes: true, skills: ["alpha"] });
 
     const appliedPlan = mocks.provider.apply.mock.calls[0]?.[1] as MigrationPlan;
-    expect(appliedPlan.summary).toMatchObject({ planned: 2, skipped: 1, conflicts: 0 });
-    expect(appliedPlan.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: "skill:alpha", status: "planned" }),
-        expect.objectContaining({
-          id: "skill:beta",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-      ]),
-    );
+    expect(appliedPlan.summary.planned).toBe(2);
+    expect(appliedPlan.summary.skipped).toBe(1);
+    expect(appliedPlan.summary.conflicts).toBe(0);
+    const itemsById = new Map(appliedPlan.items.map((item) => [item.id, item]));
+    expect(itemsById.get("skill:alpha")?.status).toBe("planned");
+    expect(itemsById.get("skill:beta")?.status).toBe("skipped");
+    expect(itemsById.get("skill:beta")?.reason).toBe("not selected for migration");
     expect(mocks.backupCreateCommand).toHaveBeenCalled();
   });
 
@@ -1006,18 +1004,14 @@ describe("migrateApplyCommand", () => {
     await migrateApplyCommand(runtime, { provider: "codex", yes: true, plugins: ["gmail"] });
 
     const appliedPlan = mocks.provider.apply.mock.calls[0]?.[1] as MigrationPlan;
-    expect(appliedPlan.summary).toMatchObject({ planned: 2, skipped: 1, conflicts: 0 });
-    expect(appliedPlan.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "plugin:google-calendar",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-        expect.objectContaining({ id: "plugin:gmail", status: "planned" }),
-        expect.objectContaining({ id: "config:codex-plugins", status: "planned" }),
-      ]),
-    );
+    expect(appliedPlan.summary.planned).toBe(2);
+    expect(appliedPlan.summary.skipped).toBe(1);
+    expect(appliedPlan.summary.conflicts).toBe(0);
+    const itemsById = new Map(appliedPlan.items.map((item) => [item.id, item]));
+    expect(itemsById.get("plugin:google-calendar")?.status).toBe("skipped");
+    expect(itemsById.get("plugin:google-calendar")?.reason).toBe("not selected for migration");
+    expect(itemsById.get("plugin:gmail")?.status).toBe("planned");
+    expect(itemsById.get("config:codex-plugins")?.status).toBe("planned");
     expect(mocks.backupCreateCommand).toHaveBeenCalled();
   });
 
@@ -1033,17 +1027,15 @@ describe("migrateApplyCommand", () => {
 
     const result = await migrateApplyCommand(runtime, { provider: "hermes", yes: true });
 
-    expect(mocks.backupCreateCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ log: expect.any(Function) }),
-      { output: undefined, verify: true },
-    );
-    expect(mocks.provider.apply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        backupPath: "/tmp/openclaw-backup.tgz",
-        reportDir: expect.stringContaining("/migration/hermes/"),
-      }),
-      planned,
-    );
+    const backupCall = mocks.backupCreateCommand.mock.calls[0];
+    expect(typeof (backupCall?.[0] as { log?: unknown } | undefined)?.log).toBe("function");
+    expect(backupCall?.[1]).toStrictEqual({ output: undefined, verify: true });
+    const applyContext = mocks.provider.apply.mock.calls[0]?.[0] as
+      | { backupPath?: unknown; reportDir?: unknown }
+      | undefined;
+    expect(applyContext?.backupPath).toBe("/tmp/openclaw-backup.tgz");
+    expect(String(applyContext?.reportDir)).toContain("/migration/hermes/");
+    expect(mocks.provider.apply.mock.calls[0]?.[1]).toBe(planned);
     expect(result.backupPath).toBe("/tmp/openclaw-backup.tgz");
   });
 
@@ -1084,22 +1076,24 @@ describe("migrateApplyCommand", () => {
     await migrateDefaultCommand(jsonRuntime, { provider: "hermes", yes: true, json: true });
 
     expect(logs).toHaveLength(1);
-    expect(JSON.parse(logs[0] ?? "{}")).toMatchObject({
-      providerId: "hermes",
-      backupPath: "/tmp/openclaw-backup.tgz",
-      items: [
-        {
-          details: {
-            value: {
-              time: {
-                env: { OPENAI_API_KEY: "[redacted]" },
-                headers: { "x-api-key": "[redacted]" },
-              },
-            },
-          },
-        },
-      ],
-    });
+    const logPayload = JSON.parse(logs[0] ?? "{}") as {
+      backupPath?: unknown;
+      items?: Array<{
+        details?: {
+          value?: {
+            time?: {
+              env?: Record<string, unknown>;
+              headers?: Record<string, unknown>;
+            };
+          };
+        };
+      }>;
+      providerId?: unknown;
+    };
+    expect(logPayload.providerId).toBe("hermes");
+    expect(logPayload.backupPath).toBe("/tmp/openclaw-backup.tgz");
+    expect(logPayload.items?.[0]?.details?.value?.time?.env?.OPENAI_API_KEY).toBe("[redacted]");
+    expect(logPayload.items?.[0]?.details?.value?.time?.headers?.["x-api-key"]).toBe("[redacted]");
     expect(logs[0]).not.toContain("short-dev-key");
     expect(logs[0]).not.toContain("another-short-dev-key");
     expect(logs[0]).not.toContain("Migration plan");
@@ -1135,7 +1129,7 @@ describe("migrateApplyCommand", () => {
     await migrateDefaultCommand(jsonRuntime, { provider: "hermes", yes: true, json: true });
 
     expect(logs).toHaveLength(1);
-    expect(JSON.parse(logs[0] ?? "{}")).toMatchObject({ providerId: "hermes" });
+    expect((JSON.parse(logs[0] ?? "{}") as { providerId?: unknown }).providerId).toBe("hermes");
     expect(errors).toEqual(["provider planning", "provider applying"]);
   });
 
@@ -1152,7 +1146,8 @@ describe("migrateApplyCommand", () => {
     await migrateDefaultCommand(runtime, { provider: "hermes", yes: true });
 
     expect(mocks.provider.plan).toHaveBeenCalledTimes(1);
-    expect(mocks.provider.apply).toHaveBeenCalledWith(expect.any(Object), planned);
+    expect(typeof mocks.provider.apply.mock.calls[0]?.[0]).toBe("object");
+    expect(mocks.provider.apply.mock.calls[0]?.[1]).toBe(planned);
   });
 
   it("fails after writing JSON output when apply reports item errors", async () => {
@@ -1185,11 +1180,14 @@ describe("migrateApplyCommand", () => {
     ).rejects.toThrow("Migration finished with 1 error");
 
     expect(logs).toHaveLength(1);
-    expect(JSON.parse(logs[0] ?? "{}")).toMatchObject({
-      providerId: "hermes",
-      summary: { errors: 1 },
-      reportDir: expect.stringContaining("/migration/hermes/"),
-    });
+    const logPayload = JSON.parse(logs[0] ?? "{}") as {
+      providerId?: unknown;
+      reportDir?: unknown;
+      summary?: { errors?: unknown };
+    };
+    expect(logPayload.providerId).toBe("hermes");
+    expect(logPayload.summary?.errors).toBe(1);
+    expect(String(logPayload.reportDir)).toContain("/migration/hermes/");
   });
 
   it("fails after writing JSON output when apply reports late conflicts", async () => {
@@ -1222,11 +1220,14 @@ describe("migrateApplyCommand", () => {
     ).rejects.toThrow("Migration finished with 1 conflict");
 
     expect(logs).toHaveLength(1);
-    expect(JSON.parse(logs[0] ?? "{}")).toMatchObject({
-      providerId: "hermes",
-      summary: { conflicts: 1 },
-      reportDir: expect.stringContaining("/migration/hermes/"),
-    });
+    const logPayload = JSON.parse(logs[0] ?? "{}") as {
+      providerId?: unknown;
+      reportDir?: unknown;
+      summary?: { conflicts?: unknown };
+    };
+    expect(logPayload.providerId).toBe("hermes");
+    expect(logPayload.summary?.conflicts).toBe(1);
+    expect(String(logPayload.reportDir)).toContain("/migration/hermes/");
   });
 
   it("prints the dry-run plan in JSON mode even when --yes is set", async () => {
@@ -1248,10 +1249,12 @@ describe("migrateApplyCommand", () => {
     });
 
     expect(logs).toHaveLength(1);
-    expect(JSON.parse(logs[0] ?? "{}")).toMatchObject({
-      providerId: "hermes",
-      summary: { planned: 1 },
-    });
+    const logPayload = JSON.parse(logs[0] ?? "{}") as {
+      providerId?: unknown;
+      summary?: { planned?: unknown };
+    };
+    expect(logPayload.providerId).toBe("hermes");
+    expect(logPayload.summary?.planned).toBe(1);
     expect(mocks.provider.apply).not.toHaveBeenCalled();
     expect(mocks.backupCreateCommand).not.toHaveBeenCalled();
   });
