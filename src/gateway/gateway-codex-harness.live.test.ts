@@ -211,7 +211,16 @@ async function writeLiveGatewayConfig(params: {
         model: { primary: params.modelKey },
         sandbox: { mode: "off" },
       },
-      list: [{ id: "dev", default: true }],
+      list: [
+        {
+          id: "dev",
+          default: true,
+          workspace: params.workspace,
+          agentRuntime: { id: "codex" },
+          model: { primary: params.modelKey },
+          models: { [params.modelKey]: { agentRuntime: { id: "codex" } } },
+        },
+      ],
     },
   };
   await fs.writeFile(params.configPath, `${JSON.stringify(cfg, null, 2)}\n`);
