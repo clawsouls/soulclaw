@@ -394,13 +394,26 @@ describe("capability cli", () => {
     });
   }
 
-  type GatewayCall = { method?: unknown; params?: Record<string, unknown> };
+  type GatewayCall = {
+    clientName?: unknown;
+    method?: unknown;
+    mode?: unknown;
+    params?: Record<string, unknown>;
+    scopes?: unknown;
+  };
   type CompletionCall = {
     context?: {
       messages?: Array<{ content?: unknown; role?: unknown }>;
       systemPrompt?: unknown;
     };
     options?: { reasoning?: unknown };
+  };
+  type ImageDescribeParams = {
+    filePath?: string;
+    model?: unknown;
+    prompt?: unknown;
+    provider?: unknown;
+    timeoutMs?: unknown;
   };
 
   function firstGatewayCall() {
@@ -423,6 +436,18 @@ describe("capability cli", () => {
 
   function firstJsonOutput() {
     return mocks.runtime.writeJson.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+  }
+
+  function imageDescribeCall(index = 0) {
+    const calls = mocks.describeImageFile.mock.calls as unknown as Array<[ImageDescribeParams]>;
+    return calls[index]?.[0];
+  }
+
+  function firstImageDescribeWithModelCall() {
+    const calls = mocks.describeImageFileWithModel.mock.calls as unknown as Array<
+      [ImageDescribeParams]
+    >;
+    return calls[0]?.[0];
   }
 
   function expectModelRunDispatch(transport: "local" | "gateway", modelRef: string) {
@@ -785,16 +810,11 @@ describe("capability cli", () => {
       argv: ["capability", "model", "run", "--prompt", "hello", "--gateway", "--json"],
     });
 
-    expect(mocks.callGateway).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "agent",
-        params: expect.objectContaining({
-          cleanupBundleMcpOnRunEnd: true,
-          modelRun: true,
-          promptMode: "none",
-        }),
-      }),
-    );
+    const gatewayCall = firstGatewayCall();
+    expect(gatewayCall?.method).toBe("agent");
+    expect(gatewayCall?.params?.cleanupBundleMcpOnRunEnd).toBe(true);
+    expect(gatewayCall?.params?.modelRun).toBe(true);
+    expect(gatewayCall?.params?.promptMode).toBe("none");
   });
 
   it("surfaces gateway model fallback attempts in model probe JSON", async () => {
@@ -823,19 +843,14 @@ describe("capability cli", () => {
       argv: ["capability", "model", "run", "--prompt", "hello", "--gateway", "--json"],
     });
 
-    expect(mocks.runtime.writeJson).toHaveBeenCalledWith(
-      expect.objectContaining({
-        provider: "openai",
-        model: "gpt-4.1-mini",
-        attempts: [
-          expect.objectContaining({
-            provider: "openrouter",
-            model: "openrouter/auto",
-            reason: "model_not_found",
-          }),
-        ],
-      }),
-    );
+    const payload = firstJsonOutput();
+    const attempts = payload?.attempts as Array<Record<string, unknown>>;
+    expect(payload?.provider).toBe("openai");
+    expect(payload?.model).toBe("gpt-4.1-mini");
+    expect(attempts).toHaveLength(1);
+    expect(attempts[0]?.provider).toBe("openrouter");
+    expect(attempts[0]?.model).toBe("openrouter/auto");
+    expect(attempts[0]?.reason).toBe("model_not_found");
   });
 
   it("requests admin scope for gateway model probes with provider/model overrides", async () => {
@@ -854,20 +869,15 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.callGateway).toHaveBeenCalledWith(
-      expect.objectContaining({
-        clientName: "gateway-client",
-        method: "agent",
-        mode: "backend",
-        scopes: ["operator.admin"],
-        params: expect.objectContaining({
-          provider: "anthropic",
-          model: "claude-haiku-4-5",
-          modelRun: true,
-          promptMode: "none",
-        }),
-      }),
-    );
+    const gatewayCall = firstGatewayCall();
+    expect(gatewayCall?.clientName).toBe("gateway-client");
+    expect(gatewayCall?.method).toBe("agent");
+    expect(gatewayCall?.mode).toBe("backend");
+    expect(gatewayCall?.scopes).toEqual(["operator.admin"]);
+    expect(gatewayCall?.params?.provider).toBe("anthropic");
+    expect(gatewayCall?.params?.model).toBe("claude-haiku-4-5");
+    expect(gatewayCall?.params?.modelRun).toBe(true);
+    expect(gatewayCall?.params?.promptMode).toBe("none");
   });
 
   it.each(["local", "gateway"] as const)(
@@ -879,9 +889,11 @@ describe("capability cli", () => {
 
       await runModelRunWithModel("Anthropic/CLAUDE-OPUS-4-7", transport);
 
-      expect(mocks.loadModelCatalog).toHaveBeenCalledWith(
-        expect.objectContaining({ readOnly: true }),
-      );
+      const catalogCalls = mocks.loadModelCatalog.mock.calls as unknown as Array<
+        [{ readOnly?: unknown }]
+      >;
+      const catalogParams = catalogCalls[0]?.[0];
+      expect(catalogParams?.readOnly).toBe(true);
       expectModelRunDispatch(transport, "anthropic/claude-opus-4-7");
     },
   );
@@ -930,16 +942,11 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.callGateway).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "agent",
-        params: expect.objectContaining({
-          thinking: "high",
-          modelRun: true,
-          promptMode: "none",
-        }),
-      }),
-    );
+    const gatewayCall = firstGatewayCall();
+    expect(gatewayCall?.method).toBe("agent");
+    expect(gatewayCall?.params?.thinking).toBe("high");
+    expect(gatewayCall?.params?.modelRun).toBe(true);
+    expect(gatewayCall?.params?.promptMode).toBe("none");
   });
 
   it("rejects invalid model run thinking overrides before dispatch", async () => {
@@ -989,12 +996,8 @@ describe("capability cli", () => {
       argv: ["capability", "tts", "status", "--json"],
     });
 
-    expect(mocks.callGateway).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "tts.status" }),
-    );
-    expect(mocks.runtime.writeJson).toHaveBeenCalledWith(
-      expect.objectContaining({ transport: "gateway" }),
-    );
+    expect(firstGatewayCall()?.method).toBe("tts.status");
+    expect(firstJsonOutput()?.transport).toBe("gateway");
   });
 
   it("routes image describe through media understanding, not generation", async () => {
@@ -1003,15 +1006,13 @@ describe("capability cli", () => {
       argv: ["capability", "image", "describe", "--file", "photo.jpg", "--json"],
     });
 
-    expect(mocks.describeImageFile).toHaveBeenCalledWith(
-      expect.objectContaining({ filePath: expect.stringMatching(/photo\.jpg$/) }),
-    );
-    expect(mocks.runtime.writeJson).toHaveBeenCalledWith(
-      expect.objectContaining({
-        capability: "image.describe",
-        outputs: [expect.objectContaining({ kind: "image.description" })],
-      }),
-    );
+    const describeCall = imageDescribeCall();
+    expect(path.basename(describeCall?.filePath ?? "")).toBe("photo.jpg");
+    const output = firstJsonOutput();
+    const outputs = output?.outputs as Array<Record<string, unknown>>;
+    expect(output?.capability).toBe("image.describe");
+    expect(outputs).toHaveLength(1);
+    expect(outputs[0]?.kind).toBe("image.description");
   });
 
   it("passes image describe prompts through media understanding", async () => {
@@ -1031,13 +1032,10 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.describeImageFile).toHaveBeenCalledWith(
-      expect.objectContaining({
-        filePath: expect.stringMatching(/photo\.jpg$/),
-        prompt: "Read the menu text",
-        timeoutMs: 90000,
-      }),
-    );
+    const describeCall = imageDescribeCall();
+    expect(path.basename(describeCall?.filePath ?? "")).toBe("photo.jpg");
+    expect(describeCall?.prompt).toBe("Read the menu text");
+    expect(describeCall?.timeoutMs).toBe(90000);
   });
 
   it("uses the explicit media-understanding provider for image describe model overrides", async () => {
@@ -1059,22 +1057,15 @@ describe("capability cli", () => {
       ],
     });
 
-    expect(mocks.describeImageFileWithModel).toHaveBeenCalledWith(
-      expect.objectContaining({
-        filePath: expect.stringMatching(/photo\.jpg$/),
-        provider: "ollama",
-        model: "qwen2.5vl:7b",
-        prompt: "Count visible buttons",
-        timeoutMs: 120000,
-      }),
-    );
+    const describeCall = firstImageDescribeWithModelCall();
+    expect(path.basename(describeCall?.filePath ?? "")).toBe("photo.jpg");
+    expect(describeCall?.provider).toBe("ollama");
+    expect(describeCall?.model).toBe("qwen2.5vl:7b");
+    expect(describeCall?.prompt).toBe("Count visible buttons");
+    expect(describeCall?.timeoutMs).toBe(120000);
     expect(mocks.describeImageFile).not.toHaveBeenCalled();
-    expect(mocks.runtime.writeJson).toHaveBeenCalledWith(
-      expect.objectContaining({
-        provider: "ollama",
-        model: "gpt-4.1-mini",
-      }),
-    );
+    expect(firstJsonOutput()?.provider).toBe("ollama");
+    expect(firstJsonOutput()?.model).toBe("gpt-4.1-mini");
   });
 
   it("passes describe-many prompts to each image", async () => {
@@ -1097,22 +1088,14 @@ describe("capability cli", () => {
     });
 
     expect(mocks.describeImageFile).toHaveBeenCalledTimes(2);
-    expect(mocks.describeImageFile).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        filePath: expect.stringMatching(/a\.jpg$/),
-        prompt: "Extract all visible labels",
-        timeoutMs: 45000,
-      }),
-    );
-    expect(mocks.describeImageFile).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        filePath: expect.stringMatching(/b\.jpg$/),
-        prompt: "Extract all visible labels",
-        timeoutMs: 45000,
-      }),
-    );
+    const firstDescribe = imageDescribeCall(0);
+    const secondDescribe = imageDescribeCall(1);
+    expect(path.basename(firstDescribe?.filePath ?? "")).toBe("a.jpg");
+    expect(firstDescribe?.prompt).toBe("Extract all visible labels");
+    expect(firstDescribe?.timeoutMs).toBe(45000);
+    expect(path.basename(secondDescribe?.filePath ?? "")).toBe("b.jpg");
+    expect(secondDescribe?.prompt).toBe("Extract all visible labels");
+    expect(secondDescribe?.timeoutMs).toBe(45000);
   });
 
   it("fails image describe when no description text is returned", async () => {
