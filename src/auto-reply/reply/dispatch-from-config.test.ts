@@ -1212,12 +1212,11 @@ describe("dispatchReplyFromConfig", () => {
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
     expect(dispatcher.sendFinalReply).not.toHaveBeenCalled();
-    expect(mocks.routeReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "telegram",
-        to: "telegram:999",
-      }),
-    );
+    const routeCall = mocks.routeReply.mock.calls[0]?.[0] as
+      | { channel?: unknown; to?: unknown }
+      | undefined;
+    expect(routeCall?.channel).toBe("telegram");
+    expect(routeCall?.to).toBe("telegram:999");
   });
 
   it("routes Feishu replies when provider is webchat and origin metadata points to Feishu", async () => {
@@ -1236,12 +1235,11 @@ describe("dispatchReplyFromConfig", () => {
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
     expect(dispatcher.sendFinalReply).not.toHaveBeenCalled();
-    expect(mocks.routeReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "feishu",
-        to: "ou_feishu_direct_123",
-      }),
-    );
+    const routeCall = mocks.routeReply.mock.calls[0]?.[0] as
+      | { channel?: unknown; to?: unknown }
+      | undefined;
+    expect(routeCall?.channel).toBe("feishu");
+    expect(routeCall?.to).toBe("ou_feishu_direct_123");
   });
 
   it("does not route when provider already matches originating channel", async () => {
@@ -1307,13 +1305,12 @@ describe("dispatchReplyFromConfig", () => {
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
     expect(dispatcher.sendFinalReply).not.toHaveBeenCalled();
-    expect(mocks.routeReply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        channel: "imessage",
-        policyConversationType: "direct",
-        to: "imessage:+15550001111",
-      }),
-    );
+    const routeCall = mocks.routeReply.mock.calls[0]?.[0] as
+      | { channel?: unknown; policyConversationType?: unknown; to?: unknown }
+      | undefined;
+    expect(routeCall?.channel).toBe("imessage");
+    expect(routeCall?.policyConversationType).toBe("direct");
+    expect(routeCall?.to).toBe("imessage:+15550001111");
   });
 
   it("routes media-only tool results when summaries are suppressed", async () => {
@@ -1344,12 +1341,10 @@ describe("dispatchReplyFromConfig", () => {
 
     await dispatchReplyFromConfig({ ctx, cfg, dispatcher, replyResolver });
 
-    expect(replyMediaPathMocks.createReplyMediaPathNormalizer).toHaveBeenCalledWith(
-      expect.objectContaining({
-        cfg,
-        messageProvider: "telegram",
-      }),
-    );
+    const normalizerOptions = replyMediaPathMocks.createReplyMediaPathNormalizer.mock
+      .calls[0]?.[0] as { cfg?: unknown; messageProvider?: unknown } | undefined;
+    expect(normalizerOptions?.cfg).toBe(cfg);
+    expect(normalizerOptions?.messageProvider).toBe("telegram");
     expect(dispatcher.sendToolResult).not.toHaveBeenCalled();
     expect(dispatcher.sendFinalReply).not.toHaveBeenCalled();
     expect(mocks.routeReply).toHaveBeenCalledTimes(1);
