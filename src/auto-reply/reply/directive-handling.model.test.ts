@@ -111,7 +111,7 @@ import {
   replaceRuntimeAuthProfileStoreSnapshots,
 } from "../../agents/auth-profiles.js";
 import type { ModelAliasIndex } from "../../agents/model-selection.js";
-import type { OpenClawConfig } from "../../config/config.js";
+import type { ModelDefinitionConfig, OpenClawConfig } from "../../config/config.js";
 import type { SessionEntry } from "../../config/sessions.js";
 import { enqueueSystemEvent } from "../../infra/system-events.js";
 import { createEmptyPluginRegistry } from "../../plugins/registry-empty.js";
@@ -197,6 +197,18 @@ function baseConfig(): OpenClawConfig {
     commands: { text: true },
     agents: { defaults: {} },
   } as unknown as OpenClawConfig;
+}
+
+function modelDefinition(id: string, name: string): ModelDefinitionConfig {
+  return {
+    id,
+    name,
+    reasoning: true,
+    input: ["text"],
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    contextWindow: 128_000,
+    maxTokens: 8192,
+  };
 }
 
 function createSessionEntry(overrides?: Partial<SessionEntry>): SessionEntry {
@@ -529,7 +541,8 @@ describe("/model chat UX", () => {
         models: {
           providers: {
             openrouter: {
-              models: [{ id: "google/gemini-3-flash-preview", name: "Gemini via OpenRouter" }],
+              baseUrl: "https://openrouter.example.test/api/v1",
+              models: [modelDefinition("google/gemini-3-flash-preview", "Gemini via OpenRouter")],
             },
           },
         },
@@ -562,10 +575,12 @@ describe("/model chat UX", () => {
         models: {
           providers: {
             google: {
-              models: [{ id: "gemini-3-flash-preview", name: "Gemini 3 Flash" }],
+              baseUrl: "https://google.example.test/v1",
+              models: [modelDefinition("gemini-3-flash-preview", "Gemini 3 Flash")],
             },
             openrouter: {
-              models: [{ id: "google/gemini-3-flash-preview", name: "Gemini via OpenRouter" }],
+              baseUrl: "https://openrouter.example.test/api/v1",
+              models: [modelDefinition("google/gemini-3-flash-preview", "Gemini via OpenRouter")],
             },
           },
         },
