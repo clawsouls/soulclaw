@@ -601,26 +601,16 @@ describe("migrateApplyCommand", () => {
     expect(runtime.log).toHaveBeenCalledWith(
       "No Codex skills or native Codex plugins selected for migration.",
     );
-    expect(result.summary).toMatchObject({ planned: 0, skipped: 3, conflicts: 0 });
-    expect(result.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "plugin:google-calendar",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-        expect.objectContaining({
-          id: "plugin:gmail",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-        expect.objectContaining({
-          id: "config:codex-plugins",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-      ]),
-    );
+    expect(result.summary.planned).toBe(0);
+    expect(result.summary.skipped).toBe(3);
+    expect(result.summary.conflicts).toBe(0);
+    const itemsById = new Map(result.items.map((item) => [item.id, item]));
+    expect(itemsById.get("plugin:google-calendar")?.status).toBe("skipped");
+    expect(itemsById.get("plugin:google-calendar")?.reason).toBe("not selected for migration");
+    expect(itemsById.get("plugin:gmail")?.status).toBe("skipped");
+    expect(itemsById.get("plugin:gmail")?.reason).toBe("not selected for migration");
+    expect(itemsById.get("config:codex-plugins")?.status).toBe("skipped");
+    expect(itemsById.get("config:codex-plugins")?.reason).toBe("not selected for migration");
   });
 
   it("does not prompt for Codex plugins when --plugin selected them explicitly", async () => {
@@ -644,17 +634,13 @@ describe("migrateApplyCommand", () => {
     expect(mocks.multiselect).not.toHaveBeenCalled();
     expect(mocks.promptYesNo).toHaveBeenCalledWith("Apply this migration now?", false);
     const appliedPlan = mocks.provider.apply.mock.calls[0]?.[1] as MigrationPlan;
-    expect(appliedPlan.summary).toMatchObject({ planned: 2, skipped: 1, conflicts: 0 });
-    expect(appliedPlan.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "plugin:google-calendar",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-        expect.objectContaining({ id: "plugin:gmail", status: "planned" }),
-      ]),
-    );
+    expect(appliedPlan.summary.planned).toBe(2);
+    expect(appliedPlan.summary.skipped).toBe(1);
+    expect(appliedPlan.summary.conflicts).toBe(0);
+    const itemsById = new Map(appliedPlan.items.map((item) => [item.id, item]));
+    expect(itemsById.get("plugin:google-calendar")?.status).toBe("skipped");
+    expect(itemsById.get("plugin:google-calendar")?.reason).toBe("not selected for migration");
+    expect(itemsById.get("plugin:gmail")?.status).toBe("planned");
   });
 
   it("leaves conflicting Codex skills unchecked by default", async () => {
@@ -702,14 +688,17 @@ describe("migrateApplyCommand", () => {
 
     await migrateDefaultCommand(runtime, { provider: "codex" });
 
-    expect(mocks.multiselect).toHaveBeenCalledWith(
-      expect.objectContaining({
-        initialValues: ["skill:alpha"],
-        options: expect.arrayContaining([
-          expect.objectContaining({ value: "skill:beta", label: "beta" }),
-        ]),
-      }),
+    const skillPrompt = mocks.multiselect.mock.calls[0]?.[0] as
+      | {
+          initialValues?: unknown;
+          options?: Array<{ label?: unknown; value?: unknown }>;
+        }
+      | undefined;
+    expect(skillPrompt?.initialValues).toStrictEqual(["skill:alpha"]);
+    const skillOptionsByValue = new Map(
+      skillPrompt?.options?.map((option) => [option.value, option]),
     );
+    expect(skillOptionsByValue.get("skill:beta")?.label).toBe("beta");
     expect(mocks.promptYesNo).toHaveBeenCalledWith("Apply this migration now?", false);
     expect(mocks.provider.apply).not.toHaveBeenCalled();
   });
@@ -752,27 +741,17 @@ describe("migrateApplyCommand", () => {
     expect(runtime.log).toHaveBeenCalledWith("Codex skill migration skipped for now.");
     expect(mocks.promptYesNo).toHaveBeenCalledWith("Apply this migration now?", false);
     const appliedPlan = mocks.provider.apply.mock.calls[0]?.[1] as MigrationPlan;
-    expect(appliedPlan.summary).toMatchObject({ planned: 3, skipped: 3, conflicts: 0 });
-    expect(appliedPlan.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "skill:alpha",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-        expect.objectContaining({
-          id: "skill:beta",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-        expect.objectContaining({ id: "plugin:gmail", status: "planned" }),
-        expect.objectContaining({
-          id: "plugin:google-calendar",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-      ]),
-    );
+    expect(appliedPlan.summary.planned).toBe(3);
+    expect(appliedPlan.summary.skipped).toBe(3);
+    expect(appliedPlan.summary.conflicts).toBe(0);
+    const itemsById = new Map(appliedPlan.items.map((item) => [item.id, item]));
+    expect(itemsById.get("skill:alpha")?.status).toBe("skipped");
+    expect(itemsById.get("skill:alpha")?.reason).toBe("not selected for migration");
+    expect(itemsById.get("skill:beta")?.status).toBe("skipped");
+    expect(itemsById.get("skill:beta")?.reason).toBe("not selected for migration");
+    expect(itemsById.get("plugin:gmail")?.status).toBe("planned");
+    expect(itemsById.get("plugin:google-calendar")?.status).toBe("skipped");
+    expect(itemsById.get("plugin:google-calendar")?.reason).toBe("not selected for migration");
   });
 
   it("does not apply archive-only Codex migration work after Toggle all off", async () => {
@@ -792,22 +771,15 @@ describe("migrateApplyCommand", () => {
     expect(runtime.log).toHaveBeenCalledWith(
       "No Codex skills or native Codex plugins selected for migration.",
     );
-    expect(result.summary).toMatchObject({ planned: 1, skipped: 2, conflicts: 0 });
-    expect(result.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "skill:alpha",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-        expect.objectContaining({
-          id: "skill:beta",
-          status: "skipped",
-          reason: "not selected for migration",
-        }),
-        expect.objectContaining({ id: "archive:config.toml", status: "planned" }),
-      ]),
-    );
+    expect(result.summary.planned).toBe(1);
+    expect(result.summary.skipped).toBe(2);
+    expect(result.summary.conflicts).toBe(0);
+    const itemsById = new Map(result.items.map((item) => [item.id, item]));
+    expect(itemsById.get("skill:alpha")?.status).toBe("skipped");
+    expect(itemsById.get("skill:alpha")?.reason).toBe("not selected for migration");
+    expect(itemsById.get("skill:beta")?.status).toBe("skipped");
+    expect(itemsById.get("skill:beta")?.reason).toBe("not selected for migration");
+    expect(itemsById.get("archive:config.toml")?.status).toBe("planned");
   });
 
   it("applies Toggle all on unless Toggle all off is also selected", async () => {
