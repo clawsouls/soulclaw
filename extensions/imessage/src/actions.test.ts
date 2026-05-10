@@ -96,9 +96,18 @@ describe("imessage message actions", () => {
       currentChannelId: "chat_guid:iMessage;+;chat0000",
     } as never);
 
-    expect(described?.actions).toEqual(
-      expect.arrayContaining(["react", "reply", "sendWithEffect", "upload-file"]),
-    );
+    expect(described?.actions).toStrictEqual([
+      "react",
+      "edit",
+      "reply",
+      "sendWithEffect",
+      "renameGroup",
+      "setGroupIcon",
+      "addParticipant",
+      "removeParticipant",
+      "leaveGroup",
+      "upload-file",
+    ]);
   });
 
   it("advertises BB-parity actions when private API and selectors are available", () => {
@@ -116,21 +125,19 @@ describe("imessage message actions", () => {
       currentChannelId: "chat_guid:iMessage;+;chat0000",
     } as never);
 
-    expect(described?.actions).toEqual(
-      expect.arrayContaining([
-        "react",
-        "edit",
-        "unsend",
-        "reply",
-        "sendWithEffect",
-        "renameGroup",
-        "setGroupIcon",
-        "addParticipant",
-        "removeParticipant",
-        "leaveGroup",
-        "upload-file",
-      ]),
-    );
+    expect(described?.actions).toStrictEqual([
+      "react",
+      "edit",
+      "unsend",
+      "reply",
+      "sendWithEffect",
+      "renameGroup",
+      "setGroupIcon",
+      "addParticipant",
+      "removeParticipant",
+      "leaveGroup",
+      "upload-file",
+    ]);
   });
 
   it("respects configured action gates", () => {
