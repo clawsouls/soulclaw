@@ -445,7 +445,7 @@ export async function runCli(argv: string[] = process.argv) {
     proxyHandle = null;
     handle?.kill("SIGTERM");
   };
-  if (shouldStartProxyForCli(normalizedArgv)) {
+  if (!isHelpOrVersionInvocation && shouldStartProxyForCli(normalizedArgv)) {
     const config = await readBestEffortCliConfig();
     const unownedPrimary = await resolveUnownedCliPrimary({ argv: normalizedArgv, config });
     if (unownedPrimary) {
@@ -545,7 +545,8 @@ export async function runCli(argv: string[] = process.argv) {
       return;
     }
 
-    const shouldUseCliEnvProxy = shouldStartProxyForCli(normalizedArgv);
+    const shouldUseCliEnvProxy =
+      !isHelpOrVersionInvocation && shouldStartProxyForCli(normalizedArgv);
     const bootstrapProxyBeforeFastPath =
       shouldUseCliEnvProxy && shouldBootstrapCliProxyBeforeFastPath();
     if (
