@@ -66,8 +66,8 @@ import type { PreparedSlackMessage } from "./types.js";
 
 const mentionRegexCache = new WeakMap<SlackMonitorContext, Map<string, RegExp[]>>();
 const SLACK_ANY_MENTION_RE = /<@[^>]+>|<!subteam\^[^>]+>/;
-const SLACK_USER_MENTION_RE = /<@([A-Z0-9]+)(?:\|[^>]+)?>/gi;
-const SLACK_SUBTEAM_MENTION_RE = /<!subteam\^([A-Z0-9]+)(?:\|[^>]+)?>/gi;
+const SLACK_USER_MENTION_RE = /<@([^>|]+)(?:\|[^>]+)?>/g;
+const SLACK_SUBTEAM_MENTION_RE = /<!subteam\^([^>|]+)(?:\|[^>]+)?>/g;
 const SLACK_SUBTEAM_MENTION_MARKER = "<!subteam^";
 
 function resolveCachedMentionRegexes(
