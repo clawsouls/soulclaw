@@ -1177,15 +1177,15 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-allowbots-mentions-mentioned-room");
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        actorUserId: "@observer:matrix-qa.test",
-        driverEventId: "$observer-bot-trigger",
-        reply: {
-          tokenMatched: true,
-        },
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as {
+      actorUserId?: unknown;
+      driverEventId?: unknown;
+      reply?: { tokenMatched?: unknown };
+    };
+    expect(artifacts.actorUserId).toBe("@observer:matrix-qa.test");
+    expect(artifacts.driverEventId).toBe("$observer-bot-trigger");
+    expect(artifacts.reply?.tokenMatched).toBe(true);
 
     expect(createMatrixQaClient).toHaveBeenCalledWith({
       accessToken: "observer-token",
@@ -1216,12 +1216,10 @@ describe("matrix live qa scenarios", () => {
       "matrix-allowbots-mentions-unmentioned-open-room-block",
     );
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        actorUserId: "@observer:matrix-qa.test",
-        driverEventId: "$observer-bot-unmentioned",
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as Record<string, unknown>;
+    expect(artifacts.actorUserId).toBe("@observer:matrix-qa.test");
+    expect(artifacts.driverEventId).toBe("$observer-bot-unmentioned");
 
     expect(sendTextMessage).toHaveBeenCalledWith({
       body: expect.stringContaining("reply with only this exact marker:"),
@@ -1250,12 +1248,10 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-allowbots-self-sender-ignored");
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        actorUserId: "@sut:matrix-qa.test",
-        driverEventId: "$sut-self-trigger",
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as Record<string, unknown>;
+    expect(artifacts.actorUserId).toBe("@sut:matrix-qa.test");
+    expect(artifacts.driverEventId).toBe("$sut-self-trigger");
 
     expect(createMatrixQaClient).toHaveBeenNthCalledWith(1, {
       accessToken: "sut-token",
@@ -1291,12 +1287,10 @@ describe("matrix live qa scenarios", () => {
 
     const scenario = requireMatrixQaScenario("matrix-mxid-prefixed-command-block");
 
-    await expect(runMatrixQaScenario(scenario, matrixQaScenarioContext())).resolves.toMatchObject({
-      artifacts: {
-        actorUserId: "@observer:matrix-qa.test",
-        driverEventId: "$observer-command-trigger",
-      },
-    });
+    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
+    const artifacts = result.artifacts as Record<string, unknown>;
+    expect(artifacts.actorUserId).toBe("@observer:matrix-qa.test");
+    expect(artifacts.driverEventId).toBe("$observer-command-trigger");
 
     expect(createMatrixQaClient).toHaveBeenCalledWith({
       accessToken: "observer-token",
@@ -1307,11 +1301,7 @@ describe("matrix live qa scenarios", () => {
       mentionUserIds: ["@sut:matrix-qa.test"],
       roomId: "!main:matrix-qa.test",
     });
-    expect(waitForOptionalRoomEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        roomId: "!main:matrix-qa.test",
-      }),
-    );
+    expect(waitForOptionalRoomEvent.mock.calls[0]?.[0]?.roomId).toBe("!main:matrix-qa.test");
   });
 
   it("ignores stale Matrix SUT replies before a no-reply trigger", async () => {
