@@ -1278,6 +1278,61 @@ describe("slack prepareSlackMessage inbound contract", () => {
     expect(prepared.ctxPayload.MessageThreadId).toBe("500.000");
   });
 
+  it("records non-main DM last-route metadata on the prepared thread session", async () => {
+    const { storePath } = storeFixture.makeTmpStorePath();
+    const slackCtx = createInboundSlackCtx({
+      cfg: {
+        session: { store: storePath, dmScope: "per-channel-peer" },
+        channels: { slack: { enabled: true, replyToMode: "all" } },
+      } as OpenClawConfig,
+      replyToMode: "all",
+    });
+    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
+
+    const prepared = await prepareMessageWith(
+      slackCtx,
+      createSlackAccount({ replyToMode: "all" }),
+      createSlackMessage({
+        text: "thread reply",
+        ts: "501.000",
+        thread_ts: "500.000",
+      }),
+    );
+
+    assertPrepared(prepared);
+    expect(prepared.route.sessionKey).toBe("agent:main:slack:direct:u1");
+    expect(prepared.ctxPayload.SessionKey).toBe("agent:main:slack:direct:u1:thread:500.000");
+    expect(
+      (prepared.turn.record as { updateLastRoute?: { sessionKey?: string } }).updateLastRoute,
+    ).toEqual(expect.objectContaining({ sessionKey: prepared.ctxPayload.SessionKey }));
+  });
+
+  it("keeps default main-scope DM last-route metadata on the main session", async () => {
+    const slackCtx = createInboundSlackCtx({
+      cfg: {
+        channels: { slack: { enabled: true, replyToMode: "all" } },
+      } as OpenClawConfig,
+      replyToMode: "all",
+    });
+    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
+
+    const prepared = await prepareMessageWith(
+      slackCtx,
+      createSlackAccount({ replyToMode: "all" }),
+      createSlackMessage({
+        text: "thread reply",
+        ts: "601.000",
+        thread_ts: "600.000",
+      }),
+    );
+
+    assertPrepared(prepared);
+    expect(prepared.ctxPayload.SessionKey).toBe("agent:main:main:thread:600.000");
+    expect(
+      (prepared.turn.record as { updateLastRoute?: { sessionKey?: string } }).updateLastRoute,
+    ).toEqual(expect.objectContaining({ sessionKey: "agent:main:main" }));
+  });
+
   it("routes Slack thread replies through runtime conversation bindings", async () => {
     const targetSessionKey = "agent:review:acp:session-67739";
     const binding: SessionBindingRecord = {

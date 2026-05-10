@@ -21,6 +21,7 @@ import {
   recordPendingHistoryEntryIfEnabled,
 } from "openclaw/plugin-sdk/reply-history";
 import type { FinalizedMsgContext } from "openclaw/plugin-sdk/reply-runtime";
+import { resolveInboundLastRouteSessionKey } from "openclaw/plugin-sdk/routing";
 import { logVerbose, shouldLogVerbose } from "openclaw/plugin-sdk/runtime-env";
 import { resolvePinnedMainDmOwnerFromAllowlist } from "openclaw/plugin-sdk/security-runtime";
 import {
@@ -991,7 +992,7 @@ export async function prepareSlackMessage(params: {
       record: {
         updateLastRoute: isDirectMessage
           ? {
-              sessionKey: route.mainSessionKey,
+              sessionKey: resolveInboundLastRouteSessionKey({ route, sessionKey }),
               channel: "slack",
               to: `user:${message.user}`,
               accountId: route.accountId,
