@@ -331,15 +331,13 @@ jobs:
           crabbox --version
           crabbox media preview --help >/dev/null
 
-      - name: Install local proof tools
+      - name: Check local proof tools
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update -y
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg gifsicle
           test -f scripts/e2e/telegram-user-driver.py
+          command -v ffmpeg
           ffmpeg -version >/dev/null
-          gifsicle --version >/dev/null
 
       - name: Ensure agent key exists
         env:

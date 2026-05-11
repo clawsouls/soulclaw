@@ -45,8 +45,8 @@ Required workflow:
    install and build each worktree with the repo's normal `pnpm` commands.
 5. In each worktree, run the real-user Telegram Crabbox proof flow from the
    skill. Use `scripts/e2e/telegram-user-driver.py`, the workflow-provided
-   `crabbox` binary, and the workflow-provided local media tools; do not
-   generate or patch replacement proof tooling during the run. Use the same
+   `crabbox` binary, and the workflow-checked local `ffmpeg`; do not generate,
+   install, or patch replacement proof tooling during the run. Use the same
    proof idea for baseline and candidate. You may iterate and rerun if the
    visual result is not convincing.
 6. Open Telegram Desktop directly to the newest relevant message with the

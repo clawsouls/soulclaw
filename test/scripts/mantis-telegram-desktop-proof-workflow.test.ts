@@ -40,10 +40,11 @@ describe("Mantis Telegram Desktop proof workflow", () => {
     expect(readFileSync(USER_DRIVER, "utf8")).toContain("/usr/local/lib/libtdjson.so");
   });
 
-  it("preinstalls local proof tools before the Codex agent runs", () => {
-    const install = workflowStep("Install local proof tools");
-    expect(install.run).toContain("apt-get install -y ffmpeg gifsicle");
+  it("checks local proof tools before the Codex agent runs", () => {
+    const install = workflowStep("Check local proof tools");
     expect(install.run).toContain("test -f scripts/e2e/telegram-user-driver.py");
+    expect(install.run).toContain("command -v ffmpeg");
+    expect(install.run).not.toContain("apt-get install");
 
     const agent = workflowStep("Run Codex Mantis Telegram agent");
     expect(agent.env?.OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT).toBe(
