@@ -25,9 +25,9 @@ describe("qa scenario catalog", () => {
       "image-generation-roundtrip",
       "character-vibes-gollum",
       "character-vibes-c3po",
-    ].sort();
+    ].toSorted();
     expect(
-      scenarioIds.filter((scenarioId) => requiredScenarioIds.includes(scenarioId)).sort(),
+      scenarioIds.filter((scenarioId) => requiredScenarioIds.includes(scenarioId)).toSorted(),
     ).toEqual(requiredScenarioIds);
     expect(
       pack.scenarios
