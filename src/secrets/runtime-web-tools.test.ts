@@ -332,10 +332,12 @@ function expectDiagnostic(
       candidate.code === fields.code &&
       (fields.path === undefined || candidate.path === fields.path),
   );
-  expect(diagnostic, `${fields.code}${fields.path ? ` ${fields.path}` : ""}`).toBeDefined();
+  if (!diagnostic) {
+    throw new Error(`Expected diagnostic ${fields.code}${fields.path ? ` ${fields.path}` : ""}`);
+  }
   if (fields.messageIncludes) {
-    expect(typeof diagnostic?.message).toBe("string");
-    expect(diagnostic?.message).toContain(fields.messageIncludes);
+    expect(typeof diagnostic.message).toBe("string");
+    expect(diagnostic.message).toContain(fields.messageIncludes);
   }
 }
 
