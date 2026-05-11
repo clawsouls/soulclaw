@@ -107,10 +107,29 @@ describe("Mantis Telegram Desktop proof workflow", () => {
     expect(prepare.run).toContain(
       "OPENCLAW_TELEGRAM_USER_CRABBOX_BIN OPENCLAW_TELEGRAM_USER_CRABBOX_PROVIDER OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT OPENCLAW_TELEGRAM_USER_PROOF_CMD",
     );
+    expect(prepare.run).toContain("MANTIS_CANDIDATE_TRUST");
 
     const prompt = readFileSync(PROMPT, "utf8");
     expect(prompt).toContain("$OPENCLAW_TELEGRAM_USER_PROOF_CMD");
     expect(prompt).toContain("do not run\n   `pnpm qa:telegram-user:crabbox` directly");
+  });
+
+  it("requires explicit maintainer fork approval before accepting fork PR heads", () => {
+    const workflowText = readFileSync(WORKFLOW, "utf8");
+    expect(workflowText).toContain("@openclaw-mantis");
+    expect(workflowText).toContain("fork[-_]ok");
+    expect(workflowText).toContain("ALLOW_FORK_CANDIDATE");
+    expect(workflowText).toContain("maintainer-approved-fork-pr-head");
+    expect(workflowText).toContain(".head.repo.full_name !=");
+
+    const agent = workflowStep("Run Codex Mantis Telegram agent");
+    expect(agent.env?.MANTIS_CANDIDATE_TRUST).toBe(
+      "${{ needs.validate_refs.outputs.candidate_trust }}",
+    );
+
+    const prompt = readFileSync(PROMPT, "utf8");
+    expect(prompt).toContain("MANTIS_CANDIDATE_TRUST");
+    expect(prompt).toContain("untrusted fork code");
   });
 
   it("checks the Telegram user driver before leasing credentials", () => {
@@ -131,5 +150,13 @@ describe("Mantis Telegram Desktop proof workflow", () => {
     expect(defaultProof.indexOf("requireUserDriverScript(opts);")).toBeLessThan(
       defaultProof.indexOf("leaseCredential({ localRoot, opts, root })"),
     );
+  });
+
+  it("does not pass the full workflow environment into the local Telegram SUT", () => {
+    const proofScript = readFileSync(PROOF_SCRIPT, "utf8");
+    expect(proofScript).toContain("function childProcessBaseEnv()");
+    expect(proofScript).toContain("...childProcessBaseEnv()");
+    expect(proofScript).not.toContain("...process.env,\n    OPENAI_API_KEY");
+    expect(proofScript).not.toContain("...process.env,\n    MOCK_PORT");
   });
 });
