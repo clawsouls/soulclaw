@@ -4,8 +4,9 @@ import { collectProviderApiKeys, isApiKeyRateLimitError } from "./live-auth-keys
 import {
   resolveTransientProviderAttempts,
   resolveTransientProviderDelayMs,
+  resolveTransientProviderRetryOptions,
   shouldRetrySameKeyProviderOperation,
-  type TransientProviderRetryOptions,
+  type TransientProviderRetryConfig,
 } from "./provider-operation-retry.js";
 
 type ApiKeyRetryParams = {
@@ -20,7 +21,7 @@ type ExecuteWithApiKeyRotationOptions<T> = {
   execute: (apiKey: string) => Promise<T>;
   shouldRetry?: (params: ApiKeyRetryParams & { message: string }) => boolean;
   onRetry?: (params: ApiKeyRetryParams & { message: string }) => void;
-  transientRetry?: TransientProviderRetryOptions;
+  transientRetry?: TransientProviderRetryConfig;
 };
 
 function dedupeApiKeys(raw: string[]): string[] {
@@ -54,9 +55,10 @@ export async function executeWithApiKeyRotation<T>(
   }
 
   let lastError: unknown;
+  const transientRetry = resolveTransientProviderRetryOptions(params.transientRetry);
   keyLoop: for (let apiKeyIndex = 0; apiKeyIndex < keys.length; apiKeyIndex += 1) {
     const apiKey = keys[apiKeyIndex];
-    const maxOperationAttempts = resolveTransientProviderAttempts(params.transientRetry);
+    const maxOperationAttempts = resolveTransientProviderAttempts(transientRetry);
     for (let attemptNumber = 1; attemptNumber <= maxOperationAttempts; attemptNumber += 1) {
       try {
         return await params.execute(apiKey);
@@ -76,9 +78,9 @@ export async function executeWithApiKeyRotation<T>(
         }
 
         if (
-          !params.transientRetry ||
+          !transientRetry ||
           !shouldRetrySameKeyProviderOperation({
-            options: params.transientRetry,
+            options: transientRetry,
             error,
             message,
             provider: params.provider,
@@ -90,9 +92,9 @@ export async function executeWithApiKeyRotation<T>(
           break keyLoop;
         }
 
-        const delayMs = resolveTransientProviderDelayMs(params.transientRetry, attemptNumber);
-        const sleep = params.transientRetry.sleep ?? sleepWithAbort;
-        await sleep(delayMs, params.transientRetry.signal);
+        const delayMs = resolveTransientProviderDelayMs(transientRetry, attemptNumber);
+        const sleep = transientRetry.sleep ?? sleepWithAbort;
+        await sleep(delayMs, transientRetry.signal);
       }
     }
   }

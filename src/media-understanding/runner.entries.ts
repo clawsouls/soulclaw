@@ -45,12 +45,6 @@ import type {
 import { estimateBase64Size, resolveVideoMaxBase64Bytes } from "./video.js";
 
 export type ProviderRegistry = Map<string, MediaUnderstandingProvider>;
-const TRANSIENT_PROVIDER_RETRY = {
-  attempts: 2,
-  baseDelayMs: 250,
-  maxDelayMs: 1_000,
-} as const;
-
 type ResolveApiKeyForProvider = typeof import("../agents/model-auth.js").resolveApiKeyForProvider;
 type RequireApiKey = typeof import("../agents/model-auth.js").requireApiKey;
 
@@ -654,7 +648,7 @@ export async function runProviderEntry(params: {
     const result = await executeWithApiKeyRotation({
       provider: providerId,
       apiKeys,
-      transientRetry: TRANSIENT_PROVIDER_RETRY,
+      transientRetry: true,
       execute: async (apiKey) =>
         transcribeAudio({
           buffer: media.buffer,
@@ -712,7 +706,7 @@ export async function runProviderEntry(params: {
   const result = await executeWithApiKeyRotation({
     provider: providerId,
     apiKeys,
-    transientRetry: TRANSIENT_PROVIDER_RETRY,
+    transientRetry: true,
     execute: (apiKey) =>
       describeVideo({
         buffer: media.buffer,

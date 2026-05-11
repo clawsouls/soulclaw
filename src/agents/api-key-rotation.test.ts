@@ -46,6 +46,29 @@ describe("executeWithApiKeyRotation", () => {
     expect(sleep).toHaveBeenCalledWith(25, undefined);
   });
 
+  it("uses the shared default transient retry policy when enabled with true", async () => {
+    vi.useFakeTimers();
+    const execute = vi
+      .fn<(apiKey: string) => Promise<string>>()
+      .mockRejectedValueOnce(new Error("Audio transcription failed (HTTP 500)"))
+      .mockResolvedValueOnce("ok");
+
+    try {
+      const result = executeWithApiKeyRotation({
+        provider: "openai",
+        apiKeys: ["key-1"],
+        transientRetry: true,
+        execute,
+      });
+      await vi.advanceTimersByTimeAsync(250);
+      await expect(result).resolves.toBe("ok");
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
   it.each([502, 503, 504])("retries the same key for transient HTTP %i", async (status) => {
     const sleep = vi.fn(async () => undefined);
     const execute = vi

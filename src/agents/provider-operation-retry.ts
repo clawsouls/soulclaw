@@ -21,6 +21,26 @@ export type TransientProviderRetryOptions = {
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
 };
 
+export type TransientProviderRetryConfig = boolean | TransientProviderRetryOptions;
+
+export const DEFAULT_TRANSIENT_PROVIDER_RETRY_OPTIONS = {
+  attempts: 2,
+  baseDelayMs: 250,
+  maxDelayMs: 1_000,
+} as const satisfies TransientProviderRetryOptions;
+
+export function resolveTransientProviderRetryOptions(
+  options?: TransientProviderRetryConfig,
+): TransientProviderRetryOptions | undefined {
+  if (!options) {
+    return undefined;
+  }
+  if (options === true) {
+    return DEFAULT_TRANSIENT_PROVIDER_RETRY_OPTIONS;
+  }
+  return options;
+}
+
 function readErrorName(error: unknown): string | undefined {
   if (typeof error !== "object" || error === null) {
     return undefined;
