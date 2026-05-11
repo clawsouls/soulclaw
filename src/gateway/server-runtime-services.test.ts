@@ -185,18 +185,16 @@ describe("server-runtime-services", () => {
     expect(services.heartbeatRunner).toBe(hoisted.heartbeatRunner);
     await vi.advanceTimersByTimeAsync(1_250);
     await vi.dynamicImportSettled();
-    expect(hoisted.recoverPendingDeliveries).toHaveBeenCalledWith(
-      expect.objectContaining({
-        deliver: hoisted.deliverOutboundPayloads,
-        cfg: {},
-      }),
-    );
-    expect(hoisted.recoverPendingRestartContinuationDeliveries).toHaveBeenCalledWith(
-      expect.objectContaining({
-        deps: {},
-        maxEnqueuedAt: 123,
-      }),
-    );
+    expect(hoisted.recoverPendingDeliveries).toHaveBeenCalledWith({
+      deliver: hoisted.deliverOutboundPayloads,
+      cfg: {},
+      log: expect.any(Object),
+    });
+    expect(hoisted.recoverPendingRestartContinuationDeliveries).toHaveBeenCalledWith({
+      deps: {},
+      maxEnqueuedAt: 123,
+      log: expect.any(Object),
+    });
   });
 
   it("can defer cron startup while activating other scheduled services", async () => {
