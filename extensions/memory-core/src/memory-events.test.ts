@@ -62,15 +62,11 @@ describe("memory host event journal integration", () => {
       "memory.recall.recorded",
       "memory.promotion.applied",
     ]);
-    expect(events[0]).toMatchObject({
-      type: "memory.recall.recorded",
-      resultCount: 1,
-      query: "alpha memory",
-    });
-    expect(events[1]).toMatchObject({
-      type: "memory.promotion.applied",
-      applied: 1,
-    });
+    expect(events[0]?.type).toBe("memory.recall.recorded");
+    expect(events[0]?.resultCount).toBe(1);
+    expect(events[0]?.query).toBe("alpha memory");
+    expect(events[1]?.type).toBe("memory.promotion.applied");
+    expect(events[1]?.applied).toBe(1);
   });
 
   it("records dreaming completion events when phase artifacts are written", async () => {
@@ -93,11 +89,9 @@ describe("memory host event journal integration", () => {
     await expect(fs.readFile(written.inlinePath ?? "", "utf8")).resolves.toContain("- staged note");
     await expect(fs.readFile(written.reportPath ?? "", "utf8")).resolves.toContain("- second note");
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({
-      type: "memory.dream.completed",
-      phase: "light",
-      lineCount: 2,
-      storageMode: "both",
-    });
+    expect(events[0]?.type).toBe("memory.dream.completed");
+    expect(events[0]?.phase).toBe("light");
+    expect(events[0]?.lineCount).toBe(2);
+    expect(events[0]?.storageMode).toBe("both");
   });
 });
