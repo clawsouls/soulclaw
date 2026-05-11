@@ -526,7 +526,9 @@ function expectRegistryErrorDiagnostic(params: {
       entry.pluginId === params.pluginId &&
       entry.message === params.message,
   );
-  expect(diagnostic, params.message).toBeDefined();
+  if (!diagnostic) {
+    throw new Error(`Expected registry error diagnostic: ${params.message}`);
+  }
 }
 
 function expectDiagnosticContaining(params: {
@@ -541,7 +543,9 @@ function expectDiagnosticContaining(params: {
       (!params.pluginId || entry.pluginId === params.pluginId) &&
       entry.message.includes(params.message),
   );
-  expect(diagnostic, params.message).toBeDefined();
+  if (!diagnostic) {
+    throw new Error(`Expected diagnostic containing: ${params.message}`);
+  }
 }
 
 function expectNoDiagnosticContaining(params: {
@@ -2160,7 +2164,9 @@ module.exports = { id: "throws-after-import", register() {} };`,
         entry.pluginId === "bad-harness" &&
         entry.message === 'agent harness "broken" registration missing required runtime methods',
     );
-    expect(diagnostic).toBeDefined();
+    if (!diagnostic) {
+      throw new Error("Expected bad-harness runtime methods diagnostic");
+    }
   });
 
   it("does not register internal hooks globally during non-activating loads", () => {
