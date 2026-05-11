@@ -78,7 +78,7 @@ async function flushAsyncWarmup() {
     return;
   }
   await Promise.resolve();
-  await new Promise((r) => setTimeout(r, 0));
+  await new Promise<void>((resolve) => setImmediate(resolve));
   await Promise.resolve();
 }
 

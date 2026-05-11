@@ -808,7 +808,7 @@ export async function performGatewaySessionReset(params: {
     sessionId: next.sessionId,
     resumedFrom: oldSessionId,
     storePath,
-    sessionFile: next.sessionFile as string | undefined,
+    sessionFile: next.sessionFile,
     agentId: target.agentId,
   });
   if (hadExistingEntry) {

@@ -67,6 +67,9 @@ vi.mock("../logging/subsystem.js", () => ({
 const { createGatewayCloseHandler } = await import("./server-close.js");
 type GatewayCloseHandlerParams = Parameters<typeof createGatewayCloseHandler>[0];
 type GatewayCloseClient = GatewayCloseHandlerParams["clients"] extends Set<infer T> ? T : never;
+type DrainActiveSessionsForShutdown = NonNullable<
+  GatewayCloseHandlerParams["drainActiveSessionsForShutdown"]
+>;
 
 function createGatewayCloseTestDeps(
   overrides: Partial<GatewayCloseHandlerParams> = {},
@@ -187,7 +190,7 @@ describe("createGatewayCloseHandler", () => {
   });
 
   it("drains the active-session tracker with reason=shutdown on SIGTERM/SIGINT close", async () => {
-    const drainActiveSessionsForShutdown = vi.fn(async () => ({
+    const drainActiveSessionsForShutdown = vi.fn<DrainActiveSessionsForShutdown>(async () => ({
       emittedSessionIds: ["session-A", "session-B"],
       timedOut: false,
     }));
@@ -204,7 +207,7 @@ describe("createGatewayCloseHandler", () => {
   });
 
   it("drains the active-session tracker with reason=restart when restartExpectedMs is set", async () => {
-    const drainActiveSessionsForShutdown = vi.fn(async () => ({
+    const drainActiveSessionsForShutdown = vi.fn<DrainActiveSessionsForShutdown>(async () => ({
       emittedSessionIds: ["session-A"],
       timedOut: false,
     }));
@@ -221,7 +224,7 @@ describe("createGatewayCloseHandler", () => {
   });
 
   it("records a warning and continues shutdown when the session-end drain reports a timeout", async () => {
-    const drainActiveSessionsForShutdown = vi.fn(async () => ({
+    const drainActiveSessionsForShutdown = vi.fn<DrainActiveSessionsForShutdown>(async () => ({
       emittedSessionIds: ["session-A"],
       timedOut: true,
     }));
