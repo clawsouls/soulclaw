@@ -233,16 +233,16 @@ describe("gateway plugin hot reload handlers", () => {
       }
     }
 
-    expect(reloadPlugins).toHaveBeenCalledWith(
-      expect.objectContaining({
-        nextConfig: {
-          plugins: {
-            enabled: false,
-          },
-        },
-        changedPaths: ["plugins.enabled"],
-      }),
-    );
+    const [reloadParams] = reloadPlugins.mock.calls.at(-1) ?? [];
+    const reloadParamsRecord = reloadParams as
+      | { nextConfig?: unknown; changedPaths?: unknown }
+      | undefined;
+    expect(reloadParamsRecord?.nextConfig).toEqual({
+      plugins: {
+        enabled: false,
+      },
+    });
+    expect(reloadParamsRecord?.changedPaths).toEqual(["plugins.enabled"]);
     expect(stopChannel).toHaveBeenCalledWith("discord");
     expect(startChannel).not.toHaveBeenCalled();
     expect(events).toEqual(["reload:start", "stop", "registry:replace"]);

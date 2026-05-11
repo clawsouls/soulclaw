@@ -110,9 +110,10 @@ describe("GatewayClient", () => {
     const client = new GatewayClient({ url: "ws://127.0.0.1:1" });
     client.start();
     const last = wsMockState.last as { url: unknown; opts: unknown } | null;
+    const opts = last?.opts as { maxPayload?: number } | undefined;
 
     expect(last?.url).toBe("ws://127.0.0.1:1");
-    expect(last?.opts).toEqual(expect.objectContaining({ maxPayload: 25 * 1024 * 1024 }));
+    expect(opts?.maxPayload).toBe(25 * 1024 * 1024);
   });
 
   test("does not pass an explicit direct agent for loopback control-plane WebSocket connections", () => {
@@ -621,16 +622,13 @@ describe("gateway broadcaster", () => {
       broadcast("chat", { sessionKey: "agent:main:main", message: "secret" }, { dropIfSlow: true });
       broadcast("heartbeat", { ts: 1 });
 
-      expect(events).toContainEqual(
-        expect.objectContaining({
-          type: "payload.large",
-          surface: "gateway.ws.outbound_buffer",
-          action: "rejected",
-          bytes: MAX_BUFFERED_BYTES + 1,
-          limitBytes: MAX_BUFFERED_BYTES,
-          reason: "ws_send_buffer_drop",
-        }),
-      );
+      const payloadEvent = events.find((event) => event.type === "payload.large");
+      expect(payloadEvent?.type).toBe("payload.large");
+      expect(payloadEvent?.surface).toBe("gateway.ws.outbound_buffer");
+      expect(payloadEvent?.action).toBe("rejected");
+      expect(payloadEvent?.bytes).toBe(MAX_BUFFERED_BYTES + 1);
+      expect(payloadEvent?.limitBytes).toBe(MAX_BUFFERED_BYTES);
+      expect(payloadEvent?.reason).toBe("ws_send_buffer_drop");
       expect(
         events.reduce((count, event) => count + (event.type === "payload.large" ? 1 : 0), 0),
       ).toBe(1);
