@@ -320,7 +320,9 @@ describe("cli session history", () => {
           (record.__openclaw as { cliSessionId?: unknown } | undefined)?.cliSessionId === sessionId
         );
       });
-      expect(importedUser).toBeDefined();
+      if (!importedUser) {
+        throw new Error("Expected imported user CLI history message");
+      }
     });
   });
 
