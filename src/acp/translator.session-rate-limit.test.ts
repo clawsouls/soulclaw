@@ -115,7 +115,7 @@ async function expectOversizedPromptRejected(params: { sessionId: string; text: 
   await expect(agent.prompt(createPromptRequest(params.sessionId, params.text))).rejects.toThrow(
     /maximum allowed size/i,
   );
-  expect(request).not.toHaveBeenCalledWith("chat.send", expect.anything(), expect.anything());
+  expect(request.mock.calls.some(([method]) => method === "chat.send")).toBe(false);
   const session = sessionStore.getSession(params.sessionId);
   expect(session?.activeRunId).toBeNull();
   expect(session?.abortController).toBeNull();
@@ -727,7 +727,7 @@ describe("acp setSessionConfigOption bridge behavior", () => {
     );
     expect(Array.isArray(result.configOptions)).toBe(true);
 
-    expect(request).not.toHaveBeenCalledWith("sessions.patch", expect.anything());
+    expect(request.mock.calls.some(([method]) => method === "sessions.patch")).toBe(false);
 
     sessionStore.clearAllSessionsForTest();
   });

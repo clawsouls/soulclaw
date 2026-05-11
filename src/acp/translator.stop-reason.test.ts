@@ -227,17 +227,19 @@ describe("acp translator stop reason mapping", () => {
   it("rechecks accepted prompts at the disconnect deadline after reconnect timeout", async () => {
     vi.useFakeTimers();
     try {
+      let chatRunId: string | undefined;
+      const agentWaitParams: Array<Record<string, unknown> | undefined> = [];
       let waitCount = 0;
       const request = vi.fn(async (method: string, params?: Record<string, unknown>) => {
         if (method === "chat.send") {
+          const runId = params?.idempotencyKey;
+          expect(typeof runId).toBe("string");
+          chatRunId = runId;
           return {};
         }
         if (method === "agent.wait") {
           waitCount += 1;
-          expect(params).toEqual({
-            runId: expect.any(String),
-            timeoutMs: 0,
-          });
+          agentWaitParams.push(params);
           return waitCount === 1 ? { status: "timeout" } : { status: "ok" };
         }
         return {};
@@ -256,6 +258,16 @@ describe("acp translator stop reason mapping", () => {
 
       await vi.advanceTimersByTimeAsync(1);
       await expect(promptPromise).resolves.toEqual({ stopReason: "end_turn" });
+      expect(agentWaitParams).toEqual([
+        {
+          runId: requireValue(chatRunId, "chat.send run id"),
+          timeoutMs: 0,
+        },
+        {
+          runId: requireValue(chatRunId, "chat.send run id"),
+          timeoutMs: 0,
+        },
+      ]);
     } finally {
       vi.useRealTimers();
     }
