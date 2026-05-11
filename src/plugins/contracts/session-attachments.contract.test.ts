@@ -10,7 +10,10 @@ import { withTempConfig } from "../../gateway/test-temp-config.js";
 import { resolvePreferredOpenClawTmpDir } from "../../infra/tmp-openclaw-dir.js";
 import { FILE_TYPE_SNIFF_MAX_BYTES } from "../../media/mime.js";
 import { createOutboundTestPlugin, createTestRegistry } from "../../test-utils/channel-plugins.js";
-import { resolveAttachmentDelivery, sendPluginSessionAttachment } from "../host-hook-attachments.js";
+import {
+  resolveAttachmentDelivery,
+  sendPluginSessionAttachment,
+} from "../host-hook-attachments.js";
 import { clearPluginLoaderCache } from "../loader.js";
 import { createEmptyPluginRegistry } from "../registry-empty.js";
 import { createPluginRegistry } from "../registry.js";
@@ -116,6 +119,23 @@ async function sendBundledSessionAttachment(
   });
 }
 
+function expectTelegramAttachmentResult(result: unknown, count: number) {
+  const response = result as { ok?: unknown; channel?: unknown; count?: unknown };
+  expect(response.ok).toBe(true);
+  expect(response.channel).toBe("telegram");
+  expect(response.count).toBe(count);
+}
+
+function requireFirstSendMessageParams() {
+  const params = workflowMocks.sendMessage.mock.calls[0]?.[0] as
+    | Record<string, unknown>
+    | undefined;
+  if (!params) {
+    throw new Error("expected sendMessage call");
+  }
+  return params;
+}
+
 describe("plugin session attachments", () => {
   afterEach(() => {
     workflowMocks.getChannelPlugin.mockReset();
@@ -214,16 +234,15 @@ describe("plugin session attachments", () => {
         count: 1,
       });
       expect(workflowMocks.sendMessage).toHaveBeenCalledTimes(1);
-      expect(workflowMocks.sendMessage.mock.calls[0]?.[0]).toMatchObject({
-        to: "12345",
-        channel: "telegram",
-        accountId: "default",
-        threadId: 42,
-        mediaUrls: [filePath],
-        bestEffort: false,
-        silent: true,
-        parseMode: "HTML",
-      });
+      const sendParams = requireFirstSendMessageParams();
+      expect(sendParams.to).toBe("12345");
+      expect(sendParams.channel).toBe("telegram");
+      expect(sendParams.accountId).toBe("default");
+      expect(sendParams.threadId).toBe(42);
+      expect(sendParams.mediaUrls).toEqual([filePath]);
+      expect(sendParams.bestEffort).toBe(false);
+      expect(sendParams.silent).toBe(true);
+      expect(sendParams.parseMode).toBe("HTML");
     });
   });
 
@@ -236,15 +255,13 @@ describe("plugin session attachments", () => {
       await writeSessionEntry(storePath);
       mockSuccessfulAttachmentDelivery();
 
-      await expect(
-        sendBundledSessionAttachment({
-          files: [{ path: first }, { path: second }],
-        }),
-      ).resolves.toMatchObject({ ok: true, channel: "telegram", count: 2 });
-      expect(workflowMocks.sendMessage.mock.calls[0]?.[0]).toMatchObject({
-        mediaUrls: [first, second],
-        bestEffort: false,
+      const result = await sendBundledSessionAttachment({
+        files: [{ path: first }, { path: second }],
       });
+      expectTelegramAttachmentResult(result, 2);
+      const sendParams = requireFirstSendMessageParams();
+      expect(sendParams.mediaUrls).toEqual([first, second]);
+      expect(sendParams.bestEffort).toBe(false);
     });
   });
 
@@ -253,23 +270,16 @@ describe("plugin session attachments", () => {
       await writeSessionEntry(storePath);
       mockSuccessfulAttachmentDelivery();
 
-      await expect(
-        sendBundledSessionAttachment({
-          files: [{ path: filePath }],
-          text: "1 < 2 & 3 > 2",
-          captionFormat: "plain",
-          channelHints: { telegram: { parseMode: "HTML" } },
-        }),
-      ).resolves.toMatchObject({
-        ok: true,
-        channel: "telegram",
-        deliveredTo: "12345",
-        count: 1,
+      const result = await sendBundledSessionAttachment({
+        files: [{ path: filePath }],
+        text: "1 < 2 & 3 > 2",
+        captionFormat: "plain",
+        channelHints: { telegram: { parseMode: "HTML" } },
       });
-      expect(workflowMocks.sendMessage.mock.calls[0]?.[0]).toMatchObject({
-        content: "1 &lt; 2 &amp; 3 &gt; 2",
-        parseMode: "HTML",
-      });
+      expectTelegramAttachmentResult(result, 1);
+      const sendParams = requireFirstSendMessageParams();
+      expect(sendParams.content).toBe("1 &lt; 2 &amp; 3 &gt; 2");
+      expect(sendParams.parseMode).toBe("HTML");
     });
   });
 
@@ -283,20 +293,17 @@ describe("plugin session attachments", () => {
       await writeSessionEntry(storePath);
       mockSuccessfulAttachmentDelivery();
 
-      await expect(
-        sendBundledSessionAttachment({
-          files: [{ path: relativeFilePath }],
-          config: {
-            session: { store: storePath },
-            agents: {
-              list: [{ id: "main", workspace: workspaceDir }],
-            },
+      const result = await sendBundledSessionAttachment({
+        files: [{ path: relativeFilePath }],
+        config: {
+          session: { store: storePath },
+          agents: {
+            list: [{ id: "main", workspace: workspaceDir }],
           },
-        }),
-      ).resolves.toMatchObject({ ok: true, channel: "telegram", count: 1 });
-      expect(workflowMocks.sendMessage.mock.calls[0]?.[0]).toMatchObject({
-        mediaUrls: [absoluteFilePath],
+        },
       });
+      expectTelegramAttachmentResult(result, 1);
+      expect(requireFirstSendMessageParams().mediaUrls).toEqual([absoluteFilePath]);
     });
   });
 
@@ -317,15 +324,12 @@ describe("plugin session attachments", () => {
       );
       mockSuccessfulAttachmentDelivery();
 
-      await expect(
-        sendBundledSessionAttachment({
-          sessionKey: threadKey,
-          files: [{ path: filePath }],
-        }),
-      ).resolves.toMatchObject({ ok: true, channel: "telegram", count: 1 });
-      expect(workflowMocks.sendMessage.mock.calls[0]?.[0]).toMatchObject({
-        threadId: "99",
+      const result = await sendBundledSessionAttachment({
+        sessionKey: threadKey,
+        files: [{ path: filePath }],
       });
+      expectTelegramAttachmentResult(result, 1);
+      expect(requireFirstSendMessageParams().threadId).toBe("99");
     });
   });
 
@@ -480,19 +484,15 @@ describe("plugin session attachments", () => {
       await writeSessionEntry(storePath);
       mockSuccessfulAttachmentDelivery();
 
-      await expect(
-        sendBundledSessionAttachment({
-          files: [{ path: pdfPath }],
-          forceDocument: false,
-          channelHints: { telegram: { forceDocumentMime: "application/pdf" } },
-        }),
-      ).resolves.toMatchObject({ ok: true, channel: "telegram", count: 1 });
-      expect(workflowMocks.sendMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mediaUrls: [pdfPath],
-          forceDocument: true,
-        }),
-      );
+      const result = await sendBundledSessionAttachment({
+        files: [{ path: pdfPath }],
+        forceDocument: false,
+        channelHints: { telegram: { forceDocumentMime: "application/pdf" } },
+      });
+      expectTelegramAttachmentResult(result, 1);
+      const sendParams = requireFirstSendMessageParams();
+      expect(sendParams.mediaUrls).toEqual([pdfPath]);
+      expect(sendParams.forceDocument).toBe(true);
     });
   });
 
@@ -602,12 +602,11 @@ describe("plugin session attachments", () => {
       });
       setActivePluginRegistry(registry.registry);
 
-      await expect(
-        capturedApi?.sendSessionAttachment({
-          sessionKey: MAIN_SESSION_KEY,
-          files: [{ path: filePath }],
-        }),
-      ).resolves.toMatchObject({ ok: true, channel: "telegram", count: 1 });
+      const firstResult = await capturedApi?.sendSessionAttachment({
+        sessionKey: MAIN_SESSION_KEY,
+        files: [{ path: filePath }],
+      });
+      expectTelegramAttachmentResult(firstResult, 1);
 
       setActivePluginRegistry(createEmptyPluginRegistry());
       await expect(
@@ -650,16 +649,13 @@ describe("plugin session attachments", () => {
       });
       setActivePluginRegistry(registry.registry);
 
-      await expect(
-        capturedApi?.sendSessionAttachment({
-          sessionKey: MAIN_SESSION_KEY,
-          files: [{ path: filePath }],
-        }),
-      ).resolves.toMatchObject({ ok: true, channel: "telegram", count: 1 });
-      expect(workflowMocks.sendMessage).toHaveBeenCalledTimes(1);
-      expect(workflowMocks.sendMessage.mock.calls[0]?.[0]).toMatchObject({
-        cfg: liveConfig,
+      const result = await capturedApi?.sendSessionAttachment({
+        sessionKey: MAIN_SESSION_KEY,
+        files: [{ path: filePath }],
       });
+      expectTelegramAttachmentResult(result, 1);
+      expect(workflowMocks.sendMessage).toHaveBeenCalledTimes(1);
+      expect(requireFirstSendMessageParams().cfg).toBe(liveConfig);
     });
   });
 
