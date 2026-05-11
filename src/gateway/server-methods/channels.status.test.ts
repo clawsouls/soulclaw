@@ -45,8 +45,7 @@ vi.mock("../../infra/channel-activity.js", () => ({
 import { channelsHandlers } from "./channels.js";
 
 function getSuccessPayload(respond: ReturnType<typeof vi.fn>): Record<string, unknown> {
-  expect(respond).toHaveBeenCalledWith(true, expect.any(Object), undefined);
-  return respond.mock.calls[0]?.[1] as Record<string, unknown>;
+  return requireRespondPayload(respond);
 }
 
 function createOptions(
@@ -209,21 +208,16 @@ describe("channelsHandlers channels.status", () => {
     );
 
     const payload = getSuccessPayload(respond);
-    const channelAccounts = payload.channelAccounts as Record<
-      string,
-      Array<Record<string, unknown>>
-    >;
-    expect(channelAccounts.whatsapp).toEqual([
-      expect.objectContaining({
-        accountId: "default",
-        lastError: expect.stringContaining("probe failed"),
-        lastProbeAt: expect.any(Number),
-        probe: expect.objectContaining({
-          ok: false,
-          error: expect.stringContaining("probe failed"),
-        }),
-      }),
-    ]);
+    const channelAccounts = requireRecord(payload.channelAccounts);
+    expect(Array.isArray(channelAccounts.whatsapp)).toBe(true);
+    const [whatsappAccount] = channelAccounts.whatsapp as unknown[];
+    const account = requireRecord(whatsappAccount);
+    expect(account.accountId).toBe("default");
+    expect(String(account.lastError)).toContain("probe failed");
+    expect(typeof account.lastProbeAt).toBe("number");
+    const accountProbe = requireRecord(account.probe);
+    expect(accountProbe.ok).toBe(false);
+    expect(String(accountProbe.error)).toContain("probe failed");
   });
 
   it("returns a partial snapshot when a channel probe exceeds the status budget", async () => {
@@ -295,15 +289,17 @@ describe("channelsHandlers channels.status", () => {
     );
 
     const payload = getSuccessPayload(respond);
-    expect(payload.channels).toEqual({
-      whatsapp: expect.objectContaining({
-        configured: true,
-        lastError: expect.stringContaining("summary failed"),
-      }),
-    });
-    expect(payload.channelAccounts).toEqual({
-      whatsapp: [expect.objectContaining({ accountId: "default", configured: true })],
-    });
+    const channels = requireRecord(payload.channels);
+    const whatsapp = requireRecord(channels.whatsapp);
+    expect(whatsapp.configured).toBe(true);
+    expect(String(whatsapp.lastError)).toContain("summary failed");
+
+    const channelAccounts = requireRecord(payload.channelAccounts);
+    expect(Array.isArray(channelAccounts.whatsapp)).toBe(true);
+    const [whatsappAccount] = channelAccounts.whatsapp as unknown[];
+    const account = requireRecord(whatsappAccount);
+    expect(account.accountId).toBe("default");
+    expect(account.configured).toBe(true);
   });
 
   it("annotates unhealthy channel snapshots and includes event-loop health", async () => {
