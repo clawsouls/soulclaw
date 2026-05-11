@@ -141,8 +141,15 @@ describe("backup commands", () => {
     expect(path.relative(included.sourcePath, skipped.sourcePath).startsWith("..")).toBe(false);
   }
 
-  function expectOnlyAssetKind(assets: Array<{ kind: string }>, kind: string) {
-    expect(assets).toStrictEqual([expect.objectContaining({ kind })]);
+  function expectOnlyAssetKind(assets: BackupAsset[], kind: BackupAsset["kind"]) {
+    expect(assets).toStrictEqual([
+      {
+        kind,
+        sourcePath: expect.any(String),
+        displayPath: expect.any(String),
+        archivePath: expect.stringContaining("/payload/"),
+      },
+    ]);
   }
 
   it("collapses default config, credentials, and workspace into the state backup root", async () => {
