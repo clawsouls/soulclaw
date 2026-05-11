@@ -25,16 +25,17 @@ describe("matrix resolver adapter", () => {
       runtime: createNonExitingRuntimeEnv(),
     });
 
-    expect(resolveMatrixTargetsMock).toHaveBeenCalledWith({
+    expect(resolveMatrixTargetsMock).toHaveBeenCalledTimes(1);
+    const forwarded = resolveMatrixTargetsMock.mock.calls[0]?.[0];
+    expect(forwarded).toEqual({
       cfg: { channels: { matrix: {} } },
       accountId: "ops",
       inputs: ["Alice"],
       kind: "user",
-      runtime: expect.objectContaining({
-        log: expect.any(Function),
-        error: expect.any(Function),
-        exit: expect.any(Function),
-      }),
+      runtime: forwarded?.runtime,
     });
+    expect(forwarded?.runtime.log).toBeTypeOf("function");
+    expect(forwarded?.runtime.error).toBeTypeOf("function");
+    expect(forwarded?.runtime.exit).toBeTypeOf("function");
   });
 });
