@@ -254,13 +254,12 @@ describe("createAnthropicVertexStreamFn", () => {
 
     void streamFn(model, { messages: [] }, { maxTokens: Number.NaN });
 
-    expect(streamAnthropicMock).toHaveBeenCalledWith(
-      model,
-      { messages: [] },
-      expect.not.objectContaining({
-        maxTokens: expect.anything(),
-      }),
-    );
+    expect(streamAnthropicMock).toHaveBeenCalledTimes(1);
+    const [calledModel, payload, transportOptions] = streamAnthropicMock.mock.calls[0] ?? [];
+    expect(calledModel).toBe(model);
+    expect(payload).toEqual({ messages: [] });
+    expect(transportOptions).toBeTypeOf("object");
+    expect(Object.hasOwn(transportOptions as object, "maxTokens")).toBe(false);
   });
 });
 
