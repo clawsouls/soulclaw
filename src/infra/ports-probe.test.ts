@@ -44,11 +44,18 @@ describe("tryListenOnPort", () => {
 
   it("rejects when the port is already in use", async () => {
     await withListeningServer(async (address) => {
-      await expect(
-        tryListenOnPort({ port: address.port, host: "127.0.0.1" }),
-      ).rejects.toMatchObject({
-        code: "EADDRINUSE",
-      });
+      let rejection: NodeJS.ErrnoException | undefined;
+      try {
+        await tryListenOnPort({ port: address.port, host: "127.0.0.1" });
+      } catch (err) {
+        rejection = err as NodeJS.ErrnoException;
+      }
+
+      expect(rejection).toBeInstanceOf(Error);
+      expect(rejection?.code).toBe("EADDRINUSE");
+      expect(rejection?.address).toBe("127.0.0.1");
+      expect(rejection?.port).toBe(address.port);
+      expect(rejection?.syscall).toBe("listen");
     });
   });
 });
