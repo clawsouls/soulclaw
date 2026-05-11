@@ -53,7 +53,11 @@ function expectSingleProfileCredential(
       profileId,
     }),
   ]);
-  return profiles[0]?.credential as Record<string, unknown>;
+  const credential = profiles[0]?.credential;
+  if (!credential) {
+    throw new Error(`Expected credential for profile ${profileId}`);
+  }
+  return credential as Record<string, unknown>;
 }
 
 function expectSingleProfile(
@@ -66,16 +70,22 @@ function expectSingleProfile(
       profileId,
     }),
   ]);
-  return profiles[0];
+  const profile = profiles[0];
+  if (!profile?.credential) {
+    throw new Error(`Expected credential for profile ${profileId}`);
+  }
+  return profile;
 }
 
 function expectCredentialFields(
   credential: Record<string, unknown> | undefined,
   expected: Record<string, unknown>,
 ) {
-  expect(credential).toBeTruthy();
+  if (!credential) {
+    throw new Error("Expected credential");
+  }
   for (const [key, value] of Object.entries(expected)) {
-    expect(credential?.[key]).toBe(value);
+    expect(credential[key]).toBe(value);
   }
 }
 

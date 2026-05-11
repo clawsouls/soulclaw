@@ -25,7 +25,6 @@ function getDeliveredInternalEvents(): Array<Record<string, unknown>> {
   const params = announceDeliveryMocks.deliverSubagentAnnouncement.mock.calls[0]?.[0] as
     | { internalEvents?: unknown }
     | undefined;
-  expect(params?.internalEvents).toBeTruthy();
   if (!Array.isArray(params?.internalEvents)) {
     throw new Error("Expected delivered internal events");
   }

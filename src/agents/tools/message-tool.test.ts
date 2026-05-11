@@ -243,7 +243,6 @@ function expectStringSchema(
     description?: string;
   },
 ) {
-  expect(schema).toBeTruthy();
   if (!schema || typeof schema !== "object") {
     throw new Error("Expected string schema");
   }
