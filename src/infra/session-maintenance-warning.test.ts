@@ -1,6 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+type DeliveryCall = {
+  channel?: string;
+  to?: string;
+  session?: {
+    agentId?: string;
+    key?: string;
+  };
+};
+
 const mocks = vi.hoisted(() => ({
   resolveSessionAgentId: vi.fn(() => "agent-from-key"),
   deliveryContextFromSession: vi.fn(() => ({
@@ -11,7 +20,7 @@ const mocks = vi.hoisted(() => ({
   })),
   normalizeMessageChannel: vi.fn((channel: string) => channel),
   isDeliverableMessageChannel: vi.fn(() => true),
-  deliverOutboundPayloads: vi.fn(async () => []),
+  deliverOutboundPayloads: vi.fn(async (_params: DeliveryCall) => []),
   enqueueSystemEvent: vi.fn(),
 }));
 
