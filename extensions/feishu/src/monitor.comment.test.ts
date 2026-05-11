@@ -909,7 +909,7 @@ describe("drive.notice.comment_add_v1 monitor handler", () => {
         "default",
       );
       expect(lastRuntime?.error).toHaveBeenCalledWith(
-        expect.stringContaining("error handling drive comment notice: Error: post-send failure"),
+        "feishu[default]: error handling drive comment notice: Error: post-send failure",
       );
     });
     const [recordedMessageId, recordedNamespace, recordedLogger] =
@@ -936,9 +936,7 @@ describe("drive.notice.comment_add_v1 monitor handler", () => {
         "default",
       );
       expect(lastRuntime?.error).toHaveBeenCalledWith(
-        expect.stringContaining(
-          "error handling drive comment notice: FeishuRetryableSyntheticEventError: retry me",
-        ),
+        "feishu[default]: error handling drive comment notice: FeishuRetryableSyntheticEventError: retry me",
       );
     });
   });
