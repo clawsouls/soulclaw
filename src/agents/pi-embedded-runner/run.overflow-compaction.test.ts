@@ -250,10 +250,12 @@ describe("runEmbeddedPiAgent overflow compaction trigger routing", () => {
     });
 
     expect(mockedEnsureAuthProfileStore).not.toHaveBeenCalled();
-    expect(mockedEnsureAuthProfileStoreWithoutExternalProfiles).toHaveBeenCalledWith(
-      expect.stringMatching(/[/\\]\.openclaw[/\\]agents[/\\]main[/\\]agent$/),
-      { allowKeychainPrompt: false },
-    );
+    const authStoreCall = mockedEnsureAuthProfileStoreWithoutExternalProfiles.mock.calls[0];
+    expect(typeof authStoreCall?.[0]).toBe("string");
+    expect(
+      String(authStoreCall?.[0]).replaceAll("\\", "/").endsWith("/.openclaw/agents/main/agent"),
+    ).toBe(true);
+    expect(authStoreCall?.[1]).toEqual({ allowKeychainPrompt: false });
   });
 
   it("forwards optional attempt params and the runtime plan into one attempt call", async () => {
