@@ -651,7 +651,9 @@ describe("buildGatewayCronService", () => {
         ?.sessionKey;
       const wakeOpts = wakeCall?.[0] as { agentId?: string; sessionKey?: string } | undefined;
 
-      expect(enqueueSessionKey).toBeDefined();
+      if (!enqueueSessionKey) {
+        throw new Error("Expected enqueue session key");
+      }
       expect(enqueueSessionKey).toMatch(/^agent:ops:/);
       expect(wakeOpts?.agentId).toBe("ops");
       expect(wakeOpts?.sessionKey).toMatch(/^agent:ops:/);
