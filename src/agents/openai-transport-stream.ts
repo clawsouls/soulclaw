@@ -241,7 +241,7 @@ function responseInputRoles(input: unknown): string {
       }
     }
   }
-  return [...roles].sort().join(",");
+  return [...roles].toSorted().join(",");
 }
 
 function readResponsesToolDisplayName(tool: unknown): string {
@@ -296,7 +296,10 @@ function assertCodeModeResponsesToolSurface(payload: unknown): void {
   if (!isRecord(payload) || !Array.isArray(payload.tools)) {
     throw new Error("Code mode payload tool surface violation: expected exec,wait; got no tools");
   }
-  const names = payload.tools.map(responsesPayloadToolName).filter(Boolean).sort();
+  const names = payload.tools
+    .map(responsesPayloadToolName)
+    .filter((name): name is string => typeof name === "string" && name.length > 0)
+    .toSorted((a, b) => a.localeCompare(b));
   if (names.length === 2 && names[0] === "exec" && names[1] === "wait") {
     return;
   }
@@ -340,7 +343,7 @@ function summarizeResponsesPayload(params: unknown): string {
       ? (record.text as Record<string, unknown>)
       : undefined;
   const parts = [
-    `fields=${Object.keys(record).sort().join(",")}`,
+    `fields=${Object.keys(record).toSorted().join(",")}`,
     `model=${safeDebugValue(record.model)}`,
     `stream=${safeDebugValue(record.stream)}`,
     `inputItems=${Array.isArray(input) ? input.length : typeof input}`,
@@ -355,7 +358,7 @@ function summarizeResponsesPayload(params: unknown): string {
     `promptCacheKey=${record.prompt_cache_key === undefined ? "absent" : "present"}`,
     `metadataKeys=${
       record.metadata && typeof record.metadata === "object"
-        ? Object.keys(record.metadata).sort().join(",")
+        ? Object.keys(record.metadata).toSorted().join(",")
         : "none"
     }`,
   ];
