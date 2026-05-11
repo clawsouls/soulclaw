@@ -36,7 +36,9 @@ function expectReplyInstructionContains(text: string) {
   const event = getDeliveredInternalEvents().find(
     (item) => typeof item.replyInstruction === "string" && item.replyInstruction.includes(text),
   );
-  expect(event).toBeDefined();
+  if (!event) {
+    throw new Error(`Expected reply instruction containing ${text}`);
+  }
 }
 
 describe("music generate background helpers", () => {
