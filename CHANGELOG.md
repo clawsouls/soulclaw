@@ -48,6 +48,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- OpenAI Codex: surface browser OAuth and device-code login failures instead of treating failed logins as empty successful auth results. Refs #80363.
 - fix(matrix): gate name-based allowlist resolution [AI]. (#79007) Thanks @pgondhi987.
 - Slack: include the bot's own root/parent message in new thread sessions so in-thread replies reach the agent with the parent text the user is responding to, instead of only `reply_to_id` metadata. Fixes #79338. Thanks @sxxtony.
 - Docker: keep image builds on the source pnpm workspace policy so pnpm 11 can prune production dependencies without a Docker-only workspace rewrite.
