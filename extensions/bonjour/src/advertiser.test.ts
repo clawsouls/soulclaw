@@ -748,13 +748,16 @@ describe("gateway bonjour advertiser", () => {
 
     expect(advertise).toHaveBeenCalledTimes(1);
     expect(createService).toHaveBeenCalledTimes(1);
-    expect(logger.warn).not.toHaveBeenCalledWith(
-      expect.stringContaining("watchdog detected non-announced service; attempting re-advertise"),
+    expect(
+      warnMessages().every(
+        (message) =>
+          !message.includes("watchdog detected non-announced service; attempting re-advertise"),
+      ),
     );
 
     await vi.advanceTimersByTimeAsync(10_000);
 
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("service stuck in probing"));
+    expectWarnContaining("service stuck in probing");
     expect(createService).toHaveBeenCalledTimes(2);
 
     await started.stop();
@@ -781,13 +784,11 @@ describe("gateway bonjour advertiser", () => {
     await vi.advanceTimersByTimeAsync(15_000);
 
     expect(createService).toHaveBeenCalledTimes(1);
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('name conflict resolved; newName="test-host (OpenClaw) (2)"'),
-    );
+    expectWarnContaining('name conflict resolved; newName="test-host (OpenClaw) (2)"');
 
     await vi.advanceTimersByTimeAsync(20_000);
 
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("service stuck in probing"));
+    expectWarnContaining("service stuck in probing");
     expect(createService).toHaveBeenCalledTimes(2);
 
     await started.stop();
