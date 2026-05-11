@@ -253,7 +253,7 @@ describe("channel-streaming", () => {
         lines: ["x".repeat(80)],
         formatLine: (line) => `\`${line}\``,
       }),
-    ).toBe(`Shelling\n• \`${"x".repeat(71)}…\``);
+    ).toBe(`Shelling\n• \`${"x".repeat(107)}…\``);
   });
 
   it("keeps compacted raw progress lines from leaking unmatched markdown backticks", () => {
@@ -274,7 +274,9 @@ describe("channel-streaming", () => {
       lines: line ? [line] : [],
     });
 
-    expect(text).toBe("Shelling\n🛠️ run node script…th/that/keeps/going/and/going/index…");
+    expect(text).toBe(
+      "Shelling\n🛠️ run node script…/some/really/deep/path/that/keeps/going/and/going/index…",
+    );
     expect(text.match(/`/g) ?? []).toHaveLength(0);
   });
 
