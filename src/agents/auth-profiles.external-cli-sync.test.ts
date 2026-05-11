@@ -47,9 +47,12 @@ function expectSingleProfileCredential(
   profiles: ReturnType<typeof resolveExternalCliAuthProfiles>,
   profileId: string,
 ) {
-  expect(profiles).toHaveLength(1);
-  expect(profiles[0]?.profileId).toBe(profileId);
-  expect(profiles[0]?.credential).toBeTruthy();
+  expect(profiles).toStrictEqual([
+    expect.objectContaining({
+      credential: expect.any(Object),
+      profileId,
+    }),
+  ]);
   return profiles[0]?.credential as Record<string, unknown>;
 }
 
@@ -57,9 +60,12 @@ function expectSingleProfile(
   profiles: ReturnType<typeof resolveExternalCliAuthProfiles>,
   profileId: string,
 ) {
-  expect(profiles).toHaveLength(1);
-  expect(profiles[0]?.profileId).toBe(profileId);
-  expect(profiles[0]?.credential).toBeTruthy();
+  expect(profiles).toStrictEqual([
+    expect.objectContaining({
+      credential: expect.any(Object),
+      profileId,
+    }),
+  ]);
   return profiles[0];
 }
 
@@ -74,13 +80,13 @@ function expectCredentialFields(
 }
 
 function expectReaderPolicyCall(mock: { mock: { calls: unknown[][] } }) {
-  expect(mock.mock.calls).toHaveLength(1);
-  const [arg] = mock.mock.calls[0] ?? [];
-  expect(arg).toBeTruthy();
-  if (!arg || typeof arg !== "object") {
-    throw new Error("Expected CLI reader options");
-  }
-  expect((arg as { allowKeychainPrompt?: unknown }).allowKeychainPrompt).toBe(false);
+  expect(mock.mock.calls).toStrictEqual([
+    [
+      expect.objectContaining({
+        allowKeychainPrompt: false,
+      }),
+    ],
+  ]);
 }
 
 describe("external cli oauth resolution", () => {
