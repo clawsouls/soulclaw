@@ -697,7 +697,7 @@ describe("cron method validation", () => {
         sessionKey: "",
       });
       expect(context.cron.wake).not.toHaveBeenCalled();
-      expect(respond).toHaveBeenCalledWith(false, undefined, expect.any(Object));
+      expectResponseError(respond, { code: "INVALID_REQUEST", messageIncludes: "sessionKey" });
     });
 
     it("treats whitespace-only sessionKey as omitted at the handler boundary", async () => {
@@ -720,7 +720,7 @@ describe("cron method validation", () => {
         sessionKey: 42,
       });
       expect(context.cron.wake).not.toHaveBeenCalled();
-      expect(respond).toHaveBeenCalledWith(false, undefined, expect.any(Object));
+      expectResponseError(respond, { code: "INVALID_REQUEST", messageIncludes: "sessionKey" });
     });
 
     it("rejects subagent sessionKey targets before enqueueing", async () => {
@@ -730,7 +730,7 @@ describe("cron method validation", () => {
         sessionKey: "agent:main:subagent:worker",
       });
       expect(context.cron.wake).not.toHaveBeenCalled();
-      expect(respond).toHaveBeenCalledWith(false, undefined, expect.any(Object));
+      expectResponseError(respond, { code: "INVALID_REQUEST", messageIncludes: "sessionKey" });
     });
   });
 });
