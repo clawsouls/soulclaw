@@ -1231,12 +1231,62 @@ describe("runCodexAppServerAttempt", () => {
     );
     await vi.waitFor(
       () =>
-        expect(request).toHaveBeenCalledWith("turn/interrupt", {
-          threadId: "thread-1",
-          turnId: "turn-1",
-        }),
+        expect(request).toHaveBeenCalledWith(
+          "turn/interrupt",
+          {
+            threadId: "thread-1",
+            turnId: "turn-1",
+          },
+          { timeoutMs: 5_000 },
+        ),
       { interval: 1 },
     );
+    expect(queueActiveRunMessageForTest("session-1", "after timeout")).toBe(false);
+  });
+
+  it("closes the app-server client when the active turn exceeds the attempt timeout", async () => {
+    const close = vi.fn();
+    const request = vi.fn(async (method: string) => {
+      if (method === "thread/start") {
+        return threadStartResult("thread-1");
+      }
+      if (method === "turn/start") {
+        return turnStartResult("turn-1", "inProgress");
+      }
+      if (method === "turn/interrupt") {
+        return new Promise<never>(() => undefined);
+      }
+      return {};
+    });
+    __testing.setCodexAppServerClientFactoryForTests(
+      async () =>
+        ({
+          request,
+          close,
+          addNotificationHandler: () => () => undefined,
+          addRequestHandler: () => () => undefined,
+        }) as never,
+    );
+    const params = createParams(
+      path.join(tempDir, "session.jsonl"),
+      path.join(tempDir, "workspace"),
+    );
+    params.timeoutMs = 100;
+
+    const result = await runCodexAppServerAttempt(params);
+
+    expect(result.aborted).toBe(true);
+    expect(result.timedOut).toBe(true);
+    expect(result.promptError).toBe("codex app-server attempt timed out");
+    expect(request).toHaveBeenCalledWith(
+      "turn/interrupt",
+      {
+        threadId: "thread-1",
+        turnId: "turn-1",
+      },
+      { timeoutMs: 5_000 },
+    );
+    expect(close).toHaveBeenCalledTimes(1);
     expect(queueActiveRunMessageForTest("session-1", "after timeout")).toBe(false);
   });
 
@@ -1540,10 +1590,14 @@ describe("runCodexAppServerAttempt", () => {
     );
     await vi.waitFor(
       () =>
-        expect(harness.request).toHaveBeenCalledWith("turn/interrupt", {
-          threadId: "thread-1",
-          turnId: "turn-1",
-        }),
+        expect(harness.request).toHaveBeenCalledWith(
+          "turn/interrupt",
+          {
+            threadId: "thread-1",
+            turnId: "turn-1",
+          },
+          { timeoutMs: 5_000 },
+        ),
       { interval: 1 },
     );
     expect(queueActiveRunMessageForTest("session-1", "after silent turn")).toBe(false);
