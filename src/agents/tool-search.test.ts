@@ -45,14 +45,17 @@ function pluginTool(name: string, description: string, pluginId = "fake-catalog"
 }
 
 function resultDetails(result: { details?: unknown }): Record<string, unknown> {
-  expect(result.details).toBeDefined();
-  expect(typeof result.details).toBe("object");
+  if (!result.details || typeof result.details !== "object") {
+    throw new Error("Expected result details");
+  }
   return result.details as Record<string, unknown>;
 }
 
 function mockCall(mock: { mock: { calls: unknown[][] } }, index = 0): unknown[] {
   const call = mock.mock.calls[index];
-  expect(call).toBeDefined();
+  if (!call) {
+    throw new Error(`Expected mock call ${index}`);
+  }
   return call;
 }
 
