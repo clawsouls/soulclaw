@@ -2854,10 +2854,9 @@ describe("runCodexAppServerAttempt", () => {
       },
     });
 
-    await expect(run).resolves.toMatchObject({
-      assistantTexts: [],
-      toolMediaUrls: ["/tmp/codex-home/generated_images/session-1/ig_123.png"],
-    });
+    const result = await run;
+    expect(result.assistantTexts).toEqual([]);
+    expect(result.toolMediaUrls).toEqual(["/tmp/codex-home/generated_images/session-1/ig_123.png"]);
   });
 
   it("does not complete on unscoped turn/completed notifications", async () => {
@@ -3717,9 +3716,11 @@ describe("runCodexAppServerAttempt", () => {
       approvalPolicy: "never",
       approvalsReviewer: "user",
       sandbox: "danger-full-access",
-      developerInstructions: expect.stringContaining(CODEX_GPT5_BEHAVIOR_CONTRACT),
       persistExtendedHistory: true,
     });
+    const resumeRequest = requests.find((request) => request.method === "thread/resume");
+    const resumeRequestParams = resumeRequest?.params as Record<string, unknown> | undefined;
+    expect(resumeRequestParams?.developerInstructions).toContain(CODEX_GPT5_BEHAVIOR_CONTRACT);
   });
 
   it("resumes a bound Codex thread when only dynamic tool descriptions change", async () => {
@@ -4585,16 +4586,17 @@ describe("runCodexAppServerAttempt", () => {
       model: "gpt-5.4-codex",
       approvalPolicy: "on-request",
       approvalsReviewer: "guardian_subagent",
-      config: expect.objectContaining({
-        "features.codex_hooks": true,
-        "features.code_mode": true,
-        "features.code_mode_only": true,
-      }),
       sandbox: "danger-full-access",
       serviceTier: "priority",
-      developerInstructions: expect.stringContaining(CODEX_GPT5_BEHAVIOR_CONTRACT),
       persistExtendedHistory: true,
     });
+    const resumeRequest = requests.find((request) => request.method === "thread/resume");
+    const resumeRequestParams = resumeRequest?.params as Record<string, unknown> | undefined;
+    const resumeConfig = resumeRequestParams?.config as Record<string, unknown> | undefined;
+    expect(resumeConfig?.["features.codex_hooks"]).toBe(true);
+    expect(resumeConfig?.["features.code_mode"]).toBe(true);
+    expect(resumeConfig?.["features.code_mode_only"]).toBe(true);
+    expect(resumeRequestParams?.developerInstructions).toContain(CODEX_GPT5_BEHAVIOR_CONTRACT);
     const turnRequest = requests.find((request) => request.method === "turn/start");
     const turnRequestParams = turnRequest?.params as Record<string, unknown> | undefined;
     expect(turnRequestParams?.approvalPolicy).toBe("on-request");
@@ -4687,7 +4689,8 @@ describe("runCodexAppServerAttempt", () => {
       serviceTier: "flex" as const,
     };
 
-    expect(buildThreadResumeParams(params, { threadId: "thread-1", appServer })).toEqual({
+    const resumeParams = buildThreadResumeParams(params, { threadId: "thread-1", appServer });
+    expect(resumeParams).toEqual({
       threadId: "thread-1",
       model: "gpt-5.4-codex",
       approvalPolicy: "on-request",
@@ -4698,9 +4701,10 @@ describe("runCodexAppServerAttempt", () => {
       },
       sandbox: "danger-full-access",
       serviceTier: "flex",
-      developerInstructions: expect.stringContaining(CODEX_GPT5_BEHAVIOR_CONTRACT),
+      developerInstructions: resumeParams.developerInstructions,
       persistExtendedHistory: true,
     });
+    expect(resumeParams.developerInstructions).toContain(CODEX_GPT5_BEHAVIOR_CONTRACT);
     const turnParams = buildTurnStartParams(params, {
       threadId: "thread-1",
       cwd: "/tmp/workspace",
@@ -4727,20 +4731,17 @@ describe("runCodexAppServerAttempt", () => {
     const params = createParams("/tmp/session.jsonl", "/tmp/workspace");
     params.trigger = "heartbeat";
 
-    expect(buildTurnCollaborationMode(params)).toEqual({
-      mode: "default",
-      settings: {
-        model: "gpt-5.4-codex",
-        reasoning_effort: "medium",
-        developer_instructions: expect.stringContaining(
-          "This is an OpenClaw heartbeat turn. Apply these instructions only to this heartbeat wake",
-        ),
-      },
-    });
-    expect(buildTurnCollaborationMode(params).settings.developer_instructions).toContain(
+    const heartbeatCollaborationMode = buildTurnCollaborationMode(params);
+    expect(heartbeatCollaborationMode.mode).toBe("default");
+    expect(heartbeatCollaborationMode.settings.model).toBe("gpt-5.4-codex");
+    expect(heartbeatCollaborationMode.settings.reasoning_effort).toBe("medium");
+    expect(heartbeatCollaborationMode.settings.developer_instructions).toContain(
+      "This is an OpenClaw heartbeat turn. Apply these instructions only to this heartbeat wake",
+    );
+    expect(heartbeatCollaborationMode.settings.developer_instructions).toContain(
       "Use heartbeats to create useful proactive progress",
     );
-    expect(buildTurnCollaborationMode(params).settings.developer_instructions).toContain(
+    expect(heartbeatCollaborationMode.settings.developer_instructions).toContain(
       "If `heartbeat_respond` is not already available and `tool_search` is available",
     );
 
