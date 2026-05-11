@@ -76,6 +76,7 @@ Docs: https://docs.openclaw.ai
 - Google/Gemini: normalize retired nested Gemini 3 Pro Preview ids while converting manifest catalog rows into emitted provider config, so `google/gemini-3.1-pro-preview` is used for testing instead of `google/gemini-3-pro-preview`.
 - Google/Gemini: normalize retired nested Gemini 3 Pro Preview ids in configured proxy/provider-auth model catalogs, so regenerated config keeps testing `google/gemini-3.1-pro-preview` instead of `google/gemini-3-pro-preview`.
 - Google/Gemini: normalize retired nested Gemini 3 Pro Preview ids while onboarding provider catalog presets, so setup-emitted proxy configs test `google/gemini-3.1-pro-preview` instead of `google/gemini-3-pro-preview`.
+- Google/Gemini: normalize retired Gemini 3 Pro Preview ids in provider catalog rows during generic config writes, so unrelated config changes keep testing `google/gemini-3.1-pro-preview`.
 - Models: keep configured fallback chains ahead of configured primary models for override selections with duplicate model ids, preventing fallback jumps to the wrong provider. Fixes #80562.
 - Native apps: advertise the Gateway protocol compatibility range so chat and node sessions can connect to v3 gateways after additive v4 client updates.
 - Gateway/agents: keep stale `sessions_send` ACP manager and `web_fetch` runtime chunks importable after package updates, preventing live gateways from breaking before restart. Fixes #78804. Thanks @Gomesy72.
