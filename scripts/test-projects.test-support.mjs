@@ -1543,7 +1543,8 @@ function hasConservativeVitestWorkerBudget(env) {
   return workerBudget !== null && workerBudget <= 1;
 }
 
-export function resolveParallelFullSuiteConcurrency(specCount, env = process.env, hostInfo) {
+export function resolveParallelFullSuiteConcurrency(specCount, env, hostInfo) {
+  env ??= process.env;
   const override = parsePositiveInt(env.OPENCLAW_TEST_PROJECTS_PARALLEL);
   if (override !== null) {
     return Math.min(override, specCount);

@@ -6,6 +6,7 @@ Docs: https://docs.openclaw.ai
 
 ### Changes
 
+- Build: enable additional low-churn oxlint rules for promise, TypeScript, and runtime footgun checks.
 - Build: enable stricter Vitest lint rules for focused, disabled, conditional, hook, matcher, and expectation hazards.
 - Build: pin explicit oxfmt defaults in the shared formatter config to keep formatting behavior stable across upgrades.
 - TypeScript: enable stricter compiler checks for implicit returns, side-effect imports, overrides, and unused production code.
