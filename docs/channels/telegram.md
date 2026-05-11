@@ -62,7 +62,15 @@ openclaw pairing approve telegram <CODE>
   </Step>
 
   <Step title="Add the bot to a group">
-    Add the bot to your group, then set `channels.telegram.groups` and `groupPolicy` to match your access model.
+    Add the bot to your group, then get both IDs that group access needs:
+
+    - your Telegram user ID, used in `allowFrom` / `groupAllowFrom`
+    - the Telegram group chat ID, used as the key under `channels.telegram.groups`
+
+    In the group, run `/whoami@<bot_username>` if native commands are enabled. You can also read the same values from `openclaw logs --follow` after sending a group message to the bot.
+
+    Negative Telegram supergroup IDs that start with `-100` are group chat IDs. Put them under `channels.telegram.groups`, not under `groupAllowFrom`.
+
   </Step>
 </Steps>
 
@@ -169,6 +177,28 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
     Practical pattern for one-owner bots: set your user ID in `channels.telegram.allowFrom`, leave `groupAllowFrom` unset, and allow the target groups under `channels.telegram.groups`.
     Runtime note: if `channels.telegram` is completely missing, runtime defaults to fail-closed `groupPolicy="allowlist"` unless `channels.defaults.groupPolicy` is explicitly set.
 
+    Owner-only group setup:
+
+```json5
+{
+  channels: {
+    telegram: {
+      enabled: true,
+      dmPolicy: "pairing",
+      groupPolicy: "allowlist",
+      groupAllowFrom: ["<YOUR_TELEGRAM_USER_ID>"],
+      groups: {
+        "<GROUP_CHAT_ID>": {
+          requireMention: true,
+        },
+      },
+    },
+  },
+}
+```
+
+    Test it from the group with `@<bot_username> ping`. Plain group messages do not trigger the bot while `requireMention: true`.
+
     Example: allow any member in one specific group:
 
 ```json5
@@ -247,6 +277,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 
     Getting the group chat ID:
 
+    - run `/whoami@<bot_username>` in the group if native commands are enabled
     - forward a group message to `@userinfobot` / `@getidsbot`
     - or read `chat.id` from `openclaw logs --follow`
     - or inspect Bot API `getUpdates`
