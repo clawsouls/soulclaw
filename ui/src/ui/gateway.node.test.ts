@@ -121,7 +121,9 @@ function expectLatestRequestTiming(
   expected: Partial<RequestTimingPayload>,
 ) {
   const timing = onRequestTiming.mock.calls.at(-1)?.[0] as RequestTimingPayload | undefined;
-  expect(timing).toMatchObject(expected);
+  for (const [key, value] of Object.entries(expected)) {
+    expect(timing?.[key as keyof RequestTimingPayload]).toBe(value);
+  }
   expect(timing?.startedAtMs).toBeTypeOf("number");
   expect(timing?.endedAtMs).toBeTypeOf("number");
   expect(timing?.durationMs).toBeTypeOf("number");
@@ -304,18 +306,23 @@ describe("GatewayBrowserClient", () => {
     });
 
     expect(() => client.start()).not.toThrow();
-    expect(onClose).toHaveBeenCalledWith({
-      code: 1006,
-      reason: "security error",
-      error: expect.objectContaining({
-        code: "BROWSER_WEBSOCKET_SECURITY_ERROR",
-        message: expect.stringContaining("Use wss://"),
-        details: expect.objectContaining({
-          code: "BROWSER_WEBSOCKET_SECURITY_ERROR",
-          browserErrorName: "SecurityError",
-        }),
-      }),
-    });
+    const close = onClose.mock.calls[0]?.[0] as
+      | {
+          code?: number;
+          reason?: string;
+          error?: {
+            code?: string;
+            message?: string;
+            details?: { code?: string; browserErrorName?: string };
+          };
+        }
+      | undefined;
+    expect(close?.code).toBe(1006);
+    expect(close?.reason).toBe("security error");
+    expect(close?.error?.code).toBe("BROWSER_WEBSOCKET_SECURITY_ERROR");
+    expect(close?.error?.message).toContain("Use wss://");
+    expect(close?.error?.details?.code).toBe("BROWSER_WEBSOCKET_SECURITY_ERROR");
+    expect(close?.error?.details?.browserErrorName).toBe("SecurityError");
     expect(wsInstances).toHaveLength(0);
 
     await vi.advanceTimersByTimeAsync(30_000);
@@ -343,19 +350,24 @@ describe("GatewayBrowserClient", () => {
     });
 
     expect(() => client.start()).not.toThrow();
-    expect(onClose).toHaveBeenCalledWith({
-      code: 1006,
-      reason: "websocket error",
-      error: expect.objectContaining({
-        code: "BROWSER_WEBSOCKET_CONSTRUCTOR_ERROR",
-        message: expect.stringContaining("Could not create the Gateway WebSocket"),
-        details: expect.objectContaining({
-          code: "BROWSER_WEBSOCKET_CONSTRUCTOR_ERROR",
-          browserErrorName: "TypeError",
-          browserMessage: "constructor failed",
-        }),
-      }),
-    });
+    const close = onClose.mock.calls[0]?.[0] as
+      | {
+          code?: number;
+          reason?: string;
+          error?: {
+            code?: string;
+            message?: string;
+            details?: { code?: string; browserErrorName?: string; browserMessage?: string };
+          };
+        }
+      | undefined;
+    expect(close?.code).toBe(1006);
+    expect(close?.reason).toBe("websocket error");
+    expect(close?.error?.code).toBe("BROWSER_WEBSOCKET_CONSTRUCTOR_ERROR");
+    expect(close?.error?.message).toContain("Could not create the Gateway WebSocket");
+    expect(close?.error?.details?.code).toBe("BROWSER_WEBSOCKET_CONSTRUCTOR_ERROR");
+    expect(close?.error?.details?.browserErrorName).toBe("TypeError");
+    expect(close?.error?.details?.browserMessage).toBe("constructor failed");
     expect(wsInstances).toHaveLength(0);
 
     await vi.advanceTimersByTimeAsync(30_000);
@@ -436,12 +448,14 @@ describe("GatewayBrowserClient", () => {
       error: { code: "CONFIG_ERROR", message: "config failed" },
     });
 
-    await expect(request).rejects.toMatchObject({ gatewayCode: "CONFIG_ERROR" });
-    expect(onRequestTiming).toHaveBeenCalledWith(
-      expect.not.objectContaining({
-        params: expect.anything(),
-      }),
-    );
+    try {
+      await request;
+      throw new Error("expected config.get request to reject");
+    } catch (error) {
+      expect((error as { gatewayCode?: string }).gatewayCode).toBe("CONFIG_ERROR");
+    }
+    expect(onRequestTiming).toHaveBeenCalledTimes(1);
+    expect(onRequestTiming.mock.calls[0]?.[0]).not.toHaveProperty("params");
     expectLatestRequestTiming(onRequestTiming, {
       id: frame.id,
       method: "config.get",
