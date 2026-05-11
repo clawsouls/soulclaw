@@ -30,8 +30,8 @@ function expectWrittenSkillEntry(skillKey: string, entry: unknown) {
       entries?: Record<string, unknown>;
     };
   };
-  expect(Object.keys(config).sort()).toEqual(["skills"]);
-  expect(Object.keys(config.skills ?? {}).sort()).toEqual(["entries"]);
+  expect(Object.keys(config).toSorted()).toEqual(["skills"]);
+  expect(Object.keys(config.skills ?? {}).toSorted()).toEqual(["entries"]);
   expect(config.skills?.entries?.[skillKey]).toEqual(entry);
 }
 

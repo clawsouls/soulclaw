@@ -124,11 +124,9 @@ describe("tools.catalog handler", () => {
     const voiceCall = pluginGroups
       .flatMap((group) => group.tools)
       .find((tool) => tool.id === "voice_call");
-    expect(voiceCall).toMatchObject({
-      source: "plugin",
-      pluginId: "voice-call",
-      optional: true,
-    });
+    expect(voiceCall?.source).toBe("plugin");
+    expect(voiceCall?.pluginId).toBe("voice-call");
+    expect(voiceCall?.optional).toBe(true);
   });
 
   it("summarizes plugin tool descriptions the same way as the effective inventory", async () => {
@@ -159,15 +157,12 @@ describe("tools.catalog handler", () => {
 
     await invoke();
 
-    expect(vi.mocked(resolvePluginTools)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        allowGatewaySubagentBinding: true,
-      }),
+    expect(vi.mocked(resolvePluginTools).mock.calls[0]?.[0]?.allowGatewaySubagentBinding).toBe(
+      true,
     );
-    expect(vi.mocked(ensureStandalonePluginToolRegistryLoaded)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        allowGatewaySubagentBinding: true,
-      }),
-    );
+    expect(
+      vi.mocked(ensureStandalonePluginToolRegistryLoaded).mock.calls[0]?.[0]
+        ?.allowGatewaySubagentBinding,
+    ).toBe(true);
   });
 });
