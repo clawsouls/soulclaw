@@ -57,10 +57,10 @@ function createSpawnedProcess() {
 }
 
 async function waitForSpawnCount(count: number) {
-  while (spawnMock.mock.calls.length < count) {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  }
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await vi.waitFor(() => {
+    expect(spawnMock).toHaveBeenCalledTimes(count);
+  });
+  await Promise.resolve();
 }
 
 describe("qa suite runtime agent process helpers", () => {
