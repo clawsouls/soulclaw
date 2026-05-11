@@ -160,6 +160,36 @@ describe("minimax provider hooks", () => {
     });
   });
 
+  it("keeps M2.7 on the Anthropic Messages route used by the empty-history guard", async () => {
+    const { providers } = await registerProviderPlugin({
+      plugin: minimaxProviderPlugin,
+      id: "minimax",
+      name: "MiniMax Provider",
+    });
+    const apiProvider = requireRegisteredProvider(providers, "minimax");
+
+    const catalog = await apiProvider.catalog?.run({
+      env: {},
+      config: {},
+      resolveProviderApiKey: (providerId?: string) => ({
+        apiKey: providerId === "minimax" ? "sk-minimax-test" : undefined,
+      }),
+    } as never);
+
+    const provider = "provider" in (catalog ?? {}) ? catalog?.provider : undefined;
+    expect(provider).toMatchObject({
+      api: "anthropic-messages",
+      authHeader: true,
+      baseUrl: "https://api.minimax.io/anthropic",
+    });
+    expect(provider?.models.find((model) => model.id === "MiniMax-M2.7")).toMatchObject({
+      id: "MiniMax-M2.7",
+      input: ["text"],
+      name: "MiniMax M2.7",
+      reasoning: true,
+    });
+  });
+
   it("owns fast-mode stream wrapping for MiniMax transports", async () => {
     const { providers } = await registerProviderPlugin({
       plugin: minimaxProviderPlugin,
