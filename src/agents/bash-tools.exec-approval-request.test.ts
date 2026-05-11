@@ -241,7 +241,23 @@ describe("requestExecApprovalDecision", () => {
     });
 
     expect(result).toBe("deny");
-    expect(vi.mocked(callGatewayTool).mock.calls).toHaveLength(1);
+    expect(vi.mocked(callGatewayTool).mock.calls).toStrictEqual([
+      [
+        "exec.approval.request",
+        { timeoutMs: DEFAULT_APPROVAL_REQUEST_TIMEOUT_MS },
+        expect.objectContaining({
+          ask: "on-miss",
+          command: "echo hi",
+          cwd: "/tmp",
+          host: "gateway",
+          id: "approval-id",
+          security: "allowlist",
+          timeoutMs: DEFAULT_APPROVAL_TIMEOUT_MS,
+          twoPhase: true,
+        }),
+        { expectFinal: false },
+      ],
+    ]);
   });
 
   it("adds command spans to host approval registration payloads", async () => {
