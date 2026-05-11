@@ -100,10 +100,9 @@ describe("channel plugin module loader helpers", () => {
         target: fs.realpathSync.native(modulePath),
       });
       expect(createJiti).toHaveBeenCalledOnce();
-      expect(createJiti).toHaveBeenCalledWith(
-        expect.stringContaining("module-loader.ts"),
-        expect.objectContaining({ tryNative: false }),
-      );
+      const [loaderFilename, loaderOptions] = createJiti.mock.calls[0] ?? [];
+      expect(loaderFilename).toEqual(expect.stringContaining("module-loader.ts"));
+      expect(loaderOptions?.tryNative).toBe(false);
       expect(loadWithJiti).toHaveBeenCalledWith(fs.realpathSync.native(modulePath));
     } finally {
       for (const [extension, hook] of sourceHooks) {
