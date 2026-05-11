@@ -154,12 +154,23 @@ describe("handleStopCommand target fallback", () => {
     });
     expect(replyRunAbortMock).toHaveBeenCalledWith("agent:target:telegram:direct:123");
     expect(abortEmbeddedPiRunMock).not.toHaveBeenCalledWith("wrapper-session-id");
-    const persistAbortTargetParams = persistAbortTargetEntryMock.mock.calls[0]?.[0];
+    const [[persistAbortTargetParams]] = persistAbortTargetEntryMock.mock.calls as unknown as Array<
+      [
+        {
+          key?: string;
+          entry?: unknown;
+          sessionStore?: unknown;
+          storePath?: string;
+        },
+      ]
+    >;
     expect(persistAbortTargetParams?.key).toBe("agent:target:telegram:direct:123");
     expect(persistAbortTargetParams?.entry).toBeUndefined();
     expect(persistAbortTargetParams?.sessionStore).toBe(params.sessionStore);
     expect(persistAbortTargetParams?.storePath).toBe("/tmp/sessions.json");
-    const stopSubagentsParams = stopSubagentsForRequesterMock.mock.calls[0]?.[0];
+    const [[stopSubagentsParams]] = stopSubagentsForRequesterMock.mock.calls as unknown as Array<
+      [{ cfg?: unknown; requesterSessionKey?: string }]
+    >;
     expect(stopSubagentsParams?.cfg).toBe(params.cfg);
     expect(stopSubagentsParams?.requesterSessionKey).toBe("agent:target:telegram:direct:123");
     expect(createInternalHookEventMock).toHaveBeenCalledWith(
