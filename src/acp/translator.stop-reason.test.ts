@@ -233,7 +233,9 @@ describe("acp translator stop reason mapping", () => {
       const request = vi.fn(async (method: string, params?: Record<string, unknown>) => {
         if (method === "chat.send") {
           const runId = params?.idempotencyKey;
-          expect(typeof runId).toBe("string");
+          if (typeof runId !== "string") {
+            throw new Error("expected chat.send idempotency key");
+          }
           chatRunId = runId;
           return {};
         }
