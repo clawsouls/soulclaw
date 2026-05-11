@@ -53,8 +53,11 @@ describe("tryListenOnPort", () => {
 
       expect(rejection).toBeInstanceOf(Error);
       expect(rejection?.code).toBe("EADDRINUSE");
-      expect(rejection?.address).toBe("127.0.0.1");
-      expect(rejection?.port).toBe(address.port);
+      const listenError = rejection as
+        | (NodeJS.ErrnoException & { address?: string; port?: number })
+        | undefined;
+      expect(listenError?.address).toBe("127.0.0.1");
+      expect(listenError?.port).toBe(address.port);
       expect(rejection?.syscall).toBe("listen");
     });
   });
