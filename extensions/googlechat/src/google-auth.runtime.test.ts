@@ -454,6 +454,9 @@ describe("googlechat google auth runtime", () => {
         credentialsFile: credentialsPath,
         enabled: true,
       });
+      if (!credentials) {
+        throw new Error("expected validated credentials");
+      }
       expect(credentials.client_email).toBe("bot@example.iam.gserviceaccount.com");
       expect(credentials.token_uri).toBe("https://oauth2.googleapis.com/token");
       expect(credentials.type).toBe("service_account");
@@ -496,6 +499,9 @@ describe("googlechat google auth runtime", () => {
         credentialsFile: symlinkPath,
         enabled: true,
       });
+      if (!credentials) {
+        throw new Error("expected validated credentials");
+      }
       expect(credentials.client_email).toBe("bot@example.iam.gserviceaccount.com");
       expect(credentials.token_uri).toBe("https://oauth2.googleapis.com/token");
       expect(credentials.type).toBe("service_account");

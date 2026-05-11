@@ -62,11 +62,17 @@ describe("memory host event journal integration", () => {
       "memory.recall.recorded",
       "memory.promotion.applied",
     ]);
-    expect(events[0]?.type).toBe("memory.recall.recorded");
-    expect(events[0]?.resultCount).toBe(1);
-    expect(events[0]?.query).toBe("alpha memory");
-    expect(events[1]?.type).toBe("memory.promotion.applied");
-    expect(events[1]?.applied).toBe(1);
+    const recallEvent = events[0];
+    if (recallEvent?.type !== "memory.recall.recorded") {
+      throw new Error("expected recall event");
+    }
+    expect(recallEvent.resultCount).toBe(1);
+    expect(recallEvent.query).toBe("alpha memory");
+    const promotionEvent = events[1];
+    if (promotionEvent?.type !== "memory.promotion.applied") {
+      throw new Error("expected promotion event");
+    }
+    expect(promotionEvent.applied).toBe(1);
   });
 
   it("records dreaming completion events when phase artifacts are written", async () => {
@@ -89,9 +95,12 @@ describe("memory host event journal integration", () => {
     await expect(fs.readFile(written.inlinePath ?? "", "utf8")).resolves.toContain("- staged note");
     await expect(fs.readFile(written.reportPath ?? "", "utf8")).resolves.toContain("- second note");
     expect(events).toHaveLength(1);
-    expect(events[0]?.type).toBe("memory.dream.completed");
-    expect(events[0]?.phase).toBe("light");
-    expect(events[0]?.lineCount).toBe(2);
-    expect(events[0]?.storageMode).toBe("both");
+    const dreamEvent = events[0];
+    if (dreamEvent?.type !== "memory.dream.completed") {
+      throw new Error("expected dream completion event");
+    }
+    expect(dreamEvent.phase).toBe("light");
+    expect(dreamEvent.lineCount).toBe(2);
+    expect(dreamEvent.storageMode).toBe("both");
   });
 });
