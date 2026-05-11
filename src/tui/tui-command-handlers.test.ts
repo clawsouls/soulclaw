@@ -413,9 +413,18 @@ describe("tui command handlers", () => {
 
     // /new creates a unique session key (isolates TUI client) (#39217)
     expect(setSessionMock).toHaveBeenCalledTimes(1);
-    expect(setSessionMock).toHaveBeenCalledWith(
-      expect.stringMatching(/^tui-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/),
-    );
+    const newSessionKey = setSessionMock.mock.calls[0]?.[0];
+    if (!newSessionKey) {
+      throw new Error("expected /new to set a TUI session key");
+    }
+    expect(newSessionKey.startsWith("tui-")).toBe(true);
+    const uuidParts = newSessionKey.slice("tui-".length).split("-");
+    expect(uuidParts.map((part) => part.length)).toEqual([8, 4, 4, 4, 12]);
+    expect(
+      uuidParts.every((part) =>
+        [...part].every((char) => (char >= "0" && char <= "9") || (char >= "a" && char <= "f")),
+      ),
+    ).toBe(true);
     // /reset still resets the shared session
     expect(resetSession).toHaveBeenCalledTimes(1);
     expect(resetSession).toHaveBeenCalledWith("agent:main:main", "reset");
