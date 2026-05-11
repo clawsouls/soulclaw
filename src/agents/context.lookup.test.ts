@@ -15,9 +15,11 @@ const contextTestState = vi.hoisted(() => {
     discoveredModels: [] as DiscoveredModel[],
     ensureOpenClawModelsJson: vi.fn(async () => {}),
     discoverAuthStorage: vi.fn(() => ({})),
-    discoverModels: vi.fn(() => ({
-      getAll: () => state.discoveredModels,
-    })),
+    discoverModels: vi.fn(
+      (_authStorage: unknown, _agentDir: string, _options?: { normalizeModels?: boolean }) => ({
+        getAll: () => state.discoveredModels,
+      }),
+    ),
   };
   return state;
 });
@@ -301,9 +303,7 @@ describe("lookupContextTokens", () => {
     expect(discoverCall?.[0]).toEqual({});
     expect(typeof discoverCall?.[1]).toBe("string");
     expect(
-      path
-        .normalize(String(discoverCall?.[1]))
-        .endsWith(path.join(".openclaw", "agents", "main", "agent")),
+      path.normalize(discoverCall?.[1]).endsWith(path.join(".openclaw", "agents", "main", "agent")),
     ).toBe(true);
     expect(discoverCall?.[2]).toEqual({ normalizeModels: false });
     expect(lookupContextTokens("anthropic/claude-opus-4.7-20260219")).toBe(1_048_576);
