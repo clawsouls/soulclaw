@@ -271,7 +271,7 @@ describe("qa suite runtime agent process helpers", () => {
     expect(agentPayload?.channel).toBe("qa-channel");
     expect(agentPayload?.replyChannel).toBe("reply-channel");
     expect(agentPayload?.replyTo).toBe("reply-target");
-    expect(gatewayArgs?.[2]).toEqual(expect.any(Object));
+    expect(gatewayArgs?.[2]).toBeTypeOf("object");
   });
 
   it("finds managed dreaming cron jobs across legacy and current payload contracts", () => {
