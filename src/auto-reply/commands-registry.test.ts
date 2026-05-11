@@ -480,18 +480,14 @@ describe("commands registry", () => {
     pinActivePluginChannelRegistry(pinnedEmptyRegistry);
 
     setActivePluginRegistry(createNativeCommandsRegistry("discord"));
-    expect([...commandKeySet(listChatCommands())]).toEqual(
-      expect.arrayContaining(["dock:discord"]),
-    );
-    expect([...commandKeySet(listChatCommands())]).not.toEqual(
-      expect.arrayContaining(["dock:slack"]),
-    );
+    const discordCommandKeys = commandKeySet(listChatCommands());
+    expect(discordCommandKeys.has("dock:discord")).toBe(true);
+    expect(discordCommandKeys.has("dock:slack")).toBe(false);
 
     setActivePluginRegistry(createNativeCommandsRegistry("slack"));
-    expect([...commandKeySet(listChatCommands())]).not.toEqual(
-      expect.arrayContaining(["dock:discord"]),
-    );
-    expect([...commandKeySet(listChatCommands())]).toEqual(expect.arrayContaining(["dock:slack"]));
+    const slackCommandKeys = commandKeySet(listChatCommands());
+    expect(slackCommandKeys.has("dock:discord")).toBe(false);
+    expect(slackCommandKeys.has("dock:slack")).toBe(true);
   });
 
   it("refreshes text-command gating when pinned-empty fallback active registry changes", () => {
@@ -701,8 +697,10 @@ describe("commands registry args", () => {
     const seenChoice = requireSeenChoice(seen);
     expect(seenChoice.commandKey).toBe("think");
     expect(seenChoice.argName).toBe("level");
-    expect(seenChoice.provider).toEqual(expect.stringMatching(/\S/));
-    expect(seenChoice.model).toEqual(expect.stringMatching(/\S/));
+    expect(typeof seenChoice.provider).toBe("string");
+    expect(seenChoice.provider?.trim().length).toBeGreaterThan(0);
+    expect(typeof seenChoice.model).toBe("string");
+    expect(seenChoice.model?.trim().length).toBeGreaterThan(0);
     expect(seenChoice.catalogLength).toBe(0);
   });
 
