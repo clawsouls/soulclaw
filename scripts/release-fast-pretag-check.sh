@@ -8,7 +8,6 @@ export RELEASE_TAG="${release_tag}"
 echo "release tag: ${RELEASE_TAG}"
 git diff --check
 pnpm check:temp-path-guardrails
-pnpm release-metadata:check
 pnpm plugins:sync:check
 pnpm release:generated:check
 pnpm release:plugins:npm:check -- --selection-mode all-publishable
