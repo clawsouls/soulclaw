@@ -1,5 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRealtimeVoiceAgentTalkbackQueue } from "./agent-talkback-runtime.js";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function makeLogger() {
   return {
@@ -47,7 +51,6 @@ describe("realtime voice agent talkback queue", () => {
       responseStyle: "brief",
     });
     expect(deliver).toHaveBeenCalledWith("answer:first\nsecond");
-    vi.useRealTimers();
   });
 
   it("accumulates pending questions while a consult is active", async () => {
@@ -95,7 +98,6 @@ describe("realtime voice agent talkback queue", () => {
     });
     expect(deliver).toHaveBeenCalledWith("first-answer");
     expect(deliver).toHaveBeenCalledWith("second-answer");
-    vi.useRealTimers();
   });
 
   it("keeps active pending questions split by metadata", async () => {
@@ -146,7 +148,6 @@ describe("realtime voice agent talkback queue", () => {
     });
     expect(deliver).toHaveBeenCalledWith("owner-answer");
     expect(deliver).toHaveBeenCalledWith("guest-answer");
-    vi.useRealTimers();
   });
 
   it("delivers fallback text when consult fails", async () => {
@@ -171,7 +172,6 @@ describe("realtime voice agent talkback queue", () => {
 
     expect(logger.warn).toHaveBeenCalledExactlyOnceWith("[test] consult failed: elapsedMs=0 boom");
     expect(deliver).toHaveBeenCalledWith("fallback");
-    vi.useRealTimers();
   });
 
   it("cancels pending debounced work on close", async () => {
@@ -193,7 +193,6 @@ describe("realtime voice agent talkback queue", () => {
     await vi.advanceTimersByTimeAsync(100);
 
     expect(consult).not.toHaveBeenCalled();
-    vi.useRealTimers();
   });
 
   it("aborts the active consult on close without delivering fallback", async () => {
@@ -234,6 +233,5 @@ describe("realtime voice agent talkback queue", () => {
     expect(signal.aborted).toBe(true);
     expect(deliver).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
-    vi.useRealTimers();
   });
 });
