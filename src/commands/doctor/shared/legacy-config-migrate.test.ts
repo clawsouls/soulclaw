@@ -527,7 +527,7 @@ describe("legacy migrate heartbeat config", () => {
       },
     });
 
-    expect(res.changes).toContain("Moved heartbeat → agents.defaults.heartbeat.");
+    expect(res.changes).toStrictEqual(["Moved heartbeat → agents.defaults.heartbeat."]);
     expect(res.config?.agents?.defaults?.heartbeat).toEqual({
       model: "anthropic/claude-3-5-haiku-20241022",
       every: "30m",
@@ -544,7 +544,9 @@ describe("legacy migrate heartbeat config", () => {
       },
     });
 
-    expect(res.changes).toContain("Moved heartbeat visibility → channels.defaults.heartbeat.");
+    expect(res.changes).toStrictEqual([
+      "Moved heartbeat visibility → channels.defaults.heartbeat.",
+    ]);
     expect(res.config?.channels?.defaults?.heartbeat).toEqual({
       showOk: true,
       showAlerts: false,
@@ -569,9 +571,9 @@ describe("legacy migrate heartbeat config", () => {
       },
     });
 
-    expect(res.changes).toContain(
+    expect(res.changes).toStrictEqual([
       "Merged heartbeat → agents.defaults.heartbeat (filled missing fields from legacy; kept explicit agents.defaults values).",
-    );
+    ]);
     expect(res.config?.agents?.defaults?.heartbeat).toEqual({
       every: "1h",
       target: "telegram",
@@ -596,9 +598,9 @@ describe("legacy migrate heartbeat config", () => {
       },
     });
 
-    expect(res.changes).toContain(
+    expect(res.changes).toStrictEqual([
       "Merged heartbeat visibility → channels.defaults.heartbeat (filled missing fields from legacy; kept explicit channels.defaults values).",
-    );
+    ]);
     expect(res.config?.channels?.defaults?.heartbeat).toEqual({
       showOk: false,
       showAlerts: true,
@@ -653,7 +655,7 @@ describe("legacy migrate heartbeat config", () => {
       heartbeat: {},
     });
 
-    expect(res.changes).toContain("Removed empty top-level heartbeat.");
+    expect(res.changes).toStrictEqual(["Removed empty top-level heartbeat."]);
     expect(res.config).not.toBeNull();
     if (res.config === null) {
       throw new Error("Expected migrated config");
@@ -674,9 +676,8 @@ describe("legacy migrate controlUi.allowedOrigins seed (issue #29385)", () => {
       "http://localhost:18789",
       "http://127.0.0.1:18789",
     ]);
-    expectMigrationChangesToIncludeFragments(res.changes, [
-      "gateway.controlUi.allowedOrigins",
-      "bind=lan",
+    expect(res.changes).toStrictEqual([
+      'Seeded gateway.controlUi.allowedOrigins ["http://localhost:18789","http://127.0.0.1:18789"] for bind=lan. Required since v2026.2.26. Add other machine origins to gateway.controlUi.allowedOrigins if needed.',
     ]);
   });
 
@@ -702,8 +703,11 @@ describe("legacy migrate controlUi.allowedOrigins seed (issue #29385)", () => {
         auth: { mode: "token", token: "tok" },
       },
     });
-    expect(res.config?.gateway?.controlUi?.allowedOrigins).toContain("http://192.168.1.100:18789");
-    expect(res.config?.gateway?.controlUi?.allowedOrigins).toContain("http://localhost:18789");
+    expect(res.config?.gateway?.controlUi?.allowedOrigins).toEqual([
+      "http://localhost:18789",
+      "http://127.0.0.1:18789",
+      "http://192.168.1.100:18789",
+    ]);
   });
 
   it("does not overwrite existing allowedOrigins — returns null (no migration needed)", () => {
@@ -717,7 +721,7 @@ describe("legacy migrate controlUi.allowedOrigins seed (issue #29385)", () => {
       },
     });
     expect(res.config).toBeNull();
-    expect(res.changes).toHaveLength(0);
+    expect(res.changes).toStrictEqual([]);
   });
 
   it("does not migrate when dangerouslyAllowHostHeaderOriginFallback is set — returns null", () => {
@@ -729,7 +733,7 @@ describe("legacy migrate controlUi.allowedOrigins seed (issue #29385)", () => {
       },
     });
     expect(res.config).toBeNull();
-    expect(res.changes).toHaveLength(0);
+    expect(res.changes).toStrictEqual([]);
   });
 
   it("seeds allowedOrigins when existing entries are blank strings", () => {
@@ -744,7 +748,9 @@ describe("legacy migrate controlUi.allowedOrigins seed (issue #29385)", () => {
       "http://localhost:18789",
       "http://127.0.0.1:18789",
     ]);
-    expectMigrationChangesToIncludeFragments(res.changes, ["gateway.controlUi.allowedOrigins"]);
+    expect(res.changes).toStrictEqual([
+      'Seeded gateway.controlUi.allowedOrigins ["http://localhost:18789","http://127.0.0.1:18789"] for bind=lan. Required since v2026.2.26. Add other machine origins to gateway.controlUi.allowedOrigins if needed.',
+    ]);
   });
 
   it("does not migrate loopback bind — returns null", () => {
@@ -755,7 +761,7 @@ describe("legacy migrate controlUi.allowedOrigins seed (issue #29385)", () => {
       },
     });
     expect(res.config).toBeNull();
-    expect(res.changes).toHaveLength(0);
+    expect(res.changes).toStrictEqual([]);
   });
 
   it("preserves existing controlUi fields when seeding allowedOrigins", () => {
