@@ -346,6 +346,8 @@ jobs:
         run: |
           set -euo pipefail
           sudo useradd --create-home --shell /bin/bash codex
+          printf '%s\n' 'Defaults env_keep += "CODEX_HOME CODEX_INTERNAL_ORIGINATOR_OVERRIDE"' | sudo tee /etc/sudoers.d/mantis-codex-env >/dev/null
+          sudo chmod 0440 /etc/sudoers.d/mantis-codex-env
           codex_home="/tmp/mantis-codex-home-${GITHUB_RUN_ID}"
           sudo install -d -m 0770 -o codex -g codex "$codex_home"
           sudo setfacl -m u:runner:rwx,u:codex:rwx "$codex_home"
