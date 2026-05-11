@@ -84,7 +84,7 @@ describe("diagnostics gateway methods", () => {
       },
       undefined,
     ]);
-    expect(Object.keys(respond.mock.calls[0]?.[1] as Record<string, unknown>).sort()).toEqual([
+    expect(Object.keys(respond.mock.calls[0]?.[1] as Record<string, unknown>).toSorted()).toEqual([
       "capacity",
       "count",
       "dropped",
