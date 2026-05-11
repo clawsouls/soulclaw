@@ -65,11 +65,13 @@ describe("collectCodexRouteWarnings", () => {
       } as OpenClawConfig,
     });
 
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain("Legacy `openai-codex/*`");
-    expect(warnings[0]).toContain("agents.defaults.model");
-    expect(warnings[0]).toContain("openai/gpt-5.5");
-    expect(warnings[0]).not.toContain("agentRuntime.id");
+    expect(warnings).toStrictEqual([
+      [
+        "- Legacy `openai-codex/*` model refs should be rewritten to `openai/*`.",
+        "- agents.defaults.model: openai-codex/gpt-5.5 should become openai/gpt-5.5.",
+        "- Run `openclaw doctor --fix`: it rewrites configured model refs and stale sessions to `openai/*`, moves Codex intent to provider/model runtime policy, and clears old whole-agent runtime pins.",
+      ].join("\n"),
+    ]);
   });
 
   it("still warns when the native Codex runtime is selected with a legacy model ref", () => {
@@ -86,9 +88,13 @@ describe("collectCodexRouteWarnings", () => {
       } as OpenClawConfig,
     });
 
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain("openai/gpt-5.5");
-    expect(warnings[0]).toContain('runtime is "codex"');
+    expect(warnings).toStrictEqual([
+      [
+        "- Legacy `openai-codex/*` model refs should be rewritten to `openai/*`.",
+        '- agents.defaults.model: openai-codex/gpt-5.5 should become openai/gpt-5.5; current runtime is "codex".',
+        "- Run `openclaw doctor --fix`: it rewrites configured model refs and stale sessions to `openai/*`, moves Codex intent to provider/model runtime policy, and clears old whole-agent runtime pins.",
+      ].join("\n"),
+    ]);
   });
 
   it("still warns when OPENCLAW_AGENT_RUNTIME selects native Codex with a legacy model ref", () => {
@@ -105,8 +111,13 @@ describe("collectCodexRouteWarnings", () => {
       },
     });
 
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain('runtime is "codex"');
+    expect(warnings).toStrictEqual([
+      [
+        "- Legacy `openai-codex/*` model refs should be rewritten to `openai/*`.",
+        '- agents.defaults.model: openai-codex/gpt-5.5 should become openai/gpt-5.5; current runtime is "codex".',
+        "- Run `openclaw doctor --fix`: it rewrites configured model refs and stale sessions to `openai/*`, moves Codex intent to provider/model runtime policy, and clears old whole-agent runtime pins.",
+      ].join("\n"),
+    ]);
   });
 
   it("does not warn for canonical OpenAI refs", () => {
