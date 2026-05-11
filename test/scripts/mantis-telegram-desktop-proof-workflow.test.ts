@@ -51,7 +51,7 @@ describe("Mantis Telegram Desktop proof workflow", () => {
 
     const agent = workflowStep("Run Codex Mantis Telegram agent");
     expect(agent.env?.OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT).toBe(
-      "scripts/e2e/telegram-user-driver.py",
+      "${{ github.workspace }}/scripts/e2e/telegram-user-driver.py",
     );
     expect(agent.env?.OPENCLAW_TELEGRAM_USER_CRABBOX_BIN).toBe("/usr/local/bin/crabbox");
     expect(agent.env?.CRABBOX_COORDINATOR).toContain(
@@ -64,6 +64,26 @@ describe("Mantis Telegram Desktop proof workflow", () => {
     const prepare = workflowStep("Prepare Codex user");
     expect(prepare.run).toContain(
       "OPENCLAW_TELEGRAM_USER_CRABBOX_BIN OPENCLAW_TELEGRAM_USER_CRABBOX_PROVIDER OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT",
+    );
+  });
+
+  it("checks the Telegram user driver before leasing credentials", () => {
+    const proofScript = readFileSync(PROOF_SCRIPT, "utf8");
+    const startSession = proofScript.slice(
+      proofScript.indexOf("async function startSession"),
+      proofScript.indexOf("async function sendSessionProbe"),
+    );
+    const defaultProof = proofScript.slice(proofScript.indexOf("async function main"));
+
+    expect(startSession).toContain("requireUserDriverScript(opts);");
+    expect(startSession).toContain("leaseCredential({ localRoot, opts, root })");
+    expect(defaultProof).toContain("requireUserDriverScript(opts);");
+    expect(defaultProof).toContain("leaseCredential({ localRoot, opts, root })");
+    expect(startSession.indexOf("requireUserDriverScript(opts);")).toBeLessThan(
+      startSession.indexOf("leaseCredential({ localRoot, opts, root })"),
+    );
+    expect(defaultProof.indexOf("requireUserDriverScript(opts);")).toBeLessThan(
+      defaultProof.indexOf("leaseCredential({ localRoot, opts, root })"),
     );
   });
 });

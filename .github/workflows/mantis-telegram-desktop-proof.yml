@@ -408,7 +408,7 @@ jobs:
           OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN: ${{ secrets.OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN }}
           OPENCLAW_TELEGRAM_USER_CRABBOX_BIN: /usr/local/bin/crabbox
           OPENCLAW_TELEGRAM_USER_CRABBOX_PROVIDER: ${{ needs.resolve_request.outputs.crabbox_provider }}
-          OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT: scripts/e2e/telegram-user-driver.py
+          OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT: ${{ github.workspace }}/scripts/e2e/telegram-user-driver.py
         with:
           openai-api-key: ${{ secrets.OPENCLAW_MANTIS_AGENT_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
           prompt-file: .github/codex/prompts/mantis-telegram-desktop-proof.md

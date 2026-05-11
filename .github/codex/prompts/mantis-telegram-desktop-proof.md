@@ -44,7 +44,7 @@ Required workflow:
    `.artifacts/qa-e2e/mantis/telegram-desktop-proof-worktrees/candidate`, then
    install and build each worktree with the repo's normal `pnpm` commands.
 5. In each worktree, run the real-user Telegram Crabbox proof flow from the
-   skill. Use `scripts/e2e/telegram-user-driver.py`, the workflow-provided
+   skill. Use `$OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT`, the workflow-provided
    `crabbox` binary, and the workflow-provided local `ffmpeg`/`ffprobe`; do
    not generate, install, or patch replacement proof tooling during the run.
    Use the same proof idea for baseline and candidate. You may iterate and rerun
