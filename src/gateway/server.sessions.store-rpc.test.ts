@@ -22,6 +22,17 @@ function collectNonEmptyLines(text: string): string[] {
   return lines;
 }
 
+function expectSinglePrefixedFilename(files: string[], prefix: string): string {
+  const matches = files.filter((file) => file.startsWith(prefix));
+  expect(matches).toHaveLength(1);
+  const [match] = matches;
+  if (!match) {
+    throw new Error(`Expected one filename with prefix ${prefix}`);
+  }
+  expect(match.length).toBeGreaterThan(prefix.length);
+  return match;
+}
+
 test("lists and patches session store via sessions.* RPC", async () => {
   const { dir, storePath } = await createSessionStoreDir();
   const now = Date.now();
@@ -391,7 +402,7 @@ test("lists and patches session store via sessions.* RPC", async () => {
   );
   expect(compactedLines).toHaveLength(3);
   const filesAfterCompact = await fs.readdir(dir);
-  expect(filesAfterCompact).toContainEqual(expect.stringMatching(/^sess-main\.jsonl\.bak\./));
+  expectSinglePrefixedFilename(filesAfterCompact, "sess-main.jsonl.bak.");
 
   const deleted = await directSessionReq<{ ok: true; deleted: boolean }>("sessions.delete", {
     key: "agent:main:discord:group:dev",
@@ -406,7 +417,7 @@ test("lists and patches session store via sessions.* RPC", async () => {
     "agent:main:discord:group:dev",
   );
   const filesAfterDelete = await fs.readdir(dir);
-  expect(filesAfterDelete).toContainEqual(expect.stringMatching(/^sess-group\.jsonl\.deleted\./));
+  expectSinglePrefixedFilename(filesAfterDelete, "sess-group.jsonl.deleted.");
 
   const reset = await directSessionReq<{
     ok: true;
@@ -433,7 +444,7 @@ test("lists and patches session store via sessions.* RPC", async () => {
   expect(storeAfterReset["agent:main:main"]?.lastAccountId).toBe("work");
   expect(storeAfterReset["agent:main:main"]?.lastThreadId).toBe("1737500000.123456");
   const filesAfterReset = await fs.readdir(dir);
-  expect(filesAfterReset).toContainEqual(expect.stringMatching(/^sess-main\.jsonl\.reset\./));
+  expectSinglePrefixedFilename(filesAfterReset, "sess-main.jsonl.reset.");
 
   const badThinking = await directSessionReq("sessions.patch", {
     key: "agent:main:main",
