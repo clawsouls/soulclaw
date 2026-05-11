@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { RuntimeEnv } from "openclaw/plugin-sdk/runtime-env";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { stripAnsi } from "../../../../src/terminal/ansi.js";
 import { loginWeb } from "./login.js";
 import { renderQrTerminal } from "./qr-terminal.js";
 import { createWaSocket, formatError, waitForWaConnection } from "./session.js";
@@ -80,6 +81,10 @@ async function flushTasks() {
   await Promise.resolve();
 }
 
+function runtimeMessageCalls(fn: ReturnType<typeof vi.fn>) {
+  return fn.mock.calls.map((call) => stripAnsi(String(call[0])));
+}
+
 describe("loginWeb coverage", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -112,8 +117,8 @@ describe("loginWeb coverage", () => {
     expect(createWaSocketMock).toHaveBeenCalledTimes(2);
     const firstSock = await createWaSocketMock.mock.results[0]?.value;
     expect(firstSock.ws.close).toHaveBeenCalled();
-    expect(runtime.log).toHaveBeenCalledWith(
-      expect.stringContaining("Linked after restart; web session ready."),
+    expect(runtimeMessageCalls(runtime.log)).toContain(
+      "✅ Linked after restart; web session ready.",
     );
     vi.runAllTimers();
     const secondSock = await createWaSocketMock.mock.results[1]?.value;
@@ -160,7 +165,9 @@ describe("loginWeb coverage", () => {
     await expect(loginWeb(false, waitForWaConnectionMock as never, runtime)).rejects.toThrow(
       /cache cleared/i,
     );
-    expect(runtime.error).toHaveBeenCalledWith(expect.stringContaining("session is logged out"));
+    expect(runtimeMessageCalls(runtime.error)).toEqual([
+      "WhatsApp reported the session is logged out. Cleared cached web session; please rerun openclaw channels login and scan the QR again.",
+    ]);
     expect(rmMock).toHaveBeenCalledWith(path.resolve(testState.authDir), {
       recursive: true,
       force: true,
@@ -173,9 +180,9 @@ describe("loginWeb coverage", () => {
     await expect(loginWeb(false, waitForWaConnectionMock as never, runtime)).rejects.toThrow(
       "formatted:Error: boom",
     );
-    expect(runtime.error).toHaveBeenCalledWith(
-      expect.stringContaining("WhatsApp Web connection ended before fully opening."),
-    );
+    expect(runtimeMessageCalls(runtime.error)).toEqual([
+      "WhatsApp Web connection ended before fully opening. formatted:Error: boom",
+    ]);
     expect(formatErrorMock).toHaveBeenCalled();
   });
 });
