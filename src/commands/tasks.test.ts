@@ -124,10 +124,13 @@ describe("tasks commands", () => {
         findings: Array<{ kind: string; code: string; token?: string }>;
       };
 
-      expect(limitedPayload.findings).toHaveLength(1);
-      expect(limitedPayload.findings[0]?.kind).toBe("task_flow");
-      expect(limitedPayload.findings[0]?.code).toBe("stale_running");
-      expect(limitedPayload.findings[0]?.token).toBe(runningFlow.flowId);
+      expect(limitedPayload.findings).toStrictEqual([
+        expect.objectContaining({
+          code: "stale_running",
+          kind: "task_flow",
+          token: runningFlow.flowId,
+        }),
+      ]);
     });
   });
 
