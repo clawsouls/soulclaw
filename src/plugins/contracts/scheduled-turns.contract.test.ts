@@ -98,6 +98,20 @@ function getCronAddBody() {
   return addCall?.[2] as Record<string, unknown>;
 }
 
+function expectSessionTurnHandle(
+  handle: unknown,
+  id: string,
+  pluginId = WORKFLOW_PLUGIN_ID,
+  sessionKey = MAIN_SESSION_KEY,
+) {
+  expect(handle).toEqual({
+    id,
+    pluginId,
+    sessionKey,
+    kind: "session-turn",
+  });
+}
+
 async function scheduleWorkflowTurn(
   params: Omit<ScheduleSessionTurnRequest, "pluginId" | "origin" | "schedule"> & {
     origin?: ScheduleSessionTurnRequest["origin"];
@@ -177,23 +191,19 @@ describe("plugin scheduled turns", () => {
     expect(job.sessionTarget).toBe("session:agent:main:main");
     expect(job.deleteAfterRun).toBe(true);
     expect(job.delivery).toEqual({ mode: "announce", channel: "last" });
-    expect(job.payload).toMatchObject({
-      kind: "agentTurn",
-      message: "wake",
-    });
+    expect(job.payload).toEqual({ kind: "agentTurn", message: "wake" });
     expect(listPluginSessionSchedulerJobs(WORKFLOW_PLUGIN_ID)).toHaveLength(1);
   });
 
   it("prefixes explicit untagged schedule names with plugin ownership metadata", async () => {
     mockCronAdd({ id: "job-untagged" });
 
-    await expect(
-      scheduleWorkflowTurn({
-        schedule: {
-          name: "daily-nudge",
-        },
-      }),
-    ).resolves.toMatchObject({ id: "job-untagged" });
+    const handle = await scheduleWorkflowTurn({
+      schedule: {
+        name: "daily-nudge",
+      },
+    });
+    expectSessionTurnHandle(handle, "job-untagged");
 
     expect(getCronAddBody().name).toBe("plugin:workflow-plugin:agent:main:main:daily-nudge");
   });
@@ -212,13 +222,12 @@ describe("plugin scheduled turns", () => {
       return { ok: true };
     });
 
-    await expect(
-      scheduleWorkflowTurn({
-        schedule: {
-          tag: "nudge",
-        },
-      }),
-    ).resolves.toMatchObject({ id: "cron-compatible-job" });
+    const handle = await scheduleWorkflowTurn({
+      schedule: {
+        tag: "nudge",
+      },
+    });
+    expectSessionTurnHandle(handle, "cron-compatible-job");
   });
 
   it("pages through cron.list when unscheduling tagged turns", async () => {
@@ -409,13 +418,12 @@ describe("plugin scheduled turns", () => {
   it("falls back to a valid delay schedule when a malformed cron value is absent", async () => {
     mockCronAdd({ id: "delay-job" });
 
-    await expect(
-      scheduleWorkflowTurn({
-        schedule: {
-          cron: undefined,
-        } as never,
-      }),
-    ).resolves.toMatchObject({ id: "delay-job" });
+    const handle = await scheduleWorkflowTurn({
+      schedule: {
+        cron: undefined,
+      } as never,
+    });
+    expectSessionTurnHandle(handle, "delay-job");
 
     expect((getCronAddBody() as { schedule?: { kind?: string } }).schedule?.kind).toBe("at");
   });
@@ -498,17 +506,16 @@ describe("plugin scheduled turns", () => {
     expect(registry.plugins.find((plugin) => plugin.id === "loader-scheduler")?.status).toBe(
       "loaded",
     );
-    await vi.waitFor(() =>
-      expect(workflowMocks.callGatewayTool).toHaveBeenCalledWith(
-        "cron.add",
-        {},
-        expect.objectContaining({
-          sessionTarget: "session:agent:main:main",
-          payload: { kind: "agentTurn", message: "wake" },
-        }),
-        { scopes: ["operator.admin"] },
-      ),
-    );
+    await vi.waitFor(() => {
+      const cronAddCall = workflowMocks.callGatewayTool.mock.calls.find(
+        (args) => args[0] === "cron.add",
+      );
+      expect(cronAddCall).toBeDefined();
+      const body = cronAddCall?.[2] as Record<string, unknown> | undefined;
+      expect(body?.sessionTarget).toBe("session:agent:main:main");
+      expect(body?.payload).toEqual({ kind: "agentTurn", message: "wake" });
+      expect(cronAddCall?.[3]).toEqual({ scopes: ["operator.admin"] });
+    });
     expect(listPluginSessionSchedulerJobs("loader-scheduler")).toEqual([
       {
         id: "loader-scheduled-job",
@@ -654,10 +661,18 @@ describe("plugin scheduled turns", () => {
       badDelete: null,
       removed: { removed: 2, failed: 0 },
     });
-    expect(addedJobs.map((job) => job.name)).toEqual([
-      expect.stringContaining("plugin:loader-scheduler-runtime:tag:nudge:agent:main:main:"),
-      expect.stringContaining("plugin:loader-scheduler-runtime:tag:nudge:agent:main:main:"),
-    ]);
+    const namePrefix = "plugin:loader-scheduler-runtime:tag:nudge:agent:main:main:";
+    const addedNames = addedJobs.map((job) => job.name);
+    expect(addedNames).toHaveLength(2);
+    expect(addedNames[0]).toMatch(
+      /^plugin:loader-scheduler-runtime:tag:nudge:agent:main:main:[0-9a-f-]{36}$/u,
+    );
+    expect(addedNames[1]).toMatch(
+      /^plugin:loader-scheduler-runtime:tag:nudge:agent:main:main:[0-9a-f-]{36}$/u,
+    );
+    expect(String(addedNames[0]).startsWith(namePrefix)).toBe(true);
+    expect(String(addedNames[1]).startsWith(namePrefix)).toBe(true);
+    expect(addedNames[0]).not.toBe(addedNames[1]);
     expect(addedJobs.map((job) => job.delivery)).toEqual([
       { mode: "announce", channel: "last" },
       { mode: "none" },
@@ -702,23 +717,18 @@ describe("plugin scheduled turns", () => {
       },
     );
 
-    await expect(
-      scheduleWorkflowTurn({
-        pluginName: "Workflow Plugin",
-      }),
-    ).resolves.toMatchObject({ id: "cleanup-failure-job" });
+    const cleanupFailureHandle = await scheduleWorkflowTurn({
+      pluginName: "Workflow Plugin",
+    });
+    expectSessionTurnHandle(cleanupFailureHandle, "cleanup-failure-job");
 
-    await expect(
-      cleanupPluginSessionSchedulerJobs({
-        pluginId: WORKFLOW_PLUGIN_ID,
-        reason: "disable",
-      }),
-    ).resolves.toEqual([
-      expect.objectContaining({
-        pluginId: WORKFLOW_PLUGIN_ID,
-        hookId: "scheduler:cleanup-failure-job",
-      }),
-    ]);
+    const failures = await cleanupPluginSessionSchedulerJobs({
+      pluginId: WORKFLOW_PLUGIN_ID,
+      reason: "disable",
+    });
+    expect(failures).toHaveLength(1);
+    expect(failures[0]?.pluginId).toBe(WORKFLOW_PLUGIN_ID);
+    expect(failures[0]?.hookId).toBe("scheduler:cleanup-failure-job");
     expect(listPluginSessionSchedulerJobs(WORKFLOW_PLUGIN_ID)).toEqual([
       {
         id: "cleanup-failure-job",
@@ -744,7 +754,8 @@ describe("plugin scheduled turns", () => {
       },
     );
 
-    await expect(scheduleWorkflowTurn()).resolves.toMatchObject({ id: "dynamic-cleanup-job" });
+    const dynamicCleanupHandle = await scheduleWorkflowTurn();
+    expectSessionTurnHandle(dynamicCleanupHandle, "dynamic-cleanup-job");
 
     await expect(
       cleanupPluginSessionSchedulerJobs({
@@ -806,13 +817,12 @@ describe("plugin scheduled turns", () => {
       },
     });
 
-    await expect(
-      cleanupReplacedPluginHostRegistry({
-        cfg: previousFixture.config,
-        previousRegistry: previousFixture.registry.registry,
-        nextRegistry: replacementFixture.registry.registry,
-      }),
-    ).resolves.toMatchObject({ failures: [] });
+    const cleanupResult = await cleanupReplacedPluginHostRegistry({
+      cfg: previousFixture.config,
+      previousRegistry: previousFixture.registry.registry,
+      nextRegistry: replacementFixture.registry.registry,
+    });
+    expect(cleanupResult.failures).toEqual([]);
     expect(removed).toEqual(["old-runtime-job"]);
     expect(listPluginSessionSchedulerJobs(WORKFLOW_PLUGIN_ID)).toEqual([
       {
@@ -839,7 +849,8 @@ describe("plugin scheduled turns", () => {
       },
     );
 
-    await expect(scheduleWorkflowTurn()).resolves.toMatchObject({ id: "already-missing-job" });
+    const alreadyMissingHandle = await scheduleWorkflowTurn();
+    expectSessionTurnHandle(alreadyMissingHandle, "already-missing-job");
 
     await expect(
       cleanupPluginSessionSchedulerJobs({
@@ -1051,13 +1062,12 @@ describe("plugin scheduled turns", () => {
     });
     setActivePluginRegistry(registry.registry);
 
-    await expect(
-      capturedApi?.session.workflow.scheduleSessionTurn({
-        sessionKey: "agent:main:main",
-        message: "wake",
-        delayMs: 10,
-      }),
-    ).resolves.toMatchObject({ id: "job-live", pluginId: "scheduler-plugin" });
+    const liveHandle = await capturedApi?.session.workflow.scheduleSessionTurn({
+      sessionKey: "agent:main:main",
+      message: "wake",
+      delayMs: 10,
+    });
+    expectSessionTurnHandle(liveHandle, "job-live", "scheduler-plugin");
     await expect(
       capturedApi?.session.workflow.unscheduleSessionTurnsByTag({
         sessionKey: "agent:main:main",
