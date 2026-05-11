@@ -268,6 +268,9 @@ describe("runReplyAgent runtime config", () => {
 
     const result = await runReplyAgent(replyParams);
 
+    if (!result || Array.isArray(result)) {
+      throw new Error("expected a single memory-flush error reply payload");
+    }
     expect(result).toEqual({
       text: "⚠️ write failed: Memory flush writes are restricted to memory/2023-11-14.md; use that path only.",
       isError: true,
