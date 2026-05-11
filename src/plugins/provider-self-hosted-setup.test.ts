@@ -120,28 +120,24 @@ describe("discoverOpenAICompatibleLocalModels", () => {
         maxTokens: 8192,
       },
     ]);
-    expect(fetchWithSsrFGuardMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: "http://127.0.0.1:8000/v1/models",
-        init: { headers: { Authorization: "Bearer self-hosted-test-key" } },
-        policy: {
-          hostnameAllowlist: ["127.0.0.1"],
-          allowPrivateNetwork: true,
-        },
-        timeoutMs: 5000,
-      }),
-    );
-    expect(fetchWithSsrFGuardMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: "http://127.0.0.1:8000/props",
-        init: { headers: { Authorization: "Bearer self-hosted-test-key" } },
-        policy: {
-          hostnameAllowlist: ["127.0.0.1"],
-          allowPrivateNetwork: true,
-        },
-        timeoutMs: 2500,
-      }),
-    );
+    expect(fetchWithSsrFGuardMock).toHaveBeenNthCalledWith(1, {
+      url: "http://127.0.0.1:8000/v1/models",
+      init: { headers: { Authorization: "Bearer self-hosted-test-key" } },
+      policy: {
+        hostnameAllowlist: ["127.0.0.1"],
+        allowPrivateNetwork: true,
+      },
+      timeoutMs: 5000,
+    });
+    expect(fetchWithSsrFGuardMock).toHaveBeenNthCalledWith(2, {
+      url: "http://127.0.0.1:8000/props",
+      init: { headers: { Authorization: "Bearer self-hosted-test-key" } },
+      policy: {
+        hostnameAllowlist: ["127.0.0.1"],
+        allowPrivateNetwork: true,
+      },
+      timeoutMs: 2500,
+    });
     expect(release).toHaveBeenCalledOnce();
     expect(propsRelease).toHaveBeenCalledOnce();
   });
@@ -179,18 +175,26 @@ describe("discoverOpenAICompatibleLocalModels", () => {
     });
 
     expect(models).toEqual([
-      expect.objectContaining({
+      {
         id: "qwen3.6-mxfp4-moe",
+        name: "qwen3.6-mxfp4-moe",
+        reasoning: false,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: 262_144,
         contextTokens: 65_536,
-      }),
+        maxTokens: 8192,
+      },
     ]);
-    expect(fetchWithSsrFGuardMock).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        url: "http://127.0.0.1:8080/props",
-      }),
-    );
+    expect(fetchWithSsrFGuardMock).toHaveBeenNthCalledWith(2, {
+      url: "http://127.0.0.1:8080/props",
+      init: { headers: undefined },
+      policy: {
+        hostnameAllowlist: ["127.0.0.1"],
+        allowPrivateNetwork: true,
+      },
+      timeoutMs: 2500,
+    });
     expect(modelsRelease).toHaveBeenCalledOnce();
     expect(propsRelease).toHaveBeenCalledOnce();
   });
@@ -240,29 +244,45 @@ describe("discoverOpenAICompatibleLocalModels", () => {
     });
 
     expect(models).toEqual([
-      expect.objectContaining({
+      {
         id: "qwen/router-a",
+        name: "qwen/router-a",
+        reasoning: false,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: 262_144,
         contextTokens: 65_536,
-      }),
-      expect.objectContaining({
+        maxTokens: 8192,
+      },
+      {
         id: "qwen/router-b",
+        name: "qwen/router-b",
+        reasoning: false,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: 131_072,
         contextTokens: 32_768,
-      }),
+        maxTokens: 8192,
+      },
     ]);
-    expect(fetchWithSsrFGuardMock).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        url: "http://127.0.0.1:8080/props?model=qwen%2Frouter-a&autoload=false",
-      }),
-    );
-    expect(fetchWithSsrFGuardMock).toHaveBeenNthCalledWith(
-      3,
-      expect.objectContaining({
-        url: "http://127.0.0.1:8080/props?model=qwen%2Frouter-b&autoload=false",
-      }),
-    );
+    expect(fetchWithSsrFGuardMock).toHaveBeenNthCalledWith(2, {
+      url: "http://127.0.0.1:8080/props?model=qwen%2Frouter-a&autoload=false",
+      init: { headers: undefined },
+      policy: {
+        hostnameAllowlist: ["127.0.0.1"],
+        allowPrivateNetwork: true,
+      },
+      timeoutMs: 2500,
+    });
+    expect(fetchWithSsrFGuardMock).toHaveBeenNthCalledWith(3, {
+      url: "http://127.0.0.1:8080/props?model=qwen%2Frouter-b&autoload=false",
+      init: { headers: undefined },
+      policy: {
+        hostnameAllowlist: ["127.0.0.1"],
+        allowPrivateNetwork: true,
+      },
+      timeoutMs: 2500,
+    });
     expect(modelsRelease).toHaveBeenCalledOnce();
     expect(firstPropsRelease).toHaveBeenCalledOnce();
     expect(secondPropsRelease).toHaveBeenCalledOnce();
@@ -299,11 +319,16 @@ describe("discoverOpenAICompatibleLocalModels", () => {
     });
 
     expect(models).toEqual([
-      expect.objectContaining({
+      {
         id: "qwen3.6-mxfp4-moe",
+        name: "qwen3.6-mxfp4-moe",
+        reasoning: false,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: 262_144,
         contextTokens: 65_536,
-      }),
+        maxTokens: 8192,
+      },
     ]);
     expect(modelsRelease).toHaveBeenCalledOnce();
     expect(propsRelease).toHaveBeenCalledOnce();
@@ -330,10 +355,15 @@ describe("discoverOpenAICompatibleLocalModels", () => {
     });
 
     expect(models).toEqual([
-      expect.objectContaining({
+      {
         id: "qwen3.6-mxfp4-moe",
+        name: "qwen3.6-mxfp4-moe",
+        reasoning: false,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: 65_536,
-      }),
+        maxTokens: 8192,
+      },
     ]);
     expect(models[0]).not.toHaveProperty("contextTokens");
     expect(fetchWithSsrFGuardMock).toHaveBeenCalledTimes(1);
@@ -449,7 +479,10 @@ describe("configureOpenAICompatibleSelfHostedProviderNonInteractive", () => {
 
     expect(cfg).toBeNull();
     expect(ctx.runtime.error).toHaveBeenCalledWith(
-      expect.stringContaining("Missing --custom-model-id for --auth-choice vllm."),
+      [
+        "Missing --custom-model-id for --auth-choice vllm.",
+        "Pass the vLLM model id to use, for example Qwen/Qwen3-32B.",
+      ].join("\n"),
     );
     expect(ctx.runtime.exit).toHaveBeenCalledWith(1);
     expect(ctx.resolveApiKey).not.toHaveBeenCalled();
