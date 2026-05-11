@@ -478,7 +478,9 @@ describe("parseMessageWithAttachments validation errors", () => {
       expect(parsed.message).toContain(
         "[image attachment omitted: text-only attachment limit reached]",
       );
-      expect(logs).toContainEqual(expect.stringMatching(/offload limit 10/i));
+      expect(logs).toEqual([
+        "attachment dot-10.png: dropping image because text-only offload limit 10 was reached",
+      ]);
     } finally {
       await cleanupOffloadedRefs(parsed.offloadedRefs);
     }
