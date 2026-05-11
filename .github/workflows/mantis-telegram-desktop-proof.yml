@@ -350,6 +350,12 @@ jobs:
           sudo install -d -m 0770 -o codex -g codex "$codex_home"
           sudo setfacl -m u:runner:rwx,u:codex:rwx "$codex_home"
           sudo setfacl -d -m u:runner:rwx,u:codex:rwx "$codex_home"
+          workspace_parent="$(dirname "$GITHUB_WORKSPACE")"
+          while [ "$workspace_parent" != "/" ]; do
+            sudo setfacl -m u:codex:--x "$workspace_parent"
+            [ "$workspace_parent" = "/home/runner" ] && break
+            workspace_parent="$(dirname "$workspace_parent")"
+          done
           sudo chown -R codex:codex "$GITHUB_WORKSPACE"
 
       - name: Run Codex Mantis Telegram agent
