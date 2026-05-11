@@ -1071,6 +1071,7 @@ describe("runCodexAppServerAttempt", () => {
   it("emits normalized tool progress around app-server dynamic tool requests", async () => {
     const harness = createStartedThreadHarness();
     const onRunAgentEvent = vi.fn();
+    const onExecutionPhase = vi.fn();
     const globalAgentEvents: AgentEventPayload[] = [];
     onAgentEvent((event) => globalAgentEvents.push(event));
     const params = createParams(
@@ -1078,6 +1079,7 @@ describe("runCodexAppServerAttempt", () => {
       path.join(tempDir, "workspace"),
     );
     params.onAgentEvent = onRunAgentEvent;
+    params.onExecutionPhase = onExecutionPhase;
 
     const run = runCodexAppServerAttempt(params);
     await harness.waitForMethod("turn/start");
@@ -1143,6 +1145,20 @@ describe("runCodexAppServerAttempt", () => {
     expect(globalStartEvent?.runId).toBe("run-1");
     expect(globalStartEvent?.sessionKey).toBe("agent:main:session-1");
     expect(globalStartEvent?.data.name).toBe("message");
+    expect(onExecutionPhase).toHaveBeenCalledWith({
+      phase: "turn_accepted",
+      provider: "codex",
+      model: "gpt-5.4-codex",
+      backend: "codex-app-server",
+    });
+    expect(onExecutionPhase).toHaveBeenCalledWith({
+      phase: "tool_execution_started",
+      provider: "codex",
+      model: "gpt-5.4-codex",
+      backend: "codex-app-server",
+      tool: "message",
+      toolCallId: "call-1",
+    });
   });
 
   it("releases the session when Codex never completes after a dynamic tool response", async () => {
