@@ -84,7 +84,9 @@ describe("google provider plugin hooks", () => {
 
     const bootstrapMessage = sanitized?.[0];
     expect(bootstrapMessage?.role).toBe("user");
-    expect(bootstrapMessage?.content).toBe("(session bootstrap)");
+    expect(
+      bootstrapMessage && "content" in bootstrapMessage ? bootstrapMessage.content : undefined,
+    ).toBe("(session bootstrap)");
     expect(typeof (bootstrapMessage as { timestamp?: unknown } | undefined)?.timestamp).toBe(
       "number",
     );
