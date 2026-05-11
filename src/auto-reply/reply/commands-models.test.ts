@@ -390,9 +390,10 @@ describe("handleModelsCommand", () => {
     const result = await handleModelsCommand(params, true);
 
     expect(result?.reply?.text).toContain("Models (anthropic · 🔑 target-auth) — showing 1-2 of 2");
-    const authLabelParams = modelAuthLabelMocks.resolveModelAuthLabel.mock.calls[0]?.[0];
-    expect(authLabelParams?.provider).toBe("anthropic");
-    expect(authLabelParams?.workspaceDir).toBe("/tmp");
+    const [[authLabelParams]] = modelAuthLabelMocks.resolveModelAuthLabel.mock
+      .calls as unknown as Array<[{ provider?: string; workspaceDir?: string }]>;
+    expect(authLabelParams.provider).toBe("anthropic");
+    expect(authLabelParams.workspaceDir).toBe("/tmp");
   });
 
   it("uses spawned workspace for direct /models provider visibility", async () => {

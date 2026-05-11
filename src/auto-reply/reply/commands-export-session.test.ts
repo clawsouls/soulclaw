@@ -204,8 +204,8 @@ describe("buildExportSessionReply", () => {
     });
 
     expect(reply.text).toContain("✅ Session exported!");
-    const systemPromptBundleParams =
-      hoisted.resolveCommandsSystemPromptBundleMock.mock.calls[0]?.[0];
+    const [[systemPromptBundleParams]] = hoisted.resolveCommandsSystemPromptBundleMock.mock
+      .calls as unknown as Array<[{ sessionEntry?: { sessionId?: string; updatedAt?: number } }]>;
     expect(systemPromptBundleParams?.sessionEntry?.sessionId).toBe("session-from-store");
     expect(systemPromptBundleParams?.sessionEntry?.updatedAt).toBe(2);
   });
