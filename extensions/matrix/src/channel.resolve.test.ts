@@ -26,7 +26,15 @@ describe("matrix resolver adapter", () => {
     });
 
     expect(resolveMatrixTargetsMock).toHaveBeenCalledTimes(1);
-    const forwarded = resolveMatrixTargetsMock.mock.calls[0]?.[0];
+    const [forwarded] = resolveMatrixTargetsMock.mock.calls[0] as unknown as [
+      {
+        accountId: string;
+        cfg: { channels: { matrix: Record<string, never> } };
+        inputs: string[];
+        kind: string;
+        runtime: { error: unknown; exit: unknown; log: unknown };
+      },
+    ];
     expect(forwarded).toEqual({
       cfg: { channels: { matrix: {} } },
       accountId: "ops",
