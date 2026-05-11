@@ -333,8 +333,10 @@ function expectMockCallFields(
 
 function expectNthSystemEventFields(callIndex: number, expected: Record<string, unknown>): void {
   const call = mocks.enqueueSystemEvent.mock.calls[callIndex];
-  expect(call).toBeDefined();
-  expectRecordFields(call?.[1], expected);
+  if (!call) {
+    throw new Error(`Expected enqueueSystemEvent call at index ${callIndex}`);
+  }
+  expectRecordFields(call[1], expected);
 }
 
 function expectContinuationDispatchFields(
