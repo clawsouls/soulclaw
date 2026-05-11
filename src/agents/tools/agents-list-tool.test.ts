@@ -60,16 +60,19 @@ describe("agents_list tool", () => {
     );
     const details = result.details as AgentListDetails;
 
-    expect(details.requester).toBe("main");
-    expect(details.agents).toStrictEqual([
-      expect.objectContaining({
-        id: "codex",
-        name: "Codex",
-        configured: true,
-        model: "openai/gpt-5.5",
-        agentRuntime: { id: "codex", source: "model" },
-      }),
-    ]);
+    expect(details).toStrictEqual({
+      requester: "main",
+      allowAny: false,
+      agents: [
+        {
+          id: "codex",
+          name: "Codex",
+          configured: true,
+          model: "openai/gpt-5.5",
+          agentRuntime: { id: "codex", source: "model" },
+        },
+      ],
+    });
   });
 
   it("returns requester as the only target when no subagent allowlist is configured", async () => {
