@@ -59,6 +59,15 @@ type ApprovalRequestPayload = {
   commandSpans?: Array<{ startIndex: number; endIndex: number }>;
 };
 
+function requireApprovalRequestPayload(callIndex: number): ApprovalRequestPayload {
+  const call = vi.mocked(callGatewayTool).mock.calls[callIndex];
+  expect(call?.[0]).toBe("exec.approval.request");
+  const payload = call?.[2];
+  expect(typeof payload).toBe("object");
+  expect(payload).not.toBeNull();
+  return payload as ApprovalRequestPayload;
+}
+
 describe("requestExecApprovalDecision", () => {
   beforeAll(async () => {
     ({ callGatewayTool } = await import("./tools/gateway.js"));
@@ -299,20 +308,9 @@ describe("requestExecApprovalDecision", () => {
       ask: "always",
     });
 
-    expect(callGatewayTool).toHaveBeenNthCalledWith(
-      1,
-      "exec.approval.request",
-      expect.anything(),
-      expect.not.objectContaining({ commandSpans: expect.anything() }),
-      expect.anything(),
-    );
-    expect(callGatewayTool).toHaveBeenNthCalledWith(
-      2,
-      "exec.approval.request",
-      expect.anything(),
-      expect.not.objectContaining({ commandSpans: expect.anything() }),
-      expect.anything(),
-    );
+    expect(vi.mocked(callGatewayTool).mock.calls).toHaveLength(2);
+    expect(requireApprovalRequestPayload(0).commandSpans).toBeUndefined();
+    expect(requireApprovalRequestPayload(1).commandSpans).toBeUndefined();
   });
 
   it("omits generated command spans for Windows gateway PowerShell commands", async () => {
@@ -330,12 +328,8 @@ describe("requestExecApprovalDecision", () => {
     });
 
     expect(commandExplainerMock.formatCommandSpans).not.toHaveBeenCalled();
-    expect(callGatewayTool).toHaveBeenCalledWith(
-      "exec.approval.request",
-      expect.anything(),
-      expect.not.objectContaining({ commandSpans: expect.anything() }),
-      expect.anything(),
-    );
+    expect(vi.mocked(callGatewayTool).mock.calls).toHaveLength(1);
+    expect(requireApprovalRequestPayload(0).commandSpans).toBeUndefined();
   });
 
   it("omits generated command spans for unsupported shell wrappers through system run carriers", async () => {
@@ -357,12 +351,8 @@ describe("requestExecApprovalDecision", () => {
     });
 
     expect(commandExplainerMock.formatCommandSpans).not.toHaveBeenCalled();
-    expect(callGatewayTool).toHaveBeenCalledWith(
-      "exec.approval.request",
-      expect.anything(),
-      expect.not.objectContaining({ commandSpans: expect.anything() }),
-      expect.anything(),
-    );
+    expect(vi.mocked(callGatewayTool).mock.calls).toHaveLength(1);
+    expect(requireApprovalRequestPayload(0).commandSpans).toBeUndefined();
   });
 
   it("keeps explicit command spans", async () => {
