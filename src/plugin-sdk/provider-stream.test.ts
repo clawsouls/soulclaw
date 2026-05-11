@@ -48,7 +48,6 @@ function requireRecord(value: unknown, label: string): Record<string, unknown> {
 }
 
 function requirePayload(payload: Record<string, unknown> | undefined): Record<string, unknown> {
-  expect(payload).toBeDefined();
   if (!payload) {
     throw new Error("expected captured payload");
   }

@@ -94,7 +94,6 @@ function requireMatchingRecord(
     const record = item as Record<string, unknown>;
     return Object.entries(fields).every(([key, value]) => Object.is(record[key], value));
   });
-  expect(found).toBeDefined();
   if (!found) {
     throw new Error(`missing ${label}`);
   }
@@ -104,7 +103,6 @@ function requireMatchingRecord(
 function requireFirstMockCallArg(mock: unknown, label: string) {
   const calls = (mock as { mock?: { calls?: unknown[][] } }).mock?.calls;
   const call = calls?.[0];
-  expect(call).toBeDefined();
   if (!call) {
     throw new Error(`missing ${label} call`);
   }

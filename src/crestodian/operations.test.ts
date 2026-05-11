@@ -43,7 +43,6 @@ function expectAuditRecord(
 
 function requireFirstMockCall(mock: unknown, label: string): unknown[] {
   const call = (mock as { mock?: { calls?: unknown[][] } }).mock?.calls?.[0];
-  expect(call).toBeDefined();
   if (!call) {
     throw new Error(`missing ${label} call`);
   }

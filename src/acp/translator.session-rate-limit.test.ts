@@ -139,9 +139,11 @@ function configOptions(value: unknown) {
 
 function expectConfigOption(options: unknown, id: string, fields: Record<string, unknown>) {
   const option = configOptions(options).find((candidate) => candidate.id === id);
-  expect(option, `config option ${id}`).toBeDefined();
+  if (!option) {
+    throw new Error(`Expected config option ${id}`);
+  }
   for (const [field, value] of Object.entries(fields)) {
-    expect(option?.[field]).toEqual(value);
+    expect(option[field]).toEqual(value);
   }
 }
 
