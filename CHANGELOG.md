@@ -6,6 +6,7 @@ Docs: https://docs.openclaw.ai
 
 ### Changes
 
+- Build: enable stricter Vitest safety lint rules for focused, disabled, conditional, and standalone expectations.
 - Build: pin explicit oxfmt defaults in the shared formatter config to keep formatting behavior stable across upgrades.
 - TypeScript: enable stricter compiler checks for implicit returns, side-effect imports, overrides, and unused production code.
 - Build: upgrade workspace package management to pnpm 11 and keep Docker, install, update, and release workflows on the pnpm 11 config surface. (#79414) Thanks @altaywtf.
