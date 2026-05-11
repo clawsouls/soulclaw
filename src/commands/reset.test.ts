@@ -5,6 +5,10 @@ import {
   silenceCleanupCommandRuntime,
 } from "./cleanup-command.test-support.js";
 
+function loggedMessages(runtime: ReturnType<typeof createCleanupCommandRuntime>) {
+  return runtime.log.mock.calls.map(([message]) => String(message));
+}
+
 describe("resetCommand", () => {
   const runtime = createCleanupCommandRuntime();
   let resetCommand: typeof import("./reset.js").resetCommand;
@@ -26,7 +30,9 @@ describe("resetCommand", () => {
       dryRun: true,
     });
 
-    expect(runtime.log).toHaveBeenCalledWith(expect.stringContaining("openclaw backup create"));
+    expect(
+      loggedMessages(runtime).some((message) => message.includes("openclaw backup create")),
+    ).toBe(true);
   });
 
   it("does not recommend backup for config-only reset", async () => {
@@ -37,6 +43,8 @@ describe("resetCommand", () => {
       dryRun: true,
     });
 
-    expect(runtime.log).not.toHaveBeenCalledWith(expect.stringContaining("openclaw backup create"));
+    expect(
+      loggedMessages(runtime).some((message) => message.includes("openclaw backup create")),
+    ).toBe(false);
   });
 });
