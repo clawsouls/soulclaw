@@ -270,17 +270,16 @@ describe("uploadToConsentUrl", () => {
       validationOpts: { resolveFn: publicResolve },
     });
 
-    expect(fetchFn).toHaveBeenCalledWith(
-      "https://contoso.sharepoint.com/upload",
-      expect.objectContaining({
-        method: "PUT",
-        headers: expect.objectContaining({
-          "Content-Range": "bytes 0-4/5",
-          "Content-Type": "application/octet-stream",
-          "User-Agent": expect.stringMatching(/^teams\.ts\[apps\]\/.+ OpenClaw\/.+$/),
-        }),
-      }),
-    );
+    expect(fetchFn).toHaveBeenCalledOnce();
+    const [url, opts] = fetchFn.mock.calls[0];
+    expect(url).toBe("https://contoso.sharepoint.com/upload");
+    expect(opts?.method).toBe("PUT");
+    expect(opts?.headers).toEqual({
+      "Content-Range": "bytes 0-4/5",
+      "Content-Type": "application/octet-stream",
+      "User-Agent": expect.stringMatching(/^teams\.ts\[apps\]\/.+ OpenClaw\/.+$/),
+    });
+    expect(opts?.body).toEqual(new Uint8Array(Buffer.from("hello")));
   });
 
   it("blocks upload to a disallowed host", async () => {
