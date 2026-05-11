@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { formatCliCommand } from "../command-format.js";
 import { ensureConfigReady, __test__ } from "./config-guard.js";
 
 const loadAndMaybeMigrateDoctorConfigMock = vi.hoisted(() => vi.fn());
@@ -29,6 +30,10 @@ function makeRuntime() {
     error: vi.fn(),
     exit: vi.fn(),
   };
+}
+
+function plainErrorCalls(runtime: ReturnType<typeof makeRuntime>): string[] {
+  return runtime.error.mock.calls.map((call) => String(call[0]).replace(/\u001b\[[0-9;]*m/g, ""));
 }
 
 async function withCapturedStdout(run: () => Promise<void>): Promise<string> {
@@ -128,9 +133,16 @@ describe("ensureConfigReady", () => {
     setInvalidSnapshot();
     const runtime = await runEnsureConfigReady(["message"]);
 
-    expect(runtime.error).toHaveBeenCalledWith(expect.stringContaining("config is invalid"));
-    expect(runtime.error).toHaveBeenCalledWith(expect.stringContaining("doctor --fix"));
-    expect(runtime.error).toHaveBeenCalledWith(expect.stringContaining("config validate"));
+    expect(plainErrorCalls(runtime)).toEqual([
+      "OpenClaw config is invalid",
+      "File: /tmp/openclaw.json",
+      "Problem:",
+      "  - channels.quietchat: invalid",
+      "",
+      `Fix: ${formatCliCommand("openclaw doctor --fix")}`,
+      `Inspect: ${formatCliCommand("openclaw config validate")}`,
+      "Status, health, logs, and doctor commands still run with invalid config.",
+    ]);
     expect(runtime.exit).toHaveBeenCalledWith(1);
   });
 
