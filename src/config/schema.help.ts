@@ -716,6 +716,10 @@ export const FIELD_HELP: Record<string, string> = {
     "Per-agent additive allowlist for tools on top of global and profile policy. Keep narrow to avoid accidental privilege expansion on specialized agents.",
   "agents.list[].tools.byProvider":
     "Per-agent provider-specific tool policy overrides for channel-scoped capability control. Use this when a single agent needs tighter restrictions on one provider than others.",
+  "agents.list[].tools.message.crossContext.allowWithinProvider":
+    "Per-agent message guard for sending to other conversations on the same provider. Set false for current-conversation-only public agents.",
+  "agents.list[].tools.message.crossContext.allowAcrossProviders":
+    "Per-agent message guard for sending across providers. Keep false for public or sandboxed agents.",
   "tools.exec.approvalRunningNoticeMs":
     "Delay in milliseconds before showing an in-progress notice after an exec approval is granted. Increase to reduce flicker for fast commands, or lower for quicker operator feedback.",
   "tools.links.enabled":
