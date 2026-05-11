@@ -6,7 +6,8 @@ import {
 } from "./cleanup-command.test-support.js";
 
 function loggedMessages(runtime: ReturnType<typeof createCleanupCommandRuntime>) {
-  return runtime.log.mock.calls.map(([message]) => String(message));
+  const calls = (runtime.log as unknown as { mock: { calls: Array<[unknown]> } }).mock.calls;
+  return calls.map(([message]) => String(message));
 }
 
 describe("resetCommand", () => {
