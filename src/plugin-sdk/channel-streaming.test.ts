@@ -243,7 +243,7 @@ describe("channel-streaming", () => {
         entry: { streaming: { progress: { label: false } } },
         lines: line ? [line] : [],
       }),
-    ).toBe("🩹 1 modified; extensions/discord/src/monitor/message-handler.draft-preview.ts");
+    ).toBe("🩹 1 modified; extensions/discord/src/monitor/message-handler.draft-prev…");
   });
 
   it("bounds progress draft line length to reduce edit reflow", () => {
