@@ -95,8 +95,13 @@ describe("detectImageReferences", () => {
     for (const ext of extensions) {
       const prompt = `Image: /test/image.${ext}`;
       const refs = detectImageReferences(prompt);
-      expect(refs.length).toBeGreaterThanOrEqual(1);
-      expect(refs[0]?.raw).toContain(`.${ext}`);
+      expect(refs).toStrictEqual([
+        {
+          raw: `/test/image.${ext}`,
+          type: "path",
+          resolved: `/test/image.${ext}`,
+        },
+      ]);
     }
   });
 
