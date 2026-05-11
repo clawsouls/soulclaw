@@ -751,25 +751,25 @@ describe("anthropic transport stream", () => {
         } as AnthropicStreamOptions,
       );
 
-      expect(latestAnthropicRequest().payload).toMatchObject({
-        model: "MiniMax-M2.7",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: ".",
-                cache_control: { type: "ephemeral" },
-              },
-            ],
-          },
-        ],
-      });
-      expect(guardedFetchMock).toHaveBeenCalledWith(
-        "https://api.minimax.io/anthropic/v1/messages",
-        expect.objectContaining({ method: "POST" }),
-      );
+      const requestPayload = latestAnthropicRequest().payload;
+      expect(requestPayload.model).toBe("MiniMax-M2.7");
+      expect(requestPayload.messages).toEqual([
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: ".",
+              cache_control: { type: "ephemeral" },
+            },
+          ],
+        },
+      ]);
+      const [[url, fetchOptions]] = guardedFetchMock.mock.calls as unknown as Array<
+        [string, { method?: string }]
+      >;
+      expect(url).toBe("https://api.minimax.io/anthropic/v1/messages");
+      expect(fetchOptions.method).toBe("POST");
     },
   );
 
