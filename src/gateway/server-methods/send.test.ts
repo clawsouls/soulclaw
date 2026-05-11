@@ -211,6 +211,13 @@ function firstRespondCall(respond: ReturnType<typeof vi.fn>) {
   return calls[0];
 }
 
+function lastDispatchChannelMessageActionCall(): Record<string, any> | undefined {
+  const calls = mocks.dispatchChannelMessageAction.mock.calls as unknown as Array<
+    [Record<string, any>]
+  >;
+  return calls.at(-1)?.[0];
+}
+
 function pollCall(index = 0): Record<string, any> | undefined {
   const calls = mocks.sendPoll.mock.calls as unknown as Array<[Record<string, any>]>;
   return calls[index]?.[0];
@@ -323,18 +330,20 @@ describe("gateway send mirroring", () => {
     await Promise.all([firstRequest, secondRequest]);
 
     expect(mocks.dispatchChannelMessageAction).toHaveBeenCalledTimes(1);
-    expect(firstRespond).toHaveBeenCalledWith(
-      true,
-      { action: "handled" },
-      undefined,
-      expect.objectContaining({ channel: "slack" }),
-    );
-    expect(secondRespond).toHaveBeenCalledWith(
-      true,
-      { action: "handled" },
-      undefined,
-      expect.objectContaining({ channel: "slack", cached: true }),
-    );
+    expect(firstRespond).toHaveBeenCalledTimes(1);
+    expect(secondRespond).toHaveBeenCalledTimes(1);
+    const firstCall = firstRespondCall(firstRespond);
+    expect(firstCall?.[0]).toBe(true);
+    expect(firstCall?.[1]).toEqual({ action: "handled" });
+    expect(firstCall?.[2]).toBeUndefined();
+    expect(firstCall?.[3]?.channel).toBe("slack");
+    expect(firstCall?.[3]?.cached).toBeUndefined();
+    const secondCall = firstRespondCall(secondRespond);
+    expect(secondCall?.[0]).toBe(true);
+    expect(secondCall?.[1]).toEqual({ action: "handled" });
+    expect(secondCall?.[2]).toBeUndefined();
+    expect(secondCall?.[3]?.channel).toBe("slack");
+    expect(secondCall?.[3]?.cached).toBe(true);
   });
 
   it("dedupes concurrent send requests while inflight", async () => {
@@ -380,18 +389,22 @@ describe("gateway send mirroring", () => {
     await Promise.all([firstRequest, secondRequest]);
 
     expect(mocks.deliverOutboundPayloads).toHaveBeenCalledTimes(1);
-    expect(firstRespond).toHaveBeenCalledWith(
-      true,
-      expect.objectContaining({ messageId: "m-concurrent", runId: "idem-send-concurrent" }),
-      undefined,
-      expect.objectContaining({ channel: "slack" }),
-    );
-    expect(secondRespond).toHaveBeenCalledWith(
-      true,
-      expect.objectContaining({ messageId: "m-concurrent", runId: "idem-send-concurrent" }),
-      undefined,
-      expect.objectContaining({ channel: "slack", cached: true }),
-    );
+    expect(firstRespond).toHaveBeenCalledTimes(1);
+    expect(secondRespond).toHaveBeenCalledTimes(1);
+    const firstCall = firstRespondCall(firstRespond);
+    expect(firstCall?.[0]).toBe(true);
+    expect(firstCall?.[1]?.messageId).toBe("m-concurrent");
+    expect(firstCall?.[1]?.runId).toBe("idem-send-concurrent");
+    expect(firstCall?.[2]).toBeUndefined();
+    expect(firstCall?.[3]?.channel).toBe("slack");
+    expect(firstCall?.[3]?.cached).toBeUndefined();
+    const secondCall = firstRespondCall(secondRespond);
+    expect(secondCall?.[0]).toBe(true);
+    expect(secondCall?.[1]?.messageId).toBe("m-concurrent");
+    expect(secondCall?.[1]?.runId).toBe("idem-send-concurrent");
+    expect(secondCall?.[2]).toBeUndefined();
+    expect(secondCall?.[3]?.channel).toBe("slack");
+    expect(secondCall?.[3]?.cached).toBe(true);
   });
 
   it("dedupes concurrent poll requests while inflight", async () => {
@@ -438,26 +451,24 @@ describe("gateway send mirroring", () => {
     await Promise.all([firstRequest, secondRequest]);
 
     expect(mocks.sendPoll).toHaveBeenCalledTimes(1);
-    expect(firstRespond).toHaveBeenCalledWith(
-      true,
-      expect.objectContaining({
-        messageId: "poll-concurrent",
-        pollId: "poll-1",
-        runId: "idem-poll-concurrent",
-      }),
-      undefined,
-      expect.objectContaining({ channel: "slack" }),
-    );
-    expect(secondRespond).toHaveBeenCalledWith(
-      true,
-      expect.objectContaining({
-        messageId: "poll-concurrent",
-        pollId: "poll-1",
-        runId: "idem-poll-concurrent",
-      }),
-      undefined,
-      expect.objectContaining({ channel: "slack", cached: true }),
-    );
+    expect(firstRespond).toHaveBeenCalledTimes(1);
+    expect(secondRespond).toHaveBeenCalledTimes(1);
+    const firstCall = firstRespondCall(firstRespond);
+    expect(firstCall?.[0]).toBe(true);
+    expect(firstCall?.[1]?.messageId).toBe("poll-concurrent");
+    expect(firstCall?.[1]?.pollId).toBe("poll-1");
+    expect(firstCall?.[1]?.runId).toBe("idem-poll-concurrent");
+    expect(firstCall?.[2]).toBeUndefined();
+    expect(firstCall?.[3]?.channel).toBe("slack");
+    expect(firstCall?.[3]?.cached).toBeUndefined();
+    const secondCall = firstRespondCall(secondRespond);
+    expect(secondCall?.[0]).toBe(true);
+    expect(secondCall?.[1]?.messageId).toBe("poll-concurrent");
+    expect(secondCall?.[1]?.pollId).toBe("poll-1");
+    expect(secondCall?.[1]?.runId).toBe("idem-poll-concurrent");
+    expect(secondCall?.[2]).toBeUndefined();
+    expect(secondCall?.[3]?.channel).toBe("slack");
+    expect(secondCall?.[3]?.cached).toBe(true);
   });
 
   it("accepts media-only sends without message", async () => {
@@ -1303,11 +1314,8 @@ describe("gateway send mirroring", () => {
     });
 
     expect(firstRespondCall(respond)?.[0]).toBe(true);
-    expect(mocks.dispatchChannelMessageAction).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        mediaLocalRoots: expect.arrayContaining([TEST_AGENT_WORKSPACE]),
-      }),
-    );
+    const actionCall = lastDispatchChannelMessageActionCall();
+    expect(actionCall?.mediaLocalRoots).toContain(TEST_AGENT_WORKSPACE);
   });
 
   it("forces senderIsOwner=false for narrowly-scoped callers but honors it for full operators", async () => {
@@ -1356,9 +1364,7 @@ describe("gateway send mirroring", () => {
       },
       { connect: { scopes: ["operator.write"] } },
     );
-    expect(mocks.dispatchChannelMessageAction).toHaveBeenLastCalledWith(
-      expect.objectContaining({ senderIsOwner: false }),
-    );
+    expect(lastDispatchChannelMessageActionCall()?.senderIsOwner).toBe(false);
 
     // Full operator (admin-scoped): the trusted runtime is allowed to
     // forward the real channel-sender ownership bit. Wire true → true.
@@ -1376,9 +1382,7 @@ describe("gateway send mirroring", () => {
       },
       { connect: { scopes: ["operator.admin"] } },
     );
-    expect(mocks.dispatchChannelMessageAction).toHaveBeenLastCalledWith(
-      expect.objectContaining({ senderIsOwner: true }),
-    );
+    expect(lastDispatchChannelMessageActionCall()?.senderIsOwner).toBe(true);
 
     // Full operator forwarding a non-owner sender: wire false → false
     // (admin scope does not inflate ownership on its own).
@@ -1396,8 +1400,6 @@ describe("gateway send mirroring", () => {
       },
       { connect: { scopes: ["operator.admin"] } },
     );
-    expect(mocks.dispatchChannelMessageAction).toHaveBeenLastCalledWith(
-      expect.objectContaining({ senderIsOwner: false }),
-    );
+    expect(lastDispatchChannelMessageActionCall()?.senderIsOwner).toBe(false);
   });
 });
