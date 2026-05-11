@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { RuntimeEnv } from "openclaw/plugin-sdk/runtime-env";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { stripAnsi } from "../../../../src/terminal/ansi.js";
+import { stripAnsi } from "../../../src/terminal/ansi.js";
 import { loginWeb } from "./login.js";
 import { renderQrTerminal } from "./qr-terminal.js";
 import { createWaSocket, formatError, waitForWaConnection } from "./session.js";
