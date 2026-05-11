@@ -815,7 +815,7 @@ describe("createMusicGenerateTool", () => {
     expect(loadOptions.ssrfPolicy).toEqual({ allowRfc2544BenchmarkRange: true });
     expect(generateMusicOptions().timeoutMs).toBe(180_000);
     expect(fetchTimeout.buildTimeoutAbortSignal).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(fetchTimeout.buildTimeoutAbortSignal).mock.calls[0]?.[0]).toMatchObject({
+    expect(vi.mocked(fetchTimeout.buildTimeoutAbortSignal).mock.calls[0]?.[0]).toEqual({
       operation: "music-generate.reference-fetch",
       timeoutMs: 30_000,
       url: "http://198.18.0.153/reference.png",
