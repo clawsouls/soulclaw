@@ -346,7 +346,13 @@ jobs:
         run: |
           set -euo pipefail
           sudo useradd --create-home --shell /bin/bash codex
-          printf '%s\n' 'Defaults env_keep += "CODEX_HOME CODEX_INTERNAL_ORIGINATOR_OVERRIDE"' | sudo tee /etc/sudoers.d/mantis-codex-env >/dev/null
+          {
+            printf '%s\n' 'Defaults env_keep += "CODEX_HOME CODEX_INTERNAL_ORIGINATOR_OVERRIDE"'
+            printf '%s\n' 'Defaults env_keep += "BASELINE_REF BASELINE_SHA CANDIDATE_REF CANDIDATE_SHA"'
+            printf '%s\n' 'Defaults env_keep += "CRABBOX_ACCESS_CLIENT_ID CRABBOX_ACCESS_CLIENT_SECRET CRABBOX_COORDINATOR CRABBOX_COORDINATOR_TOKEN CRABBOX_LEASE_ID CRABBOX_PROVIDER"'
+            printf '%s\n' 'Defaults env_keep += "GH_TOKEN MANTIS_INSTRUCTIONS MANTIS_OUTPUT_DIR MANTIS_PR_NUMBER"'
+            printf '%s\n' 'Defaults env_keep += "OPENCLAW_BUILD_PRIVATE_QA OPENCLAW_ENABLE_PRIVATE_QA_CLI OPENCLAW_QA_CONVEX_SECRET_CI OPENCLAW_QA_CONVEX_SITE_URL OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR OPENCLAW_QA_MANTIS_CRABBOX_COORDINATOR_TOKEN"'
+          } | sudo tee /etc/sudoers.d/mantis-codex-env >/dev/null
           sudo chmod 0440 /etc/sudoers.d/mantis-codex-env
           codex_home="/tmp/mantis-codex-home-${GITHUB_RUN_ID}"
           sudo install -d -m 0770 -o codex -g codex "$codex_home"
