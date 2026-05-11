@@ -97,5 +97,6 @@ describe("scripts/mantis/build-telegram-desktop-proof-evidence", () => {
     expect(body).toContain("| Main | This PR |");
     expect(body).toContain("baseline/telegram-desktop-proof.gif");
     expect(body).toContain("candidate/telegram-desktop-proof.gif");
+    expect(body).toContain('telegram-desktop-proof.gif" width="420"');
   });
 });
