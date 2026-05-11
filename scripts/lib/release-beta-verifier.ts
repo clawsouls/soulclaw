@@ -72,7 +72,7 @@ function parseJson(raw: string, label: string): unknown {
     return JSON.parse(raw) as unknown;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`${label} returned invalid JSON: ${message}`);
+    throw new Error(`${label} returned invalid JSON: ${message}`, { cause: error });
   }
 }
 
