@@ -89,11 +89,12 @@ describe("getReplyFromConfig fast test bootstrap", () => {
     expect(mocks.ensureAgentWorkspace).not.toHaveBeenCalled();
     expect(mocks.initSessionState).not.toHaveBeenCalled();
     expect(mocks.resolveReplyDirectives).not.toHaveBeenCalled();
-    expect(vi.mocked(runPreparedReplyMock)).toHaveBeenCalledWith(
-      expect.objectContaining({
-        cfg,
-      }),
-    );
+    expect(vi.mocked(runPreparedReplyMock)).toHaveBeenCalledOnce();
+    const preparedReplyParams = vi.mocked(runPreparedReplyMock).mock.calls[0]?.[0];
+    if (!preparedReplyParams) {
+      throw new Error("expected prepared reply params");
+    }
+    expect(preparedReplyParams.cfg).toBe(cfg);
   });
 
   it("still merges partial config overrides against getRuntimeConfig()", async () => {
@@ -235,7 +236,10 @@ describe("getReplyFromConfig fast test bootstrap", () => {
       cfg,
     );
 
-    expect(reply).toEqual(expect.objectContaining({ text: expect.stringContaining("OpenClaw") }));
+    if (!reply || Array.isArray(reply) || typeof reply.text !== "string") {
+      throw new Error("expected status reply text");
+    }
+    expect(reply.text.includes("OpenClaw")).toBe(true);
     expect(mocks.ensureAgentWorkspace).not.toHaveBeenCalled();
     expect(mocks.initSessionState).not.toHaveBeenCalled();
     expect(mocks.resolveReplyDirectives).not.toHaveBeenCalled();
@@ -279,12 +283,15 @@ describe("getReplyFromConfig fast test bootstrap", () => {
     expect(mocks.ensureAgentWorkspace).not.toHaveBeenCalled();
     expect(mocks.initSessionState).not.toHaveBeenCalled();
     expect(vi.mocked(runPreparedReplyMock)).not.toHaveBeenCalled();
-    expect(mocks.resolveReplyDirectives).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sessionKey: targetSessionKey,
-        workspaceDir: expect.any(String),
-      }),
-    );
+    expect(mocks.resolveReplyDirectives).toHaveBeenCalledOnce();
+    const directiveParams = mocks.resolveReplyDirectives.mock.calls[0]?.[0] as
+      | { sessionKey?: string; workspaceDir?: string }
+      | undefined;
+    if (!directiveParams) {
+      throw new Error("expected directive params");
+    }
+    expect(directiveParams.sessionKey).toBe(targetSessionKey);
+    expect(directiveParams.workspaceDir).toBe("/tmp/workspace");
   });
 
   it("uses native command target session keys during fast bootstrap", () => {
