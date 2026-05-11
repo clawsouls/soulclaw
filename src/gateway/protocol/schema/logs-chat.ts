@@ -83,6 +83,7 @@ export const ChatEventSchema = Type.Object(
       Type.Literal("error"),
     ]),
     message: Type.Optional(Type.Unknown()),
+    deltaText: Type.Optional(Type.String()),
     errorMessage: Type.Optional(Type.String()),
     errorKind: Type.Optional(
       Type.Union([

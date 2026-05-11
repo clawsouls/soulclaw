@@ -174,6 +174,18 @@ function readChatErrorKind(value: unknown): ErrorKind | undefined {
     : undefined;
 }
 
+function resolveBroadcastDeltaText(params: {
+  text: string;
+  previousBroadcastText: string | undefined;
+}): string | undefined {
+  const previous = params.previousBroadcastText ?? "";
+  if (previous && !params.text.startsWith(previous)) {
+    return undefined;
+  }
+  const deltaText = params.text.slice(previous.length);
+  return deltaText || undefined;
+}
+
 export type AgentEventHandlerOptions = {
   broadcast: ChatEventBroadcast;
   broadcastToConnIds: (
@@ -215,6 +227,7 @@ export function createAgentEventHandler({
     chatRunState.buffers.delete(clientRunId);
     chatRunState.deltaSentAt.delete(clientRunId);
     chatRunState.deltaLastBroadcastLen.delete(clientRunId);
+    chatRunState.deltaLastBroadcastText.delete(clientRunId);
   };
 
   const clearPendingTerminalLifecycleError = (runId: string) => {
@@ -459,8 +472,13 @@ export function createAgentEventHandler({
     if (now - last < 150) {
       return;
     }
+    const deltaText = resolveBroadcastDeltaText({
+      text: mergedText,
+      previousBroadcastText: chatRunState.deltaLastBroadcastText.get(clientRunId),
+    });
     chatRunState.deltaSentAt.set(clientRunId, now);
     chatRunState.deltaLastBroadcastLen.set(clientRunId, mergedText.length);
+    chatRunState.deltaLastBroadcastText.set(clientRunId, mergedText);
     const spawnedBy = resolveSpawnedBy(sessionKey);
     const payload = {
       runId: clientRunId,
@@ -468,6 +486,7 @@ export function createAgentEventHandler({
       ...(spawnedBy && { spawnedBy }),
       seq,
       state: "delta" as const,
+      ...(deltaText !== undefined && { deltaText }),
       message: {
         role: "assistant",
         content: [{ type: "text", text: mergedText }],
@@ -523,6 +542,10 @@ export function createAgentEventHandler({
     }
 
     const now = Date.now();
+    const deltaText = resolveBroadcastDeltaText({
+      text,
+      previousBroadcastText: chatRunState.deltaLastBroadcastText.get(clientRunId),
+    });
     const spawnedBy = resolveSpawnedBy(sessionKey);
     const flushPayload = {
       runId: clientRunId,
@@ -530,6 +553,7 @@ export function createAgentEventHandler({
       ...(spawnedBy && { spawnedBy }),
       seq,
       state: "delta" as const,
+      ...(deltaText !== undefined && { deltaText }),
       message: {
         role: "assistant",
         content: [{ type: "text", text }],
@@ -539,6 +563,7 @@ export function createAgentEventHandler({
     broadcast("chat", flushPayload, { dropIfSlow: true });
     nodeSendToSession(sessionKey, "chat", flushPayload);
     chatRunState.deltaLastBroadcastLen.set(clientRunId, text.length);
+    chatRunState.deltaLastBroadcastText.set(clientRunId, text);
     chatRunState.deltaSentAt.set(clientRunId, now);
   };
 
@@ -561,6 +586,7 @@ export function createAgentEventHandler({
     // Only flush if the buffer has grown since the last broadcast to avoid duplicates.
     flushBufferedChatDeltaIfNeeded(sessionKey, clientRunId, sourceRunId, seq);
     chatRunState.deltaLastBroadcastLen.delete(clientRunId);
+    chatRunState.deltaLastBroadcastText.delete(clientRunId);
     chatRunState.rawBuffers.delete(clientRunId);
     chatRunState.buffers.delete(clientRunId);
     chatRunState.deltaSentAt.delete(clientRunId);

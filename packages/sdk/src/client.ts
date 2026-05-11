@@ -240,6 +240,10 @@ function readChatProjectionText(payload: Record<string, unknown>): string | unde
   return text.length > 0 ? text : undefined;
 }
 
+function readChatProjectionDeltaText(payload: Record<string, unknown>): string | undefined {
+  return typeof payload.deltaText === "string" ? payload.deltaText : undefined;
+}
+
 function isAssistantRunEvent(event: OpenClawEvent): boolean {
   return event.type === "assistant.delta" || event.type === "assistant.message";
 }
@@ -259,8 +263,9 @@ function normalizeChatProjectionEvent(
   previousText: string | undefined,
 ): OpenClawEvent {
   const text = readChatProjectionText(projection.payload);
+  const deltaText = readChatProjectionDeltaText(projection.payload);
   const isReplacement = Boolean(
-    previousText && text !== undefined && !text.startsWith(previousText),
+    deltaText === undefined && previousText && text !== undefined && !text.startsWith(previousText),
   );
   return {
     ...event,
@@ -270,7 +275,7 @@ function normalizeChatProjectionEvent(
         ? text !== undefined
           ? {
               text,
-              delta: isReplacement ? text : text.slice(previousText?.length ?? 0),
+              delta: deltaText ?? (isReplacement ? text : text.slice(previousText?.length ?? 0)),
               ...(isReplacement ? { replace: true } : {}),
             }
           : event.data

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { TALK_TEST_PROVIDER_ID } from "../../test-utils/talk-test-provider.js";
 import {
   formatValidationErrors,
+  validateChatEvent,
   validateModelsListParams,
   validateNodeEventResult,
   validateNodePairRequestParams,
@@ -444,6 +445,24 @@ describe("validateWakeParams", () => {
         text: "check back",
         unknownFutureField: 42,
         anotherExtra: true,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("validateChatEvent", () => {
+  it("accepts additive chat delta text", () => {
+    expect(
+      validateChatEvent({
+        runId: "run-chat",
+        sessionKey: "agent:main:main",
+        seq: 1,
+        state: "delta",
+        deltaText: "hello",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "hello" }],
+        },
       }),
     ).toBe(true);
   });

@@ -468,7 +468,9 @@ enumeration of `src/gateway/server-methods/*.ts`.
 ### Common event families
 
 - `chat`: UI chat updates such as `chat.inject` and other transcript-only chat
-  events.
+  events. Delta payloads keep `message` as the cumulative assistant snapshot for
+  compatibility and may include `deltaText` when the Gateway can provide a safe
+  additive text suffix.
 - `session.message` and `session.tool`: transcript/event-stream updates for a
   subscribed session.
 - `sessions.changed`: session index or metadata changed.
