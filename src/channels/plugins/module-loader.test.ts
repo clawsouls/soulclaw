@@ -70,7 +70,9 @@ describe("channel plugin module loader helpers", () => {
       loadedBy: "jiti",
       target,
     }));
-    const createJiti = vi.fn(() => loadWithJiti);
+    const createJiti = vi.fn(
+      (_filename: string, _options: { tryNative?: boolean }) => loadWithJiti,
+    );
     const sourceExtensions = [".ts", ".tsx", ".mts", ".cts"] as const;
     const sourceHooks = new Map<string, NodeJS.RequireExtensions[string] | undefined>();
     for (const extension of sourceExtensions) {
@@ -101,7 +103,7 @@ describe("channel plugin module loader helpers", () => {
       });
       expect(createJiti).toHaveBeenCalledOnce();
       const [loaderFilename, loaderOptions] = createJiti.mock.calls[0] ?? [];
-      expect(loaderFilename).toEqual(expect.stringContaining("module-loader.ts"));
+      expect(loaderFilename).toContain("module-loader.ts");
       expect(loaderOptions?.tryNative).toBe(false);
       expect(loadWithJiti).toHaveBeenCalledWith(fs.realpathSync.native(modulePath));
     } finally {
