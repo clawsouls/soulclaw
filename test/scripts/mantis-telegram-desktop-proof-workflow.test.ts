@@ -7,6 +7,7 @@ const USER_DRIVER = "scripts/e2e/telegram-user-driver.py";
 const PACKAGE_JSON = "package.json";
 const WORKFLOW = ".github/workflows/mantis-telegram-desktop-proof.yml";
 const LIVE_WORKFLOW = ".github/workflows/mantis-telegram-live.yml";
+const PROMPT = ".github/codex/prompts/mantis-telegram-desktop-proof.md";
 
 type WorkflowStep = {
   env?: Record<string, string>;
@@ -57,6 +58,15 @@ describe("Mantis Telegram Desktop proof workflow", () => {
     expect(liveWorkflow.env?.PNPM_VERSION?.split(".", 1)[0]).toBe(pnpmMajor);
   });
 
+  it("uses the OpenClaw Mantis mention as the comment trigger", () => {
+    const workflow = readFileSync(WORKFLOW, "utf8");
+    expect(workflow).toContain("@openclaw-mantis");
+    expect(workflow).toContain("/openclaw-mantis");
+    expect(workflow).not.toContain("@Mantis");
+    expect(workflow).not.toContain("@mantis");
+    expect(workflow).not.toContain('"/mantis"');
+  });
+
   it("uses the repo-owned Telegram user driver by default", () => {
     expect(existsSync(USER_DRIVER)).toBe(true);
     expect(readFileSync(PROOF_SCRIPT, "utf8")).toContain(
@@ -68,6 +78,10 @@ describe("Mantis Telegram Desktop proof workflow", () => {
   it("installs local proof tools before the Codex agent runs", () => {
     const install = workflowStep("Install local proof tools");
     expect(install.run).toContain("test -f scripts/e2e/telegram-user-driver.py");
+    expect(install.run).toContain("/usr/local/bin/openclaw-telegram-user-crabbox-proof");
+    expect(install.run).toContain(
+      'exec node --import tsx "${GITHUB_WORKSPACE}/scripts/e2e/telegram-user-crabbox-proof.ts" "$@"',
+    );
     expect(install.run).toContain("BtbN/FFmpeg-Builds");
     expect(install.run).toContain("ffmpeg-master-latest-linux64-gpl.tar.xz");
     expect(install.run).toContain("/usr/local/bin/ffmpeg");
@@ -77,6 +91,9 @@ describe("Mantis Telegram Desktop proof workflow", () => {
     const agent = workflowStep("Run Codex Mantis Telegram agent");
     expect(agent.env?.OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT).toBe(
       "${{ github.workspace }}/scripts/e2e/telegram-user-driver.py",
+    );
+    expect(agent.env?.OPENCLAW_TELEGRAM_USER_PROOF_CMD).toBe(
+      "/usr/local/bin/openclaw-telegram-user-crabbox-proof",
     );
     expect(agent.env?.OPENCLAW_TELEGRAM_USER_CRABBOX_BIN).toBe("/usr/local/bin/crabbox");
     expect(agent.env?.CRABBOX_COORDINATOR).toContain(
@@ -88,8 +105,12 @@ describe("Mantis Telegram Desktop proof workflow", () => {
 
     const prepare = workflowStep("Prepare Codex user");
     expect(prepare.run).toContain(
-      "OPENCLAW_TELEGRAM_USER_CRABBOX_BIN OPENCLAW_TELEGRAM_USER_CRABBOX_PROVIDER OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT",
+      "OPENCLAW_TELEGRAM_USER_CRABBOX_BIN OPENCLAW_TELEGRAM_USER_CRABBOX_PROVIDER OPENCLAW_TELEGRAM_USER_DRIVER_SCRIPT OPENCLAW_TELEGRAM_USER_PROOF_CMD",
     );
+
+    const prompt = readFileSync(PROMPT, "utf8");
+    expect(prompt).toContain("$OPENCLAW_TELEGRAM_USER_PROOF_CMD");
+    expect(prompt).toContain("do not run\n   `pnpm qa:telegram-user:crabbox` directly");
   });
 
   it("checks the Telegram user driver before leasing credentials", () => {
