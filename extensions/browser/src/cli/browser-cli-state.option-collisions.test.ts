@@ -38,7 +38,8 @@ vi.spyOn(cliCoreApiModule.defaultRuntime, "exit").mockImplementation(browserCliR
 const { registerBrowserStateCommands } = await import("./browser-cli-state.js");
 
 describe("browser state option collisions", () => {
-  const stripAnsi = (value: string) => value.replace(/\u001b\[[0-9;]*m/g, "");
+  const ansiPattern = new RegExp(String.raw`\u001b\[[0-9;]*m`, "g");
+  const stripAnsi = (value: string) => value.replace(ansiPattern, "");
 
   const createStateProgram = ({ withGatewayUrl = false } = {}) => {
     const { program, browser, parentOpts } = createBrowserProgramShared({ withGatewayUrl });
