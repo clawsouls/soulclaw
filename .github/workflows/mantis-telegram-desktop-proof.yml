@@ -346,8 +346,10 @@ jobs:
         run: |
           set -euo pipefail
           sudo useradd --create-home --shell /bin/bash codex
-          sudo setfacl -m u:runner:rwx,u:codex:rwx /home/codex
-          sudo setfacl -d -m u:runner:rwx,u:codex:rwx /home/codex
+          codex_home="/tmp/mantis-codex-home-${GITHUB_RUN_ID}"
+          sudo install -d -m 0770 -o codex -g codex "$codex_home"
+          sudo setfacl -m u:runner:rwx,u:codex:rwx "$codex_home"
+          sudo setfacl -d -m u:runner:rwx,u:codex:rwx "$codex_home"
           sudo chown -R codex:codex "$GITHUB_WORKSPACE"
 
       - name: Run Codex Mantis Telegram agent
@@ -377,6 +379,7 @@ jobs:
           model: ${{ vars.OPENCLAW_CI_OPENAI_MODEL_BARE }}
           effort: high
           sandbox: danger-full-access
+          codex-home: /tmp/mantis-codex-home-${{ github.run_id }}
           safety-strategy: unprivileged-user
           codex-user: codex
           codex-args: '["--full-auto"]'
