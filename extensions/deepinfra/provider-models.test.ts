@@ -31,13 +31,12 @@ function makeModelEntry(overrides: Record<string, unknown> = {}) {
 }
 
 function expectedStaticCatalog() {
-  return DEEPINFRA_MODEL_CATALOG.map((model) => ({
-    ...model,
-    compat: {
-      ...model.compat,
+  return DEEPINFRA_MODEL_CATALOG.map((model) => {
+    const compat = Object.assign({}, model.compat, {
       supportsUsageInStreaming: model.compat?.supportsUsageInStreaming ?? true,
-    },
-  }));
+    });
+    return Object.assign({}, model, { compat });
+  });
 }
 
 async function withFetchPathTest(
