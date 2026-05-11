@@ -63,8 +63,9 @@ function requireApprovalRequestPayload(callIndex: number): ApprovalRequestPayloa
   const call = vi.mocked(callGatewayTool).mock.calls[callIndex];
   expect(call?.[0]).toBe("exec.approval.request");
   const payload = call?.[2];
-  expect(typeof payload).toBe("object");
-  expect(payload).not.toBeNull();
+  if (!payload || typeof payload !== "object") {
+    throw new Error(`expected approval request payload ${callIndex}`);
+  }
   return payload as ApprovalRequestPayload;
 }
 
