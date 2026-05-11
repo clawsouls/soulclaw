@@ -78,6 +78,57 @@ function resolveAuthStoreLockPath(authPath: string): string {
   return `${path.join(fs.realpathSync(path.dirname(authPath)), path.basename(authPath))}.lock`;
 }
 
+type ExpectedOAuthCredentialFields = {
+  provider: string;
+  access?: string;
+  refresh?: string;
+  idToken?: string;
+  expires?: number;
+  email?: string;
+  accountId?: string;
+  chatgptPlanType?: string;
+};
+
+function expectOAuthCredentialFields(
+  value: unknown,
+  expected: ExpectedOAuthCredentialFields,
+): Record<string, unknown> {
+  if (!value || typeof value !== "object") {
+    throw new Error("Expected OAuth credential object");
+  }
+  const credential = value as Record<string, unknown>;
+  expect(credential.type).toBe("oauth");
+  expect(credential.provider).toBe(expected.provider);
+  for (const field of [
+    "access",
+    "refresh",
+    "idToken",
+    "expires",
+    "email",
+    "accountId",
+    "chatgptPlanType",
+  ] as const) {
+    if (field in expected) {
+      expect(credential[field]).toBe(expected[field]);
+    }
+  }
+  return credential;
+}
+
+function expectOpenClawCredentialsOAuthRef(
+  credential: Record<string, unknown>,
+  provider: string,
+): void {
+  const oauthRef = credential.oauthRef;
+  if (!oauthRef || typeof oauthRef !== "object") {
+    throw new Error("Expected OAuth credential ref");
+  }
+  const ref = oauthRef as Record<string, unknown>;
+  expect(ref.source).toBe("openclaw-credentials");
+  expect(ref.provider).toBe(provider);
+  expect(ref.id).toEqual(expect.any(String));
+}
+
 describe("promoteAuthProfileInOrder", () => {
   it("omits inline openai-codex oauth secrets from persisted auth profile files", () => {
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-auth-profile-metadata-"));
@@ -114,19 +165,16 @@ describe("promoteAuthProfileInOrder", () => {
       };
       const credential = persisted.profiles[profileId];
 
-      expect(credential).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        expires,
-        email: "dev@example.test",
-        accountId: "acct-local",
-        chatgptPlanType: "plus",
-        oauthRef: {
-          source: "openclaw-credentials",
+      expectOpenClawCredentialsOAuthRef(
+        expectOAuthCredentialFields(credential, {
           provider: "openai-codex",
-          id: expect.any(String),
-        },
-      });
+          expires,
+          email: "dev@example.test",
+          accountId: "acct-local",
+          chatgptPlanType: "plus",
+        }),
+        "openai-codex",
+      );
       expect(credential).not.toHaveProperty("access");
       expect(credential).not.toHaveProperty("refresh");
       expect(credential).not.toHaveProperty("idToken");
@@ -139,15 +187,15 @@ describe("promoteAuthProfileInOrder", () => {
       expect(persistedStateTree).not.toContain("local-id-token");
 
       clearRuntimeAuthProfileStoreSnapshots();
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreWithoutExternalProfiles(agentDir).profiles[profileId],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "local-access-token",
-        refresh: "local-refresh-token",
-        idToken: "local-id-token",
-      });
+        {
+          provider: "openai-codex",
+          access: "local-access-token",
+          refresh: "local-refresh-token",
+          idToken: "local-id-token",
+        },
+      );
     } finally {
       if (previousStateDir === undefined) {
         delete process.env.OPENCLAW_STATE_DIR;
@@ -192,23 +240,24 @@ describe("promoteAuthProfileInOrder", () => {
 
       process.env.OPENCLAW_AUTH_PROFILE_SECRET_KEY = "wrong-profile-secret-key";
       clearRuntimeAuthProfileStoreSnapshots();
-      expect(
-        loadAuthProfileStoreWithoutExternalProfiles(agentDir).profiles[profileId],
-      ).not.toMatchObject({
-        access: "keyed-access-token",
-        refresh: "keyed-refresh-token",
-      });
+      {
+        const credential = loadAuthProfileStoreWithoutExternalProfiles(agentDir).profiles[
+          profileId
+        ] as Record<string, unknown> | undefined;
+        expect(credential?.access).not.toBe("keyed-access-token");
+        expect(credential?.refresh).not.toBe("keyed-refresh-token");
+      }
 
       process.env.OPENCLAW_AUTH_PROFILE_SECRET_KEY = "correct-profile-secret-key";
       clearRuntimeAuthProfileStoreSnapshots();
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreWithoutExternalProfiles(agentDir).profiles[profileId],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "keyed-access-token",
-        refresh: "keyed-refresh-token",
-      });
+        {
+          provider: "openai-codex",
+          access: "keyed-access-token",
+          refresh: "keyed-refresh-token",
+        },
+      );
     } finally {
       if (previousStateDir === undefined) {
         delete process.env.OPENCLAW_STATE_DIR;
@@ -268,14 +317,14 @@ describe("promoteAuthProfileInOrder", () => {
 
       expect(findFilesNamed(rootDir, "auth-profile-secret-key")).toEqual([]);
       clearRuntimeAuthProfileStoreSnapshots();
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreWithoutExternalProfiles(agentDir).profiles[profileId],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "test-env-access-token",
-        refresh: "test-env-refresh-token",
-      });
+        {
+          provider: "openai-codex",
+          access: "test-env-access-token",
+          refresh: "test-env-refresh-token",
+        },
+      );
     } finally {
       if (previousStateDir === undefined) {
         delete process.env.OPENCLAW_STATE_DIR;
@@ -366,14 +415,14 @@ describe("promoteAuthProfileInOrder", () => {
       expect(findFilesNamed(rootDir, "auth-profile-secret-key")).toHaveLength(1);
       clearRuntimeAuthProfileStoreSnapshots();
       delete process.env.NODE_ENV;
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreWithoutExternalProfiles(agentDir).profiles[profileId],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "node-env-test-access-token",
-        refresh: "node-env-test-refresh-token",
-      });
+        {
+          provider: "openai-codex",
+          access: "node-env-test-access-token",
+          refresh: "node-env-test-refresh-token",
+        },
+      );
     } finally {
       if (previousStateDir === undefined) {
         delete process.env.OPENCLAW_STATE_DIR;
@@ -463,14 +512,14 @@ describe("promoteAuthProfileInOrder", () => {
       expect(persistedStateTree).not.toContain("production-refresh-token");
 
       clearRuntimeAuthProfileStoreSnapshots();
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreWithoutExternalProfiles(agentDir).profiles[profileId],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "production-access-token",
-        refresh: "production-refresh-token",
-      });
+        {
+          provider: "openai-codex",
+          access: "production-access-token",
+          refresh: "production-refresh-token",
+        },
+      );
     } finally {
       if (previousStateDir === undefined) {
         delete process.env.OPENCLAW_STATE_DIR;
@@ -669,14 +718,14 @@ describe("promoteAuthProfileInOrder", () => {
 
       expect(injectedRace).toBe(true);
       clearRuntimeAuthProfileStoreSnapshots();
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreWithoutExternalProfiles(agentDir).profiles[profileId],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "race-access-token",
-        refresh: "race-refresh-token",
-      });
+        {
+          provider: "openai-codex",
+          access: "race-access-token",
+          refresh: "race-refresh-token",
+        },
+      );
     } finally {
       openSpy.mockRestore();
       if (previousStateDir === undefined) {
@@ -749,28 +798,25 @@ describe("promoteAuthProfileInOrder", () => {
         profiles: Record<string, Record<string, unknown>>;
       };
       const credential = persisted.profiles[profileId];
-      expect(credential).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        expires,
-        oauthRef: {
-          source: "openclaw-credentials",
+      expectOpenClawCredentialsOAuthRef(
+        expectOAuthCredentialFields(credential, {
           provider: "openai-codex",
-          id: expect.any(String),
-        },
-      });
+          expires,
+        }),
+        "openai-codex",
+      );
       expect(credential).not.toHaveProperty("access");
       expect(credential).not.toHaveProperty("refresh");
       expect(JSON.stringify(persisted)).not.toContain("access-only-token");
 
       clearRuntimeAuthProfileStoreSnapshots();
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreWithoutExternalProfiles(agentDir).profiles[profileId],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "access-only-token",
-      });
+        {
+          provider: "openai-codex",
+          access: "access-only-token",
+        },
+      );
     } finally {
       if (previousStateDir === undefined) {
         delete process.env.OPENCLAW_STATE_DIR;
@@ -904,14 +950,14 @@ describe("promoteAuthProfileInOrder", () => {
       expect(fs.existsSync(originalSecretPath)).toBe(false);
       expect(fs.existsSync(copiedSecretPath)).toBe(true);
       clearRuntimeAuthProfileStoreSnapshots();
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreWithoutExternalProfiles(copiedAgentDir).profiles[copiedProfileId],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "copy-access-token",
-        refresh: "copy-refresh-token",
-      });
+        {
+          provider: "openai-codex",
+          access: "copy-access-token",
+          refresh: "copy-refresh-token",
+        },
+      );
     } finally {
       if (previousStateDir === undefined) {
         delete process.env.OPENCLAW_STATE_DIR;
@@ -953,8 +999,7 @@ describe("promoteAuthProfileInOrder", () => {
       );
       const before = fs.readFileSync(resolveAuthStorePath(agentDir), "utf8");
 
-      expect(findPersistedAuthProfileCredential({ agentDir, profileId })).toMatchObject({
-        type: "oauth",
+      expectOAuthCredentialFields(findPersistedAuthProfileCredential({ agentDir, profileId }), {
         provider: "openai-codex",
         access: "readonly-access-token",
         refresh: "readonly-refresh-token",
@@ -963,16 +1008,16 @@ describe("promoteAuthProfileInOrder", () => {
 
       process.env.OPENCLAW_AUTH_STORE_READONLY = "1";
       clearRuntimeAuthProfileStoreSnapshots();
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreForRuntime(agentDir, { externalCli: { mode: "none" } }).profiles[
           profileId
         ],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "readonly-access-token",
-        refresh: "readonly-refresh-token",
-      });
+        {
+          provider: "openai-codex",
+          access: "readonly-access-token",
+          refresh: "readonly-refresh-token",
+        },
+      );
       expect(fs.readFileSync(resolveAuthStorePath(agentDir), "utf8")).toBe(before);
     } finally {
       if (previousStateDir === undefined) {
@@ -1036,17 +1081,17 @@ describe("promoteAuthProfileInOrder", () => {
 
       process.env.OPENCLAW_AUTH_STORE_READONLY = "1";
       clearRuntimeAuthProfileStoreSnapshots();
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreForRuntime(agentDir, {
           readOnly: true,
           externalCli: { mode: "none" },
         }).profiles[profileId],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "legacy-sidecar-access",
-        refresh: "legacy-sidecar-refresh",
-      });
+        {
+          provider: "openai-codex",
+          access: "legacy-sidecar-access",
+          refresh: "legacy-sidecar-refresh",
+        },
+      );
       expect(fs.readFileSync(secretPath, "utf8")).toBe(legacySidecar);
     } finally {
       if (previousStateDir === undefined) {
@@ -1102,34 +1147,31 @@ describe("promoteAuthProfileInOrder", () => {
         )}\n`,
       );
 
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreForRuntime(agentDir, { externalCli: { mode: "none" } }).profiles[
           profileId
         ],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "existing-access-token",
-        refresh: "existing-refresh-token",
-        idToken: "existing-id-token",
-      });
+        {
+          provider: "openai-codex",
+          access: "existing-access-token",
+          refresh: "existing-refresh-token",
+          idToken: "existing-id-token",
+        },
+      );
 
       const persisted = JSON.parse(fs.readFileSync(resolveAuthStorePath(agentDir), "utf8")) as {
         profiles: Record<string, Record<string, unknown>>;
         order?: Record<string, string[]>;
       };
       const credential = persisted.profiles[profileId];
-      expect(credential).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        expires,
-        accountId: "acct-existing",
-        oauthRef: {
-          source: "openclaw-credentials",
+      expectOpenClawCredentialsOAuthRef(
+        expectOAuthCredentialFields(credential, {
           provider: "openai-codex",
-          id: expect.any(String),
-        },
-      });
+          expires,
+          accountId: "acct-existing",
+        }),
+        "openai-codex",
+      );
       expect(persisted.order?.["openai-codex"]).toEqual([profileId]);
       expect(credential).not.toHaveProperty("access");
       expect(credential).not.toHaveProperty("refresh");
@@ -1140,15 +1182,15 @@ describe("promoteAuthProfileInOrder", () => {
       expect(persistedStateTree).not.toContain("existing-id-token");
 
       clearRuntimeAuthProfileStoreSnapshots();
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreWithoutExternalProfiles(agentDir).profiles[profileId],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "existing-access-token",
-        refresh: "existing-refresh-token",
-        idToken: "existing-id-token",
-      });
+        {
+          provider: "openai-codex",
+          access: "existing-access-token",
+          refresh: "existing-refresh-token",
+          idToken: "existing-id-token",
+        },
+      );
     } finally {
       if (previousStateDir === undefined) {
         delete process.env.OPENCLAW_STATE_DIR;
@@ -1200,16 +1242,16 @@ describe("promoteAuthProfileInOrder", () => {
         "utf8",
       );
 
-      expect(
+      expectOAuthCredentialFields(
         loadAuthProfileStoreForRuntime(agentDir, { externalCli: { mode: "none" } }).profiles[
           profileId
         ],
-      ).toMatchObject({
-        type: "oauth",
-        provider: "openai-codex",
-        access: "locked-access-token",
-        refresh: "locked-refresh-token",
-      });
+        {
+          provider: "openai-codex",
+          access: "locked-access-token",
+          refresh: "locked-refresh-token",
+        },
+      );
 
       expect(fs.readFileSync(authPath, "utf8")).toBe(before);
     } finally {
