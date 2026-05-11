@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DEEPINFRA_DEFAULT_MODEL_REF,
+  DEEPINFRA_MODEL_CATALOG,
   DEEPINFRA_MODELS_URL,
   discoverDeepInfraModels,
   resetDeepInfraModelCacheForTest,
@@ -27,6 +28,16 @@ function makeModelEntry(overrides: Record<string, unknown> = {}) {
     },
     ...overrides,
   };
+}
+
+function expectedStaticCatalog() {
+  return DEEPINFRA_MODEL_CATALOG.map((model) => ({
+    ...model,
+    compat: {
+      ...model.compat,
+      supportsUsageInStreaming: model.compat?.supportsUsageInStreaming ?? true,
+    },
+  }));
 }
 
 async function withFetchPathTest(
@@ -65,7 +76,8 @@ describe("discoverDeepInfraModels", () => {
       .map((m) => m.id);
 
     expect(DEEPINFRA_DEFAULT_MODEL_REF).toBe("deepinfra/deepseek-ai/DeepSeek-V3.2");
-    expect(modelIds).toContain("deepseek-ai/DeepSeek-V3.2");
+    expect(models).toStrictEqual(expectedStaticCatalog());
+    expect(modelIds).toStrictEqual(expectedStaticCatalog().map((model) => model.id));
     expect(streamingUsageIncompatibleModelIds).toStrictEqual([]);
   });
 
@@ -154,7 +166,7 @@ describe("discoverDeepInfraModels", () => {
 
     await withFetchPathTest(mockFetch, async () => {
       const models = await discoverDeepInfraModels();
-      expect(models.map((m) => m.id)).toContain("deepseek-ai/DeepSeek-V3.2");
+      expect(models).toStrictEqual(expectedStaticCatalog());
     });
   });
 
