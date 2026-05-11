@@ -56,7 +56,7 @@ describe("tasks JSON commands", () => {
 
   it("lists task records with runtime and status filters", async () => {
     await withTaskJsonStateDir(async () => {
-      createTaskRecord({
+      const cliTask = createTaskRecord({
         runtime: "cli",
         ownerKey: "agent:main:main",
         scopeKind: "session",
@@ -76,23 +76,12 @@ describe("tasks JSON commands", () => {
       const runtime = createRuntime();
       await tasksListJsonCommand({ json: true, runtime: "cli", status: "running" }, runtime);
 
-      const payload = readJsonLog(runtime) as {
-        count: number;
-        runtime: string | null;
-        status: string | null;
-        tasks: Array<{ runtime: string; status: string; runId: string }>;
-      };
-      expect(payload.count).toBe(1);
-      expect(payload.runtime).toBe("cli");
-      expect(payload.status).toBe("running");
-      expect(payload.tasks).toStrictEqual([
-        expect.objectContaining({
-          runtime: "cli",
-          status: "running",
-          runId: "run-cli",
-          task: "Inspect issue backlog",
-        }),
-      ]);
+      expect(readJsonLog(runtime)).toStrictEqual({
+        count: 1,
+        runtime: "cli",
+        status: "running",
+        tasks: [JSON.parse(JSON.stringify(cliTask))],
+      });
     });
   });
 
