@@ -127,15 +127,41 @@ describe("detectImageReferences", () => {
   });
 
   it("deduplicates repeated image references", () => {
-    expectImageReferenceCount("Look at /path/image.png and also /path/image.png again", 1);
+    expect(
+      detectImageReferences("Look at /path/image.png and also /path/image.png again"),
+    ).toStrictEqual([
+      {
+        raw: "/path/image.png",
+        type: "path",
+        resolved: "/path/image.png",
+      },
+    ]);
   });
 
   it("dedupe casing follows host filesystem conventions", () => {
+    const prompt = "Look at /tmp/Image.png and /tmp/image.png";
     if (process.platform === "win32") {
-      expectImageReferenceCount("Look at /tmp/Image.png and /tmp/image.png", 1);
+      expect(detectImageReferences(prompt)).toStrictEqual([
+        {
+          raw: "/tmp/Image.png",
+          type: "path",
+          resolved: "/tmp/Image.png",
+        },
+      ]);
       return;
     }
-    expectImageReferenceCount("Look at /tmp/Image.png and /tmp/image.png", 2);
+    expect(detectImageReferences(prompt)).toStrictEqual([
+      {
+        raw: "/tmp/Image.png",
+        type: "path",
+        resolved: "/tmp/Image.png",
+      },
+      {
+        raw: "/tmp/image.png",
+        type: "path",
+        resolved: "/tmp/image.png",
+      },
+    ]);
   });
 
   it("returns empty array when no images found", () => {
@@ -149,13 +175,21 @@ describe("detectImageReferences", () => {
   it("handles paths inside quotes (without spaces)", () => {
     const ref = expectSingleImageReference('The file is at "/path/to/image.png"');
 
-    expect(ref?.raw).toBe("/path/to/image.png");
+    expect(ref).toStrictEqual({
+      raw: "/path/to/image.png",
+      type: "path",
+      resolved: "/path/to/image.png",
+    });
   });
 
   it("handles paths in parentheses", () => {
     const ref = expectSingleImageReference("See the image (./screenshot.png) for details");
 
-    expect(ref?.raw).toBe("./screenshot.png");
+    expect(ref).toStrictEqual({
+      raw: "./screenshot.png",
+      type: "path",
+      resolved: "./screenshot.png",
+    });
   });
 
   it("detects [Image: source: ...] format from messaging systems", () => {
