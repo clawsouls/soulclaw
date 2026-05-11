@@ -107,9 +107,7 @@ function expectPluginApprovalId(value: unknown, label: string): string {
   expect(uuid).toHaveLength(36);
   expect(uuid.split("-").map((part) => part.length)).toEqual([8, 4, 4, 4, 12]);
   expect(
-    uuid
-      .split("-")
-      .every((part) => part.length > 0 && [...part].every((char) => /[0-9a-f]/.test(char))),
+    uuid.split("-").every((part) => /^[0-9a-f]+$/.test(part)),
     label,
   ).toBe(true);
   return value;
