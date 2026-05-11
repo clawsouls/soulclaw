@@ -106,7 +106,10 @@ describe("plugin-sdk qa-runner-runtime linked plugin smoke", () => {
 
     const module = await import("./qa-runner-runtime.js");
 
-    expect(module.listQaRunnerCliContributions()).toEqual([
+    const contributions = module.listQaRunnerCliContributions();
+    const register = contributions[0]?.registration.register;
+    expect(typeof register).toBe("function");
+    expect(contributions).toEqual([
       {
         pluginId: "qa-linked",
         commandName: "linked",
@@ -114,7 +117,7 @@ describe("plugin-sdk qa-runner-runtime linked plugin smoke", () => {
         status: "available",
         registration: {
           commandName: "linked",
-          register: expect.any(Function),
+          register,
         },
       },
     ]);

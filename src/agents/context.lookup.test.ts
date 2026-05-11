@@ -1,3 +1,4 @@
+import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 type DiscoveredModel = {
@@ -295,11 +296,16 @@ describe("lookupContextTokens", () => {
     lookupContextTokens("anthropic/claude-opus-4.7-20260219");
     await flushAsyncWarmup();
 
-    expect(contextTestState.discoverModels).toHaveBeenCalledWith(
-      {},
-      expect.stringMatching(/\/\.openclaw\/agents\/main\/agent$/),
-      { normalizeModels: false },
-    );
+    expect(contextTestState.discoverModels).toHaveBeenCalledTimes(1);
+    const discoverCall = contextTestState.discoverModels.mock.calls[0];
+    expect(discoverCall?.[0]).toEqual({});
+    expect(typeof discoverCall?.[1]).toBe("string");
+    expect(
+      path
+        .normalize(String(discoverCall?.[1]))
+        .endsWith(path.join(".openclaw", "agents", "main", "agent")),
+    ).toBe(true);
+    expect(discoverCall?.[2]).toEqual({ normalizeModels: false });
     expect(lookupContextTokens("anthropic/claude-opus-4.7-20260219")).toBe(1_048_576);
   });
 
