@@ -12,6 +12,10 @@ function requireRecord(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function readFirstMockArg(fn: unknown): unknown {
+  return (fn as { mock: { calls: unknown[][] } }).mock.calls[0]?.[0];
+}
+
 describe("createMatrixRoomMessageHandler thread root media", () => {
   it("keeps image-only thread roots visible via attachment markers", async () => {
     installMatrixMonitorTestRuntime();
@@ -80,10 +84,7 @@ describe("createMatrixRoomMessageHandler thread root media", () => {
     expect(String(envelope.body)).toContain("replying");
 
     expect(recordInboundSession).toHaveBeenCalledTimes(1);
-    const inbound = requireRecord(
-      recordInboundSession.mock.calls[0]?.[0],
-      "record inbound session",
-    );
+    const inbound = requireRecord(readFirstMockArg(recordInboundSession), "record inbound session");
     const ctx = requireRecord(inbound.ctx, "inbound context");
     expect(String(ctx.ThreadStarterBody)).toContain("[matrix image attachment]");
   });
