@@ -1,6 +1,7 @@
 import { escapeRegExp, formatEnvelopeTimestamp } from "openclaw/plugin-sdk/channel-test-helpers";
 import type { GetReplyOptions, MsgContext } from "openclaw/plugin-sdk/reply-runtime";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { stripAnsi } from "../../../src/terminal/ansi.js";
 import type { TelegramBotOptions } from "./bot.types.js";
 const harness = await import("./bot.create-telegram-bot.test-harness.js");
 const conversationRuntime = await import("openclaw/plugin-sdk/conversation-runtime");
@@ -245,7 +246,8 @@ describe("createTelegramBot", () => {
 
     expect(errorHandler).toBeTypeOf("function");
     errorHandler?.(new Error("handler boom"));
-    expect(runtime.error).toHaveBeenCalledWith(expect.stringContaining("telegram bot error:"));
+    const errorMessage = stripAnsi(String(runtime.error.mock.calls[0]?.[0]));
+    expect(errorMessage.startsWith("telegram bot error: Error: handler boom")).toBe(true);
   });
 
   it("uses wrapped fetch when global fetch is available", () => {
@@ -713,10 +715,9 @@ describe("createTelegramBot", () => {
 
       expect(startedBodies[0]).toContain("first");
       expect(startedBodies[1]).toContain("second");
-      expect(sendMessageSpy.mock.calls.map((call) => call[1])).toEqual([
-        expect.stringContaining("first"),
-        expect.stringContaining("second"),
-      ]);
+      const sentBodies = sendMessageSpy.mock.calls.map((call) => String(call[1]));
+      expect(sentBodies[0]).toContain("first");
+      expect(sentBodies[1]).toContain("second");
     } finally {
       setTimeoutSpy.mockRestore();
     }
