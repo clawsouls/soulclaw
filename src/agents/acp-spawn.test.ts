@@ -349,8 +349,10 @@ function gatewayRequests(): Array<{ method?: string; params?: Record<string, unk
 
 function gatewayRequest(method: string): { method?: string; params?: Record<string, unknown> } {
   const request = gatewayRequests().find((candidate) => candidate.method === method);
-  expect(request).toBeDefined();
-  return request as { method?: string; params?: Record<string, unknown> };
+  if (!request) {
+    throw new Error(`Expected gateway request for ${method}`);
+  }
+  return request;
 }
 
 function expectGatewayMethodNotCalled(method: string): void {
