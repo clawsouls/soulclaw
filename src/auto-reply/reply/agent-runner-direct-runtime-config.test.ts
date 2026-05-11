@@ -268,11 +268,17 @@ describe("runReplyAgent runtime config", () => {
 
     const result = await runReplyAgent(replyParams);
 
-    expect(result).toMatchObject({
+    expect(result).toEqual({
       text: "⚠️ write failed: Memory flush writes are restricted to memory/2023-11-14.md; use that path only.",
       isError: true,
+      replyToId: "msg-1",
+      replyToCurrent: undefined,
+      replyToTag: false,
+      mediaUrl: undefined,
+      mediaUrls: undefined,
+      audioAsVoice: false,
     });
-    expect(result ? getReplyPayloadMetadata(result) : undefined).toMatchObject({
+    expect(getReplyPayloadMetadata(result)).toEqual({
       deliverDespiteSourceReplySuppression: true,
     });
   });
