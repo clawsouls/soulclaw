@@ -404,7 +404,121 @@ describe("buildGatewayCronService", () => {
         reason: "cron:test",
         agentId: "main",
         sessionKey: "agent:main:discord:channel:ops",
+        heartbeat: { target: "last", to: undefined, accountId: undefined },
+      });
+    } finally {
+      state.cron.stop();
+    }
+  });
+
+  it("does not inherit explicit heartbeat destinations for direct target-last wakes", async () => {
+    const cfg = {
+      ...createCronConfig("server-cron-direct-heartbeat-route"),
+      agents: {
+        defaults: {
+          heartbeat: {
+            every: "1h",
+            prompt: "Default heartbeat prompt",
+            target: "none",
+            directPolicy: "block",
+            to: "telegram:dm",
+            accountId: "default",
+          },
+        },
+      },
+    } as OpenClawConfig;
+    loadConfigMock.mockReturnValue(cfg);
+
+    const state = buildGatewayCronService({
+      cfg,
+      deps: {} as CliDeps,
+      broadcast: () => {},
+    });
+    try {
+      const cronDeps = (
+        state.cron as unknown as {
+          state?: {
+            deps?: {
+              runHeartbeatOnce?: (opts?: {
+                agentId?: string;
+                sessionKey?: string | null;
+                reason?: string;
+                heartbeat?: { target?: string };
+              }) => Promise<unknown>;
+            };
+          };
+        }
+      ).state?.deps;
+
+      await cronDeps?.runHeartbeatOnce?.({
+        reason: "cron:test",
+        sessionKey: "telegram:group:123:topic:456",
         heartbeat: { target: "last" },
+      });
+
+      const call = requireRecord(
+        callArg(runHeartbeatOnceMock, 0, 0, "heartbeat run options"),
+        "heartbeat run options",
+      );
+      expect(call.sessionKey).toBe("agent:main:telegram:group:123:topic:456");
+      expect(call.heartbeat).toEqual({
+        every: "1h",
+        prompt: "Default heartbeat prompt",
+        target: "last",
+        directPolicy: "block",
+        to: undefined,
+        accountId: undefined,
+      });
+    } finally {
+      state.cron.stop();
+    }
+  });
+
+  it("does not inherit explicit heartbeat destinations for queued target-last wakes", async () => {
+    const cfg = {
+      ...createCronConfig("server-cron-queued-heartbeat-route"),
+      agents: {
+        defaults: {
+          heartbeat: {
+            every: "1h",
+            prompt: "Default heartbeat prompt",
+            target: "none",
+            directPolicy: "block",
+            to: "telegram:dm",
+            accountId: "default",
+          },
+        },
+      },
+    } as OpenClawConfig;
+    loadConfigMock.mockReturnValue(cfg);
+
+    const state = buildGatewayCronService({
+      cfg,
+      deps: {} as CliDeps,
+      broadcast: () => {},
+    });
+    try {
+      const job = await state.cron.add({
+        name: "queued-heartbeat-route",
+        enabled: true,
+        schedule: { kind: "at", at: new Date(1).toISOString() },
+        sessionTarget: "main",
+        wakeMode: "next-heartbeat",
+        sessionKey: "telegram:group:123:topic:456",
+        payload: { kind: "systemEvent", text: "hello" },
+      });
+
+      await state.cron.run(job.id, "force");
+
+      const call = requireRecord(
+        callArg(requestHeartbeatMock, 0, 0, "heartbeat request"),
+        "heartbeat request",
+      );
+      expect(call.sessionKey).toBe("agent:main:telegram:group:123:topic:456");
+      expect(call.heartbeat).toEqual({
+        target: "last",
+        to: undefined,
+        accountId: undefined,
       });
     } finally {
       state.cron.stop();
