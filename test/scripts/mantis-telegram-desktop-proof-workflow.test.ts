@@ -62,6 +62,7 @@ describe("Mantis Telegram Desktop proof workflow", () => {
     const workflow = readFileSync(WORKFLOW, "utf8");
     expect(workflow).toContain("@openclaw-mantis");
     expect(workflow).toContain("/openclaw-mantis");
+    expect(workflow).toContain("mantis: telegram-visible-proof");
     expect(workflow).not.toContain("@Mantis");
     expect(workflow).not.toContain("@mantis");
     expect(workflow).not.toContain('"/mantis"');
@@ -114,13 +115,23 @@ describe("Mantis Telegram Desktop proof workflow", () => {
     expect(prompt).toContain("do not run\n   `pnpm qa:telegram-user:crabbox` directly");
   });
 
-  it("requires explicit maintainer fork approval before accepting fork PR heads", () => {
+  it("derives refs from the PR instead of parsing comment prose", () => {
     const workflowText = readFileSync(WORKFLOW, "utf8");
-    expect(workflowText).toContain("@openclaw-mantis");
-    expect(workflowText).toContain("fork[-_]ok");
-    expect(workflowText).toContain("ALLOW_FORK_CANDIDATE");
-    expect(workflowText).toContain("maintainer-approved-fork-pr-head");
-    expect(workflowText).toContain(".head.repo.full_name !=");
+    expect(workflowText).toContain('setOutput("baseline_ref", pr.base.sha)');
+    expect(workflowText).toContain('setOutput("candidate_ref", pr.head.sha)');
+    expect(workflowText).not.toContain("body.match");
+    expect(workflowText).not.toContain("baselineMatch");
+    expect(workflowText).not.toContain("candidateMatch");
+    expect(workflowText).not.toContain("leaseMatch");
+    expect(workflowText).not.toContain("fork-ok");
+    expect(workflowText).not.toContain("allow_fork_candidate");
+  });
+
+  it("trusts the open PR head and marks fork heads for sandboxed handling", () => {
+    const workflowText = readFileSync(WORKFLOW, "utf8");
+    expect(workflowText).toContain("repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}");
+    expect(workflowText).toContain('candidate_trust="fork-pr-head"');
+    expect(workflowText).toContain('pr_head_repo" != "$GITHUB_REPOSITORY"');
 
     const agent = workflowStep("Run Codex Mantis Telegram agent");
     expect(agent.env?.MANTIS_CANDIDATE_TRUST).toBe(
@@ -129,6 +140,7 @@ describe("Mantis Telegram Desktop proof workflow", () => {
 
     const prompt = readFileSync(PROMPT, "utf8");
     expect(prompt).toContain("MANTIS_CANDIDATE_TRUST");
+    expect(prompt).toContain("fork-pr-head");
     expect(prompt).toContain("untrusted fork code");
   });
 

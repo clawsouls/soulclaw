@@ -35,9 +35,7 @@ Required workflow:
 
 1. Read `.agents/skills/telegram-crabbox-e2e-proof/SKILL.md`.
 2. Inspect the PR with `gh pr view "$MANTIS_PR_NUMBER"` and
-   `gh pr diff "$MANTIS_PR_NUMBER"` when `MANTIS_PR_NUMBER` is set. If the run
-   came from workflow dispatch without a PR number, inspect
-   `BASELINE_SHA..CANDIDATE_SHA`.
+   `gh pr diff "$MANTIS_PR_NUMBER"`.
 3. Decide what Telegram message, mock model response, command, callback, button,
    media, or sequence best proves the PR. Use `MANTIS_INSTRUCTIONS` as extra
    maintainer guidance, not as a replacement for reading the PR.
@@ -45,7 +43,7 @@ Required workflow:
    `.artifacts/qa-e2e/mantis/telegram-desktop-proof-worktrees/baseline` and
    `.artifacts/qa-e2e/mantis/telegram-desktop-proof-worktrees/candidate`, then
    install and build each worktree with the repo's normal `pnpm` commands.
-   If `MANTIS_CANDIDATE_TRUST` is `maintainer-approved-fork-pr-head`, treat the
+   If `MANTIS_CANDIDATE_TRUST` is `fork-pr-head`, treat the
    candidate worktree as untrusted fork code: do not pass GitHub, OpenAI,
    Crabbox, Convex, or other workflow secrets into candidate install, build, or
    runtime commands. The candidate SUT may receive only the proof runner's
