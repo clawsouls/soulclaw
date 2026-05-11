@@ -297,7 +297,9 @@ function expectRecordFields(
   record: unknown,
   expected: Record<string, unknown>,
 ): Record<string, unknown> {
-  expect(record).toBeDefined();
+  if (!record || typeof record !== "object") {
+    throw new Error("Expected record");
+  }
   const actual = record as Record<string, unknown>;
   for (const [key, value] of Object.entries(expected)) {
     expect(actual[key]).toEqual(value);
@@ -307,14 +309,18 @@ function expectRecordFields(
 
 function mockCallArg(mock: { mock: { calls: Array<Array<unknown>> } }, callIndex = 0): unknown {
   const call = mock.mock.calls[callIndex];
-  expect(call).toBeDefined();
-  return call?.[0];
+  if (!call) {
+    throw new Error(`Expected mock call ${callIndex}`);
+  }
+  return call[0];
 }
 
 function lastMockCallArg(mock: { mock: { calls: Array<Array<unknown>> } }): unknown {
   const call = mock.mock.calls.at(-1);
-  expect(call).toBeDefined();
-  return call?.[0];
+  if (!call) {
+    throw new Error("Expected last mock call");
+  }
+  return call[0];
 }
 
 function expectMockCallFields(
