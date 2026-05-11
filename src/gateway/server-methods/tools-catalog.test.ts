@@ -53,10 +53,10 @@ function createInvokeParams(params: Record<string, unknown>) {
   };
 }
 
-function firstMockArg<T>(mock: { mock: { calls: unknown[][] } }, label: string): T {
+function firstMockArg(mock: { mock: { calls: unknown[][] } }, label: string): unknown {
   const arg = mock.mock.calls[0]?.[0];
   expect(arg, label).toBeDefined();
-  return arg as T;
+  return arg;
 }
 
 describe("tools.catalog handler", () => {
@@ -171,7 +171,7 @@ describe("tools.catalog handler", () => {
 
     await invoke();
 
-    const resolveArgs = firstMockArg<{
+    const resolveArgs = firstMockArg(vi.mocked(resolvePluginTools), "resolvePluginTools args") as {
       allowGatewaySubagentBinding?: boolean;
       suppressNameConflicts?: boolean;
       toolAllowlist?: string[];
@@ -181,7 +181,7 @@ describe("tools.catalog handler", () => {
         agentDir?: string;
       };
       existingToolNames?: Set<string>;
-    }>(vi.mocked(resolvePluginTools), "resolvePluginTools args");
+    };
     expect(resolveArgs.allowGatewaySubagentBinding).toBe(true);
     expect(resolveArgs.suppressNameConflicts).toBe(true);
     expect(resolveArgs.toolAllowlist).toEqual(["group:plugins"]);
@@ -191,7 +191,10 @@ describe("tools.catalog handler", () => {
     expect(resolveArgs.existingToolNames).toBeInstanceOf(Set);
     expect(resolveArgs.existingToolNames?.has("tts")).toBe(true);
 
-    const registryArgs = firstMockArg<{
+    const registryArgs = firstMockArg(
+      vi.mocked(ensureStandalonePluginToolRegistryLoaded),
+      "registry load args",
+    ) as {
       allowGatewaySubagentBinding?: boolean;
       toolAllowlist?: string[];
       context?: {
@@ -199,7 +202,7 @@ describe("tools.catalog handler", () => {
         workspaceDir?: string;
         agentDir?: string;
       };
-    }>(vi.mocked(ensureStandalonePluginToolRegistryLoaded), "registry load args");
+    };
     expect(registryArgs.allowGatewaySubagentBinding).toBe(true);
     expect(registryArgs.toolAllowlist).toEqual(["group:plugins"]);
     expect(registryArgs.context).toEqual({
