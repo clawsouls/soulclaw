@@ -4,9 +4,18 @@ import { runRegisteredCli } from "../test-utils/command-runner.js";
 import { withTempSecretFiles } from "../test-utils/secret-file-fixture.js";
 import { registerAcpCli } from "./acp-cli.js";
 
+type AcpClientOptions = {
+  verbose?: boolean;
+};
+
+type AcpGatewayOptions = {
+  gatewayPassword?: string;
+  gatewayToken?: string;
+};
+
 const mocks = vi.hoisted(() => ({
-  runAcpClientInteractive: vi.fn(async (_opts: unknown) => {}),
-  serveAcpGateway: vi.fn(async (_opts: unknown) => {}),
+  runAcpClientInteractive: vi.fn(async (_opts: AcpClientOptions) => {}),
+  serveAcpGateway: vi.fn(async (_opts: AcpGatewayOptions) => {}),
   defaultRuntime: {
     log: vi.fn(),
     error: vi.fn(),
@@ -21,11 +30,11 @@ const { runAcpClientInteractive, serveAcpGateway, defaultRuntime } = mocks;
 const passwordKey = () => ["pass", "word"].join("");
 
 vi.mock("../acp/client.js", () => ({
-  runAcpClientInteractive: (opts: unknown) => mocks.runAcpClientInteractive(opts),
+  runAcpClientInteractive: (opts: AcpClientOptions) => mocks.runAcpClientInteractive(opts),
 }));
 
 vi.mock("../acp/server.js", () => ({
-  serveAcpGateway: (opts: unknown) => mocks.serveAcpGateway(opts),
+  serveAcpGateway: (opts: AcpGatewayOptions) => mocks.serveAcpGateway(opts),
 }));
 
 vi.mock("../runtime.js", () => ({
