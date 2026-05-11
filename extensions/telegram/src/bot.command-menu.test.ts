@@ -191,7 +191,6 @@ describe("createTelegramBot command menu", () => {
       ...native,
       { command: "custom_backup", description: "Git backup" },
     ]);
-    expect(registered).not.toContainEqual({ command: "status", description: "Custom status" });
     expect(registered.find((command) => command.command === "status")).toEqual(nativeStatus);
     expect(countMatching(registered, (command) => command.command === "status")).toBe(1);
     expect(errorSpy).toHaveBeenCalled();
