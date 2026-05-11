@@ -1,23 +1,13 @@
-import { resolveAgentConfig, resolveDefaultAgentId } from "../../../agents/agent-scope-config.js";
+import { resolveAgentConfig } from "../../../agents/agent-scope-config.js";
 import { pickSandboxToolPolicy } from "../../../agents/sandbox-tool-policy.js";
 import { isToolAllowedByPolicies } from "../../../agents/tool-policy-match.js";
 import { mergeAlsoAllowPolicy, resolveToolProfilePolicy } from "../../../agents/tool-policy.js";
-import { normalizeChatChannelId } from "../../../channels/ids.js";
-import { listRouteBindings } from "../../../config/bindings.js";
-import type { AgentRouteBinding } from "../../../config/types.agents.js";
 import type { OpenClawConfig } from "../../../config/types.openclaw.js";
 import type { AgentToolsConfig, ToolsConfig } from "../../../config/types.tools.js";
-import {
-  DEFAULT_ACCOUNT_ID,
-  normalizeAccountId,
-  normalizeAgentId,
-} from "../../../routing/session-key.js";
+import { collectChannelRouteTargets } from "../../../routing/channel-route-targets.js";
 import { createLazyImportLoader } from "../../../shared/lazy-promise.js";
-import { normalizeLowercaseStringOrEmpty } from "../../../shared/string-coerce.js";
 
 type ChannelDoctorModule = typeof import("./channel-doctor.js");
-
-const CHANNELS_CONFIG_META_KEYS = new Set(["defaults", "modelByChannel"]);
 
 const channelDoctorModuleLoader = createLazyImportLoader<ChannelDoctorModule>(
   () => import("./channel-doctor.js"),
@@ -37,47 +27,6 @@ function listAgentRecords(cfg: OpenClawConfig): Record<string, unknown>[] {
 
 function hasChannels(cfg: OpenClawConfig): boolean {
   return hasRecord(cfg.channels);
-}
-
-function normalizeChannelKey(raw?: string | null): string {
-  return normalizeChatChannelId(raw) ?? normalizeLowercaseStringOrEmpty(raw);
-}
-
-function normalizeRouteBindingChannelKey(raw?: string | null): string {
-  return normalizeLowercaseStringOrEmpty(raw);
-}
-
-function listConfiguredChannelIds(cfg: OpenClawConfig): string[] {
-  if (!hasRecord(cfg.channels)) {
-    return [];
-  }
-  return Object.entries(cfg.channels)
-    .filter(([id, value]) => {
-      if (CHANNELS_CONFIG_META_KEYS.has(id)) {
-        return false;
-      }
-      return !(hasRecord(value) && value.enabled === false);
-    })
-    .map(([id]) => normalizeChannelKey(id))
-    .filter(Boolean)
-    .toSorted();
-}
-
-function listConfiguredChannelAccountIds(cfg: OpenClawConfig, channelId: string): string[] {
-  if (!hasRecord(cfg.channels)) {
-    return [];
-  }
-  const channel = Object.entries(cfg.channels).find(
-    ([id]) => normalizeChannelKey(id) === channelId,
-  )?.[1];
-  if (!hasRecord(channel) || !hasRecord(channel.accounts)) {
-    return [];
-  }
-  return Object.entries(channel.accounts)
-    .filter(([, value]) => !(hasRecord(value) && value.enabled === false))
-    .map(([accountId]) => normalizeAccountId(accountId))
-    .filter(Boolean)
-    .toSorted();
 }
 
 function hasPlugins(cfg: OpenClawConfig): boolean {
@@ -254,100 +203,8 @@ function formatChannelList(channels: string[]): string {
     .join(", ")}, and ${channels.length - 2} more`;
 }
 
-function isUnscopedRouteBinding(binding: AgentRouteBinding): boolean {
-  const match = binding.match;
-  const hasRoles = Array.isArray(match.roles) && match.roles.length > 0;
-  return !match.peer && !match.guildId && !match.teamId && !hasRoles;
-}
-
-function isUnscopedChannelRouteBinding(binding: AgentRouteBinding): boolean {
-  const accountId = binding.match.accountId?.trim();
-  return accountId === "*" && isUnscopedRouteBinding(binding);
-}
-
-function resolveUnscopedBindingAccountId(binding: AgentRouteBinding): string | undefined {
-  if (!isUnscopedRouteBinding(binding)) {
-    return undefined;
-  }
-  const accountId = binding.match.accountId?.trim();
-  if (accountId === "*") {
-    return "*";
-  }
-  return normalizeAccountId(accountId || DEFAULT_ACCOUNT_ID);
-}
-
-function collectBoundChannelTargets(cfg: OpenClawConfig): Array<{
-  agentId: string;
-  channels: string[];
-}> {
-  const byAgent = new Map<string, Set<string>>();
-  const add = (agentId: string, channel: string) => {
-    const normalizedAgentId = normalizeAgentId(agentId);
-    const trimmedChannel = channel.trim();
-    if (!normalizedAgentId || !trimmedChannel) {
-      return;
-    }
-    let channels = byAgent.get(normalizedAgentId);
-    if (!channels) {
-      channels = new Set<string>();
-      byAgent.set(normalizedAgentId, channels);
-    }
-    channels.add(trimmedChannel);
-  };
-
-  const routeBindings: AgentRouteBinding[] = listRouteBindings(cfg);
-  const fullyCoveredChannels = new Set<string>();
-  const coveredAccountsByChannel = new Map<string, Set<string>>();
-  for (const binding of routeBindings) {
-    const channel = normalizeRouteBindingChannelKey(binding.match.channel);
-    add(binding.agentId, channel);
-    if (!channel) {
-      continue;
-    }
-    if (isUnscopedChannelRouteBinding(binding)) {
-      fullyCoveredChannels.add(channel);
-      continue;
-    }
-    const coveredAccountId = resolveUnscopedBindingAccountId(binding);
-    if (coveredAccountId && coveredAccountId !== "*") {
-      let coveredAccounts = coveredAccountsByChannel.get(channel);
-      if (!coveredAccounts) {
-        coveredAccounts = new Set<string>();
-        coveredAccountsByChannel.set(channel, coveredAccounts);
-      }
-      coveredAccounts.add(coveredAccountId);
-    }
-  }
-
-  const defaultAgentId = resolveDefaultAgentId(cfg);
-  for (const channel of listConfiguredChannelIds(cfg)) {
-    if (fullyCoveredChannels.has(channel)) {
-      continue;
-    }
-    const configuredAccountIds = listConfiguredChannelAccountIds(cfg, channel);
-    const coveredAccounts = coveredAccountsByChannel.get(channel);
-    if (configuredAccountIds.length === 0) {
-      if (!coveredAccounts?.has(DEFAULT_ACCOUNT_ID)) {
-        add(defaultAgentId, channel);
-      }
-      continue;
-    }
-    if (configuredAccountIds.some((accountId) => !coveredAccounts?.has(accountId))) {
-      add(defaultAgentId, channel);
-    }
-  }
-
-  return Array.from(byAgent.entries())
-    .map(([agentId, channels]) => ({
-      agentId,
-      channels: Array.from(channels).toSorted(),
-    }))
-    .filter((target) => target.channels.length > 0)
-    .toSorted((a, b) => a.agentId.localeCompare(b.agentId));
-}
-
 export function collectChannelBoundMessageToolPolicyWarnings(cfg: OpenClawConfig): string[] {
-  return collectBoundChannelTargets(cfg).flatMap((target) => {
+  return collectChannelRouteTargets(cfg).flatMap((target) => {
     const agentTools = resolveAgentConfig(cfg, target.agentId)?.tools;
     if (resolveMessageToolAvailability({ globalTools: cfg.tools, agentTools })) {
       return [];
