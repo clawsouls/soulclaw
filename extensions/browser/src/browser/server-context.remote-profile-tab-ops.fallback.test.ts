@@ -265,7 +265,9 @@ describe("browser remote profile fallback and attachOnly behavior", () => {
 
     expect(Date.now() - startedAt).toBeLessThan(700);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [fetchUrl, fetchInit] = fetchMock.mock.calls[0] ?? [];
+    const [fetchUrl, fetchInit] =
+      (fetchMock.mock.calls as Array<[string | URL, RequestInit & { dispatcher?: unknown }]>)[0] ??
+      [];
     expect(String(fetchUrl)).toBe(
       "https://1.1.1.1:9222/chrome/json/new?token=abc&url=https%3A%2F%2Fexample.com",
     );
