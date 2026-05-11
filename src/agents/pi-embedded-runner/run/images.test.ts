@@ -97,10 +97,18 @@ describe("detectImageReferences", () => {
   });
 
   it("does not leak parser state between calls", () => {
-    expectSingleImageReference("[media attached: /tmp/first.png (image/png)]");
-    expectSingleImageReference("[Image: source: /tmp/second.jpg]");
-    expectSingleImageReference("See file:///tmp/third.webp");
-    expectSingleImageReference("See ./fourth.jpeg");
+    expect(detectImageReferences("[media attached: /tmp/first.png (image/png)]")).toStrictEqual([
+      { raw: "/tmp/first.png", type: "path", resolved: "/tmp/first.png" },
+    ]);
+    expect(detectImageReferences("[Image: source: /tmp/second.jpg]")).toStrictEqual([
+      { raw: "/tmp/second.jpg", type: "path", resolved: "/tmp/second.jpg" },
+    ]);
+    expect(detectImageReferences("See file:///tmp/third.webp")).toStrictEqual([
+      { raw: "file:///tmp/third.webp", type: "path", resolved: "/tmp/third.webp" },
+    ]);
+    expect(detectImageReferences("See ./fourth.jpeg")).toStrictEqual([
+      { raw: "./fourth.jpeg", type: "path", resolved: "./fourth.jpeg" },
+    ]);
   });
 
   it("handles various image extensions", () => {
@@ -176,8 +184,18 @@ what about these images?`,
       2,
     );
 
-    expect(refs[0]?.resolved).toContain("IMG_6430.jpeg");
-    expect(refs[1]?.resolved).toContain("IMG_6431.jpeg");
+    expect(refs).toStrictEqual([
+      {
+        raw: "/Users/tyleryust/.openclaw/media/IMG_6430.jpeg",
+        type: "path",
+        resolved: "/Users/tyleryust/.openclaw/media/IMG_6430.jpeg",
+      },
+      {
+        raw: "/Users/tyleryust/.openclaw/media/IMG_6431.jpeg",
+        type: "path",
+        resolved: "/Users/tyleryust/.openclaw/media/IMG_6431.jpeg",
+      },
+    ]);
   });
 
   it("does not double-count path and url in same bracket", () => {
@@ -186,7 +204,11 @@ what about these images?`,
       "[media attached: /cache/IMG_6430.jpeg (image/jpeg) | /cache/IMG_6430.jpeg]",
     );
 
-    expect(ref?.resolved).toContain("IMG_6430.jpeg");
+    expect(ref).toStrictEqual({
+      raw: "/cache/IMG_6430.jpeg",
+      type: "path",
+      resolved: "/cache/IMG_6430.jpeg",
+    });
   });
 
   it("ignores remote URLs entirely (local-only)", () => {
