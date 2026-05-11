@@ -122,8 +122,10 @@ function createSecretsApplyResult(options?: {
 function mockCall(mock: unknown, index = 0): Array<unknown> {
   const calls = (mock as { mock?: { calls?: Array<Array<unknown>> } }).mock?.calls ?? [];
   const call = calls.at(index);
-  expect(call, `mock call ${index + 1}`).toBeDefined();
-  return call as Array<unknown>;
+  if (!call) {
+    throw new Error(`Expected mock call ${index + 1}`);
+  }
+  return call;
 }
 
 function mockFirstObjectArg(mock: unknown): Record<string, unknown> {
@@ -184,7 +186,9 @@ describe("secrets CLI", () => {
     await createProgram().parseAsync(["secrets", "reload"], { from: "user" });
     const reloadCall = mockCall(callGatewayFromCli);
     expect(reloadCall[0]).toBe("secrets.reload");
-    expect(reloadCall[1]).toBeDefined();
+    if (reloadCall[1] === undefined) {
+      throw new Error("Expected secrets.reload params");
+    }
     expect(reloadCall[2]).toBeUndefined();
     expectObjectFields(reloadCall[3], { expectFinal: false });
     expect(runtimeLogs.at(-1)).toBe("Secrets reloaded with 1 warning(s).");
@@ -241,7 +245,9 @@ describe("secrets CLI", () => {
     ).rejects.toThrow("__exit__:2");
     expect(mockFirstObjectArg(runSecretsAudit).allowExec).toBe(false);
     const exitCodeCall = mockCall(resolveSecretsAuditExitCode);
-    expect(exitCodeCall[0]).toBeDefined();
+    if (exitCodeCall[0] === undefined) {
+      throw new Error("Expected secrets audit result for exit-code resolution");
+    }
     expect(exitCodeCall[1]).toBe(true);
   });
 

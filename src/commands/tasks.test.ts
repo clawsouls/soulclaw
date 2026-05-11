@@ -270,9 +270,15 @@ describe("tasks commands", () => {
 
       const updated = JSON.parse(await fs.readFile(storePath, "utf-8")) as Record<string, unknown>;
       expect(updated["agent:main:cron:done-job:run:old-run"]).toBeUndefined();
-      expect(updated["agent:main:cron:running-job:run:old-run"]).toBeDefined();
-      expect(updated["agent:main:cron:done-job:run:recent-run"]).toBeDefined();
-      expect(updated["agent:main:telegram:dm:old"]).toBeDefined();
+      for (const key of [
+        "agent:main:cron:running-job:run:old-run",
+        "agent:main:cron:done-job:run:recent-run",
+        "agent:main:telegram:dm:old",
+      ]) {
+        if (updated[key] === undefined) {
+          throw new Error(`Expected preserved session ${key}`);
+        }
+      }
     });
   });
 });

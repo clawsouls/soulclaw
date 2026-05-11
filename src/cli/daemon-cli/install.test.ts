@@ -194,8 +194,10 @@ function expectFields(value: unknown, expected: Record<string, unknown>): void {
 function readFirstInstallPlanArg(): Record<string, unknown> {
   const [firstArg] =
     (buildGatewayInstallPlanMock.mock.calls.at(0) as [Record<string, unknown>] | undefined) ?? [];
-  expect(firstArg).toBeDefined();
-  return firstArg as Record<string, unknown>;
+  if (!firstArg) {
+    throw new Error("Expected gateway install plan arg");
+  }
+  return firstArg;
 }
 
 function expectLastEmittedResult(result: string): void {

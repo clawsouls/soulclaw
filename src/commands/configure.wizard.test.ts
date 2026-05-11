@@ -209,8 +209,10 @@ function requireRecord(value: unknown, label: string): Record<string, unknown> {
 
 function requireWriteConfig(callIndex = 0) {
   const call = mocks.writeConfigFile.mock.calls.at(callIndex);
-  expect(call, "writeConfigFile call").toBeDefined();
-  return requireRecord(call?.[0], "written config");
+  if (!call) {
+    throw new Error(`Expected writeConfigFile call ${callIndex}`);
+  }
+  return requireRecord(call[0], "written config");
 }
 
 function getGateway(config: Record<string, unknown>) {

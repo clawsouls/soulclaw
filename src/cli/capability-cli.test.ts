@@ -559,7 +559,9 @@ describe("capability cli", () => {
       [Record<string, unknown>]
     >;
     const params = calls[0]?.[0];
-    expect(params).toBeDefined();
+    if (!params) {
+      throw new Error("Expected simple completion model params");
+    }
     expect(params).not.toHaveProperty("allowBundledStaticCatalogFallback");
   });
 
