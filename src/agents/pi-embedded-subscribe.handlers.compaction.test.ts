@@ -56,6 +56,14 @@ function createCompactionContext(params: {
   } as unknown as EmbeddedPiSubscribeContext;
 }
 
+function loggedInfoMetaAt(info: ReturnType<typeof vi.fn>, index: number): Record<string, unknown> {
+  const [, meta] = info.mock.calls[index] ?? [];
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+    throw new Error(`expected info metadata for call ${index + 1}`);
+  }
+  return meta as Record<string, unknown>;
+}
+
 afterEach(async () => {
   await drainSessionStoreWriterQueuesForTest();
 });
@@ -136,28 +144,24 @@ describe("compaction lifecycle logging", () => {
       aborted: false,
     });
 
-    expect(info).toHaveBeenNthCalledWith(
-      1,
-      "embedded run auto-compaction start",
-      expect.objectContaining({
-        event: "embedded_run_compaction_start",
-        reason: "threshold",
-        runId: "run-test",
-        consoleMessage: "embedded run auto-compaction start: runId=run-test reason=threshold",
-      }),
+    expect(info.mock.calls[0]?.[0]).toBe("embedded run auto-compaction start");
+    const startMeta = loggedInfoMetaAt(info, 0);
+    expect(startMeta.event).toBe("embedded_run_compaction_start");
+    expect(startMeta.reason).toBe("threshold");
+    expect(startMeta.runId).toBe("run-test");
+    expect(startMeta.consoleMessage).toBe(
+      "embedded run auto-compaction start: runId=run-test reason=threshold",
     );
-    expect(info).toHaveBeenNthCalledWith(
-      2,
-      "embedded run auto-compaction complete",
-      expect.objectContaining({
-        event: "embedded_run_compaction_end",
-        reason: "threshold",
-        runId: "run-test",
-        completed: true,
-        compactionCount: 1,
-        consoleMessage:
-          "embedded run auto-compaction complete: runId=run-test reason=threshold compactionCount=1 willRetry=false",
-      }),
+
+    expect(info.mock.calls[1]?.[0]).toBe("embedded run auto-compaction complete");
+    const endMeta = loggedInfoMetaAt(info, 1);
+    expect(endMeta.event).toBe("embedded_run_compaction_end");
+    expect(endMeta.reason).toBe("threshold");
+    expect(endMeta.runId).toBe("run-test");
+    expect(endMeta.completed).toBe(true);
+    expect(endMeta.compactionCount).toBe(1);
+    expect(endMeta.consoleMessage).toBe(
+      "embedded run auto-compaction complete: runId=run-test reason=threshold compactionCount=1 willRetry=false",
     );
   });
 
@@ -190,28 +194,24 @@ describe("compaction lifecycle logging", () => {
       aborted: false,
     });
 
-    expect(info).toHaveBeenNthCalledWith(
-      1,
-      "embedded run manual compaction start",
-      expect.objectContaining({
-        event: "embedded_run_compaction_start",
-        reason: "manual",
-        runId: "run-test",
-        consoleMessage: "embedded run manual compaction start: runId=run-test reason=manual",
-      }),
+    expect(info.mock.calls[0]?.[0]).toBe("embedded run manual compaction start");
+    const startMeta = loggedInfoMetaAt(info, 0);
+    expect(startMeta.event).toBe("embedded_run_compaction_start");
+    expect(startMeta.reason).toBe("manual");
+    expect(startMeta.runId).toBe("run-test");
+    expect(startMeta.consoleMessage).toBe(
+      "embedded run manual compaction start: runId=run-test reason=manual",
     );
-    expect(info).toHaveBeenNthCalledWith(
-      2,
-      "embedded run manual compaction incomplete",
-      expect.objectContaining({
-        event: "embedded_run_compaction_end",
-        reason: "manual",
-        runId: "run-test",
-        completed: false,
-        aborted: false,
-        consoleMessage:
-          "embedded run manual compaction incomplete: runId=run-test reason=manual aborted=false willRetry=false",
-      }),
+
+    expect(info.mock.calls[1]?.[0]).toBe("embedded run manual compaction incomplete");
+    const endMeta = loggedInfoMetaAt(info, 1);
+    expect(endMeta.event).toBe("embedded_run_compaction_end");
+    expect(endMeta.reason).toBe("manual");
+    expect(endMeta.runId).toBe("run-test");
+    expect(endMeta.completed).toBe(false);
+    expect(endMeta.aborted).toBe(false);
+    expect(endMeta.consoleMessage).toBe(
+      "embedded run manual compaction incomplete: runId=run-test reason=manual aborted=false willRetry=false",
     );
   });
 
@@ -242,28 +242,24 @@ describe("compaction lifecycle logging", () => {
       aborted: false,
     });
 
-    expect(info).toHaveBeenNthCalledWith(
-      1,
-      "embedded run auto-compaction start",
-      expect.objectContaining({
-        event: "embedded_run_compaction_start",
-        reason: "threshold",
-        runId: "run-test",
-        consoleMessage: "embedded run auto-compaction start: runId=run-test reason=threshold",
-      }),
+    expect(info.mock.calls[0]?.[0]).toBe("embedded run auto-compaction start");
+    const startMeta = loggedInfoMetaAt(info, 0);
+    expect(startMeta.event).toBe("embedded_run_compaction_start");
+    expect(startMeta.reason).toBe("threshold");
+    expect(startMeta.runId).toBe("run-test");
+    expect(startMeta.consoleMessage).toBe(
+      "embedded run auto-compaction start: runId=run-test reason=threshold",
     );
-    expect(info).toHaveBeenNthCalledWith(
-      2,
-      "embedded run auto-compaction complete",
-      expect.objectContaining({
-        event: "embedded_run_compaction_end",
-        reason: "threshold",
-        runId: "run-test",
-        completed: true,
-        compactionCount: 1,
-        consoleMessage:
-          "embedded run auto-compaction complete: runId=run-test reason=threshold compactionCount=1 willRetry=false",
-      }),
+
+    expect(info.mock.calls[1]?.[0]).toBe("embedded run auto-compaction complete");
+    const endMeta = loggedInfoMetaAt(info, 1);
+    expect(endMeta.event).toBe("embedded_run_compaction_end");
+    expect(endMeta.reason).toBe("threshold");
+    expect(endMeta.runId).toBe("run-test");
+    expect(endMeta.completed).toBe(true);
+    expect(endMeta.compactionCount).toBe(1);
+    expect(endMeta.consoleMessage).toBe(
+      "embedded run auto-compaction complete: runId=run-test reason=threshold compactionCount=1 willRetry=false",
     );
   });
 });
