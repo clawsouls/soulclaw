@@ -261,7 +261,7 @@ describe("CONSENT_UPLOAD_HOST_ALLOWLIST", () => {
 
 describe("uploadToConsentUrl", () => {
   it("sends the OpenClaw User-Agent header with consent uploads", async () => {
-    const fetchFn = vi.fn(async () => new Response(null, { status: 200 }));
+    const fetchFn = vi.fn<typeof fetch>(async () => new Response(null, { status: 200 }));
 
     await uploadToConsentUrl({
       url: "https://contoso.sharepoint.com/upload",
