@@ -707,10 +707,9 @@ describe("buildGatewayCronService", () => {
       expect((enqueueCall?.[1] as { sessionKey?: string } | undefined)?.sessionKey).toBe(
         "agent:primary:discord:channel:ops",
       );
-      expect(wakeCall?.[0]).toMatchObject({
-        agentId: "primary",
-        sessionKey: "agent:primary:discord:channel:ops",
-      });
+      const wakeRequest = wakeCall?.[0] as { agentId?: string; sessionKey?: string } | undefined;
+      expect(wakeRequest?.agentId).toBe("primary");
+      expect(wakeRequest?.sessionKey).toBe("agent:primary:discord:channel:ops");
     } finally {
       state.cron.stop();
     }
@@ -768,10 +767,9 @@ describe("buildGatewayCronService", () => {
       expect((enqueueCall?.[1] as { sessionKey?: string } | undefined)?.sessionKey).toBe(
         "agent:primary:main",
       );
-      expect(wakeCall?.[0]).toMatchObject({
-        agentId: "primary",
-        sessionKey: "agent:primary:main",
-      });
+      const wakeRequest = wakeCall?.[0] as { agentId?: string; sessionKey?: string } | undefined;
+      expect(wakeRequest?.agentId).toBe("primary");
+      expect(wakeRequest?.sessionKey).toBe("agent:primary:main");
     } finally {
       state.cron.stop();
     }
@@ -813,15 +811,20 @@ describe("buildGatewayCronService", () => {
       expect((enqueueCall?.[1] as { sessionKey?: string } | undefined)?.sessionKey).toMatch(
         /^agent:ops:/,
       );
-      expect(wakeCall?.[0]).toMatchObject({
-        source: "manual",
-        intent: "immediate",
-        reason: "wake",
-        agentId: "ops",
-      });
-      expect((wakeCall?.[0] as { sessionKey?: string } | undefined)?.sessionKey).toMatch(
-        /^agent:ops:/,
-      );
+      const wakeRequest = wakeCall?.[0] as
+        | {
+            source?: string;
+            intent?: string;
+            reason?: string;
+            agentId?: string;
+            sessionKey?: string;
+          }
+        | undefined;
+      expect(wakeRequest?.source).toBe("manual");
+      expect(wakeRequest?.intent).toBe("immediate");
+      expect(wakeRequest?.reason).toBe("wake");
+      expect(wakeRequest?.agentId).toBe("ops");
+      expect(wakeRequest?.sessionKey).toMatch(/^agent:ops:/);
     } finally {
       state.cron.stop();
     }
