@@ -849,7 +849,12 @@ describe("buildGatewayCronService", () => {
       expect(agentHeartbeat.target).toBe("last");
       expect(agentHeartbeat.deliveryFormat).toBe("markdown");
       const heartbeat = requireRecord(options.heartbeat, "heartbeat override");
-      expect(heartbeat).toEqual({});
+      expect(heartbeat).toEqual({
+        target: "last",
+        deliveryFormat: "markdown",
+        to: undefined,
+        accountId: undefined,
+      });
     } finally {
       state.cron.stop();
     }
