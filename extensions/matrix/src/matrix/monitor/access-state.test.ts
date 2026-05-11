@@ -81,6 +81,54 @@ describe("resolveMatrixMonitorAccessState", () => {
     });
   });
 
+  it("treats unresolved configured room allowlists as configured but nonmatching", async () => {
+    const groupState = await resolveMatrixMonitorAccessState({
+      allowFrom: [],
+      storeAllowFrom: [],
+      groupAllowFrom: ["Alice"],
+      roomUsers: [],
+      senderId: "@alice:example.org",
+      isRoom: true,
+      groupPolicy: "allowlist",
+    });
+    const roomState = await resolveMatrixMonitorAccessState({
+      allowFrom: [],
+      storeAllowFrom: [],
+      groupAllowFrom: [],
+      roomUsers: ["Dana"],
+      senderId: "@dana:example.org",
+      isRoom: true,
+      groupPolicy: "open",
+    });
+
+    expect(groupState.effectiveGroupAllowFrom).toEqual(["alice"]);
+    expect(groupState.messageIngress.ingress.decision).toBe("block");
+    expect(groupState.messageIngress.ingress.reasonCode).toBe("group_policy_not_allowlisted");
+    expect(roomState.effectiveRoomUsers).toEqual(["dana"]);
+    expect(roomState.messageIngress.ingress.decision).toBe("block");
+    expect(roomState.messageIngress.ingress.reasonCode).toBe("group_policy_not_allowlisted");
+    await expect(
+      resolveMatrixMonitorCommandAccess(groupState, {
+        useAccessGroups: true,
+        allowTextCommands: true,
+        hasControlCommand: true,
+      }),
+    ).resolves.toMatchObject({
+      authorized: false,
+      shouldBlockControlCommand: true,
+    });
+    await expect(
+      resolveMatrixMonitorCommandAccess(roomState, {
+        useAccessGroups: true,
+        allowTextCommands: true,
+        hasControlCommand: true,
+      }),
+    ).resolves.toMatchObject({
+      authorized: false,
+      shouldBlockControlCommand: true,
+    });
+  });
+
   it("authorizes room control commands through the shared ingress command gate", async () => {
     const state = await resolveMatrixMonitorAccessState({
       allowFrom: [],
