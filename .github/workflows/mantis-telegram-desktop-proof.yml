@@ -331,13 +331,19 @@ jobs:
           crabbox --version
           crabbox media preview --help >/dev/null
 
-      - name: Check local proof tools
+      - name: Install local proof tools
         shell: bash
         run: |
           set -euo pipefail
           test -f scripts/e2e/telegram-user-driver.py
-          command -v ffmpeg
+          media_tools="${RUNNER_TEMP}/mantis-media-tools"
+          install -d "$media_tools"
+          printf '%s\n' '{"private":true}' > "$media_tools/package.json"
+          pnpm --dir "$media_tools" --config.dangerouslyAllowAllBuilds=true add ffmpeg-static@5.2.0 ffprobe-static@3.1.0
+          sudo install -m 0755 "$media_tools/node_modules/ffmpeg-static/ffmpeg" /usr/local/bin/ffmpeg
+          sudo install -m 0755 "$media_tools/node_modules/ffprobe-static/bin/linux/x64/ffprobe" /usr/local/bin/ffprobe
           ffmpeg -version >/dev/null
+          ffprobe -version >/dev/null
 
       - name: Ensure agent key exists
         env:
