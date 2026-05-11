@@ -36,7 +36,7 @@ describe("whatsapp setup entry", () => {
     if (!legacySessionSurface) {
       throw new Error("expected WhatsApp legacy session surface");
     }
-    expect(Object.keys(legacySessionSurface).sort()).toEqual([
+    expect(Object.keys(legacySessionSurface).toSorted()).toEqual([
       "canonicalizeLegacySessionKey",
       "isLegacyGroupSessionKey",
     ]);
