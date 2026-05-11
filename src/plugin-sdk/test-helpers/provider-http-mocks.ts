@@ -20,7 +20,7 @@ type ResolveProviderHttpRequestConfigResult = {
   dispatcherPolicy: undefined;
 };
 
-type AnyMock = Mock<(...args: any[]) => any>;
+type AnyMock = Mock<(...args: unknown[]) => unknown>;
 
 interface ProviderHttpMocks {
   resolveApiKeyForProviderMock: Mock<() => Promise<{ apiKey: string }>>;
