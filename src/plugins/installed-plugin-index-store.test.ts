@@ -97,7 +97,6 @@ function expectPluginFields(
   expected: Record<string, unknown>,
 ) {
   const plugin = index.plugins.find((candidate) => candidate.pluginId === pluginId);
-  expect(plugin, pluginId).toBeDefined();
   if (!plugin) {
     throw new Error(`Missing plugin ${pluginId}`);
   }
@@ -112,7 +111,6 @@ function expectInstallRecord(
   expected: Record<string, unknown>,
 ) {
   const record = index.installRecords[pluginId];
-  expect(record, pluginId).toBeDefined();
   if (!record) {
     throw new Error(`Missing install record ${pluginId}`);
   }
