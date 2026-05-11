@@ -88,14 +88,19 @@ describe("agents_list tool", () => {
     );
     const details = result.details as AgentListDetails;
 
-    expect(details.requester).toBe("main");
-    expect(details.allowAny).toBe(false);
-    expect(details.agents).toStrictEqual([
-      expect.objectContaining({
-        id: "main",
-        configured: true,
-      }),
-    ]);
+    expect(details).toStrictEqual({
+      requester: "main",
+      allowAny: false,
+      agents: [
+        {
+          id: "main",
+          name: undefined,
+          configured: true,
+          model: undefined,
+          agentRuntime: { id: "codex", source: "implicit" },
+        },
+      ],
+    });
   });
 
   it("ignores legacy env-forced plugin runtime selections", async () => {
@@ -115,12 +120,19 @@ describe("agents_list tool", () => {
     );
     const details = result.details as AgentListDetails;
 
-    expect(details.agents).toStrictEqual([
-      expect.objectContaining({
-        id: "main",
-        agentRuntime: { id: "codex", source: "implicit" },
-      }),
-    ]);
+    expect(details).toStrictEqual({
+      requester: "main",
+      allowAny: false,
+      agents: [
+        {
+          id: "main",
+          name: undefined,
+          configured: true,
+          model: "openai/gpt-5.5",
+          agentRuntime: { id: "codex", source: "implicit" },
+        },
+      ],
+    });
   });
 
   it("ignores legacy per-agent runtime overrides", async () => {
@@ -143,11 +155,18 @@ describe("agents_list tool", () => {
     );
     const details = result.details as AgentListDetails;
 
-    expect(details.agents).toStrictEqual([
-      expect.objectContaining({
-        id: "strict",
-        agentRuntime: { id: "codex", source: "implicit" },
-      }),
-    ]);
+    expect(details).toStrictEqual({
+      requester: "main",
+      allowAny: false,
+      agents: [
+        {
+          id: "strict",
+          name: undefined,
+          configured: true,
+          model: undefined,
+          agentRuntime: { id: "codex", source: "implicit" },
+        },
+      ],
+    });
   });
 });
