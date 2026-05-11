@@ -119,12 +119,11 @@ describe("feishu setup wizard", () => {
 
     expect(initAppRegistrationMock).not.toHaveBeenCalled();
     expect(beginAppRegistrationMock).not.toHaveBeenCalled();
-    expect(result.cfg.channels?.feishu).toMatchObject({
-      appId: "cli_manual",
-      appSecret: "secret_manual",
-      connectionMode: "websocket",
-      domain: "feishu",
-    });
+    const feishuConfig = result.cfg.channels?.feishu;
+    expect(feishuConfig?.appId).toBe("cli_manual");
+    expect(feishuConfig?.appSecret).toBe("secret_manual");
+    expect(feishuConfig?.connectionMode).toBe("websocket");
+    expect(feishuConfig?.domain).toBe("feishu");
   });
 
   it("passes selected domain through scan-to-create and poll", async () => {
@@ -162,20 +161,16 @@ describe("feishu setup wizard", () => {
 
     expect(initAppRegistrationMock).toHaveBeenCalledWith("lark");
     expect(beginAppRegistrationMock).toHaveBeenCalledWith("lark");
-    expect(pollAppRegistrationMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        deviceCode: "device-code",
-        initialDomain: "lark",
-        tp: "ob_cli_app",
-      }),
-    );
-    expect(result.cfg.channels?.feishu).toMatchObject({
-      appId: "cli_lark",
-      appSecret: "secret_lark",
-      domain: "lark",
-      groupPolicy: "open",
-      requireMention: true,
-    });
+    const [pollOptions] = pollAppRegistrationMock.mock.calls[0] ?? [];
+    expect(pollOptions?.deviceCode).toBe("device-code");
+    expect(pollOptions?.initialDomain).toBe("lark");
+    expect(pollOptions?.tp).toBe("ob_cli_app");
+    const feishuConfig = result.cfg.channels?.feishu;
+    expect(feishuConfig?.appId).toBe("cli_lark");
+    expect(feishuConfig?.appSecret).toBe("secret_lark");
+    expect(feishuConfig?.domain).toBe("lark");
+    expect(feishuConfig?.groupPolicy).toBe("open");
+    expect(feishuConfig?.requireMention).toBe(true);
   });
 
   it("falls back to manual credentials when selected scan-to-create is unavailable", async () => {
@@ -201,11 +196,10 @@ describe("feishu setup wizard", () => {
 
     expect(initAppRegistrationMock).toHaveBeenCalledWith("feishu");
     expect(beginAppRegistrationMock).not.toHaveBeenCalled();
-    expect(result.cfg.channels?.feishu).toMatchObject({
-      appId: "cli_from_fallback",
-      appSecret: "secret_from_fallback",
-      domain: "feishu",
-    });
+    const feishuConfig = result.cfg.channels?.feishu;
+    expect(feishuConfig?.appId).toBe("cli_from_fallback");
+    expect(feishuConfig?.appSecret).toBe("secret_from_fallback");
+    expect(feishuConfig?.domain).toBe("feishu");
   });
 
   it("prompts over SecretRef appId/appSecret config objects", async () => {
