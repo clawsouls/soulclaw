@@ -267,7 +267,10 @@ describe("memory tools", () => {
       });
       const event = events[0];
       expect(event?.type).toBe("memory.recall.recorded");
-      expect(event?.query).toBe("glacier backup");
+      if (!event || event.type !== "memory.recall.recorded") {
+        throw new Error("expected memory recall recorded event");
+      }
+      expect(event.query).toBe("glacier backup");
     } finally {
       await fs.rm(workspaceDir, { recursive: true, force: true });
     }
