@@ -66,6 +66,14 @@ async function withFetchPathTest(
   }
 }
 
+function requireFirstFetchCall(mockFetch: ReturnType<typeof vi.fn>): [unknown, unknown] {
+  const [call] = mockFetch.mock.calls;
+  if (!call) {
+    throw new Error("expected DeepInfra models fetch call");
+  }
+  return call as [unknown, unknown];
+}
+
 describe("discoverDeepInfraModels", () => {
   it("returns static catalog in test environment", async () => {
     const models = await discoverDeepInfraModels();
@@ -89,7 +97,7 @@ describe("discoverDeepInfraModels", () => {
     await withFetchPathTest(mockFetch, async () => {
       const models = await discoverDeepInfraModels();
       expect(mockFetch).toHaveBeenCalledOnce();
-      const [fetchUrl, fetchInit] = mockFetch.mock.calls[0] ?? [];
+      const [fetchUrl, fetchInit] = requireFirstFetchCall(mockFetch);
       const fetchSignal = Reflect.get(fetchInit ?? {}, "signal");
       expect(fetchUrl).toBe(DEEPINFRA_MODELS_URL);
       expect(fetchSignal).toBeInstanceOf(AbortSignal);
