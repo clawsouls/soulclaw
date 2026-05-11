@@ -151,14 +151,13 @@ describe("telegramPlugin gateway startup", () => {
     const { task } = startTelegramAccount();
 
     await expect(task).resolves.toBeUndefined();
-    expect(probeTelegram).toHaveBeenCalledWith(
-      "123456:bad-token",
-      15_000,
-      expect.objectContaining({
-        accountId: "default",
-        includeWebhookInfo: false,
-      }),
-    );
+    expect(probeTelegram).toHaveBeenCalledWith("123456:bad-token", 15_000, {
+      accountId: "default",
+      proxyUrl: undefined,
+      network: undefined,
+      apiRoot: undefined,
+      includeWebhookInfo: false,
+    });
   });
 
   it("passes successful startup probe botInfo into the polling monitor", async () => {
@@ -213,14 +212,13 @@ describe("telegramPlugin gateway startup", () => {
     const { task } = startTelegramAccount("ops", { timeoutSeconds: 60 });
 
     await expect(task).resolves.toBeUndefined();
-    expect(probeTelegram).toHaveBeenCalledWith(
-      "123456:bad-token",
-      60_000,
-      expect.objectContaining({
-        accountId: "ops",
-        includeWebhookInfo: false,
-      }),
-    );
+    expect(probeTelegram).toHaveBeenCalledWith("123456:bad-token", 60_000, {
+      accountId: "ops",
+      proxyUrl: undefined,
+      network: undefined,
+      apiRoot: undefined,
+      includeWebhookInfo: false,
+    });
   });
 });
 
