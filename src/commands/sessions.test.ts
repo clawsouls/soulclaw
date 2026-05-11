@@ -85,8 +85,9 @@ describe("sessionsCommand", () => {
     expect(logs.some((line) => line.includes("Runtime"))).toBe(true);
 
     const row = logs.find((line) => line.includes("agent:main:main")) ?? "";
-    expect(row).toContain("claude-opus-4-7");
-    expect(row).toContain("Claude CLI");
+    expect(row).toBe(
+      "direct agent:main:main            1m ago    claude-opus-4-7 Claude CLI         unknown/200k (?%)    id:main-session",
+    );
   });
 
   it("renders configured CLI runtime when the session stores a canonical provider", async () => {
@@ -119,8 +120,9 @@ describe("sessionsCommand", () => {
     fs.rmSync(store);
 
     const row = logs.find((line) => line.includes("agent:main:main")) ?? "";
-    expect(row).toContain("claude-opus-4-7");
-    expect(row).toContain("Claude CLI");
+    expect(row).toBe(
+      "direct agent:main:main            1m ago    claude-opus-4-7 Claude CLI         unknown/200k (?%)    id:main-session",
+    );
   });
 
   it("shows placeholder rows when tokens are missing", async () => {
