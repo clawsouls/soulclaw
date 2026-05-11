@@ -12,6 +12,7 @@ Docs: https://docs.openclaw.ai
 - TypeScript: enable stricter compiler checks for implicit returns, side-effect imports, overrides, and unused production code.
 - Agents: allow `session.agentToAgent.maxPingPongTurns` up to 20 while keeping the default at 5 for longer agent-to-agent reply chains. Fixes #52382. (#52400) Thanks @thirumaleshp.
 - Agents: add per-agent `tools.message.crossContext` overrides so sandboxed/public agents can restrict message sends to the current conversation without changing the global bot policy.
+- Agents: add per-agent `tools.message.actions.allow` overrides so sandboxed/public agents can expose and enforce send-only message tools.
 - Build: upgrade workspace package management to pnpm 11 and keep Docker, install, update, and release workflows on the pnpm 11 config surface. (#79414) Thanks @altaywtf.
 - Models: add provider-level `localService` startup for on-demand local model servers before OpenAI-compatible requests, including one-shot model probes.
 - Agents: trim default system prompt guidance and send-only message tool schemas to reduce prompt tokens while preserving GPT-5 personality guidance.
