@@ -849,7 +849,7 @@ describe("chrome.ts internal", () => {
         onConnection: (wss) => {
           wss.on("connection", (ws) => {
             // Immediately close with no response, triggering the 'close' branch.
-            setTimeout(() => ws.close(), 10);
+            setImmediate(() => ws.close());
           });
         },
         run: async (baseUrl) => {
