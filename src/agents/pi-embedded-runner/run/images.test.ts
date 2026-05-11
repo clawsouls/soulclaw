@@ -268,7 +268,10 @@ describe("loadImageFromRef", () => {
       );
 
       expect(image?.type).toBe("image");
-      expect(image?.data.length).toBeGreaterThan(0);
+      expect(image?.mimeType).toBe("image/png");
+      expect(image?.data).toBe(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACXBIWXMAAAsTAAALEwEAmpwYAAAADUlEQVR4nGP4////KwAJ5gPoxLp9owAAAABJRU5ErkJggg==",
+      );
     } finally {
       await fs.rm(sandboxParent, { recursive: true, force: true });
     }
