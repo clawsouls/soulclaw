@@ -154,7 +154,6 @@ function requireRecord(value: unknown, label: string): Record<string, unknown> {
 
 function mockObjectArg(mock: ReturnType<typeof vi.fn>, label: string, callIndex = 0, argIndex = 0) {
   const call = mock.mock.calls[callIndex];
-  expect(call).toBeDefined();
   if (!call) {
     throw new Error(`expected ${label} mock call ${callIndex}`);
   }
@@ -163,7 +162,6 @@ function mockObjectArg(mock: ReturnType<typeof vi.fn>, label: string, callIndex 
 
 function mockCallArgs(mock: ReturnType<typeof vi.fn>, label: string, callIndex = 0): unknown[] {
   const call = mock.mock.calls[callIndex] as unknown[] | undefined;
-  expect(call).toBeDefined();
   if (!call) {
     throw new Error(`expected ${label} mock call ${callIndex}`);
   }

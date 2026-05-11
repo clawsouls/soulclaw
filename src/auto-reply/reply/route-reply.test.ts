@@ -108,8 +108,10 @@ function createChannelPlugin(
 
 function lastDelivery() {
   const call = mocks.deliverOutboundPayloads.mock.calls.at(-1);
-  expect(call).toBeDefined();
-  const delivery = call?.[0];
+  if (!call) {
+    throw new Error("Expected outbound delivery call");
+  }
+  const delivery = call[0];
   expect(typeof delivery).toBe("object");
   expect(delivery).not.toBeNull();
   return delivery as Record<string, unknown>;

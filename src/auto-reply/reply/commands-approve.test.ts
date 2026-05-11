@@ -36,7 +36,6 @@ function requireRecord(value: unknown, label: string): Record<string, unknown> {
 
 function gatewayRequest(callIndex = 0) {
   const call = callGatewayMock.mock.calls[callIndex] as unknown[] | undefined;
-  expect(call).toBeDefined();
   if (!call) {
     throw new Error(`expected gateway call ${callIndex}`);
   }
