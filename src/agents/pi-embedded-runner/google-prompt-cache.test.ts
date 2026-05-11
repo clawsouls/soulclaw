@@ -93,8 +93,9 @@ function callArg(mock: { mock: { calls: unknown[][] } }, callIndex: number, argI
 
 function fetchInit(fetchMock: { mock: { calls: unknown[][] } }, callIndex = 0): RequestInit {
   const init = callArg(fetchMock, callIndex, 1);
-  expect(typeof init).toBe("object");
-  expect(init).not.toBeNull();
+  if (!init || typeof init !== "object") {
+    throw new Error(`expected fetch init for call ${callIndex}`);
+  }
   return init as RequestInit;
 }
 
