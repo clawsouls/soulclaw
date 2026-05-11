@@ -386,8 +386,10 @@ describe("DiscordVoiceManager", () => {
 
   const expectOffEventWithFunction = (source: MockCallSource, event: string) => {
     const call = Array.from(source.mock.calls).find((candidate) => candidate[0] === event);
-    expect(call, `${event} listener removal`).toBeDefined();
-    expect(call?.[1], `${event} listener`).toBeTypeOf("function");
+    if (!call) {
+      throw new Error(`Expected ${event} listener removal`);
+    }
+    expect(call[1], `${event} listener`).toBeTypeOf("function");
   };
 
   const lastAgentCommandArgs = () =>
