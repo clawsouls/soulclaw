@@ -321,15 +321,15 @@ jobs:
         run: |
           set -euo pipefail
           install_dir="${RUNNER_TEMP}/crabbox"
-          mkdir -p "$install_dir/src" "$HOME/.local/bin"
+          mkdir -p "$install_dir/src"
           git init "$install_dir/src"
           git -C "$install_dir/src" remote add origin https://github.com/openclaw/crabbox.git
           git -C "$install_dir/src" fetch --depth 1 origin "$CRABBOX_REF"
           git -C "$install_dir/src" checkout --detach FETCH_HEAD
-          go build -C "$install_dir/src" -o "$HOME/.local/bin/crabbox" ./cmd/crabbox
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          "$HOME/.local/bin/crabbox" --version
-          "$HOME/.local/bin/crabbox" media preview --help >/dev/null
+          go build -C "$install_dir/src" -o "$install_dir/crabbox" ./cmd/crabbox
+          sudo install -m 0755 "$install_dir/crabbox" /usr/local/bin/crabbox
+          crabbox --version
+          crabbox media preview --help >/dev/null
 
       - name: Ensure agent key exists
         env:
@@ -396,7 +396,6 @@ jobs:
           codex-home: /tmp/mantis-codex-home-${{ github.run_id }}
           safety-strategy: unprivileged-user
           codex-user: codex
-          codex-args: '["--full-auto"]'
 
       - name: Inspect Mantis evidence manifest
         id: inspect
