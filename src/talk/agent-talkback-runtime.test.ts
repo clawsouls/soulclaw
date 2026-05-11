@@ -24,6 +24,18 @@ function expectConsultRequest(
   expect(request).toStrictEqual(expected);
 }
 
+function expectConsultCall(
+  consult: { mock: { calls: unknown[][] } },
+  callIndex: number,
+  expected: { metadata: unknown; question: string; responseStyle: string },
+) {
+  const call = consult.mock.calls[callIndex]?.[0];
+  if (call === undefined) {
+    throw new Error(`Expected talkback consult call ${callIndex}`);
+  }
+  expectConsultRequest(call, expected);
+}
+
 describe("realtime voice agent talkback queue", () => {
   it("debounces transcript fragments into one consult", async () => {
     vi.useFakeTimers();
@@ -45,7 +57,7 @@ describe("realtime voice agent talkback queue", () => {
     queue.enqueue("second");
     await vi.advanceTimersByTimeAsync(100);
 
-    expectConsultRequest(consult.mock.calls[0]?.[0], {
+    expectConsultCall(consult, 0, {
       metadata: undefined,
       question: "first\nsecond",
       responseStyle: "brief",
@@ -86,12 +98,12 @@ describe("realtime voice agent talkback queue", () => {
     finishFirst?.({ text: "first-answer" });
     await vi.runAllTimersAsync();
 
-    expectConsultRequest(consult.mock.calls[0]?.[0], {
+    expectConsultCall(consult, 0, {
       metadata: undefined,
       question: "first",
       responseStyle: "brief",
     });
-    expectConsultRequest(consult.mock.calls[1]?.[0], {
+    expectConsultCall(consult, 1, {
       metadata: undefined,
       question: "ignored\nsecond",
       responseStyle: "brief",
@@ -136,12 +148,12 @@ describe("realtime voice agent talkback queue", () => {
     finishFirst?.({ text: "first-answer" });
     await vi.runAllTimersAsync();
 
-    expectConsultRequest(consult.mock.calls[1]?.[0], {
+    expectConsultCall(consult, 1, {
       metadata: ownerMetadata,
       question: "owner",
       responseStyle: "brief",
     });
-    expectConsultRequest(consult.mock.calls[2]?.[0], {
+    expectConsultCall(consult, 2, {
       metadata: guestMetadata,
       question: "guest",
       responseStyle: "brief",
