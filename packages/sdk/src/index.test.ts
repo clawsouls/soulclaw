@@ -847,6 +847,60 @@ describe("OpenClaw SDK", () => {
     }
   });
 
+  it("uses cumulative text for the first replayed chat projection", async () => {
+    const transport = new FakeTransport({});
+    const oc = new OpenClaw({ transport });
+    const runId = "run_chat_delta_text_replay";
+    let text = "";
+    let iterator: AsyncIterator<OpenClawEvent> | undefined;
+
+    try {
+      await oc.connect();
+      const observedLast = (async () => {
+        for await (const event of oc.events(
+          (event) => event.raw?.event === "chat" && event.raw.seq === 501,
+        )) {
+          return event;
+        }
+        throw new Error("expected final replay setup event");
+      })();
+
+      for (let index = 0; index <= 500; index += 1) {
+        const deltaText = index === 0 ? "hello" : ` ${index}`;
+        text += deltaText;
+        transport.emit({
+          event: "chat",
+          seq: index + 1,
+          payload: {
+            runId,
+            sessionKey: "chat-delta-text-replay",
+            state: "delta",
+            deltaText,
+            message: {
+              role: "assistant",
+              content: [{ type: "text", text }],
+              timestamp: 1_777_000_000_300 + index,
+            },
+          },
+        });
+      }
+
+      await observedLast;
+      const run = await oc.runs.get(runId);
+      iterator = run.events()[Symbol.asyncIterator]();
+      const first = await iterator.next();
+      expect(first.done).toBe(false);
+      if (first.done !== false) {
+        throw new Error("expected first replayed chat projection event");
+      }
+      expect(first.value.type).toBe("assistant.delta");
+      expect(first.value.data).toEqual({ text: "hello 1", delta: "hello 1" });
+    } finally {
+      await iterator?.return?.();
+      await oc.close();
+    }
+  });
+
   it("creates a session and sends a message as a run", async () => {
     const transport = new FakeTransport({
       "sessions.create": { key: "session-main", label: "Main" },

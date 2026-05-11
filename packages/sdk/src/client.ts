@@ -264,6 +264,7 @@ function normalizeChatProjectionEvent(
 ): OpenClawEvent {
   const text = readChatProjectionText(projection.payload);
   const deltaText = readChatProjectionDeltaText(projection.payload);
+  const hasPreviousText = previousText !== undefined;
   const isReplacement = Boolean(
     deltaText === undefined && previousText && text !== undefined && !text.startsWith(previousText),
   );
@@ -275,7 +276,12 @@ function normalizeChatProjectionEvent(
         ? text !== undefined
           ? {
               text,
-              delta: deltaText ?? (isReplacement ? text : text.slice(previousText?.length ?? 0)),
+              delta:
+                deltaText !== undefined && hasPreviousText
+                  ? deltaText
+                  : isReplacement
+                    ? text
+                    : text.slice(previousText?.length ?? 0),
               ...(isReplacement ? { replace: true } : {}),
             }
           : event.data
