@@ -1,4 +1,4 @@
-import type { AssistantMessageEventStream } from "@mariozechner/pi-ai";
+import type { AssistantMessageEventStream } from "@earendil-works/pi-ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../../../config/config.js";
 import {
