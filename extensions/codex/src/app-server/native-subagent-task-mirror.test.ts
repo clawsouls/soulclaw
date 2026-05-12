@@ -311,13 +311,15 @@ describe("CodexNativeSubagentTaskMirror", () => {
     });
 
     expect(runtime.finalizeTaskRunByRunId).toHaveBeenCalledTimes(1);
-    expect(runtime.finalizeTaskRunByRunId).toHaveBeenCalledWith(
-      expect.objectContaining({
-        runId: "codex-thread:child-thread",
-        status: "succeeded",
-        terminalSummary: "No user task is specified.",
-      }),
-    );
+    expect(runtime.finalizeTaskRunByRunId).toHaveBeenCalledWith({
+      runId: "codex-thread:child-thread",
+      runtime: "subagent",
+      status: "succeeded",
+      endedAt: 50_000,
+      lastEventAt: 50_000,
+      progressSummary: "No user task is specified.",
+      terminalSummary: "No user task is specified.",
+    });
   });
 
   it("normalizes collab agent status spelling from alternate event surfaces", () => {
