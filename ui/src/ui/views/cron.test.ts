@@ -278,7 +278,7 @@ describe("cron view", () => {
     expect(onLoadRuns).toHaveBeenNthCalledWith(2, "job-1");
 
     const link = container.querySelector("a.session-link");
-    expect(link?.getAttribute("href")).toContain(
+    expect(link?.getAttribute("href")).toBe(
       "/ui/chat?session=agent%3Amain%3Acron%3Ajob-1%3Arun%3Aabc",
     );
 
