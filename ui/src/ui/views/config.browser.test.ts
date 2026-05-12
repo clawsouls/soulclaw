@@ -307,14 +307,13 @@ describe("config view", () => {
     const rawButton = findButtonByText(container, "Raw");
     expect([...formButton.classList]).toEqual(["config-mode-toggle__btn", "active"]);
     expect(rawButton.disabled).toBe(true);
-    queryRequired(container, ".config-actions__notice", HTMLElement);
+    expect(
+      queryRequired(container, ".config-actions__notice", HTMLElement).textContent?.trim(),
+    ).toBe("Raw mode disabled (snapshot cannot safely round-trip raw text).");
     const actionButtons = queryRequired(container, ".config-actions__buttons", HTMLElement);
     expect(
       [...actionButtons.querySelectorAll("button")].map((button) => button.textContent?.trim()),
     ).toEqual(["Reload", "Clear", "Save", "Apply", "Update"]);
-    expect(normalizedText(container)).toContain(
-      "Raw mode disabled (snapshot cannot safely round-trip raw text).",
-    );
     expect(container.querySelector(".config-raw-field")).toBeNull();
 
     rawButton.click();
