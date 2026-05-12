@@ -166,15 +166,15 @@ function requireWriteOptions(): { unsetPaths?: string[][]; explicitSetPaths?: st
 }
 
 function expectLogIncludes(text: string) {
-  expect(mockLog.mock.calls.some((call) => String(call[0]).includes(text))).toBe(true);
+  expect(mockLog.mock.calls.map((call) => String(call[0])).join("\n")).toContain(text);
 }
 
 function expectLogExcludes(text: string) {
-  expect(mockLog.mock.calls.some((call) => String(call[0]).includes(text))).toBe(false);
+  expect(mockLog.mock.calls.map((call) => String(call[0])).join("\n")).not.toContain(text);
 }
 
 function expectErrorIncludes(text: string) {
-  expect(mockError.mock.calls.some((call) => String(call[0]).includes(text))).toBe(true);
+  expect(mockError.mock.calls.map((call) => String(call[0])).join("\n")).toContain(text);
 }
 
 function requireRecord(value: unknown, label: string): Record<string, unknown> {
