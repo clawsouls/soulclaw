@@ -31,18 +31,19 @@ describe("runPostCorePluginConvergence", () => {
   });
 
   it("calls repair with OPENCLAW_UPDATE_POST_CORE_CONVERGENCE=1 set", async () => {
+    const cfg = { plugins: { entries: {} } } as unknown as OpenClawConfig;
     await runPostCorePluginConvergence({
-      cfg: { plugins: { entries: {} } } as unknown as OpenClawConfig,
+      cfg,
       env: { OPENCLAW_UPDATE_IN_PROGRESS: "1" },
     });
-    expect(mocks.repairMissingConfiguredPluginInstalls).toHaveBeenCalledWith(
-      expect.objectContaining({
-        env: expect.objectContaining({
-          OPENCLAW_UPDATE_IN_PROGRESS: "1",
-          OPENCLAW_UPDATE_POST_CORE_CONVERGENCE: "1",
-        }),
-      }),
-    );
+    expect(mocks.repairMissingConfiguredPluginInstalls).toHaveBeenCalledTimes(1);
+    expect(mocks.repairMissingConfiguredPluginInstalls).toHaveBeenCalledWith({
+      cfg,
+      env: {
+        OPENCLAW_UPDATE_IN_PROGRESS: "1",
+        OPENCLAW_UPDATE_POST_CORE_CONVERGENCE: "1",
+      },
+    });
   });
 
   it("returns ok when no warnings/failures and includes repair changes", async () => {
@@ -79,21 +80,27 @@ describe("runPostCorePluginConvergence", () => {
 
   it("forwards baselineInstallRecords to repair so sync/npm in-memory mutations are preserved", async () => {
     const baseline = { matrix: { source: "npm" as const, installPath: "/p/matrix" } };
+    const cfg = {
+      plugins: { entries: { matrix: { enabled: true } } },
+    } as unknown as OpenClawConfig;
     mocks.repairMissingConfiguredPluginInstalls.mockResolvedValue({
       changes: [],
       warnings: [],
       records: baseline,
     });
     await runPostCorePluginConvergence({
-      cfg: {
-        plugins: { entries: { matrix: { enabled: true } } },
-      } as unknown as OpenClawConfig,
+      cfg,
       env: {},
       baselineInstallRecords: baseline,
     });
-    expect(mocks.repairMissingConfiguredPluginInstalls).toHaveBeenCalledWith(
-      expect.objectContaining({ baselineRecords: baseline }),
-    );
+    expect(mocks.repairMissingConfiguredPluginInstalls).toHaveBeenCalledTimes(1);
+    expect(mocks.repairMissingConfiguredPluginInstalls).toHaveBeenCalledWith({
+      cfg,
+      env: {
+        OPENCLAW_UPDATE_POST_CORE_CONVERGENCE: "1",
+      },
+      baselineRecords: baseline,
+    });
   });
 
   it("flags errored=true and surfaces actionable guidance when repair warns", async () => {
@@ -199,10 +206,11 @@ describe("runPostCorePluginConvergence", () => {
   });
 
   it("hands repair's post-mutation records straight to the smoke check (no second disk read)", async () => {
+    const records = { brave: { source: "npm" as const, installPath: "/p/brave" } };
     mocks.repairMissingConfiguredPluginInstalls.mockResolvedValue({
       changes: ["Repaired"],
       warnings: [],
-      records: { brave: { source: "npm", installPath: "/p/brave" } },
+      records,
     });
     await runPostCorePluginConvergence({
       cfg: {
@@ -210,11 +218,13 @@ describe("runPostCorePluginConvergence", () => {
       } as unknown as OpenClawConfig,
       env: {},
     });
-    expect(mocks.runPluginPayloadSmokeCheck).toHaveBeenCalledWith(
-      expect.objectContaining({
-        records: { brave: { source: "npm", installPath: "/p/brave" } },
-      }),
-    );
+    expect(mocks.runPluginPayloadSmokeCheck).toHaveBeenCalledTimes(1);
+    expect(mocks.runPluginPayloadSmokeCheck).toHaveBeenCalledWith({
+      records,
+      env: {
+        OPENCLAW_UPDATE_POST_CORE_CONVERGENCE: "1",
+      },
+    });
   });
 });
 
