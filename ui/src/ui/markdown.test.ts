@@ -324,22 +324,24 @@ describe("toSanitizedMarkdownHtml", () => {
   describe("code blocks", () => {
     it("renders fenced code blocks", () => {
       const html = toSanitizedMarkdownHtml("```ts\nconsole.log(1)\n```");
-      expect(html).toContain("<pre>");
-      expect(html).toContain("<code");
-      expect(html).toContain("console.log(1)");
+      expect(html).toBe(
+        '<div class="code-block-wrapper"><div class="code-block-header"><span class="code-block-lang">ts</span><button type="button" class="code-block-copy" data-code="console.log(1)" aria-label="Copy code"><span class="code-block-copy__idle">Copy</span><span class="code-block-copy__done">Copied!</span></button></div><pre><code class="language-ts">console.log(1)\n</code></pre></div>',
+      );
     });
 
     it("renders indented code blocks", () => {
       // markdown-it requires a blank line before indented code
       const html = toSanitizedMarkdownHtml("text\n\n    indented code");
-      expect(html).toContain("<pre>");
-      expect(html).toContain("<code>");
+      expect(html).toBe(
+        '<p>text</p>\n<div class="code-block-wrapper"><div class="code-block-header"><button type="button" class="code-block-copy" data-code="indented code" aria-label="Copy code"><span class="code-block-copy__idle">Copy</span><span class="code-block-copy__done">Copied!</span></button></div><pre><code>indented code\n</code></pre></div>',
+      );
     });
 
     it("includes copy button", () => {
       const html = toSanitizedMarkdownHtml("```\ncode\n```");
-      expect(html).toContain('class="code-block-copy"');
-      expect(html).toContain("data-code=");
+      expect(html).toBe(
+        '<div class="code-block-wrapper"><div class="code-block-header"><button type="button" class="code-block-copy" data-code="code" aria-label="Copy code"><span class="code-block-copy__idle">Copy</span><span class="code-block-copy__done">Copied!</span></button></div><pre><code>code\n</code></pre></div>',
+      );
     });
 
     it("keeps localized copy labels fresh after locale changes", async () => {
