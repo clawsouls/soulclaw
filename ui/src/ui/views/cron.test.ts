@@ -385,9 +385,16 @@ describe("cron view", () => {
       container,
     );
 
-    expect(container.textContent).toContain("Delivery");
-    expect(container.textContent).toContain("webhook");
-    expect(container.textContent).toContain("https://example.invalid/cron");
+    const details = Array.from(container.querySelectorAll(".cron-job-detail-section")).map(
+      (section) => ({
+        label: section.querySelector(".cron-job-detail-label")?.textContent?.trim(),
+        value: section.querySelector(".cron-job-detail-value")?.textContent?.trim(),
+      }),
+    );
+    expect(details).toEqual([
+      { label: "Prompt", value: "do it" },
+      { label: "Delivery", value: "webhook (https://example.invalid/cron)" },
+    ]);
   });
 
   it("renders a stale cron job with no payload", () => {
