@@ -152,8 +152,9 @@ describe("resolveLoginFailureFeedback", () => {
     });
 
     expect(feedback?.kind).toBe("insecure-context");
-    expect(feedback?.rawError).toContain("Use wss://");
-    expect(feedback?.rawError).toContain("http://127.0.0.1:18789");
+    expect(feedback?.rawError).toBe(
+      "Browser refused the Gateway WebSocket for security reasons. Use wss:// when the Control UI is served over HTTPS/Tailscale Serve, or open the loopback dashboard at http://127.0.0.1:18789.",
+    );
     expect(feedback?.steps).toEqual([
       "Use HTTPS/Tailscale Serve, or open http://127.0.0.1:18789 on the Gateway host.",
       "For local token-only compatibility, set gateway.controlUi.allowInsecureAuth: true.",
@@ -242,10 +243,9 @@ describe("resolveLoginFailureFeedback", () => {
       hasPassword: false,
     });
 
-    expect(feedback?.rawError).not.toContain("secret-token");
-    expect(feedback?.rawError).not.toContain("secret-bearer");
-    expect(feedback?.rawError).not.toContain("inline-secret");
-    expect(feedback?.rawError).toContain("[redacted");
+    expect(feedback?.rawError).toBe(
+      "failed ws://host/openclaw#[redacted-credential] Authorization: Bearer [redacted] token=[redacted]",
+    );
   });
 });
 
