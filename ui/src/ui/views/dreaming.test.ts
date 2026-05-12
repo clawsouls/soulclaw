@@ -563,17 +563,23 @@ describe("dreaming view", () => {
     setDreamSubTab("advanced");
     setDreamAdvancedWaitingSort("recent");
     const container = renderInto(buildProps());
-    expect(container.querySelector(".dreams-advanced__title")?.textContent).toContain(
+    expect(container.querySelector(".dreams-advanced__title")?.textContent).toBe(
       "Daily Log Review",
     );
-    const buttons = [...container.querySelectorAll("button")].map((node) =>
+    const actionButtons = [...container.querySelectorAll(".dreams-advanced__actions button")].map(
+      (node) => node.textContent?.trim(),
+    );
+    expect(actionButtons).toEqual([
+      "Dedupe Diary",
+      "Repair Dream Cache",
+      "Backfill",
+      "Reset",
+      "Clear Replayed",
+    ]);
+    const sortButtons = [...container.querySelectorAll(".dreams-advanced__sort-btn")].map((node) =>
       node.textContent?.trim(),
     );
-    expect(buttons).toContain("Backfill");
-    expect(buttons).toContain("Reset");
-    expect(buttons).toContain("Clear Replayed");
-    expect(buttons).toContain("Most recent");
-    expect(buttons).toContain("Strongest support");
+    expect(sortButtons).toEqual(["Most recent", "Strongest support"]);
     const sectionTitles = [...container.querySelectorAll(".dreams-advanced__section-title")].map(
       (node) => node.textContent?.trim(),
     );
@@ -582,13 +588,12 @@ describe("dreaming view", () => {
       "Waiting for Promotion",
       "Recent Promotions",
     ]);
-    expect(container.querySelector(".dreams-advanced__summary")?.textContent).toContain(
-      "1 from daily log",
+    expect(compactText(container.querySelector(".dreams-advanced__summary"))).toBe(
+      "1 from daily log · 47 waiting · 12 promoted today",
     );
-    expect(container.querySelector(".dreams-advanced__item")?.textContent).toContain(
-      "Emma prefers shorter",
-    );
-    expect(container.textContent).not.toContain("Signal Hotspots");
+    expect(
+      container.querySelector(".dreams-advanced__item .dreams-advanced__snippet")?.textContent,
+    ).toBe("Emma prefers shorter, lower-pressure check-ins.");
     setDreamAdvancedWaitingSort("recent");
     setDreamSubTab("scene");
   });
