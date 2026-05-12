@@ -840,11 +840,16 @@ describe("config view", () => {
     details.open = true;
     details.dispatchEvent(new Event("toggle"));
 
-    const text = normalizedText(container);
-    expect(text).toContain("integrations.foo.bar.credential");
-    expect(text).toContain("[redacted - click reveal to view]");
-    expect(text).not.toContain("TOKEN_BEFORE");
-    expect(text).not.toContain("TOKEN_AFTER");
+    const item = queryRequired(container, ".config-diff__item", HTMLElement);
+    expect(item.querySelector(".config-diff__path")?.textContent?.trim()).toBe(
+      "integrations.foo.bar.credential",
+    );
+    expect(item.querySelector(".config-diff__from")?.textContent?.trim()).toBe(
+      "[redacted - click reveal to view]",
+    );
+    expect(item.querySelector(".config-diff__to")?.textContent?.trim()).toBe(
+      "[redacted - click reveal to view]",
+    );
   });
 
   it("removes the raw pending changes panel after raw changes clear", () => {
