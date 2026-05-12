@@ -652,14 +652,38 @@ describe("cron view", () => {
       container,
     );
 
-    expect(container.textContent).toContain("Name is required.");
-    expect(container.textContent).toContain("Cron expression is required.");
-    expect(container.textContent).toContain("Agent message is required.");
-    expect(container.textContent).toContain("Can't add job yet");
-    expect(container.textContent).toContain("Fix 3 fields to continue.");
+    expect(container.querySelector("#cron-error-name")?.textContent?.trim()).toBe(
+      "Name is required.",
+    );
+    expect(container.querySelector("#cron-error-cronExpr")?.textContent?.trim()).toBe(
+      "Cron expression is required.",
+    );
+    expect(container.querySelector("#cron-error-payloadText")?.textContent?.trim()).toBe(
+      "Agent message is required.",
+    );
+
+    const validationStatus = getElement(container, ".cron-form-status", HTMLElement);
+    expect(validationStatus.querySelector(".cron-form-status__title")?.textContent?.trim()).toBe(
+      "Can't add job yet",
+    );
+    expect(validationStatus.querySelector(".cron-help")?.textContent?.trim()).toBe(
+      "Fill the required fields below to enable submit.",
+    );
+    expect(
+      Array.from(validationStatus.querySelectorAll(".cron-form-status__link")).map((button) =>
+        button.textContent?.trim(),
+      ),
+    ).toEqual([
+      "Name: Name is required.",
+      "Expression: Cron expression is required.",
+      "Assistant task prompt: Agent message is required.",
+    ]);
 
     const saveButton = getButtonByAnyText(container, ["Add job", "Save changes"]);
     expect(saveButton.disabled).toBe(true);
+    expect(container.querySelector(".cron-submit-reason")?.textContent?.trim()).toBe(
+      "Fix 3 fields to continue.",
+    );
 
     render(
       renderCron(
@@ -682,17 +706,21 @@ describe("cron view", () => {
       container,
     );
 
-    expect(container.textContent).toContain("* Required");
+    expect(container.querySelector(".cron-required-legend")?.textContent?.trim()).toBe(
+      "* Required",
+    );
 
     const nameInput = container.querySelector("#cron-name");
     expect(nameInput?.getAttribute("aria-invalid")).toBe("true");
     expect(nameInput?.getAttribute("aria-describedby")).toBe("cron-error-name");
-    expect(container.querySelector("#cron-error-name")?.textContent).toContain("Name is required.");
+    expect(container.querySelector("#cron-error-name")?.textContent?.trim()).toBe(
+      "Name is required.",
+    );
 
     const everyInput = container.querySelector("#cron-every-amount");
     expect(everyInput?.getAttribute("aria-invalid")).toBe("true");
     expect(everyInput?.getAttribute("aria-describedby")).toBe("cron-error-everyAmount");
-    expect(container.querySelector("#cron-error-everyAmount")?.textContent).toContain(
+    expect(container.querySelector("#cron-error-everyAmount")?.textContent?.trim()).toBe(
       "Interval must be greater than 0.",
     );
   });
