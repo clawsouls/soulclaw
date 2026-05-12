@@ -205,14 +205,14 @@ describe("runEmbeddedAttempt context engine sessionKey forwarding", () => {
       },
     });
 
-    expect(hoisted.createOpenClawCodingToolsMock).toHaveBeenCalled();
+    expect(hoisted.createOpenClawCodingToolsMock).toHaveBeenCalledTimes(1);
     const options = mockParams(
       hoisted.createOpenClawCodingToolsMock,
       0,
       "createOpenClawCodingTools options",
     );
     expect(options.includeToolSearchControls).toBe(true);
-    expect(options.toolSearchCatalogRef).toBeTruthy();
+    expect(options.toolSearchCatalogRef).toEqual({});
   });
 
   it("sends transcriptPrompt visibly and queues runtime context as hidden custom context", async () => {
