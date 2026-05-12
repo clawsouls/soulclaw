@@ -988,8 +988,10 @@ describe("sendChatMessage", () => {
 
     const result = await sendChatMessage(state, "hello");
 
+    const expectedError =
+      "origin not allowed (open the Control UI from the gateway host or allow it in gateway.controlUi.allowedOrigins)";
     expect(result).toBeNull();
-    expect(state.lastError).toContain("origin not allowed");
+    expect(state.lastError).toBe(expectedError);
     const assistantMessage = requireRecord(state.chatMessages.at(-1));
     expect(assistantMessage.role).toBe("assistant");
     const content = assistantMessage.content;
@@ -997,7 +999,7 @@ describe("sendChatMessage", () => {
     const [textPart] = content as unknown[];
     const textRecord = requireRecord(textPart);
     expect(textRecord.type).toBe("text");
-    expect(String(textRecord.text)).toContain("origin not allowed");
+    expect(textRecord.text).toBe(`Error: ${expectedError}`);
   });
 });
 
@@ -1024,7 +1026,9 @@ describe("abortChatRun", () => {
       sessionKey: "main",
       runId: "run-1",
     });
-    expect(state.lastError).toContain("device identity required");
+    expect(state.lastError).toBe(
+      "device identity required (use HTTPS/localhost or allow insecure auth explicitly)",
+    );
   });
 });
 
@@ -1243,7 +1247,9 @@ describe("loadChatHistory retry handling", () => {
 
     expect(state.chatMessages).toStrictEqual([]);
     expect(state.chatThinkingLevel).toBeNull();
-    expect(state.lastError).toContain("operator.read");
+    expect(state.lastError).toBe(
+      "This connection is missing operator.read, so existing chat history cannot be loaded yet.",
+    );
     expect(state.chatLoading).toBe(false);
   });
 
