@@ -114,7 +114,14 @@ describe("resolveLoginFailureFeedback", () => {
 
     expect(feedback?.kind).toBe("pairing-required");
     expect(feedback?.title).toBe("Scope upgrade pending");
-    expect(feedback?.steps.join(" ")).toContain("openclaw devices approve req-123");
+    expect(feedback?.summary).toBe(
+      "This browser is already known, but the requested access changed and needs a fresh approval.",
+    );
+    expect(feedback?.steps).toEqual([
+      "Run openclaw devices list on the Gateway host.",
+      "Approve this request: openclaw devices approve req-123.",
+      "Reconnect after the approval completes.",
+    ]);
   });
 
   it("explains insecure HTTP device identity failures", () => {
@@ -127,8 +134,11 @@ describe("resolveLoginFailureFeedback", () => {
     });
 
     expect(feedback?.kind).toBe("insecure-context");
-    expect(feedback?.steps.join(" ")).toContain("Tailscale Serve");
-    expect(feedback?.steps.join(" ")).toContain("gateway.controlUi.allowInsecureAuth");
+    expect(feedback?.steps).toEqual([
+      "Use HTTPS/Tailscale Serve, or open http://127.0.0.1:18789 on the Gateway host.",
+      "For local token-only compatibility, set gateway.controlUi.allowInsecureAuth: true.",
+      "Avoid disabling device auth for remote HTTP access.",
+    ]);
   });
 
   it("explains browser WebSocket security failures as insecure context", () => {
@@ -144,8 +154,11 @@ describe("resolveLoginFailureFeedback", () => {
     expect(feedback?.kind).toBe("insecure-context");
     expect(feedback?.rawError).toContain("Use wss://");
     expect(feedback?.rawError).toContain("http://127.0.0.1:18789");
-    expect(feedback?.steps.join(" ")).toContain("Tailscale Serve");
-    expect(feedback?.steps.join(" ")).toContain("gateway.controlUi.allowInsecureAuth");
+    expect(feedback?.steps).toEqual([
+      "Use HTTPS/Tailscale Serve, or open http://127.0.0.1:18789 on the Gateway host.",
+      "For local token-only compatibility, set gateway.controlUi.allowInsecureAuth: true.",
+      "Avoid disabling device auth for remote HTTP access.",
+    ]);
   });
 
   it("keeps generic browser WebSocket constructor failures on the network path", () => {
