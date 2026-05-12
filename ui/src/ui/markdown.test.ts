@@ -286,8 +286,9 @@ describe("toSanitizedMarkdownHtml", () => {
 
     it("escapes details/summary injection in task items", () => {
       const html = toSanitizedMarkdownHtml("- [ ] <details><summary>x</summary>y</details>");
-      expect(html).toContain("&lt;details&gt;");
-      expect(html).not.toContain("<details>");
+      expect(html).toBe(
+        '<ul class="contains-task-list">\n<li class="task-list-item"><input class="task-list-item-checkbox" disabled="" type="checkbox"> &lt;details&gt;&lt;summary&gt;x&lt;/summary&gt;y&lt;/details&gt;</li>\n</ul>\n',
+      );
     });
   });
 
