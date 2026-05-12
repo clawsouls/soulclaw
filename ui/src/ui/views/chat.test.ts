@@ -608,12 +608,16 @@ describe("chat voice controls", () => {
   it("renders composer and Talk labels from the active locale", async () => {
     await i18n.setLocale("zh-CN");
     const container = renderChatView();
+    const startTalkLabel = t("chat.composer.startTalk");
 
-    requireElement(
+    const talkButton = requireElement(
       container,
-      `[aria-label="${t("chat.composer.startTalk")}"]`,
+      `[aria-label="${startTalkLabel}"]`,
       "localized Start Talk button",
     );
+    expect(talkButton.getAttribute("title")).toBe(startTalkLabel);
+    expect(talkButton.textContent?.trim()).toBe("");
+    expect(container.querySelector('[aria-label="Start Talk"]')).toBeNull();
     requireElement(
       container,
       `[aria-label="${t("chat.composer.attachFile")}"]`,
@@ -622,7 +626,6 @@ describe("chat voice controls", () => {
     expect(container.querySelector("textarea")?.getAttribute("placeholder")).toBe(
       t("chat.composer.placeholder", { name: "Val" }),
     );
-    expect(container.textContent).not.toContain("Start Talk");
   });
 
   it("lets users dismiss Talk start errors", () => {
