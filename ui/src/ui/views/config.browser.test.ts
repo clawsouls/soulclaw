@@ -579,7 +579,7 @@ describe("config view", () => {
     revealButton.click();
 
     const textarea = queryRequired(container, "textarea", HTMLTextAreaElement);
-    expect(textarea.value).toContain("supersecret");
+    expect(textarea.value).toBe('{\n  "openai": { "apiKey": "supersecret" }\n}\n');
     textarea.value = textarea.value.replace("supersecret", "updatedsecret");
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
     expect(onRawChange).toHaveBeenCalledWith(textarea.value);
