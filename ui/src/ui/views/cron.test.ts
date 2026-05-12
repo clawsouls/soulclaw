@@ -171,8 +171,10 @@ describe("cron view", () => {
 
     expect(onRunsFiltersChange).toHaveBeenCalledWith({ cronRunsStatuses: ["ok"] });
 
-    expect(container.textContent).toContain("Due");
-    expect(container.textContent).not.toContain("Next 13");
+    const runMeta = Array.from(container.querySelectorAll(".cron-run-entry__meta .muted")).map(
+      (node) => node.textContent?.trim(),
+    );
+    expect(runMeta.at(-1)).toBe("Due 13m ago");
 
     const scheduleSelect = getElement(
       container,
