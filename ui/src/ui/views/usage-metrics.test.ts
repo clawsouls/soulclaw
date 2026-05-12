@@ -227,10 +227,9 @@ describe("buildPeakErrorHours", () => {
 
   it("falls back to proportional allocation when utcQuarterHourMessageCounts is absent", () => {
     // Session without utcQuarterHourMessageCounts should use forEachSessionHourSlice
-    const now = Date.now();
     const session: UsageSessionEntry = {
       key: "fallback-session",
-      updatedAt: now,
+      updatedAt: Date.parse("2026-03-15T10:30:00.000Z"),
       usage: {
         totalTokens: 100,
         totalCost: 0.01,
@@ -243,8 +242,8 @@ describe("buildPeakErrorHours", () => {
         cacheReadCost: 0,
         cacheWriteCost: 0,
         missingCostEntries: 0,
-        firstActivity: now - 3600_000,
-        lastActivity: now,
+        firstActivity: Date.parse("2026-03-15T10:00:00.000Z"),
+        lastActivity: Date.parse("2026-03-15T10:30:00.000Z"),
         messageCounts: {
           total: 10,
           user: 5,
@@ -258,14 +257,9 @@ describe("buildPeakErrorHours", () => {
     } as unknown as UsageSessionEntry;
 
     const result = buildPeakErrorHours([session], "utc");
-    // Should still produce results via the proportional allocation fallback
-    expect(result.length).toBeGreaterThan(0);
-    // All errors (3) should be distributed proportionally
-    const totalErrors = result.reduce((sum, r) => {
-      const match = r.sub.match(/(\d+) errors/);
-      return sum + (match ? Number.parseInt(match[1], 10) : 0);
-    }, 0);
-    expect(totalErrors).toBe(3);
+    expect(result.map(({ value, sub }) => ({ value, sub }))).toStrictEqual([
+      { value: "30.00%", sub: "3 errors · 10 msgs" },
+    ]);
   });
 });
 
