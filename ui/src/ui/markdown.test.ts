@@ -363,9 +363,9 @@ describe("toSanitizedMarkdownHtml", () => {
 
     it("collapses JSON code blocks", () => {
       const html = toSanitizedMarkdownHtml('```json\n{"key": "value"}\n```');
-      expect(html).toContain("<details");
-      expect(html).toContain("json-collapse");
-      expect(html).toContain("JSON");
+      expect(html).toBe(
+        '<details class="json-collapse"><summary>JSON · 2 lines</summary><div class="code-block-wrapper"><div class="code-block-header"><span class="code-block-lang">json</span><button type="button" class="code-block-copy" data-code="{&quot;key&quot;: &quot;value&quot;}" aria-label="Copy code"><span class="code-block-copy__idle">Copy</span><span class="code-block-copy__done">Copied!</span></button></div><pre><code class="language-json">{"key": "value"}\n</code></pre></div></details>',
+      );
     });
   });
 
@@ -386,11 +386,9 @@ describe("toSanitizedMarkdownHtml", () => {
         "Text after.",
       ].join("\n");
       const html = toSanitizedMarkdownHtml(md);
-      expect(html).toContain("<table");
-      expect(html).toContain("<th>");
-      expect(html).toContain("Text before.");
-      expect(html).toContain("Text after.");
-      expect(html).not.toContain("|---|");
+      expect(html).toBe(
+        "<p>Text before.</p>\n<table>\n<thead>\n<tr>\n<th>A</th>\n<th>B</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td>2</td>\n</tr>\n</tbody>\n</table>\n<p>Text after.</p>\n",
+      );
     });
 
     it("renders basic markdown", () => {
