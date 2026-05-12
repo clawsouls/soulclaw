@@ -159,7 +159,22 @@ describe("cron view", () => {
       { label: "Status", summary: "All statuses" },
       { label: "Delivery", summary: "All delivery" },
     ]);
-    expect(container.textContent).not.toContain("multi-select");
+    expect(runHistoryCard.querySelectorAll(".cron-filter-dropdown select[multiple]")).toHaveLength(
+      0,
+    );
+    expect(
+      Array.from(
+        runHistoryCard.querySelectorAll<HTMLInputElement>(".cron-filter-dropdown input"),
+      ).map((input) => ({ type: input.type, value: input.value })),
+    ).toEqual([
+      { type: "checkbox", value: "ok" },
+      { type: "checkbox", value: "error" },
+      { type: "checkbox", value: "skipped" },
+      { type: "checkbox", value: "delivered" },
+      { type: "checkbox", value: "not-delivered" },
+      { type: "checkbox", value: "unknown" },
+      { type: "checkbox", value: "not-requested" },
+    ]);
 
     const statusOk = getElement(
       container,
