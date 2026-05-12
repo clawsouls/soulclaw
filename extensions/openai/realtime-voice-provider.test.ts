@@ -1496,7 +1496,7 @@ describe("buildOpenAIRealtimeVoiceProvider", () => {
     socket.emit("message", Buffer.from(JSON.stringify({ type: "response.done" })));
 
     expect(onError).not.toHaveBeenCalled();
-    expect(parseSent(socket).some((event) => event.type === "response.create")).toBe(false);
+    expect(parseSent(socket).filter((event) => event.type === "response.create")).toEqual([]);
 
     bridge.submitToolResult("call_1", { text: "done" });
 
