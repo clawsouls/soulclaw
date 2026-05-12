@@ -1027,13 +1027,15 @@ describe("buildOpenAIRealtimeVoiceProvider", () => {
 
     expect(onAudio).toHaveBeenCalledTimes(1);
     expect(onClearAudio).toHaveBeenCalledTimes(1);
-    expect(parseSent(socket)).toContainEqual({ type: "response.cancel" });
-    expect(parseSent(socket)).toContainEqual({
-      type: "conversation.item.truncate",
-      item_id: "item_1",
-      content_index: 0,
-      audio_end_ms: 300,
-    });
+    expect(parseSent(socket).slice(-2)).toEqual([
+      { type: "response.cancel" },
+      {
+        type: "conversation.item.truncate",
+        item_id: "item_1",
+        content_index: 0,
+        audio_end_ms: 300,
+      },
+    ]);
   });
 
   it("forwards current realtime output audio events", async () => {
@@ -1714,13 +1716,15 @@ describe("buildOpenAIRealtimeVoiceProvider", () => {
     bridge.handleBargeIn?.({ audioPlaybackActive: true });
 
     expect(onClearAudio).toHaveBeenCalledTimes(1);
-    expect(parseSent(socket)).toContainEqual({ type: "response.cancel" });
-    expect(parseSent(socket)).toContainEqual({
-      type: "conversation.item.truncate",
-      item_id: "item_1",
-      content_index: 0,
-      audio_end_ms: 0,
-    });
+    expect(parseSent(socket).slice(-2)).toEqual([
+      { type: "response.cancel" },
+      {
+        type: "conversation.item.truncate",
+        item_id: "item_1",
+        content_index: 0,
+        audio_end_ms: 0,
+      },
+    ]);
   });
 
   it("drains deferred response.create after a no-active-response cancellation error", async () => {
