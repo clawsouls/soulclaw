@@ -671,4 +671,63 @@ describe("config io audit helpers", () => {
     expect(after).toContain("xoxb-real-bot-token");
     expect(fs.existsSync(`${auditPath}.scrub.tmp`)).toBe(false);
   });
+
+  it("aborts without overwriting when the audit log is appended to after temp write", async () => {
+    const home = await suiteRootTracker.make("scrub-race-after-temp-write");
+    const auditPath = path.join(home, ".openclaw", "logs", "config-audit.jsonl");
+    fs.mkdirSync(path.dirname(auditPath), { recursive: true, mode: 0o700 });
+    const unredacted = {
+      ts: "2026-05-02T00:03:48.471Z",
+      argv: [
+        "node",
+        "openclaw.mjs",
+        "config",
+        "set",
+        "channels.slack.botToken",
+        "xoxb-real-bot-token-1234567890abcdef0123456789abcdef",
+      ],
+      execArgv: [],
+    };
+    const appended = {
+      ts: "2026-05-02T00:04:00.000Z",
+      argv: ["node", "openclaw.mjs", "config", "set", "theme", "dark"],
+      execArgv: [],
+    };
+    const original = `${JSON.stringify(unredacted)}\n`;
+    const appendedLine = `${JSON.stringify(appended)}\n`;
+    fs.writeFileSync(auditPath, original, { encoding: "utf-8", mode: 0o600 });
+    let renameCalled = false;
+
+    const raceFs = {
+      promises: {
+        readFile: fsPromises.readFile,
+        stat: fsPromises.stat,
+        writeFile: async (
+          p: string,
+          data: string,
+          options?: { encoding?: BufferEncoding; mode?: number },
+        ) => {
+          await fsPromises.writeFile(p, data, options);
+          await fsPromises.appendFile(auditPath, appendedLine, "utf-8");
+        },
+        rename: async () => {
+          renameCalled = true;
+        },
+        unlink: fsPromises.unlink,
+      },
+    };
+    const result = await scrubConfigAuditLog({
+      fs: raceFs,
+      env: {} as NodeJS.ProcessEnv,
+      homedir: () => home,
+    });
+
+    expect(result.aborted).toBe(true);
+    expect(result.rewritten).toBeGreaterThan(0);
+    expect(renameCalled).toBe(false);
+    const after = fs.readFileSync(auditPath, "utf-8");
+    expect(after).toBe(`${original}${appendedLine}`);
+    expect(after).toContain("xoxb-real-bot-token");
+    expect(fs.existsSync(`${auditPath}.scrub.tmp`)).toBe(false);
+  });
 });

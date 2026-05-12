@@ -575,6 +575,25 @@ export async function scrubConfigAuditLog(params: {
       encoding: "utf-8",
       mode: 0o600,
     });
+    let finalPreRenameSize: number;
+    try {
+      finalPreRenameSize = (await params.fs.promises.stat(auditPath)).size;
+    } catch {
+      try {
+        await params.fs.promises.unlink(tmpPath);
+      } catch {
+        // best-effort cleanup; the stat failure is handled as a safe abort
+      }
+      return { scanned, rewritten, skipped, aborted: true };
+    }
+    if (finalPreRenameSize !== originalByteLength) {
+      try {
+        await params.fs.promises.unlink(tmpPath);
+      } catch {
+        // best-effort cleanup; the append detection is the actionable state
+      }
+      return { scanned, rewritten, skipped, aborted: true };
+    }
     await params.fs.promises.rename(tmpPath, auditPath);
   } catch (err) {
     try {
