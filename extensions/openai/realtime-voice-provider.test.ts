@@ -1666,8 +1666,15 @@ describe("buildOpenAIRealtimeVoiceProvider", () => {
 
     bridge.handleBargeIn?.({ audioPlaybackActive: true, force: true });
 
-    expect(parseSent(socket)).toContainEqual({ type: "response.cancel" });
-    expect(hasSentEventType(socket, "conversation.item.truncate")).toBe(true);
+    expect(parseSent(socket).slice(-2)).toEqual([
+      { type: "response.cancel" },
+      {
+        type: "conversation.item.truncate",
+        item_id: "item_1",
+        content_index: 0,
+        audio_end_ms: 0,
+      },
+    ]);
     expect(onClearAudio).toHaveBeenCalled();
     expect(
       onEvent.mock.calls.some(
