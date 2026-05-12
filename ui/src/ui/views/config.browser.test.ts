@@ -1027,7 +1027,12 @@ describe("config view", () => {
 
     expect(onImportCustomTheme).toHaveBeenCalledTimes(1);
     expect(onClearCustomTheme).toHaveBeenCalledTimes(1);
-    expect(normalizedText(container)).toContain("Loaded Light Green");
+    expect(container.querySelector(".settings-theme-import__meta-label")?.textContent?.trim()).toBe(
+      "Loaded",
+    );
+    expect(container.querySelector(".settings-theme-import__meta-value")?.textContent?.trim()).toBe(
+      "Light Green \u00b7 https://tweakcn.com/themes/cmlhfpjhw000004l4f4ax3m7z",
+    );
 
     const input = container.querySelector(".settings-theme-import__input") as HTMLInputElement;
     input.value = "/r/themes/cmlhfpjhw000004l4f4ax3m7z";
