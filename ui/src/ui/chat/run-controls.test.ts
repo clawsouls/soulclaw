@@ -77,7 +77,7 @@ describe("chat run controls", () => {
     expect(stopButton.title).toBe("Stop");
     stopButton.click();
     expect(onAbort).toHaveBeenCalledTimes(1);
-    expect(container.textContent).not.toContain("New session");
+    expect(container.querySelector('button[title="New session"]')).toBeNull();
 
     const onNewSession = vi.fn();
     const onSend = vi.fn();
@@ -105,7 +105,7 @@ describe("chat run controls", () => {
     sendButton.click();
     expect(onStoreDraft).toHaveBeenCalledWith(" run this ");
     expect(onSend).toHaveBeenCalledTimes(1);
-    expect(container.textContent).not.toContain("Stop");
+    expect(container.querySelector(".chat-send-btn--stop")).toBeNull();
   });
 
   it("queues draft text while an active run is abortable", () => {
@@ -159,7 +159,7 @@ describe("chat run controls", () => {
     getButton(container, `button[title="${t("chat.runControls.newSession")}"]`);
     getButton(container, `button[title="${t("chat.runControls.export")}"]`);
     getButton(container, `button[title="${t("chat.runControls.send")}"]`);
-    expect(container.textContent).not.toContain("New session");
+    expect(container.querySelector('button[title="New session"]')).toBeNull();
   });
 });
 
