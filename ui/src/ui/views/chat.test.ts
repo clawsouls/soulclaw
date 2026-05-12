@@ -1197,16 +1197,17 @@ describe("chat session controls", () => {
     const thinkingSelect = container.querySelector<HTMLSelectElement>(
       'select[data-chat-thinking-select="true"]',
     );
-    const options = [...(thinkingSelect?.options ?? [])].map((option) => option.value);
 
-    expect(options).toContain("adaptive");
-    expect(options).toContain("xhigh");
-    expect(options).toContain("max");
+    expect([...(thinkingSelect?.options ?? [])].map((option) => option.value)).toEqual([
+      "",
+      "off",
+      "adaptive",
+      "xhigh",
+      "max",
+    ]);
     expect(
-      [...(thinkingSelect?.options ?? [])]
-        .find((option) => option.value === "max")
-        ?.textContent?.trim(),
-    ).toBe("Override: maximum");
+      [...(thinkingSelect?.options ?? [])].map((option) => option.textContent?.trim()),
+    ).toEqual(["Off", "Off", "Override: adaptive", "Override: xhigh", "Override: maximum"]);
   });
 
   it("labels chat thinking default from the active session row", () => {
