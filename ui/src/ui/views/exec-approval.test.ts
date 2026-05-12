@@ -142,7 +142,7 @@ describe("approval and confirmation modals", () => {
     expect(
       modal.shadowRoot?.querySelector("#openclaw-modal-dialog-description")?.textContent,
     ).toContain("expires in");
-    expect(container.querySelector("#exec-approval-title")?.textContent).toContain(
+    expect(container.querySelector("#exec-approval-title")?.textContent?.trim()).toBe(
       "Exec approval needed",
     );
   });
@@ -226,14 +226,37 @@ describe("approval and confirmation modals", () => {
       container,
     );
 
-    expect(container.textContent).toContain("需要 Exec 审批");
-    expect(container.textContent).toContain("1m 后过期");
-    expect(container.textContent).toContain("2 个待处理");
-    expect(container.textContent).toContain("主机");
-    expect(container.textContent).toContain("代理");
-    expect(container.textContent).toContain("允许一次");
-    expect(container.textContent).toContain("始终允许");
-    expect(container.textContent).toContain("拒绝");
+    expect(container.querySelector("#exec-approval-title")?.textContent?.trim()).toBe(
+      "需要 Exec 审批",
+    );
+    expect(container.querySelector("#exec-approval-description")?.textContent?.trim()).toBe(
+      "1m 后过期",
+    );
+    expect(container.querySelector(".exec-approval-queue")?.textContent?.trim()).toBe("2 个待处理");
+    expect(container.querySelector(".exec-approval-command")?.textContent?.trim()).toBe(
+      "pnpm check:changed",
+    );
+    expect(
+      Array.from(container.querySelectorAll(".exec-approval-meta-row")).map((row) => {
+        const [label, value] = Array.from(row.querySelectorAll("span")).map((span) =>
+          span.textContent?.trim(),
+        );
+        return { label, value };
+      }),
+    ).toEqual([
+      { label: "主机", value: "gateway" },
+      { label: "代理", value: "main" },
+      { label: "会话", value: "main" },
+      { label: "CWD", value: "/tmp/project" },
+      { label: "已解析", value: "/tmp/project" },
+      { label: "安全", value: "workspace-write" },
+      { label: "询问策略", value: "on-request" },
+    ]);
+    expect(
+      Array.from(container.querySelectorAll(".exec-approval-actions button")).map((button) =>
+        button.textContent?.trim(),
+      ),
+    ).toEqual(["允许一次", "始终允许", "拒绝"]);
   });
 
   it("uses the shared modal primitive for gateway URL confirmation and cancels on Escape", async () => {
