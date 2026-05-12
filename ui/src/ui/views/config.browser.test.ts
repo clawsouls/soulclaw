@@ -747,7 +747,14 @@ describe("config view", () => {
     details.dispatchEvent(new Event("toggle"));
     const revealButton = queryRequired(container, ".config-raw-toggle", HTMLButtonElement);
     revealButton.click();
-    expect(normalizedText(container)).toContain("TOKEN_A_AFTER");
+    const revealedItem = queryRequired(container, ".config-diff__item", HTMLElement);
+    expect(revealedItem.querySelector(".config-diff__path")?.textContent?.trim()).toBe("token");
+    expect(revealedItem.querySelector(".config-diff__from")?.textContent?.trim()).toBe(
+      '"TOKEN_A_BEFORE"',
+    );
+    expect(revealedItem.querySelector(".config-diff__to")?.textContent?.trim()).toBe(
+      '"TOKEN_A_AFTER"',
+    );
 
     props.configPath = "/tmp/openclaw-b.json5";
     props.raw = '{\n  token: "TOKEN_B_AFTER"\n}\n';
@@ -760,12 +767,30 @@ describe("config view", () => {
     };
     rerender();
 
-    const text = normalizedText(container);
-    expect(text).toContain("1 secret redacted");
-    expect(text).not.toContain("TOKEN_A_AFTER");
-    expect(text).not.toContain("TOKEN_B_AFTER");
+    expect(
+      queryRequired(container, ".config-raw-field .pill", HTMLElement)
+        .textContent?.replace(/\s+/g, " ")
+        .trim(),
+    ).toBe("1 secret redacted");
+    expect(
+      queryRequired(container, ".config-raw-field .callout.info", HTMLElement)
+        .textContent?.replace(/\s+/g, " ")
+        .trim(),
+    ).toBe("1 sensitive value hidden. Use the reveal button above to edit the raw config.");
     expect(container.querySelector("textarea")).toBeNull();
-    expect(container.querySelector<HTMLDetailsElement>(".config-diff")?.open).toBe(false);
+    const nextDetails = queryRequired(container, ".config-diff", HTMLDetailsElement);
+    expect(nextDetails.open).toBe(false);
+
+    nextDetails.open = true;
+    nextDetails.dispatchEvent(new Event("toggle"));
+    const redactedItem = queryRequired(container, ".config-diff__item", HTMLElement);
+    expect(redactedItem.querySelector(".config-diff__path")?.textContent?.trim()).toBe("token");
+    expect(redactedItem.querySelector(".config-diff__from")?.textContent?.trim()).toBe(
+      "[redacted - click reveal to view]",
+    );
+    expect(redactedItem.querySelector(".config-diff__to")?.textContent?.trim()).toBe(
+      "[redacted - click reveal to view]",
+    );
   });
 
   it("redacts raw diff values under leaf wildcard sensitive hints when keys contain dots", () => {
