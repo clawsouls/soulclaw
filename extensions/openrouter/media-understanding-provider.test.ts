@@ -70,26 +70,39 @@ describe("openrouter media understanding provider", () => {
       text: "hello world",
       model: "openai/whisper-large-v3-turbo",
     });
-    expect(resolveProviderHttpRequestConfigMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        provider: "openrouter",
-        capability: "audio",
-      }),
-    );
-    expect(postJsonRequestMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: "https://openrouter.ai/api/v1/audio/transcriptions",
-        timeoutMs: 12_000,
-        body: {
-          model: "openai/whisper-large-v3-turbo",
-          input_audio: {
-            data: Buffer.from("audio-bytes").toString("base64"),
-            format: "ogg",
-          },
-          language: "en",
+    expect(resolveProviderHttpRequestConfigMock).toHaveBeenCalledWith({
+      baseUrl: undefined,
+      defaultBaseUrl: "https://openrouter.ai/api/v1",
+      headers: undefined,
+      request: undefined,
+      defaultHeaders: {
+        Authorization: "Bearer sk-openrouter",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://openclaw.ai",
+        "X-OpenRouter-Title": "OpenClaw",
+      },
+      provider: "openrouter",
+      api: "openrouter-stt",
+      capability: "audio",
+      transport: "media-understanding",
+    });
+    expect(postJsonRequestMock).toHaveBeenCalledWith({
+      url: "https://openrouter.ai/api/v1/audio/transcriptions",
+      headers: expect.any(Headers),
+      body: {
+        model: "openai/whisper-large-v3-turbo",
+        input_audio: {
+          data: Buffer.from("audio-bytes").toString("base64"),
+          format: "ogg",
         },
-      }),
-    );
+        language: "en",
+      },
+      timeoutMs: 12_000,
+      fetchFn: fetch,
+      allowPrivateNetwork: false,
+      dispatcherPolicy: undefined,
+      auditContext: "openrouter stt",
+    });
     const headers = postJsonRequestMock.mock.calls.at(0)?.[0]?.headers as Headers;
     expect(headers.get("authorization")).toBe("Bearer sk-openrouter");
     expect(headers.get("http-referer")).toBe("https://openclaw.ai");
