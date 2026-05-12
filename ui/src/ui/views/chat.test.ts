@@ -634,7 +634,7 @@ describe("chat voice controls", () => {
       onDismissError,
     });
 
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+    expect(container.querySelector('[role="alert"] .callout__content')?.textContent).toBe(
       'Realtime voice provider "openai" is not configured',
     );
 
@@ -806,7 +806,7 @@ describe("chat attachment picker", () => {
     expect(getChatAttachmentDataUrl(nextAttachments[0])).toMatch(/^data:application\/pdf;base64,/);
     const preview = renderChatView({ attachments: nextAttachments });
     expect(preview.querySelectorAll(".chat-attachment-thumb--file")).toHaveLength(1);
-    expect(preview.textContent).toContain("brief.pdf");
+    expect(preview.querySelector(".chat-attachment-file__name")?.textContent).toBe("brief.pdf");
   });
 
   it("filters video file attachments", () => {
@@ -903,7 +903,7 @@ describe("chat welcome", () => {
 
     const avatar = container.querySelector<HTMLElement>(".agent-chat__avatar");
     expect(avatar?.tagName).toBe("DIV");
-    expect(avatar?.textContent).toContain("VC");
+    expect(avatar?.textContent?.trim()).toBe("VC");
     expect(avatar?.getAttribute("aria-label")).toBe("Val");
 
     container = renderWelcome({
