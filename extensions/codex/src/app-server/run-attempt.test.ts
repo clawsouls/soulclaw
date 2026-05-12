@@ -727,9 +727,9 @@ describe("runCodexAppServerAttempt", () => {
     });
 
     expect(factoryOptions).toHaveLength(1);
-    expect(factoryOptions[0]).toMatchObject({
+    expect((factoryOptions[0] as { authProfileStore?: unknown }).authProfileStore).toBe(
       authProfileStore,
-    });
+    );
   });
 
   it("normalizes Codex dynamic toolsAllow entries before filtering", () => {
