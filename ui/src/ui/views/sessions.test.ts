@@ -861,13 +861,16 @@ describe("sessions view", () => {
     );
     await Promise.resolve();
 
-    expect(container.textContent).toContain("No sessions match your filters.");
-    const showAll = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent?.trim() === "Show all",
+    const emptyState = container.querySelector(".data-table-empty-state");
+    expect(emptyState?.getAttribute("role")).toBe("status");
+    expect(emptyState?.firstElementChild?.textContent?.trim()).toBe(
+      "No sessions match your filters.",
     );
-    if (!showAll) {
+    const showAll = emptyState?.querySelector<HTMLButtonElement>("button");
+    if (!(showAll instanceof HTMLButtonElement)) {
       throw new Error("Expected filtered empty state to render a Show all button");
     }
+    expect(showAll.textContent?.trim()).toBe("Show all");
     showAll.click();
     expect(onClearFilters).toHaveBeenCalledTimes(1);
   });
@@ -887,7 +890,8 @@ describe("sessions view", () => {
     );
     await Promise.resolve();
 
-    expect(container.textContent).toContain("No sessions found.");
-    expect(container.textContent).not.toContain("Show all");
+    const emptyCell = container.querySelector(".data-table-empty-cell");
+    expect(emptyCell?.textContent?.trim()).toBe("No sessions found.");
+    expect(emptyCell?.querySelector("button")).toBeNull();
   });
 });
