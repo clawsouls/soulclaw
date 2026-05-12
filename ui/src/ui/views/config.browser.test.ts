@@ -559,13 +559,21 @@ describe("config view", () => {
       onRawChange,
     });
 
-    const text = normalizedText(container);
-    expect(text).toContain("1 secret redacted");
-    expect(text).toContain("Use the reveal button above to edit the raw config.");
-    expect(text).not.toContain("supersecret");
+    expect(
+      queryRequired(container, ".config-raw-field .pill", HTMLElement)
+        .textContent?.replace(/\s+/g, " ")
+        .trim(),
+    ).toBe("1 secret redacted");
+    expect(
+      queryRequired(container, ".config-raw-field .callout.info", HTMLElement)
+        .textContent?.replace(/\s+/g, " ")
+        .trim(),
+    ).toBe("1 sensitive value hidden. Use the reveal button above to edit the raw config.");
     expect(container.querySelector("textarea")).toBeNull();
 
     const revealButton = queryRequired(container, ".config-raw-toggle", HTMLButtonElement);
+    expect(revealButton.getAttribute("title")).toBe("Reveal sensitive values");
+    expect(revealButton.getAttribute("aria-pressed")).toBe("false");
     revealButton.click();
 
     const textarea = queryRequired(container, "textarea", HTMLTextAreaElement);
