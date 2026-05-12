@@ -9,6 +9,14 @@ function requireCoreToolProfilePolicy(profile: Parameters<typeof resolveCoreTool
   return policy;
 }
 
+function requirePolicyAllow(profile: Parameters<typeof resolveCoreToolProfilePolicy>[0]) {
+  const allow = requireCoreToolProfilePolicy(profile).allow;
+  if (!allow) {
+    throw new Error(`expected ${profile} tool profile allow list`);
+  }
+  return allow;
+}
+
 describe("tool-catalog", () => {
   it("includes code_execution, web_search, x_search, web_fetch, and update_plan in the coding profile policy", () => {
     const policy = requireCoreToolProfilePolicy("coding");
@@ -43,8 +51,8 @@ describe("tool-catalog", () => {
   });
 
   it("includes bundle MCP tools in coding and messaging profile policies", () => {
-    expect(resolveCoreToolProfilePolicy("coding")?.allow.at(-1)).toBe("bundle-mcp");
-    expect(resolveCoreToolProfilePolicy("messaging")?.allow).toEqual([
+    expect(requirePolicyAllow("coding").at(-1)).toBe("bundle-mcp");
+    expect(requirePolicyAllow("messaging")).toEqual([
       "sessions_list",
       "sessions_history",
       "sessions_send",
@@ -52,7 +60,7 @@ describe("tool-catalog", () => {
       "message",
       "bundle-mcp",
     ]);
-    expect(resolveCoreToolProfilePolicy("minimal")?.allow).toEqual(["session_status"]);
+    expect(requirePolicyAllow("minimal")).toEqual(["session_status"]);
   });
 
   it("full profile uses wildcard to grant all tools (#76507)", () => {
