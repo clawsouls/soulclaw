@@ -855,27 +855,27 @@ describe("cron view", () => {
       container,
     );
 
-    expect(Array.from(container.querySelectorAll("datalist")).map((node) => node.id)).toEqual([
+    const suggestionListIds = [
       "cron-agent-suggestions",
       "cron-model-suggestions",
       "cron-thinking-suggestions",
       "cron-tz-suggestions",
       "cron-delivery-to-suggestions",
       "cron-delivery-account-suggestions",
-    ]);
+    ];
+    expect(Array.from(container.querySelectorAll("datalist")).map((node) => node.id)).toEqual(
+      suggestionListIds,
+    );
     const inputLists = Array.from(container.querySelectorAll("input[list]")).map((node) =>
       node.getAttribute("list"),
     );
-    for (const expectedList of [
+    expect(inputLists).toEqual([
       "cron-agent-suggestions",
-      "cron-model-suggestions",
-      "cron-thinking-suggestions",
       "cron-tz-suggestions",
       "cron-delivery-to-suggestions",
       "cron-delivery-account-suggestions",
-    ]) {
-      expect(inputLists).toContain(expectedList);
-    }
-    expect(container.querySelectorAll("input[list]")).toHaveLength(6);
+      "cron-model-suggestions",
+      "cron-thinking-suggestions",
+    ]);
   });
 });
