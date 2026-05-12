@@ -928,9 +928,12 @@ describe("chat welcome", () => {
     await i18n.setLocale("zh-CN");
     const container = renderWelcome({ assistantAvatar: "VC", assistantAvatarUrl: null });
 
-    expect(container.textContent).toContain(t("chat.welcome.ready"));
-    expect(container.textContent).toContain(t("chat.welcome.suggestions.whatCanYouDo"));
-    expect(container.textContent).not.toContain("Ready to chat");
+    expect(container.querySelector(".agent-chat__badge")?.textContent?.trim()).toBe(
+      t("chat.welcome.ready"),
+    );
+    expect(container.querySelector(".agent-chat__suggestion")?.textContent?.trim()).toBe(
+      t("chat.welcome.suggestions.whatCanYouDo"),
+    );
   });
 });
 
