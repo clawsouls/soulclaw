@@ -346,8 +346,8 @@ describe("dreaming view", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(container.querySelector(".dreams-diary__preview-hint")?.textContent).toContain(
-      "6001 total lines",
+    expect(compactText(container.querySelector(".dreams-diary__preview-hint"))).toBe(
+      "Showing the first chunk of this page (6001 total lines).",
     );
 
     const closePreviewButton = container.querySelector<HTMLButtonElement>(
