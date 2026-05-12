@@ -196,9 +196,11 @@ describe("chat status indicators", () => {
       );
 
       let indicator = container.querySelector(".compaction-indicator--active");
-      expect(indicator?.textContent).toContain("Compacting context...");
+      expect(indicator?.textContent?.trim()).toBe("Compacting context...");
       indicator = container.querySelector(".compaction-indicator--fallback");
-      expect(indicator?.textContent).toContain("Fallback active: deepinfra/moonshotai/Kimi-K2.5");
+      expect(indicator?.textContent?.trim()).toBe(
+        "Fallback active: deepinfra/moonshotai/Kimi-K2.5",
+      );
 
       renderIndicators(
         {
@@ -217,9 +219,9 @@ describe("chat status indicators", () => {
         },
       );
       indicator = container.querySelector(".compaction-indicator--complete");
-      expect(indicator?.textContent).toContain("Context compacted");
+      expect(indicator?.textContent?.trim()).toBe("Context compacted");
       indicator = container.querySelector(".compaction-indicator--fallback-cleared");
-      expect(indicator?.textContent).toContain("Fallback cleared: fireworks/minimax-m2p5");
+      expect(indicator?.textContent?.trim()).toBe("Fallback cleared: fireworks/minimax-m2p5");
 
       nowSpy.mockReturnValue(20_000);
       renderIndicators(
