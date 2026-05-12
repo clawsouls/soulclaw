@@ -502,18 +502,31 @@ describe("renderAgentFiles", () => {
     expect(dialog).toBeInstanceOf(HTMLDialogElement);
     expect(panel).toBeInstanceOf(HTMLElement);
     expect(expandButton).toBeInstanceOf(HTMLButtonElement);
-    expandButton!.click();
+    const previewPanel = panel!;
+    const previewExpandButton = expandButton!;
+    previewExpandButton.click();
 
-    expect(panel?.classList.contains("fullscreen")).toBe(true);
-    expect(expandButton?.classList.contains("is-fullscreen")).toBe(true);
-    expect(expandButton?.getAttribute("aria-pressed")).toBe("true");
-    expect(expandButton?.getAttribute("aria-label")).toBe("Collapse preview");
+    expect([...previewPanel.classList]).toEqual(["md-preview-dialog__panel", "fullscreen"]);
+    expect([...previewExpandButton.classList]).toEqual([
+      "btn",
+      "btn--sm",
+      "md-preview-icon-btn",
+      "md-preview-expand-btn",
+      "is-fullscreen",
+    ]);
+    expect(previewExpandButton.getAttribute("aria-pressed")).toBe("true");
+    expect(previewExpandButton.getAttribute("aria-label")).toBe("Collapse preview");
 
     dialog!.dispatchEvent(new Event("close"));
 
-    expect(panel?.classList.contains("fullscreen")).toBe(false);
-    expect(expandButton?.classList.contains("is-fullscreen")).toBe(false);
-    expect(expandButton?.getAttribute("aria-pressed")).toBe("false");
-    expect(expandButton?.getAttribute("aria-label")).toBe("Expand preview");
+    expect([...previewPanel.classList]).toEqual(["md-preview-dialog__panel"]);
+    expect([...previewExpandButton.classList]).toEqual([
+      "btn",
+      "btn--sm",
+      "md-preview-icon-btn",
+      "md-preview-expand-btn",
+    ]);
+    expect(previewExpandButton.getAttribute("aria-pressed")).toBe("false");
+    expect(previewExpandButton.getAttribute("aria-label")).toBe("Expand preview");
   });
 });
