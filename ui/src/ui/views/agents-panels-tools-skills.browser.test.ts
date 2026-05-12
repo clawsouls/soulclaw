@@ -256,11 +256,17 @@ describe("agents tools panel (browser)", () => {
     const tool = container.querySelector<HTMLDetailsElement>(".agent-tool-card");
     tool!.open = true;
 
-    const sourceDetail = Array.from(
-      container.querySelectorAll<HTMLElement>(".agent-tool-detail"),
-    ).find((detail) => detail.textContent?.includes("Source"));
-
-    expect(sourceDetail?.textContent).toContain("Plugin: voice-call");
+    expect(
+      Array.from(container.querySelectorAll<HTMLElement>(".agent-tool-detail")).map((detail) => ({
+        label: detail.querySelector(".label")?.textContent?.trim(),
+        value: detail.lastElementChild?.textContent?.trim(),
+      })),
+    ).toEqual([
+      { label: "Access", value: "Enabled by the current profile." },
+      { label: "Source", value: "Plugin: voice-call" },
+      { label: "Default Presets", value: "full" },
+      { label: "Current Session", value: "Not available in this chat session right now." },
+    ]);
   });
 
   it("opens the collapsed group and tool row from a live tool chip", async () => {
