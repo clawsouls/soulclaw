@@ -541,14 +541,15 @@ describe("dreaming view", () => {
     setDreamDiarySubTab("dreams");
     const emptyContainer = renderInto(buildProps({ dreamDiaryContent: null }));
     expect(emptyContainer.querySelectorAll(".dreams-diary__empty")).toHaveLength(1);
-    expect(emptyContainer.querySelector(".dreams-diary__empty-text")?.textContent).toContain(
+    expect(emptyContainer.querySelector(".dreams-diary__empty-text")?.textContent).toBe(
       "No dreams yet",
+    );
+    expect(emptyContainer.querySelector(".dreams-diary__empty-hint")?.textContent).toBe(
+      "Dreams will appear here after the first dreaming cycle runs.",
     );
 
     const errorContainer = renderInto(buildProps({ dreamDiaryError: "read failed" }));
-    expect(errorContainer.querySelector(".dreams-diary__error")?.textContent).toContain(
-      "read failed",
-    );
+    expect(errorContainer.querySelector(".dreams-diary__error")?.textContent).toBe("read failed");
 
     const container = renderInto(buildProps());
     expect(container.querySelector(".dreams-diary__page")).toBeNull();
