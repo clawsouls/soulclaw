@@ -4,6 +4,12 @@ import { i18n } from "../i18n/index.ts";
 import { md, toSanitizedMarkdownHtml } from "./markdown.ts";
 import { renderMarkdownSidebar } from "./views/markdown-sidebar.ts";
 
+function htmlFragment(html: string): HTMLElement {
+  const container = document.createElement("div");
+  container.innerHTML = html;
+  return container;
+}
+
 describe("toSanitizedMarkdownHtml", () => {
   // ── Original tests from before markdown-it migration ──
   it("strips scripts and unsafe links", () => {
@@ -456,13 +462,19 @@ describe("toSanitizedMarkdownHtml", () => {
     it("renders deeply nested emphasis markers without dropping text (#36213)", () => {
       const nested = "*".repeat(500) + "text" + "*".repeat(500);
       const html = toSanitizedMarkdownHtml(nested);
-      expect(html).toContain("text");
+      const container = htmlFragment(html);
+      expect(container.children).toHaveLength(1);
+      expect(container.firstElementChild?.tagName).toBe("P");
+      expect(container.textContent).toBe("text\n");
     });
 
     it("renders deeply nested brackets without dropping text (#36213)", () => {
       const nested = "[".repeat(200) + "link" + "]".repeat(200) + "(" + "x".repeat(200) + ")";
       const html = toSanitizedMarkdownHtml(nested);
-      expect(html).toContain("link");
+      const container = htmlFragment(html);
+      expect(container.children).toHaveLength(1);
+      expect(container.firstElementChild?.tagName).toBe("P");
+      expect(container.textContent).toBe(`${nested}\n`);
     });
 
     it("does not hang on backtick + bracket ReDoS pattern", { timeout: 2_000 }, () => {
@@ -499,18 +511,24 @@ describe("toSanitizedMarkdownHtml", () => {
       // MARKDOWN_PARSE_LIMIT is 40_000 chars
       const input = Array.from(
         { length: 220 },
-        (_, i) => `Paragraph ${i + 1}: ${"Long plain-text reply. ".repeat(8)}`,
+        (_, i) =>
+          `Paragraph ${i + 1}: ${Array.from({ length: 8 }, () => "Long plain-text reply.").join(
+            " ",
+          )}`,
       ).join("\n\n");
       const html = toSanitizedMarkdownHtml(input);
-      expect(html).toContain('class="markdown-plain-text-fallback"');
+      const fallback = htmlFragment(html).firstElementChild;
+      expect(fallback?.tagName).toBe("DIV");
+      expect(fallback?.className).toBe("markdown-plain-text-fallback");
+      expect(fallback?.textContent).toBe(input);
     });
 
     it("preserves indentation in plain text fallback", () => {
       const input = `${"Header line\n".repeat(3400)}\n    indented log line\n        deeper indent`;
       const html = toSanitizedMarkdownHtml(input);
-      expect(html).toContain('class="markdown-plain-text-fallback"');
-      expect(html).toContain("    indented log line");
-      expect(html).toContain("        deeper indent");
+      const fallback = htmlFragment(html).firstElementChild;
+      expect(fallback?.className).toBe("markdown-plain-text-fallback");
+      expect(fallback?.textContent).toBe(input);
     });
 
     it("caches oversized fallback results", () => {
@@ -519,7 +537,7 @@ describe("toSanitizedMarkdownHtml", () => {
       const first = toSanitizedMarkdownHtml(input);
       const second = toSanitizedMarkdownHtml(input);
       expect(input.length).toBeGreaterThan(40_000);
-      expect(first).toContain('class="markdown-plain-text-fallback"');
+      expect(htmlFragment(first).firstElementChild?.className).toBe("markdown-plain-text-fallback");
       expect(second).toBe(first);
     });
 
@@ -530,7 +548,7 @@ describe("toSanitizedMarkdownHtml", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       try {
         const html = toSanitizedMarkdownHtml("test");
-        expect(html).toContain('<pre class="code-block">');
+        expect(html).toBe('<pre class="code-block">test</pre>');
         expect(warnSpy).toHaveBeenCalledOnce();
       } finally {
         renderSpy.mockRestore();
