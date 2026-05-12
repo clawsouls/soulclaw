@@ -458,10 +458,12 @@ describe("chat compaction divider", () => {
       onOpenSessionCheckpoints,
     });
 
-    expect(container.textContent).toContain("Compacted history");
-    expect(container.textContent).toContain("Earlier turns are preserved");
+    expect(container.querySelector(".chat-divider__label")?.textContent).toBe("Compacted history");
+    expect(container.querySelector(".chat-divider__description")?.textContent?.trim()).toBe(
+      "Earlier turns are preserved in a compaction checkpoint. Open session checkpoints to branch or restore that pre-compaction view.",
+    );
     const button = container.querySelector<HTMLButtonElement>(".chat-divider__action");
-    expect(button?.textContent).toContain("Open checkpoints");
+    expect(button?.textContent?.trim()).toBe("Open checkpoints");
 
     expect(button).toBeInstanceOf(HTMLButtonElement);
     button!.click();
@@ -499,7 +501,9 @@ describe("chat loading skeleton", () => {
     });
 
     expect(container.querySelector(".chat-loading-skeleton")).toBeNull();
-    expect(container.textContent).toContain("Already loaded answer");
+    expect(container.querySelector(".chat-group")?.textContent?.trim()).toBe(
+      "Already loaded answer",
+    );
   });
 
   it("keeps active stream content visible without the skeleton during a background reload", () => {
@@ -510,7 +514,7 @@ describe("chat loading skeleton", () => {
     });
 
     expect(container.querySelector(".chat-loading-skeleton")).toBeNull();
-    expect(container.textContent).toContain("Partial streamed answer");
+    expect(container.querySelector(".chat-stream")?.textContent).toBe("Partial streamed answer");
   });
 
   it("keeps the reading indicator visible without the skeleton before stream text arrives", () => {
