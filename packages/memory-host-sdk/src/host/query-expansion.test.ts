@@ -9,19 +9,35 @@ describe("extractKeywords", () => {
 
   it("extracts keywords from Chinese conversational query", () => {
     const keywords = extractKeywords("之前讨论的那个方案");
-    expect(keywords).toContain("讨论");
-    expect(keywords).toContain("方案");
-    // Should not include stop words
-    expect(keywords).not.toContain("之前");
-    expect(keywords).not.toContain("的");
-    expect(keywords).not.toContain("那个");
+    expect(keywords).toStrictEqual([
+      "之",
+      "讨",
+      "论",
+      "个",
+      "方",
+      "案",
+      "前讨",
+      "讨论",
+      "论的",
+      "的那",
+      "个方",
+      "方案",
+    ]);
   });
 
   it("extracts keywords from mixed language query", () => {
     const keywords = extractKeywords("昨天讨论的 API design");
-    expect(keywords).toContain("讨论");
-    expect(keywords).toContain("api");
-    expect(keywords).toContain("design");
+    expect(keywords).toStrictEqual([
+      "昨",
+      "天",
+      "讨",
+      "论",
+      "天讨",
+      "讨论",
+      "论的",
+      "api",
+      "design",
+    ]);
   });
 
   it("returns specific technical terms", () => {
@@ -41,24 +57,17 @@ describe("extractKeywords", () => {
 
   it("filters Korean stop words including inflected forms", () => {
     const keywords = extractKeywords("나는 그리고 그래서");
-    expect(keywords).not.toContain("나");
-    expect(keywords).not.toContain("나는");
-    expect(keywords).not.toContain("그리고");
-    expect(keywords).not.toContain("그래서");
+    expect(keywords).toStrictEqual([]);
   });
 
   it("filters inflected Korean stop words not explicitly listed", () => {
     const keywords = extractKeywords("그녀는 우리는");
-    expect(keywords).not.toContain("그녀는");
-    expect(keywords).not.toContain("우리는");
-    expect(keywords).not.toContain("그녀");
-    expect(keywords).not.toContain("우리");
+    expect(keywords).toStrictEqual([]);
   });
 
   it("does not produce bogus single-char stems from particle stripping", () => {
     const keywords = extractKeywords("논의");
-    expect(keywords).toContain("논의");
-    expect(keywords).not.toContain("논");
+    expect(keywords).toStrictEqual(["논의"]);
   });
 
   it("strips longest Korean trailing particles first", () => {
@@ -73,31 +82,22 @@ describe("extractKeywords", () => {
 
   it("handles mixed Korean and English query", () => {
     const keywords = extractKeywords("API 배포에 대한 논의");
-    expect(keywords).toContain("api");
-    expect(keywords).toContain("배포");
-    expect(keywords).toContain("논의");
+    expect(keywords).toStrictEqual(["api", "배포에", "배포", "대한", "논의"]);
   });
 
   it("extracts keywords from Japanese conversational query", () => {
     const keywords = extractKeywords("昨日話したデプロイ戦略");
-    expect(keywords).toContain("デプロイ");
-    expect(keywords).toContain("戦略");
-    expect(keywords).not.toContain("昨日");
+    expect(keywords).toStrictEqual(["昨日話", "日話", "デプロイ", "戦略"]);
   });
 
   it("handles mixed Japanese and English query", () => {
     const keywords = extractKeywords("昨日話したAPIのバグ");
-    expect(keywords).toContain("api");
-    expect(keywords).toContain("バグ");
-    expect(keywords).not.toContain("した");
+    expect(keywords).toStrictEqual(["昨日話", "日話", "api", "バグ"]);
   });
 
   it("filters Japanese stop words", () => {
     const keywords = extractKeywords("これ それ そして どう");
-    expect(keywords).not.toContain("これ");
-    expect(keywords).not.toContain("それ");
-    expect(keywords).not.toContain("そして");
-    expect(keywords).not.toContain("どう");
+    expect(keywords).toStrictEqual([]);
   });
 
   it("extracts keywords from Spanish conversational query", () => {
@@ -112,12 +112,7 @@ describe("extractKeywords", () => {
 
   it("filters Spanish and Portuguese question stop words", () => {
     const keywords = extractKeywords("cómo cuando donde porquê quando onde");
-    expect(keywords).not.toContain("cómo");
-    expect(keywords).not.toContain("cuando");
-    expect(keywords).not.toContain("donde");
-    expect(keywords).not.toContain("porquê");
-    expect(keywords).not.toContain("quando");
-    expect(keywords).not.toContain("onde");
+    expect(keywords).toStrictEqual([]);
   });
 
   it("extracts keywords from Arabic conversational query", () => {
@@ -127,10 +122,7 @@ describe("extractKeywords", () => {
 
   it("filters Arabic question stop words", () => {
     const keywords = extractKeywords("كيف متى أين ماذا");
-    expect(keywords).not.toContain("كيف");
-    expect(keywords).not.toContain("متى");
-    expect(keywords).not.toContain("أين");
-    expect(keywords).not.toContain("ماذا");
+    expect(keywords).toStrictEqual([]);
   });
 
   it("handles empty query", () => {
@@ -154,42 +146,38 @@ describe("extractKeywords", () => {
     it("emits whole CJK block instead of unigrams in trigram mode", () => {
       const defaultKeywords = extractKeywords("之前讨论的那个方案");
       const trigramKeywords = extractKeywords("之前讨论的那个方案", trigramOpts);
-      // Default mode produces bigrams
-      expect(defaultKeywords).toContain("讨论");
-      expect(defaultKeywords).toContain("方案");
-      // Trigram mode emits the whole contiguous CJK block (FTS5 trigram
-      // requires >= 3 chars per term; individual characters return no results)
-      expect(trigramKeywords).toContain("之前讨论的那个方案");
-      expect(trigramKeywords).not.toContain("讨论");
-      expect(trigramKeywords).not.toContain("方案");
+      expect(defaultKeywords).toStrictEqual([
+        "之",
+        "讨",
+        "论",
+        "个",
+        "方",
+        "案",
+        "前讨",
+        "讨论",
+        "论的",
+        "的那",
+        "个方",
+        "方案",
+      ]);
+      expect(trigramKeywords).toStrictEqual(["之前讨论的那个方案"]);
     });
 
     it("skips Japanese kanji bigrams in trigram mode", () => {
       const defaultKeywords = extractKeywords("経済政策について");
       const trigramKeywords = extractKeywords("経済政策について", trigramOpts);
-      // Default mode adds kanji bigrams: 経済, 済政, 政策
-      expect(defaultKeywords).toContain("経済");
-      expect(defaultKeywords).toContain("済政");
-      expect(defaultKeywords).toContain("政策");
-      // Trigram mode keeps the full kanji block but skips bigram splitting
-      expect(trigramKeywords).toContain("経済政策");
-      expect(trigramKeywords).not.toContain("済政");
+      expect(defaultKeywords).toStrictEqual(["経済政策", "経済", "済政", "政策", "について"]);
+      expect(trigramKeywords).toStrictEqual(["経済政策", "について"]);
     });
 
     it("still filters stop words in trigram mode", () => {
       const keywords = extractKeywords("これ それ そして どう", trigramOpts);
-      expect(keywords).not.toContain("これ");
-      expect(keywords).not.toContain("それ");
-      expect(keywords).not.toContain("そして");
-      expect(keywords).not.toContain("どう");
+      expect(keywords).toStrictEqual([]);
     });
 
     it("does not affect English keyword extraction", () => {
       const keywords = extractKeywords("that thing we discussed about the API", trigramOpts);
-      expect(keywords).toContain("discussed");
-      expect(keywords).toContain("api");
-      expect(keywords).not.toContain("that");
-      expect(keywords).not.toContain("the");
+      expect(keywords).toStrictEqual(["discussed", "api"]);
     });
   });
 });
