@@ -49,34 +49,33 @@ describe("CodexNativeSubagentTaskMirror", () => {
       },
     });
 
-    expect(runtime.createRunningTaskRun).toHaveBeenCalledWith(
-      expect.objectContaining({
-        runtime: "subagent",
-        taskKind: "codex-native",
-        sourceId: "codex-thread:child-thread",
-        requesterSessionKey: "agent:main:main",
-        ownerKey: "agent:main:main",
-        scopeKind: "session",
-        agentId: "main",
-        runId: "codex-thread:child-thread",
-        label: "Poincare",
-        task: "write the Madrid wine script",
-        notifyPolicy: "silent",
-        deliveryStatus: "not_applicable",
-        startedAt: 10_000,
-        progressSummary: "Codex native subagent started.",
-      }),
-    );
+    expect(runtime.createRunningTaskRun).toHaveBeenCalledWith({
+      runtime: "subagent",
+      taskKind: "codex-native",
+      sourceId: "codex-thread:child-thread",
+      requesterSessionKey: "agent:main:main",
+      ownerKey: "agent:main:main",
+      scopeKind: "session",
+      agentId: "main",
+      runId: "codex-thread:child-thread",
+      label: "Poincare",
+      task: "write the Madrid wine script",
+      notifyPolicy: "silent",
+      deliveryStatus: "not_applicable",
+      preferMetadata: true,
+      startedAt: 10_000,
+      lastEventAt: 20_000,
+      progressSummary: "Codex native subagent started.",
+    });
     expect(vi.mocked(runtime.createRunningTaskRun).mock.calls.at(0)?.[0]).not.toHaveProperty(
       "childSessionKey",
     );
-    expect(runtime.recordTaskRunProgressByRunId).toHaveBeenCalledWith(
-      expect.objectContaining({
-        runId: "codex-thread:child-thread",
-        runtime: "subagent",
-        progressSummary: "Codex native subagent is active.",
-      }),
-    );
+    expect(runtime.recordTaskRunProgressByRunId).toHaveBeenCalledWith({
+      runId: "codex-thread:child-thread",
+      runtime: "subagent",
+      lastEventAt: 20_000,
+      progressSummary: "Codex native subagent is active.",
+    });
   });
 
   it("ignores subagent threads spawned by a different parent thread", () => {
