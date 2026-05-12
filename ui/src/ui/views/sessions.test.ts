@@ -72,6 +72,15 @@ function buildProps(result: SessionsListResult): SessionsProps {
   };
 }
 
+function readSessionDetailStats(container: ParentNode): Map<string, string> {
+  return new Map(
+    Array.from(container.querySelectorAll(".session-detail-stat")).map((stat) => [
+      stat.querySelector(".session-detail-stat__label")?.textContent?.trim() ?? "",
+      stat.querySelector(".session-detail-stat__value")?.textContent?.trim() ?? "",
+    ]),
+  );
+}
+
 describe("sessions view", () => {
   it("renders an explicit archived-session toggle", async () => {
     const container = document.createElement("div");
@@ -642,13 +651,36 @@ describe("sessions view", () => {
     await Promise.resolve();
 
     const details = container.querySelector(".session-details-panel");
-    expect(details?.textContent).toContain("Session details");
-    expect(details?.textContent).toContain("gpt-5.5");
-    expect(details?.textContent).toContain("openai");
-    expect(details?.textContent).toContain("2m 5s");
-    expect(details?.textContent).toContain("Compaction history");
-    expect(details?.textContent).toContain("123,456 to 38,920 tokens");
-    expect(details?.textContent).not.toContain("->");
+    expect(details?.querySelector(".session-details-panel__eyebrow")?.textContent?.trim()).toBe(
+      "Session details",
+    );
+    expect(details?.querySelector(".session-details-panel__title")?.textContent?.trim()).toBe(
+      "agent:main:main",
+    );
+    expect(
+      Array.from(details?.querySelectorAll(".session-details-panel__badges > *") ?? []).map(
+        (badge) => badge.textContent?.trim(),
+      ),
+    ).toEqual(["Live", "direct"]);
+
+    const stats = readSessionDetailStats(details ?? container);
+    expect(stats.get("Status")).toBe("running");
+    expect(stats.get("Model")).toBe("gpt-5.5");
+    expect(stats.get("Provider")).toBe("openai");
+    expect(stats.get("Runtime")).toBe("2m 5s");
+    expect(stats.get("Tokens")).toBe("123456 / 200000");
+    expect(stats.get("Compaction")).toBe("1 Checkpoint");
+
+    const compactionSection = details?.querySelector(".session-details-section");
+    expect(
+      compactionSection?.querySelector(".session-details-panel__eyebrow")?.textContent?.trim(),
+    ).toBe("Compaction history");
+    expect(
+      compactionSection?.querySelector(".session-details-section__title")?.textContent?.trim(),
+    ).toBe("1 Checkpoint");
+    expect(
+      compactionSection?.querySelector(".session-checkpoint-card__delta")?.textContent?.trim(),
+    ).toBe("123,456 to 38,920 tokens");
   });
 
   it("does not expand checkpoint details when the row has none or a nested control was used", async () => {
