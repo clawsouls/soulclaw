@@ -171,6 +171,10 @@ function mockObjectArg(source: MockCallSource, label: string, callIndex = 0, arg
   return arg as Record<string, unknown>;
 }
 
+function mockMessageBody(source: MockCallSource, label: string, callIndex = 0) {
+  return String(mockObjectArg(source, label, callIndex).body);
+}
+
 function expectSentTextMessage(
   source: MockCallSource,
   expected: {
@@ -1132,7 +1136,7 @@ describe("matrix live qa scenarios", () => {
         eventId: "$sut-reply",
         sender: "@sut:matrix-qa.test",
         type: "m.room.message",
-        body: String(sendTextMessage.mock.calls.at(0)?.[0]?.body).replace(
+        body: mockMessageBody(sendTextMessage, "sendTextMessage").replace(
           "@sut:matrix-qa.test reply with only this exact marker: ",
           "",
         ),
@@ -1198,7 +1202,7 @@ describe("matrix live qa scenarios", () => {
         eventId: "$sut-bot-reply",
         sender: "@sut:matrix-qa.test",
         type: "m.room.message",
-        body: String(sendTextMessage.mock.calls.at(0)?.[0]?.body).replace(
+        body: mockMessageBody(sendTextMessage, "sendTextMessage").replace(
           "@sut:matrix-qa.test reply with only this exact marker: ",
           "",
         ),
@@ -1914,7 +1918,7 @@ describe("matrix live qa scenarios", () => {
 
       const sendTextMessage = vi.fn().mockResolvedValue("$driver-trigger");
       const waitForRoomEvent = vi.fn().mockImplementation(async () => {
-        const token = String(sendTextMessage.mock.calls.at(0)?.[0]?.body).replace(
+        const token = mockMessageBody(sendTextMessage, "sendTextMessage").replace(
           "@sync-gateway:matrix-qa.test reply with only this exact marker: ",
           "",
         );
@@ -2304,7 +2308,7 @@ describe("matrix live qa scenarios", () => {
         eventId: "$sut-reply",
         sender: "@sut:matrix-qa.test",
         type: "m.room.message",
-        body: String(sendTextMessage.mock.calls.at(0)?.[0]?.body).replace(
+        body: mockMessageBody(sendTextMessage, "sendTextMessage").replace(
           "reply with only this exact marker: ",
           "",
         ),
@@ -2383,7 +2387,7 @@ describe("matrix live qa scenarios", () => {
         eventId: "$sut-reply",
         sender: "@sut:matrix-qa.test",
         type: "m.room.message",
-        body: String(sendTextMessage.mock.calls.at(0)?.[0]?.body).replace(
+        body: mockMessageBody(sendTextMessage, "sendTextMessage").replace(
           "@sut:matrix-qa.test reply with only this exact marker: ",
           "",
         ),
@@ -2439,7 +2443,7 @@ describe("matrix live qa scenarios", () => {
       .mockImplementationOnce(async () => {
         const childToken =
           /task="Finish with exactly ([^".]+)\./.exec(
-            String(sendTextMessage.mock.calls.at(0)?.[0]?.body),
+            mockMessageBody(sendTextMessage, "sendTextMessage"),
           )?.[1] ?? "MATRIX_QA_SUBAGENT_CHILD_FIXED";
         return {
           event: {
@@ -2605,7 +2609,7 @@ describe("matrix live qa scenarios", () => {
     const primeRoom = vi.fn().mockResolvedValue("driver-sync-start");
     const sendTextMessage = vi.fn().mockResolvedValue("$quiet-stream-trigger");
     const readFinalText = () =>
-      /reply exactly `([^`]+)`/.exec(String(sendTextMessage.mock.calls.at(0)?.[0]?.body))?.[1] ??
+      /reply exactly `([^`]+)`/.exec(mockMessageBody(sendTextMessage, "sendTextMessage"))?.[1] ??
       "MATRIX_QA_QUIET_STREAM_PREVIEW_COMPLETE";
     const waitForRoomEvent = vi
       .fn()
@@ -2703,7 +2707,7 @@ describe("matrix live qa scenarios", () => {
               kind: "message",
               eventId: "$partial-final",
               body: readMatrixQaReplyDirective(
-                sendTextMessage.mock.calls.at(0)?.[0]?.body,
+                mockMessageBody(sendTextMessage, "sendTextMessage"),
                 fallbackFinalText,
               ),
               relatesTo: {
@@ -2754,7 +2758,7 @@ describe("matrix live qa scenarios", () => {
               kind: "notice",
               eventId: "$tool-progress-final",
               body: readMatrixQaReplyDirective(
-                sendTextMessage.mock.calls.at(0)?.[0]?.body,
+                mockMessageBody(sendTextMessage, "sendTextMessage"),
                 "MATRIX_QA_TOOL_PROGRESS_FIXED",
               ),
               relatesTo: {
@@ -2782,7 +2786,7 @@ describe("matrix live qa scenarios", () => {
     );
     expect(artifacts.previewEventId).toBe("$tool-progress-preview");
     expect(artifacts.reply?.eventId).toBe("$tool-progress-final");
-    const prompt = String(sendTextMessage.mock.calls.at(0)?.[0]?.body);
+    const prompt = mockMessageBody(sendTextMessage, "sendTextMessage");
     expect(prompt).toContain("use the read tool exactly once on `QA_KICKOFF_TASK.md`");
     expect(prompt).toContain("Do not read `HEARTBEAT.md`");
     expect(prompt).toContain("reply with only this exact marker and no other text");
@@ -2819,7 +2823,7 @@ describe("matrix live qa scenarios", () => {
               kind: "notice",
               eventId: "$tool-progress-generic-final",
               body: readMatrixQaReplyDirective(
-                sendTextMessage.mock.calls.at(0)?.[0]?.body,
+                mockMessageBody(sendTextMessage, "sendTextMessage"),
                 "MATRIX_QA_TOOL_PROGRESS_FIXED",
               ),
               relatesTo: {
@@ -2952,7 +2956,7 @@ describe("matrix live qa scenarios", () => {
               kind: "message",
               eventId: "$tool-progress-optout-final",
               body: readMatrixQaReplyDirective(
-                sendTextMessage.mock.calls.at(0)?.[0]?.body,
+                mockMessageBody(sendTextMessage, "sendTextMessage"),
                 "MATRIX_QA_TOOL_PROGRESS_OPTOUT_FIXED",
               ),
             }),
@@ -2998,7 +3002,7 @@ describe("matrix live qa scenarios", () => {
               kind: "notice",
               eventId: "$tool-progress-error-final",
               body: readMatrixQaReplyDirective(
-                sendTextMessage.mock.calls.at(0)?.[0]?.body,
+                mockMessageBody(sendTextMessage, "sendTextMessage"),
                 "MATRIX_QA_TOOL_PROGRESS_ERROR_FIXED",
               ),
               relatesTo: {
@@ -3063,7 +3067,7 @@ describe("matrix live qa scenarios", () => {
               kind: "notice",
               eventId: "$tool-progress-error-short-final",
               body: readMatrixQaReplyDirective(
-                sendTextMessage.mock.calls.at(0)?.[0]?.body,
+                mockMessageBody(sendTextMessage, "sendTextMessage"),
                 "MATRIX_QA_TOOL_PROGRESS_ERROR_SHORT_FIXED",
               ),
               relatesTo: {
@@ -3135,7 +3139,7 @@ describe("matrix live qa scenarios", () => {
               kind: "message",
               eventId: "$tool-progress-mention-final",
               body: readMatrixQaReplyDirective(
-                sendTextMessage.mock.calls.at(0)?.[0]?.body,
+                mockMessageBody(sendTextMessage, "sendTextMessage"),
                 "MATRIX_QA_TOOL_PROGRESS_MENTION_SAFE_FIXED",
               ),
               relatesTo: {
@@ -3167,7 +3171,7 @@ describe("matrix live qa scenarios", () => {
     const primeRoom = vi.fn().mockResolvedValue("driver-sync-start");
     const sendTextMessage = vi.fn().mockResolvedValue("$block-stream-trigger");
     const readBlockText = (label: "ONE" | "TWO") =>
-      String(sendTextMessage.mock.calls.at(0)?.[0]?.body)
+      mockMessageBody(sendTextMessage, "sendTextMessage")
         .split("\n")
         .find((line) => line.startsWith(`MATRIX_QA_BLOCK_${label}_`)) ??
       `MATRIX_QA_BLOCK_${label}_FIXED`;
@@ -3250,7 +3254,7 @@ describe("matrix live qa scenarios", () => {
       mentionUserIds: ["@sut:matrix-qa.test"],
       roomId: "!block:matrix-qa.test",
     });
-    const body = String(sendTextMessage.mock.calls.at(0)?.[0]?.body);
+    const body = mockMessageBody(sendTextMessage, "sendTextMessage");
     expect(body).toMatch(
       /reply with exactly this two-line body and no extra text:\nMATRIX_QA_BLOCK_ONE_[A-F0-9]{8}\nMATRIX_QA_BLOCK_TWO_[A-F0-9]{8}$/,
     );
@@ -3557,7 +3561,7 @@ describe("matrix live qa scenarios", () => {
     }
     const firstReplyWait = waitForRoomEvent.mock.calls.at(1)?.[0];
     const firstToken =
-      String(sendMediaMessage.mock.calls.at(0)?.[0]?.body).match(
+      mockMessageBody(sendMediaMessage, "sendMediaMessage").match(
         /MATRIX_QA_MEDIA_[A-Z]+_[A-Z0-9]+/,
       )?.[0] ?? "";
     expect(
@@ -3592,7 +3596,7 @@ describe("matrix live qa scenarios", () => {
         eventId: "$sut-reply",
         sender: "@sut:matrix-qa.test",
         type: "m.room.message",
-        body: String(sendTextMessage.mock.calls.at(0)?.[0]?.body).replace(
+        body: mockMessageBody(sendTextMessage, "sendTextMessage").replace(
           "reply with only this exact marker: ",
           "",
         ),
@@ -3668,7 +3672,7 @@ describe("matrix live qa scenarios", () => {
         eventId: "$sut-primary-reply",
         sender: "@sut:matrix-qa.test",
         type: "m.room.message",
-        body: String(sendPrimaryTextMessage.mock.calls.at(0)?.[0]?.body).replace(
+        body: mockMessageBody(sendPrimaryTextMessage, "sendPrimaryTextMessage").replace(
           "reply with only this exact marker: ",
           "",
         ),
@@ -3684,7 +3688,7 @@ describe("matrix live qa scenarios", () => {
         eventId: "$sut-secondary-reply",
         sender: "@sut:matrix-qa.test",
         type: "m.room.message",
-        body: String(sendSecondaryTextMessage.mock.calls.at(0)?.[0]?.body).replace(
+        body: mockMessageBody(sendSecondaryTextMessage, "sendSecondaryTextMessage").replace(
           "reply with only this exact marker: ",
           "",
         ),
@@ -3792,7 +3796,7 @@ describe("matrix live qa scenarios", () => {
         eventId: "$sut-primary-reply",
         sender: "@sut:matrix-qa.test",
         type: "m.room.message",
-        body: String(sendPrimaryTextMessage.mock.calls.at(0)?.[0]?.body).replace(
+        body: mockMessageBody(sendPrimaryTextMessage, "sendPrimaryTextMessage").replace(
           "reply with only this exact marker: ",
           "",
         ),
@@ -3808,7 +3812,7 @@ describe("matrix live qa scenarios", () => {
         eventId: "$sut-secondary-reply",
         sender: "@sut:matrix-qa.test",
         type: "m.room.message",
-        body: String(sendSecondaryTextMessage.mock.calls.at(0)?.[0]?.body).replace(
+        body: mockMessageBody(sendSecondaryTextMessage, "sendSecondaryTextMessage").replace(
           "reply with only this exact marker: ",
           "",
         ),
@@ -3911,7 +3915,7 @@ describe("matrix live qa scenarios", () => {
           eventId: "$sut-autojoin-reply",
           sender: "@sut:matrix-qa.test",
           type: "m.room.message",
-          body: String(sendTextMessage.mock.calls.at(0)?.[0]?.body).replace(
+          body: mockMessageBody(sendTextMessage, "sendTextMessage").replace(
             "@sut:matrix-qa.test reply with only this exact marker: ",
             "",
           ),
@@ -3977,7 +3981,7 @@ describe("matrix live qa scenarios", () => {
         eventId: "$sut-reply",
         sender: "@sut:matrix-qa.test",
         type: "m.room.message",
-        body: String(sendTextMessage.mock.calls.at(0)?.[0]?.body).replace(
+        body: mockMessageBody(sendTextMessage, "sendTextMessage").replace(
           "@sut:matrix-qa.test reply with only this exact marker: ",
           "",
         ),
