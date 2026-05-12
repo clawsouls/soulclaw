@@ -36,9 +36,10 @@ describe("config doc baseline", () => {
     );
     const tupleEntry = new Map(entries.map((entry) => [entry.path, entry])).get("tupleValues.*");
 
-    expect(tupleEntry?.type).toEqual(["number", "string"]);
-    expect(tupleEntry?.enumValues).toContain(42);
-    expect(tupleEntry?.enumValues).toContain("alpha");
-    expect(tupleEntry?.enumValues).toHaveLength(2);
+    expect(tupleEntry).toMatchObject({
+      path: "tupleValues.*",
+      type: ["number", "string"],
+      enumValues: ["alpha", 42],
+    });
   });
 });
