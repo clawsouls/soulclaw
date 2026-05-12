@@ -1433,7 +1433,8 @@ describe("grouped chat rendering", () => {
     );
     expect(image?.getAttribute("src")).toBe("/media/inbound/test-image.png");
     expect(docLink?.getAttribute("href")).toBe("/__openclaw__/media/test-doc.pdf");
-    expect(container.textContent).not.toContain("Unavailable");
+    expect(container.querySelector(".chat-assistant-attachment-badge")).toBeNull();
+    expect(container.querySelector(".chat-assistant-attachment-card--blocked")).toBeNull();
   });
 
   it("renders blocked local assistant files as unavailable with a reason", () => {
