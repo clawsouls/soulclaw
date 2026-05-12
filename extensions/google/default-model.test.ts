@@ -68,6 +68,42 @@ describe("google default model", () => {
     });
   });
 
+  it("normalizes retired Gemini provider catalog rows when the primary is already current", () => {
+    const applied = applyGoogleGeminiModelDefault({
+      agents: {
+        defaults: {
+          model: {
+            primary: GOOGLE_GEMINI_DEFAULT_MODEL,
+          },
+        },
+      },
+      models: {
+        providers: {
+          google: {
+            api: "google-generative-ai",
+            baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+            models: [
+              {
+                id: "google/gemini-3-pro-preview",
+                name: "Gemini 3 Pro",
+                contextWindow: 1_000_000,
+                maxTokens: 8192,
+                input: ["text"],
+                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+                reasoning: true,
+              },
+            ],
+          },
+        },
+      },
+    } as OpenClawConfig);
+
+    expect(applied.changed).toBe(true);
+    expect(applied.next.models?.providers?.google?.models?.map((model) => model.id)).toEqual([
+      GOOGLE_GEMINI_DEFAULT_MODEL,
+    ]);
+  });
+
   it("no-ops when already on the target default", () => {
     const cfg = {
       agents: { defaults: { model: { primary: GOOGLE_GEMINI_DEFAULT_MODEL } } },
