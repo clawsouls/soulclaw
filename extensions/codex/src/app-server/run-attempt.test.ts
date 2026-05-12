@@ -1670,7 +1670,12 @@ describe("runCodexAppServerAttempt", () => {
     await harness.notify(rateLimitsUpdated(Date.now() + 60_000));
     await new Promise((resolve) => setTimeout(resolve, 20));
 
-    await expect(run).resolves.toMatchObject({
+    const result = await run;
+    expect({
+      aborted: result.aborted,
+      timedOut: result.timedOut,
+      promptError: result.promptError,
+    }).toEqual({
       aborted: true,
       timedOut: true,
       promptError: "codex app-server turn idle timed out waiting for turn/completed",
@@ -1738,7 +1743,13 @@ describe("runCodexAppServerAttempt", () => {
       },
     });
 
-    await expect(run).resolves.toMatchObject({
+    const result = await run;
+    expect({
+      aborted: result.aborted,
+      timedOut: result.timedOut,
+      promptError: result.promptError,
+      assistantTexts: result.assistantTexts,
+    }).toEqual({
       aborted: false,
       timedOut: false,
       promptError: null,
@@ -1815,7 +1826,13 @@ describe("runCodexAppServerAttempt", () => {
       },
     });
 
-    await expect(run).resolves.toMatchObject({
+    const result = await run;
+    expect({
+      aborted: result.aborted,
+      timedOut: result.timedOut,
+      promptError: result.promptError,
+      assistantTexts: result.assistantTexts,
+    }).toEqual({
       aborted: false,
       timedOut: false,
       promptError: null,
@@ -1900,7 +1917,13 @@ describe("runCodexAppServerAttempt", () => {
       },
     });
 
-    await expect(run).resolves.toMatchObject({
+    const result = await run;
+    expect({
+      aborted: result.aborted,
+      timedOut: result.timedOut,
+      promptError: result.promptError,
+      assistantTexts: result.assistantTexts,
+    }).toEqual({
       aborted: false,
       timedOut: false,
       promptError: null,
@@ -1986,7 +2009,13 @@ describe("runCodexAppServerAttempt", () => {
       },
     });
 
-    await expect(run).resolves.toMatchObject({
+    const result = await run;
+    expect({
+      aborted: result.aborted,
+      timedOut: result.timedOut,
+      promptError: result.promptError,
+      assistantTexts: result.assistantTexts,
+    }).toEqual({
       aborted: false,
       timedOut: false,
       promptError: null,
@@ -2046,7 +2075,12 @@ describe("runCodexAppServerAttempt", () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 20));
 
-    await expect(run).resolves.toMatchObject({
+    const result = await run;
+    expect({
+      aborted: result.aborted,
+      timedOut: result.timedOut,
+      promptError: result.promptError,
+    }).toEqual({
       aborted: true,
       timedOut: true,
       promptError: "codex app-server turn idle timed out waiting for turn/completed",
@@ -2122,7 +2156,13 @@ describe("runCodexAppServerAttempt", () => {
       },
     });
 
-    await expect(run).resolves.toMatchObject({
+    const result = await run;
+    expect({
+      aborted: result.aborted,
+      timedOut: result.timedOut,
+      promptError: result.promptError,
+      assistantTexts: result.assistantTexts,
+    }).toEqual({
       aborted: false,
       timedOut: false,
       promptError: null,
