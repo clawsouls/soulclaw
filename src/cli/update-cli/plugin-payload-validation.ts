@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { PluginInstallRecord } from "../../config/types.plugins.js";
 import { resolvePackageExtensionEntries, type PackageManifest } from "../../plugins/manifest.js";
+import { validatePackageExtensionEntriesForInstall } from "../../plugins/package-entry-resolution.js";
 import { resolveUserPath } from "../../utils.js";
 
 export type PluginPayloadSmokeFailureReason =
@@ -101,17 +102,18 @@ export async function runPluginPayloadSmokeCheck(params: {
 
     const extensionResolution = resolvePackageExtensionEntries(manifest);
     if (extensionResolution.status === "ok") {
-      for (const extensionRel of extensionResolution.entries) {
-        const extensionPath = path.join(installPath, extensionRel);
-        const extensionStat = await safeStat(extensionPath);
-        if (!extensionStat?.isFile()) {
-          failures.push({
-            pluginId,
-            installPath,
-            reason: "missing-extension-entry",
-            detail: `Plugin extension entry "${extensionRel}" not found at ${extensionPath}`,
-          });
-        }
+      const extensionValidation = await validatePackageExtensionEntriesForInstall({
+        packageDir: installPath,
+        extensions: extensionResolution.entries,
+        manifest,
+      });
+      if (!extensionValidation.ok) {
+        failures.push({
+          pluginId,
+          installPath,
+          reason: "missing-extension-entry",
+          detail: `Plugin extension entry validation failed: ${extensionValidation.error}`,
+        });
       }
     }
 

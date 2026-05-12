@@ -128,6 +128,21 @@ describe("runPluginPayloadSmokeCheck", () => {
     expect(result.failures).toEqual([]);
   });
 
+  it("accepts a packaged TypeScript extension entry when compiled runtime output exists", async () => {
+    const dir = path.join(tmpRoot, "codex");
+    await writePackage(dir, {
+      name: "@openclaw/codex",
+      openclaw: { extensions: ["./index.ts"] },
+    });
+    await fs.mkdir(path.join(dir, "dist"), { recursive: true });
+    await fs.writeFile(path.join(dir, "dist", "index.js"), "export default {};\n", "utf8");
+    const result = await runPluginPayloadSmokeCheck({
+      records: { codex: { source: "npm", installPath: dir } },
+      env: {},
+    });
+    expect(result.failures).toEqual([]);
+  });
+
   it("reports a failure when an `openclaw.extensions` entry file is missing", async () => {
     const dir = path.join(tmpRoot, "brave");
     await writePackage(dir, {
