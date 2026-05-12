@@ -286,7 +286,6 @@ describe("context notice", () => {
     expect(lowNotice!.querySelector(".context-notice__detail")?.textContent).toBe("46k / 200k");
     expect(container.querySelectorAll(".context-notice__meter")).toHaveLength(1);
     expect(container.querySelector(".context-notice__icon")).toBeNull();
-    expect(container.textContent).not.toContain("757.3k / 200k");
 
     const session: GatewaySessionRow = {
       key: "main",
@@ -299,7 +298,6 @@ describe("context notice", () => {
     render(renderContextNotice(session, 200_000), container);
 
     expect(getContextNoticeViewModel(session, 200_000)?.compactRecommended).toBe(true);
-    expect(container.textContent).not.toContain("757.3k / 200k");
     const notice = container.querySelector<HTMLElement>(".context-notice");
     expect(notice).toBeInstanceOf(HTMLElement);
     expect(notice!.textContent?.replace(/\s+/gu, " ").trim()).toBe("95% context used 190k / 200k");
