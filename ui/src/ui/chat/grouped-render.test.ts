@@ -1257,7 +1257,11 @@ describe("grouped chat rendering", () => {
       );
 
     renderMessage();
-    expect(container.textContent).toContain("Checking...");
+    expect(
+      Array.from(container.querySelectorAll(".chat-assistant-attachment-badge")).map((badge) =>
+        badge.textContent?.trim(),
+      ),
+    ).toEqual(["Checking...", "Checking..."]);
     await flushAssistantAttachmentAvailabilityChecks();
 
     const [, fetchInit] = requireFetchCallForUrl(
@@ -1276,7 +1280,8 @@ describe("grouped chat rendering", () => {
     expect(docLink?.getAttribute("href")).toBe(
       "/openclaw/__openclaw__/assistant-media?source=%2Ftmp%2Fopenclaw%2Ftest-doc.pdf&mediaTicket=ticket-local",
     );
-    expect(container.textContent).not.toContain("test image.png");
+    expect(image?.getAttribute("alt")).toBe("test image.png");
+    expect(container.querySelector(".chat-assistant-attachment-card__title")).toBeNull();
     vi.unstubAllGlobals();
   });
 
