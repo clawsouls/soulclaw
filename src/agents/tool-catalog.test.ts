@@ -12,25 +12,51 @@ function requireCoreToolProfilePolicy(profile: Parameters<typeof resolveCoreTool
 describe("tool-catalog", () => {
   it("includes code_execution, web_search, x_search, web_fetch, and update_plan in the coding profile policy", () => {
     const policy = requireCoreToolProfilePolicy("coding");
-    expect(policy.allow).toContain("code_execution");
-    expect(policy.allow).toContain("web_search");
-    expect(policy.allow).toContain("x_search");
-    expect(policy.allow).toContain("web_fetch");
-    expect(policy.allow).toContain("image_generate");
-    expect(policy.allow).toContain("music_generate");
-    expect(policy.allow).toContain("video_generate");
-    expect(policy.allow).toContain("update_plan");
-    expect(policy.allow).not.toContain("browser");
+    expect(policy.allow).toEqual([
+      "read",
+      "write",
+      "edit",
+      "apply_patch",
+      "exec",
+      "process",
+      "code_execution",
+      "web_search",
+      "web_fetch",
+      "x_search",
+      "memory_search",
+      "memory_get",
+      "sessions_list",
+      "sessions_history",
+      "sessions_send",
+      "sessions_spawn",
+      "sessions_yield",
+      "subagents",
+      "session_status",
+      "cron",
+      "update_plan",
+      "image",
+      "image_generate",
+      "music_generate",
+      "video_generate",
+      "bundle-mcp",
+    ]);
   });
 
   it("includes bundle MCP tools in coding and messaging profile policies", () => {
-    expect(resolveCoreToolProfilePolicy("coding")?.allow).toContain("bundle-mcp");
-    expect(resolveCoreToolProfilePolicy("messaging")?.allow).toContain("bundle-mcp");
-    expect(resolveCoreToolProfilePolicy("minimal")?.allow).not.toContain("bundle-mcp");
+    expect(resolveCoreToolProfilePolicy("coding")?.allow.at(-1)).toBe("bundle-mcp");
+    expect(resolveCoreToolProfilePolicy("messaging")?.allow).toEqual([
+      "sessions_list",
+      "sessions_history",
+      "sessions_send",
+      "session_status",
+      "message",
+      "bundle-mcp",
+    ]);
+    expect(resolveCoreToolProfilePolicy("minimal")?.allow).toEqual(["session_status"]);
   });
 
   it("full profile uses wildcard to grant all tools (#76507)", () => {
     const policy = requireCoreToolProfilePolicy("full");
-    expect(policy.allow).toContain("*");
+    expect(policy.allow).toEqual(["*"]);
   });
 });
