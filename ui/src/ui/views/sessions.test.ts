@@ -130,7 +130,7 @@ describe("sessions view", () => {
       ?.querySelector<HTMLInputElement>(".session-filter-check__input[name=showArchived]")
       ?.closest("label");
 
-    expect(activeField?.textContent).toContain("Updated within");
+    expect(activeField?.querySelector(".session-filter-label")?.textContent).toBe("Updated within");
     expect(activeField?.getAttribute("data-tooltip")).toBe(
       "Loads sessions updated in the last 120 minutes.",
     );
