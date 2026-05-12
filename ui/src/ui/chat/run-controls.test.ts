@@ -375,10 +375,20 @@ describe("side result render", () => {
       container,
     );
 
-    expect(container.textContent).toContain("BTW");
-    expect(container.textContent).toContain("what changed?");
-    expect(container.textContent).toContain("Not saved to chat history");
-    expect(container.querySelectorAll(".chat-side-result")).toHaveLength(1);
+    const sideResult = container.querySelector<HTMLElement>(".chat-side-result");
+    expect(sideResult).toBeInstanceOf(HTMLElement);
+    expect([...sideResult!.classList]).toEqual(["chat-side-result"]);
+    expect(sideResult!.getAttribute("aria-label")).toBe("BTW side result");
+    expect(sideResult!.querySelector(".chat-side-result__label")?.textContent).toBe("BTW");
+    expect(sideResult!.querySelector(".chat-side-result__meta")?.textContent).toBe(
+      "Not saved to chat history",
+    );
+    expect(sideResult!.querySelector(".chat-side-result__question")?.textContent).toBe(
+      "what changed?",
+    );
+    expect(sideResult!.querySelector(".chat-side-result__body")?.textContent?.trim()).toBe(
+      "The web UI now renders **BTW** separately.",
+    );
 
     const button = container.querySelector<HTMLButtonElement>(".chat-side-result__dismiss");
     expect(button).toBeInstanceOf(HTMLButtonElement);
@@ -401,6 +411,8 @@ describe("side result render", () => {
       container,
     );
 
-    expect(container.querySelectorAll(".chat-side-result--error")).toHaveLength(1);
+    const errorResult = container.querySelector<HTMLElement>(".chat-side-result--error");
+    expect(errorResult).toBeInstanceOf(HTMLElement);
+    expect([...errorResult!.classList]).toEqual(["chat-side-result", "chat-side-result--error"]);
   });
 });
