@@ -413,7 +413,7 @@ describe("cron view", () => {
       container,
     );
 
-    expect(container.textContent).toContain("Daily ping");
+    expect(container.querySelector(".cron-job .list-title")?.textContent).toBe("Daily ping");
   });
 
   it("renders cron job prompts and run summaries as sanitized markdown", () => {
