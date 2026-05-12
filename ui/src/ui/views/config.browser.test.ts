@@ -523,7 +523,11 @@ describe("config view", () => {
       },
     });
 
-    expect(container.querySelectorAll(".config-section-card__header").length).toBeGreaterThan(0);
+    expect(
+      [...container.querySelectorAll(".config-section-card__title")].map((title) =>
+        title.textContent?.trim(),
+      ),
+    ).toEqual(["Authentication", "Gateway"]);
   });
 
   it("clears the active search query", () => {
