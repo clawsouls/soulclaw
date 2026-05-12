@@ -116,28 +116,31 @@ describe("toSanitizedMarkdownHtml", () => {
 
     it("does NOT link www. domains starting with non-ASCII", () => {
       const html1 = toSanitizedMarkdownHtml("Visit www.ünich.de");
-      expect(html1).not.toContain("<a");
-      expect(html1).toContain("www.ünich.de");
+      expect(html1).toBe("<p>Visit www.ünich.de</p>\n");
 
       const html2 = toSanitizedMarkdownHtml("Visit www.ñoño.com");
-      expect(html2).not.toContain("<a");
+      expect(html2).toBe("<p>Visit www.ñoño.com</p>\n");
     });
 
     it("handles balanced parentheses in URLs", () => {
       const html = toSanitizedMarkdownHtml("(see www.example.com/foo(bar))");
-      expect(html).toContain('href="http://www.example.com/foo(bar)"');
+      expect(html).toBe(
+        '<p>(see <a href="http://www.example.com/foo(bar)" rel="noreferrer noopener" target="_blank">www.example.com/foo(bar)</a>)</p>\n',
+      );
     });
 
     it("stops at < character", () => {
       // Stops at < character
       const html1 = toSanitizedMarkdownHtml("Visit www.example.com/path<test");
-      expect(html1).toContain('href="http://www.example.com/path"');
-      expect(html1).toContain("&lt;test");
+      expect(html1).toBe(
+        '<p>Visit <a href="http://www.example.com/path" rel="noreferrer noopener" target="_blank">www.example.com/path</a>&lt;test</p>\n',
+      );
 
       // <tag> pattern — stops before <
       const html2 = toSanitizedMarkdownHtml("Visit www.example.com/<token> here");
-      expect(html2).toContain('href="http://www.example.com/"');
-      expect(html2).toContain("&lt;token&gt;");
+      expect(html2).toBe(
+        '<p>Visit <a href="http://www.example.com/" rel="noreferrer noopener" target="_blank">www.example.com/</a>&lt;token&gt; here</p>\n',
+      );
     });
 
     it("does NOT link bare domains without www", () => {
