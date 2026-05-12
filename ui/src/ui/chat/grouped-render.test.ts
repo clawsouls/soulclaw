@@ -1379,7 +1379,12 @@ describe("grouped chat rendering", () => {
 
     renderWithToken(null);
     await flushAssistantAttachmentAvailabilityChecks();
-    expect(container.textContent).toContain("Unavailable");
+    expect(container.querySelector(".chat-assistant-attachment-badge")?.textContent?.trim()).toBe(
+      "Unavailable",
+    );
+    expect(
+      container.querySelector(".chat-assistant-attachment-card__reason")?.textContent?.trim(),
+    ).toBe("Attachment unavailable");
 
     renderWithToken("fresh-token");
     await flushAssistantAttachmentAvailabilityChecks();
@@ -1395,13 +1400,11 @@ describe("grouped chat rendering", () => {
       "/openclaw/__openclaw__/assistant-media?source=%2Ftmp%2Fopenclaw%2Ftest+image.png&meta=1",
     );
     expectSameOriginGet(secondFetchInit);
-    expectElement(container, ".chat-message-image", HTMLImageElement);
-    expect(
-      container.querySelector<HTMLImageElement>(".chat-message-image")?.getAttribute("src"),
-    ).toBe(
+    const image = expectElement(container, ".chat-message-image", HTMLImageElement);
+    expect(image.getAttribute("src")).toBe(
       "/openclaw/__openclaw__/assistant-media?source=%2Ftmp%2Fopenclaw%2Ftest+image.png&mediaTicket=ticket-fresh",
     );
-    expect(container.textContent).not.toContain("Unavailable");
+    expect(container.querySelector(".chat-assistant-attachment-badge")).toBeNull();
     vi.unstubAllGlobals();
   });
 
