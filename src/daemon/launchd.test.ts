@@ -694,9 +694,12 @@ describe("launchd install", () => {
 
     await stopLaunchAgent({ env, stdout, disable: true });
 
-    expect(state.launchctlCalls).toContainEqual([
-      "disable",
-      `${typeof process.getuid === "function" ? `gui/${process.getuid()}` : "gui/501"}/ai.openclaw.gateway`,
+    const domain = typeof process.getuid === "function" ? `gui/${process.getuid()}` : "gui/501";
+    const serviceId = `${domain}/ai.openclaw.gateway`;
+    expect(state.launchctlCalls).toEqual([
+      ["disable", serviceId],
+      ["stop", "ai.openclaw.gateway"],
+      ["print", serviceId],
     ]);
     expect(launchctlCommandNames()).not.toContain("bootout");
     expect(output).toContain("Stopped LaunchAgent");
@@ -860,8 +863,10 @@ describe("launchd install", () => {
     const serviceId = `${domain}/${label}`;
     expect(result).toEqual({ outcome: "completed" });
     expect(cleanStaleGatewayProcessesSync).toHaveBeenCalledWith(18789);
-    expect(state.launchctlCalls).toContainEqual(["enable", serviceId]);
-    expect(state.launchctlCalls).toContainEqual(["kickstart", "-k", serviceId]);
+    expect(state.launchctlCalls).toEqual([
+      ["enable", serviceId],
+      ["kickstart", "-k", serviceId],
+    ]);
     expect(launchctlCommandNames()).not.toContain("bootout");
     expect(launchctlCommandNames()).not.toContain("bootstrap");
   });
