@@ -1593,15 +1593,24 @@ describe("grouped chat rendering", () => {
     renderMessage();
     await flushAssistantAttachmentAvailabilityChecks();
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(container.textContent).toContain("Unavailable");
+    expect(container.querySelector(".chat-assistant-attachment-badge")?.textContent?.trim()).toBe(
+      "Unavailable",
+    );
+    expect(
+      container.querySelector(".chat-assistant-attachment-card__reason")?.textContent?.trim(),
+    ).toBe("Attachment unavailable");
 
     vi.advanceTimersByTime(5_001);
     renderMessage();
     await flushAssistantAttachmentAvailabilityChecks();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expectElement(container, ".chat-message-image", HTMLImageElement);
-    expect(container.textContent).not.toContain("Unavailable");
+    expect(
+      expectElement(container, ".chat-message-image", HTMLImageElement).getAttribute("src"),
+    ).toBe(
+      "/openclaw/__openclaw__/assistant-media?source=%2Ftmp%2Fopenclaw%2Ftest+image.png&mediaTicket=ticket-retry",
+    );
+    expect(container.querySelector(".chat-assistant-attachment-badge")).toBeNull();
 
     vi.useRealTimers();
     vi.unstubAllGlobals();
