@@ -278,10 +278,12 @@ describe("context notice", () => {
     expect(lowUsage.compactRecommended).toBe(false);
     render(renderContextNotice(lowUsageSession, 200_000), container);
     const lowNotice = container.querySelector<HTMLElement>(".context-notice--usage");
-    expect(lowNotice?.textContent?.replace(/\s+/gu, " ").trim()).toBe(
+    expect(lowNotice).toBeInstanceOf(HTMLElement);
+    expect([...lowNotice!.classList]).toEqual(["context-notice", "context-notice--usage"]);
+    expect(lowNotice!.textContent?.replace(/\s+/gu, " ").trim()).toBe(
       "23% context used 46k / 200k",
     );
-    expect(lowNotice?.querySelector(".context-notice__detail")?.textContent).toBe("46k / 200k");
+    expect(lowNotice!.querySelector(".context-notice__detail")?.textContent).toBe("46k / 200k");
     expect(container.querySelectorAll(".context-notice__meter")).toHaveLength(1);
     expect(container.querySelector(".context-notice__icon")).toBeNull();
     expect(container.textContent).not.toContain("757.3k / 200k");
@@ -299,26 +301,29 @@ describe("context notice", () => {
     expect(getContextNoticeViewModel(session, 200_000)?.compactRecommended).toBe(true);
     expect(container.textContent).not.toContain("757.3k / 200k");
     const notice = container.querySelector<HTMLElement>(".context-notice");
-    expect(notice?.textContent?.replace(/\s+/gu, " ").trim()).toBe("95% context used 190k / 200k");
-    expect(notice?.querySelector(".context-notice__detail")?.textContent).toBe("190k / 200k");
-    expect(notice?.classList.contains("context-notice--warning")).toBe(true);
-    expect(notice?.getAttribute("title")).toBe("Session context usage: 190k / 200k (95%)");
-    expect(notice?.style.getPropertyValue("--ctx-color")).toContain("rgb(");
-    expect(notice?.style.getPropertyValue("--ctx-color")).toContain("4, 5, 6");
-    expect(notice?.style.getPropertyValue("--ctx-color")).not.toContain("NaN");
-    expect(notice?.style.getPropertyValue("--ctx-bg")).not.toContain("NaN");
+    expect(notice).toBeInstanceOf(HTMLElement);
+    expect(notice!.textContent?.replace(/\s+/gu, " ").trim()).toBe("95% context used 190k / 200k");
+    expect(notice!.querySelector(".context-notice__detail")?.textContent).toBe("190k / 200k");
+    expect([...notice!.classList]).toEqual(["context-notice", "context-notice--warning"]);
+    expect(notice!.getAttribute("title")).toBe("Session context usage: 190k / 200k (95%)");
+    expect(notice!.style.getPropertyValue("--ctx-color")).toContain("rgb(");
+    expect(notice!.style.getPropertyValue("--ctx-color")).toContain("4, 5, 6");
+    expect(notice!.style.getPropertyValue("--ctx-color")).not.toContain("NaN");
+    expect(notice!.style.getPropertyValue("--ctx-bg")).not.toContain("NaN");
 
     const icon = container.querySelector<SVGElement>(".context-notice__icon");
-    expect(icon?.tagName.toLowerCase()).toBe("svg");
-    expect(icon?.classList.contains("context-notice__icon")).toBe(true);
-    expect(icon?.getAttribute("width")).toBe("16");
-    expect(icon?.getAttribute("height")).toBe("16");
-    expect(icon?.querySelectorAll("path")).toHaveLength(1);
+    expect(icon).toBeInstanceOf(SVGElement);
+    expect(icon!.tagName.toLowerCase()).toBe("svg");
+    expect([...icon!.classList]).toEqual(["context-notice__icon"]);
+    expect(icon!.getAttribute("width")).toBe("16");
+    expect(icon!.getAttribute("height")).toBe("16");
+    expect(icon!.querySelectorAll("path")).toHaveLength(1);
 
     const onCompact = vi.fn();
     render(renderContextNotice(session, 200_000, { onCompact }), container);
-    expect(container.textContent).toContain("Compact");
-    getButton(container, ".context-notice__action").click();
+    const compactButton = getButton(container, ".context-notice__action");
+    expect(compactButton.textContent?.trim()).toBe("Compact");
+    compactButton.click();
     expect(onCompact).toHaveBeenCalledTimes(1);
 
     expect(
