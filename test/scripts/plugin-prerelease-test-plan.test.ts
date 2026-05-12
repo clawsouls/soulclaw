@@ -72,7 +72,7 @@ describe("scripts/lib/plugin-prerelease-test-plan.mjs", () => {
 
     expect(plan.dockerLanes).not.toContain("openai-web-search-minimal");
     expect(plan.dockerLanes.some((lane) => lane.startsWith("live-"))).toBe(false);
-    expect(plan.staticChecks).toContainEqual({
+    expect(plan.staticChecks[2]).toEqual({
       check: "live-ish-availability",
       checkName: "checks-plugin-prerelease-live-ish-availability",
       command: "node scripts/plugin-prerelease-liveish-matrix.mjs",
