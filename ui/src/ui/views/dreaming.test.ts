@@ -485,10 +485,12 @@ describe("dreaming view", () => {
     const prose = [...container.querySelectorAll(".dreams-diary__para")].map((node) =>
       node.textContent?.trim(),
     );
-    expect(prose).toContain("Always use Happy Together for flights.");
-    expect(prose).toContain("Stable preferences were made explicit.");
-    expect(prose).toContain("Happy Together rule");
-    expect(prose).toContain("Use Happy Together for flights.");
+    expect(prose).toEqual([
+      "Always use Happy Together for flights.",
+      "Stable preferences were made explicit.",
+      "Happy Together rule",
+      "Use Happy Together for flights.",
+    ]);
     expect(container.querySelector(".dreams-diary__panel-title")).toBeNull();
     setDreamSubTab("scene");
   });
