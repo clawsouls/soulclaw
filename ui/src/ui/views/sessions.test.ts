@@ -593,10 +593,11 @@ describe("sessions view", () => {
     );
     await Promise.resolve();
 
-    const compactionCell = container.querySelector("tbody .session-compaction-col");
-    expect(compactionCell?.textContent).toContain("1 Checkpoint");
-    expect(compactionCell?.textContent).not.toContain("manual");
     const trigger = container.querySelector<HTMLButtonElement>(".session-compaction-trigger");
+    expect(trigger?.querySelector(".session-compaction-count")?.textContent?.trim()).toBe(
+      "1 Checkpoint",
+    );
+    expect(trigger?.textContent?.trim()).toBe("1 Checkpoint");
     expect(trigger?.getAttribute("aria-expanded")).toBe("false");
     expect(container.querySelector(".session-checkpoint-toggle")).toBeNull();
 
