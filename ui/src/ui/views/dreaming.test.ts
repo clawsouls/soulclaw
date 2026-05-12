@@ -206,6 +206,10 @@ function expectElement(container: Element, selector: string): Element {
   return element;
 }
 
+function compactText(node: Element | null): string | undefined {
+  return node?.textContent?.trim().replace(/\s+/g, " ");
+}
+
 describe("dreaming view", () => {
   it("renders the active dream scene chrome and status", () => {
     const container = renderInto(buildProps({ dreamingOf: "reindexing old chats\u2026" }));
@@ -272,15 +276,18 @@ describe("dreaming view", () => {
     setDreamDiarySubTab("insights");
     const container = renderInto(buildProps());
     expect(container.querySelectorAll(".dreams-diary__subtab").length).toBe(3);
-    expect(container.querySelector(".dreams-diary__date")?.textContent).toContain("Travel");
-    expect(container.querySelector(".dreams-diary__insight-card")?.textContent).toContain(
+    expect(compactText(container.querySelector(".dreams-diary__date"))).toBe(
+      "Travel · 1 chats · 1 signals",
+    );
+    const insight = container.querySelector(".dreams-diary__insight-card");
+    expect(insight?.querySelector(".dreams-diary__insight-title")?.textContent).toBe(
       "BA flight receipts process",
     );
-    expect(container.querySelector(".dreams-diary__insight-card")?.textContent).toContain(
+    expect(insight?.querySelector(".dreams-diary__insight-line")?.textContent).toBe(
       "Use the BA request-a-receipt flow first.",
     );
-    expect(container.querySelector(".dreams-diary__explainer")?.textContent).toContain(
-      "imported insights clustered from external history",
+    expect(compactText(container.querySelector(".dreams-diary__explainer"))).toBe(
+      "These are imported insights clustered from external history; use them to review what imports surfaced before any of it graduates into durable memory.",
     );
     setDreamDiarySubTab("dreams");
     setDreamSubTab("scene");
@@ -356,13 +363,18 @@ describe("dreaming view", () => {
     setDreamSubTab("diary");
     setDreamDiarySubTab("palace");
     const container = renderInto(buildProps());
-    expect(container.querySelector(".dreams-diary__date")?.textContent).toContain("Syntheses");
-    expect(container.querySelector(".dreams-diary__insight-card")?.textContent).toContain(
+    expect(compactText(container.querySelector(".dreams-diary__date"))).toBe(
+      "Syntheses · 1 pages · 2 claims · 1 questions · 1 contradictions",
+    );
+    const insight = container.querySelector(".dreams-diary__insight-card");
+    expect(insight?.querySelector(".dreams-diary__insight-title")?.textContent).toBe(
       "Travel system",
     );
-    expect(container.querySelector(".dreams-diary__insight-card")?.textContent).toContain("Claims");
-    expect(container.querySelector(".dreams-diary__explainer")?.textContent).toContain(
-      "compiled memory wiki surface",
+    expect(insight?.querySelector(".dreams-diary__insight-list strong")?.textContent).toBe(
+      "Claims",
+    );
+    expect(compactText(container.querySelector(".dreams-diary__explainer"))).toBe(
+      "This is the compiled memory wiki surface the system can search and reason over; use it to inspect actual memory pages, claims, open questions, and contradictions rather than raw imported source chats.",
     );
     setDreamDiarySubTab("dreams");
     setDreamSubTab("scene");
