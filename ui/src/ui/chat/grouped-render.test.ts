@@ -1062,7 +1062,7 @@ describe("grouped chat rendering", () => {
     const documentLink = container.querySelector<HTMLAnchorElement>(
       ".chat-assistant-attachment-card__link",
     );
-    expect(documentLink?.textContent).toContain("user-upload.pdf");
+    expect(documentLink?.textContent?.trim()).toBe("user-upload.pdf");
     expect(documentLink?.getAttribute("href")).toBe("/__openclaw__/media/user-upload.pdf");
     vi.unstubAllGlobals();
   });
