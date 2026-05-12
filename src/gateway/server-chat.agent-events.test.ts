@@ -1201,9 +1201,10 @@ describe("agent event handler", () => {
       data?: { name?: string; args?: Record<string, unknown> };
     };
     expect(payload.stream).toBe("tool");
-    expect(payload.data).toMatchObject({
+    expect(payload.data).toEqual({
       phase: "start",
       name: "exec",
+      toolCallId: "tool-search-node-1",
       bridgeToolName: "tool_search_code",
       bridgeTargetToolName: "openclaw:core:exec",
       bridgeVerb: "call",
