@@ -215,22 +215,14 @@ describe("shared Codex app-server client", () => {
 
     await expect(clientPromise).resolves.toBe(harness.client);
     expect(mocks.resolveCodexAppServerAuthProfileIdForAgent).not.toHaveBeenCalled();
-    const [bridgeCall] = mocks.bridgeCodexAppServerStartOptions.mock.calls[0] ?? [];
-    expect(bridgeCall).toEqual(
-      expect.objectContaining({
-        agentDir: "/tmp/openclaw-target-agent",
-        authProfileId: null,
-        config,
-      }),
-    );
-    const [applyCall] = mocks.applyCodexAppServerAuthProfile.mock.calls[0] ?? [];
-    expect(applyCall).toEqual(
-      expect.objectContaining({
-        agentDir: "/tmp/openclaw-target-agent",
-        authProfileId: null,
-        config,
-      }),
-    );
+    const bridgeCall = bridgeStartOptionsCall();
+    expect(bridgeCall.agentDir).toBe("/tmp/openclaw-target-agent");
+    expect(bridgeCall.authProfileId).toBeNull();
+    expect(bridgeCall.config).toBe(config);
+    const applyCall = applyAuthProfileCall();
+    expect(applyCall.agentDir).toBe("/tmp/openclaw-target-agent");
+    expect(applyCall.authProfileId).toBeNull();
+    expect(applyCall.config).toBe(config);
   });
 
   it("resolves the configured implicit auth profile before sharing a client", async () => {
