@@ -241,7 +241,9 @@ describe("dreaming view", () => {
     const label = container.querySelector(".dreams__status-label");
     expect(label?.textContent).toBe("Dreaming Active");
     const detail = container.querySelector(".dreams__status-detail span");
-    expect(detail?.textContent).toContain("4:00 AM");
+    expect(detail?.textContent?.trim().replace(/\s+/g, " ")).toBe(
+      "12 promoted · next sweep 4:00 AM · America/Los_Angeles",
+    );
     const tabs = container.querySelectorAll(".dreams__tab");
     expect([...tabs].map((tab) => tab.textContent?.trim())).toEqual(["Scene", "Diary", "Advanced"]);
   });
@@ -260,7 +262,7 @@ describe("dreaming view", () => {
     expect(unknownPhaseContainer.querySelectorAll(".dreams__phase--off").length).toBe(0);
 
     const errorContainer = renderInto(buildProps({ statusError: "patch failed" }));
-    expect(errorContainer.querySelector(".dreams__controls-error")?.textContent).toContain(
+    expect(errorContainer.querySelector(".dreams__controls-error")?.textContent?.trim()).toBe(
       "patch failed",
     );
   });
