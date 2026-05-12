@@ -59,8 +59,8 @@ describe("Control UI mount fallback", () => {
     expect(frameWindow.document.body.classList.contains("openclaw-mount-fallback-active")).toBe(
       true,
     );
-    expect(fallback?.textContent).toContain("Control UI did not start");
-    expect(fallback?.textContent).toContain("Control UI troubleshooting");
+    expect(fallback?.querySelector("h1")?.textContent?.trim()).toBe("Control UI did not start");
+    expect(fallback?.querySelector("a")?.textContent?.trim()).toBe("Control UI troubleshooting");
     expect(frameWindow.document.activeElement?.classList.contains("mount-fallback__panel")).toBe(
       true,
     );
