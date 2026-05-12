@@ -334,7 +334,12 @@ describe("parseSlashCommand", () => {
       includeArgs: true,
       scope: "text",
     });
-    expect(SLASH_COMMANDS.map((entry) => entry.name)).toContain("pair");
+    expectRecordFields(requireCommandByName("pair"), "pair command", {
+      name: "pair",
+      description: "Generate setup codes.",
+      executeLocal: false,
+      tier: "standard",
+    });
   });
 
   it("falls back safely when the gateway returns malformed command payload shapes", async () => {
@@ -372,7 +377,11 @@ describe("parseSlashCommand", () => {
       agentId: "main",
     });
     expect(SLASH_COMMANDS.find((entry) => entry.name === "pair")).toBeUndefined();
-    expect(SLASH_COMMANDS.map((entry) => entry.name)).toContain("help");
+    expectRecordFields(requireCommandByName("help"), "help command", {
+      key: "help",
+      name: "help",
+      executeLocal: true,
+    });
 
     await refreshSlashCommands({
       client: { request } as never,
@@ -432,7 +441,12 @@ describe("parseSlashCommand", () => {
     }
     await pending;
 
-    expect(SLASH_COMMANDS.map((entry) => entry.name)).toContain("pair");
+    expectRecordFields(requireCommandByName("pair"), "pair command", {
+      name: "pair",
+      description: "Generate setup codes.",
+      executeLocal: false,
+      tier: "standard",
+    });
     expect(SLASH_COMMANDS.find((entry) => entry.name === "dreaming")).toBeUndefined();
   });
 });
