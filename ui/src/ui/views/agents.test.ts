@@ -401,7 +401,9 @@ describe("renderAgentFiles", () => {
     expect(container.querySelector(".md-preview-dialog__chip strong")?.textContent).toBe(
       "Saved Preview",
     );
-    expect(container.textContent).toContain("Markdown Preview");
+    expect(container.querySelector(".md-preview-dialog__eyebrow span")?.textContent?.trim()).toBe(
+      "Markdown Preview",
+    );
   });
 
   it("renders preview header controls as icon-only buttons with accessible labels", () => {
