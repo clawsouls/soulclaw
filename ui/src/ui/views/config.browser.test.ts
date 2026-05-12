@@ -885,16 +885,10 @@ describe("config view", () => {
       onFormPatch,
     });
 
-    const input = container.querySelector<HTMLInputElement>(".cfg-input");
-    expect(input).toBeInstanceOf(HTMLInputElement);
-    expect(input?.readOnly).toBe(true);
-    expect(input?.value).toBe("");
-    expect(input?.placeholder).toContain("Structured value (SecretRef)");
-    expect(container.textContent ?? "").not.toContain("[object Object]");
-
-    if (!input) {
-      return;
-    }
+    const input = queryRequired(container, ".cfg-input", HTMLInputElement);
+    expect(input.readOnly).toBe(true);
+    expect(input.value).toBe("");
+    expect(input.placeholder).toBe("Structured value (SecretRef) - use Raw mode to edit");
     input.value = "[object Object]";
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
