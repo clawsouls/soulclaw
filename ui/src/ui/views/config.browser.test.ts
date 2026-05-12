@@ -696,18 +696,22 @@ describe("config view", () => {
     details.open = true;
     details.dispatchEvent(new Event("toggle"));
 
-    const text = normalizedText(container);
-    expect(text).toContain("channels.discord.token.id");
-    expect(text).toContain("[redacted - click reveal to view]");
-    expect(text).not.toContain("TOKEN_BEFORE");
-    expect(text).not.toContain("TOKEN_AFTER");
+    const item = queryRequired(container, ".config-diff__item", HTMLElement);
+    expect(item.querySelector(".config-diff__path")?.textContent?.trim()).toBe(
+      "channels.discord.token.id",
+    );
+    expect(item.querySelector(".config-diff__from")?.textContent?.trim()).toBe(
+      "[redacted - click reveal to view]",
+    );
+    expect(item.querySelector(".config-diff__to")?.textContent?.trim()).toBe(
+      "[redacted - click reveal to view]",
+    );
 
     const revealButton = queryRequired(container, ".config-raw-toggle", HTMLButtonElement);
     revealButton.click();
 
-    const revealedText = normalizedText(container);
-    expect(revealedText).toContain("TOKEN_BEFORE");
-    expect(revealedText).toContain("TOKEN_AFTER");
+    expect(item.querySelector(".config-diff__from")?.textContent?.trim()).toBe('"TOKEN_BEFORE"');
+    expect(item.querySelector(".config-diff__to")?.textContent?.trim()).toBe('"TOKEN_AFTER"');
   });
 
   it("resets raw reveal state when the config context changes", () => {
