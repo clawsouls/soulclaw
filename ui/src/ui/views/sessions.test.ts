@@ -81,6 +81,26 @@ function readSessionDetailStats(container: ParentNode): Map<string, string> {
   );
 }
 
+function sessionTableHeaders(container: HTMLElement): Array<string | undefined> {
+  return Array.from(container.querySelectorAll("thead th")).map((cell) => cell.textContent?.trim());
+}
+
+const SESSION_TABLE_HEADERS = [
+  "",
+  "Key",
+  "Label",
+  "Kind",
+  "Status",
+  "Runtime",
+  "Updated",
+  "Tokens",
+  "Compaction",
+  "Thinking",
+  "Fast",
+  "Verbose",
+  "Reasoning",
+];
+
 describe("sessions view", () => {
   it("renders an explicit archived-session toggle", async () => {
     const container = document.createElement("div");
@@ -462,9 +482,7 @@ describe("sessions view", () => {
     );
     await Promise.resolve();
 
-    expect(
-      Array.from(container.querySelectorAll("thead th")).map((cell) => cell.textContent?.trim()),
-    ).toContain("Status");
+    expect(sessionTableHeaders(container)).toEqual(SESSION_TABLE_HEADERS);
     const badges = Array.from(container.querySelectorAll(".session-status-badge"));
     expect(badges.map((badge) => badge.textContent?.trim())).toEqual(["Live", "Idle", "Failed"]);
     expect(badges.map((badge) => [...badge.classList])).toEqual([
@@ -505,9 +523,7 @@ describe("sessions view", () => {
     );
     await Promise.resolve();
 
-    expect(
-      Array.from(container.querySelectorAll("thead th")).map((cell) => cell.textContent?.trim()),
-    ).toContain("Runtime");
+    expect(sessionTableHeaders(container)).toEqual(SESSION_TABLE_HEADERS);
     expect(container.querySelector(".session-runtime-cell")?.textContent?.trim()).toBe(
       "claude-cli (fallback none)",
     );
