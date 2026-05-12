@@ -415,50 +415,35 @@ describe("toSanitizedMarkdownHtml", () => {
   describe("security", () => {
     it("blocks javascript: in links via DOMPurify", () => {
       const html = toSanitizedMarkdownHtml("[click me](javascript:alert(1))");
-      // DOMPurify strips dangerous href schemes but keeps the anchor text
-      expect(html).not.toContain('href="javascript:');
-      expect(html).toContain("click me");
+      expect(html).toBe("<p><a>click me</a></p>\n");
     });
 
     it("shows alt text for javascript: images", () => {
       const html = toSanitizedMarkdownHtml("![Build log](javascript:alert(1))");
-      expect(html).not.toContain("<img");
-      expect(html).not.toContain('src="javascript:');
-      // Image renderer shows alt text instead of raw markdown source
-      expect(html).toContain("Build log");
-      expect(html).not.toContain("![Build log]");
+      expect(html).toBe("<p>Build log</p>\n");
     });
 
     it("shows alt text for vbscript: and file: images", () => {
       const html1 = toSanitizedMarkdownHtml("![Alt1](vbscript:msgbox(1))");
-      expect(html1).toContain("Alt1");
-      expect(html1).not.toContain("<img");
+      expect(html1).toBe("<p>Alt1</p>\n");
 
       const html2 = toSanitizedMarkdownHtml("![Alt2](file:///etc/passwd)");
-      expect(html2).toContain("Alt2");
-      expect(html2).not.toContain("<img");
+      expect(html2).toBe("<p>Alt2</p>\n");
     });
 
     it("renders non-image data: URIs as inert links (marked.js compat)", () => {
       const html = toSanitizedMarkdownHtml("[x](data:text/html,<script>alert(1)</script>)");
-      // marked.js generates <a> for all URLs; DOMPurify strips dangerous href.
-      // Result: anchor text visible but link is inert (no href or stripped href).
-      expect(html).toContain(">x<");
-      expect(html).not.toContain('href="data:text/html');
+      expect(html).toBe("<p><a>x</a></p>\n");
     });
 
     it("does not auto-link bare file:// URIs", () => {
       const html = toSanitizedMarkdownHtml("Check file:///etc/passwd");
-      // Bare file:// without www. or http:// should NOT be auto-linked
-      expect(html).not.toContain("<a");
-      expect(html).toContain("file:///etc/passwd");
+      expect(html).toBe("<p>Check file:///etc/passwd</p>\n");
     });
 
     it("strips href from explicit file:// links via DOMPurify", () => {
       const html = toSanitizedMarkdownHtml("[click](file:///etc/passwd)");
-      // DOMPurify strips file: scheme, leaving anchor text
-      expect(html).not.toContain('href="file:');
-      expect(html).toContain("click");
+      expect(html).toBe("<p><a>click</a></p>\n");
     });
   });
 
