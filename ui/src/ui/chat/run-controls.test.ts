@@ -275,9 +275,11 @@ describe("context notice", () => {
     expect(lowUsage.warning).toBe(false);
     expect(lowUsage.compactRecommended).toBe(false);
     render(renderContextNotice(lowUsageSession, 200_000), container);
-    expect(container.textContent).toContain("23% context used");
-    expect(container.textContent).toContain("46k / 200k");
-    expect(container.querySelectorAll(".context-notice--usage")).toHaveLength(1);
+    const lowNotice = container.querySelector<HTMLElement>(".context-notice--usage");
+    expect(lowNotice?.textContent?.replace(/\s+/gu, " ").trim()).toBe(
+      "23% context used 46k / 200k",
+    );
+    expect(lowNotice?.querySelector(".context-notice__detail")?.textContent).toBe("46k / 200k");
     expect(container.querySelectorAll(".context-notice__meter")).toHaveLength(1);
     expect(container.querySelector(".context-notice__icon")).toBeNull();
     expect(container.textContent).not.toContain("757.3k / 200k");
@@ -292,11 +294,11 @@ describe("context notice", () => {
     };
     render(renderContextNotice(session, 200_000), container);
 
-    expect(container.textContent).toContain("95% context used");
-    expect(container.textContent).toContain("190k / 200k");
     expect(getContextNoticeViewModel(session, 200_000)?.compactRecommended).toBe(true);
     expect(container.textContent).not.toContain("757.3k / 200k");
     const notice = container.querySelector<HTMLElement>(".context-notice");
+    expect(notice?.textContent?.replace(/\s+/gu, " ").trim()).toBe("95% context used 190k / 200k");
+    expect(notice?.querySelector(".context-notice__detail")?.textContent).toBe("190k / 200k");
     expect(notice?.classList.contains("context-notice--warning")).toBe(true);
     expect(notice?.getAttribute("title")).toBe("Session context usage: 190k / 200k (95%)");
     expect(notice?.style.getPropertyValue("--ctx-color")).toContain("rgb(");
