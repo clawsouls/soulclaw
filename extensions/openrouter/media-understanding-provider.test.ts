@@ -113,13 +113,14 @@ describe("openrouter media understanding provider", () => {
       fetchFn: fetch,
     });
 
-    expect(postJsonRequestMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          temperature: 0.2,
-        }),
-      }),
-    );
+    expect(postJsonRequestMock.mock.calls.at(0)?.[0]?.body).toEqual({
+      model: "openai/whisper-large-v3-turbo",
+      input_audio: {
+        data: Buffer.from("audio").toString("base64"),
+        format: "webm",
+      },
+      temperature: 0.2,
+    });
   });
 
   it("falls back to filename extension when mime is missing", async () => {
@@ -137,13 +138,13 @@ describe("openrouter media understanding provider", () => {
       fetchFn: fetch,
     });
 
-    expect(postJsonRequestMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          input_audio: expect.objectContaining({ format: "ogg" }),
-        }),
-      }),
-    );
+    expect(postJsonRequestMock.mock.calls.at(0)?.[0]?.body).toEqual({
+      model: "openai/whisper-large-v3-turbo",
+      input_audio: {
+        data: Buffer.from("audio").toString("base64"),
+        format: "ogg",
+      },
+    });
   });
 
   it("maps mp4 filename extension to m4a when mime is missing", async () => {
@@ -161,13 +162,13 @@ describe("openrouter media understanding provider", () => {
       fetchFn: fetch,
     });
 
-    expect(postJsonRequestMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          input_audio: expect.objectContaining({ format: "m4a" }),
-        }),
-      }),
-    );
+    expect(postJsonRequestMock.mock.calls.at(0)?.[0]?.body).toEqual({
+      model: "openai/whisper-large-v3-turbo",
+      input_audio: {
+        data: Buffer.from("audio").toString("base64"),
+        format: "m4a",
+      },
+    });
   });
 
   it("normalizes parameterized mime for extensionless filenames", async () => {
@@ -186,13 +187,13 @@ describe("openrouter media understanding provider", () => {
       fetchFn: fetch,
     });
 
-    expect(postJsonRequestMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          input_audio: expect.objectContaining({ format: "ogg" }),
-        }),
-      }),
-    );
+    expect(postJsonRequestMock.mock.calls.at(0)?.[0]?.body).toEqual({
+      model: "openai/whisper-large-v3-turbo",
+      input_audio: {
+        data: Buffer.from("audio").toString("base64"),
+        format: "ogg",
+      },
+    });
   });
 
   it("throws when format cannot be resolved", async () => {
