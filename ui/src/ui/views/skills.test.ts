@@ -233,13 +233,12 @@ describe("renderSkills", () => {
     await Promise.resolve();
 
     expect(showModal).toHaveBeenCalledTimes(1);
-    const text = normalizeText(container);
-    expect(text).toContain("rate limited");
-    expect(text).toContain("Installed github");
-    expect(text).toContain("By OpenClaw (@openclaw)");
-    expect(text).toContain("Latest: v1.2.3");
-    expect(text).toContain("Platforms: macos, linux");
-    expect(text).toContain("Added search support");
+    expect(
+      Array.from(container.querySelectorAll(".callout")).map((node) => normalizeText(node)),
+    ).toEqual(["rate limited", "Installed github"]);
+    expect(normalizeText(container.querySelector(".md-preview-dialog__body")!)).toBe(
+      "GitHub integration for OpenClaw By OpenClaw (@openclaw) Latest: v1.2.3 Added search support Platforms: macos, linux Install GitHub",
+    );
 
     const detailInstallButton = container.querySelector<HTMLButtonElement>(
       ".md-preview-dialog__body .btn.primary",
