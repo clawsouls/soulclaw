@@ -369,7 +369,7 @@ describe("sessions view", () => {
     await Promise.resolve();
 
     const keyCell = container.querySelector(".session-key-cell");
-    expect(keyCell?.textContent).toContain("📊 Data Expert (dingtalk)");
+    expect(keyCell?.textContent?.trim()).toBe("📊 Data Expert (dingtalk)");
     expect(keyCell?.getAttribute("title")).toBe("📊 Data Expert (dingtalk)");
   });
 
@@ -390,7 +390,7 @@ describe("sessions view", () => {
     await Promise.resolve();
 
     const keyCell = container.querySelector(".session-key-cell");
-    expect(keyCell?.textContent).toContain("agent:unknown-agent:telegram:abc123");
+    expect(keyCell?.textContent?.trim()).toBe("agent:unknown-agent:telegram:abc123");
     expect(keyCell?.getAttribute("title")).toBe("agent:unknown-agent:telegram:abc123");
   });
 
