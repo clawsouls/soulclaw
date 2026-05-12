@@ -747,17 +747,20 @@ describe("grouped chat rendering", () => {
       isToolMessageExpanded: () => false,
     });
 
-    expect(container.textContent).not.toContain("Input");
-    expect(container.textContent).not.toContain("Output");
+    expect(container.querySelector(".chat-tool-msg-body")).toBeNull();
 
     renderAssistantMessage(container, message, {
       isToolMessageExpanded: () => true,
     });
 
-    expect(container.textContent).toContain("Tool input");
-    expect(container.textContent).toContain("Tool output");
-    expect(container.textContent).toContain("https://example.com");
-    expect(container.textContent).toContain("Opened page");
+    const blocks = Array.from(container.querySelectorAll(".chat-tool-card__block"));
+    expect(
+      blocks.map((block) => block.querySelector(".chat-tool-card__block-label")?.textContent),
+    ).toEqual(["Tool input", "Tool output"]);
+    expect(blocks.map((block) => block.querySelector("code")?.textContent)).toEqual([
+      '{\n  "url": "https://example.com"\n}',
+      "Opened page",
+    ]);
   });
 
   it("renders expanded standalone tool-call rows", () => {
@@ -782,15 +785,19 @@ describe("grouped chat rendering", () => {
 
     expectElement(container, ".chat-bubble--tool-shell", HTMLElement);
     const summary = container.querySelector<HTMLElement>(".chat-tool-msg-summary");
-    expect(summary?.textContent).toContain("sessions_spawn");
-    expect(container.textContent).not.toContain('"thread": true');
+    expect(summary?.querySelector(".chat-tool-msg-summary__label")?.textContent).toBe(
+      "sessions_spawn",
+    );
+    expect(container.querySelector(".chat-tool-msg-body")).toBeNull();
 
     renderAssistantMessage(container, message, {
       isToolMessageExpanded: () => true,
     });
 
-    expect(container.textContent).toContain("Tool input");
-    expect(container.textContent).toContain('"thread": true');
+    expect(container.querySelector(".chat-tool-card__block-label")?.textContent).toBe("Tool input");
+    expect(container.querySelector(".chat-tool-card__block code")?.textContent).toBe(
+      '{\n  "mode": "session",\n  "thread": true\n}',
+    );
   });
 
   it("renders expanded tool output rows and their json content", () => {
