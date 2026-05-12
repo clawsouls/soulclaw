@@ -606,19 +606,22 @@ describe("config view", () => {
       );
     rerender();
 
-    expect(normalizedText(container)).toContain("View pending changes");
-    expect(normalizedText(container)).not.toContain("gateway.mode");
-
     const details = queryRequired(container, ".config-diff", HTMLDetailsElement);
+    expect(details.querySelector(".config-diff__summary span")?.textContent?.trim()).toBe(
+      "View pending changes",
+    );
+    expect(details.querySelector(".config-diff__item")?.textContent?.trim()).toBe(
+      "Changes detected (JSON diff not available)",
+    );
     details.open = true;
     details.dispatchEvent(new Event("toggle"));
 
-    const text = normalizedText(container);
     expect(updateCount).toBe(1);
     expect(onRawChange).not.toHaveBeenCalled();
-    expect(text).toContain("gateway.mode");
-    expect(text).toContain('"local"');
-    expect(text).toContain('"remote"');
+    const item = queryRequired(container, ".config-diff__item", HTMLElement);
+    expect(item.querySelector(".config-diff__path")?.textContent?.trim()).toBe("gateway.mode");
+    expect(item.querySelector(".config-diff__from")?.textContent?.trim()).toBe('"local"');
+    expect(item.querySelector(".config-diff__to")?.textContent?.trim()).toBe('"remote"');
   });
 
   it("renders array diff summaries without serializing array values", () => {
@@ -637,11 +640,14 @@ describe("config view", () => {
       },
     });
 
-    const text = normalizedText(container);
-    expect(text).toContain("View 1 pending change");
-    expect(text).toContain("items");
-    expect(text).toContain("[0 items]");
-    expect(text).toContain("[1 item]");
+    const details = queryRequired(container, ".config-diff", HTMLDetailsElement);
+    expect(details.querySelector(".config-diff__summary span")?.textContent?.trim()).toBe(
+      "View 1 pending change",
+    );
+    const item = queryRequired(container, ".config-diff__item", HTMLElement);
+    expect(item.querySelector(".config-diff__path")?.textContent?.trim()).toBe("items");
+    expect(item.querySelector(".config-diff__from")?.textContent?.trim()).toBe("[0 items]");
+    expect(item.querySelector(".config-diff__to")?.textContent?.trim()).toBe("[1 item]");
   });
 
   it("redacts sensitive values in raw pending changes until raw values are revealed", () => {
