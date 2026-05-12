@@ -10,83 +10,71 @@ function createMentionClient(selfUserId = "@bot:example.org") {
 describe("markdownToMatrixHtml", () => {
   it("renders basic inline formatting", () => {
     const html = markdownToMatrixHtml("hi _there_ **boss** `code`");
-    expect(html).toContain("<em>there</em>");
-    expect(html).toContain("<strong>boss</strong>");
-    expect(html).toContain("<code>code</code>");
+    expect(html).toBe("<p>hi <em>there</em> <strong>boss</strong> <code>code</code></p>");
   });
 
   it("renders links as HTML", () => {
     const html = markdownToMatrixHtml("see [docs](https://example.com)");
-    expect(html).toContain('<a href="https://example.com">docs</a>');
+    expect(html).toBe('<p>see <a href="https://example.com">docs</a></p>');
   });
 
   it("does not auto-link bare file references into external urls", () => {
     const html = markdownToMatrixHtml("Check README.md and backup.sh");
-    expect(html).toContain("README.md");
-    expect(html).toContain("backup.sh");
-    expect(html).not.toContain('href="http://README.md"');
-    expect(html).not.toContain('href="http://backup.sh"');
+    expect(html).toBe("<p>Check README.md and backup.sh</p>");
   });
 
   it("keeps real domains linked even when path segments look like filenames", () => {
     const html = markdownToMatrixHtml("See https://docs.example.com/backup.sh");
-    expect(html).toContain('href="https://docs.example.com/backup.sh"');
+    expect(html).toBe(
+      '<p>See <a href="https://docs.example.com/backup.sh">https://docs.example.com/backup.sh</a></p>',
+    );
   });
 
   it("escapes raw HTML", () => {
     const html = markdownToMatrixHtml("<b>nope</b>");
-    expect(html).toContain("&lt;b&gt;nope&lt;/b&gt;");
-    expect(html).not.toContain("<b>nope</b>");
+    expect(html).toBe("<p>&lt;b&gt;nope&lt;/b&gt;</p>");
   });
 
   it("flattens images into alt text", () => {
     const html = markdownToMatrixHtml("![alt](https://example.com/img.png)");
-    expect(html).toContain("alt");
-    expect(html).not.toContain("<img");
+    expect(html).toBe("<p>alt</p>");
   });
 
   it("preserves line breaks", () => {
     const html = markdownToMatrixHtml("line1\nline2");
-    expect(html).toContain("<br");
+    expect(html).toBe("<p>line1<br>\nline2</p>");
   });
 
   it("compacts loose ordered lists without paragraph tags", () => {
     const html = markdownToMatrixHtml("1. first\n\n2. second\n\n3. third");
-    expect(html).toContain("<ol>");
-    expect(html).toContain("<li>");
-    expect(html).not.toContain("<p>");
+    expect(html).toBe("<ol>\n<li>first</li>\n<li>second</li>\n<li>third</li>\n</ol>");
   });
 
   it("compacts loose unordered lists without paragraph tags", () => {
     const html = markdownToMatrixHtml("- one\n\n- two\n\n- three");
-    expect(html).toContain("<ul>");
-    expect(html).not.toContain("<p>");
+    expect(html).toBe("<ul>\n<li>one</li>\n<li>two</li>\n<li>three</li>\n</ul>");
   });
 
   it("keeps tight lists unchanged", () => {
     const html = markdownToMatrixHtml("- one\n- two");
-    expect(html).toContain("<ul>");
-    expect(html).not.toContain("<p>");
+    expect(html).toBe("<ul>\n<li>one</li>\n<li>two</li>\n</ul>");
   });
 
   it("preserves inline formatting in loose lists", () => {
     const html = markdownToMatrixHtml("1. **bold**\n\n2. _italic_");
-    expect(html).toContain("<strong>bold</strong>");
-    expect(html).toContain("<em>italic</em>");
-    expect(html).not.toContain("<p>");
+    expect(html).toBe("<ol>\n<li><strong>bold</strong></li>\n<li><em>italic</em></li>\n</ol>");
   });
 
   it("does not strip paragraph tags outside lists", () => {
     const html = markdownToMatrixHtml("Hello\n\nWorld");
-    expect(html).toContain("<p>Hello</p>");
-    expect(html).toContain("<p>World</p>");
+    expect(html).toBe("<p>Hello</p>\n<p>World</p>");
   });
 
   it("compacts nested sublists without paragraph tags", () => {
     const html = markdownToMatrixHtml("1. parent\n\n   - child\n\n2. other");
-    expect(html).toContain("<ol>");
-    expect(html).toContain("<ul>");
-    expect(html).not.toContain("<p>");
+    expect(html).toBe(
+      "<ol>\n<li>parent\n<ul>\n<li>child</li>\n</ul>\n</li>\n<li>other</li>\n</ol>",
+    );
   });
 
   it("compacts loose lists with mentions via renderMarkdownToMatrixHtmlWithMentions", async () => {
@@ -101,9 +89,9 @@ describe("markdownToMatrixHtml", () => {
 
   it("preserves paragraph wrappers for multi-paragraph list items", () => {
     const html = markdownToMatrixHtml("1. First sentence.\n\n   Second sentence in the same item.");
-    expect(html).toContain("<li>");
-    expect(html).toContain("<p>First sentence.</p>");
-    expect(html).toContain("<p>Second sentence in the same item.</p>");
+    expect(html).toBe(
+      "<ol>\n<li>\n<p>First sentence.</p>\n<p>Second sentence in the same item.</p>\n</li>\n</ol>",
+    );
   });
 
   it("renders qualified Matrix user mentions as matrix.to links and m.mentions metadata", async () => {
