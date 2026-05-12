@@ -390,8 +390,15 @@ describe("dreaming view", () => {
         onOpenConfig,
       }),
     );
-    expect(container.textContent).toContain("Memory Wiki is not enabled");
-    expect(container.textContent).toContain("plugins.entries.memory-wiki.enabled = true");
+    expect(container.querySelector(".dreams-diary__empty-text")?.textContent).toBe(
+      "Memory Wiki is not enabled",
+    );
+    expect(
+      [...container.querySelectorAll(".dreams-diary__empty-hint")].map((node) => compactText(node)),
+    ).toEqual([
+      "Imported Insights and Memory Palace are provided by the bundled memory-wiki plugin.",
+      "Enable plugins.entries.memory-wiki.enabled = true, then reload this tab.",
+    ]);
 
     const configButton = container.querySelector<HTMLButtonElement>(
       ".dreams-diary__empty-actions .btn",
