@@ -26,6 +26,16 @@ vi.mock("../plugins/provider-runtime.js", () => ({
 let clearRuntimeAuthProfileStoreSnapshots: typeof import("./auth-profiles.js").clearRuntimeAuthProfileStoreSnapshots;
 let loadAuthProfileStoreForRuntime: typeof import("./auth-profiles.js").loadAuthProfileStoreForRuntime;
 
+type MockWithCalls = { mock: { calls: unknown[][] } };
+
+function firstMockArg(mock: MockWithCalls, label: string) {
+  const call = mock.mock.calls.at(0);
+  if (!call) {
+    throw new Error(`expected ${label} call`);
+  }
+  return call[0];
+}
+
 describe("auth profiles read-only external auth overlay", () => {
   beforeEach(async () => {
     vi.resetModules();
@@ -59,7 +69,10 @@ describe("auth profiles read-only external auth overlay", () => {
       const loaded = loadAuthProfileStoreForRuntime(agentDir, { readOnly: true });
 
       expect(resolveExternalAuthProfilesWithPluginsMock).toHaveBeenCalledTimes(1);
-      const externalAuthCall = resolveExternalAuthProfilesWithPluginsMock.mock.calls[0]?.[0] as
+      const externalAuthCall = firstMockArg(
+        resolveExternalAuthProfilesWithPluginsMock,
+        "resolveExternalAuthProfilesWithPlugins",
+      ) as
         | {
             config?: unknown;
             context?: {
