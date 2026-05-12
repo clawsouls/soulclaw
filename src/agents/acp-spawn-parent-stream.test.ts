@@ -64,6 +64,17 @@ function expectNoTextWithFragment(texts: string[], fragment: string): void {
   expect(texts.join("\n")).not.toContain(fragment);
 }
 
+function firstMockCall(
+  mock: { mock: { calls: Array<readonly unknown[]> } },
+  label: string,
+): readonly unknown[] {
+  const call = mock.mock.calls[0];
+  if (!call) {
+    throw new Error(`expected ${label} call`);
+  }
+  return call;
+}
+
 describe("startAcpSpawnParentStreamRelay", () => {
   beforeAll(async () => {
     ({ emitAgentEvent } = await import("../infra/agent-events.js"));
@@ -222,10 +233,12 @@ describe("startAcpSpawnParentStreamRelay", () => {
     expect(progressOptions?.contextKey).toBe("acp-spawn:run-cron:progress");
     expect(progressOptions?.sessionKey).toBe("global");
     expect(progressOptions?.trusted).toBe(false);
-    const heartbeatOptions = requestHeartbeatMock.mock.calls.at(0)?.[0];
+    const heartbeatOptions = firstMockCall(requestHeartbeatMock, "heartbeat request")[0] as
+      | { agentId?: string; reason?: string }
+      | undefined;
     expect(heartbeatOptions?.agentId).toBe("ops");
     expect(heartbeatOptions?.reason).toBe("acp:spawn:stream");
-    expect(requestHeartbeatMock.mock.calls.at(0)?.[0]).not.toHaveProperty("sessionKey");
+    expect(heartbeatOptions).not.toHaveProperty("sessionKey");
     relay.dispose();
   });
 
@@ -458,11 +471,10 @@ describe("startAcpSpawnParentStreamRelay", () => {
       sessionKey: "agent:codex:acp:child-1",
     });
     expect(resolveSessionFilePathMock).toHaveBeenCalledTimes(1);
-    const [sessionId, entry, options] = resolveSessionFilePathMock.mock.calls.at(0) as [
-      string,
-      { sessionId?: unknown },
-      { storePath?: unknown },
-    ];
+    const [sessionId, entry, options] = firstMockCall(
+      resolveSessionFilePathMock,
+      "session file path resolution",
+    ) as [string, { sessionId?: unknown }, { storePath?: unknown }];
     expect(sessionId).toBe("sess-123");
     expect(entry.sessionId).toBe("sess-123");
     expect(options.storePath).toBe("/tmp/openclaw/agents/codex/sessions/sessions.json");
