@@ -682,9 +682,10 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         env: {},
       },
     );
-    expect(result).toMatchObject({
+    expect(result).toEqual({
       changes: ['Removed stale managed install record for bundled plugin "matrix".'],
       warnings: [],
+      records: {},
     });
   });
 
@@ -751,9 +752,10 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         env: {},
       },
     );
-    expect(result).toMatchObject({
+    expect(result).toEqual({
       changes: ['Removed stale managed install record for bundled plugin "google-meet".'],
       warnings: [],
+      records: {},
     });
   });
 
@@ -797,9 +799,10 @@ describe("repairMissingConfiguredPluginInstalls", () => {
         env: {},
       },
     );
-    expect(result).toMatchObject({
+    expect(result).toEqual({
       changes: ['Removed stale managed install record for bundled plugin "google-meet".'],
       warnings: [],
+      records: {},
     });
   });
 
@@ -922,11 +925,12 @@ describe("repairMissingConfiguredPluginInstalls", () => {
     expect(mocks.installPluginFromClawHub).not.toHaveBeenCalled();
     expect(mocks.installPluginFromNpmSpec).not.toHaveBeenCalled();
     expect(mocks.writePersistedInstalledPluginIndexInstallRecords).not.toHaveBeenCalled();
-    expect(result).toMatchObject({
+    expect(result).toEqual({
       changes: [
         'Skipped package-manager repair for configured plugin "discord" during package update; rerun "openclaw doctor --fix" after the update completes.',
       ],
       warnings: [],
+      records,
     });
   });
 
@@ -1020,11 +1024,12 @@ describe("repairMissingConfiguredPluginInstalls", () => {
     expect(mocks.installPluginFromClawHub).not.toHaveBeenCalled();
     expect(mocks.installPluginFromNpmSpec).not.toHaveBeenCalled();
     expect(mocks.writePersistedInstalledPluginIndexInstallRecords).not.toHaveBeenCalled();
-    expect(result).toMatchObject({
+    expect(result).toEqual({
       changes: [
         'Skipped package-manager repair for configured plugin "discord" during package update; rerun "openclaw doctor --fix" after the update completes.',
       ],
       warnings: [],
+      records,
     });
   });
 
