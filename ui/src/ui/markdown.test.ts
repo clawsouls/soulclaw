@@ -70,23 +70,28 @@ describe("toSanitizedMarkdownHtml", () => {
 
     it("strips trailing punctuation from links", () => {
       const html1 = toSanitizedMarkdownHtml("Check www.example.com/help.");
-      expect(html1).toContain('href="http://www.example.com/help"');
-      expect(html1).not.toContain('href="http://www.example.com/help."');
+      expect(html1).toBe(
+        '<p>Check <a href="http://www.example.com/help" rel="noreferrer noopener" target="_blank">www.example.com/help</a>.</p>\n',
+      );
 
       const html2 = toSanitizedMarkdownHtml("See www.example.com!");
-      expect(html2).toContain('href="http://www.example.com"');
-      expect(html2).not.toContain('href="http://www.example.com!"');
+      expect(html2).toBe(
+        '<p>See <a href="http://www.example.com" rel="noreferrer noopener" target="_blank">www.example.com</a>!</p>\n',
+      );
     });
 
     it("strips entity-like suffixes per GFM spec", () => {
       // &hl; looks like an entity reference, so strip it
       const html1 = toSanitizedMarkdownHtml("www.google.com/search?q=commonmark&hl;");
-      expect(html1).toContain('href="http://www.google.com/search?q=commonmark"');
-      expect(html1).toContain("&amp;hl;"); // Entity shown outside link
+      expect(html1).toBe(
+        '<p><a href="http://www.google.com/search?q=commonmark" rel="noreferrer noopener" target="_blank">www.google.com/search?q=commonmark</a>&amp;hl;</p>\n',
+      );
 
       // &amp; is also entity-like
       const html2 = toSanitizedMarkdownHtml("www.example.com/path&amp;");
-      expect(html2).toContain('href="http://www.example.com/path"');
+      expect(html2).toBe(
+        '<p><a href="http://www.example.com/path" rel="noreferrer noopener" target="_blank">www.example.com/path</a>&amp;</p>\n',
+      );
     });
 
     it("handles quotes with balance checking", () => {
