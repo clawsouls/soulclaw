@@ -95,6 +95,14 @@ function lastTypingDispatcherOptions(): Parameters<CreateReplyDispatcherWithTypi
   return options as Parameters<CreateReplyDispatcherWithTypingFn>[0];
 }
 
+function requireReplyDispatcherOptions(index = 0): Parameters<CreateReplyDispatcherFn>[0] {
+  const call = hoisted.createReplyDispatcherMock.mock.calls.at(index);
+  if (!call) {
+    throw new Error(`expected createReplyDispatcher call ${index}`);
+  }
+  return call[0] as Parameters<CreateReplyDispatcherFn>[0];
+}
+
 describe("withReplyDispatcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -243,7 +251,7 @@ describe("withReplyDispatcher", () => {
       replyResolver: async () => ({ text: "ok" }),
     });
 
-    const dispatcherOptions = hoisted.createReplyDispatcherMock.mock.calls[0]?.[0];
+    const dispatcherOptions = requireReplyDispatcherOptions();
     if (!dispatcherOptions?.beforeDeliver) {
       throw new Error("expected beforeDeliver hook");
     }
