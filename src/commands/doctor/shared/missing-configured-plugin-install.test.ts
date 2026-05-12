@@ -505,7 +505,7 @@ describe("repairMissingConfiguredPluginInstalls", () => {
     expect(mocks.installPluginFromClawHub).not.toHaveBeenCalled();
     expect(mocks.installPluginFromNpmSpec).not.toHaveBeenCalled();
     expect(mocks.writePersistedInstalledPluginIndexInstallRecords).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ changes: [], warnings: [] });
+    expect(result).toEqual({ changes: [], warnings: [], records: {} });
   });
 
   it.each([
@@ -536,7 +536,7 @@ describe("repairMissingConfiguredPluginInstalls", () => {
     expect(mocks.installPluginFromClawHub).not.toHaveBeenCalled();
     expect(mocks.installPluginFromNpmSpec).not.toHaveBeenCalled();
     expect(mocks.writePersistedInstalledPluginIndexInstallRecords).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ changes: [], warnings: [] });
+    expect(result).toEqual({ changes: [], warnings: [], records: {} });
   });
 
   it("does not install channel plugins when the matching plugin entry is disabled", async () => {
@@ -570,7 +570,7 @@ describe("repairMissingConfiguredPluginInstalls", () => {
     expect(mocks.installPluginFromClawHub).not.toHaveBeenCalled();
     expect(mocks.installPluginFromNpmSpec).not.toHaveBeenCalled();
     expect(mocks.writePersistedInstalledPluginIndexInstallRecords).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ changes: [], warnings: [] });
+    expect(result).toEqual({ changes: [], warnings: [], records: {} });
   });
 
   it("does not download configured channel plugins that are still bundled", async () => {
