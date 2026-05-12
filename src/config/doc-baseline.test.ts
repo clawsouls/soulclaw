@@ -34,12 +34,28 @@ describe("config doc baseline", () => {
         "tupleValues",
       ),
     );
-    const tupleEntry = new Map(entries.map((entry) => [entry.path, entry])).get("tupleValues.*");
-
-    expect(tupleEntry).toMatchObject({
-      path: "tupleValues.*",
-      type: ["number", "string"],
-      enumValues: ["alpha", 42],
-    });
+    expect(entries).toEqual([
+      {
+        path: "tupleValues",
+        kind: "core",
+        type: "array",
+        required: false,
+        deprecated: false,
+        sensitive: false,
+        tags: [],
+        hasChildren: true,
+      },
+      {
+        path: "tupleValues.*",
+        kind: "core",
+        type: ["number", "string"],
+        required: false,
+        enumValues: ["alpha", 42],
+        deprecated: false,
+        sensitive: false,
+        tags: [],
+        hasChildren: false,
+      },
+    ]);
   });
 });
