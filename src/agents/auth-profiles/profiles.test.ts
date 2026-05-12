@@ -611,7 +611,9 @@ describe("promoteAuthProfileInOrder", () => {
       );
 
       const keyPaths = findFilesNamed(rootDir, "auth-profile-secret-key");
-      expect(keyPaths.length).toBeGreaterThan(0);
+      expect(keyPaths).toEqual([
+        path.join(homeDir, ".openclaw-auth-profile-secrets", "auth-profile-secret-key"),
+      ]);
       expect(keyPaths.every((keyPath) => !isPathInsideOrEqual(stateDir, keyPath))).toBe(true);
       const keyValues = keyPaths.map((keyPath) => fs.readFileSync(keyPath, "utf8").trim());
       const persistedStateTree = readPersistedTree(stateDir);
