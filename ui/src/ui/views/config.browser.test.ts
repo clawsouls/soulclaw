@@ -838,14 +838,18 @@ describe("config view", () => {
     const details = queryRequired(container, ".config-diff", HTMLDetailsElement);
     details.open = true;
     details.dispatchEvent(new Event("toggle"));
-    expect(normalizedText(container)).toContain("gateway.mode");
+    expect(
+      queryRequired(container, ".config-diff__item", HTMLElement)
+        .querySelector(".config-diff__path")
+        ?.textContent?.trim(),
+    ).toBe("gateway.mode");
 
     props.raw = props.originalRaw;
     props.formValue = props.originalValue;
     rerender();
 
     expect(container.querySelector(".config-diff")).toBeNull();
-    expect(normalizedText(container)).toContain("No changes");
+    expect(container.querySelector(".config-status")?.textContent?.trim()).toBe("No changes");
   });
 
   it("renders structured SecretRef values without stringifying", () => {
