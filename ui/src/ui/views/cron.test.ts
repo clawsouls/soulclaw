@@ -312,10 +312,17 @@ describe("cron view", () => {
       container,
     );
 
-    const options = Array.from(container.querySelectorAll("option")).map((opt) =>
-      (opt.textContent ?? "").trim(),
-    );
-    expect(options).toContain("Webhook POST");
+    const deliveryMode = container.querySelector<HTMLSelectElement>("#cron-delivery-mode");
+    expect(Array.from(deliveryMode?.options ?? []).map((opt) => opt.value)).toEqual([
+      "announce",
+      "webhook",
+      "none",
+    ]);
+    expect(Array.from(deliveryMode?.options ?? []).map((opt) => opt.textContent?.trim())).toEqual([
+      "Announce summary (default)",
+      "Webhook POST",
+      "None (internal)",
+    ]);
 
     render(
       renderCron(
@@ -331,12 +338,16 @@ describe("cron view", () => {
       container,
     );
 
-    const normalizedOptions = Array.from(container.querySelectorAll("option")).map((opt) =>
-      (opt.textContent ?? "").trim(),
-    );
-    expect(normalizedOptions).not.toContain("Announce summary (default)");
-    expect(normalizedOptions).toContain("Webhook POST");
-    expect(normalizedOptions).toContain("None (internal)");
+    const normalizedDeliveryMode =
+      container.querySelector<HTMLSelectElement>("#cron-delivery-mode");
+    expect(normalizedDeliveryMode?.value).toBe("none");
+    expect(Array.from(normalizedDeliveryMode?.options ?? []).map((opt) => opt.value)).toEqual([
+      "webhook",
+      "none",
+    ]);
+    expect(
+      Array.from(normalizedDeliveryMode?.options ?? []).map((opt) => opt.textContent?.trim()),
+    ).toEqual(["Webhook POST", "None (internal)"]);
     expect(container.querySelector('input[placeholder="https://example.com/cron"]')).toBeNull();
   });
 
