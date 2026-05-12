@@ -1556,7 +1556,7 @@ describe("createFollowupRunner messaging delivery and dedupe", () => {
       } as FollowupRun,
     });
 
-    expect(routeReplyMock).toHaveBeenCalled();
+    expect(routeReplyMock).toHaveBeenCalledTimes(1);
     expect(onBlockReply).toHaveBeenCalledTimes(1);
     expectBlockReplyText(onBlockReply, "hello world!");
   });
@@ -1649,7 +1649,7 @@ describe("createFollowupRunner typing cleanup", () => {
 
     await runner(baseQueuedRun());
 
-    expect(onBlockReply).toHaveBeenCalled();
+    expect(onBlockReply).toHaveBeenCalledTimes(1);
     expectTypingCleanup(typing);
   });
 });
