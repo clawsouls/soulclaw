@@ -451,9 +451,16 @@ describe("sessions view", () => {
     ).toContain("Status");
     const badges = Array.from(container.querySelectorAll(".session-status-badge"));
     expect(badges.map((badge) => badge.textContent?.trim())).toEqual(["Live", "Idle", "Failed"]);
-    expect(badges[0]?.classList.contains("session-status-badge--live")).toBe(true);
-    expect(badges[0]?.getAttribute("aria-label")).toBe("Status: Live");
-    expect(badges[2]?.classList.contains("session-status-badge--failed")).toBe(true);
+    expect(badges.map((badge) => [...badge.classList])).toEqual([
+      ["session-status-badge", "session-status-badge--live"],
+      ["session-status-badge", "session-status-badge--idle"],
+      ["session-status-badge", "session-status-badge--failed"],
+    ]);
+    expect(badges.map((badge) => badge.getAttribute("aria-label"))).toEqual([
+      "Status: Live",
+      "Status: Idle",
+      "Status: Failed",
+    ]);
   });
 
   it("renders and filters the session runtime", async () => {
