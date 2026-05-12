@@ -760,10 +760,11 @@ describe("sessions view", () => {
     );
     await Promise.resolve();
 
-    expect(container.querySelector(".session-key-cell")?.textContent).toContain(
+    const rows = container.querySelectorAll("tbody tr.session-data-row");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.querySelector(".session-key-cell")?.textContent?.trim()).toBe(
       "Data Expert (dingtalk)",
     );
-    expect(container.textContent).not.toContain("code-agent");
   });
 
   it("keeps session selects stable and deselects only the current page", async () => {
