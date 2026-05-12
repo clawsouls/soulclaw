@@ -1006,22 +1006,13 @@ describe("chat session controls", () => {
     const container = document.createElement("div");
     render(renderChatSessionSelect(state), container);
 
-    requireElement(
-      container,
-      `[aria-label="${t("chat.selectors.session")}"]`,
-      "localized session selector",
-    );
-    requireElement(
-      container,
-      `[aria-label="${t("chat.selectors.model")}"]`,
-      "localized model selector",
-    );
-    requireElement(
-      container,
-      `[aria-label="${t("chat.selectors.thinkingLevel")}"]`,
-      "localized thinking level selector",
-    );
-    expect(container.innerHTML).not.toContain("Chat session");
+    expect(
+      [...container.querySelectorAll("select")].map((select) => select.getAttribute("aria-label")),
+    ).toEqual([
+      t("chat.selectors.session"),
+      t("chat.selectors.model"),
+      t("chat.selectors.thinkingLevel"),
+    ]);
   });
 
   it("falls back to the selected agent's main session when no sessions exist yet", () => {
