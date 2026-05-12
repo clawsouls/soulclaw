@@ -2130,7 +2130,7 @@ describe("compaction-safeguard double-compaction guard", () => {
     });
 
     expect(result).toEqual({ cancel: true });
-    expect(getApiKeyAndHeadersMock).toHaveBeenCalled();
+    expect(getApiKeyAndHeadersMock).toHaveBeenCalledWith(model);
   });
 
   it("falls back to visible custom session branch entries before writing an empty boundary", async () => {
@@ -2233,7 +2233,7 @@ describe("compaction-safeguard double-compaction guard", () => {
       apiKey: null,
     });
     expect(result).toEqual({ cancel: true });
-    expect(getApiKeyAndHeadersMock).toHaveBeenCalled();
+    expect(getApiKeyAndHeadersMock).toHaveBeenCalledWith(model);
   });
 
   it("treats tool results as real conversation only when linked to a meaningful user ask", () => {
