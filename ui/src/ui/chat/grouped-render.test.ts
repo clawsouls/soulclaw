@@ -1732,9 +1732,15 @@ describe("grouped chat rendering", () => {
     expect(iframe.getAttribute("src")).toBe(
       "/__openclaw__/canvas/documents/cv_inline_default/index.html",
     );
-    expect(container.textContent).toContain("Inline canvas result.");
-    expect(container.textContent).toContain("Inline demo");
-    expect(container.textContent).toContain("Raw details");
+    expect(container.querySelector(".chat-text")?.textContent?.trim()).toBe(
+      "Inline canvas result.",
+    );
+    expect(container.querySelector(".chat-tool-card__preview-label")?.textContent?.trim()).toBe(
+      "Inline demo",
+    );
+    expect(container.querySelector(".chat-tool-card__raw-toggle")?.textContent?.trim()).toBe(
+      "Raw details",
+    );
 
     renderCanvas({ embedSandboxMode: "trusted", suffix: "trusted" });
     iframe = expectElement(container, ".chat-tool-card__preview-frame", HTMLIFrameElement);
