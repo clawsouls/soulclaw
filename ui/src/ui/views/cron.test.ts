@@ -486,8 +486,8 @@ describe("cron view", () => {
       container,
     );
 
-    expect(container.querySelector(".cron-run-entry__meta")?.textContent).not.toContain(
-      "Failed with",
+    expect(container.querySelector(".cron-run-entry__body")?.textContent?.trim()).toBe(
+      "Failed with markdown",
     );
     expect(container.querySelector(".cron-run-entry__body strong")?.textContent).toBe("markdown");
   });
@@ -511,8 +511,8 @@ describe("cron view", () => {
       container,
     );
 
-    expect(container.querySelector(".cron-run-entry__meta")?.textContent).not.toContain(
-      "Failed with",
+    expect(container.querySelector(".cron-run-entry__body")?.textContent?.trim()).toBe(
+      "Failed with markdown",
     );
     expect(container.querySelector(".cron-run-entry__body strong")?.textContent).toBe("markdown");
   });
