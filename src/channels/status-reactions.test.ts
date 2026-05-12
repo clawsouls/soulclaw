@@ -418,8 +418,10 @@ describe("createStatusReactionController", () => {
     void controller.setThinking();
     await vi.advanceTimersByTimeAsync(DEFAULT_TIMING.debounceMs);
 
-    expect(countCallsForMethodAndEmoji(calls, "set", DEFAULT_EMOJIS.thinking)).toBe(1);
-    expect(calls).not.toContainEqual({ method: "remove", emoji: DEFAULT_EMOJIS.thinking });
+    expect(calls).toEqual([
+      { method: "set", emoji: DEFAULT_EMOJIS.thinking },
+      { method: "set", emoji: "🔎" },
+    ]);
   });
 
   it("should only call setReaction when adapter lacks removeReaction", async () => {
