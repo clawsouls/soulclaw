@@ -1696,9 +1696,14 @@ describe("grouped chat rendering", () => {
     const allPreviews = container.querySelectorAll(".chat-tool-card__preview-frame");
     expect(allPreviews).toHaveLength(1);
     const bubble = expectElement(container, ".chat-group.assistant .chat-bubble", HTMLElement);
-    expectElement(bubble, ".chat-tool-card__preview-frame", HTMLIFrameElement);
-    expect(bubble.textContent).toContain("This item is ready.");
-    expect(bubble.textContent).toContain("Live history preview");
+    const iframe = expectElement(bubble, ".chat-tool-card__preview-frame", HTMLIFrameElement);
+    expect(iframe.getAttribute("src")).toBe(
+      "/__openclaw__/canvas/documents/cv_canvas_live_history/index.html",
+    );
+    expect(bubble.querySelector(".chat-text")?.textContent?.trim()).toBe("This item is ready.");
+    expect(bubble.querySelector(".chat-tool-card__preview-label")?.textContent?.trim()).toBe(
+      "Live history preview",
+    );
   });
 
   it("renders hidden assistant_message canvas results with the configured sandbox", () => {
