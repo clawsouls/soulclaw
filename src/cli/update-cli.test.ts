@@ -3345,7 +3345,7 @@ describe("update-cli", () => {
     } else {
       expect(defaultRuntime.exit).not.toHaveBeenCalledWith(1);
     }
-    expect(vi.mocked(runGatewayUpdate).mock.calls.length > 0).toBe(false);
+    expect(runGatewayUpdate).not.toHaveBeenCalled();
     expect(
       vi
         .mocked(runCommandWithTimeout)
