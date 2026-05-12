@@ -136,7 +136,7 @@ function expectLastReplaceConfig(enabled: boolean) {
   const calls = (replaceConfigFileMock as unknown as MockCalls).mock.calls;
   const [payload] = calls.at(-1) ?? [];
   const payloadRecord = requireRecord(payload, "replace config payload");
-  expect(Object.keys(payloadRecord).sort()).toEqual(["afterWrite", "nextConfig"]);
+  expect(Object.keys(payloadRecord).toSorted()).toEqual(["afterWrite", "nextConfig"]);
   expect(payloadRecord.afterWrite).toEqual({ mode: "auto" });
   expectPluginEnabledInConfig(payloadRecord.nextConfig, enabled);
 }
@@ -145,7 +145,7 @@ function expectLastRegistryRefresh(enabled: boolean) {
   const calls = (refreshPluginRegistryAfterConfigMutationMock as unknown as MockCalls).mock.calls;
   const [payload] = calls.at(-1) ?? [];
   const payloadRecord = requireRecord(payload, "registry refresh payload");
-  expect(Object.keys(payloadRecord).sort()).toEqual(["config", "logger", "reason"]);
+  expect(Object.keys(payloadRecord).toSorted()).toEqual(["config", "logger", "reason"]);
   expect(payloadRecord.reason).toBe("policy-changed");
   const logger = getNestedRecord(payloadRecord, "logger", "registry refresh logger");
   expect(logger.warn).toEqual(expect.any(Function));
