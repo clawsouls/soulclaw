@@ -511,7 +511,11 @@ describe("sessions view", () => {
     expect(container.querySelector(".session-runtime-cell")?.textContent?.trim()).toBe(
       "claude-cli (fallback none)",
     );
-    expect(container.textContent).not.toContain("agent:main:pi");
+    const rows = container.querySelectorAll("tbody tr.session-data-row");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.querySelector(".session-key-cell")?.textContent?.trim()).toBe(
+      "agent:main:claude",
+    );
   });
 
   it("keeps raw keys for inherited identity object properties", async () => {
