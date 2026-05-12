@@ -1004,9 +1004,9 @@ describe("config view", () => {
     const input = container.querySelector<HTMLInputElement>(".cfg-input");
     expect(input).toBeInstanceOf(HTMLInputElement);
     expect(input?.readOnly).toBe(false);
-    expect(input?.value).toContain("malformed");
+    expect(input?.value).toBe('{  "malformed": true}');
     expect(input?.value).not.toBe("[object Object]");
-    expect(input?.placeholder).not.toContain("Structured value (SecretRef)");
+    expect(input?.placeholder).toBe("");
 
     if (!input) {
       return;
