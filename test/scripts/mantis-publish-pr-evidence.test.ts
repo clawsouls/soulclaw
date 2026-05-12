@@ -231,6 +231,58 @@ describe("scripts/mantis/publish-pr-evidence", () => {
     expect(body).not.toContain("<img ");
   });
 
+  it("renders a successful no-visual-proof manifest without media tables", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "mantis-evidence-test-"));
+    tempDirs.push(dir);
+    const manifestPath = path.join(dir, "mantis-evidence.json");
+    writeFileSync(
+      manifestPath,
+      JSON.stringify({
+        artifacts: [],
+        comparison: {
+          baseline: {
+            expected: "no visible Telegram Desktop delta",
+            status: "skipped",
+          },
+          candidate: {
+            expected: "no visible Telegram Desktop delta",
+            status: "skipped",
+          },
+          pass: true,
+        },
+        id: "telegram-desktop-proof",
+        scenario: "telegram-desktop-proof",
+        schemaVersion: 1,
+        summary:
+          "Mantis did not generate before/after GIFs because this PR changes CI wiring only.",
+        title: "Mantis Telegram Desktop Proof",
+      }),
+    );
+
+    const manifest = loadEvidenceManifest(manifestPath);
+    const body = renderEvidenceComment({
+      artifactRoot: "mantis/telegram-desktop/pr-1/run-1",
+      manifest,
+      marker: "<!-- mantis-telegram-desktop-proof -->",
+      rawBase:
+        "https://raw.githubusercontent.com/openclaw/openclaw/qa-artifacts/mantis/telegram-desktop/pr-1/run-1",
+      requestSource: "issue_comment",
+      runUrl: "https://github.com/openclaw/openclaw/actions/runs/1",
+      treeUrl:
+        "https://github.com/openclaw/openclaw/tree/qa-artifacts/mantis/telegram-desktop/pr-1/run-1",
+    });
+
+    expect(manifest.artifacts.map((artifact) => artifact.targetPath)).toEqual([
+      "mantis-evidence.json",
+    ]);
+    expect(body).toContain(
+      "Summary: Mantis did not generate before/after GIFs because this PR changes CI wiring only.",
+    );
+    expect(body).toContain("- Overall: `true`");
+    expect(body).not.toContain("<table");
+    expect(body).not.toContain("<img ");
+  });
+
   it("rejects artifact paths that escape the manifest directory", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "mantis-evidence-test-"));
     tempDirs.push(dir);
