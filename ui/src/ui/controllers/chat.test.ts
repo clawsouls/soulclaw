@@ -954,6 +954,8 @@ describe("sendChatMessage", () => {
       dataUrl: `data:application/pdf;base64,${Buffer.from(pdfBytes).toString("base64")}`,
       file,
     });
+    const previewUrl = attachment.previewUrl;
+    expect(previewUrl).toMatch(/^blob:nodedata:/u);
 
     const result = await sendChatMessage(state, "summarize", [attachment]);
 
@@ -968,9 +970,24 @@ describe("sendChatMessage", () => {
     const attachmentRecord = requireRecord(attachmentParam);
     expect(attachmentRecord.type).toBe("file");
     expect(attachmentRecord.content).toBe(Buffer.from(pdfBytes).toString("base64"));
-    expect(JSON.stringify(state.chatMessages)).not.toContain(
-      Buffer.from(pdfBytes).toString("base64"),
-    );
+    expect(state.chatMessages).toStrictEqual([
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "summarize" },
+          {
+            type: "attachment",
+            attachment: {
+              url: previewUrl,
+              kind: "document",
+              label: "brief.pdf",
+              mimeType: "application/pdf",
+            },
+          },
+        ],
+        timestamp: expect.any(Number),
+      },
+    ]);
   });
 
   it("formats structured non-auth connect failures for chat send", async () => {
