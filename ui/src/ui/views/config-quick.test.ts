@@ -155,9 +155,9 @@ describe("renderQuickSettings", () => {
 
     expectButtonByText(container, "full").click();
     expect(onToolProfileChange).toHaveBeenCalledWith("full");
-    expect(expectButtonByText(container, "messaging").classList).toContain(
-      "qs-segmented__btn--active",
-    );
+    expect(
+      expectButtonByText(container, "messaging").classList.contains("qs-segmented__btn--active"),
+    ).toBe(true);
   });
 
   it("keeps the local user name fixed and shows the assistant identity", () => {
