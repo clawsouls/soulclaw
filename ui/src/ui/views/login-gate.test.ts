@@ -171,7 +171,11 @@ describe("resolveLoginFailureFeedback", () => {
     });
 
     expect(feedback?.kind).toBe("network");
-    expect(feedback?.steps.join(" ")).toContain("WebSocket URL");
+    expect(feedback?.steps).toEqual([
+      "Confirm the Gateway is running with openclaw status or openclaw gateway run.",
+      "Check the WebSocket URL and use wss:// when the Gateway is behind HTTPS/Tailscale Serve.",
+      "Reopen the dashboard with openclaw dashboard --no-open to recopy the current URL and auth details.",
+    ]);
   });
 
   it("explains browser origin rejections", () => {
@@ -184,7 +188,11 @@ describe("resolveLoginFailureFeedback", () => {
     });
 
     expect(feedback?.kind).toBe("origin-not-allowed");
-    expect(feedback?.steps.join(" ")).toContain("gateway.controlUi.allowedOrigins");
+    expect(feedback?.steps).toEqual([
+      "Add this browser origin to gateway.controlUi.allowedOrigins.",
+      "Use full origins such as http://localhost:5173, not wildcard patterns.",
+      "Restart or reload the Gateway after changing allowed origins.",
+    ]);
   });
 
   it("explains protocol mismatch without requiring a gateway protocol change", () => {
@@ -197,8 +205,14 @@ describe("resolveLoginFailureFeedback", () => {
     });
 
     expect(feedback?.kind).toBe("protocol-mismatch");
-    expect(feedback?.summary).toContain("supported connection protocol");
-    expect(feedback?.steps.join(" ")).toContain("openclaw dashboard");
+    expect(feedback?.summary).toBe(
+      "The served Control UI and the running Gateway do not agree on the supported connection protocol.",
+    );
+    expect(feedback?.steps).toEqual([
+      "Reopen the served dashboard with openclaw dashboard so the UI and Gateway come from the same install.",
+      "If using pnpm ui:dev, rebuild or restart the dev UI against the current checkout.",
+      "Restart the Gateway after updating OpenClaw so it serves the current protocol.",
+    ]);
   });
 
   it("falls back to connection diagnostics for generic close errors", () => {
@@ -211,8 +225,11 @@ describe("resolveLoginFailureFeedback", () => {
     });
 
     expect(feedback?.kind).toBe("network");
-    expect(feedback?.steps.join(" ")).toContain("WebSocket URL");
-    expect(feedback?.steps.join(" ")).toContain("wss://");
+    expect(feedback?.steps).toEqual([
+      "Confirm the Gateway is running with openclaw status or openclaw gateway run.",
+      "Check the WebSocket URL and use wss:// when the Gateway is behind HTTPS/Tailscale Serve.",
+      "Reopen the dashboard with openclaw dashboard --no-open to recopy the current URL and auth details.",
+    ]);
   });
 
   it("redacts credential-shaped values from displayed raw errors", () => {
