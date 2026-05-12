@@ -1796,11 +1796,20 @@ describe("grouped chat rendering", () => {
     const allPreviews = container.querySelectorAll(".chat-tool-card__preview-frame");
     expect(allPreviews).toHaveLength(1);
     const bubble = expectElement(container, ".chat-group.assistant .chat-bubble", HTMLElement);
-    expectElement(bubble, ".chat-tool-card__preview-frame", HTMLIFrameElement);
-    expect(container.textContent).toContain("Tool output");
-    expect(container.textContent).toContain("canvas_render");
-    expect(container.textContent).toContain("Inline canvas result.");
-    expect(container.textContent).toContain("Inline demo");
+    const iframe = expectElement(bubble, ".chat-tool-card__preview-frame", HTMLIFrameElement);
+    expect(iframe.getAttribute("src")).toBe(
+      "/__openclaw__/canvas/documents/cv_inline_visible/index.html",
+    );
+    expect(bubble.querySelector(".chat-text")?.textContent?.trim()).toBe("Inline canvas result.");
+    expect(bubble.querySelector(".chat-tool-card__preview-label")?.textContent?.trim()).toBe(
+      "Inline demo",
+    );
+    expect(
+      container.querySelector(".chat-group.tool .chat-tool-msg-summary__label")?.textContent,
+    ).toBe("Tool output");
+    expect(
+      container.querySelector(".chat-group.tool .chat-tool-msg-summary__names")?.textContent,
+    ).toBe("canvas_render");
   });
 
   it("opens generic tool details instead of a canvas preview from tool rows", () => {
