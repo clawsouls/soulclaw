@@ -248,22 +248,17 @@ describe("toSanitizedMarkdownHtml", () => {
   describe("HTML escaping", () => {
     it("escapes HTML tags as text", () => {
       const html = toSanitizedMarkdownHtml("<div>**bold**</div>");
-      expect(html).toContain("&lt;div&gt;");
-      expect(html).not.toContain("<div>");
-      // Inner markdown should NOT be rendered since it's inside escaped HTML
-      expect(html).toContain("**bold**");
+      expect(html).toBe("&lt;div&gt;**bold**&lt;/div&gt;\n");
     });
 
     it("strips script tags", () => {
       const html = toSanitizedMarkdownHtml("<script>alert(1)</script>");
-      expect(html).not.toContain("<script");
-      expect(html).toContain("&lt;script&gt;");
+      expect(html).toBe("&lt;script&gt;alert(1)&lt;/script&gt;\n");
     });
 
     it("escapes inline HTML tags", () => {
       const html = toSanitizedMarkdownHtml("Check <b>this</b> out");
-      expect(html).toContain("&lt;b&gt;");
-      expect(html).not.toContain("<b>");
+      expect(html).toBe("<p>Check &lt;b&gt;this&lt;/b&gt; out</p>\n");
     });
   });
 
