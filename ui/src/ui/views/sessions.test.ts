@@ -508,8 +508,7 @@ describe("sessions view", () => {
     await Promise.resolve();
 
     const text = container.querySelector(".session-key-cell")?.textContent ?? "";
-    expect(text).toContain("agent:constructor:telegram:abc123");
-    expect(text).not.toContain("Object (telegram)");
+    expect(text.trim()).toBe("agent:constructor:telegram:abc123");
   });
 
   it("expands checkpoint details from row activation when checkpoints exist", async () => {
