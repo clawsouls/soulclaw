@@ -254,20 +254,24 @@ export function applyAgentDefaultModelPrimary(
   cfg: OpenClawConfig,
   primary: string,
 ): OpenClawConfig {
+  const defaults = cfg.agents?.defaults;
   const existingFallbacks = extractAgentDefaultModelFallbacks(cfg.agents?.defaults?.model);
   const normalizedFallbacks = existingFallbacks?.map((fallback) =>
     normalizeAgentModelRefForConfig(fallback),
   );
+  const normalizedModels =
+    defaults?.models === undefined ? undefined : normalizeAgentModelMapForConfig(defaults.models);
   return {
     ...cfg,
     agents: {
       ...cfg.agents,
       defaults: {
-        ...cfg.agents?.defaults,
+        ...defaults,
         model: {
           ...(normalizedFallbacks ? { fallbacks: normalizedFallbacks } : undefined),
           primary: normalizeAgentModelRefForConfig(primary),
         },
+        ...(normalizedModels !== undefined ? { models: normalizedModels } : undefined),
       },
     },
   };

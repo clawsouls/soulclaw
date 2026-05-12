@@ -69,6 +69,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Google/Gemini: normalize retired Gemini 3 Pro Preview refs left in Google API-key onboarding model allowlists and fallbacks, so setup-emitted config keeps testing `google/gemini-3.1-pro-preview` instead of `google/gemini-3-pro-preview`.
 - Google/Gemini: normalize retired nested Gemini 3 Pro Preview ids when resolving exact configured proxy-provider refs, so `kilocode/google/gemini-3-pro-preview` resolves to `kilocode/google/gemini-3.1-pro-preview` for Gemini 3.1 testing.
 - CLI: strip generic OSC terminal escape payloads from sanitized output fields, preventing clipboard/title escape bodies from leaking into commitment tables and other terminal-safe text. Thanks @shakkernerd.
 - Codex app-server: match connector-backed plugin approval elicitations by stable connector id so enabled destructive actions no longer fall through to display-name-only rejection.
