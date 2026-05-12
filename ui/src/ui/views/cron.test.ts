@@ -267,8 +267,6 @@ describe("cron view", () => {
       "/ui/chat?session=agent%3Amain%3Acron%3Ajob-1%3Arun%3Aabc",
     );
 
-    expect(container.textContent).toContain("Latest runs for Daily ping.");
-
     const cards = Array.from(container.querySelectorAll(".card"));
     const runHistoryCard = cards.find(
       (card) => card.querySelector(".card-title")?.textContent?.trim() === "Run history",
@@ -277,6 +275,9 @@ describe("cron view", () => {
     if (!(runHistoryCard instanceof Element)) {
       throw new Error("Expected run history card");
     }
+    expect(runHistoryCard.querySelector(".card-sub")?.textContent?.trim()).toBe(
+      "Latest runs for Daily ping.",
+    );
 
     const summaries = Array.from(runHistoryCard.querySelectorAll(".cron-run-entry__body")).map(
       (el) => (el.textContent ?? "").trim(),
