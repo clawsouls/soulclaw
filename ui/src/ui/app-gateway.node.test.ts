@@ -364,9 +364,10 @@ describe("connectGateway", () => {
 
     await vi.waitFor(() => {
       expect(host.pendingUpdateExpectedVersion).toBeNull();
-      expect(host.updateStatusBanner?.text).toContain(
-        "Update installed but running version did not change",
-      );
+      expect(host.updateStatusBanner).toEqual({
+        tone: "danger",
+        text: "Update installed but running version did not change — restart may have been blocked. Expected v2.0.0, running v1.0.0.",
+      });
     });
   });
 
