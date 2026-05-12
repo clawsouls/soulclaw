@@ -223,7 +223,11 @@ describe("config form renderer", () => {
       container,
     );
 
-    expect(container.textContent).toContain("Plugin Enabled");
+    const label = expectElement(
+      container.querySelector(".cfg-toggle-row__label"),
+      "plugin enabled label",
+    );
+    expect(label.textContent?.trim()).toBe("Plugin Enabled");
   });
 
   it("renders tags from uiHints metadata", () => {
