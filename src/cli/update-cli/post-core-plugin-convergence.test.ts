@@ -111,11 +111,15 @@ describe("runPostCorePluginConvergence", () => {
       env: {},
     });
     expect(result.errored).toBe(true);
-    expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toMatchObject({
-      reason: expect.stringContaining("discord"),
-      guidance: expect.arrayContaining([expect.stringContaining("openclaw doctor --fix")]),
-    });
+    expect(result.warnings).toStrictEqual([
+      {
+        reason:
+          'Failed to install missing configured plugin "discord" from @openclaw/discord: ENETUNREACH.',
+        message:
+          'Failed to install missing configured plugin "discord" from @openclaw/discord: ENETUNREACH.',
+        guidance: ["Run `openclaw doctor --fix` to retry plugin repair."],
+      },
+    ]);
   });
 
   it("flags errored=true when smoke check finds a missing main entry", async () => {
@@ -142,14 +146,18 @@ describe("runPostCorePluginConvergence", () => {
       env: {},
     });
     expect(result.errored).toBe(true);
-    expect(result.warnings).toEqual([
-      expect.objectContaining({
+    expect(result.warnings).toStrictEqual([
+      {
         pluginId: "brave",
-        reason: expect.stringContaining("missing-main-entry"),
-        guidance: expect.arrayContaining([
-          expect.stringContaining("openclaw plugins inspect brave"),
-        ]),
-      }),
+        reason:
+          'missing-main-entry: Plugin main entry "dist/index.js" not found at /p/brave/dist/index.js',
+        message:
+          'Plugin "brave" failed post-core payload smoke check (missing-main-entry): Plugin main entry "dist/index.js" not found at /p/brave/dist/index.js',
+        guidance: [
+          "Run `openclaw doctor --fix` to retry plugin repair.",
+          "Run `openclaw plugins inspect brave --runtime --json` for details.",
+        ],
+      },
     ]);
   });
 
@@ -176,10 +184,18 @@ describe("runPostCorePluginConvergence", () => {
       env: {},
     });
     expect(result.errored).toBe(true);
-    expect(result.warnings[0]).toMatchObject({
-      pluginId: "brave",
-      reason: expect.stringContaining("missing-install-path"),
-    });
+    expect(result.warnings).toStrictEqual([
+      {
+        pluginId: "brave",
+        reason: "missing-install-path: Install path is missing from the plugin install record.",
+        message:
+          'Plugin "brave" failed post-core payload smoke check (missing-install-path): Install path is missing from the plugin install record.',
+        guidance: [
+          "Run `openclaw doctor --fix` to retry plugin repair.",
+          "Run `openclaw plugins inspect brave --runtime --json` for details.",
+        ],
+      },
+    ]);
   });
 
   it("hands repair's post-mutation records straight to the smoke check (no second disk read)", async () => {
