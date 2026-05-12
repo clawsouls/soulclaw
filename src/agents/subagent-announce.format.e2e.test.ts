@@ -494,14 +494,8 @@ describe("subagent announce formatting", () => {
       endedAt: 20,
     });
 
-    expect(agentSpy).toHaveBeenCalled();
-    const call = agentSpy.mock.calls[0]?.[0] as {
-      params?: {
-        message?: string;
-        sessionKey?: string;
-        internalEvents?: Array<{ type?: string; taskLabel?: string }>;
-      };
-    };
+    expect(agentSpy).toHaveBeenCalledTimes(1);
+    const call = getAgentCall();
     const msg = call?.params?.message as string;
     expect(call?.params?.sessionKey).toBe("agent:main:main");
     expect(msg).toContain("OpenClaw runtime context (internal):");
