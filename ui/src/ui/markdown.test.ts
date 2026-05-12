@@ -97,17 +97,21 @@ describe("toSanitizedMarkdownHtml", () => {
     it("handles quotes with balance checking", () => {
       // Quoted URL — trailing unbalanced " is stripped
       const html1 = toSanitizedMarkdownHtml('"www.example.com"');
-      expect(html1).toContain('href="http://www.example.com"');
-      expect(html1).not.toContain('href="http://www.example.com%22"');
+      expect(html1).toBe(
+        '<p>"<a href="http://www.example.com" rel="noreferrer noopener" target="_blank">www.example.com</a>"</p>\n',
+      );
 
       // Balanced quotes inside path — preserved
       const html2 = toSanitizedMarkdownHtml('www.example.com/path"with"quotes');
-      expect(html2).toContain('www.example.com/path"with"quotes</a>');
+      expect(html2).toBe(
+        '<p><a href="http://www.example.com/path%22with%22quotes" rel="noreferrer noopener" target="_blank">www.example.com/path"with"quotes</a></p>\n',
+      );
 
       // Trailing unbalanced " — stripped
       const html3 = toSanitizedMarkdownHtml('www.example.com/path"');
-      expect(html3).toContain('href="http://www.example.com/path"');
-      expect(html3).not.toContain('path%22"');
+      expect(html3).toBe(
+        '<p><a href="http://www.example.com/path" rel="noreferrer noopener" target="_blank">www.example.com/path</a>"</p>\n',
+      );
     });
 
     it("does NOT link www. domains starting with non-ASCII", () => {
