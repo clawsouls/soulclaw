@@ -441,7 +441,13 @@ describe("control UI routing", () => {
 
     expect(app.chatMobileControlsOpen).toBe(true);
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    expect(dropdown.classList.contains("open")).toBe(true);
+    expect([...toggle.classList]).toEqual([
+      "btn",
+      "btn--sm",
+      "btn--icon",
+      "chat-controls-mobile-toggle",
+    ]);
+    expect([...dropdown.classList]).toEqual(["chat-controls-dropdown", "open"]);
 
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await app.updateComplete;
@@ -449,7 +455,7 @@ describe("control UI routing", () => {
 
     expect(app.chatMobileControlsOpen).toBe(false);
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(dropdown.classList.contains("open")).toBe(false);
+    expect([...dropdown.classList]).toEqual(["chat-controls-dropdown"]);
     expect(document.activeElement).toBe(toggle);
 
     toggle.click();
@@ -457,16 +463,16 @@ describe("control UI routing", () => {
     app.requestUpdate();
     await app.updateComplete;
 
-    const openDropdown = app.querySelector<HTMLElement>(".chat-controls-dropdown");
+    const openDropdown = expectElement(app, ".chat-controls-dropdown", HTMLElement);
     expect(app.chatMobileControlsOpen).toBe(true);
-    expect(openDropdown?.classList.contains("open")).toBe(true);
+    expect([...openDropdown.classList]).toEqual(["chat-controls-dropdown", "open"]);
 
     document.body.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, composed: true }));
     await app.updateComplete;
 
-    const closedDropdown = app.querySelector<HTMLElement>(".chat-controls-dropdown");
+    const closedDropdown = expectElement(app, ".chat-controls-dropdown", HTMLElement);
     expect(app.chatMobileControlsOpen).toBe(false);
-    expect(closedDropdown?.classList.contains("open")).toBe(false);
+    expect([...closedDropdown.classList]).toEqual(["chat-controls-dropdown"]);
 
     expectElement(app, ".chat-controls-mobile-toggle", HTMLButtonElement).click();
     await app.updateComplete;
