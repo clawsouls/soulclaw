@@ -555,11 +555,13 @@ describe("config plugin validation", () => {
     );
 
     expect(res.ok).toBe(true);
-    expect(res.warnings ?? []).toContainEqual({
-      path: "plugins.allow",
-      message:
-        "plugin not installed: discord — install the official external plugin with: openclaw plugins install @openclaw/discord",
-    });
+    expect(res.warnings ?? []).toEqual([
+      {
+        path: "plugins.allow",
+        message:
+          "plugin not installed: discord — install the official external plugin with: openclaw plugins install @openclaw/discord",
+      },
+    ]);
   });
 
   it("uses persisted installed-plugin records as stale channel evidence", async () => {
