@@ -725,7 +725,14 @@ describe("chat slash menu accessibility", () => {
     if (!announcementText) {
       throw new Error("Expected command navigation to update the live announcement");
     }
-    expect(announcementText).toContain(activeOption?.textContent?.trim().split(/\s+/u)[0]);
+    const expectedAnnouncement = [
+      activeOption?.querySelector(".slash-menu-name")?.textContent?.trim(),
+      activeOption?.querySelector(".slash-menu-args")?.textContent?.trim(),
+      activeOption?.querySelector(".slash-menu-desc")?.textContent?.trim(),
+    ]
+      .filter(Boolean)
+      .join(" ");
+    expect(announcementText).toBe(expectedAnnouncement);
   });
 
   it("wires fixed argument suggestions with command-and-argument option ids", () => {
