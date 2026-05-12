@@ -58,7 +58,22 @@ describe("auth profiles read-only external auth overlay", () => {
 
       const loaded = loadAuthProfileStoreForRuntime(agentDir, { readOnly: true });
 
-      expect(resolveExternalAuthProfilesWithPluginsMock).toHaveBeenCalled();
+      expect(resolveExternalAuthProfilesWithPluginsMock).toHaveBeenCalledTimes(1);
+      const externalAuthCall = resolveExternalAuthProfilesWithPluginsMock.mock.calls[0]?.[0] as
+        | {
+            config?: unknown;
+            context?: {
+              agentDir?: string;
+              store?: AuthProfileStore;
+              workspaceDir?: string;
+            };
+          }
+        | undefined;
+      expect(externalAuthCall?.config).toBeUndefined();
+      expect(externalAuthCall?.context?.agentDir).toBe(agentDir);
+      expect(externalAuthCall?.context?.workspaceDir).toBeUndefined();
+      expect(externalAuthCall?.context?.store?.version).toBe(AUTH_STORE_VERSION);
+      expect(externalAuthCall?.context?.store?.profiles).toStrictEqual(baseline.profiles);
       expect(loaded.profiles["minimax-portal:default"]?.type).toBe("oauth");
       expect(loaded.profiles["minimax-portal:default"]?.provider).toBe("minimax-portal");
 
