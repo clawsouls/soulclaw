@@ -169,11 +169,18 @@ describe("sessions view", () => {
     expect(toggleGroup?.getAttribute("aria-label")).toBe("Session source filters");
     expect(toggleGroup?.querySelectorAll(".session-filter-check")).toHaveLength(3);
     expect(
-      toggleGroup
-        ?.querySelector<HTMLInputElement>(".session-filter-check__input[name=includeGlobal]")
-        ?.closest("label")
-        ?.classList.contains("session-filter-check--active"),
-    ).toBe(true);
+      Array.from(toggleGroup?.querySelectorAll(".session-filter-check") ?? []).map((toggle) => [
+        toggle.querySelector("input")?.getAttribute("name"),
+        [...toggle.classList],
+      ]),
+    ).toEqual([
+      [
+        "includeGlobal",
+        ["session-filter-check", "session-filter-toggle", "session-filter-check--active"],
+      ],
+      ["includeUnknown", ["session-filter-check", "session-filter-toggle"]],
+      ["showArchived", ["session-filter-check", "session-filter-toggle", "session-archive-toggle"]],
+    ]);
     expect(toggleGroup?.querySelector(".session-filter-check__box")).toBeNull();
   });
 
