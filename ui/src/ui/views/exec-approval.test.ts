@@ -129,7 +129,10 @@ describe("approval and confirmation modals", () => {
   });
 
   it("renders exec approval as a labelled modal", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-29T00:00:00.000Z"));
     render(renderExecApprovalPrompt(createExecState()), container);
+    vi.useRealTimers();
 
     const { modal, dialog } = await getRenderedDialog();
 
@@ -140,10 +143,13 @@ describe("approval and confirmation modals", () => {
       "Exec approval needed",
     );
     expect(
-      modal.shadowRoot?.querySelector("#openclaw-modal-dialog-description")?.textContent,
-    ).toContain("expires in");
+      modal.shadowRoot?.querySelector("#openclaw-modal-dialog-description")?.textContent?.trim(),
+    ).toBe("expires in 1m");
     expect(container.querySelector("#exec-approval-title")?.textContent?.trim()).toBe(
       "Exec approval needed",
+    );
+    expect(container.querySelector("#exec-approval-description")?.textContent?.trim()).toBe(
+      "expires in 1m",
     );
   });
 
