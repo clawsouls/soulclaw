@@ -344,7 +344,7 @@ describe("renderAgents", () => {
         (button) => button.textContent?.trim(),
       );
 
-      expect(tabLabels).toContain("Cron Jobs");
+      expect(tabLabels).toEqual(["概览", "文件", "工具", "技能", "频道", "Cron Jobs"]);
       expect(container.textContent).toContain("上次刷新：从未");
     } finally {
       await i18n.setLocale("en");
