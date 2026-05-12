@@ -168,24 +168,25 @@ describe("CodexNativeSubagentTaskMirror", () => {
       },
     });
 
-    expect(runtime.finalizeTaskRunByRunId).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        runId: codexNativeSubagentRunId("child-thread"),
-        runtime: "subagent",
-        status: "succeeded",
-        terminalSummary: "Codex native subagent finished.",
-      }),
-    );
-    expect(runtime.finalizeTaskRunByRunId).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        runId: codexNativeSubagentRunId("failed-child"),
-        runtime: "subagent",
-        status: "failed",
-        terminalSummary: "Codex native subagent failed.",
-      }),
-    );
+    expect(runtime.finalizeTaskRunByRunId).toHaveBeenNthCalledWith(1, {
+      runId: codexNativeSubagentRunId("child-thread"),
+      runtime: "subagent",
+      status: "succeeded",
+      endedAt: 30_000,
+      lastEventAt: 30_000,
+      progressSummary: "Codex native subagent is idle.",
+      terminalSummary: "Codex native subagent finished.",
+    });
+    expect(runtime.finalizeTaskRunByRunId).toHaveBeenNthCalledWith(2, {
+      runId: codexNativeSubagentRunId("failed-child"),
+      runtime: "subagent",
+      status: "failed",
+      endedAt: 30_000,
+      lastEventAt: 30_000,
+      error: "Codex app-server reported a system error for the native subagent thread.",
+      progressSummary: "Codex native subagent hit a system error.",
+      terminalSummary: "Codex native subagent failed.",
+    });
   });
 
   it("creates and updates tasks from Codex collab agent item state", () => {
