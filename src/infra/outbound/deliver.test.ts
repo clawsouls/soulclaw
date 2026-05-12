@@ -153,6 +153,10 @@ function requireMockCall(
   return call;
 }
 
+function requireMatrixSendCall(sendMatrix: ReturnType<typeof vi.fn>, index = 0): unknown[] {
+  return requireMockCall(sendMatrix as { mock: { calls: unknown[][] } }, "matrix send", index);
+}
+
 function withMatrixChannel(result: Awaited<ReturnType<MatrixSendFn>>) {
   return {
     channel: "matrix" as const,
@@ -1799,11 +1803,10 @@ describe("deliverOutboundPayloads", () => {
       deps: { matrix: sendMatrix },
     });
 
-    expect(sendMatrix.mock.calls.at(0)?.[0]).toBe("!room:example");
-    expect(sendMatrix.mock.calls.at(0)?.[1]).toBe("hi");
-    const sendMatrixOptions = sendMatrix.mock.calls.at(0)?.[2] as
-      | { mediaLocalRoots?: string[] }
-      | undefined;
+    const sendMatrixCall = requireMatrixSendCall(sendMatrix);
+    expect(sendMatrixCall[0]).toBe("!room:example");
+    expect(sendMatrixCall[1]).toBe("hi");
+    const sendMatrixOptions = sendMatrixCall[2] as { mediaLocalRoots?: string[] } | undefined;
     expect(sendMatrixOptions?.mediaLocalRoots).toContain(expectedPreferredTmpRoot);
   });
 
@@ -1989,7 +1992,7 @@ describe("deliverOutboundPayloads", () => {
     });
 
     expect(sendMatrix).toHaveBeenCalledTimes(2);
-    const firstChunkCall = sendMatrix.mock.calls.at(0);
+    const firstChunkCall = requireMatrixSendCall(sendMatrix);
     expect(firstChunkCall?.[0]).toBe("!room:example");
     expect(firstChunkCall?.[1]).toBe("Line one");
     expect((firstChunkCall?.[2] as { cfg?: unknown } | undefined)?.cfg).toBe(cfg);
@@ -2225,11 +2228,12 @@ describe("deliverOutboundPayloads", () => {
       deps: { matrix: sendMatrix },
     });
 
-    const sendMatrixOptions = sendMatrix.mock.calls.at(0)?.[2] as
+    const sendMatrixCall = requireMatrixSendCall(sendMatrix);
+    const sendMatrixOptions = sendMatrixCall[2] as
       | { cfg?: unknown; mediaUrl?: unknown }
       | undefined;
-    expect(sendMatrix.mock.calls.at(0)?.[0]).toBe("!room:example");
-    expect(sendMatrix.mock.calls.at(0)?.[1]).toBe("hello");
+    expect(sendMatrixCall[0]).toBe("!room:example");
+    expect(sendMatrixCall[1]).toBe("hello");
     expect(sendMatrixOptions?.cfg).toBe(cfg);
     expect(sendMatrixOptions?.mediaUrl).toBe("https://example.com/a.png");
   });
@@ -2245,13 +2249,10 @@ describe("deliverOutboundPayloads", () => {
       deps: { matrix: sendMatrix },
     });
 
-    const sendMatrixOptions = sendMatrix.mock.calls.at(0)?.[2] as
-      | { mediaUrl?: unknown }
-      | undefined;
-    expect(sendMatrix.mock.calls.at(0)?.[0]).toBe("!room:example");
-    expect(sendMatrix.mock.calls.at(0)?.[1]).toBe(
-      "Tech: ![Node.js](https://img.shields.io/badge/Node.js-339933)",
-    );
+    const sendMatrixCall = requireMatrixSendCall(sendMatrix);
+    const sendMatrixOptions = sendMatrixCall[2] as { mediaUrl?: unknown } | undefined;
+    expect(sendMatrixCall[0]).toBe("!room:example");
+    expect(sendMatrixCall[1]).toBe("Tech: ![Node.js](https://img.shields.io/badge/Node.js-339933)");
     expect(sendMatrixOptions?.mediaUrl).toBeUndefined();
   });
 
@@ -2278,11 +2279,10 @@ describe("deliverOutboundPayloads", () => {
       deps: { matrix: sendMatrix },
     });
 
-    const sendMatrixOptions = sendMatrix.mock.calls.at(0)?.[2] as
-      | { mediaUrl?: unknown }
-      | undefined;
-    expect(sendMatrix.mock.calls.at(0)?.[0]).toBe("!room:example");
-    expect(sendMatrix.mock.calls.at(0)?.[1]).toBe("Chart now");
+    const sendMatrixCall = requireMatrixSendCall(sendMatrix);
+    const sendMatrixOptions = sendMatrixCall[2] as { mediaUrl?: unknown } | undefined;
+    expect(sendMatrixCall[0]).toBe("!room:example");
+    expect(sendMatrixCall[1]).toBe("Chart now");
     expect(sendMatrixOptions?.mediaUrl).toBe("https://example.com/chart.png");
   });
 
@@ -2606,7 +2606,7 @@ describe("deliverOutboundPayloads", () => {
     });
 
     expect(sendMatrix).toHaveBeenCalledTimes(1);
-    const deliveredText = sendMatrix.mock.calls.at(0)?.[1];
+    const deliveredText = requireMatrixSendCall(sendMatrix)[1];
     expect(deliveredText).toBe("No extra update from me.");
   });
 
