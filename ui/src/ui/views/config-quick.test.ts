@@ -177,8 +177,7 @@ describe("renderQuickSettings", () => {
     const titles = Array.from(container.querySelectorAll(".qs-identity-card__title")).map((node) =>
       node.textContent?.trim(),
     );
-    expect(titles).toContain("You");
-    expect(titles).toContain("Nova");
+    expect(titles).toEqual(["You", "Nova"]);
     expect(container.querySelector('input[placeholder="You"]')).toBeNull();
     expect(
       Array.from(container.querySelectorAll(".qs-row__label")).some(
