@@ -94,7 +94,7 @@ describe("compaction identifier-preservation instructions", () => {
       minMessagesForSplit: 4,
     });
 
-    expect(mockGenerateSummary.mock.calls.length).toBeGreaterThan(1);
+    expect(mockGenerateSummary).toHaveBeenCalledTimes(3);
     for (const call of mockGenerateSummary.mock.calls) {
       expect(extractSummaryInstructions(call)).toContain(
         "Preserve all opaque identifiers exactly as written",
@@ -110,6 +110,7 @@ describe("compaction identifier-preservation instructions", () => {
       customInstructions: "Prioritize customer-visible regressions.",
     });
 
+    expect(mockGenerateSummary).toHaveBeenCalledTimes(3);
     const mergedCall = mockGenerateSummary.mock.calls.at(-1);
     const instructions = extractSummaryInstructions(mergedCall);
     expect(instructions).toContain("Merge these partial summaries into a single cohesive summary.");
