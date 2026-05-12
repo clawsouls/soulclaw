@@ -1548,7 +1548,12 @@ describe("grouped chat rendering", () => {
       expect(fetchUrl).toBe(expectedUrl);
       expectSameOriginGet(fetchInit);
     }
-    expect(container.textContent).not.toContain("Outside allowed folders");
+    expect(
+      Array.from(container.querySelectorAll(".chat-assistant-attachment-badge")).map((badge) =>
+        badge.textContent?.trim(),
+      ),
+    ).toEqual(["Checking..."]);
+    expect(container.querySelector(".chat-assistant-attachment-card__reason")).toBeNull();
     vi.unstubAllGlobals();
   });
 
