@@ -1456,11 +1456,17 @@ describe("grouped chat rendering", () => {
     );
 
     expect(container.querySelector(".chat-assistant-attachment-card__link")).toBeNull();
-    expect(container.textContent).toContain("private.pdf");
-    expect(container.textContent).toContain("Unavailable");
-    expect(container.textContent).toContain("Outside allowed folders");
-    expect(container.textContent).toContain("Blocked");
-    expect(container.textContent).toContain("Done");
+    const blockedCard = container.querySelector(".chat-assistant-attachment-card--blocked");
+    expect(blockedCard?.querySelector(".chat-assistant-attachment-card__title")?.textContent).toBe(
+      "private.pdf",
+    );
+    expect(blockedCard?.querySelector(".chat-assistant-attachment-badge")?.textContent).toBe(
+      "Unavailable",
+    );
+    expect(
+      blockedCard?.querySelector(".chat-assistant-attachment-card__reason")?.textContent?.trim(),
+    ).toBe("Outside allowed folders");
+    expect(container.querySelector(".chat-text")?.textContent?.trim()).toBe("Blocked\nDone");
   });
 
   it("allows platform-specific local assistant attachments inside preview roots", async () => {
