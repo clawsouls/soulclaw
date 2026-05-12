@@ -57,7 +57,7 @@ function parseFetchBody(index = 0): Record<string, unknown> {
 
 function expectMockLogNotContains(mock: ReturnType<typeof vi.fn>, expected: string): void {
   const messages = mock.mock.calls.map((call) => String(call[0] ?? ""));
-  expect(messages.every((message) => !message.includes(expected))).toBe(true);
+  expect(messages.join("\n")).not.toContain(expected);
 }
 
 // Minimal WebSocket mock for connection-log assertions.
