@@ -934,18 +934,19 @@ describe("grouped chat rendering", () => {
       { showToolCalls: false },
     );
 
-    expect(container.querySelector(".chat-reply-pill")?.textContent).toContain(
+    expect(container.querySelector(".chat-reply-pill__label")?.textContent?.trim()).toBe(
       "Replying to current message",
     );
-    expectElement(container, ".chat-message-image", HTMLImageElement);
-    expectElement(container, "audio", HTMLAudioElement);
-    expect(container.querySelector(".chat-assistant-attachment-badge")?.textContent).toContain(
+    expect(container.querySelector(".chat-text")?.textContent?.trim()).toBe("Here is the image.");
+    expect(expectElement(container, ".chat-message-image", HTMLImageElement).src).toBe(
+      "https://example.com/photo.png",
+    );
+    expect(expectElement(container, "audio", HTMLAudioElement).src).toBe(
+      "https://example.com/voice.ogg",
+    );
+    expect(container.querySelector(".chat-assistant-attachment-badge")?.textContent?.trim()).toBe(
       "Voice note",
     );
-    expect(container.textContent).toContain("Here is the image.");
-    expect(container.textContent).not.toContain("[[reply_to_current]]");
-    expect(container.textContent).not.toContain("[[audio_as_voice]]");
-    expect(container.textContent).not.toContain("MEDIA:https://example.com/photo.png");
   });
 
   it("renders allowed transcript and content image variants", async () => {
