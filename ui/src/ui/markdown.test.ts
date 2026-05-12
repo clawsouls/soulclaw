@@ -265,22 +265,23 @@ describe("toSanitizedMarkdownHtml", () => {
   describe("task lists", () => {
     it("renders task list checkboxes", () => {
       const html = toSanitizedMarkdownHtml("- [ ] Unchecked\n- [x] Checked");
-      expect(html).toContain("<input");
-      expect(html).toContain('type="checkbox"');
-      expect(html).toContain("disabled");
-      expect(html).toContain("Unchecked");
-      expect(html).toContain("Checked");
+      expect(html).toBe(
+        '<ul class="contains-task-list">\n<li class="task-list-item"><input class="task-list-item-checkbox" disabled="" type="checkbox"> Unchecked</li>\n<li class="task-list-item"><input class="task-list-item-checkbox" checked="" disabled="" type="checkbox"> Checked</li>\n</ul>\n',
+      );
     });
 
     it("renders links inside task items", () => {
       const html = toSanitizedMarkdownHtml("- [ ] Task with [link](https://example.com)");
-      expect(html).toContain('<a href="https://example.com"');
+      expect(html).toBe(
+        '<ul class="contains-task-list">\n<li class="task-list-item"><input class="task-list-item-checkbox" disabled="" type="checkbox"> Task with <a href="https://example.com" rel="noreferrer noopener" target="_blank">link</a></li>\n</ul>\n',
+      );
     });
 
     it("escapes HTML injection in task items", () => {
       const html = toSanitizedMarkdownHtml("- [ ] <script>alert(1)</script>");
-      expect(html).not.toContain("<script");
-      expect(html).toContain("&lt;script&gt;");
+      expect(html).toBe(
+        '<ul class="contains-task-list">\n<li class="task-list-item"><input class="task-list-item-checkbox" disabled="" type="checkbox"> &lt;script&gt;alert(1)&lt;/script&gt;</li>\n</ul>\n',
+      );
     });
 
     it("escapes details/summary injection in task items", () => {
