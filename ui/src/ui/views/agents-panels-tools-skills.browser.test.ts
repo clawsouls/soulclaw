@@ -127,7 +127,9 @@ describe("agents tools panel (browser)", () => {
     );
     await Promise.resolve();
 
-    expect(container.textContent ?? "").toContain("Could not load runtime tool catalog");
+    expect(container.querySelector(".callout.info")?.textContent?.trim()).toBe(
+      "Could not load runtime tool catalog. Showing built-in fallback list instead.",
+    );
   });
 
   it("closes expanded tool rows when the parent group collapses", async () => {
