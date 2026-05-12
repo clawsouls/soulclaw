@@ -82,8 +82,9 @@ describe("markdownToMatrixHtml", () => {
       markdown: "1. hello @alice:example.org\n\n2. bye",
       client: createMentionClient(),
     });
-    expect(result.html).not.toContain("<p>");
-    expect(result.html).toContain('href="https://matrix.to/#/%40alice%3Aexample.org"');
+    expect(result.html).toBe(
+      '<ol>\n<li>hello <a href="https://matrix.to/#/%40alice%3Aexample.org">@alice:example.org</a></li>\n<li>bye</li>\n</ol>',
+    );
     expect(result.mentions).toEqual({ user_ids: ["@alice:example.org"] });
   });
 
@@ -100,7 +101,9 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain('href="https://matrix.to/#/%40alice%3Aexample.org"');
+    expect(result.html).toBe(
+      '<p>hello <a href="https://matrix.to/#/%40alice%3Aexample.org">@alice:example.org</a></p>',
+    );
     expect(result.mentions).toEqual({
       user_ids: ["@alice:example.org"],
     });
@@ -112,7 +115,9 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain('href="https://matrix.to/#/%40foo%2Fbar%3Aexample.org"');
+    expect(result.html).toBe(
+      '<p>hello <a href="https://matrix.to/#/%40foo%2Fbar%3Aexample.org">@foo/bar:example.org</a></p>',
+    );
     expect(result.mentions).toEqual({
       user_ids: ["@foo/bar:example.org"],
     });
@@ -124,7 +129,9 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain('href="https://matrix.to/#/%40room%3Aexample.org"');
+    expect(result.html).toBe(
+      '<p>hello <a href="https://matrix.to/#/%40room%3Aexample.org">@room:example.org</a></p>',
+    );
     expect(result.mentions).toEqual({
       user_ids: ["@room:example.org"],
     });
@@ -136,7 +143,9 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain('href="https://matrix.to/#/%40room-admin%3Aexample.org"');
+    expect(result.html).toBe(
+      '<p>hello <a href="https://matrix.to/#/%40room-admin%3Aexample.org">@room-admin:example.org</a></p>',
+    );
     expect(result.mentions).toEqual({
       user_ids: ["@room-admin:example.org"],
     });
@@ -148,8 +157,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain("@room");
-    expect(result.html).not.toContain("matrix.to");
+    expect(result.html).toBe("<p>hello @room</p>");
     expect(result.mentions).toEqual({
       room: true,
     });
@@ -161,8 +169,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain("hello @room.");
-    expect(result.html).not.toContain("matrix.to");
+    expect(result.html).toBe("<p>hello @room.</p>");
     expect(result.mentions).toEqual({
       room: true,
     });
@@ -174,8 +181,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain("hello @room:");
-    expect(result.html).not.toContain("matrix.to");
+    expect(result.html).toBe("<p>hello @room:</p>");
     expect(result.mentions).toEqual({
       room: true,
     });
@@ -187,8 +193,9 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain('href="https://matrix.to/#/%40alice%3Aexample.org"');
-    expect(result.html).toContain("@alice:example.org</a>.");
+    expect(result.html).toBe(
+      '<p>hello <a href="https://matrix.to/#/%40alice%3Aexample.org">@alice:example.org</a>.</p>',
+    );
     expect(result.mentions).toEqual({
       user_ids: ["@alice:example.org"],
     });
@@ -200,8 +207,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain("@alice:example.org/path");
-    expect(result.html).not.toContain("matrix.to");
+    expect(result.html).toBe("<p>hello @alice:example.org/path</p>");
     expect(result.mentions).toStrictEqual({});
   });
 
@@ -211,7 +217,9 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain('href="https://matrix.to/#/%40alice%3A%5B2001%3Adb8%3A%3A1%5D"');
+    expect(result.html).toBe(
+      '<p>hello <a href="https://matrix.to/#/%40alice%3A%5B2001%3Adb8%3A%3A1%5D">@alice:[2001:db8::1]</a></p>',
+    );
     expect(result.mentions).toEqual({
       user_ids: ["@alice:[2001:db8::1]"],
     });
@@ -223,10 +231,9 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain(
-      'href="https://matrix.to/#/%40alice%3A%5B2001%3Adb8%3A%3A1%5D%3A8448"',
+    expect(result.html).toBe(
+      '<p>hello <a href="https://matrix.to/#/%40alice%3A%5B2001%3Adb8%3A%3A1%5D%3A8448">@alice:[2001:db8::1]:8448</a>.</p>',
     );
-    expect(result.html).toContain("@alice:[2001:db8::1]:8448</a>.");
     expect(result.mentions).toEqual({
       user_ids: ["@alice:[2001:db8::1]:8448"],
     });
@@ -238,7 +245,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).not.toContain("matrix.to");
+    expect(result.html).toBe("<p>hello @alice</p>");
     expect(result.mentions).toStrictEqual({});
   });
 
@@ -248,8 +255,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain("@alice:example.org");
-    expect(result.html).not.toContain("matrix.to");
+    expect(result.html).toBe("<p>@alice:example.org</p>");
     expect(result.mentions).toStrictEqual({});
   });
 
@@ -259,7 +265,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain("@room");
+    expect(result.html).toBe("<p>@room</p>");
     expect(result.mentions).toStrictEqual({});
   });
 
@@ -269,8 +275,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain("`literal then @alice:example.org");
-    expect(result.html).not.toContain("matrix.to");
+    expect(result.html).toBe("<p>`literal then @alice:example.org</p>");
     expect(result.mentions).toStrictEqual({});
   });
 
@@ -280,8 +285,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain('<a href="https://example.com">@alice:example.org</a>');
-    expect(result.html).not.toContain("matrix.to");
+    expect(result.html).toBe('<p><a href="https://example.com">@alice:example.org</a></p>');
     expect(result.mentions).toStrictEqual({});
   });
 
@@ -291,7 +295,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain("<code>\\@alice:example.org</code>");
+    expect(result.html).toBe("<p><code>\\@alice:example.org</code></p>");
     expect(result.mentions).toStrictEqual({});
   });
 
@@ -301,8 +305,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain("<code>@alice:example.org</code>");
-    expect(result.html).not.toContain("matrix.to");
+    expect(result.html).toBe("<p><code>@alice:example.org</code></p>");
     expect(result.mentions).toStrictEqual({});
   });
 
@@ -312,7 +315,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain("<pre><code>\\@alice:example.org\n</code></pre>");
+    expect(result.html).toBe("<pre><code>\\@alice:example.org\n</code></pre>");
     expect(result.mentions).toStrictEqual({});
   });
 
@@ -322,7 +325,7 @@ describe("markdownToMatrixHtml", () => {
       client: createMentionClient(),
     });
 
-    expect(result.html).toContain("<pre><code>\\@alice:example.org\n</code></pre>");
+    expect(result.html).toBe("<pre><code>\\@alice:example.org\n</code></pre>");
     expect(result.mentions).toStrictEqual({});
   });
 });
