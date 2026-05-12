@@ -970,8 +970,12 @@ describe("config view", () => {
     const customButton = findButtonByText(container, "Import");
 
     expect(customButton.disabled).toBe(false);
-    expect(normalizedText(container)).toContain(
-      "Click Import to add one browser-local tweakcn theme",
+    expect(
+      normalizedText(
+        queryRequired(container, ".settings-theme-import__inline-hint", HTMLParagraphElement),
+      ),
+    ).toBe(
+      "Click Import to add one browser-local tweakcn theme. In tweakcn, use Share and paste the copied link here.",
     );
 
     customButton.click();
@@ -994,7 +998,13 @@ describe("config view", () => {
     expect(
       container.querySelector<HTMLAnchorElement>(".settings-theme-import__external")?.href,
     ).toBe("https://tweakcn.com/editor/theme");
-    expect(normalizedText(container)).toContain("Share links, editor URLs, registry URLs");
+    expect(
+      normalizedText(
+        queryRequired(container, ".settings-theme-import__hint", HTMLParagraphElement),
+      ),
+    ).toBe(
+      "Open tweakcn.com, choose or create a theme, click Share, then paste the copied theme link here. Share links, editor URLs, registry URLs, theme IDs, and default theme names like amethyst-haze are accepted.",
+    );
   });
 
   it("shows custom theme actions once a tweakcn import exists", () => {
