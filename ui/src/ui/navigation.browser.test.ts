@@ -497,13 +497,13 @@ describe("control UI routing", () => {
     expect(window.location.search).toBe("?session=agent%3Amain%3Asubagent%3Atask-123");
 
     const shell = expectElement(app, ".shell", HTMLElement);
-    expect(shell.classList.contains("shell--chat-focus")).toBe(false);
+    expect([...shell.classList]).toEqual(["shell", "shell--chat"]);
 
     const toggle = expectElement(app, 'button[title^="Toggle focus mode"]', HTMLButtonElement);
     toggle.click();
 
     await app.updateComplete;
-    expect(shell.classList.contains("shell--chat-focus")).toBe(true);
+    expect([...shell.classList]).toEqual(["shell", "shell--chat", "shell--chat-focus"]);
 
     const channelsLink = expectElement(app, 'a.nav-item[href="/channels"]', HTMLAnchorElement);
     channelsLink.dispatchEvent(
@@ -512,14 +512,14 @@ describe("control UI routing", () => {
 
     await app.updateComplete;
     expect(app.tab).toBe("channels");
-    expect(shell.classList.contains("shell--chat-focus")).toBe(false);
+    expect([...shell.classList]).toEqual(["shell"]);
 
     const chatLink = expectElement(app, 'a.nav-item[href="/chat"]', HTMLAnchorElement);
     chatLink.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
 
     await app.updateComplete;
     expect(app.tab).toBe("chat");
-    expect(shell.classList.contains("shell--chat-focus")).toBe(true);
+    expect([...shell.classList]).toEqual(["shell", "shell--chat", "shell--chat-focus"]);
   });
 
   it("auto-scrolls chat history to the latest message", async () => {
