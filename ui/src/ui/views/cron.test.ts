@@ -689,7 +689,7 @@ describe("cron view", () => {
       Array.from(everyAdvanced.querySelectorAll(".field-checkbox__label")).map((label) =>
         label.textContent?.trim(),
       ),
-    ).not.toContain("Best effort delivery");
+    ).toEqual(["Delete after run", "Clear agent override"]);
   });
 
   it("renders inline validation errors, disabled submit, and required aria bindings", () => {
