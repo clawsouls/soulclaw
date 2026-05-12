@@ -1307,7 +1307,7 @@ describe("compaction-safeguard recent-turn preservation", () => {
     };
 
     expect(result.cancel).not.toBe(true);
-    expect(mockSummarizeInStages).toHaveBeenCalled();
+    expect(mockSummarizeInStages).toHaveBeenCalledTimes(1);
     const droppedCall = mockSummarizeInStages.mock.calls[0]?.[0];
     expect(droppedCall?.customInstructions).toContain(
       "Produce a compact, factual summary with these exact section headings:",
