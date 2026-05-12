@@ -631,10 +631,11 @@ describe("grouped chat rendering", () => {
     );
     const meta = cached.querySelector<HTMLDetailsElement>("details.msg-meta");
     expect(meta?.open).toBe(false);
-    expect(meta?.querySelector("summary")?.textContent).toContain("Context");
+    expect(meta?.querySelector(".msg-meta__summary span:last-child")?.textContent).toBe("Context");
     expect(cached.querySelector(".msg-meta__ctx")?.textContent).toBe("44% ctx");
-    expect(cached.textContent).toContain("R438.4k");
-    expect(cached.textContent).toContain("W307");
+    expect(
+      Array.from(cached.querySelectorAll(".msg-meta__cache")).map((node) => node.textContent),
+    ).toEqual(["R438.4k", "W307"]);
 
     const outputHeavy = renderUsage(
       {
@@ -671,7 +672,7 @@ describe("grouped chat rendering", () => {
     );
 
     expect(container.querySelector(".msg-meta__ctx")?.textContent).toBe("42% ctx");
-    expect(container.textContent).toContain("↑214.5k");
+    expect(container.querySelector(".msg-meta__tokens")?.textContent).toBe("↑214.5k");
   });
 
   it("renders full dates with message and streaming timestamps", () => {
