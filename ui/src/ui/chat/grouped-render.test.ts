@@ -516,7 +516,11 @@ describe("grouped chat rendering", () => {
     const userConfirm = container.querySelector<HTMLElement>(
       ".chat-group.user .chat-delete-confirm",
     );
-    expect(userConfirm?.classList.contains("chat-delete-confirm--left")).toBe(true);
+    expect(userConfirm).toBeInstanceOf(HTMLElement);
+    expect([...userConfirm!.classList]).toEqual([
+      "chat-delete-confirm",
+      "chat-delete-confirm--left",
+    ]);
 
     const assistantDeleteButton = container.querySelector<HTMLButtonElement>(
       ".chat-group.assistant .chat-group-delete",
@@ -527,7 +531,11 @@ describe("grouped chat rendering", () => {
     const assistantConfirm = container.querySelector<HTMLElement>(
       ".chat-group.assistant .chat-delete-confirm",
     );
-    expect(assistantConfirm?.classList.contains("chat-delete-confirm--right")).toBe(true);
+    expect(assistantConfirm).toBeInstanceOf(HTMLElement);
+    expect([...assistantConfirm!.classList]).toEqual([
+      "chat-delete-confirm",
+      "chat-delete-confirm--right",
+    ]);
   });
 
   it("removes the delete confirm outside-click listener when Cancel dismisses it", () => {
