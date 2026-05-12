@@ -542,8 +542,10 @@ describe("cron view", () => {
     expect(onEdit).toHaveBeenCalledWith(job);
     expect(onLoadRuns).toHaveBeenCalledWith("job-3");
 
-    expect(container.textContent).toContain("Edit Job");
-    expect(container.textContent).toContain("Save changes");
+    expect(container.querySelector(".cron-form-header .card-title")?.textContent?.trim()).toBe(
+      "Edit Job",
+    );
+    expect(getButtonByText(container, "Save changes").disabled).toBe(false);
 
     const cancelButton = getButtonByText(container, "Cancel");
     cancelButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
