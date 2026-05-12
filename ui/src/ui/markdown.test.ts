@@ -16,9 +16,9 @@ describe("toSanitizedMarkdownHtml", () => {
         "[ok](https://example.com)",
       ].join("\n"),
     );
-    expect(html).not.toContain("<script");
-    expect(html).not.toContain("javascript:");
-    expect(html).toContain("https://example.com");
+    expect(html).toBe(
+      '&lt;script&gt;alert(1)&lt;/script&gt;\n\n<p><a>x</a></p>\n<p><a href="https://example.com" rel="noreferrer noopener" target="_blank">ok</a></p>\n',
+    );
   });
 
   // ── Additional tests for markdown-it migration ──
