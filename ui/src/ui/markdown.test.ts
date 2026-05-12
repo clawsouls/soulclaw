@@ -160,58 +160,69 @@ describe("toSanitizedMarkdownHtml", () => {
 
     it("keeps adjacent trailing CJK text outside www auto-links", () => {
       const html = toSanitizedMarkdownHtml("www.example.com重新解读");
-      expect(html).toContain('<a href="http://www.example.com"');
-      expect(html).toContain("重新解读");
-      expect(html).not.toContain("重新解读</a>");
+      expect(html).toBe(
+        '<p><a href="http://www.example.com" rel="noreferrer noopener" target="_blank">www.example.com</a>重新解读</p>\n',
+      );
     });
 
     it("keeps Japanese text outside www auto-links", () => {
       const html = toSanitizedMarkdownHtml("www.example.comテスト");
-      expect(html).toContain('<a href="http://www.example.com"');
-      expect(html).toContain("テスト");
+      expect(html).toBe(
+        '<p><a href="http://www.example.com" rel="noreferrer noopener" target="_blank">www.example.com</a>テスト</p>\n',
+      );
     });
   });
 
   describe("explicit protocol links", () => {
     it("links https:// URLs", () => {
       const html = toSanitizedMarkdownHtml("Visit https://example.com");
-      expect(html).toContain('<a href="https://example.com"');
+      expect(html).toBe(
+        '<p>Visit <a href="https://example.com" rel="noreferrer noopener" target="_blank">https://example.com</a></p>\n',
+      );
     });
 
     it("links http:// URLs", () => {
       const html = toSanitizedMarkdownHtml("Visit http://github.com/openclaw");
-      expect(html).toContain('<a href="http://github.com/openclaw"');
+      expect(html).toBe(
+        '<p>Visit <a href="http://github.com/openclaw" rel="noreferrer noopener" target="_blank">http://github.com/openclaw</a></p>\n',
+      );
     });
 
     it("links email addresses", () => {
       const html = toSanitizedMarkdownHtml("Email me at test@example.com");
-      expect(html).toContain('<a href="mailto:test@example.com"');
+      expect(html).toBe(
+        '<p>Email me at <a href="mailto:test@example.com" rel="noreferrer noopener" target="_blank">test@example.com</a></p>\n',
+      );
     });
 
     it("keeps adjacent trailing CJK text outside https:// auto-links", () => {
       const html = toSanitizedMarkdownHtml("https://example.com重新解读");
-      expect(html).toContain('<a href="https://example.com"');
-      expect(html).toContain(">https://example.com</a>");
-      expect(html).toContain("重新解读");
+      expect(html).toBe(
+        '<p><a href="https://example.com" rel="noreferrer noopener" target="_blank">https://example.com</a>重新解读</p>\n',
+      );
     });
 
     it("keeps CJK text outside https:// links with path", () => {
       const html = toSanitizedMarkdownHtml("https://example.com/path重新解读");
-      expect(html).toContain('<a href="https://example.com/path"');
-      expect(html).toContain("重新解读");
+      expect(html).toBe(
+        '<p><a href="https://example.com/path" rel="noreferrer noopener" target="_blank">https://example.com/path</a>重新解读</p>\n',
+      );
     });
 
     it("preserves mid-URL CJK in https:// links", () => {
       // CJK in the middle of a URL path (not trailing) must not be trimmed
       const html = toSanitizedMarkdownHtml("https://example.com/你/test");
-      expect(html).toContain("你/test</a>");
-      expect(html).not.toContain("你/test</a>你");
+      expect(html).toBe(
+        '<p><a href="https://example.com/%E4%BD%A0/test" rel="noreferrer noopener" target="_blank">https://example.com/你/test</a></p>\n',
+      );
     });
 
     it("preserves percent-encoded CJK inside URLs when no raw CJK present", () => {
       // Percent-encoded paths without raw CJK are preserved as-is
       const html = toSanitizedMarkdownHtml("https://example.com/path/%E4%BD%A0%E5%A5%BD");
-      expect(html).toContain("<a href=");
+      expect(html).toBe(
+        '<p><a href="https://example.com/path/" rel="noreferrer noopener" target="_blank">https://example.com/path/</a>你好</p>\n',
+      );
       // markdown-it linkify decodes percent-encoded CJK for display, then our
       // CJK trim rule splits at the first raw CJK char. This is acceptable
       // because raw percent-encoded CJK in chat is extremely rare.
@@ -219,16 +230,18 @@ describe("toSanitizedMarkdownHtml", () => {
 
     it("does NOT rewrite explicit markdown links with CJK display text", () => {
       const html = toSanitizedMarkdownHtml("[OpenClaw中文](https://docs.openclaw.ai)");
-      expect(html).toContain('href="https://docs.openclaw.ai"');
-      expect(html).toContain("OpenClaw中文</a>");
+      expect(html).toBe(
+        '<p><a href="https://docs.openclaw.ai" rel="noreferrer noopener" target="_blank">OpenClaw中文</a></p>\n',
+      );
     });
 
     it("preserves mailto: scheme when trimming CJK from email links", () => {
       // Email followed by space+CJK — linkify recognizes the email,
       // then CJK trim should preserve the mailto: prefix.
       const html = toSanitizedMarkdownHtml("Contact test@example.com 中文说明");
-      expect(html).toContain('href="mailto:test@example.com"');
-      expect(html).toContain("test@example.com</a>");
+      expect(html).toBe(
+        '<p>Contact <a href="mailto:test@example.com" rel="noreferrer noopener" target="_blank">test@example.com</a> 中文说明</p>\n',
+      );
     });
   });
 
