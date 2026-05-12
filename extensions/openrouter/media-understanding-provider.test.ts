@@ -1,3 +1,7 @@
+import {
+  describeImageWithModel,
+  describeImagesWithModel,
+} from "openclaw/plugin-sdk/media-understanding";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   openrouterMediaUnderstandingProvider,
@@ -37,7 +41,7 @@ describe("openrouter media understanding provider", () => {
   });
 
   it("declares image and audio capabilities with defaults", () => {
-    expect(openrouterMediaUnderstandingProvider).toMatchObject({
+    expect(openrouterMediaUnderstandingProvider).toEqual({
       id: "openrouter",
       capabilities: ["image", "audio"],
       defaultModels: {
@@ -45,8 +49,10 @@ describe("openrouter media understanding provider", () => {
         audio: "openai/whisper-large-v3-turbo",
       },
       autoPriority: { audio: 35 },
+      describeImage: describeImageWithModel,
+      describeImages: describeImagesWithModel,
+      transcribeAudio: transcribeOpenRouterAudio,
     });
-    expect(openrouterMediaUnderstandingProvider.transcribeAudio).toBeTypeOf("function");
   });
 
   it("sends JSON STT payload to OpenRouter transcriptions endpoint", async () => {
