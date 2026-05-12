@@ -177,15 +177,16 @@ describe("renderSkills", () => {
     );
     await Promise.resolve();
 
-    let text = normalizeText(container);
-    expect(text).toContain("GitHub");
-    expect(text).toContain("GitHub integration for OpenClaw");
-    expect(text).toContain("v1.2.3");
-
     const resultItem = container.querySelector<HTMLElement>(".list-item");
     const installButton = container.querySelector<HTMLButtonElement>(".list-item .btn.btn--sm");
     expect(resultItem).toBeInstanceOf(HTMLElement);
     expect(installButton).toBeInstanceOf(HTMLButtonElement);
+    expect(resultItem?.querySelector(".list-title")?.textContent?.trim()).toBe("GitHub");
+    expect(resultItem?.querySelector(".list-sub")?.textContent?.trim()).toBe(
+      "GitHub integration for OpenClaw",
+    );
+    expect(resultItem?.querySelector(".list-meta .muted")?.textContent?.trim()).toBe("v1.2.3");
+    expect(installButton?.textContent?.trim()).toBe("Install");
     resultItem!.click();
     installButton!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
@@ -232,7 +233,7 @@ describe("renderSkills", () => {
     await Promise.resolve();
 
     expect(showModal).toHaveBeenCalledTimes(1);
-    text = normalizeText(container);
+    const text = normalizeText(container);
     expect(text).toContain("rate limited");
     expect(text).toContain("Installed github");
     expect(text).toContain("By OpenClaw (@openclaw)");
