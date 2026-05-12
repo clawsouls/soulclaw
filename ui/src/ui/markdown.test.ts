@@ -52,20 +52,22 @@ describe("toSanitizedMarkdownHtml", () => {
     });
 
     it("links Unicode/IDN domains like www.münich.de", () => {
-      // markdown-it linkify converts IDN to punycode; marked.js percent-encodes.
-      // Both are valid; we just verify the link is created.
       const html1 = toSanitizedMarkdownHtml("Visit www.münich.de");
-      expect(html1).toContain("<a href=");
-      expect(html1).toContain(">www.münich.de</a>");
+      expect(html1).toBe(
+        '<p>Visit <a href="http://www.xn--mnich-kva.de" rel="noreferrer noopener" target="_blank">www.münich.de</a></p>\n',
+      );
 
       const html2 = toSanitizedMarkdownHtml("Visit www.café.example");
-      expect(html2).toContain("<a href=");
-      expect(html2).toContain(">www.café.example</a>");
+      expect(html2).toBe(
+        '<p>Visit <a href="http://www.xn--caf-dma.example" rel="noreferrer noopener" target="_blank">www.café.example</a></p>\n',
+      );
     });
 
     it("links www.foo_bar.example.com with underscores", () => {
       const html = toSanitizedMarkdownHtml("Visit www.foo_bar.example.com");
-      expect(html).toContain('<a href="http://www.foo_bar.example.com"');
+      expect(html).toBe(
+        '<p>Visit <a href="http://www.foo_bar.example.com" rel="noreferrer noopener" target="_blank">www.foo_bar.example.com</a></p>\n',
+      );
     });
 
     it("strips trailing punctuation from links", () => {
