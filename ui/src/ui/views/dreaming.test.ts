@@ -415,13 +415,15 @@ describe("dreaming view", () => {
     setDreamDiarySubTab("dreams");
     const container = renderInto(buildProps());
     const title = container.querySelector(".dreams-diary__title");
-    expect(title?.textContent).toContain("Dream Diary");
+    expect(title?.textContent).toBe("Dream Diary");
 
     expectElement(container, ".dreams-diary__entry");
     const date = container.querySelector(".dreams-diary__date");
-    expect(date?.textContent).toContain("April 5, 2026");
+    expect(date?.textContent).toBe("April 5, 2026, 3:00 AM");
     const body = container.querySelector(".dreams-diary__para");
-    expect(body?.textContent).toContain("forgotten endpoints");
+    expect(body?.textContent?.trim()).toBe(
+      "The repository whispered of forgotten endpoints tonight.",
+    );
     setDreamSubTab("scene");
   });
 
