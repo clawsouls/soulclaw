@@ -295,31 +295,29 @@ describe("toSanitizedMarkdownHtml", () => {
   describe("images", () => {
     it("flattens remote images to alt text", () => {
       const html = toSanitizedMarkdownHtml("![Alt text](https://example.com/img.png)");
-      expect(html).not.toContain("<img");
-      expect(html).toContain("Alt text");
+      expect(html).toBe("<p>Alt text</p>\n");
     });
 
     it("preserves markdown formatting in alt text", () => {
       const html = toSanitizedMarkdownHtml("![**Build log**](https://example.com/img.png)");
-      expect(html).toContain("**Build log**");
+      expect(html).toBe("<p>**Build log**</p>\n");
     });
 
     it("preserves code formatting in alt text", () => {
       const html = toSanitizedMarkdownHtml("![`error.log`](https://example.com/img.png)");
-      expect(html).toContain("`error.log`");
+      expect(html).toBe("<p>`error.log`</p>\n");
     });
 
     it("preserves base64 data URI images (#15437)", () => {
       const html = toSanitizedMarkdownHtml("![Chart](data:image/png;base64,iVBORw0KGgo=)");
-      expect(html).toContain("<img");
-      expect(html).toContain('class="markdown-inline-image"');
-      expect(html).toContain("data:image/png;base64,");
+      expect(html).toBe(
+        '<p><img class="markdown-inline-image" src="data:image/png;base64,iVBORw0KGgo=" alt="Chart"></p>\n',
+      );
     });
 
     it("uses fallback label for unlabeled images", () => {
       const html = toSanitizedMarkdownHtml("![](https://example.com/image.png)");
-      expect(html).not.toContain("<img");
-      expect(html).toContain("image");
+      expect(html).toBe("<p>image</p>\n");
     });
   });
 
