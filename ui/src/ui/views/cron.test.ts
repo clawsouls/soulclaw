@@ -568,29 +568,59 @@ describe("cron view", () => {
       container,
     );
 
-    expect(container.textContent).toContain("Advanced");
-    expect(container.textContent).toContain("Exact timing (no stagger)");
-    expect(container.textContent).toContain("Stagger window");
-    expect(container.textContent).toContain("Light context");
-    expect(container.textContent).toContain("Model");
-    expect(container.textContent).toContain("Thinking");
-    expect(container.textContent).toContain("Best effort delivery");
+    expect(
+      Array.from(container.querySelectorAll(".cron-summary-label")).map((label) =>
+        label.textContent?.trim(),
+      ),
+    ).toEqual(["Enabled", "Jobs", "Next wake"]);
+    expect(
+      Array.from(container.querySelectorAll(".cron-form-section__title")).map((label) =>
+        label.textContent?.trim(),
+      ),
+    ).toEqual(["Basics", "Schedule", "Execution", "Delivery"]);
 
-    const staggerGroup = container.querySelector(".cron-stagger-group");
-    expect(staggerGroup?.textContent).toContain("Stagger window");
-    expect(staggerGroup?.textContent).toContain("Stagger unit");
-    expect(container.textContent).toContain(
+    const advanced = getElement(container, ".cron-advanced", HTMLElement);
+    expect(advanced.querySelector(".cron-advanced__summary")?.textContent?.trim()).toBe("Advanced");
+    expect(advanced.querySelector(".cron-help")?.textContent?.trim()).toBe(
+      "Optional overrides for delivery guarantees, schedule jitter, and model controls.",
+    );
+    expect(
+      Array.from(advanced.querySelectorAll(".field-checkbox__label")).map((label) =>
+        label.textContent?.trim(),
+      ),
+    ).toEqual([
+      "Delete after run",
+      "Clear agent override",
+      "Exact timing (no stagger)",
+      "Light context",
+      "Best effort delivery",
+    ]);
+
+    const staggerGroup = getElement(container, ".cron-stagger-group", HTMLElement);
+    expect(
+      Array.from(staggerGroup.querySelectorAll(".field > span")).map((label) =>
+        label.textContent?.trim(),
+      ),
+    ).toEqual(["Stagger window", "Stagger unit"]);
+    const timeoutInput = getElement(container, "#cron-timeout-seconds", HTMLInputElement);
+    expect(timeoutInput.closest("label")?.querySelector(".cron-help")?.textContent?.trim()).toBe(
       "Optional. Leave blank to use the gateway default timeout behavior for this run.",
     );
-    expect(container.textContent).toContain("Need jitter? Use Advanced");
-
-    expect(container.textContent).toContain("Enabled");
-    expect(container.textContent).toContain("Jobs");
-    expect(container.textContent).toContain("Next wake");
-    expect(container.textContent).toContain("Basics");
-    expect(container.textContent).toContain("Schedule");
-    expect(container.textContent).toContain("Execution");
-    expect(container.textContent).toContain("Delivery");
+    const scheduleSection = Array.from(container.querySelectorAll(".cron-form-section")).find(
+      (section) =>
+        section.querySelector(".cron-form-section__title")?.textContent?.trim() === "Schedule",
+    );
+    expect(scheduleSection?.querySelector(".cron-help.cron-span-2")?.textContent?.trim()).toBe(
+      "Need jitter? Use Advanced \u2192 Stagger window / Stagger unit.",
+    );
+    expect(
+      ["#cron-payload-model", "#cron-payload-thinking"].map((selector) =>
+        getElement(container, selector, HTMLInputElement)
+          .closest("label")
+          ?.querySelector("span")
+          ?.textContent?.trim(),
+      ),
+    ).toEqual(["Model", "Thinking"]);
 
     const checkboxLabel = getElement(container, ".cron-checkbox", HTMLLabelElement);
     const firstElement = checkboxLabel.firstElementChild;
@@ -625,10 +655,15 @@ describe("cron view", () => {
       ),
       container,
     );
-    expect(container.textContent).not.toContain("Exact timing (no stagger)");
-    expect(container.textContent).not.toContain("Stagger window");
-    expect(container.textContent).not.toContain("Model");
-    expect(container.textContent).not.toContain("Best effort delivery");
+    const everyAdvanced = getElement(container, ".cron-advanced", HTMLElement);
+    expect(everyAdvanced.querySelector("#cron-stagger-amount")).toBeNull();
+    expect(everyAdvanced.querySelector("#cron-payload-model")).toBeNull();
+    expect(everyAdvanced.querySelector("#cron-payload-thinking")).toBeNull();
+    expect(
+      Array.from(everyAdvanced.querySelectorAll(".field-checkbox__label")).map((label) =>
+        label.textContent?.trim(),
+      ),
+    ).not.toContain("Best effort delivery");
   });
 
   it("renders inline validation errors, disabled submit, and required aria bindings", () => {
