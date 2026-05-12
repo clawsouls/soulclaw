@@ -95,6 +95,14 @@ function collectQuickSettingsCardKinds(container: Element): string[] {
   return kinds;
 }
 
+function expectAssistantAvatarSource(container: Element): { label: string; source: string } {
+  const source = container.querySelector(".qs-identity-card--assistant .qs-identity-card__source");
+  return {
+    label: source?.querySelector("span")?.textContent?.trim() ?? "",
+    source: source?.querySelector("code")?.textContent?.trim() ?? "",
+  };
+}
+
 describe("renderQuickSettings", () => {
   it("uses direct dashboard cards for the compact settings layout", () => {
     const container = document.createElement("div");
@@ -221,9 +229,10 @@ describe("renderQuickSettings", () => {
     expect(container.querySelector(".qs-assistant-avatar")?.getAttribute("src")).toBe(
       "apple-touch-icon.png",
     );
-    expect(container.querySelector(".qs-identity-card__source")?.textContent).toContain(
-      "assets/avatars/nova-portrait.png",
-    );
+    expect(expectAssistantAvatarSource(container)).toEqual({
+      label: "IDENTITY.md",
+      source: "assets/avatars/nova-portrait.png",
+    });
     expect(container.querySelector(".qs-identity-card__issue")?.textContent?.trim()).toBe(
       "File not found",
     );
@@ -315,9 +324,10 @@ describe("renderQuickSettings", () => {
       container,
     );
 
-    expect(container.querySelector(".qs-identity-card__source")?.textContent).toContain(
-      "UI override",
-    );
+    expect(expectAssistantAvatarSource(container)).toEqual({
+      label: "UI override",
+      source: "data:image/png;base64,...",
+    });
     expectButtonByText(container, "Clear override").dispatchEvent(new Event("click"));
 
     expect(onAssistantAvatarClearOverride).toHaveBeenCalledTimes(1);
@@ -343,9 +353,10 @@ describe("renderQuickSettings", () => {
     );
 
     expect(container.querySelector(".qs-assistant-avatar")?.getAttribute("src")).toBe(dataUrl);
-    expect(container.querySelector(".qs-identity-card__source")?.textContent).toContain(
-      "UI override",
-    );
+    expect(expectAssistantAvatarSource(container)).toEqual({
+      label: "UI override",
+      source: "data:image/png;base64,...",
+    });
     expect(container.querySelector(".qs-identity-card__issue")).toBeNull();
     expect(
       Array.from(container.querySelectorAll("label.btn")).some(
