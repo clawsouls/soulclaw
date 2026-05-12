@@ -355,9 +355,12 @@ describe("toSanitizedMarkdownHtml", () => {
         await i18n.setLocale("zh-CN");
         const chinese = toSanitizedMarkdownHtml(markdown);
 
-        expect(english).toContain(">Copy<");
-        expect(chinese).toContain(">复制<");
-        expect(chinese).not.toContain(">Copy<");
+        expect(english).toBe(
+          '<div class="code-block-wrapper"><div class="code-block-header"><span class="code-block-lang">ts</span><button type="button" class="code-block-copy" data-code="const localizedCopy = true;" aria-label="Copy code"><span class="code-block-copy__idle">Copy</span><span class="code-block-copy__done">Copied!</span></button></div><pre><code class="language-ts">const localizedCopy = true;\n</code></pre></div>',
+        );
+        expect(chinese).toBe(
+          '<div class="code-block-wrapper"><div class="code-block-header"><span class="code-block-lang">ts</span><button type="button" class="code-block-copy" data-code="const localizedCopy = true;" aria-label="复制代码"><span class="code-block-copy__idle">复制</span><span class="code-block-copy__done">已复制！</span></button></div><pre><code class="language-ts">const localizedCopy = true;\n</code></pre></div>',
+        );
       } finally {
         await i18n.setLocale("en");
       }
