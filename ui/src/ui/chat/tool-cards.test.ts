@@ -149,17 +149,23 @@ describe("tool-cards", () => {
     const rawToggle = container.querySelector<HTMLButtonElement>(".chat-tool-card__raw-toggle");
     const rawBody = container.querySelector<HTMLElement>(".chat-tool-card__raw-body");
 
-    expect(container.textContent).toContain("Counter demo");
     expect(container.querySelector(".chat-tool-card__preview-frame")).toBeNull();
-    expect(rawToggle?.getAttribute("aria-expanded")).toBe("false");
-    expect(rawBody?.hidden).toBe(true);
-
     expect(rawToggle).toBeInstanceOf(HTMLButtonElement);
+    expect(rawBody).toBeInstanceOf(HTMLElement);
+    expect([...rawToggle!.classList]).toEqual(["chat-tool-card__raw-toggle"]);
+    expect(rawToggle!.textContent?.trim()).toBe("Raw details");
+    expect(rawToggle!.getAttribute("aria-expanded")).toBe("false");
+    expect(rawBody!.hidden).toBe(true);
+
     rawToggle!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
-    expect(rawToggle?.getAttribute("aria-expanded")).toBe("true");
-    expect(rawBody?.hidden).toBe(false);
-    expect(rawBody?.textContent).toContain('"kind":"canvas"');
+    expect(rawToggle!.getAttribute("aria-expanded")).toBe("true");
+    expect(rawBody!.hidden).toBe(false);
+    expect(rawBody!.querySelector(".chat-tool-card__block-label")?.textContent).toBe("Tool output");
+    expect(JSON.parse(rawBody!.querySelector("code")?.textContent ?? "{}")).toMatchObject({
+      kind: "canvas",
+      view: { id: "cv_counter", title: "Counter demo" },
+    });
   });
 
   it("opens assistant-surface canvas payloads in the sidebar when explicitly requested", () => {
