@@ -372,7 +372,7 @@ describe("toSanitizedMarkdownHtml", () => {
   describe("GFM features", () => {
     it("renders strikethrough", () => {
       const html = toSanitizedMarkdownHtml("This is ~~deleted~~ text");
-      expect(html).toContain("<s>deleted</s>");
+      expect(html).toBe("<p>This is <s>deleted</s> text</p>\n");
     });
 
     it("renders tables surrounded by text", () => {
@@ -395,25 +395,22 @@ describe("toSanitizedMarkdownHtml", () => {
 
     it("renders basic markdown", () => {
       const html = toSanitizedMarkdownHtml("**bold** and *italic*");
-      expect(html).toContain("<strong>bold</strong>");
-      expect(html).toContain("<em>italic</em>");
+      expect(html).toBe("<p><strong>bold</strong> and <em>italic</em></p>\n");
     });
 
     it("renders headings", () => {
       const html = toSanitizedMarkdownHtml("# Heading 1\n## Heading 2");
-      expect(html).toContain("<h1>");
-      expect(html).toContain("<h2>");
+      expect(html).toBe("<h1>Heading 1</h1>\n<h2>Heading 2</h2>\n");
     });
 
     it("renders blockquotes", () => {
       const html = toSanitizedMarkdownHtml("> quote");
-      expect(html).toContain("<blockquote>");
+      expect(html).toBe("<blockquote>\n<p>quote</p>\n</blockquote>\n");
     });
 
     it("renders lists", () => {
       const html = toSanitizedMarkdownHtml("- item 1\n- item 2");
-      expect(html).toContain("<ul>");
-      expect(html).toContain("<li>");
+      expect(html).toBe("<ul>\n<li>item 1</li>\n<li>item 2</li>\n</ul>\n");
     });
   });
 
