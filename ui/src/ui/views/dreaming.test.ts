@@ -236,9 +236,7 @@ describe("dreaming view", () => {
     const buttons = [...container.querySelectorAll("button")].map((node) =>
       node.textContent?.trim(),
     );
-    expect(buttons).not.toContain("Backfill");
-    expect(buttons).not.toContain("Reset");
-    expect(buttons).not.toContain("Clear Replayed");
+    expect(buttons).toEqual(["Scene", "Diary", "Advanced"]);
     expectElement(container, ".dreams__bubble");
     const text = container.querySelector(".dreams__bubble-text");
     expect(text?.textContent).toBe("reindexing old chats\u2026");
