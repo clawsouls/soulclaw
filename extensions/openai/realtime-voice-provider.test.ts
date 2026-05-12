@@ -880,7 +880,7 @@ describe("buildOpenAIRealtimeVoiceProvider", () => {
 
     expect(onAudio).toHaveBeenCalledTimes(1);
     expect(onClearAudio).not.toHaveBeenCalled();
-    expect(parseSent(socket)).not.toContainEqual({ type: "response.cancel" });
+    expect(hasSentEventType(socket, "response.cancel")).toBe(false);
     expect(hasSentEventType(socket, "conversation.item.truncate")).toBe(false);
   });
 
@@ -926,7 +926,7 @@ describe("buildOpenAIRealtimeVoiceProvider", () => {
 
     expect(onAudio).toHaveBeenCalledTimes(1);
     expect(onClearAudio).not.toHaveBeenCalled();
-    expect(parseSent(socket)).not.toContainEqual({ type: "response.cancel" });
+    expect(hasSentEventType(socket, "response.cancel")).toBe(false);
     expect(hasSentEventType(socket, "conversation.item.truncate")).toBe(false);
   });
 
@@ -1389,7 +1389,7 @@ describe("buildOpenAIRealtimeVoiceProvider", () => {
         },
       },
     ]);
-    expect(parseSent(socket)).not.toContainEqual({ type: "response.create" });
+    expect(hasSentEventType(socket, "response.create")).toBe(false);
 
     bridge.submitToolResult("call_1", { text: "done" });
 
@@ -1443,7 +1443,7 @@ describe("buildOpenAIRealtimeVoiceProvider", () => {
         },
       },
     ]);
-    expect(parseSent(socket)).not.toContainEqual({ type: "response.create" });
+    expect(hasSentEventType(socket, "response.create")).toBe(false);
   });
 
   it("does not flush deferred response.create while a tool result is still continuing", async () => {
@@ -1617,7 +1617,7 @@ describe("buildOpenAIRealtimeVoiceProvider", () => {
     bridge.handleBargeIn?.({ audioPlaybackActive: true });
 
     expect(onClearAudio).not.toHaveBeenCalled();
-    expect(parseSent(socket)).not.toContainEqual({ type: "response.cancel" });
+    expect(hasSentEventType(socket, "response.cancel")).toBe(false);
     expect(parseSent(socket).some((event) => event.type === "conversation.item.truncate")).toBe(
       false,
     );
