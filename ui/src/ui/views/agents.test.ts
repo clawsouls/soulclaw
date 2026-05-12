@@ -42,6 +42,16 @@ function directText(element: Element | null | undefined): string | undefined {
     .trim();
 }
 
+function expectAgentTab(container: Element, text: string): HTMLButtonElement {
+  const button = Array.from(container.querySelectorAll<HTMLButtonElement>(".agent-tab")).find(
+    (candidate) => directText(candidate) === text,
+  );
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Expected agent tab "${text}"`);
+  }
+  return button;
+}
+
 function createProps(overrides: Partial<AgentsProps> = {}): AgentsProps {
   return {
     basePath: "",
@@ -284,11 +294,9 @@ describe("renderAgents", () => {
     );
     await Promise.resolve();
 
-    let skillsTab = Array.from(container.querySelectorAll<HTMLButtonElement>(".agent-tab")).find(
-      (button) => button.textContent?.includes("Skills"),
-    );
+    let skillsTab = expectAgentTab(container, "Skills");
 
-    expect(skillsTab?.textContent?.trim()).toBe("Skills");
+    expect(skillsTab.textContent?.trim()).toBe("Skills");
 
     render(
       renderAgents(
@@ -310,12 +318,10 @@ describe("renderAgents", () => {
     );
     await Promise.resolve();
 
-    skillsTab = Array.from(container.querySelectorAll<HTMLButtonElement>(".agent-tab")).find(
-      (button) => button.textContent?.includes("Skills"),
-    );
+    skillsTab = expectAgentTab(container, "Skills");
 
     expect(directText(skillsTab)).toBe("Skills");
-    expect(skillsTab?.querySelector(".agent-tab-count")?.textContent).toBe("1");
+    expect(skillsTab.querySelector(".agent-tab-count")?.textContent).toBe("1");
   });
 
   it("keeps the Cron Jobs tab label while localizing channel refresh never state", async () => {
