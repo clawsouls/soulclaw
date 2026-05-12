@@ -1178,8 +1178,11 @@ describe("grouped chat rendering", () => {
     );
 
     expectElement(container, ".chat-bubble", HTMLElement);
-    expectElement(container, ".chat-tool-card__preview-frame", HTMLIFrameElement);
-    expect(container.textContent).toContain("Tic-Tac-Toe");
+    const iframe = expectElement(container, ".chat-tool-card__preview-frame", HTMLIFrameElement);
+    expect(iframe.getAttribute("title")).toBe("Tic-Tac-Toe");
+    expect(container.querySelector(".chat-tool-card__preview-label")?.textContent?.trim()).toBe(
+      "Tic-Tac-Toe",
+    );
   });
 
   it("opens only safe assistant image URLs in a hardened new tab", () => {
