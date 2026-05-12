@@ -359,7 +359,7 @@ describe("update-cli", () => {
   };
 
   const expectUpdateCallChannel = (channel: string) => {
-    const call = vi.mocked(runGatewayUpdate).mock.calls[0]?.[0];
+    const call = vi.mocked(runGatewayUpdate).mock.calls.at(0)?.[0];
     expect(call?.channel).toBe(channel);
     return call;
   };
@@ -851,7 +851,7 @@ describe("update-cli", () => {
       },
     );
 
-    const spawnEnv = (spawn.mock.calls[0]?.[2] as { env?: NodeJS.ProcessEnv } | undefined)?.env;
+    const spawnEnv = (spawn.mock.calls.at(0)?.[2] as { env?: NodeJS.ProcessEnv } | undefined)?.env;
     expect(spawnEnv?.OPENCLAW_SERVICE_MARKER).toBeUndefined();
     expect(spawnEnv?.OPENCLAW_SERVICE_KIND).toBeUndefined();
   });
@@ -1193,7 +1193,7 @@ describe("update-cli", () => {
       },
     );
 
-    const updateCall = updateNpmInstalledPlugins.mock.calls[0]?.[0] as
+    const updateCall = updateNpmInstalledPlugins.mock.calls.at(0)?.[0] as
       | {
           onIntegrityDrift?: (drift: {
             pluginId: string;
@@ -1670,7 +1670,7 @@ describe("update-cli", () => {
 
       if (expectedPersistedChannel !== undefined) {
         expect(replaceConfigFile).toHaveBeenCalledTimes(1);
-        const writeCall = vi.mocked(replaceConfigFile).mock.calls[0]?.[0] as
+        const writeCall = vi.mocked(replaceConfigFile).mock.calls.at(0)?.[0] as
           | { nextConfig?: { update?: { channel?: string } } }
           | undefined;
         expect(writeCall?.nextConfig?.update?.channel).toBe(expectedPersistedChannel);
@@ -2222,7 +2222,7 @@ describe("update-cli", () => {
       );
     const npmInstallCallOrder =
       vi.mocked(runCommandWithTimeout).mock.invocationCallOrder[npmInstallCallIndex];
-    const serviceStopCall = serviceStop.mock.calls[0]?.[0] as
+    const serviceStopCall = serviceStop.mock.calls.at(0)?.[0] as
       | { env?: NodeJS.ProcessEnv }
       | undefined;
     expect(serviceStopCall?.env?.OPENCLAW_SERVICE_MARKER).toBe("openclaw");
@@ -2678,7 +2678,7 @@ describe("update-cli", () => {
     await updateCommand({ channel: "beta", yes: true });
 
     const repairCall =
-      legacyConfigRepairMocks.repairLegacyConfigForUpdateChannel.mock.calls[0]?.[0];
+      legacyConfigRepairMocks.repairLegacyConfigForUpdateChannel.mock.calls.at(0)?.[0];
     expect(repairCall?.configSnapshot.hash).toBe("legacy-hash");
     expect(repairCall?.configSnapshot.valid).toBe(false);
     expect(repairCall?.jsonMode).toBe(false);
@@ -2894,10 +2894,10 @@ describe("update-cli", () => {
 
     await updateCommand({ channel: "beta", yes: true });
 
-    const syncConfig = vi.mocked(syncPluginsForUpdateChannel).mock.calls[0]?.[0]?.config as
+    const syncConfig = vi.mocked(syncPluginsForUpdateChannel).mock.calls.at(0)?.[0]?.config as
       | OpenClawConfig
       | undefined;
-    const updateCall = vi.mocked(updateNpmInstalledPlugins).mock.calls[0]?.[0] as
+    const updateCall = vi.mocked(updateNpmInstalledPlugins).mock.calls.at(0)?.[0] as
       | { skipDisabledPlugins?: boolean; syncOfficialPluginInstalls?: boolean }
       | undefined;
     expect(syncConfig?.plugins?.installs).toEqual(pluginInstallRecords);
@@ -2948,7 +2948,7 @@ describe("update-cli", () => {
 
     await updateCommand({ channel: "dev", yes: true, restart: false });
 
-    const persistedConfig = vi.mocked(replaceConfigFile).mock.calls[0]?.[0]?.nextConfig;
+    const persistedConfig = vi.mocked(replaceConfigFile).mock.calls.at(0)?.[0]?.nextConfig;
     expect(persistedConfig?.update?.channel).toBe("dev");
     const syncCall = syncPluginCall() as
       | { channel?: string; config?: OpenClawConfig; workspaceDir?: string }
@@ -3130,7 +3130,9 @@ describe("update-cli", () => {
     expect(restartCall?.[0].slice(1)).toEqual([updatedEntrypoint, "gateway", "restart", "--json"]);
     expect(restartCall?.[1].cwd).toBe(updatedRoot);
     expect(restartCall?.[1].timeoutMs).toBe(60_000);
-    const probeCall = probeGateway.mock.calls[0]?.[0] as { includeDetails?: boolean } | undefined;
+    const probeCall = probeGateway.mock.calls.at(0)?.[0] as
+      | { includeDetails?: boolean }
+      | undefined;
     expect(probeCall?.includeDetails).toBe(true);
     expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
     expect(defaultRuntime.writeJson).not.toHaveBeenCalled();
@@ -3185,7 +3187,9 @@ describe("update-cli", () => {
     expect(installCall?.[1].timeoutMs).toBe(60_000);
     expect(gatewayCommandCall(updatedEntrypoint, "restart")).toBeUndefined();
     expect(runRestartScript).not.toHaveBeenCalled();
-    const probeCall = probeGateway.mock.calls[0]?.[0] as { includeDetails?: boolean } | undefined;
+    const probeCall = probeGateway.mock.calls.at(0)?.[0] as
+      | { includeDetails?: boolean }
+      | undefined;
     expect(probeCall?.includeDetails).toBe(true);
     expect(defaultRuntime.exit).not.toHaveBeenCalledWith(1);
   });
@@ -3237,7 +3241,9 @@ describe("update-cli", () => {
     await updateCommand({ yes: true });
 
     expect(runRestartScript).toHaveBeenCalledTimes(1);
-    const probeCall = probeGateway.mock.calls[0]?.[0] as { includeDetails?: boolean } | undefined;
+    const probeCall = probeGateway.mock.calls.at(0)?.[0] as
+      | { includeDetails?: boolean }
+      | undefined;
     expect(probeCall?.includeDetails).toBe(true);
     expect(defaultRuntime.exit).toHaveBeenCalledWith(1);
     expect(
@@ -3328,7 +3334,7 @@ describe("update-cli", () => {
     const runCommandWithTimeoutMock = vi.mocked(runCommandWithTimeout) as unknown as {
       mock: { calls: Array<[unknown, { cwd?: string }?]> };
     };
-    const root = setup?.root ?? runCommandWithTimeoutMock.mock.calls[0]?.[1]?.cwd;
+    const root = setup?.root ?? runCommandWithTimeoutMock.mock.calls.at(0)?.[1]?.cwd;
     const entryPath = setup?.entrypoints?.[0] ?? path.join(String(root), "dist", "entry.js");
 
     const installCall = gatewayCommandCall(entryPath, "install");
@@ -3355,7 +3361,7 @@ describe("update-cli", () => {
 
         await updateCommand({});
 
-        const doctorCall = vi.mocked(doctorCommand).mock.calls[0];
+        const doctorCall = vi.mocked(doctorCommand).mock.calls.at(0);
         expect(doctorCall?.[0]).toBe(defaultRuntime);
         expect(doctorCall?.[1]?.nonInteractive).toBe(true);
         expect(process.env.OPENCLAW_UPDATE_IN_PROGRESS).toBeUndefined();
@@ -3473,7 +3479,7 @@ describe("update-cli", () => {
 
       await updateWizardCommand({});
 
-      const call = vi.mocked(runGatewayUpdate).mock.calls[0]?.[0];
+      const call = vi.mocked(runGatewayUpdate).mock.calls.at(0)?.[0];
       expect(call?.channel).toBe("dev");
     });
   });
