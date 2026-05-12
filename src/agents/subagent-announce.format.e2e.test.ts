@@ -26,7 +26,12 @@ import { runSubagentAnnounceDispatch } from "./subagent-announce-dispatch.js";
 import { resetAnnounceQueuesForTests } from "./subagent-announce-queue.js";
 import * as agentStep from "./tools/agent-step.js";
 
-type AgentCallRequest = { method?: string; params?: Record<string, unknown> };
+type AgentCallRequest = {
+  method?: string;
+  params?: Record<string, unknown> & {
+    internalEvents?: Array<{ type?: string; taskLabel?: string }>;
+  };
+};
 type RequesterResolution = {
   requesterSessionKey: string;
   requesterOrigin?: Record<string, unknown>;
@@ -84,7 +89,7 @@ function expectInputProvenance(
 }
 
 function getAgentCall(index = 0): AgentCallRequest {
-  const call = agentSpy.mock.calls[index]?.[0];
+  const call = agentSpy.mock.calls.at(index)?.[0];
   if (!call) {
     throw new Error(`Expected agent call at index ${index}`);
   }
