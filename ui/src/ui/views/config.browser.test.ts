@@ -436,7 +436,11 @@ describe("config view", () => {
       },
     });
 
-    expect(normalizedText(container)).toContain("Telegram");
+    expect(
+      Array.from(container.querySelectorAll(".cfg-field__label")).map((label) =>
+        label.textContent?.trim(),
+      ),
+    ).toEqual(["Telegram"]);
   });
 
   it("renders and wires the search field controls", () => {
