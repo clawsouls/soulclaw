@@ -145,20 +145,17 @@ describe("toSanitizedMarkdownHtml", () => {
 
     it("does NOT link bare domains without www", () => {
       const html = toSanitizedMarkdownHtml("Visit google.com today");
-      expect(html).not.toContain("<a");
-      expect(html).toContain("google.com");
+      expect(html).toBe("<p>Visit google.com today</p>\n");
     });
 
     it("does NOT link filenames with TLD-like extensions", () => {
       const html = toSanitizedMarkdownHtml("Check README.md and config.json");
-      expect(html).not.toContain("<a");
-      expect(html).toContain("README.md");
+      expect(html).toBe("<p>Check README.md and config.json</p>\n");
     });
 
     it("does NOT link IP addresses", () => {
       const html = toSanitizedMarkdownHtml("Check 127.0.0.1:8080");
-      expect(html).not.toContain("<a");
-      expect(html).toContain("127.0.0.1:8080");
+      expect(html).toBe("<p>Check 127.0.0.1:8080</p>\n");
     });
 
     it("keeps adjacent trailing CJK text outside www auto-links", () => {
