@@ -848,11 +848,18 @@ describe("grouped chat rendering", () => {
       },
     );
 
-    expect(container.textContent).toContain("Tool input");
-    expect(container.textContent).toContain('"thread": true');
-    expect(container.textContent).toContain("Tool output");
-    expect(container.textContent).toContain('"status": "error"');
-    expect(container.textContent).toContain('"childSessionKey": "agent:test:subagent:abc123"');
+    const blocks = Array.from(container.querySelectorAll(".chat-tool-card__block"));
+    expect(
+      blocks.map((block) => block.querySelector(".chat-tool-card__block-label")?.textContent),
+    ).toEqual(["Tool input", "Tool output"]);
+    expect(blocks[0]?.querySelector("code")?.textContent).toBe(
+      '{\n  "mode": "session",\n  "thread": true\n}',
+    );
+    expect(JSON.parse(blocks[1]?.querySelector("code")?.textContent ?? "{}")).toEqual({
+      status: "error",
+      error: "Session mode is unavailable for this target.",
+      childSessionKey: "agent:test:subagent:abc123",
+    });
   });
 
   it("collapses an inline tool call while keeping matching tool output visible", () => {
@@ -891,16 +898,26 @@ describe("grouped chat rendering", () => {
       isToolMessageExpanded: () => true,
     });
 
-    expect(container.textContent).toContain("Tool input");
-    expect(container.textContent).toContain('"thread": true');
-    expect(container.textContent).toContain('"status": "error"');
+    expect(container.querySelector(".chat-tool-card__block-label")?.textContent).toBe("Tool input");
+    expect(container.querySelector(".chat-tool-card__block code")?.textContent).toBe(
+      '{\n  "mode": "session",\n  "thread": true\n}',
+    );
+    expect(
+      JSON.parse(container.querySelector(".chat-json-content code")?.textContent ?? "{}"),
+    ).toEqual({
+      status: "error",
+    });
 
     renderMessageGroups(container, groups, {
       isToolMessageExpanded: (messageId) => !messageId.startsWith("toolmsg:assistant:"),
     });
 
-    expect(container.textContent).not.toContain("Tool input");
-    expect(container.textContent).toContain('"status": "error"');
+    expect(container.querySelector(".chat-tool-card__block")).toBeNull();
+    expect(
+      JSON.parse(container.querySelector(".chat-json-content code")?.textContent ?? "{}"),
+    ).toEqual({
+      status: "error",
+    });
   });
 
   it("renders assistant MEDIA attachments, voice-note badge, and reply pill", () => {
