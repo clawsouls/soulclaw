@@ -33,6 +33,14 @@ vi.mock("openclaw/plugin-sdk/provider-http", () => ({
   resolveProviderHttpRequestConfig: resolveProviderHttpRequestConfigMock,
 }));
 
+function firstPostJsonRequest(): { body?: unknown; headers?: Headers } {
+  const [request] = postJsonRequestMock.mock.calls[0] ?? [];
+  if (!request || typeof request !== "object") {
+    throw new Error("expected first OpenRouter JSON request");
+  }
+  return request as { body?: unknown; headers?: Headers };
+}
+
 describe("openrouter media understanding provider", () => {
   afterEach(() => {
     assertOkOrThrowHttpErrorMock.mockClear();
@@ -109,7 +117,10 @@ describe("openrouter media understanding provider", () => {
       dispatcherPolicy: undefined,
       auditContext: "openrouter stt",
     });
-    const headers = postJsonRequestMock.mock.calls.at(0)?.[0]?.headers as Headers;
+    const headers = firstPostJsonRequest().headers;
+    if (!headers) {
+      throw new Error("expected OpenRouter request headers");
+    }
     expect(headers.get("authorization")).toBe("Bearer sk-openrouter");
     expect(headers.get("http-referer")).toBe("https://openclaw.ai");
     expect(headers.get("x-openrouter-title")).toBe("OpenClaw");
@@ -132,7 +143,7 @@ describe("openrouter media understanding provider", () => {
       fetchFn: fetch,
     });
 
-    expect(postJsonRequestMock.mock.calls.at(0)?.[0]?.body).toEqual({
+    expect(firstPostJsonRequest().body).toEqual({
       model: "openai/whisper-large-v3-turbo",
       input_audio: {
         data: Buffer.from("audio").toString("base64"),
@@ -157,7 +168,7 @@ describe("openrouter media understanding provider", () => {
       fetchFn: fetch,
     });
 
-    expect(postJsonRequestMock.mock.calls.at(0)?.[0]?.body).toEqual({
+    expect(firstPostJsonRequest().body).toEqual({
       model: "openai/whisper-large-v3-turbo",
       input_audio: {
         data: Buffer.from("audio").toString("base64"),
@@ -181,7 +192,7 @@ describe("openrouter media understanding provider", () => {
       fetchFn: fetch,
     });
 
-    expect(postJsonRequestMock.mock.calls.at(0)?.[0]?.body).toEqual({
+    expect(firstPostJsonRequest().body).toEqual({
       model: "openai/whisper-large-v3-turbo",
       input_audio: {
         data: Buffer.from("audio").toString("base64"),
@@ -206,7 +217,7 @@ describe("openrouter media understanding provider", () => {
       fetchFn: fetch,
     });
 
-    expect(postJsonRequestMock.mock.calls.at(0)?.[0]?.body).toEqual({
+    expect(firstPostJsonRequest().body).toEqual({
       model: "openai/whisper-large-v3-turbo",
       input_audio: {
         data: Buffer.from("audio").toString("base64"),
