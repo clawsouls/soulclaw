@@ -55,8 +55,14 @@ describe("resolveLoginFailureFeedback", () => {
 
     expect(feedback?.kind).toBe("auth-required");
     expect(feedback?.title).toBe("Auth required");
-    expect(feedback?.steps.join(" ")).toContain("openclaw dashboard --no-open");
-    expect(feedback?.steps.join(" ")).toContain("openclaw doctor --generate-gateway-token");
+    expect(feedback?.summary).toBe(
+      "The Gateway is reachable, but it needs a matching token or password before this browser can connect.",
+    );
+    expect(feedback?.steps).toEqual([
+      "Paste the token from openclaw dashboard --no-open or enter the configured password.",
+      "If no token is configured, run openclaw doctor --generate-gateway-token on the gateway host.",
+      "Click Connect again after updating the credential.",
+    ]);
   });
 
   it("explains rejected stale credentials", () => {
@@ -69,8 +75,14 @@ describe("resolveLoginFailureFeedback", () => {
     });
 
     expect(feedback?.kind).toBe("auth-failed");
-    expect(feedback?.summary).toContain("stale token");
-    expect(feedback?.steps.join(" ")).toContain("token mode");
+    expect(feedback?.summary).toBe(
+      "The supplied credential was rejected. The most common cause is a stale token or a token copied from another Gateway URL.",
+    );
+    expect(feedback?.steps).toEqual([
+      "Run openclaw dashboard --no-open and open the fresh URL or paste its token.",
+      "Replace stale token/password values; do not reuse a token from another Gateway URL.",
+      "Use one matching auth mode at a time: gateway token for token mode, password for password mode.",
+    ]);
   });
 
   it("explains auth rate limits without encouraging retries", () => {
@@ -84,7 +96,11 @@ describe("resolveLoginFailureFeedback", () => {
 
     expect(feedback?.kind).toBe("auth-rate-limited");
     expect(feedback?.title).toBe("Too many failed attempts");
-    expect(feedback?.steps[0]).toContain("Stop retrying");
+    expect(feedback?.steps).toEqual([
+      "Stop retrying from this tab for a moment.",
+      "Wait for the auth limiter to cool down, then reconnect with the corrected credential.",
+      "If this is a shared host, check other clients for repeated bad retries.",
+    ]);
   });
 
   it("preserves pairing request ids in the approval command", () => {
