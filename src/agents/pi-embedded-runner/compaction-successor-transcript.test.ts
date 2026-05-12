@@ -126,19 +126,23 @@ describe("rotateTranscriptAfterCompaction", () => {
     expect(header.cwd).toBe(dir);
     const messages = successor.buildSessionContext().messages;
     expect(
-      messages.map((message) =>
-        message.role === "compactionSummary"
-          ? {
-              role: message.role,
-              summary: message.summary,
-              tokensBefore: message.tokensBefore,
-            }
-          : {
-              role: message.role,
-              content: message.content,
-              timestamp: message.timestamp,
-            },
-      ),
+      messages.map((message) => {
+        if (message.role === "compactionSummary") {
+          return {
+            role: message.role,
+            summary: message.summary,
+            tokensBefore: message.tokensBefore,
+          };
+        }
+        if (!("content" in message)) {
+          throw new Error(`expected ${message.role} message content`);
+        }
+        return {
+          role: message.role,
+          content: message.content,
+          timestamp: message.timestamp,
+        };
+      }),
     ).toEqual([
       {
         role: "compactionSummary",
