@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
     setPercent: vi.fn(),
     tick: vi.fn(),
   },
+  withProgress: vi.fn(),
   promptYesNo: vi.fn(),
   provider: {
     id: "hermes",
@@ -21,7 +22,6 @@ const mocks = vi.hoisted(() => ({
     plan: vi.fn(),
     apply: vi.fn(),
   },
-  withProgress: vi.fn(),
 }));
 
 mocks.withProgress.mockImplementation(
@@ -176,7 +176,7 @@ function codexPluginPlan(overrides: Partial<MigrationPlan> = {}): MigrationPlan 
           config: {
             codexPlugins: {
               enabled: true,
-              allow_destructive_actions: true,
+              allow_destructive_actions: false,
               plugins: {
                 "google-calendar": {
                   enabled: true,

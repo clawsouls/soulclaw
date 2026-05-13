@@ -1,15 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../api.js", async () => {
-  const actual = await vi.importActual<typeof import("../api.js")>("../api.js");
-  return {
-    ...actual,
-    resolvePreferredOpenClawTmpDir: () => "/tmp",
-  };
-});
-
 afterAll(() => {
-  vi.doUnmock("../api.js");
   vi.resetModules();
 });
 
@@ -294,5 +285,7 @@ describe("llm-task tool (json-only)", () => {
     mockEmbeddedRunJson({ ok: true });
     const call = await executeEmbeddedRun({ prompt: "x" });
     expect(call.disableTools).toBe(true);
+    expect(call.agentId).toBe("main");
+    expect(call.sessionId).toMatch(/^llm-task-/);
   });
 });
