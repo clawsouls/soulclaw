@@ -1,6 +1,6 @@
 ---
 name: clawdtributor
-description: Use for OpenClaw clawtributors PR/issue triage: Discrawl discovery, live-open rechecks, deep review, topic grouping, and compact @handle/LOC/type/blast/verification summaries.
+description: "Use for OpenClaw clawtributors PR/issue triage: Discrawl discovery, live-open rechecks, deep review, topic grouping, and compact @handle/LOC/type/blast/verification summaries."
 ---
 
 # Clawdtributor
