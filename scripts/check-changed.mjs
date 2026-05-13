@@ -21,6 +21,7 @@ const LIVE_DOCKER_AUTH_SHELL_TARGETS = [
   "scripts/test-live-codex-harness-docker.sh",
   "scripts/test-live-gateway-models-docker.sh",
   "scripts/test-live-models-docker.sh",
+  "scripts/test-live-subagent-announce-docker.sh",
 ];
 
 export function createChangedCheckChildEnv(baseEnv = process.env) {
