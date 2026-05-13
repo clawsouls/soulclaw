@@ -4,6 +4,7 @@ import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runt
 import {
   assertOkOrThrowHttpError,
   createProviderOperationDeadline,
+  createProviderOperationTimeoutResolver,
   fetchProviderDownloadResponse,
   fetchProviderOperationResponse,
   postJsonRequest,
@@ -217,11 +218,10 @@ async function pollRunwayTask(params: {
         method: "GET",
         headers: params.headers,
       },
-      timeoutMs: () =>
-        resolveProviderOperationTimeoutMs({
-          deadline,
-          defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-        }),
+      timeoutMs: createProviderOperationTimeoutResolver({
+        deadline,
+        defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+      }),
       fetchFn: params.fetchFn,
       provider: "runway",
       requestFailedMessage: "Runway video status request failed",
@@ -377,11 +377,10 @@ export function buildRunwayVideoGenerationProvider(): VideoGenerationProvider {
         }
         const videos = await downloadRunwayVideos({
           urls: outputUrls,
-          timeoutMs: () =>
-            resolveProviderOperationTimeoutMs({
-              deadline,
-              defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-            }),
+          timeoutMs: createProviderOperationTimeoutResolver({
+            deadline,
+            defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+          }),
           fetchFn,
         });
         return {

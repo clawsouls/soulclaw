@@ -4,6 +4,7 @@ import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runt
 import {
   assertOkOrThrowHttpError,
   createProviderOperationDeadline,
+  createProviderOperationTimeoutResolver,
   fetchProviderDownloadResponse,
   fetchProviderOperationResponse,
   postJsonRequest,
@@ -91,11 +92,10 @@ async function pollBytePlusTask(params: {
         method: "GET",
         headers: params.headers,
       },
-      timeoutMs: () =>
-        resolveProviderOperationTimeoutMs({
-          deadline,
-          defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-        }),
+      timeoutMs: createProviderOperationTimeoutResolver({
+        deadline,
+        defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+      }),
       fetchFn: params.fetchFn,
       provider: "byteplus",
       requestFailedMessage: "BytePlus video status request failed",
@@ -313,11 +313,10 @@ export function buildBytePlusVideoGenerationProvider(): VideoGenerationProvider 
         }
         const video = await downloadBytePlusVideo({
           url: videoUrl,
-          timeoutMs: () =>
-            resolveProviderOperationTimeoutMs({
-              deadline,
-              defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-            }),
+          timeoutMs: createProviderOperationTimeoutResolver({
+            deadline,
+            defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+          }),
           fetchFn,
         });
         return {

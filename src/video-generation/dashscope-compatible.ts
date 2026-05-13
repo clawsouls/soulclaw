@@ -1,6 +1,7 @@
 import {
   assertOkOrThrowHttpError,
   createProviderOperationDeadline,
+  createProviderOperationTimeoutResolver,
   fetchProviderDownloadResponse,
   fetchProviderOperationResponse,
   postJsonRequest,
@@ -183,7 +184,7 @@ export async function pollDashscopeVideoTaskUntilComplete(params: {
         method: "GET",
         headers: params.headers,
       },
-      timeoutMs: () => resolveProviderOperationTimeoutMs({ deadline, defaultTimeoutMs }),
+      timeoutMs: createProviderOperationTimeoutResolver({ deadline, defaultTimeoutMs }),
       fetchFn: params.fetchFn,
       provider: params.providerLabel,
       requestFailedMessage: `${params.providerLabel} video-generation task poll failed`,
@@ -276,7 +277,7 @@ export async function runDashscopeVideoGenerationTask(params: {
     const videos = await downloadDashscopeGeneratedVideos({
       providerLabel: params.providerLabel,
       urls,
-      timeoutMs: () => resolveProviderOperationTimeoutMs({ deadline, defaultTimeoutMs }),
+      timeoutMs: createProviderOperationTimeoutResolver({ deadline, defaultTimeoutMs }),
       fetchFn: params.fetchFn,
       defaultTimeoutMs,
     });

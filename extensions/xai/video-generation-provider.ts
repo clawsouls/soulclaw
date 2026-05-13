@@ -4,6 +4,7 @@ import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runt
 import {
   assertOkOrThrowHttpError,
   createProviderOperationDeadline,
+  createProviderOperationTimeoutResolver,
   fetchProviderDownloadResponse,
   fetchProviderOperationResponse,
   postJsonRequest,
@@ -270,11 +271,10 @@ async function pollXaiVideo(params: {
         method: "GET",
         headers: params.headers,
       },
-      timeoutMs: () =>
-        resolveProviderOperationTimeoutMs({
-          deadline,
-          defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-        }),
+      timeoutMs: createProviderOperationTimeoutResolver({
+        deadline,
+        defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+      }),
       fetchFn: params.fetchFn,
       provider: "xai",
       requestFailedMessage: "xAI video status request failed",
@@ -427,11 +427,10 @@ export function buildXaiVideoGenerationProvider(): VideoGenerationProvider {
         }
         const video = await downloadXaiVideo({
           url: videoUrl,
-          timeoutMs: () =>
-            resolveProviderOperationTimeoutMs({
-              deadline,
-              defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-            }),
+          timeoutMs: createProviderOperationTimeoutResolver({
+            deadline,
+            defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+          }),
           fetchFn,
         });
         return {

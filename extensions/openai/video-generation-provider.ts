@@ -4,6 +4,7 @@ import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runt
 import {
   assertOkOrThrowHttpError,
   createProviderOperationDeadline,
+  createProviderOperationTimeoutResolver,
   fetchProviderDownloadResponse,
   fetchWithTimeout,
   pollProviderOperationJson,
@@ -356,11 +357,10 @@ export function buildOpenAIVideoGenerationProvider(): VideoGenerationProvider {
         const video = await downloadOpenAIVideo({
           videoId,
           headers,
-          timeoutMs: () =>
-            resolveProviderOperationTimeoutMs({
-              deadline,
-              defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-            }),
+          timeoutMs: createProviderOperationTimeoutResolver({
+            deadline,
+            defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+          }),
           baseUrl,
           fetchFn,
         });

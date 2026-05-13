@@ -140,6 +140,10 @@ vi.mock("openclaw/plugin-sdk/provider-http", () => ({
     label,
     timeoutMs,
   }),
+  createProviderOperationTimeoutResolver:
+    ({ defaultTimeoutMs }: { defaultTimeoutMs: number }) =>
+    () =>
+      defaultTimeoutMs,
   executeProviderOperationWithRetry: async ({ operation }: { operation: () => Promise<unknown> }) =>
     await operation(),
   fetchProviderDownloadResponse: providerHttpMocks.fetchProviderDownloadResponseMock,

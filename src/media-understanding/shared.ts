@@ -110,6 +110,13 @@ export function resolveProviderOperationTimeoutMs(params: {
   return Math.max(1, Math.min(params.defaultTimeoutMs, remainingMs));
 }
 
+export function createProviderOperationTimeoutResolver(params: {
+  deadline: ProviderOperationDeadline;
+  defaultTimeoutMs: number;
+}): () => number {
+  return () => resolveProviderOperationTimeoutMs(params);
+}
+
 export async function waitProviderOperationPollInterval(params: {
   deadline: ProviderOperationDeadline;
   pollIntervalMs: number;
@@ -147,11 +154,10 @@ export async function pollProviderOperationJson<TPayload>(params: {
         method: "GET",
         headers: params.headers,
       },
-      timeoutMs: () =>
-        resolveProviderOperationTimeoutMs({
-          deadline: params.deadline,
-          defaultTimeoutMs: params.defaultTimeoutMs,
-        }),
+      timeoutMs: createProviderOperationTimeoutResolver({
+        deadline: params.deadline,
+        defaultTimeoutMs: params.defaultTimeoutMs,
+      }),
       fetchFn: params.fetchFn,
       requestFailedMessage: params.requestFailedMessage,
     });

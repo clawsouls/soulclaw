@@ -28,6 +28,7 @@ vi.mock("../infra/net/proxy-env.js", async () => {
 
 import {
   createProviderOperationDeadline,
+  createProviderOperationTimeoutResolver,
   fetchProviderDownloadResponse,
   fetchWithTimeoutGuarded,
   pollProviderOperationJson,
@@ -285,7 +286,7 @@ describe("provider operation deadlines", () => {
       fetchProviderDownloadResponse({
         url: "https://cdn.example.com/video.mp4",
         init: { method: "GET" },
-        timeoutMs: () => resolveProviderOperationTimeoutMs({ deadline, defaultTimeoutMs: 5_000 }),
+        timeoutMs: createProviderOperationTimeoutResolver({ deadline, defaultTimeoutMs: 5_000 }),
         fetchFn,
         provider: "test-video",
         requestFailedMessage: "download failed",
