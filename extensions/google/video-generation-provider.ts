@@ -300,6 +300,25 @@ async function requestGoogleVideoJson(params: {
   stage: "create" | "poll";
   body?: unknown;
 }): Promise<unknown> {
+  function createHttpError(response: Response, detail: unknown): Error {
+    const parts = [`HTTP ${response.status}`];
+    const statusText = response.statusText.trim();
+    if (statusText) {
+      parts.push(statusText);
+    }
+    if (typeof detail === "string") {
+      const trimmed = detail.trim();
+      if (trimmed) {
+        parts.push(trimmed);
+      }
+    } else if (detail && typeof detail === "object") {
+      parts.push(JSON.stringify(detail));
+    }
+    const error = new Error(parts.join(": "));
+    Object.assign(error, { status: response.status, statusCode: response.status });
+    return error;
+  }
+
   return await executeProviderOperationWithRetry({
     provider: "google",
     stage: params.stage,
@@ -328,12 +347,18 @@ async function requestGoogleVideoJson(params: {
         });
         try {
           const text = await response.text();
-          const payload = text ? (JSON.parse(text) as unknown) : {};
           if (!response.ok) {
-            throw new Error(
-              typeof payload === "string" ? payload : JSON.stringify(payload ?? null),
-            );
+            let detail: unknown = text;
+            if (text) {
+              try {
+                detail = JSON.parse(text) as unknown;
+              } catch {
+                detail = text;
+              }
+            }
+            throw createHttpError(response, detail);
           }
+          const payload = text ? (JSON.parse(text) as unknown) : {};
           return payload;
         } finally {
           await release();
