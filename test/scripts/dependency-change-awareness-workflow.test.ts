@@ -33,7 +33,7 @@ describe("dependency change awareness workflow", () => {
     expect(workflow).toContain("pull_request_target:");
     expect(workflow).toContain("metadata-only workflow; no checkout or untrusted code execution");
     expect(parsed.permissions).toEqual({
-      "pull-requests": "read",
+      "pull-requests": "write",
       issues: "write",
     });
   });
