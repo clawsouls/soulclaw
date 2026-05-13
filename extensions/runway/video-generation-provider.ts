@@ -10,6 +10,7 @@ import {
   resolveProviderOperationTimeoutMs,
   resolveProviderHttpRequestConfig,
   waitProviderOperationPollInterval,
+  type ProviderOperationTimeoutMs,
 } from "openclaw/plugin-sdk/provider-http";
 import {
   normalizeLowercaseStringOrEmpty,
@@ -249,7 +250,7 @@ async function pollRunwayTask(params: {
 
 async function downloadRunwayVideos(params: {
   urls: string[];
-  timeoutMs?: number;
+  timeoutMs?: ProviderOperationTimeoutMs;
   fetchFn: typeof fetch;
 }): Promise<GeneratedVideoAsset[]> {
   const videos: GeneratedVideoAsset[] = [];
@@ -376,10 +377,11 @@ export function buildRunwayVideoGenerationProvider(): VideoGenerationProvider {
         }
         const videos = await downloadRunwayVideos({
           urls: outputUrls,
-          timeoutMs: resolveProviderOperationTimeoutMs({
-            deadline,
-            defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-          }),
+          timeoutMs: () =>
+            resolveProviderOperationTimeoutMs({
+              deadline,
+              defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+            }),
           fetchFn,
         });
         return {

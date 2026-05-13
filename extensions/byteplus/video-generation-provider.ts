@@ -10,6 +10,7 @@ import {
   resolveProviderOperationTimeoutMs,
   resolveProviderHttpRequestConfig,
   waitProviderOperationPollInterval,
+  type ProviderOperationTimeoutMs,
 } from "openclaw/plugin-sdk/provider-http";
 import { normalizeOptionalString } from "openclaw/plugin-sdk/string-coerce-runtime";
 import type {
@@ -120,7 +121,7 @@ async function pollBytePlusTask(params: {
 
 async function downloadBytePlusVideo(params: {
   url: string;
-  timeoutMs?: number;
+  timeoutMs?: ProviderOperationTimeoutMs;
   fetchFn: typeof fetch;
 }): Promise<GeneratedVideoAsset> {
   const response = await fetchProviderDownloadResponse({
@@ -312,10 +313,11 @@ export function buildBytePlusVideoGenerationProvider(): VideoGenerationProvider 
         }
         const video = await downloadBytePlusVideo({
           url: videoUrl,
-          timeoutMs: resolveProviderOperationTimeoutMs({
-            deadline,
-            defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-          }),
+          timeoutMs: () =>
+            resolveProviderOperationTimeoutMs({
+              deadline,
+              defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+            }),
           fetchFn,
         });
         return {

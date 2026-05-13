@@ -10,6 +10,7 @@ import {
   postJsonRequest,
   resolveProviderOperationTimeoutMs,
   resolveProviderHttpRequestConfig,
+  type ProviderOperationTimeoutMs,
 } from "openclaw/plugin-sdk/provider-http";
 import { normalizeOptionalString } from "openclaw/plugin-sdk/string-coerce-runtime";
 import type {
@@ -146,7 +147,7 @@ async function pollOpenAIVideo(params: {
 async function downloadOpenAIVideo(params: {
   videoId: string;
   headers: Headers;
-  timeoutMs?: number;
+  timeoutMs?: ProviderOperationTimeoutMs;
   baseUrl: string;
   fetchFn: typeof fetch;
 }): Promise<GeneratedVideoAsset> {
@@ -355,10 +356,11 @@ export function buildOpenAIVideoGenerationProvider(): VideoGenerationProvider {
         const video = await downloadOpenAIVideo({
           videoId,
           headers,
-          timeoutMs: resolveProviderOperationTimeoutMs({
-            deadline,
-            defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-          }),
+          timeoutMs: () =>
+            resolveProviderOperationTimeoutMs({
+              deadline,
+              defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+            }),
           baseUrl,
           fetchFn,
         });

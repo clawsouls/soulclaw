@@ -1,5 +1,8 @@
 import path from "node:path";
-import { assertOkOrThrowHttpError } from "../agents/provider-http-errors.js";
+import {
+  assertOkOrThrowHttpError,
+  createProviderHttpError,
+} from "../agents/provider-http-errors.js";
 export { assertOkOrThrowHttpError } from "../agents/provider-http-errors.js";
 import type {
   ProviderRequestCapability,
@@ -482,14 +485,25 @@ async function postGuardedRequest(params: {
   retryStage?: ProviderOperationRetryStage;
   retry?: TransientProviderRetryConfig;
 }) {
-  const operation = () =>
-    fetchWithTimeoutGuarded(
+  const operation = async () => {
+    const result = await fetchWithTimeoutGuarded(
       params.url,
       params.init,
       params.timeoutMs,
       params.fetchFn,
       params.guardedOptions,
     );
+    if (params.retryStage && isTransientProviderHttpStatus(result.response.status)) {
+      try {
+        throw await createProviderHttpError(result.response, "provider POST request failed", {
+          statusPrefix: "HTTP ",
+        });
+      } finally {
+        await result.release();
+      }
+    }
+    return result;
+  };
   if (!params.retryStage) {
     return await operation();
   }
@@ -499,6 +513,10 @@ async function postGuardedRequest(params: {
     retry: params.retry,
     operation,
   });
+}
+
+function isTransientProviderHttpStatus(status: number): boolean {
+  return status === 500 || status === 502 || status === 503 || status === 504;
 }
 
 export async function postJsonRequest(

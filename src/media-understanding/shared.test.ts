@@ -267,6 +267,35 @@ describe("provider operation deadlines", () => {
     expect(fetchFn).toHaveBeenCalledTimes(2);
     expect(sleep).toHaveBeenCalledWith(0, undefined);
   });
+
+  it("recomputes remaining download timeout before retry attempts", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const sleep = vi.fn(async () => undefined);
+    const fetchFn = vi.fn<typeof fetch>(async () => {
+      vi.setSystemTime(2_001);
+      throw Object.assign(new Error("socket hang up"), { code: "ECONNRESET" });
+    });
+    const deadline = createProviderOperationDeadline({
+      label: "video download",
+      timeoutMs: 1_000,
+    });
+
+    await expect(
+      fetchProviderDownloadResponse({
+        url: "https://cdn.example.com/video.mp4",
+        init: { method: "GET" },
+        timeoutMs: () => resolveProviderOperationTimeoutMs({ deadline, defaultTimeoutMs: 5_000 }),
+        fetchFn,
+        provider: "test-video",
+        requestFailedMessage: "download failed",
+        retry: { attempts: 2, baseDelayMs: 0, maxDelayMs: 0, sleep },
+      }),
+    ).rejects.toThrow("video download timed out after 1000ms");
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(sleep).toHaveBeenCalledWith(0, undefined);
+  });
 });
 
 describe("resolveProviderHttpRequestConfig", () => {
@@ -543,6 +572,39 @@ describe("fetchWithTimeoutGuarded", () => {
     ).resolves.toEqual(expect.objectContaining({ finalUrl: "https://api.example.com" }));
 
     expect(fetchWithSsrFGuardMock).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledWith(0, undefined);
+  });
+
+  it("retries read JSON POST transient HTTP responses", async () => {
+    fetchWithSsrFGuardMock.mockReset();
+    const firstRelease = vi.fn(async () => undefined);
+    const secondRelease = vi.fn(async () => undefined);
+    const sleep = vi.fn(async () => undefined);
+    fetchWithSsrFGuardMock
+      .mockResolvedValueOnce({
+        response: new Response("busy", { status: 503, statusText: "Service Unavailable" }),
+        finalUrl: "https://api.example.com",
+        release: firstRelease,
+      })
+      .mockResolvedValueOnce({
+        response: new Response(null, { status: 200 }),
+        finalUrl: "https://api.example.com",
+        release: secondRelease,
+      });
+
+    const result = await postJsonRequest({
+      url: "https://api.example.com/v1/analyze",
+      headers: new Headers(),
+      body: { media: "base64" },
+      fetchFn: fetch,
+      retryStage: "read",
+      retry: { attempts: 2, baseDelayMs: 0, maxDelayMs: 0, sleep },
+    });
+
+    expect(result.response.status).toBe(200);
+    expect(fetchWithSsrFGuardMock).toHaveBeenCalledTimes(2);
+    expect(firstRelease).toHaveBeenCalledOnce();
+    expect(secondRelease).not.toHaveBeenCalled();
     expect(sleep).toHaveBeenCalledWith(0, undefined);
   });
 
