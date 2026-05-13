@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { LanguageCode } from "@grammyjs/types";
 import type { Bot } from "grammy";
 import { logVerbose } from "openclaw/plugin-sdk/runtime-env";
 import type { RuntimeEnv } from "openclaw/plugin-sdk/runtime-env";
@@ -15,9 +16,10 @@ const TELEGRAM_COMMAND_RETRY_RATIO = 0.8;
 const TELEGRAM_MIN_COMMAND_DESCRIPTION_LENGTH = 1;
 const TELEGRAM_MENU_RESULT_CACHE_MAX = 128;
 
-type TelegramMenuCommand = {
+export type TelegramMenuCommand = {
   command: string;
   description: string;
+  descriptionLocalizations?: Record<string, string>;
 };
 
 type TelegramCommandMenuScope =
@@ -27,6 +29,7 @@ type TelegramCommandMenuScope =
 type TelegramPluginCommandSpec = {
   name: unknown;
   description: unknown;
+  descriptionLocalizations?: Record<string, string>;
 };
 
 const TELEGRAM_COMMAND_MENU_SCOPES: readonly TelegramCommandMenuScope[] = [
@@ -196,7 +199,11 @@ export function buildPluginTelegramMenuCommands(params: {
     }
     pluginCommandNames.add(normalized);
     existingCommands.add(normalized);
-    commands.push({ command: normalized, description });
+    const menuCommand: TelegramMenuCommand = { command: normalized, description };
+    if (spec.descriptionLocalizations) {
+      menuCommand.descriptionLocalizations = spec.descriptionLocalizations;
+    }
+    commands.push(menuCommand);
   }
 
   return { commands, issues };
@@ -324,11 +331,33 @@ function writeCachedCommandHash(
   syncedCommandHashes.set(key, hash);
 }
 
+function buildLocalizedCommandVariants(
+  commands: TelegramMenuCommand[],
+): Array<{ languageCode: string; commands: TelegramMenuCommand[] }> {
+  const locales = new Set<string>();
+  for (const cmd of commands) {
+    if (cmd.descriptionLocalizations) {
+      for (const lang of Object.keys(cmd.descriptionLocalizations)) {
+        locales.add(lang);
+      }
+    }
+  }
+  return [...locales].toSorted().map((languageCode) => ({
+    languageCode,
+    commands: commands.map((cmd) => ({
+      command: cmd.command,
+      description: cmd.descriptionLocalizations?.[languageCode] ?? cmd.description,
+    })),
+  }));
+}
+
 function formatTelegramCommandScopeOperation(
   operation: "deleteMyCommands" | "setMyCommands",
   scope: TelegramCommandMenuScope,
+  languageCode?: string,
 ): string {
-  return scope.label === "default" ? operation : `${operation}(${scope.label})`;
+  const base = scope.label === "default" ? operation : `${operation}(${scope.label})`;
+  return languageCode ? `${base}(${languageCode})` : base;
 }
 
 async function deleteTelegramMenuCommandsForScopes(params: {
@@ -359,18 +388,24 @@ async function setTelegramMenuCommandsForScopes(params: {
   bot: Bot;
   runtime: RuntimeEnv;
   commands: TelegramMenuCommand[];
+  languageCode?: string;
   shouldLog?: (err: unknown) => boolean;
 }): Promise<void> {
-  const { bot, runtime, commands, shouldLog } = params;
+  const { bot, runtime, commands, languageCode, shouldLog } = params;
   for (const scope of TELEGRAM_COMMAND_MENU_SCOPES) {
     await withTelegramApiErrorLogging({
-      operation: formatTelegramCommandScopeOperation("setMyCommands", scope),
+      operation: formatTelegramCommandScopeOperation("setMyCommands", scope, languageCode),
       runtime,
       shouldLog,
-      fn: () =>
-        scope.options
-          ? bot.api.setMyCommands(commands, scope.options)
-          : bot.api.setMyCommands(commands),
+      fn: () => {
+        const opts = {
+          ...scope.options,
+          ...(languageCode ? { language_code: languageCode as LanguageCode } : undefined),
+        };
+        return Object.keys(opts).length > 0
+          ? bot.api.setMyCommands(commands, opts)
+          : bot.api.setMyCommands(commands);
+      },
     });
   }
 }
@@ -428,8 +463,7 @@ export function syncTelegramMenuCommands(params: {
             }),
           );
         }
-        writeCachedCommandHash(accountId, botIdentity, currentHash);
-        return;
+        break;
       } catch (err) {
         if (!isBotCommandsTooMuchError(err)) {
           throw err;
@@ -449,6 +483,16 @@ export function syncTelegramMenuCommands(params: {
         retryCommands = retryCommands.slice(0, reducedCount);
       }
     }
+
+    for (const variant of buildLocalizedCommandVariants(commandsToRegister)) {
+      await setTelegramMenuCommandsForScopes({
+        bot,
+        runtime,
+        commands: variant.commands,
+        languageCode: variant.languageCode,
+      });
+    }
+    writeCachedCommandHash(accountId, botIdentity, currentHash);
   };
 
   void sync().catch((err) => {
