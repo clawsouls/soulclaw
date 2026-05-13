@@ -4,7 +4,8 @@ import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runt
 import {
   assertOkOrThrowHttpError,
   createProviderOperationDeadline,
-  fetchWithTimeout,
+  fetchProviderDownloadResponse,
+  fetchProviderOperationResponse,
   postJsonRequest,
   resolveProviderOperationTimeoutMs,
   resolveProviderHttpRequestConfig,
@@ -208,16 +209,21 @@ async function pollRunwayTask(params: {
     label: `Runway video generation task ${params.taskId}`,
   });
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
-    const response = await fetchWithTimeout(
-      `${params.baseUrl}/v1/tasks/${params.taskId}`,
-      {
+    const response = await fetchProviderOperationResponse({
+      stage: "poll",
+      url: `${params.baseUrl}/v1/tasks/${params.taskId}`,
+      init: {
         method: "GET",
         headers: params.headers,
       },
-      resolveProviderOperationTimeoutMs({ deadline, defaultTimeoutMs: DEFAULT_TIMEOUT_MS }),
-      params.fetchFn,
-    );
-    await assertOkOrThrowHttpError(response, "Runway video status request failed");
+      timeoutMs: resolveProviderOperationTimeoutMs({
+        deadline,
+        defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+      }),
+      fetchFn: params.fetchFn,
+      provider: "runway",
+      requestFailedMessage: "Runway video status request failed",
+    });
     const payload = (await response.json()) as RunwayTaskDetailResponse;
     switch (payload.status) {
       case "SUCCEEDED":
@@ -247,13 +253,14 @@ async function downloadRunwayVideos(params: {
 }): Promise<GeneratedVideoAsset[]> {
   const videos: GeneratedVideoAsset[] = [];
   for (const [index, url] of params.urls.entries()) {
-    const response = await fetchWithTimeout(
+    const response = await fetchProviderDownloadResponse({
       url,
-      { method: "GET" },
-      params.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-      params.fetchFn,
-    );
-    await assertOkOrThrowHttpError(response, "Runway generated video download failed");
+      init: { method: "GET" },
+      timeoutMs: params.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+      fetchFn: params.fetchFn,
+      provider: "runway",
+      requestFailedMessage: "Runway generated video download failed",
+    });
     const mimeType = normalizeOptionalString(response.headers.get("content-type")) ?? "video/mp4";
     const arrayBuffer = await response.arrayBuffer();
     videos.push({

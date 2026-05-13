@@ -28,6 +28,7 @@ vi.mock("../infra/net/proxy-env.js", async () => {
 
 import {
   createProviderOperationDeadline,
+  fetchProviderDownloadResponse,
   fetchWithTimeoutGuarded,
   pollProviderOperationJson,
   postJsonRequest,
@@ -178,6 +179,60 @@ describe("provider operation deadlines", () => {
           payload.status === "failed" ? payload.error?.message : undefined,
       }),
     ).rejects.toThrow("model rejected");
+  });
+
+  it("retries transient provider status failures while polling", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response("busy", { status: 503, statusText: "Service Unavailable" }),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "completed" })));
+
+    const result = pollProviderOperationJson<{ status?: string }>({
+      url: "https://api.example.com/v1/videos/task-1",
+      headers: new Headers({ authorization: "Bearer test" }),
+      deadline: createProviderOperationDeadline({
+        label: "video generation task task-1",
+        timeoutMs: 10_000,
+      }),
+      defaultTimeoutMs: 5_000,
+      fetchFn,
+      maxAttempts: 3,
+      pollIntervalMs: 1_000,
+      requestFailedMessage: "status failed",
+      timeoutMessage: "task timed out",
+      isComplete: (payload) => payload.status === "completed",
+    });
+
+    await vi.advanceTimersByTimeAsync(250);
+
+    await expect(result).resolves.toEqual({ status: "completed" });
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries transient generated asset downloads", async () => {
+    const sleep = vi.fn(async () => undefined);
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockRejectedValueOnce(Object.assign(new Error("socket hang up"), { code: "ECONNRESET" }))
+      .mockResolvedValueOnce(new Response("video-bytes", { status: 200 }));
+
+    const response = await fetchProviderDownloadResponse({
+      url: "https://cdn.example.com/video.mp4",
+      init: { method: "GET" },
+      timeoutMs: 5_000,
+      fetchFn,
+      provider: "test-video",
+      requestFailedMessage: "download failed",
+      retry: { attempts: 2, baseDelayMs: 0, maxDelayMs: 0, sleep },
+    });
+
+    expect(await response.text()).toBe("video-bytes");
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledWith(0, undefined);
   });
 });
 
@@ -408,6 +463,54 @@ describe("fetchWithTimeoutGuarded", () => {
     });
 
     expect(getFirstGuardedFetchCall().pinDns).toBe(false);
+  });
+
+  it("does not retry JSON POST requests by default", async () => {
+    fetchWithSsrFGuardMock.mockReset();
+    fetchWithSsrFGuardMock
+      .mockRejectedValueOnce(Object.assign(new Error("socket hang up"), { code: "ECONNRESET" }))
+      .mockResolvedValueOnce({
+        response: new Response(null, { status: 200 }),
+        finalUrl: "https://api.example.com",
+        release: async () => {},
+      });
+
+    await expect(
+      postJsonRequest({
+        url: "https://api.example.com/v1/create",
+        headers: new Headers(),
+        body: { prompt: "make a video" },
+        fetchFn: fetch,
+      }),
+    ).rejects.toThrow("socket hang up");
+
+    expect(fetchWithSsrFGuardMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries JSON POST requests only when marked as read operations", async () => {
+    fetchWithSsrFGuardMock.mockReset();
+    const sleep = vi.fn(async () => undefined);
+    fetchWithSsrFGuardMock
+      .mockRejectedValueOnce(Object.assign(new Error("socket hang up"), { code: "ECONNRESET" }))
+      .mockResolvedValueOnce({
+        response: new Response(null, { status: 200 }),
+        finalUrl: "https://api.example.com",
+        release: async () => {},
+      });
+
+    await expect(
+      postJsonRequest({
+        url: "https://api.example.com/v1/analyze",
+        headers: new Headers(),
+        body: { media: "base64" },
+        fetchFn: fetch,
+        retryStage: "read",
+        retry: { attempts: 2, baseDelayMs: 0, maxDelayMs: 0, sleep },
+      }),
+    ).resolves.toEqual(expect.objectContaining({ finalUrl: "https://api.example.com" }));
+
+    expect(fetchWithSsrFGuardMock).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledWith(0, undefined);
   });
 
   it("forwards explicit pinDns overrides to transcription requests", async () => {

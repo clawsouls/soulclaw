@@ -1,7 +1,8 @@
 import {
   assertOkOrThrowHttpError,
   createProviderOperationDeadline,
-  fetchWithTimeout,
+  fetchProviderDownloadResponse,
+  fetchProviderOperationResponse,
   postJsonRequest,
   resolveProviderOperationTimeoutMs,
   waitProviderOperationPollInterval,
@@ -174,19 +175,18 @@ export async function pollDashscopeVideoTaskUntilComplete(params: {
     label: `${params.providerLabel} video generation task ${params.taskId}`,
   });
   for (let attempt = 0; attempt < DEFAULT_VIDEO_GENERATION_MAX_POLL_ATTEMPTS; attempt += 1) {
-    const response = await fetchWithTimeout(
-      `${params.baseUrl}/api/v1/tasks/${params.taskId}`,
-      {
+    const response = await fetchProviderOperationResponse({
+      stage: "poll",
+      url: `${params.baseUrl}/api/v1/tasks/${params.taskId}`,
+      init: {
         method: "GET",
         headers: params.headers,
       },
-      resolveProviderOperationTimeoutMs({ deadline, defaultTimeoutMs }),
-      params.fetchFn,
-    );
-    await assertOkOrThrowHttpError(
-      response,
-      `${params.providerLabel} video-generation task poll failed`,
-    );
+      timeoutMs: resolveProviderOperationTimeoutMs({ deadline, defaultTimeoutMs }),
+      fetchFn: params.fetchFn,
+      provider: params.providerLabel,
+      requestFailedMessage: `${params.providerLabel} video-generation task poll failed`,
+    });
     const payload = (await response.json()) as DashscopeVideoGenerationResponse;
     const status = payload.output?.task_status?.trim().toUpperCase();
     if (status === "SUCCEEDED") {
@@ -302,16 +302,14 @@ export async function downloadDashscopeGeneratedVideos(params: {
 }): Promise<GeneratedVideoAsset[]> {
   const videos: GeneratedVideoAsset[] = [];
   for (const [index, url] of params.urls.entries()) {
-    const response = await fetchWithTimeout(
+    const response = await fetchProviderDownloadResponse({
       url,
-      { method: "GET" },
-      params.timeoutMs ?? params.defaultTimeoutMs ?? DEFAULT_VIDEO_GENERATION_TIMEOUT_MS,
-      params.fetchFn,
-    );
-    await assertOkOrThrowHttpError(
-      response,
-      `${params.providerLabel} generated video download failed`,
-    );
+      init: { method: "GET" },
+      timeoutMs: params.timeoutMs ?? params.defaultTimeoutMs ?? DEFAULT_VIDEO_GENERATION_TIMEOUT_MS,
+      fetchFn: params.fetchFn,
+      provider: params.providerLabel,
+      requestFailedMessage: `${params.providerLabel} generated video download failed`,
+    });
     const arrayBuffer = await response.arrayBuffer();
     videos.push({
       buffer: Buffer.from(arrayBuffer),

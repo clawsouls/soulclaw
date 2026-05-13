@@ -15,6 +15,8 @@ export {
 export {
   buildAudioTranscriptionFormData,
   createProviderOperationDeadline,
+  fetchProviderDownloadResponse,
+  fetchProviderOperationResponse,
   fetchWithTimeout,
   fetchWithTimeoutGuarded,
   normalizeBaseUrl,
@@ -30,6 +32,16 @@ export {
   waitProviderOperationPollInterval,
 } from "../media-understanding/shared.js";
 export type { ProviderOperationDeadline } from "../media-understanding/shared.js";
+export {
+  executeProviderOperationWithRetry,
+  providerOperationRetryConfig,
+} from "../provider-runtime/operation-retry.js";
+export type {
+  ProviderOperationRetryStage,
+  TransientProviderRetryConfig,
+  TransientProviderRetryOptions,
+  TransientProviderRetryParams,
+} from "../provider-runtime/operation-retry.js";
 export type {
   ProviderAttributionPolicy,
   ProviderRequestCapabilities,

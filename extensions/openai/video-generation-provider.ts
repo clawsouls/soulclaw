@@ -4,6 +4,7 @@ import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runt
 import {
   assertOkOrThrowHttpError,
   createProviderOperationDeadline,
+  fetchProviderDownloadResponse,
   fetchWithTimeout,
   pollProviderOperationJson,
   postJsonRequest,
@@ -151,19 +152,20 @@ async function downloadOpenAIVideo(params: {
 }): Promise<GeneratedVideoAsset> {
   const url = new URL(`${params.baseUrl}/videos/${params.videoId}/content`);
   url.searchParams.set("variant", "video");
-  const response = await fetchWithTimeout(
-    url.toString(),
-    {
+  const response = await fetchProviderDownloadResponse({
+    url: url.toString(),
+    init: {
       method: "GET",
       headers: new Headers({
         ...Object.fromEntries(params.headers.entries()),
         Accept: "application/binary",
       }),
     },
-    params.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-    params.fetchFn,
-  );
-  await assertOkOrThrowHttpError(response, "OpenAI video download failed");
+    timeoutMs: params.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    fetchFn: params.fetchFn,
+    provider: "openai",
+    requestFailedMessage: "OpenAI video download failed",
+  });
   const mimeType = normalizeOptionalString(response.headers.get("content-type")) ?? "video/mp4";
   const arrayBuffer = await response.arrayBuffer();
   return {

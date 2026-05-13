@@ -1,13 +1,13 @@
 import { sleepWithAbort } from "../infra/backoff.js";
 import { formatErrorMessage } from "../infra/errors.js";
-import { collectProviderApiKeys, isApiKeyRateLimitError } from "./live-auth-keys.js";
 import {
   resolveTransientProviderAttempts,
   resolveTransientProviderDelayMs,
   resolveTransientProviderRetryOptions,
   shouldRetrySameKeyProviderOperation,
   type TransientProviderRetryConfig,
-} from "./provider-operation-retry.js";
+} from "../provider-runtime/operation-retry.js";
+import { collectProviderApiKeys, isApiKeyRateLimitError } from "./live-auth-keys.js";
 
 type ApiKeyRetryParams = {
   apiKey: string;
