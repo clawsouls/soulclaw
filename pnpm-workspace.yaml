@@ -36,6 +36,7 @@ minimumReleaseAgeExclude:
   - "sqlite-vec-*"
 
 nodeLinker: hoisted
+blockExoticSubdeps: true
 
 overrides:
   "@anthropic-ai/sdk": 0.95.1
