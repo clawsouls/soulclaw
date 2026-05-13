@@ -531,6 +531,54 @@ describe("fetchWithTimeoutGuarded", () => {
     expect(getFirstGuardedFetchCall().pinDns).toBe(false);
   });
 
+  it("does not retry transcription POST requests by default", async () => {
+    fetchWithSsrFGuardMock.mockReset();
+    fetchWithSsrFGuardMock
+      .mockRejectedValueOnce(Object.assign(new Error("socket hang up"), { code: "ECONNRESET" }))
+      .mockResolvedValueOnce({
+        response: new Response(null, { status: 200 }),
+        finalUrl: "https://api.example.com",
+        release: async () => {},
+      });
+
+    await expect(
+      postTranscriptionRequest({
+        url: "https://api.example.com/v1/transcriptions",
+        headers: new Headers(),
+        body: "audio-bytes",
+        fetchFn: fetch,
+      }),
+    ).rejects.toThrow("socket hang up");
+
+    expect(fetchWithSsrFGuardMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries transcription POST requests only when marked as read operations", async () => {
+    fetchWithSsrFGuardMock.mockReset();
+    const sleep = vi.fn(async () => undefined);
+    fetchWithSsrFGuardMock
+      .mockRejectedValueOnce(Object.assign(new Error("socket hang up"), { code: "ECONNRESET" }))
+      .mockResolvedValueOnce({
+        response: new Response(null, { status: 200 }),
+        finalUrl: "https://api.example.com",
+        release: async () => {},
+      });
+
+    await expect(
+      postTranscriptionRequest({
+        url: "https://api.example.com/v1/transcriptions",
+        headers: new Headers(),
+        body: "audio-bytes",
+        fetchFn: fetch,
+        retryStage: "read",
+        retry: { attempts: 2, baseDelayMs: 0, maxDelayMs: 0, sleep },
+      }),
+    ).resolves.toEqual(expect.objectContaining({ finalUrl: "https://api.example.com" }));
+
+    expect(fetchWithSsrFGuardMock).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledWith(0, undefined);
+  });
+
   it("does not set a guarded fetch mode when no HTTP proxy env is configured", async () => {
     shouldUseEnvHttpProxyForUrlMock.mockReturnValue(false);
     fetchWithSsrFGuardMock.mockResolvedValue({
