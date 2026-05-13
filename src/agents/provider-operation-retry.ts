@@ -49,6 +49,11 @@ function readErrorName(error: unknown): string | undefined {
   return typeof name === "string" ? name : undefined;
 }
 
+function isTimeoutNamedError(error: unknown): boolean {
+  const name = readErrorName(error);
+  return name === "TimeoutError" || name === "RequestTimeoutError";
+}
+
 function readErrorStatus(error: unknown): number | undefined {
   if (typeof error !== "object" || error === null) {
     return undefined;
@@ -98,12 +103,18 @@ function hasTransientNetworkSignal(error: unknown, message: string): boolean {
 }
 
 function hasTimeoutSignal(error: unknown, message: string): boolean {
+  if (isTimeoutNamedError(error)) {
+    return true;
+  }
   if (/\b(?:request timeout|provider timeout|timed out|timeout)\b/i.test(message)) {
     return true;
   }
   const cause = readErrorCause(error);
   if (!cause || cause === error) {
     return false;
+  }
+  if (isTimeoutNamedError(cause)) {
+    return true;
   }
   return /\b(?:request timeout|provider timeout|timed out|timeout)\b/i.test(
     formatErrorMessage(cause),
@@ -127,12 +138,6 @@ export function isTransientProviderOperationError(error: unknown, message: strin
     return true;
   }
   if (hasTransientNetworkSignal(error, message)) {
-    return true;
-  }
-  if (readErrorName(error) === "AbortError") {
-    // Timeout wrappers can abort without a reason, yielding a generic AbortError
-    // message such as "This operation was aborted". Caller aborts are filtered
-    // by the retry options signal before this classifier is used.
     return true;
   }
   if (hasTimeoutSignal(error, message)) {
