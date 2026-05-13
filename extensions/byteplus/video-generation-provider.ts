@@ -90,10 +90,11 @@ async function pollBytePlusTask(params: {
         method: "GET",
         headers: params.headers,
       },
-      timeoutMs: resolveProviderOperationTimeoutMs({
-        deadline,
-        defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-      }),
+      timeoutMs: () =>
+        resolveProviderOperationTimeoutMs({
+          deadline,
+          defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+        }),
       fetchFn: params.fetchFn,
       provider: "byteplus",
       requestFailedMessage: "BytePlus video status request failed",

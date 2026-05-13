@@ -31,7 +31,10 @@ export {
   sanitizeConfiguredModelProviderRequest,
   waitProviderOperationPollInterval,
 } from "../media-understanding/shared.js";
-export type { ProviderOperationDeadline } from "../media-understanding/shared.js";
+export type {
+  ProviderOperationDeadline,
+  ProviderOperationTimeoutMs,
+} from "../media-understanding/shared.js";
 export {
   executeProviderOperationWithRetry,
   providerOperationRetryConfig,

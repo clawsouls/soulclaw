@@ -269,10 +269,11 @@ async function pollXaiVideo(params: {
         method: "GET",
         headers: params.headers,
       },
-      timeoutMs: resolveProviderOperationTimeoutMs({
-        deadline,
-        defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-      }),
+      timeoutMs: () =>
+        resolveProviderOperationTimeoutMs({
+          deadline,
+          defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+        }),
       fetchFn: params.fetchFn,
       provider: "xai",
       requestFailedMessage: "xAI video status request failed",

@@ -213,6 +213,39 @@ describe("provider operation deadlines", () => {
     expect(fetchFn).toHaveBeenCalledTimes(2);
   });
 
+  it("recomputes remaining poll timeout before retry attempts", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000);
+    const fetchFn = vi.fn<typeof fetch>(async () => {
+      vi.setSystemTime(2_001);
+      return new Response("busy", { status: 503, statusText: "Service Unavailable" });
+    });
+
+    const result = pollProviderOperationJson<{ status?: string }>({
+      url: "https://api.example.com/v1/videos/task-1",
+      headers: new Headers({ authorization: "Bearer test" }),
+      deadline: createProviderOperationDeadline({
+        label: "video generation task task-1",
+        timeoutMs: 1_000,
+      }),
+      defaultTimeoutMs: 5_000,
+      fetchFn,
+      maxAttempts: 3,
+      pollIntervalMs: 1_000,
+      requestFailedMessage: "status failed",
+      timeoutMessage: "task timed out",
+      isComplete: (payload) => payload.status === "completed",
+    });
+    const assertion = expect(result).rejects.toThrow(
+      "video generation task task-1 timed out after 1000ms",
+    );
+
+    await vi.advanceTimersByTimeAsync(250);
+
+    await assertion;
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
   it("retries transient generated asset downloads", async () => {
     const sleep = vi.fn(async () => undefined);
     const fetchFn = vi

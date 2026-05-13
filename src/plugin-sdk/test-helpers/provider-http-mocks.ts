@@ -63,12 +63,18 @@ const providerHttpMocks = vi.hoisted(() => ({
   })),
 }));
 
+function resolveMockProviderTimeoutMs(
+  timeoutMs: FetchProviderOperationResponseParams["timeoutMs"],
+) {
+  return typeof timeoutMs === "function" ? timeoutMs() : (timeoutMs ?? 60_000);
+}
+
 providerHttpMocks.fetchProviderOperationResponseMock.mockImplementation(
   async (params: FetchProviderOperationResponseParams) => {
     const response = await providerHttpMocks.fetchWithTimeoutMock(
       params.url,
       params.init ?? {},
-      params.timeoutMs ?? 60_000,
+      resolveMockProviderTimeoutMs(params.timeoutMs),
       params.fetchFn,
     );
     if (params.requestFailedMessage) {
@@ -83,7 +89,7 @@ providerHttpMocks.fetchProviderDownloadResponseMock.mockImplementation(
     const response = await providerHttpMocks.fetchWithTimeoutMock(
       params.url,
       params.init ?? {},
-      params.timeoutMs ?? 60_000,
+      resolveMockProviderTimeoutMs(params.timeoutMs),
       params.fetchFn,
     );
     await providerHttpMocks.assertOkOrThrowHttpErrorMock(response, params.requestFailedMessage);

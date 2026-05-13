@@ -71,6 +71,8 @@ export type ProviderOperationDeadline = {
   timeoutMs?: number;
 };
 
+export type ProviderOperationTimeoutMs = number | (() => number);
+
 export function createProviderOperationDeadline(params: {
   timeoutMs?: number;
   label: string;
@@ -142,10 +144,11 @@ export async function pollProviderOperationJson<TPayload>(params: {
         method: "GET",
         headers: params.headers,
       },
-      timeoutMs: resolveProviderOperationTimeoutMs({
-        deadline: params.deadline,
-        defaultTimeoutMs: params.defaultTimeoutMs,
-      }),
+      timeoutMs: () =>
+        resolveProviderOperationTimeoutMs({
+          deadline: params.deadline,
+          defaultTimeoutMs: params.defaultTimeoutMs,
+        }),
       fetchFn: params.fetchFn,
       requestFailedMessage: params.requestFailedMessage,
     });
@@ -169,7 +172,7 @@ export async function fetchProviderOperationResponse(params: {
   stage: ProviderOperationRetryStage;
   url: string;
   init?: RequestInit;
-  timeoutMs?: number;
+  timeoutMs?: ProviderOperationTimeoutMs;
   fetchFn: typeof fetch;
   provider?: string;
   requestFailedMessage?: string;
@@ -183,7 +186,7 @@ export async function fetchProviderOperationResponse(params: {
       const response = await fetchWithTimeout(
         params.url,
         params.init ?? {},
-        params.timeoutMs ?? DEFAULT_GUARDED_HTTP_TIMEOUT_MS,
+        resolveProviderOperationRequestTimeoutMs(params.timeoutMs),
         params.fetchFn,
       );
       if (params.requestFailedMessage) {
@@ -197,7 +200,7 @@ export async function fetchProviderOperationResponse(params: {
 export async function fetchProviderDownloadResponse(params: {
   url: string;
   init?: RequestInit;
-  timeoutMs?: number;
+  timeoutMs?: ProviderOperationTimeoutMs;
   fetchFn: typeof fetch;
   provider?: string;
   requestFailedMessage: string;
@@ -213,6 +216,16 @@ export async function fetchProviderDownloadResponse(params: {
     requestFailedMessage: params.requestFailedMessage,
     retry: params.retry,
   });
+}
+
+function resolveProviderOperationRequestTimeoutMs(
+  timeoutMs: ProviderOperationTimeoutMs | undefined,
+): number {
+  const resolved = typeof timeoutMs === "function" ? timeoutMs() : timeoutMs;
+  if (typeof resolved !== "number" || !Number.isFinite(resolved) || resolved <= 0) {
+    return DEFAULT_GUARDED_HTTP_TIMEOUT_MS;
+  }
+  return resolved;
 }
 
 function resolveGuardedHttpTimeoutMs(timeoutMs: number | undefined): number {

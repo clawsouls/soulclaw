@@ -182,7 +182,7 @@ export async function pollDashscopeVideoTaskUntilComplete(params: {
         method: "GET",
         headers: params.headers,
       },
-      timeoutMs: resolveProviderOperationTimeoutMs({ deadline, defaultTimeoutMs }),
+      timeoutMs: () => resolveProviderOperationTimeoutMs({ deadline, defaultTimeoutMs }),
       fetchFn: params.fetchFn,
       provider: params.providerLabel,
       requestFailedMessage: `${params.providerLabel} video-generation task poll failed`,
