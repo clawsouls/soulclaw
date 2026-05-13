@@ -451,7 +451,7 @@ describe("validateWakeParams", () => {
 });
 
 describe("validateChatEvent", () => {
-  it("accepts additive chat delta text", () => {
+  it("accepts v4 chat delta text and replacement markers", () => {
     expect(
       validateChatEvent({
         runId: "run-chat",
@@ -465,6 +465,35 @@ describe("validateChatEvent", () => {
         },
       }),
     ).toBe(true);
+    expect(
+      validateChatEvent({
+        runId: "run-chat",
+        sessionKey: "agent:main:main",
+        seq: 2,
+        state: "delta",
+        deltaText: "replacement",
+        replace: true,
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "replacement" }],
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects v3-style chat deltas without deltaText", () => {
+    expect(
+      validateChatEvent({
+        runId: "run-chat",
+        sessionKey: "agent:main:main",
+        seq: 1,
+        state: "delta",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "hello" }],
+        },
+      }),
+    ).toBe(false);
   });
 });
 

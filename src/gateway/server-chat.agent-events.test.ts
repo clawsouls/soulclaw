@@ -773,7 +773,7 @@ describe("agent event handler", () => {
     nowSpy.mockRestore();
   });
 
-  it("omits deltaText when a non-prefix replacement is broadcast", () => {
+  it("marks non-prefix replacement deltas explicitly", () => {
     let now = 11_300;
     const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
     const { broadcast, nodeSendToSession, chatRunState, handler } = createHarness();
@@ -804,11 +804,13 @@ describe("agent event handler", () => {
     const firstPayload = chatCalls[0]?.[1] as { deltaText?: string };
     const replacementPayload = chatCalls[1]?.[1] as {
       deltaText?: string;
+      replace?: boolean;
       message?: { content?: Array<{ text?: string }> };
     };
     expect(firstPayload.deltaText).toBe("Hello world");
     expect(replacementPayload.message?.content?.[0]?.text).toBe("Goodbye world");
-    expect(replacementPayload.deltaText).toBeUndefined();
+    expect(replacementPayload.deltaText).toBe("Goodbye world");
+    expect(replacementPayload.replace).toBe(true);
     expect(sessionChatCalls(nodeSendToSession)).toHaveLength(2);
     nowSpy.mockRestore();
   });

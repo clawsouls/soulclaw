@@ -588,6 +588,7 @@ describe("OpenClaw SDK", () => {
             runId: "run_chat_projection",
             sessionKey: "chat-projection",
             state: "delta",
+            deltaText: "hello",
             message: {
               role: "assistant",
               content: [{ type: "text", text: "hello" }],
@@ -665,6 +666,7 @@ describe("OpenClaw SDK", () => {
             runId: "run_chat_only",
             sessionKey: "chat-only",
             state: "delta",
+            deltaText: "hello",
             message: {
               role: "assistant",
               content: [{ type: "text", text: "hello" }],
@@ -679,6 +681,7 @@ describe("OpenClaw SDK", () => {
             runId: "run_chat_only",
             sessionKey: "chat-only",
             state: "delta",
+            deltaText: " again",
             message: {
               role: "assistant",
               content: [{ type: "text", text: "hello again" }],
@@ -693,6 +696,8 @@ describe("OpenClaw SDK", () => {
             runId: "run_chat_only",
             sessionKey: "chat-only",
             state: "delta",
+            deltaText: "reset",
+            replace: true,
             message: {
               role: "assistant",
               content: [{ type: "text", text: "reset" }],
