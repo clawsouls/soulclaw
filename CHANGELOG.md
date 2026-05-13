@@ -85,6 +85,7 @@ Docs: https://docs.openclaw.ai
 - CLI/commitments: write `--json` output to stdout instead of diagnostic logs so automation can parse commitment list and dismiss results. (#81215) Thanks @giodl73-repo.
 - Update: allow pnpm GitHub-source OpenClaw updates to approve the OpenClaw package build, so source installs complete their prepare/prepack lifecycle. (#81294) Thanks @fuller-stack-dev.
 - Test state: seed isolated auth-profile secret keys for generated homes, preventing helper-backed proof runs from falling back to host Keychain secrets. (#81393) Thanks @altaywtf.
+- Plugins/runtime: attribute deprecated runtime config load/write warnings to the plugin id and source that triggered them so logs and plugin doctor runs are actionable. Refs #81394. (#81425) Thanks @BKF-Gitty.
 
 ### Changes
 
