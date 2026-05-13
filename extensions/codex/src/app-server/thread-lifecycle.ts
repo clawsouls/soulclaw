@@ -3,6 +3,7 @@ import {
   isActiveHarnessContextEngine,
   type EmbeddedRunAttemptParams,
 } from "openclaw/plugin-sdk/agent-harness-runtime";
+import { buildCodexUserMcpServersThreadConfigPatch } from "openclaw/plugin-sdk/codex-mcp-projection";
 import {
   CODEX_GPT5_HEARTBEAT_PROMPT_OVERLAY,
   renderCodexPromptOverlay,
@@ -76,6 +77,8 @@ export async function startOrResumeThread(params: {
 }): Promise<CodexAppServerThreadLifecycleBinding> {
   const dynamicToolsFingerprint = fingerprintDynamicTools(params.dynamicTools);
   const contextEngineBinding = buildContextEngineBinding(params.params);
+  const userMcpServersConfigPatch = buildCodexUserMcpServersThreadConfigPatch(params.params.config);
+  const userMcpServersFingerprint = fingerprintUserMcpServersConfigPatch(userMcpServersConfigPatch);
   let binding = await readCodexAppServerBinding(params.params.sessionFile, {
     authProfileStore: params.params.authProfileStore,
     agentDir: params.params.agentDir,
@@ -101,6 +104,13 @@ export async function startOrResumeThread(params: {
       binding = undefined;
       rotatedContextEngineBinding = true;
     }
+  }
+  if (binding?.threadId && binding.userMcpServersFingerprint !== userMcpServersFingerprint) {
+    embeddedAgentLog.debug("codex app-server user MCP config changed; starting a new thread", {
+      threadId: binding.threadId,
+    });
+    await clearCodexAppServerBinding(params.params.sessionFile);
+    binding = undefined;
   }
   if (binding?.threadId) {
     let pluginBindingStale = isCodexPluginThreadBindingStale({
@@ -198,6 +208,7 @@ export async function startOrResumeThread(params: {
             model: params.params.modelId,
             modelProvider: response.modelProvider ?? fallbackModelProvider,
             dynamicToolsFingerprint,
+            userMcpServersFingerprint,
             pluginAppsFingerprint: binding.pluginAppsFingerprint,
             pluginAppsInputFingerprint: binding.pluginAppsInputFingerprint,
             pluginAppPolicyContext: binding.pluginAppPolicyContext,
@@ -218,6 +229,7 @@ export async function startOrResumeThread(params: {
           model: params.params.modelId,
           modelProvider: response.modelProvider ?? fallbackModelProvider,
           dynamicToolsFingerprint,
+          userMcpServersFingerprint,
           pluginAppsFingerprint: binding.pluginAppsFingerprint,
           pluginAppsInputFingerprint: binding.pluginAppsInputFingerprint,
           pluginAppPolicyContext: binding.pluginAppPolicyContext,
@@ -239,7 +251,11 @@ export async function startOrResumeThread(params: {
   const pluginThreadConfig = params.pluginThreadConfig?.enabled
     ? (prebuiltPluginThreadConfig ?? (await params.pluginThreadConfig.build()))
     : undefined;
-  const config = mergeCodexThreadConfigs(params.config, pluginThreadConfig?.configPatch);
+  const config = mergeCodexThreadConfigs(
+    params.config,
+    userMcpServersConfigPatch,
+    pluginThreadConfig?.configPatch,
+  );
   const response = assertCodexThreadStartResponse(
     await params.client.request(
       "thread/start",
@@ -270,6 +286,7 @@ export async function startOrResumeThread(params: {
         model: response.model ?? params.params.modelId,
         modelProvider: response.modelProvider ?? modelProvider,
         dynamicToolsFingerprint,
+        userMcpServersFingerprint,
         pluginAppsFingerprint: pluginThreadConfig?.fingerprint,
         pluginAppsInputFingerprint: pluginThreadConfig?.inputFingerprint,
         pluginAppPolicyContext: pluginThreadConfig?.policyContext,
@@ -292,6 +309,7 @@ export async function startOrResumeThread(params: {
     model: response.model ?? params.params.modelId,
     modelProvider: response.modelProvider ?? modelProvider,
     dynamicToolsFingerprint,
+    userMcpServersFingerprint,
     pluginAppsFingerprint: pluginThreadConfig?.fingerprint,
     pluginAppsInputFingerprint: pluginThreadConfig?.inputFingerprint,
     pluginAppPolicyContext: pluginThreadConfig?.policyContext,
@@ -528,6 +546,12 @@ function fingerprintDynamicTools(dynamicTools: CodexDynamicToolSpec[]): string {
   return JSON.stringify(
     dynamicTools.map(fingerprintDynamicToolSpec).toSorted(compareJsonFingerprint),
   );
+}
+
+function fingerprintUserMcpServersConfigPatch(
+  configPatch: JsonObject | undefined,
+): string | undefined {
+  return configPatch ? JSON.stringify(stabilizeJsonValue(configPatch)) : undefined;
 }
 
 function fingerprintDynamicToolSpec(tool: JsonValue): JsonValue {
