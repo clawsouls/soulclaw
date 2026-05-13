@@ -1,6 +1,6 @@
 ---
 name: clawdtributor
-description: Use when asked to scan the OpenClaw clawtributors Discord channel for PRs/issues, find new/open contributor work, recheck which surfaced items remain open, deep-review candidates, group them by topic, or produce the compact colored triage list with @handle, LOC, PR/Issue marker, type, blast radius, and verification hint.
+description: Use for OpenClaw clawtributors PR/issue triage: Discrawl discovery, live-open rechecks, deep review, topic grouping, and compact @handle/LOC/type/blast/verification summaries.
 ---
 
 # Clawdtributor
