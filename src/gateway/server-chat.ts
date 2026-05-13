@@ -174,16 +174,24 @@ function readChatErrorKind(value: unknown): ErrorKind | undefined {
     : undefined;
 }
 
+type BroadcastDelta = { deltaText: string; replace?: true };
+
 function resolveBroadcastDelta(params: {
   text: string;
   previousBroadcastText: string | undefined;
-}): { deltaText: string; replace?: true } {
-  const previous = params.previousBroadcastText ?? "";
-  if (previous && !params.text.startsWith(previous)) {
+}): BroadcastDelta | undefined {
+  if (!params.text) {
+    return undefined;
+  }
+  const previous = params.previousBroadcastText;
+  if (previous === undefined) {
+    return { deltaText: params.text };
+  }
+  if (!params.text.startsWith(previous)) {
     return { deltaText: params.text, replace: true };
   }
   const deltaText = params.text.slice(previous.length);
-  return { deltaText: deltaText || params.text };
+  return deltaText ? { deltaText } : undefined;
 }
 
 export type AgentEventHandlerOptions = {
@@ -476,6 +484,9 @@ export function createAgentEventHandler({
       text: mergedText,
       previousBroadcastText: chatRunState.deltaLastBroadcastText.get(clientRunId),
     });
+    if (!broadcastDelta) {
+      return;
+    }
     chatRunState.deltaSentAt.set(clientRunId, now);
     chatRunState.deltaLastBroadcastLen.set(clientRunId, mergedText.length);
     chatRunState.deltaLastBroadcastText.set(clientRunId, mergedText);
@@ -537,16 +548,14 @@ export function createAgentEventHandler({
       return;
     }
 
-    const lastBroadcastLen = chatRunState.deltaLastBroadcastLen.get(clientRunId) ?? 0;
-    if (text.length <= lastBroadcastLen) {
-      return;
-    }
-
     const now = Date.now();
     const delta = resolveBroadcastDelta({
       text,
       previousBroadcastText: chatRunState.deltaLastBroadcastText.get(clientRunId),
     });
+    if (!delta) {
+      return;
+    }
     const spawnedBy = resolveSpawnedBy(sessionKey);
     const flushPayload = {
       runId: clientRunId,
@@ -585,7 +594,7 @@ export function createAgentEventHandler({
     // Flush any throttled delta so streaming clients receive the complete text
     // before the final event. The 150 ms throttle in emitChatDelta may have
     // suppressed the most recent chunk, leaving the client with stale text.
-    // Only flush if the buffer has grown since the last broadcast to avoid duplicates.
+    // Only flush if the buffered text differs from the last broadcast to avoid duplicates.
     flushBufferedChatDeltaIfNeeded(sessionKey, clientRunId, sourceRunId, seq);
     chatRunState.deltaLastBroadcastLen.delete(clientRunId);
     chatRunState.deltaLastBroadcastText.delete(clientRunId);

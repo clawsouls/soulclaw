@@ -773,6 +773,40 @@ describe("agent event handler", () => {
     nowSpy.mockRestore();
   });
 
+  it("does not emit a delta when a repeated assistant snapshot is unchanged", () => {
+    let now = 11_250;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
+    const { broadcast, nodeSendToSession, chatRunState, handler } = createHarness();
+    chatRunState.registry.add("run-unchanged-snapshot", {
+      sessionKey: "session-unchanged-snapshot",
+      clientRunId: "client-unchanged-snapshot",
+    });
+
+    handler({
+      runId: "run-unchanged-snapshot",
+      seq: 1,
+      stream: "assistant",
+      ts: Date.now(),
+      data: { text: "Hello world" },
+    });
+
+    now = 11_450;
+    handler({
+      runId: "run-unchanged-snapshot",
+      seq: 2,
+      stream: "assistant",
+      ts: Date.now(),
+      data: { text: "Hello world" },
+    });
+
+    const chatCalls = chatBroadcastCalls(broadcast);
+    expect(chatCalls).toHaveLength(1);
+    const payload = chatCalls[0]?.[1] as { deltaText?: string };
+    expect(payload.deltaText).toBe("Hello world");
+    expect(sessionChatCalls(nodeSendToSession)).toHaveLength(1);
+    nowSpy.mockRestore();
+  });
+
   it("marks non-prefix replacement deltas explicitly", () => {
     let now = 11_300;
     const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
@@ -812,6 +846,51 @@ describe("agent event handler", () => {
     expect(replacementPayload.deltaText).toBe("Goodbye world");
     expect(replacementPayload.replace).toBe(true);
     expect(sessionChatCalls(nodeSendToSession)).toHaveLength(2);
+    nowSpy.mockRestore();
+  });
+
+  it("flushes throttled shorter replacement deltas before final", () => {
+    let now = 11_700;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
+    const { broadcast, nodeSendToSession, chatRunState, handler } = createHarness();
+    chatRunState.registry.add("run-short-replacement-flush", {
+      sessionKey: "session-short-replacement-flush",
+      clientRunId: "client-short-replacement-flush",
+    });
+
+    handler({
+      runId: "run-short-replacement-flush",
+      seq: 1,
+      stream: "assistant",
+      ts: Date.now(),
+      data: { text: "Hello world" },
+    });
+
+    now = 11_760;
+    handler({
+      runId: "run-short-replacement-flush",
+      seq: 2,
+      stream: "assistant",
+      ts: Date.now(),
+      data: { text: "Hi" },
+    });
+
+    emitLifecycleEnd(handler, "run-short-replacement-flush", 3);
+
+    const chatCalls = chatBroadcastCalls(broadcast);
+    expect(chatCalls).toHaveLength(3);
+    const replacementPayload = chatCalls[1]?.[1] as {
+      state?: string;
+      deltaText?: string;
+      replace?: boolean;
+      message?: { content?: Array<{ text?: string }> };
+    };
+    expect(replacementPayload.state).toBe("delta");
+    expect(replacementPayload.deltaText).toBe("Hi");
+    expect(replacementPayload.replace).toBe(true);
+    expect(replacementPayload.message?.content?.[0]?.text).toBe("Hi");
+    expect((chatCalls[2]?.[1] as { state?: string }).state).toBe("final");
+    expect(sessionChatCalls(nodeSendToSession)).toHaveLength(3);
     nowSpy.mockRestore();
   });
 
