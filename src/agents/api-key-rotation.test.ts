@@ -112,6 +112,25 @@ describe("executeWithApiKeyRotation", () => {
     expect(execute).toHaveBeenCalledTimes(2);
   });
 
+  it("retries selected transient network errors with top-level codes", async () => {
+    const sleep = vi.fn(async () => undefined);
+    const execute = vi
+      .fn<(apiKey: string) => Promise<string>>()
+      .mockRejectedValueOnce(Object.assign(new Error("socket hang up"), { code: "ECONNRESET" }))
+      .mockResolvedValueOnce("ok");
+
+    await expect(
+      executeWithApiKeyRotation({
+        provider: "deepgram",
+        apiKeys: ["key-1"],
+        transientRetry: { attempts: 2, baseDelayMs: 0, maxDelayMs: 0, sleep },
+        execute,
+      }),
+    ).resolves.toBe("ok");
+
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
   it("does not retry caller-aborted AbortError", async () => {
     const controller = new AbortController();
     controller.abort(new Error("user cancelled"));

@@ -90,6 +90,10 @@ function hasTransientNetworkSignal(error: unknown, message: string): boolean {
   if (transientCodes.test(message)) {
     return true;
   }
+  const code = readErrorCode(error);
+  if (code && transientCodes.test(code)) {
+    return true;
+  }
   const cause = readErrorCause(error);
   if (!cause || cause === error) {
     return false;
