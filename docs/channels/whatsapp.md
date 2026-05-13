@@ -16,8 +16,8 @@ Status: production-ready via WhatsApp Web (Baileys). Gateway owns linked session
 - Dev channel + git checkout: defaults to the local plugin path.
 - Stable/Beta: installs the official `@openclaw/whatsapp` plugin from ClawHub
   first, with npm as the fallback.
-- The WhatsApp runtime is distributed outside the core OpenClaw npm package
-  because its Baileys dependency chain uses GPL-licensed `libsignal`.
+- The WhatsApp runtime is distributed outside the core OpenClaw npm package so
+  WhatsApp-specific runtime dependencies stay with the external plugin.
 
 Manual install stays available:
 

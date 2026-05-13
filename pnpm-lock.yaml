@@ -116,9 +116,6 @@ importers:
       ajv:
         specifier: 8.20.0
         version: 8.20.0
-      audio-decode:
-        specifier: 2.2.3
-        version: 2.2.3
       chalk:
         specifier: 5.6.2
         version: 5.6.2
@@ -1655,6 +1652,9 @@ importers:
 
   extensions/whatsapp:
     dependencies:
+      audio-decode:
+        specifier: 2.2.3
+        version: 2.2.3
       baileys:
         specifier: 7.0.0-rc11
         version: 7.0.0-rc11(patch_hash=a9aea1790d2c65b1ae543c77faca4119bbfb91ee3b6ca6c38d1cad4f5702ada2)(audio-decode@2.2.3)(jimp@1.6.1)(sharp@0.34.5)
