@@ -26,7 +26,7 @@ interface MinimaxProviderHttpMocks {
   fetchWithTimeoutMock: AnyMock;
   fetchProviderOperationResponseMock: AnyMock;
   fetchProviderDownloadResponseMock: AnyMock;
-  assertOkOrThrowHttpErrorMock: Mock<() => Promise<void>>;
+  assertOkOrThrowHttpErrorMock: Mock<(response: Response, label: string) => Promise<void>>;
   resolveProviderHttpRequestConfigMock: Mock<
     (params: ResolveProviderHttpRequestConfigParams) => ResolveProviderHttpRequestConfigResult
   >;
