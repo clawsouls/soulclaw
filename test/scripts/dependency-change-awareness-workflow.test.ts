@@ -79,6 +79,8 @@ describe("dependency change awareness workflow", () => {
     expect(step.with?.script).toContain("github.rest.issues.createComment");
     expect(step.with?.script).toContain("github.rest.issues.updateComment");
     expect(step.with?.script).toContain("github.rest.issues.deleteComment");
+    expect(step.with?.script).toContain("ignoreUnavailableWritePermission");
+    expect(step.with?.script).toContain("error?.status === 403");
     expect(workflow).toContain('"dependencies-changed"');
   });
 
