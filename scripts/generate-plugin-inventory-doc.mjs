@@ -377,8 +377,7 @@ ${record.docs.map((link) => `- ${docLink(link)}`).join("\n")}`;
 
 function renderReferencePage(record) {
   const relatedDocs = renderRelatedDocs(record);
-  const extraSectionsValue = PLUGIN_REFERENCE_EXTRA_SECTIONS.get(record.id);
-  const extraSections = typeof extraSectionsValue === "string" ? extraSectionsValue : "";
+  const extraSections = PLUGIN_REFERENCE_EXTRA_SECTIONS.get(record.id);
   return `---
 summary: "${record.description.replaceAll('"', '\\"')}"
 read_when:

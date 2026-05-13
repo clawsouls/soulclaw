@@ -119,8 +119,9 @@ function expectAgentCallFields(
 const agentSpy = vi.fn(async (_req: AgentCallRequest) => visibleAgentResponse());
 const sendSpy = vi.fn(async (_req: AgentCallRequest) => ({ runId: "send-main", status: "ok" }));
 const sessionsDeleteSpy = vi.fn((_req: AgentCallRequest) => undefined);
-const getSessionEntrySpy = vi.spyOn(configSessions, "getSessionEntry");
+const loadSessionStoreSpy = vi.spyOn(configSessions, "loadSessionStore");
 const resolveAgentIdFromSessionKeySpy = vi.spyOn(configSessions, "resolveAgentIdFromSessionKey");
+const resolveStorePathSpy = vi.spyOn(configSessions, "resolveStorePath");
 const resolveMainSessionKeySpy = vi.spyOn(configSessions, "resolveMainSessionKey");
 const callGatewaySpy = vi.spyOn(gatewayCall, "callGateway");
 const getGlobalHookRunnerSpy = vi.spyOn(hookRunnerGlobal, "getGlobalHookRunner");
@@ -280,7 +281,7 @@ function toSessionEntry(
   };
 }
 
-function sessionRowsFixture(): Record<string, SessionEntry> {
+function loadSessionStoreFixture(): Record<string, SessionEntry> {
   return new Proxy(sessionStore, {
     get(target, key: string | symbol) {
       if (typeof key !== "string") {
@@ -374,7 +375,7 @@ describe("subagent announce formatting", () => {
       ) => (await callGatewaySpy(req)) as T,
       getRuntimeConfig: () => configOverride,
       getRequesterSessionActivity: (requesterSessionKey: string) => {
-        const entry = sessionRowsFixture()[requesterSessionKey];
+        const entry = loadSessionStoreFixture()[requesterSessionKey];
         const sessionId = entry?.sessionId;
         return {
           sessionId,
@@ -390,10 +391,9 @@ describe("subagent announce formatting", () => {
       ) => (await callGatewaySpy(req)) as T,
       getRuntimeConfig: () => configOverride,
     });
-    getSessionEntrySpy
-      .mockReset()
-      .mockImplementation(({ sessionKey }) => sessionRowsFixture()[sessionKey]);
+    loadSessionStoreSpy.mockReset().mockImplementation(() => loadSessionStoreFixture());
     resolveAgentIdFromSessionKeySpy.mockReset().mockImplementation(() => "main");
+    resolveStorePathSpy.mockReset().mockImplementation(() => "/tmp/sessions.json");
     resolveMainSessionKeySpy.mockReset().mockImplementation(() => "agent:main:main");
     getGlobalHookRunnerSpy
       .mockReset()

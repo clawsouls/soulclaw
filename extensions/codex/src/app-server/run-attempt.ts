@@ -13,7 +13,6 @@ import {
   emitAgentEvent as emitGlobalAgentEvent,
   finalizeHarnessContextEngineTurn,
   formatErrorMessage,
-  hasSqliteSessionTranscriptEvents,
   isActiveHarnessContextEngine,
   isSubagentSessionKey,
   normalizeAgentRuntimeTools,
@@ -41,6 +40,7 @@ import {
 } from "openclaw/plugin-sdk/agent-harness-runtime";
 import { markAuthProfileBlockedUntil, resolveAgentDir } from "openclaw/plugin-sdk/agent-runtime";
 import { emitTrustedDiagnosticEvent } from "openclaw/plugin-sdk/diagnostic-runtime";
+import { pathExists } from "openclaw/plugin-sdk/security-runtime";
 import { defaultCodexAppInventoryCache } from "./app-inventory-cache.js";
 import { handleCodexAppServerApprovalRequest } from "./approval-bridge.js";
 import {
@@ -460,10 +460,7 @@ export async function runCodexAppServerAttempt(
     agentId: params.agentId,
   });
   const agentDir = params.agentDir ?? resolveAgentDir(params.config ?? {}, sessionAgentId);
-  const startupBinding = await readCodexAppServerBinding({
-    sessionKey: sandboxSessionKey,
-    sessionId: params.sessionId,
-  });
+  const startupBinding = await readCodexAppServerBinding(params.sessionFile);
   const startupAuthProfileCandidate =
     params.runtimePlan?.auth.forwardedAuthProfileId ??
     params.authProfileId ??
@@ -525,15 +522,8 @@ export async function runCodexAppServerAttempt(
       runId: params.runId,
     },
   });
-  const hadTranscript = hasSqliteSessionTranscriptEvents({
-    agentId: sessionAgentId,
-    sessionId: params.sessionId,
-  });
-  let historyMessages =
-    (await readMirroredSessionHistoryMessages({
-      agentId: sessionAgentId,
-      sessionId: params.sessionId,
-    })) ?? [];
+  const hadSessionFile = await pathExists(params.sessionFile);
+  let historyMessages = (await readMirroredSessionHistoryMessages(params.sessionFile)) ?? [];
   const hookContext = {
     runId: params.runId,
     agentId: sessionAgentId,
@@ -546,11 +536,11 @@ export async function runCodexAppServerAttempt(
   };
   if (activeContextEngine) {
     await bootstrapHarnessContextEngine({
-      hadTranscript,
+      hadSessionFile,
       contextEngine: activeContextEngine,
       sessionId: params.sessionId,
       sessionKey: sandboxSessionKey,
-      transcriptScope: { agentId: sessionAgentId, sessionId: params.sessionId },
+      sessionFile: params.sessionFile,
       runtimeContext: buildHarnessContextEngineRuntimeContext({
         attempt: runtimeParams,
         workspaceDir: effectiveWorkspace,
@@ -562,10 +552,7 @@ export async function runCodexAppServerAttempt(
       warn: (message) => embeddedAgentLog.warn(message),
     });
     historyMessages =
-      (await readMirroredSessionHistoryMessages({
-        agentId: sessionAgentId,
-        sessionId: params.sessionId,
-      })) ?? historyMessages;
+      (await readMirroredSessionHistoryMessages(params.sessionFile)) ?? historyMessages;
   }
   const baseDeveloperInstructions = buildDeveloperInstructions(params);
   // Build the workspace bootstrap block before finalizing developer
@@ -837,7 +824,7 @@ export async function runCodexAppServerAttempt(
     throw error;
   }
   trajectoryRecorder?.recordEvent("session.started", {
-    sessionId: params.sessionId,
+    sessionFile: params.sessionFile,
     threadId: thread.threadId,
     authProfileId: startupAuthProfileId,
     workspaceDir: effectiveWorkspace,
@@ -1247,10 +1234,7 @@ export async function runCodexAppServerAttempt(
     // See openclaw/openclaw#67996.
     const isTurnAbortMarker =
       isCurrentTurnNotification &&
-      isCodexTurnAbortMarkerNotification(notification, {
-        currentPromptText: promptBuild.prompt,
-        rawPromptText: params.prompt,
-      });
+      isCodexTurnAbortMarkerNotification(notification, { currentPromptText: promptBuild.prompt });
     const isTurnTerminal = isTurnCompletion || isTurnAbortMarker;
     try {
       await projector.handleNotification(notification);
@@ -1694,10 +1678,8 @@ export async function runCodexAppServerAttempt(
     }
     if (activeContextEngine) {
       const finalMessages =
-        (await readMirroredSessionHistoryMessages({
-          agentId: sessionAgentId,
-          sessionId: params.sessionId,
-        })) ?? historyMessages.concat(result.messagesSnapshot);
+        (await readMirroredSessionHistoryMessages(params.sessionFile)) ??
+        historyMessages.concat(result.messagesSnapshot);
       await finalizeHarnessContextEngineTurn({
         contextEngine: activeContextEngine,
         promptError: Boolean(finalPromptError),
@@ -1705,7 +1687,7 @@ export async function runCodexAppServerAttempt(
         yieldAborted: Boolean(result.yieldDetected),
         sessionIdUsed: params.sessionId,
         sessionKey: sandboxSessionKey,
-        transcriptScope: { agentId: sessionAgentId, sessionId: params.sessionId },
+        sessionFile: params.sessionFile,
         messagesSnapshot: finalMessages,
         prePromptMessageCount,
         tokenBudget: params.contextTokenBudget,
@@ -2680,11 +2662,6 @@ function isRetryableErrorNotification(value: JsonValue | undefined): boolean {
   return readBoolean(value, "willRetry") === true || readBoolean(value, "will_retry") === true;
 }
 
-function readBoolean(record: JsonObject, key: string): boolean | undefined {
-  const value = record[key];
-  return typeof value === "boolean" ? value : undefined;
-}
-
 function isTerminalTurnStatus(status: string | undefined): boolean {
   return status === "completed" || status === "interrupted" || status === "failed";
 }
@@ -2707,29 +2684,24 @@ const CODEX_INTERRUPTED_DEVELOPER_GUIDANCE =
 
 function isCodexTurnAbortMarkerNotification(
   notification: CodexServerNotification,
-  options: { currentPromptText?: string; rawPromptText?: string } = {},
+  options: { currentPromptText?: string } = {},
 ): boolean {
   if (notification.method !== "rawResponseItem/completed" || !isJsonObject(notification.params)) {
     return false;
   }
   const item = notification.params.item;
-  if (!isJsonObject(item) || readString(item, "role") !== "user") {
+  const role = isJsonObject(item) ? readString(item, "role") : undefined;
+  if (!isJsonObject(item) || (role !== "user" && role !== "developer")) {
     return false;
   }
-  const role = readString(item, "role");
   const text = extractRawResponseItemText(item).trim();
-  if (
-    role === "user" &&
-    (text === options.currentPromptText?.trim() || text === options.rawPromptText?.trim())
-  ) {
+  if (role === "user" && text === options.currentPromptText?.trim()) {
     return false;
   }
   const markerBody = readCodexTurnAbortMarkerBody(text);
   return (
     markerBody === CODEX_INTERRUPTED_USER_GUIDANCE ||
-    markerBody === CODEX_INTERRUPTED_DEVELOPER_GUIDANCE ||
-    markerBody?.startsWith("The user interrupted the previous turn on purpose.") === true ||
-    markerBody?.startsWith("The previous turn was interrupted on purpose.") === true
+    markerBody === CODEX_INTERRUPTED_DEVELOPER_GUIDANCE
   );
 }
 
@@ -2770,14 +2742,18 @@ function readString(record: JsonObject, key: string): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-async function readMirroredSessionHistoryMessages(scope: {
-  agentId: string;
-  sessionId: string;
-}): Promise<AgentMessage[] | undefined> {
-  const messages = await readCodexMirroredSessionHistoryMessages(scope);
+function readBoolean(record: JsonObject, key: string): boolean | undefined {
+  const value = record[key];
+  return typeof value === "boolean" ? value : undefined;
+}
+
+async function readMirroredSessionHistoryMessages(
+  sessionFile: string,
+): Promise<AgentMessage[] | undefined> {
+  const messages = await readCodexMirroredSessionHistoryMessages(sessionFile);
   if (!messages) {
     embeddedAgentLog.warn("failed to read mirrored session history for codex harness hooks", {
-      sessionId: scope.sessionId,
+      sessionFile,
     });
   }
   return messages;
@@ -3037,8 +3013,8 @@ async function mirrorTranscriptBestEffort(params: {
 }): Promise<void> {
   try {
     await mirrorCodexAppServerTranscript({
-      sessionId: params.params.sessionId,
-      agentId: params.agentId ?? "main",
+      sessionFile: params.params.sessionFile,
+      agentId: params.agentId,
       sessionKey: params.sessionKey,
       messages: params.result.messagesSnapshot,
       // Scope is thread-stable. Each entry in `messagesSnapshot` is tagged

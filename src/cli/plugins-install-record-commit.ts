@@ -6,7 +6,6 @@ import type { PluginInstallRecord } from "../config/types.plugins.js";
 import {
   loadInstalledPluginIndexInstallRecords,
   PLUGIN_INSTALLS_CONFIG_PATH,
-  readPendingPluginInstallRecords,
   withoutPluginInstallRecords,
   writePersistedInstalledPluginIndexInstallRecords,
 } from "../plugins/installed-plugin-index-records.js";
@@ -87,7 +86,7 @@ export async function commitConfigWriteWithPendingPluginInstalls(params: {
   installRecords: Record<string, PluginInstallRecord>;
   movedInstallRecords: boolean;
 }> {
-  const pendingInstallRecords = readPendingPluginInstallRecords(params.nextConfig);
+  const pendingInstallRecords = params.nextConfig.plugins?.installs ?? {};
   if (Object.keys(pendingInstallRecords).length === 0) {
     if (params.writeOptions) {
       await params.commit(params.nextConfig, params.writeOptions);

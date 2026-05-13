@@ -563,6 +563,7 @@ async function processMessageWithPipeline(params: ZaloMessagePipelineParams): Pr
       id: chatId,
     },
     runtime: core.channel,
+    sessionStore: config.session?.store,
   });
 
   if (
@@ -575,7 +576,7 @@ async function processMessageWithPipeline(params: ZaloMessagePipelineParams): Pr
   }
 
   const fromLabel = isGroup ? `group:${chatId}` : senderName || `user:${senderId}`;
-  const { body } = buildEnvelope({
+  const { storePath, body } = buildEnvelope({
     channel: "Zalo",
     from: fromLabel,
     timestamp: date ? date * 1000 : undefined,
@@ -669,7 +670,7 @@ async function processMessageWithPipeline(params: ZaloMessagePipelineParams): Pr
     accountId: account.accountId,
     agentId: route.agentId,
     routeSessionKey: route.sessionKey,
-    messageId: message_id,
+    storePath,
     ctxPayload,
     recordInboundSession: core.channel.session.recordInboundSession,
     dispatchReplyWithBufferedBlockDispatcher:

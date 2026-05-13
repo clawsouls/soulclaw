@@ -65,6 +65,7 @@ import { resolveMarkdownTableMode } from "../../config/markdown-tables.js";
 import {
   readSessionUpdatedAt,
   recordSessionMetaFromInbound,
+  resolveStorePath,
   updateLastRoute,
 } from "../../config/sessions.js";
 import { getChannelActivity, recordChannelActivity } from "../../infra/channel-activity.js";
@@ -135,6 +136,7 @@ export function createRuntimeChannel(): PluginRuntime["channel"] {
       get: getChannelActivity,
     },
     session: {
+      resolveStorePath,
       readSessionUpdatedAt,
       recordSessionMetaFromInbound,
       recordInboundSession,

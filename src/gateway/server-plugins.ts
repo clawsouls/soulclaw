@@ -461,6 +461,7 @@ export function createGatewaySubagentRuntime(): PluginRuntime["subagent"] {
         "sessions.delete",
         {
           key: params.sessionKey,
+          deleteTranscript: params.deleteTranscript ?? true,
         },
         pluginOwnedCleanupOptions,
       );

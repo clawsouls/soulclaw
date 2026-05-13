@@ -62,6 +62,7 @@ type MatrixHandlerTestHarnessOptions = {
   hasControlCommand?: MatrixMonitorHandlerParams["core"]["channel"]["text"]["hasControlCommand"];
   resolveMarkdownTableMode?: () => string;
   resolveAgentRoute?: () => typeof DEFAULT_ROUTE;
+  resolveStorePath?: () => string;
   readSessionUpdatedAt?: () => number | undefined;
   recordInboundSession?: (...args: unknown[]) => Promise<void>;
   resolveEnvelopeFormatOptions?: () => Record<string, never>;
@@ -131,7 +132,7 @@ export function createMatrixHandlerTestHarness(
       turn: Parameters<MatrixMonitorHandlerParams["core"]["channel"]["turn"]["runPrepared"]>[0],
     ) => {
       await turn.recordInboundSession({
-        agentId: turn.agentId,
+        storePath: turn.storePath,
         sessionKey: turn.ctxPayload.SessionKey ?? turn.routeSessionKey,
         ctx: turn.ctxPayload,
         groupResolution: turn.record?.groupResolution,
@@ -215,6 +216,7 @@ export function createMatrixHandlerTestHarness(
           buildMentionRegexes: () => options.mentionRegexes ?? [],
         },
         session: {
+          resolveStorePath: options.resolveStorePath ?? (() => "/tmp/session-store"),
           readSessionUpdatedAt: options.readSessionUpdatedAt ?? (() => undefined),
           recordInboundSession,
         },

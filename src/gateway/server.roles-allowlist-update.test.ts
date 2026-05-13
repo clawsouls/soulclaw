@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { WebSocket } from "ws";
@@ -7,7 +8,7 @@ import type { DeviceIdentity } from "../infra/device-identity.js";
 import { loadOrCreateDeviceIdentity } from "../infra/device-identity.js";
 import { approveDevicePairing, listDevicePairing } from "../infra/device-pairing.js";
 import { approveNodePairing, requestNodePairing } from "../infra/node-pairing.js";
-import { readRestartSentinel } from "../infra/restart-sentinel.js";
+import { resolveRestartSentinelPath } from "../infra/restart-sentinel.js";
 import { getActiveRuntimePluginRegistry } from "../plugins/active-runtime-registry.js";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
 import type { GatewayClient } from "./client.js";
@@ -277,9 +278,13 @@ describe("gateway update.run", () => {
       }, FAST_WAIT_OPTS);
       expect(sigusr1).toHaveBeenCalled();
 
-      const sentinel = await readRestartSentinel();
-      expect(sentinel?.payload.kind).toBe("update");
-      expect(sentinel?.payload.stats?.mode).toBe("git");
+      const sentinelPath = resolveRestartSentinelPath();
+      const raw = await fs.readFile(sentinelPath, "utf-8");
+      const parsed = JSON.parse(raw) as {
+        payload?: { kind?: string; stats?: { mode?: string } };
+      };
+      expect(parsed.payload?.kind).toBe("update");
+      expect(parsed.payload?.stats?.mode).toBe("git");
     } finally {
       process.off("SIGUSR1", sigusr1);
     }
@@ -348,16 +353,15 @@ describe("gateway node command allowlist", () => {
     let allowedClient: GatewayClient | undefined;
 
     try {
-      const nonce = `${Date.now()}:${Math.random()}`;
-      const systemDeviceIdentity = loadOrCreateDeviceIdentity({
-        key: `test:node-system-run:${nonce}`,
-      });
-      const emptyDeviceIdentity = loadOrCreateDeviceIdentity({
-        key: `test:node-empty:${nonce}`,
-      });
-      const allowedDeviceIdentity = loadOrCreateDeviceIdentity({
-        key: `test:node-allowed:${nonce}`,
-      });
+      const systemDeviceIdentity = loadOrCreateDeviceIdentity(
+        path.join(os.tmpdir(), `openclaw-node-system-run-${Date.now()}-${Math.random()}.json`),
+      );
+      const emptyDeviceIdentity = loadOrCreateDeviceIdentity(
+        path.join(os.tmpdir(), `openclaw-node-empty-${Date.now()}-${Math.random()}.json`),
+      );
+      const allowedDeviceIdentity = loadOrCreateDeviceIdentity(
+        path.join(os.tmpdir(), `openclaw-node-allowed-${Date.now()}-${Math.random()}.json`),
+      );
 
       systemClient = await connectNodeClientWithPairing({
         port,
@@ -489,8 +493,11 @@ describe("gateway node command allowlist", () => {
   });
 
   test("records only allowlisted commands in pending node pairing requests", async () => {
-    const deviceIdentityKey = `test:allowlisted-pending:${Date.now()}:${Math.random().toString(36).slice(2)}`;
-    const deviceIdentity = loadOrCreateDeviceIdentity({ key: deviceIdentityKey });
+    const deviceIdentityPath = path.join(
+      os.tmpdir(),
+      `openclaw-allowlisted-pending-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,
+    );
+    const deviceIdentity = loadOrCreateDeviceIdentity(deviceIdentityPath);
     const displayName = "node-pending-allowlisted-only";
     let nodeClient: GatewayClient | undefined;
 
@@ -526,8 +533,11 @@ describe("gateway node command allowlist", () => {
   });
 
   test("rejects reconnect metadata spoof for paired node devices", async () => {
-    const deviceIdentityKey = `test:spoof-device:${Date.now()}:${Math.random().toString(36).slice(2)}`;
-    const deviceIdentity = loadOrCreateDeviceIdentity({ key: deviceIdentityKey });
+    const deviceIdentityPath = path.join(
+      os.tmpdir(),
+      `openclaw-spoof-test-device-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,
+    );
+    const deviceIdentity = loadOrCreateDeviceIdentity(deviceIdentityPath);
 
     let iosClient: GatewayClient | undefined;
     try {
@@ -569,8 +579,11 @@ describe("gateway node command allowlist", () => {
   });
 
   test("filters system.run for confusable iOS metadata at connect time", async () => {
-    const deviceIdentityKey = `test:confusable-node-greek-omicron:${Date.now()}:${Math.random().toString(36).slice(2)}`;
-    const deviceIdentity = loadOrCreateDeviceIdentity({ key: deviceIdentityKey });
+    const deviceIdentityPath = path.join(
+      os.tmpdir(),
+      `openclaw-confusable-node-greek-omicron-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,
+    );
+    const deviceIdentity = loadOrCreateDeviceIdentity(deviceIdentityPath);
     const displayName = "node-greek-omicron-family";
 
     let client: GatewayClient | undefined;

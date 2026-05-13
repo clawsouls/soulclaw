@@ -91,6 +91,7 @@ export function buildInboundReplyDispatchBase(params: {
     agentId: string;
     sessionKey: string;
   };
+  storePath: string;
   ctxPayload: FinalizedMsgContext;
   core: {
     channel: {
@@ -109,6 +110,7 @@ export function buildInboundReplyDispatchBase(params: {
     accountId: params.accountId,
     agentId: params.route.agentId,
     routeSessionKey: params.route.sessionKey,
+    storePath: params.storePath,
     ctxPayload: params.ctxPayload,
     recordInboundSession: params.core.channel.session.recordInboundSession,
     dispatchReplyWithBufferedBlockDispatcher:
@@ -123,6 +125,7 @@ type RecordChannelMessageReplyDispatchParams = {
   accountId?: string;
   agentId: string;
   routeSessionKey: string;
+  storePath: string;
   ctxPayload: FinalizedMsgContext;
   recordInboundSession: RecordInboundSessionFn;
   dispatchReplyWithBufferedBlockDispatcher: DispatchReplyWithBufferedBlockDispatcher;
@@ -217,8 +220,8 @@ export async function recordChannelMessageReplyDispatch(
   await runPreparedChannelTurn({
     channel: params.channel,
     accountId: params.accountId,
-    agentId: params.agentId,
     routeSessionKey: params.routeSessionKey,
+    storePath: params.storePath,
     ctxPayload: params.ctxPayload,
     recordInboundSession: params.recordInboundSession,
     record: {

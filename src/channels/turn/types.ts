@@ -314,6 +314,7 @@ export type AssembledChannelTurn = {
   accountId?: string;
   agentId: string;
   routeSessionKey: string;
+  storePath: string;
   ctxPayload: FinalizedMsgContext;
   recordInboundSession: RecordInboundSession;
   dispatchReplyWithBufferedBlockDispatcher: DispatchReplyWithBufferedBlockDispatcher;
@@ -332,8 +333,8 @@ export type AssembledChannelTurn = {
 export type PreparedChannelTurn<TDispatchResult = DispatchFromConfigResult> = {
   channel: string;
   accountId?: string;
-  agentId?: string;
   routeSessionKey: string;
+  storePath: string;
   ctxPayload: FinalizedMsgContext;
   recordInboundSession: RecordInboundSession;
   record?: ChannelTurnRecordOptions;

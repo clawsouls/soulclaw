@@ -164,6 +164,7 @@ async function processMessageWithPipeline(params: {
       id: spaceId,
     },
     runtime: core.channel,
+    sessionStore: config.session?.store,
   });
 
   let mediaPath: string | undefined;
@@ -180,7 +181,7 @@ async function processMessageWithPipeline(params: {
   const fromLabel = isGroup
     ? space.displayName || `space:${spaceId}`
     : senderName || `user:${senderId}`;
-  const { body } = buildEnvelope({
+  const { storePath, body } = buildEnvelope({
     channel: "Google Chat",
     from: fromLabel,
     timestamp: event.eventTime ? Date.parse(event.eventTime) : undefined,
@@ -299,6 +300,7 @@ async function processMessageWithPipeline(params: {
         accountId: route.accountId,
         agentId: route.agentId,
         routeSessionKey: route.sessionKey,
+        storePath,
         ctxPayload,
         recordInboundSession: core.channel.session.recordInboundSession,
         dispatchReplyWithBufferedBlockDispatcher:
