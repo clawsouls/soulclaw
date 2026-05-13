@@ -28,9 +28,7 @@ function createMatrixRuntimeMediaMock(
   >["media"]["readRemoteMediaBuffer"];
   return {
     readRemoteMediaBuffer,
-    fetchRemoteMedia: readRemoteMediaBuffer as NonNullable<
-      PluginRuntime["channel"]
-    >["media"]["fetchRemoteMedia"],
+    fetchRemoteMedia: readRemoteMediaBuffer,
     saveRemoteMedia: vi.fn().mockResolvedValue({
       path: "/tmp/test-media.jpg",
       contentType: "image/jpeg",
