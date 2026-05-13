@@ -143,7 +143,6 @@ Docs: https://docs.openclaw.ai
 - Codex app-server: mirror native Codex subagent spawn lifecycle events into Task Registry so app-server child agents appear in task/status surfaces without relying on transcript text. (#79512) Thanks @mbelinky.
 - Gateway: expose optional `isHeartbeat` metadata on agent event payloads so clients can distinguish scheduled heartbeat runs from ordinary chat runs. (#80610) Thanks @medns.
 - Agents: add `agents.defaults.runRetries` and `agents.list[].runRetries` config for embedded Pi runner retry loop limits. (#80661) Thanks @medns.
-- Plugins/ClawHub: check exact-release trust before ClawHub plugin install/update downloads, require confirmation for risky releases, and add `--acknowledge-clawhub-risk` for reviewed automation. (#81307) Thanks @jesse-merhi.
 
 ### Fixes
 
