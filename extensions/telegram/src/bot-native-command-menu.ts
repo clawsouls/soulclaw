@@ -14,6 +14,7 @@ const TELEGRAM_MAX_COMMANDS = 100;
 export const TELEGRAM_TOTAL_COMMAND_TEXT_BUDGET = 5700;
 const TELEGRAM_COMMAND_RETRY_RATIO = 0.8;
 const TELEGRAM_MIN_COMMAND_DESCRIPTION_LENGTH = 1;
+const TELEGRAM_MAX_COMMAND_DESCRIPTION_LENGTH = 256;
 const TELEGRAM_MENU_RESULT_CACHE_MAX = 128;
 
 export type TelegramMenuCommand = {
@@ -101,7 +102,10 @@ function fitTelegramCommandsWithinTextBudget(
     );
     let descriptionTrimmed = false;
     const fittedCommands = candidateCommands.map((command) => {
-      const description = truncateTelegramCommandText(command.description, descriptionCap);
+      const description = truncateTelegramCommandText(
+        command.description,
+        Math.min(descriptionCap, TELEGRAM_MAX_COMMAND_DESCRIPTION_LENGTH),
+      );
       if (description !== command.description) {
         descriptionTrimmed = true;
         return Object.assign({}, command, { description });
@@ -278,6 +282,7 @@ function buildTelegramMenuResultCacheKey(params: {
   for (const command of params.allCommands) {
     updateTelegramCommandDigestField(digest, command.command);
     updateTelegramCommandDigestField(digest, command.description);
+    updateTelegramCommandLocalizationDigest(digest, command.descriptionLocalizations);
   }
   return digest.digest("hex").slice(0, 16);
 }
@@ -289,6 +294,18 @@ function updateTelegramCommandDigestField(
   digest.update(String(value.length));
   digest.update(":");
   digest.update(value);
+}
+
+function updateTelegramCommandLocalizationDigest(
+  digest: ReturnType<typeof createHash>,
+  localizations: Record<string, string> | undefined,
+): void {
+  const entries = Object.entries(localizations ?? {}).toSorted(([a], [b]) => a.localeCompare(b));
+  updateTelegramCommandDigestField(digest, String(entries.length));
+  for (const [locale, description] of entries) {
+    updateTelegramCommandDigestField(digest, locale);
+    updateTelegramCommandDigestField(digest, description);
+  }
 }
 
 function rememberCappedTelegramMenuResult(
@@ -331,24 +348,74 @@ function writeCachedCommandHash(
   syncedCommandHashes.set(key, hash);
 }
 
-function buildLocalizedCommandVariants(
-  commands: TelegramMenuCommand[],
-): Array<{ languageCode: string; commands: TelegramMenuCommand[] }> {
+function normalizeTelegramLanguageCode(languageCode: string): string | null {
+  const normalized = languageCode.trim().toLowerCase();
+  return /^[a-z]{2}$/.test(normalized) ? normalized : null;
+}
+
+function readLocalizedDescription(
+  command: TelegramMenuCommand,
+  languageCode: string,
+): string | undefined {
+  for (const [rawLanguageCode, rawDescription] of Object.entries(
+    command.descriptionLocalizations ?? {},
+  )) {
+    if (normalizeTelegramLanguageCode(rawLanguageCode) !== languageCode) {
+      continue;
+    }
+    const description = normalizeOptionalString(rawDescription);
+    if (description) {
+      return description;
+    }
+  }
+  return undefined;
+}
+
+function toTelegramBotCommands(commands: TelegramMenuCommand[]): Array<{
+  command: string;
+  description: string;
+}> {
+  return commands.map((command) => ({
+    command: command.command,
+    description: command.description,
+  }));
+}
+
+function buildLocalizedCommandVariants(commands: TelegramMenuCommand[]): {
+  variants: Array<{ languageCode: string; commands: TelegramMenuCommand[] }>;
+  unsupportedLanguageCodes: string[];
+} {
   const locales = new Set<string>();
+  const unsupportedLanguageCodes = new Set<string>();
   for (const cmd of commands) {
     if (cmd.descriptionLocalizations) {
       for (const lang of Object.keys(cmd.descriptionLocalizations)) {
-        locales.add(lang);
+        const normalized = normalizeTelegramLanguageCode(lang);
+        if (normalized) {
+          locales.add(normalized);
+        } else {
+          unsupportedLanguageCodes.add(lang);
+        }
       }
     }
   }
-  return [...locales].toSorted().map((languageCode) => ({
-    languageCode,
-    commands: commands.map((cmd) => ({
+  const variants = [...locales].toSorted().map((languageCode) => {
+    const localizedCommands = commands.map((cmd) => ({
       command: cmd.command,
-      description: cmd.descriptionLocalizations?.[languageCode] ?? cmd.description,
-    })),
-  }));
+      description: readLocalizedDescription(cmd, languageCode) ?? cmd.description,
+    }));
+    return {
+      languageCode,
+      commands: fitTelegramCommandsWithinTextBudget(
+        localizedCommands,
+        TELEGRAM_TOTAL_COMMAND_TEXT_BUDGET,
+      ).commands,
+    };
+  });
+  return {
+    variants,
+    unsupportedLanguageCodes: [...unsupportedLanguageCodes].toSorted(),
+  };
 }
 
 function formatTelegramCommandScopeOperation(
@@ -398,13 +465,14 @@ async function setTelegramMenuCommandsForScopes(params: {
       runtime,
       shouldLog,
       fn: () => {
+        const botCommands = toTelegramBotCommands(commands);
         const opts = {
           ...scope.options,
           ...(languageCode ? { language_code: languageCode as LanguageCode } : undefined),
         };
         return Object.keys(opts).length > 0
-          ? bot.api.setMyCommands(commands, opts)
-          : bot.api.setMyCommands(commands);
+          ? bot.api.setMyCommands(botCommands, opts)
+          : bot.api.setMyCommands(botCommands);
       },
     });
   }
@@ -446,6 +514,7 @@ export function syncTelegramMenuCommands(params: {
     }
 
     let retryCommands = commandsToRegister;
+    let acceptedCommands: TelegramMenuCommand[] | null = null;
     const initialCommandCount = commandsToRegister.length;
     while (retryCommands.length > 0) {
       try {
@@ -463,6 +532,7 @@ export function syncTelegramMenuCommands(params: {
             }),
           );
         }
+        acceptedCommands = retryCommands;
         break;
       } catch (err) {
         if (!isBotCommandsTooMuchError(err)) {
@@ -484,7 +554,18 @@ export function syncTelegramMenuCommands(params: {
       }
     }
 
-    for (const variant of buildLocalizedCommandVariants(commandsToRegister)) {
+    if (!acceptedCommands) {
+      return;
+    }
+
+    const { variants, unsupportedLanguageCodes } = buildLocalizedCommandVariants(acceptedCommands);
+    if (unsupportedLanguageCodes.length > 0) {
+      runtime.log?.(
+        `Telegram command menu ignored unsupported description localization codes: ${unsupportedLanguageCodes.join(", ")}.`,
+      );
+    }
+
+    for (const variant of variants) {
       await setTelegramMenuCommandsForScopes({
         bot,
         runtime,

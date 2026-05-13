@@ -772,7 +772,14 @@ export const registerTelegramNativeCommands = ({
           );
           return null;
         }
-        return { command: normalized, description: command.description };
+        const menuCommand: TelegramMenuCommand = {
+          command: normalized,
+          description: command.description,
+        };
+        if (command.descriptionLocalizations) {
+          menuCommand.descriptionLocalizations = command.descriptionLocalizations;
+        }
+        return menuCommand;
       })
       .filter((cmd) => cmd !== null),
     ...(nativeEnabled ? pluginCatalog.commands : []),
