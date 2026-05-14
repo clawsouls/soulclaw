@@ -15,6 +15,7 @@ Docs: https://docs.openclaw.ai
 - iOS: restore first-use Contacts, Calendar, and Reminders permission prompts and add Privacy & Access status/actions in Settings. Thanks @BunsDev.
 - Canvas: return not found for malformed percent-encoded Canvas/A2UI/document asset paths and keep decoded parent traversal blocked before path normalization.
 - Agents: allow dot-dot-prefixed filenames such as `..note.txt` through sandbox FS bridge, remote sandbox reads, and apply_patch summaries without mistaking the name for parent traversal.
+- CLI/migrate: hide per-item source/plugin hints on non-conflicting Codex skill and plugin selection prompts, keeping the hint text reserved for rows that actually need attention. Thanks @sjf.
 - CLI/migrate: humanize Codex conflict-status messaging across the migrate UI so selection prompts and plan/result rows say "Codex skill already installed in workspace" instead of surfacing internal `MIGRATION_REASON_*` codes. Thanks @sjf.
 - CLI/migrate: render migrate result rows with distinct glyphs for manual-review (🔍) and archive (📖) items instead of the misleading "skipped" and "migrated" checkmarks, so users can see which entries still need attention versus which were filed away. Thanks @sjf.
 - CLI/migrate: split Codex migrate output into separate preview and result phases so the Before plan and After result render through clack with independently tunable copy. Thanks @sjf.
