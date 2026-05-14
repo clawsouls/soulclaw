@@ -14,7 +14,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
-- CLI: lazy-load model and plugin runtime helpers for command actions so parent/help output renders without importing those runtime paths.
+- CLI: lazy-load model, plugin, and device runtime helpers for command actions so parent/help output renders without importing those runtime paths.
 - Gateway/session history: carry monotonic transcript message sequence through live updates and refresh SSE history when stale sequence input would otherwise append bad incremental state. (#81474) Thanks @samzong.
 - Security/sandbox: include Windows `USERPROFILE` in the sandbox blocked home roots so credential-bearing binds (such as `.codex`, `.openclaw`, or `.ssh` under the Windows user profile) are denied even when `HOME` points at a different shell home. (#63074) Thanks @luoyanglang.
 - Models config/auth: stop inferring provider env-var markers from broad `^[A-Z_][A-Z0-9_]*$` strings, and resolve config-backed provider `apiKey` values only through structured env SecretRefs (`secrets.providers[id]` / `secrets.defaults`), so unrelated env vars cannot accidentally become provider credentials. Thanks @sallyom.
