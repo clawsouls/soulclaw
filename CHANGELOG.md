@@ -21,6 +21,7 @@ Docs: https://docs.openclaw.ai
 - CLI/migrate: drop trailing periods from Codex migrate item messages and `REASON_CODE_MESSAGES` strings so plan/result rows read as labels instead of sentence fragments. (#81705) Thanks @sjf.
 - Slack: treat malformed private-file redirect `Location` headers as unfollowable redirects instead of failing Slack media downloads.
 - Matrix: ignore malformed percent-encoding in optional location URI parameters instead of letting a bad `geo:` event abort inbound message handling.
+- Web search: auto-detect Brave from the documented `tools.web.search.apiKey` config path, keeping allowlisted isolated cron runs from reporting `web_search` unavailable when the key is stored outside plugin-scoped config. Fixes #81538. Thanks @atomicmonk.
 - Plugins: discover provider plugins from `setup.providers[].envVars` credentials during provider discovery while keeping the deprecated `providerAuthEnvVars` fallback. (#81542) Thanks @JARVIS-Glasses.
 - Docs/Codex harness: clarify that per-agent `CODEX_HOME` isolates `~/.codex` while inherited `HOME` intentionally keeps `.agents` discovery and subprocess user-home state available.
 - CLI/plugins: keep bare plugin and parent-command help on the lightweight path, avoiding plugin registry discovery before rendering help.
