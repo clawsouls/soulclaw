@@ -51,6 +51,31 @@
       }
     },
     {
+      "name": "@openclaw/anthropic-vertex-provider",
+      "description": "OpenClaw Anthropic Vertex provider plugin",
+      "source": "official",
+      "kind": "provider",
+      "openclaw": {
+        "plugin": {
+          "id": "anthropic-vertex",
+          "label": "Anthropic Vertex"
+        },
+        "providers": [
+          {
+            "id": "anthropic-vertex",
+            "name": "Anthropic Vertex",
+            "docs": "/providers/models",
+            "categories": ["cloud", "llm"]
+          }
+        ],
+        "install": {
+          "npmSpec": "@openclaw/anthropic-vertex-provider",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.5.12-beta.1"
+        }
+      }
+    },
+    {
       "name": "@openclaw/codex",
       "description": "OpenClaw Codex harness and model provider plugin",
       "source": "official",

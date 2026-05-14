@@ -44,9 +44,6 @@ importers:
       '@agentclientprotocol/sdk':
         specifier: 0.21.0
         version: 0.21.0(zod@4.4.3)
-      '@anthropic-ai/vertex-sdk':
-        specifier: 0.16.0
-        version: 0.16.0(zod@4.4.3)
       '@clack/core':
         specifier: 1.3.0
         version: 1.3.0
@@ -89,15 +86,6 @@ importers:
       '@openclaw/fs-safe':
         specifier: 0.2.3
         version: 0.2.3
-      '@slack/bolt':
-        specifier: 4.7.2
-        version: 4.7.2(@types/express@5.0.6)
-      '@slack/types':
-        specifier: 2.21.1
-        version: 2.21.1
-      '@slack/web-api':
-        specifier: 7.15.2
-        version: 7.15.2
       ajv:
         specifier: 8.20.0
         version: 8.20.0
@@ -161,9 +149,6 @@ importers:
       openai:
         specifier: 6.37.0
         version: 6.37.0(ws@8.20.0)(zod@4.4.3)
-      openshell:
-        specifier: 0.1.0
-        version: 0.1.0
       pdfjs-dist:
         specifier: 5.7.284
         version: 5.7.284
@@ -1418,6 +1403,9 @@ importers:
       '@openclaw/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
+      openclaw:
+        specifier: workspace:*
+        version: link:../..
 
   extensions/speech-core:
     devDependencies:
