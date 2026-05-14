@@ -13,6 +13,7 @@ Docs: https://docs.openclaw.ai
 
 - Control UI/chat: reconcile terminal and reconnect run cleanup with cached session activity, stale compaction/fallback indicators, and a compact composer run-status chip so completed or interrupted turns do not leave Stop active. Fixes #76874 and #64220; refs #71630. Thanks @BunsDev.
 - Maintainer tooling: clarify which pnpm test/check commands are safe locally versus inside Codex worktrees, routing linked-worktree gates through node wrappers and Crabbox/Testbox.
+- Auto-reply: preserve same-key ordering when debounced inbound work falls back to immediate flushes, so follow-up turns cannot overtake an active buffered flush.
 - Telegram/WhatsApp: keep Telegram same-chat replies ordered behind active no-delay turns without blocking WhatsApp follow-up message dispatch.
 - Codex migration: avoid duplicate cached plugin bundle warnings when app-server plugin inventory is available.
 - iOS/chat: resize PhotosPicker image attachments to capped JPEGs before staging and sending, stripping source metadata and keeping oversized camera photos under the chat upload budget. Fixes #68524. Thanks @BunsDev.

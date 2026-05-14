@@ -208,7 +208,7 @@ export function createInboundDebouncer<T>(params: InboundDebounceCreateParams<T>
           await reservedTask.task;
           return;
         }
-        if (params.serializeImmediate && keyChains.has(key)) {
+        if (keyChains.has(key)) {
           await enqueueKeyTask(key, async () => {
             await runFlush([item]);
           });
@@ -236,15 +236,10 @@ export function createInboundDebouncer<T>(params: InboundDebounceCreateParams<T>
     }
     if (!canTrackKey(key)) {
       // When the debounce map is saturated, fall back to immediate keyed work
-      // instead of buffering. Channels that need strict no-delay ordering can
-      // still opt into serial immediate work.
-      if (params.serializeImmediate) {
-        await enqueueKeyTask(key, async () => {
-          await runFlush([item]);
-        });
-        return;
-      }
-      await runFlush([item]);
+      // instead of buffering, but still preserve same-key ordering.
+      await enqueueKeyTask(key, async () => {
+        await runFlush([item]);
+      });
       return;
     }
 
