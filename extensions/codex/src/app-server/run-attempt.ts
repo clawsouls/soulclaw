@@ -3050,7 +3050,8 @@ function remapCodexContextFilePath(params: {
   const relativePath = path.relative(params.sourceWorkspaceDir, params.file.path);
   if (
     !relativePath ||
-    relativePath.startsWith("..") ||
+    relativePath === ".." ||
+    relativePath.startsWith(`..${path.sep}`) ||
     path.isAbsolute(relativePath) ||
     params.sourceWorkspaceDir === params.targetWorkspaceDir
   ) {
@@ -3214,6 +3215,7 @@ export const __testing = {
   filterCodexDynamicToolsForAllowlist,
   filterToolsForVisionInputs,
   handleDynamicToolCallWithTimeout,
+  remapCodexContextFilePath,
   resolveDynamicToolCallTimeoutMs,
   restrictCodexAppServerSandboxForOpenClawSandbox,
   resolveOpenClawCodingToolsSessionKeys,

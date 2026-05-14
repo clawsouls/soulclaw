@@ -2371,6 +2371,35 @@ describe("runCodexAppServerAttempt", () => {
     expect(config?.instructions).toBeUndefined();
   });
 
+  it("remaps Codex bootstrap files under dot-prefixed workspace directories", () => {
+    expect(
+      __testing.remapCodexContextFilePath({
+        file: {
+          path: "/real/workspace/..context/SOUL.md",
+          content: "Soul voice goes here.",
+        },
+        sourceWorkspaceDir: "/real/workspace",
+        targetWorkspaceDir: "/sandbox/workspace",
+      }),
+    ).toEqual({
+      path: "/sandbox/workspace/..context/SOUL.md",
+      content: "Soul voice goes here.",
+    });
+    expect(
+      __testing.remapCodexContextFilePath({
+        file: {
+          path: "/outside/SOUL.md",
+          content: "outside",
+        },
+        sourceWorkspaceDir: "/real/workspace",
+        targetWorkspaceDir: "/sandbox/workspace",
+      }),
+    ).toEqual({
+      path: "/outside/SOUL.md",
+      content: "outside",
+    });
+  });
+
   it("keeps lightweight cron Codex turns out of OpenClaw bootstrap context", async () => {
     const sessionFile = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
