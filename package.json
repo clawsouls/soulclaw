@@ -1416,6 +1416,7 @@
     "deps:root-ownership": "node scripts/root-dependency-ownership-audit.mjs",
     "deps:root-ownership:check": "node scripts/root-dependency-ownership-audit.mjs --check",
     "deps:changes:report": "node scripts/dependency-changes-report.mjs",
+    "deps:patches:check": "node scripts/check-package-patches.mjs",
     "deps:pins:check": "node scripts/check-dependency-pins.mjs",
     "deps:ownership-surface:check": "node scripts/dependency-ownership-surface-report.mjs --check",
     "deps:ownership-surface:report": "node scripts/dependency-ownership-surface-report.mjs",
