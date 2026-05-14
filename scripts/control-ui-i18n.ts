@@ -85,7 +85,8 @@ const CONTROL_UI_I18N_WORKFLOW = 1;
 const DEFAULT_OPENAI_MODEL = "gpt-5.5";
 const DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-6";
 const DEFAULT_PROVIDER = "openai";
-const DEFAULT_PI_PACKAGE_VERSION = "0.58.3";
+export const DEFAULT_PI_PACKAGE_VERSION = "0.74.0";
+const PI_PACKAGE_NAME = "@earendil-works/pi-coding-agent";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, "..");
 const LOCALES_DIR = path.join(ROOT, "ui", "src", "i18n", "locales");
@@ -918,6 +919,14 @@ function getPiRuntimeDir() {
   );
 }
 
+export function resolveLocalPiCommand(root = ROOT): PiCommand | null {
+  const cliPath = path.join(root, "node_modules", ...PI_PACKAGE_NAME.split("/"), "dist", "cli.js");
+  if (!existsSync(cliPath)) {
+    return null;
+  }
+  return { executable: "node", args: [cliPath] };
+}
+
 async function resolvePiCommand(): Promise<PiCommand> {
   const explicitExecutable = process.env[ENV_PI_EXECUTABLE]?.trim();
   if (explicitExecutable) {
@@ -935,12 +944,16 @@ async function resolvePiCommand(): Promise<PiCommand> {
     }
   }
 
+  const localCommand = resolveLocalPiCommand();
+  if (localCommand) {
+    return localCommand;
+  }
+
   const runtimeDir = getPiRuntimeDir();
   const cliPath = path.join(
     runtimeDir,
     "node_modules",
-    "@mariozechner",
-    "pi-coding-agent",
+    ...PI_PACKAGE_NAME.split("/"),
     "dist",
     "cli.js",
   );
@@ -953,7 +966,7 @@ async function resolvePiCommand(): Promise<PiCommand> {
         "--silent",
         "--no-audit",
         "--no-fund",
-        `@earendil-works/pi-coding-agent@${resolvePiPackageVersion()}`,
+        `${PI_PACKAGE_NAME}@${resolvePiPackageVersion()}`,
       ],
       {
         cwd: runtimeDir,
