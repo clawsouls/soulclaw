@@ -26,9 +26,11 @@ const REQUIRED_REVIEWED_PUBLISHABLE_CRITICAL_FINDINGS = new Set([
   "@openclaw/acpx:dangerous-exec:src/codex-auth-bridge.ts",
   "@openclaw/acpx:dangerous-exec:src/runtime-internals/mcp-proxy.mjs",
   "@openclaw/codex:dangerous-exec:src/app-server/transport-stdio.ts",
+  "@openclaw/codex:dangerous-exec:src/node-cli-sessions.ts",
   "@openclaw/google-meet:dangerous-exec:src/node-host.ts",
   "@openclaw/google-meet:dangerous-exec:src/realtime.ts",
   "@openclaw/matrix:dangerous-exec:src/matrix/deps.ts",
+  "@openclaw/slack:dynamic-code-execution:dist/outbound-payload.test-harness-<hash>.js",
   "@openclaw/voice-call:dangerous-exec:src/tunnel.ts",
   "@openclaw/voice-call:dangerous-exec:src/webhook/tailscale.ts",
 ]);
@@ -89,7 +91,7 @@ function isScannerWalkedPackedPath(packedPath: string): boolean {
 }
 
 function normalizePackedFindingPath(packedPath: string): string {
-  for (const prefix of ["client", "runtime-entry", "service"]) {
+  for (const prefix of ["client", "outbound-payload.test-harness", "runtime-entry", "service"]) {
     if (packedPath.startsWith(`dist/${prefix}-`) && packedPath.endsWith(".js")) {
       return `dist/${prefix}-<hash>.js`;
     }
