@@ -2163,6 +2163,8 @@ function detectCompat(model: OpenAIModeModel) {
     openRouterRouting: {},
     vercelGatewayRouting: {},
     supportsStrictMode: compatDefaults.supportsStrictMode,
+    requiresReasoningContentOnAssistantMessages:
+      compatDefaults.requiresReasoningContentOnAssistantMessages,
   };
 }
 
@@ -2184,6 +2186,7 @@ function getCompat(model: OpenAIModeModel): {
   requiresStringContent: boolean;
   strictMessageKeys: boolean;
   visibleReasoningDetailTypes: string[];
+  requiresReasoningContentOnAssistantMessages: boolean;
 } {
   const detected = detectCompat(model);
   const compat = model.compat ?? {};
@@ -2215,6 +2218,9 @@ function getCompat(model: OpenAIModeModel): {
     strictMessageKeys: compat.strictMessageKeys === true,
     visibleReasoningDetailTypes:
       compat.visibleReasoningDetailTypes ?? detected.visibleReasoningDetailTypes,
+    requiresReasoningContentOnAssistantMessages:
+      compat.requiresReasoningContentOnAssistantMessages ??
+      detected.requiresReasoningContentOnAssistantMessages,
   };
 }
 
