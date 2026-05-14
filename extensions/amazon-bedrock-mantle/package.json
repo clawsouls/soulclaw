@@ -32,6 +32,7 @@
       "bundledDist": false
     },
     "release": {
+      "publishToClawHub": true,
       "publishToNpm": true
     }
   }
