@@ -64,6 +64,7 @@ Docs: https://docs.openclaw.ai
 - Process execution: collapse case-insensitive duplicate child environment keys on Windows so caller-provided overrides such as `PATH` cannot be shadowed by host `Path`.
 - Browser CLI: request the existing `operator.admin` gateway scope explicitly for browser control commands, avoiding unnecessary scope-upgrade approval loops. Fixes #81555. (#81716) Thanks @joshavant.
 - Web: honor explicitly configured global `web_search` providers during provider ownership resolution while keeping sandboxed `web_fetch` limited to bundled providers.
+- Channels: keep configured third-party channel plugins visible in `openclaw channels list` when their manifest declares `channels` but has not added `channelConfigs` metadata yet. Fixes #81334. (#81340) Thanks @AllynSheep and @vincentkoc.
 - Agents: skip bootstrap file and hook preload work on completed `continuation-skip` turns when no workspace bootstrap is pending, reducing isolated-agent prep latency without changing first-turn bootstrap behavior. Fixes #81548. Thanks @delizaran-unpa.
 - Config: validate JSON dry-runs against plugin-owned channel schemas, so external channel fields are not rejected by stale bundled schemas. Fixes #77887. (#81504) Thanks @giodl73-repo.
 - iOS: restore first-use Contacts, Calendar, and Reminders permission prompts and add Privacy & Access status/actions in Settings. Thanks @BunsDev.
