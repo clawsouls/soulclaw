@@ -278,7 +278,8 @@ const { runCommandWithTimeout } = await import("../process/exec.js");
 const { runDaemonRestart, runDaemonInstall } = await import("./daemon-cli.js");
 const { doctorCommand } = await import("../commands/doctor.js");
 const { defaultRuntime } = await import("../runtime.js");
-const { updateCommand, updateStatusCommand, updateWizardCommand } = await import("./update-cli.js");
+const { updateCommand, updateFinalizeCommand, updateStatusCommand, updateWizardCommand } =
+  await import("./update-cli.js");
 const updateCliShared = await import("./update-cli/shared.js");
 const { resolveGitInstallDir } = updateCliShared;
 const { spawnSync } = await import("node:child_process");
@@ -3354,6 +3355,48 @@ describe("update-cli", () => {
     } finally {
       randomSpy.mockRestore();
     }
+  });
+
+  it("updateFinalizeCommand runs doctor and plugin convergence with full update env", async () => {
+    await withEnvAsync(
+      {
+        OPENCLAW_UPDATE_IN_PROGRESS: undefined,
+        OPENCLAW_UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE: undefined,
+      },
+      async () => {
+        let doctorEnv: NodeJS.ProcessEnv | undefined;
+        vi.mocked(doctorCommand).mockImplementationOnce(async () => {
+          doctorEnv = { ...process.env };
+        });
+        vi.mocked(defaultRuntime.writeJson).mockClear();
+
+        await updateFinalizeCommand({ json: true, yes: true, timeout: "9", restart: false });
+
+        expect(doctorEnv?.OPENCLAW_UPDATE_IN_PROGRESS).toBe("1");
+        expect(doctorEnv?.OPENCLAW_UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE).toBe("1");
+        expect(process.env.OPENCLAW_UPDATE_IN_PROGRESS).toBeUndefined();
+        expect(process.env.OPENCLAW_UPDATE_PARENT_SUPPORTS_DOCTOR_CONFIG_WRITE).toBeUndefined();
+        expect(doctorCommand).toHaveBeenCalledWith(defaultRuntime, {
+          nonInteractive: true,
+          yes: true,
+        });
+        expect(syncPluginCall()?.channel).toBe("stable");
+        expect(lastNpmPluginUpdateCall()?.timeoutMs).toBe(9_000);
+        const output = lastWriteJsonCall() as
+          | {
+              status?: string;
+              mode?: string;
+              restart?: boolean;
+              postUpdate?: { doctor?: { status?: string }; plugins?: { status?: string } };
+            }
+          | undefined;
+        expect(output?.status).toBe("ok");
+        expect(output?.mode).toBe("finalize");
+        expect(output?.restart).toBe(false);
+        expect(output?.postUpdate?.doctor?.status).toBe("ok");
+        expect(output?.postUpdate?.plugins?.status).toBe("ok");
+      },
+    );
   });
 
   it.each([
