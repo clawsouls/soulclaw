@@ -50,6 +50,7 @@ export type InboundDebounceCreateParams<T> = {
   buildKey: (item: T) => string | null | undefined;
   shouldDebounce?: (item: T) => boolean;
   resolveDebounceMs?: (item: T) => number | undefined;
+  serializeImmediate?: boolean;
   onFlush: (items: T[]) => Promise<void>;
   onError?: (err: unknown, items: T[]) => void;
 };
@@ -92,6 +93,29 @@ export function createInboundDebouncer<T>(params: InboundDebounceCreateParams<T>
       }
     };
     settled.then(cleanup, cleanup);
+    return next;
+  };
+
+  const runKeyTaskNow = (key: string, task: () => Promise<void>) => {
+    let resolveSettled!: () => void;
+    const settled = new Promise<void>((resolve) => {
+      resolveSettled = resolve;
+    });
+    keyChains.set(key, settled);
+    const cleanup = () => {
+      resolveSettled();
+      if (keyChains.get(key) === settled) {
+        keyChains.delete(key);
+      }
+    };
+    let next: Promise<void>;
+    try {
+      next = task();
+    } catch (err) {
+      cleanup();
+      throw err;
+    }
+    next.then(cleanup, cleanup);
     return next;
   };
 
@@ -184,8 +208,14 @@ export function createInboundDebouncer<T>(params: InboundDebounceCreateParams<T>
           await reservedTask.task;
           return;
         }
-        if (keyChains.has(key)) {
+        if (params.serializeImmediate && keyChains.has(key)) {
           await enqueueKeyTask(key, async () => {
+            await runFlush([item]);
+          });
+          return;
+        }
+        if (params.serializeImmediate) {
+          await runKeyTaskNow(key, async () => {
             await runFlush([item]);
           });
           return;
@@ -206,10 +236,15 @@ export function createInboundDebouncer<T>(params: InboundDebounceCreateParams<T>
     }
     if (!canTrackKey(key)) {
       // When the debounce map is saturated, fall back to immediate keyed work
-      // instead of buffering, but still preserve same-key ordering.
-      await enqueueKeyTask(key, async () => {
-        await runFlush([item]);
-      });
+      // instead of buffering. Channels that need strict no-delay ordering can
+      // still opt into serial immediate work.
+      if (params.serializeImmediate) {
+        await enqueueKeyTask(key, async () => {
+          await runFlush([item]);
+        });
+        return;
+      }
+      await runFlush([item]);
       return;
     }
 
