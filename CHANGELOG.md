@@ -19,6 +19,7 @@ Docs: https://docs.openclaw.ai
 - Telegram: allow trusted local Bot API media files whose filenames start with dots instead of falling back to remote download.
 - Agents/Codex app-server: remap injected context files under dot-dot-prefixed workspace directories when a run switches to an effective sandbox workspace.
 - Control UI/i18n: use the installed workspace pi runtime for locale refreshes, update the fallback package pin, and prefer the Anthropic CI provider when available, restoring the scheduled locale refresh workflow.
+- Plugins: preserve installed package metadata and persisted registry freshness checks for plugin package paths under dot-dot-prefixed directories.
 - Agents: allow dot-dot-prefixed filenames such as `..note.txt` through sandbox FS bridge, remote sandbox reads, and apply_patch summaries without mistaking the name for parent traversal.
 - CLI/migrate: hide per-item source/plugin hints on non-conflicting Codex skill and plugin selection prompts, keeping the hint text reserved for rows that actually need attention. Thanks @sjf.
 - Codex harness: treat high-confidence app-server OAuth refresh invalidation as a terminal auth-profile failure, stopping repeated raw token-refresh errors without turning entitlement or usage-limit payloads into re-auth prompts.
