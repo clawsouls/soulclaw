@@ -19,7 +19,9 @@ Use when:
 - Read dependency docs/source/types when the finding depends on external behavior.
 - Reject unrealistic edge cases, speculative risks, broad rewrites, and fixes that over-complicate the codebase.
 - Prefer small fixes at the right ownership boundary; no refactor unless it clearly improves the bug class.
-- If a review-triggered fix changes code, rerun focused tests and rerun Codex review once.
+- Keep going until Codex review returns no accepted/actionable findings.
+- If a review-triggered fix changes code, rerun focused tests and rerun Codex review.
+- If rejecting a finding as intentional/not worth fixing, add a brief inline code comment only when it explains a real invariant or ownership decision that future reviewers should know.
 - Do not push just to review. Push only when the user requested push/ship/PR update.
 
 ## Pick Target
@@ -58,7 +60,7 @@ Format first if formatting can change line locations. Then it is OK to run tests
 scripts/codex-review --parallel-tests "<focused test command>"
 ```
 
-Tradeoff: tests may force code changes that stale the review. If tests or review lead to code edits, rerun the affected tests and rerun review once.
+Tradeoff: tests may force code changes that stale the review. If tests or review lead to code edits, rerun the affected tests and rerun review until no accepted/actionable findings remain.
 
 ## Context Efficiency
 
@@ -96,4 +98,4 @@ Include:
 - review command used
 - tests/proof run
 - findings accepted/rejected, briefly why
-- whether review was rerun after review-triggered edits
+- final clean review command, or why a remaining finding was consciously rejected
