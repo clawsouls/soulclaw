@@ -39,6 +39,8 @@ git fetch origin
 codex review --base origin/main
 ```
 
+Do not pass an inline prompt with `--base`; current CLI rejects `--base` + `[PROMPT]` even though help text is ambiguous. If custom instructions are needed, run the plain base review first, then do a local/manual follow-up pass.
+
 If an open PR exists, use its actual base:
 
 ```bash
