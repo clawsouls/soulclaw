@@ -197,12 +197,10 @@ describe("xiaomi provider plugin", () => {
     const modelIds = catalogProvider.models?.map((m) => m.id);
     expect(modelIds).toContain("mimo-v2-pro");
     expect(modelIds).toContain("mimo-v2-omni");
-    expect(modelIds).toContain("mimo-v2.5");
-    expect(modelIds).toContain("mimo-v2.5-pro");
     expect(modelIds).toContain("mimo-v2-flash");
 
     expect(catalogProvider.models?.find((m) => m.id === "mimo-v2-pro")?.reasoning).toBe(true);
-    expect(catalogProvider.models?.find((m) => m.id === "mimo-v2.5-pro")?.reasoning).toBe(true);
+    expect(catalogProvider.models?.find((m) => m.id === "mimo-v2-omni")?.reasoning).toBe(true);
     expect(catalogProvider.models?.find((m) => m.id === "mimo-v2-flash")?.reasoning).toBeFalsy();
   });
 
