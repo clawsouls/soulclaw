@@ -487,6 +487,14 @@
       "types": "./dist/plugin-sdk/cli-backend.d.ts",
       "default": "./dist/plugin-sdk/cli-backend.js"
     },
+    "./plugin-sdk/codex-mcp-projection": {
+      "types": "./dist/plugin-sdk/codex-mcp-projection.d.ts",
+      "default": "./dist/plugin-sdk/codex-mcp-projection.js"
+    },
+    "./plugin-sdk/codex-native-task-runtime": {
+      "types": "./dist/plugin-sdk/codex-native-task-runtime.d.ts",
+      "default": "./dist/plugin-sdk/codex-native-task-runtime.js"
+    },
     "./plugin-sdk/agent-harness": {
       "types": "./dist/plugin-sdk/agent-harness.d.ts",
       "default": "./dist/plugin-sdk/agent-harness.js"
