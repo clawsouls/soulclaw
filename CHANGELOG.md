@@ -56,6 +56,7 @@ Docs: https://docs.openclaw.ai
 - Microsoft Foundry: report malformed Azure CLI token JSON with owned auth errors instead of leaking raw parser failures.
 - Gateway/model pricing: report malformed external pricing catalog JSON with source-owned errors instead of leaking raw parser failures.
 - QA Lab: report malformed model-catalog subprocess JSON with an owned error and ignore invalid catalog rows.
+- Google Meet: report malformed browser-control status JSON with plugin-owned errors instead of leaking raw parser failures.
 - Models config/auth: stop inferring provider env-var markers from broad `^[A-Z_][A-Z0-9_]*$` strings, and resolve config-backed provider `apiKey` values only through structured env SecretRefs (`secrets.providers[id]` / `secrets.defaults`), so unrelated env vars cannot accidentally become provider credentials. Thanks @sallyom.
 - Media fetch: skip allocating and buffering the response body for bodyless media responses (HEAD probes and 204-style empty bodies), avoiding wasted heap on streams that carry no payload. Thanks @shakkernerd.
 - CLI/onboarding: forward provider-specific auth flags (e.g. `--openai-api-key`) through the onboarding wizard so they reach provider auth methods via `ctx.opts`, letting `--openai-api-key "$OPENAI_API_KEY"` skip the redundant "use existing env var?" prompt in non-interactive harnesses. (#81669) Thanks @sjf.
