@@ -1830,16 +1830,29 @@ export async function updateFinalizeCommand(opts: UpdateFinalizeOptions): Promis
     });
   }
 
-  const pluginInstallRecords = await loadInstalledPluginIndexInstallRecords();
   const pluginUpdate = await withUpdateFinalizationEnv(async () => {
     await createUpdateConfigSnapshot();
     await doctorCommand(defaultRuntime, {
       nonInteractive: true,
+      repair: true,
       yes: opts.yes === true,
     });
+    configSnapshot = await readConfigFileSnapshot();
+    if (requestedChannel) {
+      configSnapshot = await persistRequestedUpdateChannel({
+        configSnapshot,
+        requestedChannel,
+      });
+    }
+    const postDoctorStoredChannel = configSnapshot.valid
+      ? normalizeUpdateChannel(configSnapshot.config.update?.channel)
+      : null;
+    const postDoctorChannel =
+      requestedChannel ?? postDoctorStoredChannel ?? storedChannel ?? DEFAULT_PACKAGE_CHANNEL;
+    const pluginInstallRecords = await loadInstalledPluginIndexInstallRecords();
     return await runPostCorePluginUpdate({
       root,
-      channel,
+      channel: postDoctorChannel,
       configSnapshot,
       opts: {
         json: opts.json,
@@ -1861,7 +1874,12 @@ export async function updateFinalizeCommand(opts: UpdateFinalizeOptions): Promis
           : "ok",
     mode: "finalize",
     root,
-    channel,
+    channel:
+      requestedChannel ??
+      (configSnapshot.valid
+        ? normalizeUpdateChannel(configSnapshot.config.update?.channel)
+        : null) ??
+      channel,
     restart: false,
     postUpdate: {
       doctor: {
