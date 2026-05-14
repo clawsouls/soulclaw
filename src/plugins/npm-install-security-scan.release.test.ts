@@ -30,7 +30,6 @@ const REQUIRED_REVIEWED_PUBLISHABLE_CRITICAL_FINDINGS = new Set([
   "@openclaw/google-meet:dangerous-exec:src/node-host.ts",
   "@openclaw/google-meet:dangerous-exec:src/realtime.ts",
   "@openclaw/matrix:dangerous-exec:src/matrix/deps.ts",
-  "@openclaw/slack:dynamic-code-execution:dist/outbound-payload.test-harness-<hash>.js",
   "@openclaw/voice-call:dangerous-exec:src/tunnel.ts",
   "@openclaw/voice-call:dangerous-exec:src/webhook/tailscale.ts",
 ]);
@@ -40,6 +39,7 @@ const OPTIONAL_REVIEWED_PUBLISHABLE_DIST_CRITICAL_FINDINGS = new Set([
   "@openclaw/acpx:dangerous-exec:dist/service-<hash>.js",
   "@openclaw/codex:dangerous-exec:dist/client-<hash>.js",
   "@openclaw/google-meet:dangerous-exec:dist/index.js",
+  "@openclaw/slack:dynamic-code-execution:dist/outbound-payload.test-harness-<hash>.js",
   "@openclaw/voice-call:dangerous-exec:dist/runtime-entry-<hash>.js",
 ]);
 
@@ -97,6 +97,16 @@ function normalizePackedFindingPath(packedPath: string): string {
     }
   }
   return packedPath;
+}
+
+function expectedOptionalReviewedFindingsForPackedPath(
+  packageName: string,
+  packedPath: string,
+): string[] {
+  const normalizedPath = normalizePackedFindingPath(packedPath);
+  return [...OPTIONAL_REVIEWED_PUBLISHABLE_DIST_CRITICAL_FINDINGS].filter(
+    (key) => key.startsWith(`${packageName}:`) && key.endsWith(`:${normalizedPath}`),
+  );
 }
 
 function stageScannerRelevantPackedFiles(
@@ -182,8 +192,10 @@ async function scanPublishablePluginPackage(plugin: PublishablePluginPackage): P
   const unexpectedCriticalFindings: string[] = [];
   const packedFiles = await collectNpmPackedFiles(plugin.packageDir, plugin.packageName);
   for (const packedFile of packedFiles) {
-    const key = `${plugin.packageName}:dangerous-exec:${normalizePackedFindingPath(packedFile)}`;
-    if (OPTIONAL_REVIEWED_PUBLISHABLE_DIST_CRITICAL_FINDINGS.has(key)) {
+    for (const key of expectedOptionalReviewedFindingsForPackedPath(
+      plugin.packageName,
+      packedFile,
+    )) {
       expectedReviewedCriticalFindings.push(key);
     }
   }
