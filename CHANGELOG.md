@@ -36,6 +36,7 @@ Docs: https://docs.openclaw.ai
 - Gateway HTTP: match models, session kill, and session history route paths without trusting malformed Host headers, avoiding pre-auth 500s on those endpoints.
 - Google Meet/Codex: report malformed node proxy `payloadJSON` responses with plugin-owned errors instead of leaking raw JSON parser failures.
 - Debug proxy: reject malformed relative-form proxy targets with a controlled 400 response instead of letting URL parsing escape the request handler.
+- File transfer: reject malformed inline `file_write` base64 before computing hashes or invoking paired nodes, avoiding Node's lenient base64 decoder.
 - Models config/auth: stop inferring provider env-var markers from broad `^[A-Z_][A-Z0-9_]*$` strings, and resolve config-backed provider `apiKey` values only through structured env SecretRefs (`secrets.providers[id]` / `secrets.defaults`), so unrelated env vars cannot accidentally become provider credentials. Thanks @sallyom.
 - Media fetch: skip allocating and buffering the response body for bodyless media responses (HEAD probes and 204-style empty bodies), avoiding wasted heap on streams that carry no payload. Thanks @shakkernerd.
 - CLI/onboarding: forward provider-specific auth flags (e.g. `--openai-api-key`) through the onboarding wizard so they reach provider auth methods via `ctx.opts`, letting `--openai-api-key "$OPENAI_API_KEY"` skip the redundant "use existing env var?" prompt in non-interactive harnesses. (#81669) Thanks @sjf.
