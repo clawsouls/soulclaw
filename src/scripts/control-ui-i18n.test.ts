@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_PI_PACKAGE_VERSION,
   findPlaceholderMismatches,
+  isProviderAuthError,
   resolveLocalPiCommand,
 } from "../../scripts/control-ui-i18n.ts";
 
@@ -73,5 +74,19 @@ describe("control-ui-i18n pi runtime resolution", () => {
     } finally {
       await rm(root, { force: true, recursive: true });
     }
+  });
+});
+
+describe("control-ui-i18n provider auth errors", () => {
+  it("recognizes OpenAI and Anthropic authentication failures", () => {
+    expect(isProviderAuthError(new Error("401 Incorrect API key provided"))).toBe(true);
+    expect(
+      isProviderAuthError(
+        new Error(
+          '401 {"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}',
+        ),
+      ),
+    ).toBe(true);
+    expect(isProviderAuthError(new Error("model timed out"))).toBe(false);
   });
 });
