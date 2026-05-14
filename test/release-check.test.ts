@@ -532,6 +532,9 @@ describe("collectMissingPackPaths", () => {
   });
 
   it("requires bundled plugin runtime sidecars that dynamic plugin boundaries resolve at runtime", () => {
+    expect(requiredBundledPluginPackPaths).not.toContain(
+      bundledDistPluginFile("slack", "runtime-api.js"),
+    );
     expect(requiredBundledPluginPackPaths).toContain(
       bundledDistPluginFile("telegram", "runtime-api.js"),
     );
