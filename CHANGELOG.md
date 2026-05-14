@@ -42,6 +42,7 @@ Docs: https://docs.openclaw.ai
 - QA channel: skip malformed inline inbound attachment base64 instead of staging silently corrupted media for agent turns.
 - Microsoft Teams: reject malformed inline HTML image base64 padding instead of decoding corrupted `data:` image attachments.
 - Voice-call realtime: ignore malformed provider media-frame base64 before forwarding audio into bridge and transcription paths.
+- QQBot: reject malformed stored cron payload base64 before JSON decoding structured reminder data.
 - Models config/auth: stop inferring provider env-var markers from broad `^[A-Z_][A-Z0-9_]*$` strings, and resolve config-backed provider `apiKey` values only through structured env SecretRefs (`secrets.providers[id]` / `secrets.defaults`), so unrelated env vars cannot accidentally become provider credentials. Thanks @sallyom.
 - Media fetch: skip allocating and buffering the response body for bodyless media responses (HEAD probes and 204-style empty bodies), avoiding wasted heap on streams that carry no payload. Thanks @shakkernerd.
 - CLI/onboarding: forward provider-specific auth flags (e.g. `--openai-api-key`) through the onboarding wizard so they reach provider auth methods via `ctx.opts`, letting `--openai-api-key "$OPENAI_API_KEY"` skip the redundant "use existing env var?" prompt in non-interactive harnesses. (#81669) Thanks @sjf.
