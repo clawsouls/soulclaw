@@ -91,6 +91,7 @@ Docs: https://docs.openclaw.ai
 - OpenAI embeddings: report malformed batch output JSONL with provider-owned errors instead of leaking raw parser failures.
 - Synology Chat: report malformed JSON webhook payloads with stable channel-owned parser errors.
 - Mattermost: report malformed interaction callback JSON with stable channel-owned parser errors.
+- Twilio voice-call: report malformed media stream WebSocket JSON with an owned parser error instead of logging raw parser failures.
 - Matrix: ignore malformed percent-encoding in optional location URI parameters instead of letting a bad `geo:` event abort inbound message handling.
 - Web search: auto-detect Brave through its legacy `tools.web.search.apiKey` compatibility fallback while keeping doctor migration to `plugins.entries.brave.config.webSearch.apiKey` as the canonical repair, so allowlisted isolated cron runs do not report `web_search` unavailable before migration. Fixes #81538. Thanks @atomicmonk.
 - Plugins: memoize repeated in-process plugin metadata snapshots and keep vanished managed-install residue from forcing full derived discovery, reducing gateway/status startup scans under large plugin sets. Fixes #81143 and #79806. (#81570) Thanks @Kaspre, @holgergruenhagen, @JanPlessow, and @mjamiv.
