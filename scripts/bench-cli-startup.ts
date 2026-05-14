@@ -162,6 +162,14 @@ const COMMAND_CASES: readonly CommandCase[] = [
     exitBudgetMs: 6_000,
   },
   {
+    id: "pluginsListJson",
+    name: "plugins list --json",
+    args: ["plugins", "list", "--json"],
+    presets: ["response", "real"],
+    firstOutputBudgetMs: 2_500,
+    exitBudgetMs: 6_000,
+  },
+  {
     id: "gatewayHelp",
     name: "gateway --help",
     args: ["gateway", "--help"],
