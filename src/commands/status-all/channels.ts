@@ -194,6 +194,19 @@ function collectMissingPaths(accounts: ChannelAccountRow[]): string[] {
   return missing;
 }
 
+function isLikelyDependencyTreeCorruption(message: string): boolean {
+  return /(?:cannot find (?:module|package)|module_not_found|err_module_not_found|enoent|enotempty|missing package|failed to resolve)/iu.test(
+    message,
+  );
+}
+
+function formatLoadFailureDetail(message: string): string {
+  const reason = isLikelyDependencyTreeCorruption(message)
+    ? "dependency tree corrupted"
+    : "registration failed";
+  return `plugin load failed: ${reason}; run openclaw doctor --fix`;
+}
+
 // `status --all` channels table.
 // Keep this generic: channel-specific rules belong in the channel plugin.
 export async function buildChannelsTable(
@@ -433,6 +446,29 @@ export async function buildChannelsTable(
   }
 
   const visibleChannelIds = new Set(rows.map((row) => row.id));
+  const loadFailuresByChannel = new Map(
+    readOnlyPlugins.loadFailures.map((failure) => [failure.channelId, failure] as const),
+  );
+  for (const channelId of readOnlyPlugins.missingConfiguredChannelIds.toSorted((left, right) =>
+    left.localeCompare(right),
+  )) {
+    if (visibleChannelIds.has(channelId)) {
+      continue;
+    }
+    const failure = loadFailuresByChannel.get(channelId);
+    if (!failure) {
+      continue;
+    }
+    rows.push({
+      id: channelId,
+      label: channelId,
+      enabled: true,
+      state: "warn",
+      detail: formatLoadFailureDetail(failure.message),
+    });
+    visibleChannelIds.add(channelId);
+  }
+
   const missingCandidateChannelIds = [
     ...new Set([
       ...readOnlyPlugins.missingConfiguredChannelIds,
