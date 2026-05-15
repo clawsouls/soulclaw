@@ -84,6 +84,7 @@ Docs: https://docs.openclaw.ai
 - DeepInfra video: report malformed successful API JSON responses with provider-owned errors instead of leaking raw parser failures.
 - Brave Search: report malformed web and LLM-context API JSON with provider-owned errors instead of leaking raw parser failures.
 - xAI tools: report malformed web search, X search, and code execution JSON with provider-owned errors instead of leaking raw parser failures.
+- Nextcloud Talk: report malformed room-info and bot-admin JSON with channel-owned errors instead of leaking raw parser failures.
 - Twilio voice-call: report malformed successful API JSON responses with provider-owned errors instead of leaking raw parser failures.
 - Voice-call provider APIs: report malformed successful guarded JSON responses with provider-prefixed errors instead of leaking raw parser failures.
 - Realtime transcription: report malformed provider websocket JSON frames with owned parser errors instead of leaking raw `SyntaxError` objects.
