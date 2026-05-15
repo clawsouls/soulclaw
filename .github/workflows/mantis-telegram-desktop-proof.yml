@@ -380,8 +380,9 @@ jobs:
           openai-api-key: ${{ secrets.OPENCLAW_MANTIS_AGENT_OPENAI_API_KEY || secrets.OPENAI_API_KEY }}
           prompt-file: .github/codex/prompts/mantis-telegram-desktop-proof.md
           model: ${{ vars.OPENCLAW_CI_OPENAI_MODEL_BARE }}
-          effort: high
+          effort: medium
           sandbox: danger-full-access
+          codex-args: '["-c","service_tier=\"fast\""]'
           codex-home: /tmp/mantis-codex-home-${{ github.run_id }}
           safety-strategy: unprivileged-user
           codex-user: codex
