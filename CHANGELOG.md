@@ -97,6 +97,7 @@ Docs: https://docs.openclaw.ai
 - Signal: return a stable installer error when GitHub release metadata is malformed JSON.
 - ClawHub: report malformed successful marketplace JSON responses with owned errors instead of leaking raw parser failures.
 - Provider usage: report malformed successful usage JSON responses with stable provider errors instead of leaking raw parser failures.
+- Tlon/Urbit: report malformed scry response JSON with owned errors instead of leaking raw parser failures.
 - Matrix: ignore malformed percent-encoding in optional location URI parameters instead of letting a bad `geo:` event abort inbound message handling.
 - Web search: auto-detect Brave through its legacy `tools.web.search.apiKey` compatibility fallback while keeping doctor migration to `plugins.entries.brave.config.webSearch.apiKey` as the canonical repair, so allowlisted isolated cron runs do not report `web_search` unavailable before migration. Fixes #81538. Thanks @atomicmonk.
 - Plugins: memoize repeated in-process plugin metadata snapshots and keep vanished managed-install residue from forcing full derived discovery, reducing gateway/status startup scans under large plugin sets. Fixes #81143 and #79806. (#81570) Thanks @Kaspre, @holgergruenhagen, @JanPlessow, and @mjamiv.
