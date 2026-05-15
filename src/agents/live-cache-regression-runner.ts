@@ -27,7 +27,7 @@ const ANTHROPIC_TIMEOUT_MS = 120_000;
 const LIVE_CACHE_LANE_RETRIES = 1;
 const LIVE_CACHE_RESPONSE_RETRIES = 2;
 const OPENAI_CACHE_REASONING = "low" as unknown as never;
-const OPENAI_CACHE_MIN_MAX_TOKENS = 256;
+const CACHE_PROBE_MIN_MAX_TOKENS = 256;
 const OPENAI_PREFIX = buildStableCachePrefix("openai");
 const OPENAI_MCP_PREFIX = buildStableCachePrefix("openai-mcp-style");
 const ANTHROPIC_PREFIX = buildStableCachePrefix("anthropic");
@@ -163,10 +163,7 @@ function resolveCacheProbeMaxTokens(params: {
   providerTag: "anthropic" | "openai";
 }): number {
   const requested = params.maxTokens ?? 64;
-  if (params.providerTag !== "openai") {
-    return requested;
-  }
-  return Math.max(requested, OPENAI_CACHE_MIN_MAX_TOKENS);
+  return Math.max(requested, CACHE_PROBE_MIN_MAX_TOKENS);
 }
 
 function shouldAcceptEmptyOpenAICacheProbe(params: {
