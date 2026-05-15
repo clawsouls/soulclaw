@@ -92,6 +92,7 @@ Docs: https://docs.openclaw.ai
 - Tavily: report malformed search and extract API JSON with provider-owned errors instead of leaking raw parser failures.
 - Perplexity: report malformed Search API and chat completion JSON with provider-owned errors instead of leaking raw parser failures.
 - Exa: report malformed search API JSON with a provider-owned error instead of leaking raw parser failures.
+- Memory host SDK: report malformed remote JSON with caller-scoped errors for POST and batch file upload responses instead of leaking raw parser failures.
 - Twilio voice-call: report malformed successful API JSON responses with provider-owned errors instead of leaking raw parser failures.
 - Voice-call provider APIs: report malformed successful guarded JSON responses with provider-prefixed errors instead of leaking raw parser failures.
 - Realtime transcription: report malformed provider websocket JSON frames with owned parser errors instead of leaking raw `SyntaxError` objects.
