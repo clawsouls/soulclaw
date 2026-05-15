@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildPublishCommand, parseArgs } from "../../scripts/release-candidate-checklist.mjs";
+import {
+  buildPublishCommand,
+  parseArgs,
+  parseRunIdFromDispatchOutput,
+} from "../../scripts/release-candidate-checklist.mjs";
 
 describe("release candidate checklist", () => {
   it("requires run ids when dispatch is disabled", () => {
@@ -34,5 +38,13 @@ describe("release candidate checklist", () => {
     expect(() =>
       parseArgs(["--tag", "v2026.5.14-beta.3", "--plugin-publish-scope", "selected"]),
     ).toThrow("--plugin-publish-scope selected requires --plugins");
+  });
+
+  it("extracts a workflow run id from gh dispatch output", () => {
+    expect(
+      parseRunIdFromDispatchOutput(
+        "https://github.com/openclaw/openclaw/actions/runs/25922042055\n",
+      ),
+    ).toBe("25922042055");
   });
 });

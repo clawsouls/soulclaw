@@ -163,40 +163,57 @@ function gitRevParse(ref) {
   return run("git", ["rev-parse", ref], { capture: true }).trim();
 }
 
-function workflowRuns(repo) {
+function workflowRuns(repo, workflowFile) {
   return JSON.parse(
     run(
       "gh",
       [
-        "run",
-        "list",
-        "--repo",
-        repo,
-        "--limit",
-        "100",
-        "--json",
-        "databaseId,workflowName,event,createdAt",
+        "api",
+        `repos/${repo}/actions/workflows/${workflowFile}/runs?event=workflow_dispatch&per_page=100`,
+        "--jq",
+        ".workflow_runs | map({databaseId:.id, workflowName:.name, event:.event, createdAt:.created_at})",
       ],
       { capture: true },
     ),
   );
 }
 
-function beforeRunIds(repo, workflowName) {
-  return new Set(
-    workflowRuns(repo)
-      .filter((run) => run.workflowName === workflowName && run.event === "workflow_dispatch")
-      .map((run) => String(run.databaseId)),
-  );
+function beforeRunIds(repo, workflowFile) {
+  return new Set(workflowRuns(repo, workflowFile).map((run) => String(run.databaseId)));
+}
+
+function runAndEcho(command, args) {
+  const result = spawnSync(command, args, {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  if (result.stdout) {
+    process.stdout.write(result.stdout);
+  }
+  if (result.stderr) {
+    process.stderr.write(result.stderr);
+  }
+  if (result.status !== 0) {
+    throw new Error(
+      `${command} ${args.join(" ")} failed with ${result.status ?? result.signal}\n${
+        result.stderr ?? ""
+      }`,
+    );
+  }
+  return `${result.stdout ?? ""}${result.stderr ?? ""}`;
+}
+
+export function parseRunIdFromDispatchOutput(output) {
+  return output.match(/actions\/runs\/([0-9]+)/u)?.[1] ?? "";
 }
 
 async function wait(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function findNewRunId(repo, workflowName, beforeIds) {
+async function findNewRunId(repo, workflowFile, workflowName, beforeIds) {
   for (let attempt = 0; attempt < 60; attempt += 1) {
-    const match = workflowRuns(repo)
+    const match = workflowRuns(repo, workflowFile)
       .filter(
         (run) =>
           run.workflowName === workflowName &&
@@ -217,7 +234,7 @@ function dispatchWorkflow(repo, workflowFile, workflowRef, fields) {
   for (const [key, value] of Object.entries(fields)) {
     args.push("-f", `${key}=${value}`);
   }
-  run("gh", args);
+  return parseRunIdFromDispatchOutput(runAndEcho("gh", args));
 }
 
 function runInfo(repo, runId) {
@@ -419,8 +436,9 @@ async function main() {
   const targetSha = gitRevParse(`${options.tag}^{}`);
 
   if (!options.fullReleaseRunId && !options.skipDispatch) {
-    const before = beforeRunIds(options.repo, "Full Release Validation");
-    dispatchWorkflow(options.repo, "full-release-validation.yml", options.workflowRef, {
+    const workflowFile = "full-release-validation.yml";
+    const before = beforeRunIds(options.repo, workflowFile);
+    const dispatchedRunId = dispatchWorkflow(options.repo, workflowFile, options.workflowRef, {
       ref: options.tag,
       provider: options.provider,
       mode: options.mode,
@@ -428,17 +446,22 @@ async function main() {
       run_release_soak: options.releaseProfile === "full" ? "true" : "false",
       rerun_group: "all",
     });
-    options.fullReleaseRunId = await findNewRunId(options.repo, "Full Release Validation", before);
+    options.fullReleaseRunId =
+      dispatchedRunId ||
+      (await findNewRunId(options.repo, workflowFile, "Full Release Validation", before));
   }
 
   if (!options.npmPreflightRunId && !options.skipDispatch) {
-    const before = beforeRunIds(options.repo, "OpenClaw NPM Release");
-    dispatchWorkflow(options.repo, "openclaw-npm-release.yml", options.workflowRef, {
+    const workflowFile = "openclaw-npm-release.yml";
+    const before = beforeRunIds(options.repo, workflowFile);
+    const dispatchedRunId = dispatchWorkflow(options.repo, workflowFile, options.workflowRef, {
       tag: options.tag,
       preflight_only: "true",
       npm_dist_tag: options.npmDistTag,
     });
-    options.npmPreflightRunId = await findNewRunId(options.repo, "OpenClaw NPM Release", before);
+    options.npmPreflightRunId =
+      dispatchedRunId ||
+      (await findNewRunId(options.repo, workflowFile, "OpenClaw NPM Release", before));
   }
 
   const fullRun = await waitForSuccessfulRun(options.repo, options.fullReleaseRunId, {
