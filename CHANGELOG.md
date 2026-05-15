@@ -32,6 +32,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Channels/config: treat channel entries with only `enabled: true` as configured state so plugin-backed channels can auto-enable from an explicit on switch. Fixes #81323. (#81331) Thanks @EvanYao826 and @vincentkoc.
 - CLI/update: add an update finalization path for externally swapped core runtimes, running update-time doctor repair and plugin convergence from post-doctor config and install-record state before reporting completion. Thanks @shakkernerd.
 - Agents/WebChat: stop a successful assistant turn whose stale `errorMessage` matches a billing, auth, or rate-limit pattern from rotating profiles, falling back, or surfacing a hard `FailoverError` unless the current attempt has a real failover failure. (#70900) Thanks @truffle-dev.
 - Control UI/logs: make the Gateway Logs stream height responsive to the viewport with a minimum height floor, so larger screens can show substantially more log lines without collapsing on shorter viewports. (#53916) Thanks @extrasmall0.
