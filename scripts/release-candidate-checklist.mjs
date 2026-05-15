@@ -151,6 +151,7 @@ function readJson(path, label) {
   } catch (error) {
     throw new Error(
       `${label} is invalid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
     );
   }
 }
