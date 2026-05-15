@@ -57,7 +57,10 @@ import {
 import { createAuthRateLimiter, type AuthRateLimiter } from "./auth-rate-limit.js";
 import { resolveGatewayAuth } from "./auth.js";
 import { ADMIN_SCOPE } from "./method-scopes.js";
-import { STARTUP_UNAVAILABLE_GATEWAY_METHODS } from "./methods/core-descriptors.js";
+import {
+  STARTUP_UNAVAILABLE_GATEWAY_METHODS,
+  listCoreGatewayMethodNames,
+} from "./methods/core-descriptors.js";
 import {
   createCoreGatewayMethodDescriptors,
   createGatewayMethodDescriptorsFromHandlers,
@@ -663,6 +666,7 @@ export async function startGatewayServer(
     baseMethods,
     runtimePluginsLoaded,
   } = pluginBootstrap;
+  const coreGatewayMethodNames = listCoreGatewayMethodNames();
   setCurrentPluginMetadataSnapshot(pluginLookUpTable, {
     config: startupActivationSourceConfig,
     compatibleConfigs: [startupRuntimeConfig, cfgAtStart, gatewayPluginConfigAtStart],
@@ -1242,7 +1246,7 @@ export async function startGatewayServer(
         cfg: params.nextConfig,
         workspaceDir: defaultWorkspaceDir,
         log,
-        coreGatewayMethodNames: baseMethods,
+        coreGatewayMethodNames,
         hostServices: pluginHostServices,
         baseMethods,
         pluginLookUpTable: nextPluginLookUpTable,
@@ -1376,7 +1380,7 @@ export async function startGatewayServer(
           activationSourceConfig: startupActivationSourceConfig,
           workspaceDir: defaultWorkspaceDir,
           log,
-          coreGatewayMethodNames: baseMethods,
+          coreGatewayMethodNames,
           hostServices: pluginHostServices,
           baseMethods,
           pluginIds: startupPluginIds,
@@ -1487,6 +1491,7 @@ export async function startGatewayServer(
                   workspaceDir: defaultWorkspaceDir,
                   log,
                   baseMethods,
+                  coreGatewayMethodNames,
                   hostServices: pluginHostServices,
                   startupPluginIds,
                   pluginLookUpTable,
