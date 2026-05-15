@@ -154,7 +154,7 @@ describe("live cache regression runner", () => {
         maxTokens: 32,
         providerTag: "anthropic",
       }),
-    ).toBe(256);
+    ).toBe(1024);
   });
 
   it("accepts empty cache probe text only when usage is observable", () => {
