@@ -233,7 +233,7 @@ async function findNewRunId(repo, workflowFile, workflowName, beforeIds) {
 function dispatchWorkflow(repo, workflowFile, workflowRef, fields) {
   const args = ["workflow", "run", workflowFile, "--repo", repo, "--ref", workflowRef];
   for (const [key, value] of Object.entries(fields)) {
-    args.push("-f", `${key}=${value}`);
+    args.push("-f", `${key}=${String(value)}`);
   }
   return parseRunIdFromDispatchOutput(runAndEcho("gh", args));
 }
