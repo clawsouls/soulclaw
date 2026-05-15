@@ -2663,10 +2663,11 @@ export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
     downgradeRisk,
   });
 
-  let postUpdateConfigSnapshot = configSnapshot;
+  let postUpdateConfigSnapshot =
+    result.status === "ok" && !opts.dryRun ? await readConfigFileSnapshot() : configSnapshot;
   if (!shouldResumePostCoreInFreshProcess) {
     postUpdateConfigSnapshot = await persistRequestedUpdateChannel({
-      configSnapshot,
+      configSnapshot: postUpdateConfigSnapshot,
       requestedChannel,
     });
   }
@@ -2707,7 +2708,7 @@ export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
   if (!pluginsUpdatedInFreshProcess) {
     if (shouldResumePostCoreInFreshProcess) {
       postUpdateConfigSnapshot = await persistRequestedUpdateChannel({
-        configSnapshot,
+        configSnapshot: postUpdateConfigSnapshot,
         requestedChannel,
       });
     }
