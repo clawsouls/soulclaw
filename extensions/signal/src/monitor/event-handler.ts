@@ -485,7 +485,12 @@ export function createSignalEventHandler(deps: SignalEventHandlerDeps) {
     ]
       .filter(Boolean)
       .join(":");
-    enqueueSystemEvent(text, { sessionKey: route.sessionKey, contextKey, trusted: false });
+    enqueueSystemEvent(text, {
+      sessionKey: route.sessionKey,
+      contextKey,
+      forceSenderIsOwnerFalse: true,
+      trusted: false,
+    });
     return true;
   }
 
