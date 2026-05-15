@@ -11,10 +11,9 @@ import {
 import { doctorCommand } from "../../commands/doctor.js";
 import { createPreUpdateConfigSnapshot } from "../../config/backup-rotation.js";
 import {
-  ConfigMutationConflictError,
   assertConfigWriteAllowedInCurrentMode,
+  mutateConfigFileWithRetry,
   readConfigFileSnapshot,
-  replaceConfigFile,
   resolveGatewayPort,
 } from "../../config/config.js";
 import { formatConfigIssueLines } from "../../config/issue-format.js";
@@ -1920,46 +1919,17 @@ async function persistRequestedUpdateChannel(params: {
   if (params.requestedChannel === storedChannel) {
     return params.configSnapshot;
   }
+  const requestedChannel = params.requestedChannel;
 
-  const next = {
-    ...params.configSnapshot.sourceConfig,
-    update: {
-      ...params.configSnapshot.sourceConfig.update,
-      channel: params.requestedChannel,
+  const mutation = await mutateConfigFileWithRetry({
+    mutate: (draft) => {
+      draft.update = {
+        ...draft.update,
+        channel: requestedChannel,
+      };
     },
-  };
-  try {
-    await replaceConfigFile({
-      nextConfig: next,
-      baseHash: params.configSnapshot.hash,
-    });
-    return createUpdatedChannelSnapshot(params.configSnapshot, next);
-  } catch (error) {
-    if (!(error instanceof ConfigMutationConflictError)) {
-      throw error;
-    }
-  }
-
-  const refreshed = await readConfigFileSnapshot();
-  if (!refreshed.valid) {
-    return refreshed;
-  }
-  const refreshedChannel = normalizeUpdateChannel(refreshed.config.update?.channel);
-  if (refreshedChannel === params.requestedChannel) {
-    return refreshed;
-  }
-  const refreshedNext = {
-    ...refreshed.sourceConfig,
-    update: {
-      ...refreshed.sourceConfig.update,
-      channel: params.requestedChannel,
-    },
-  };
-  await replaceConfigFile({
-    nextConfig: refreshedNext,
-    baseHash: refreshed.hash,
   });
-  return createUpdatedChannelSnapshot(refreshed, refreshedNext);
+  return createUpdatedChannelSnapshot(mutation.snapshot, mutation.nextConfig);
 }
 
 function createUpdatedChannelSnapshot(
