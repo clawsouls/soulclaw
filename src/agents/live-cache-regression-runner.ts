@@ -166,12 +166,12 @@ function resolveCacheProbeMaxTokens(params: {
   return Math.max(requested, CACHE_PROBE_MIN_MAX_TOKENS);
 }
 
-function shouldAcceptEmptyOpenAICacheProbe(params: {
+function shouldAcceptEmptyCacheProbe(params: {
   providerTag: "anthropic" | "openai";
   text: string;
   usage: CacheUsage;
 }): boolean {
-  if (params.providerTag !== "openai" || params.text.trim().length > 0) {
+  if (params.text.trim().length > 0) {
     return false;
   }
   return (
@@ -283,7 +283,7 @@ async function completeCacheProbe(params: {
     const text = extractAssistantText(response);
     const usage = normalizeCacheUsage(response.usage);
     if (
-      shouldAcceptEmptyOpenAICacheProbe({
+      shouldAcceptEmptyCacheProbe({
         providerTag: params.providerTag,
         text,
         usage,
@@ -679,7 +679,7 @@ export const __testing = {
   evaluateAgainstBaseline,
   isAnthropicAccountDrift,
   resolveCacheProbeMaxTokens,
-  shouldAcceptEmptyOpenAICacheProbe,
+  shouldAcceptEmptyCacheProbe,
   shouldRetryCacheProbeText,
   shouldRetryBaselineFindings,
 };
