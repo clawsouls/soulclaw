@@ -121,7 +121,6 @@ export async function buildDiscordMessageProcessContext(params: {
     allowNameMatching: isDangerousNameMatchingEnabled(discordConfig),
     isGuild: isGuildMessage,
     channelTopic: channelInfo?.topic,
-    messageBody: text,
   });
   const pinnedMainDmOwner = isDirectMessage
     ? resolvePinnedMainDmOwnerFromAllowlist({
@@ -420,7 +419,7 @@ export async function buildDiscordMessageProcessContext(params: {
       ...(preflightAudioTranscript !== undefined ? { Transcript: preflightAudioTranscript } : {}),
       GroupSubject: groupSubject,
       GroupChannel: groupChannel,
-      UntrustedContext: untrustedContext,
+      UntrustedStructuredContext: untrustedContext,
       OwnerAllowFrom: ownerAllowFrom,
     },
   });
