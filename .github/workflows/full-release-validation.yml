@@ -883,6 +883,54 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           }
 
+          summarize_failed_child() {
+            local label="$1"
+            local run_id="$2"
+            if [[ -z "${run_id// }" ]]; then
+              return 0
+            fi
+
+            local run_json status conclusion artifacts_json
+            run_json="$(gh run view "$run_id" --json status,conclusion,url,jobs)"
+            status="$(jq -r '.status' <<< "$run_json")"
+            conclusion="$(jq -r '.conclusion' <<< "$run_json")"
+            if [[ "$status" == "completed" && "$conclusion" == "success" ]]; then
+              return 0
+            fi
+
+            {
+              echo
+              echo "### Failed child detail: ${label}"
+              echo
+              jq -r '
+                "- Run: " + (.url // ""),
+                "- Result: `" + (.status // "") + "/" + (.conclusion // "") + "`",
+                "",
+                "Failed jobs:",
+                (.jobs[]
+                  | select(.conclusion != "success" and .conclusion != "skipped")
+                  | "- `" + (.name | gsub("`"; "\\`")) + "`: `" + ((.conclusion // .status // "") | tostring) + "` " + (.url // ""))
+              ' <<< "$run_json" || true
+              echo
+              echo "Artifacts:"
+              artifacts_json="$(
+                gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" 2>/dev/null || true
+              )"
+              if [[ -n "${artifacts_json// }" ]]; then
+                jq -r '
+                  if ((.artifacts // []) | length) == 0 then
+                    "- none"
+                  else
+                    (.artifacts[]
+                      | "- `" + (.name | gsub("`"; "\\`")) + "` (" + ((.size_in_bytes // 0) | tostring) + " bytes)")
+                  end
+                ' <<< "$artifacts_json" || echo "- unable to list artifacts"
+              else
+                echo "- unable to list artifacts"
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
+
           failed=0
 
           append_child_overview
@@ -915,6 +963,13 @@ jobs:
           summarize_child_timing "plugin_prerelease" "$PLUGIN_PRERELEASE_RUN_ID"
           summarize_child_timing "release_checks" "$RELEASE_CHECKS_RUN_ID"
           summarize_child_timing "npm_telegram" "$NPM_TELEGRAM_RUN_ID"
+
+          if [[ "$failed" != "0" ]]; then
+            summarize_failed_child "normal_ci" "$NORMAL_CI_RUN_ID"
+            summarize_failed_child "plugin_prerelease" "$PLUGIN_PRERELEASE_RUN_ID"
+            summarize_failed_child "release_checks" "$RELEASE_CHECKS_RUN_ID"
+            summarize_failed_child "npm_telegram" "$NPM_TELEGRAM_RUN_ID"
+          fi
 
           exit "$failed"
 
