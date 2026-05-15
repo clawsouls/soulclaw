@@ -287,6 +287,20 @@ jobs:
           NODE
           echo "dir=$ARTIFACT_DIR" >> "$GITHUB_OUTPUT"
 
+      - name: Verify prepared npm tarball install
+        env:
+          PREFLIGHT_ARTIFACT_DIR: ${{ steps.packed_tarball.outputs.dir }}
+        run: |
+          set -euo pipefail
+          TARBALL_PATH="$(find "$PREFLIGHT_ARTIFACT_DIR" -maxdepth 1 -type f -name '*.tgz' -print | sort | tail -n 1)"
+          if [[ -z "$TARBALL_PATH" ]]; then
+            echo "Prepared preflight tarball not found." >&2
+            ls -la "$PREFLIGHT_ARTIFACT_DIR" >&2 || true
+            exit 1
+          fi
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          node --import tsx scripts/openclaw-npm-prepublish-verify.ts "$TARBALL_PATH" "$PACKAGE_VERSION"
+
       - name: Upload dependency release evidence
         uses: actions/upload-artifact@v7
         with:
