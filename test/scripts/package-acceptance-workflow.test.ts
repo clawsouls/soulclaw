@@ -883,8 +883,18 @@ describe("package artifact reuse", () => {
     expect(workflow).toContain("timeout-minutes: 60");
     expect(workflow).toContain("Download OpenClaw npm preflight manifest");
     expect(workflow).toContain("Validate OpenClaw npm preflight manifest");
+    expect(workflow).toContain("Download full release validation manifest");
+    expect(workflow).toContain("Validate full release validation manifest");
+    expect(workflow).toContain("full_release_validation_run_id");
+    expect(workflow).toContain(
+      "Full release validation must run rerun_group=all before npm publish",
+    );
     expect(workflow).toContain("preflight-manifest.json");
     expect(npmWorkflow).toContain("preflight-manifest.json");
+    expect(npmWorkflow).toContain("Verify full release validation run metadata");
+    expect(npmWorkflow).toContain("Verify full release validation target");
+    expect(npmWorkflow).toContain("full_release_validation_run_id");
+    expect(npmWorkflow).toContain("Real publish requires full_release_validation_run_id");
     expect(npmWorkflow).toContain("tarballSha256");
     expect(workflow).toContain("Checkout release SHA");
     expect(workflow).toContain('git show "${TARGET_SHA}:CHANGELOG.md" > "${changelog_file}"');
