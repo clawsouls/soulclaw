@@ -79,6 +79,7 @@ Docs: https://docs.openclaw.ai
 - Google Meet: report malformed node-host params JSON with plugin-owned errors instead of leaking raw JSON parser failures.
 - CLI/export-trajectory: report malformed encoded request JSON with a stable CLI error instead of leaking raw parser output.
 - ComfyUI: report malformed workflow API JSON responses with owned errors instead of leaking raw parser failures.
+- DeepInfra video: report malformed successful API JSON responses with provider-owned errors instead of leaking raw parser failures.
 - Twilio voice-call: report malformed successful API JSON responses with provider-owned errors instead of leaking raw parser failures.
 - Voice-call provider APIs: report malformed successful guarded JSON responses with provider-prefixed errors instead of leaking raw parser failures.
 - Realtime transcription: report malformed provider websocket JSON frames with owned parser errors instead of leaking raw `SyntaxError` objects.
