@@ -887,12 +887,15 @@ async function processResponsesStream(
         | undefined;
       if (usage) {
         const cachedTokens = usage.input_tokens_details?.cached_tokens || 0;
+        const inputTokens = usage.input_tokens || 0;
+        const outputTokens = usage.output_tokens || 0;
+        const input = Math.max(0, inputTokens - cachedTokens);
         output.usage = {
-          input: (usage.input_tokens || 0) - cachedTokens,
-          output: usage.output_tokens || 0,
+          input,
+          output: outputTokens,
           cacheRead: cachedTokens,
           cacheWrite: 0,
-          totalTokens: usage.total_tokens || 0,
+          totalTokens: input + outputTokens + cachedTokens,
           cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
         };
       }

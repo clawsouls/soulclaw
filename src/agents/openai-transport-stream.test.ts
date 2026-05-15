@@ -140,6 +140,39 @@ describe("openai transport stream", () => {
     ).rejects.toThrow(/did not deliver a first event within 1ms after HTTP streaming headers/);
   });
 
+  it("clamps Responses cached prompt usage at zero", async () => {
+    const model = createAzureResponsesModel();
+    const output = createResponsesAssistantOutput(model);
+
+    await __testing.processResponsesStream(
+      streamChunks([
+        {
+          type: "response.completed",
+          response: {
+            id: "resp-cache-overflow",
+            status: "completed",
+            usage: {
+              input_tokens: 2,
+              output_tokens: 5,
+              total_tokens: 7,
+              input_tokens_details: { cached_tokens: 4 },
+            },
+          },
+        },
+      ]),
+      output,
+      { push: vi.fn() },
+      model,
+    );
+
+    expectRecordFields(output.usage, {
+      input: 0,
+      output: 5,
+      cacheRead: 4,
+      totalTokens: 9,
+    });
+  });
+
   it("summarizes model payload tools with full names when requested", () => {
     const previous = process.env.OPENCLAW_DEBUG_MODEL_PAYLOAD;
     process.env.OPENCLAW_DEBUG_MODEL_PAYLOAD = "tools";
