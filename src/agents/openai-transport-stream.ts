@@ -2469,13 +2469,56 @@ function sanitizeOpenRouterReasoningReplayFields(record: Record<string, unknown>
   }
 }
 
+function sanitizeReasoningContentReplayFields(record: Record<string, unknown>): void {
+  if ("reasoning_content" in record && typeof record.reasoning_content !== "string") {
+    delete record.reasoning_content;
+  }
+  delete record.reasoning_details;
+  delete record.reasoning;
+  delete record.reasoning_text;
+}
+
+const REASONING_CONTENT_REPLAY_MODEL_IDS = new Set([
+  "deepseek-v4-flash",
+  "deepseek-v4-pro",
+  "mimo-v2-pro",
+  "mimo-v2-omni",
+  "mimo-v2.5",
+  "mimo-v2.5-pro",
+]);
+
+function normalizeReasoningContentReplayModelId(modelId: unknown): string | undefined {
+  if (typeof modelId !== "string") {
+    return undefined;
+  }
+  const normalized = modelId.trim().toLowerCase().split(":", 1)[0];
+  if (!normalized) {
+    return undefined;
+  }
+  const parts = normalized.split("/").filter(Boolean);
+  return parts[parts.length - 1] ?? normalized;
+}
+
+function shouldPreserveReasoningContentReplay(
+  model: OpenAIModeModel,
+  compat: { requiresReasoningContentOnAssistantMessages: boolean },
+): boolean {
+  if (compat.requiresReasoningContentOnAssistantMessages) {
+    return true;
+  }
+  const normalizedModelId = normalizeReasoningContentReplayModelId(model.id);
+  return (
+    normalizedModelId !== undefined && REASONING_CONTENT_REPLAY_MODEL_IDS.has(normalizedModelId)
+  );
+}
+
 // OpenAI Chat Completions assistant-message input does not define reasoning
-// replay fields, while OpenRouter documents a compatible pass-back contract.
-// Keep OpenRouter's valid shapes, but normalize leaked string reasoning_details
-// from pi-ai thinking signatures before a follow-up request hits the wire.
+// replay fields, while OpenRouter and DeepSeek-style providers document
+// compatible pass-back contracts. Keep valid provider-owned replay fields, but
+// strip them for stock OpenAI before a follow-up request hits the wire.
 function sanitizeCompletionsReasoningReplayFields(
   messages: unknown,
-  options: { preserveOpenRouterReasoning: boolean },
+  options: { preserveOpenRouterReasoning: boolean; preserveReasoningContent: boolean },
 ): void {
   if (!Array.isArray(messages)) {
     return;
@@ -2490,6 +2533,8 @@ function sanitizeCompletionsReasoningReplayFields(
     }
     if (options.preserveOpenRouterReasoning) {
       sanitizeOpenRouterReasoningReplayFields(record);
+    } else if (options.preserveReasoningContent) {
+      sanitizeReasoningContentReplayFields(record);
     } else {
       stripCompletionsReasoningReplayFields(record);
     }
@@ -2513,6 +2558,7 @@ export function buildOpenAICompletionsParams(
   injectToolCallThoughtSignatures(messages as unknown[], context, model);
   sanitizeCompletionsReasoningReplayFields(messages, {
     preserveOpenRouterReasoning: compat.thinkingFormat === "openrouter",
+    preserveReasoningContent: shouldPreserveReasoningContentReplay(model, compat),
   });
   if (compat.strictMessageKeys) {
     messages = stripCompletionMessagesToRoleContent(messages) as typeof messages;
