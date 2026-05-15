@@ -11,6 +11,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- LINE: acknowledge signed webhook events before agent processing so slow model replies do not cause LINE `request_timeout` delivery failures. Fixes #65375. Thanks @myericho.
 - Codex/Lossless: keep Codex explicit compaction on native app-server threads while allowing Lossless through the context-engine slot; `openclaw doctor --fix` now migrates legacy `compaction.provider: "lossless-claw"` config to `plugins.slots.contextEngine`.
 - Gateway/approvals: treat `turnSourceTo` as optional in `canBridgeNoDeviceChatApprovalFromBackend`, matching the existing optional handling of `turnSourceAccountId` and `turnSourceThreadId`. Channels without a recipient concept (webchat, control-ui) leave `turnSourceTo` null on both the approval snapshot and the replay params, so the prior required-string check rejected every backend replay with `APPROVAL_CLIENT_MISMATCH`. Cross-channel replay is still gated by the required `turnSourceChannel` and `sessionKey` checks. Fixes #82132. (#82136) Thanks @ottodeng.
 - Cron: load runtime plugins before isolated cron model and delivery resolution so external channels can be selected for scheduled runs. (#82111) Thanks @medns.
