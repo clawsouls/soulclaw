@@ -1030,3 +1030,60 @@ jobs:
             -d "$payload"; then
             echo "::warning::Automatic private release evidence dispatch failed; child workflow validation remains authoritative."
           fi
+
+      - name: Write release validation manifest
+        if: ${{ success() }}
+        env:
+          TARGET_REF: ${{ inputs.ref }}
+          TARGET_SHA: ${{ needs.resolve_target.outputs.sha }}
+          RELEASE_PROFILE: ${{ inputs.release_profile }}
+          RERUN_GROUP: ${{ inputs.rerun_group }}
+          RUN_RELEASE_SOAK: ${{ inputs.run_release_soak || inputs.release_profile == 'full' }}
+          NORMAL_CI_RUN_ID: ${{ needs.normal_ci.outputs.run_id }}
+          PLUGIN_PRERELEASE_RUN_ID: ${{ needs.plugin_prerelease.outputs.run_id }}
+          RELEASE_CHECKS_RUN_ID: ${{ needs.release_checks.outputs.run_id }}
+          NPM_TELEGRAM_RUN_ID: ${{ needs.npm_telegram.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          manifest_dir="${RUNNER_TEMP}/full-release-validation"
+          mkdir -p "$manifest_dir"
+          jq -n \
+            --arg workflowName "Full Release Validation" \
+            --arg runId "$GITHUB_RUN_ID" \
+            --arg runAttempt "$GITHUB_RUN_ATTEMPT" \
+            --arg workflowRef "$GITHUB_REF_NAME" \
+            --arg targetRef "$TARGET_REF" \
+            --arg targetSha "$TARGET_SHA" \
+            --arg releaseProfile "$RELEASE_PROFILE" \
+            --arg rerunGroup "$RERUN_GROUP" \
+            --arg runReleaseSoak "$RUN_RELEASE_SOAK" \
+            --arg normalCiRunId "$NORMAL_CI_RUN_ID" \
+            --arg pluginPrereleaseRunId "$PLUGIN_PRERELEASE_RUN_ID" \
+            --arg releaseChecksRunId "$RELEASE_CHECKS_RUN_ID" \
+            --arg npmTelegramRunId "$NPM_TELEGRAM_RUN_ID" \
+            '{
+              version: 1,
+              workflowName: $workflowName,
+              runId: $runId,
+              runAttempt: $runAttempt,
+              workflowRef: $workflowRef,
+              targetRef: $targetRef,
+              targetSha: $targetSha,
+              releaseProfile: $releaseProfile,
+              rerunGroup: $rerunGroup,
+              runReleaseSoak: $runReleaseSoak,
+              childRuns: {
+                normalCi: $normalCiRunId,
+                pluginPrerelease: $pluginPrereleaseRunId,
+                releaseChecks: $releaseChecksRunId,
+                npmTelegram: $npmTelegramRunId
+              }
+            }' > "${manifest_dir}/full-release-validation-manifest.json"
+
+      - name: Upload release validation manifest
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: full-release-validation-${{ github.run_id }}
+          path: ${{ runner.temp }}/full-release-validation
+          if-no-files-found: error
