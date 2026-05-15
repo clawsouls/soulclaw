@@ -3828,6 +3828,8 @@ describe("update-cli", () => {
     };
     vi.mocked(readConfigFileSnapshot)
       .mockResolvedValueOnce(preDoctorSnapshot)
+      .mockResolvedValueOnce(preDoctorSnapshot)
+      .mockResolvedValueOnce(postDoctorSnapshot)
       .mockResolvedValueOnce(postDoctorSnapshot);
 
     await updateFinalizeCommand({ channel: "dev", json: true, restart: false });
