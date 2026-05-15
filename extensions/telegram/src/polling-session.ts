@@ -81,7 +81,7 @@ const resolvePollingStallThresholdMs = (value: number | undefined): number => {
 
 type TelegramPollingSessionOpts = {
   token: string;
-  config: Parameters<typeof createTelegramBot>[0]["config"];
+  config: NonNullable<Parameters<typeof createTelegramBot>[0]["config"]>;
   accountId: string;
   runtime: Parameters<typeof createTelegramBot>[0]["runtime"];
   proxyFetch: Parameters<typeof createTelegramBot>[0]["proxyFetch"];
@@ -491,7 +491,7 @@ export class TelegramPollingSession {
       try {
         const drain = await this.#drainSpooledUpdates({ bot, spoolDir });
         consecutiveDrainFailures = 0;
-        for (const handlerKey of [...stalledBacklogKeys]) {
+        for (const handlerKey of stalledBacklogKeys) {
           if (
             !activeSpooledUpdateHandlersByLane.has(handlerKey) ||
             !drain.blockedByLane.has(handlerKey)

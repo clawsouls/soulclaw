@@ -487,11 +487,13 @@ export function createFollowupRunner(params: {
         modelId: modelUsed,
       });
     } finally {
-      for (const end of endDeliveryCorrelations.reverse()) {
+      for (const end of endDeliveryCorrelations.toReversed()) {
         try {
           end();
         } catch (err) {
-          defaultRuntime.error?.(`followup queue: delivery correlation cleanup failed: ${err}`);
+          defaultRuntime.error?.(
+            `followup queue: delivery correlation cleanup failed: ${formatErrorMessage(err)}`,
+          );
         }
       }
       completeFollowupRunLifecycle(queued);

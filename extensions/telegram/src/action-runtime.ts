@@ -19,10 +19,7 @@ import {
 import type { MessagePresentation } from "openclaw/plugin-sdk/interactive-runtime";
 import { createTelegramActionGate, resolveTelegramPollActionGateState } from "./accounts.js";
 import { resolveTelegramInlineButtons } from "./button-types.js";
-import {
-  notifyTelegramInboundTurnOutboundSuccess,
-  type TelegramInboundTurnDeliveryKind,
-} from "./inbound-turn-delivery.js";
+import { notifyTelegramInboundTurnOutboundSuccess } from "./inbound-turn-delivery.js";
 import {
   resolveTelegramInlineButtonsScope,
   resolveTelegramTargetChatType,
@@ -243,7 +240,7 @@ export async function handleTelegramAction(
     mediaLocalRoots?: readonly string[];
     mediaReadFile?: (filePath: string) => Promise<Buffer>;
     sessionKey?: string | null;
-    inboundTurnKind?: TelegramInboundTurnDeliveryKind | string;
+    inboundTurnKind?: string;
   },
 ): Promise<AgentToolResult<unknown>> {
   const { action, accountId } = {

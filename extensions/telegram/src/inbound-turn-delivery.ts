@@ -41,7 +41,7 @@ function telegramDeliveryTargetsMatch(expected: string, actual: string): boolean
 
 export function resolveTelegramInboundTurnDeliveryCorrelationKey(
   sessionKey: string | undefined,
-  inboundTurnKind?: TelegramInboundTurnDeliveryKind | string,
+  inboundTurnKind?: string,
 ): string | undefined {
   const key = sessionKey?.trim();
   if (!key) {
@@ -53,7 +53,7 @@ export function resolveTelegramInboundTurnDeliveryCorrelationKey(
 export function beginTelegramInboundTurnDeliveryCorrelation(
   sessionKey: string | undefined,
   turn: ActiveTurn,
-  options?: { inboundTurnKind?: TelegramInboundTurnDeliveryKind | string },
+  options?: { inboundTurnKind?: string },
 ): TelegramInboundTurnDeliveryEnd {
   const key = resolveTelegramInboundTurnDeliveryCorrelationKey(
     sessionKey,
@@ -74,7 +74,7 @@ export function notifyTelegramInboundTurnOutboundSuccess(params: {
   sessionKey: string | undefined;
   to: string;
   accountId?: string | null;
-  inboundTurnKind?: TelegramInboundTurnDeliveryKind | string;
+  inboundTurnKind?: string;
 }): void {
   const key = resolveTelegramInboundTurnDeliveryCorrelationKey(
     params.sessionKey,

@@ -267,7 +267,7 @@ async function dropAbortedFollowups(
 ): Promise<number> {
   let dropped = 0;
   for (let index = items.length - 1; index >= 0; index -= 1) {
-    const item = items[index]!;
+    const item = items[index];
     if (isFollowupRunAborted(item)) {
       await runFollowup(item);
       completeFollowupRunLifecycle(item);
