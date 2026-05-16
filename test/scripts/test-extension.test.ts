@@ -424,6 +424,52 @@ describe("scripts/test-extension.mjs", () => {
     ]);
   });
 
+  it("counts tracked extension tests without walking extension directories", () => {
+    const output = execFileSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "--eval",
+        `
+          import fs from "node:fs";
+          import { syncBuiltinESMExports } from "node:module";
+          const counts = { readdirSync: 0 };
+          const originalReaddirSync = fs.readdirSync;
+          fs.readdirSync = (...args) => {
+            counts.readdirSync += 1;
+            return originalReaddirSync(...args);
+          };
+          syncBuiltinESMExports();
+          const { createExtensionTestShards, resolveExtensionBatchPlan } = await import("./scripts/lib/extension-test-plan.mjs");
+          const extensionIds = ["matrix", "openai", "slack", "telegram"];
+          const batch = resolveExtensionBatchPlan({ cwd: process.cwd(), extensionIds });
+          const shards = createExtensionTestShards({ cwd: process.cwd(), extensionIds, shardCount: 2 });
+          console.log(JSON.stringify({
+            batchTests: batch.testFileCount,
+            counts,
+            shards: shards.length,
+            shardTests: shards.reduce((total, shard) => total + shard.testFileCount, 0),
+          }));
+        `,
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    const payload = JSON.parse(output) as {
+      batchTests: number;
+      counts: { readdirSync: number };
+      shards: number;
+      shardTests: number;
+    };
+    expect(payload.batchTests).toBeGreaterThan(0);
+    expect(payload.shards).toBe(2);
+    expect(payload.shardTests).toBe(payload.batchTests);
+    expect(payload.counts.readdirSync).toBe(0);
+  });
+
   it("balances extension test shards by estimated CI cost", () => {
     const shards = createExtensionTestShards({
       cwd: process.cwd(),
