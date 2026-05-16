@@ -17,6 +17,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - MCP plugin tools: forward host MCP `tools/call` `AbortSignal` through `createPluginToolsMcpHandlers().callTool` into plugin `tool.execute`, so host cancellation actually cancels in-flight plugin tool calls instead of letting them run to completion. (#82443) Thanks @joshavant.
+- Media: ignore image MIME and filename hints when bytes sniff as generic containers, so zip/octet-stream payloads mislabeled as images do not become local image media.
 - Update/doctor: avoid materializing `groupAllowFrom` for channel schemas that reject it, so package-swap doctor repairs do not fail on externalized Slack configs.
 - Gateway/media: prevent image filenames from overriding generic non-image byte sniffing, so zip/octet-stream payloads mislabeled as images are offloaded or rejected before they become inline image attachments.
 - Plugins/web search: downgrade stale optional provider installs to warnings so Gateway and doctor repair paths keep running after startup provider selection. Refs #82313. Thanks @crackmac.
