@@ -162,6 +162,42 @@ describe("cron service store load: missing sessionTarget", () => {
         payload: ["systemEvent", "tick"],
         state: {},
       },
+      {
+        id: "bad-cron-expr",
+        name: "bad cron expr",
+        enabled: true,
+        createdAtMs: STORE_TEST_NOW - 60_000,
+        updatedAtMs: STORE_TEST_NOW - 60_000,
+        schedule: { kind: "cron", expr: [] },
+        sessionTarget: "main",
+        wakeMode: "now",
+        payload: { kind: "systemEvent", text: "tick" },
+        state: {},
+      },
+      {
+        id: "bad-system-event-text",
+        name: "bad system event text",
+        enabled: true,
+        createdAtMs: STORE_TEST_NOW - 60_000,
+        updatedAtMs: STORE_TEST_NOW - 60_000,
+        schedule: { kind: "every", everyMs: 60_000 },
+        sessionTarget: "main",
+        wakeMode: "now",
+        payload: { kind: "systemEvent", text: ["tick"] },
+        state: {},
+      },
+      {
+        id: "bad-agent-turn-message",
+        name: "bad agent turn message",
+        enabled: true,
+        createdAtMs: STORE_TEST_NOW - 60_000,
+        updatedAtMs: STORE_TEST_NOW - 60_000,
+        schedule: { kind: "every", everyMs: 60_000 },
+        sessionTarget: "isolated",
+        wakeMode: "now",
+        payload: { kind: "agentTurn", message: { text: "tick" } },
+        state: {},
+      },
     ]);
     const beforeRaw = await fs.readFile(storePath, "utf-8");
     const warnSpy = vi.spyOn(logger, "warn");
@@ -178,10 +214,13 @@ describe("cron service store load: missing sessionTarget", () => {
       const msg = typeof call[1] === "string" ? call[1] : "";
       return msg.includes("skipped invalid persisted job");
     });
-    expect(invalidShapeWarns).toHaveLength(2);
+    expect(invalidShapeWarns).toHaveLength(5);
     expect(invalidShapeWarns.map((call) => (call[0] as { reason?: string }).reason)).toEqual([
       "missing-schedule",
       "missing-payload",
+      "invalid-schedule",
+      "invalid-payload",
+      "invalid-payload",
     ]);
     warnSpy.mockRestore();
   });

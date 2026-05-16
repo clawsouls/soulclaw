@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { normalizeCronJobIdentityFields } from "../normalize-job-identity.js";
 import { normalizeCronJobInput } from "../normalize.js";
+import { getInvalidPersistedCronJobReason } from "../persisted-shape.js";
 import { cronSchedulingInputsEqual } from "../schedule-identity.js";
 import { isInvalidCronSessionTargetIdError } from "../session-target.js";
 import { loadCronStore, saveCronStore } from "../store.js";
@@ -20,30 +21,6 @@ function invalidateStaleNextRunOnScheduleChange(params: {
   params.hydrated.state.nextRunAtMs = undefined;
 }
 
-function getInvalidPersistedCronJobReason(candidate: Record<string, unknown>): string | null {
-  const id = candidate.id;
-  if (typeof id !== "string" || !id.trim()) {
-    return "missing-id";
-  }
-  const schedule = candidate.schedule;
-  if (!schedule || typeof schedule !== "object" || Array.isArray(schedule)) {
-    return "missing-schedule";
-  }
-  const scheduleKind = (schedule as { kind?: unknown }).kind;
-  if (scheduleKind !== "at" && scheduleKind !== "every" && scheduleKind !== "cron") {
-    return "invalid-schedule";
-  }
-  const payload = candidate.payload;
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return "missing-payload";
-  }
-  const payloadKind = (payload as { kind?: unknown }).kind;
-  if (payloadKind !== "systemEvent" && payloadKind !== "agentTurn") {
-    return "invalid-payload";
-  }
-  return null;
-}
-
 function warnInvalidPersistedCronJob(params: {
   state: CronServiceState;
   raw: Record<string, unknown>;
@@ -57,7 +34,12 @@ function warnInvalidPersistedCronJob(params: {
   }
   params.state.warnedInvalidPersistedJobKeys.add(dedupeKey);
   params.state.deps.log.warn(
-    { storePath: params.state.deps.storePath, jobId, jobIndex: params.index, reason: params.reason },
+    {
+      storePath: params.state.deps.storePath,
+      jobId,
+      jobIndex: params.index,
+      reason: params.reason,
+    },
     "cron: skipped invalid persisted job; run openclaw doctor --fix to repair",
   );
 }
@@ -114,10 +96,9 @@ export async function ensureLoaded(
     }
     const hydrated =
       normalized && typeof normalized === "object" ? (normalized as unknown as CronJob) : job;
-    const invalidReason = getInvalidPersistedCronJobReason(hydrated as unknown as Record<
-      string,
-      unknown
-    >);
+    const invalidReason = getInvalidPersistedCronJobReason(
+      hydrated as unknown as Record<string, unknown>,
+    );
     if (invalidReason) {
       warnInvalidPersistedCronJob({ state, raw, index, reason: invalidReason });
       continue;
