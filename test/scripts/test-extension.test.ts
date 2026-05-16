@@ -252,6 +252,53 @@ describe("scripts/test-extension.mjs", () => {
     );
   });
 
+  it("lists available extension ids from git without reading extension directories", () => {
+    const output = execFileSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "--eval",
+        `
+          import fs from "node:fs";
+          import { syncBuiltinESMExports } from "node:module";
+          const counts = { existsSync: 0, readdirSync: 0 };
+          const originalExistsSync = fs.existsSync;
+          const originalReaddirSync = fs.readdirSync;
+          fs.existsSync = (...args) => {
+            counts.existsSync += 1;
+            return originalExistsSync(...args);
+          };
+          fs.readdirSync = (...args) => {
+            counts.readdirSync += 1;
+            return originalReaddirSync(...args);
+          };
+          syncBuiltinESMExports();
+          const { detectChangedExtensionIds, listAvailableExtensionIds } = await import("./scripts/lib/changed-extensions.mjs");
+          const ids = listAvailableExtensionIds();
+          const changed = detectChangedExtensionIds([
+            "extensions/slack/src/channel.ts",
+            "src/line/message.test.ts",
+            "extensions/not-real/package.json",
+          ]);
+          console.log(JSON.stringify({ changed, counts, ids: ids.length }));
+        `,
+      ],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    const payload = JSON.parse(output) as {
+      changed: string[];
+      counts: { existsSync: number; readdirSync: number };
+      ids: number;
+    };
+    expect(payload.changed).toEqual(["line", "slack"]);
+    expect(payload.ids).toBeGreaterThan(0);
+    expect(payload.counts).toEqual({ existsSync: 0, readdirSync: 0 });
+  });
+
   it("can fail safe to all extensions when the base revision is unavailable", () => {
     const extensionIds = listChangedExtensionIds({
       base: "refs/heads/openclaw-test-missing-base",
