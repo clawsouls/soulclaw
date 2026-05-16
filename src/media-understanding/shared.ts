@@ -2,7 +2,7 @@ import path from "node:path";
 import {
   assertOkOrThrowHttpError,
   createProviderHttpError,
-  readProviderJsonResponse,
+  readProviderJsonObjectResponse,
 } from "../agents/provider-http-errors.js";
 export {
   assertOkOrThrowHttpError,
@@ -166,7 +166,10 @@ export async function pollProviderOperationJson<TPayload>(params: {
       fetchFn: params.fetchFn,
       requestFailedMessage: params.requestFailedMessage,
     });
-    const payload = await readProviderJsonResponse<TPayload>(response, params.requestFailedMessage);
+    const payload = (await readProviderJsonObjectResponse(
+      response,
+      params.requestFailedMessage,
+    )) as TPayload;
     if (params.isComplete(payload)) {
       return payload;
     }
