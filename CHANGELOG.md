@@ -16,7 +16,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
-- MCP plugin tools: forward host MCP `tools/call` `AbortSignal` through `createPluginToolsMcpHandlers().callTool` into plugin `tool.execute`, so host cancellation actually cancels in-flight plugin tool calls instead of letting them run to completion. (#82443) Thanks @joshavant.
+- MCP plugin tools: forward host MCP `tools/call` `AbortSignal` through `createPluginToolsMcpHandlers().callTool` into plugin `tool.execute`, so host cancellation actually cancels in-flight plugin tool calls instead of letting them run to completion. Fixes #82424. (#82443) Thanks @joshavant.
 - Media: ignore image MIME and filename hints when bytes sniff as generic containers, so zip/octet-stream payloads mislabeled as images do not become local image media or keep image file extensions when staged.
 - Update/doctor: avoid materializing `groupAllowFrom` for channel schemas that reject it, so package-swap doctor repairs do not fail on externalized Slack configs.
 - Gateway/media: prevent image filenames from overriding generic non-image byte sniffing, so zip/octet-stream payloads mislabeled as images are offloaded or rejected before they become inline image attachments.
@@ -71,7 +71,6 @@ Docs: https://docs.openclaw.ai
 - Plugin releases: require external package compatibility metadata in the npm plugin publish plan, matching the ClawHub package contract before packages ship.
 - Agents/OpenAI-compatible: honor per-model `max_completion_tokens`/`max_tokens` params in embedded OpenAI-completions runs so high-token Kimi-style routes keep their configured completion cap. Fixes #82230. Thanks @albert-zen.
 - Agents/local: install a local gateway request scope around trusted `openclaw agent --local` runs, so subagent completion announces can use in-process gateway dispatch without crashing. Fixes #82140. Thanks @Kushmaro.
-- MCP/plugin tools: forward host cancellation signals into plugin tool execution so cancelled MCP calls can abort in-flight tools. Fixes #82424. (#82443) Thanks @joshavant.
 - Cron: keep failed isolated-agent runs from marking successful result delivery when only the failure notification was delivered. Fixes #72985. Thanks @Allenbluff.
 - Discord: validate message-read results before normalizing channel history and report unexpected payloads with a Discord boundary error instead of `map is not a function`. Fixes #82252. Thanks @jessewunderlich.
 - Agents/runtime: apply `agents.defaults.models["provider/*"].agentRuntime` as provider-wide model runtime policy while preserving exact model runtime precedence. Fixes #82243. Thanks @rendrag-git.
