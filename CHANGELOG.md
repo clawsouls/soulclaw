@@ -24,6 +24,7 @@ Docs: https://docs.openclaw.ai
 - Media/files: sniff `input_file` bytes before trusting declared MIME headers, rejecting spoofed image or zip payloads before they become agent-visible text.
 - Config persistence: ignore malformed array/scalar auth profile, cron job state, and session store entries instead of hydrating them into numeric profile ids, crashed cron rows, or invalid session records.
 - Providers: reject malformed successful Runway, BytePlus, and Ollama embedding responses with provider-owned errors instead of raw parser/type failures, silent bad vectors, or long bogus polling.
+- Providers/images: reject malformed successful OpenAI-compatible, OpenAI, Google, fal, and OpenRouter image responses with provider-owned errors instead of raw shape failures, silent invalid base64 skips, or empty image results.
 - Trajectory export: skip and report malformed session/runtime JSONL rows in `manifest.json` instead of letting wrong-shaped session rows crash support bundle export.
 - Voice calls: persist rejected inbound-call replay keys so duplicate carrier webhook retries stay ignored after a Gateway restart.
 - Config/doctor: copy fallback-enabled channel `allowFrom` entries into explicit `groupAllowFrom` allowlists during `openclaw doctor --fix`, preserving current group access without adding runtime fallback-transition flags.
