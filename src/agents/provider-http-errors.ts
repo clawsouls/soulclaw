@@ -184,6 +184,19 @@ export async function readProviderJsonObjectResponse(
   return object;
 }
 
+export async function readProviderJsonArrayFieldResponse(
+  response: Response,
+  label: string,
+  field: string,
+): Promise<unknown[]> {
+  const payload = await readProviderJsonObjectResponse(response, label);
+  const value = payload[field];
+  if (!Array.isArray(value)) {
+    throw new Error(`${label}: malformed JSON response`);
+  }
+  return value;
+}
+
 function normalizeContentType(response: Response): string | undefined {
   const contentType = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
   return contentType || undefined;
