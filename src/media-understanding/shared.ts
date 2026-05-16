@@ -6,6 +6,7 @@ import {
 } from "../agents/provider-http-errors.js";
 export {
   assertOkOrThrowHttpError,
+  readProviderJsonObjectResponse,
   readProviderJsonResponse,
 } from "../agents/provider-http-errors.js";
 import type {
