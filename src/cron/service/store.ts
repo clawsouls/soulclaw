@@ -20,6 +20,48 @@ function invalidateStaleNextRunOnScheduleChange(params: {
   params.hydrated.state.nextRunAtMs = undefined;
 }
 
+function getInvalidPersistedCronJobReason(candidate: Record<string, unknown>): string | null {
+  const id = candidate.id;
+  if (typeof id !== "string" || !id.trim()) {
+    return "missing-id";
+  }
+  const schedule = candidate.schedule;
+  if (!schedule || typeof schedule !== "object" || Array.isArray(schedule)) {
+    return "missing-schedule";
+  }
+  const scheduleKind = (schedule as { kind?: unknown }).kind;
+  if (scheduleKind !== "at" && scheduleKind !== "every" && scheduleKind !== "cron") {
+    return "invalid-schedule";
+  }
+  const payload = candidate.payload;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return "missing-payload";
+  }
+  const payloadKind = (payload as { kind?: unknown }).kind;
+  if (payloadKind !== "systemEvent" && payloadKind !== "agentTurn") {
+    return "invalid-payload";
+  }
+  return null;
+}
+
+function warnInvalidPersistedCronJob(params: {
+  state: CronServiceState;
+  raw: Record<string, unknown>;
+  index: number;
+  reason: string;
+}) {
+  const jobId = typeof params.raw.id === "string" ? params.raw.id : undefined;
+  const dedupeKey = jobId ?? `index:${params.index}`;
+  if (params.state.warnedInvalidPersistedJobKeys.has(dedupeKey)) {
+    return;
+  }
+  params.state.warnedInvalidPersistedJobKeys.add(dedupeKey);
+  params.state.deps.log.warn(
+    { storePath: params.state.deps.storePath, jobId, jobIndex: params.index, reason: params.reason },
+    "cron: skipped invalid persisted job; run openclaw doctor --fix to repair",
+  );
+}
+
 async function getFileMtimeMs(path: string): Promise<number | null> {
   try {
     const stats = await fs.promises.stat(path);
@@ -52,8 +94,9 @@ export async function ensureLoaded(
 
   const fileMtimeMs = await getFileMtimeMs(state.deps.storePath);
   const loaded = await loadCronStore(state.deps.storePath);
-  const jobs = (loaded.jobs ?? []) as unknown as CronJob[];
-  for (const [index, job] of jobs.entries()) {
+  const loadedJobs = (loaded.jobs ?? []) as unknown as CronJob[];
+  const jobs: CronJob[] = [];
+  for (const [index, job] of loadedJobs.entries()) {
     const raw = job as unknown as Record<string, unknown>;
     const { legacyJobIdIssue } = normalizeCronJobIdentityFields(raw);
     let normalized: Record<string, unknown> | null;
@@ -71,7 +114,15 @@ export async function ensureLoaded(
     }
     const hydrated =
       normalized && typeof normalized === "object" ? (normalized as unknown as CronJob) : job;
-    jobs[index] = hydrated;
+    const invalidReason = getInvalidPersistedCronJobReason(hydrated as unknown as Record<
+      string,
+      unknown
+    >);
+    if (invalidReason) {
+      warnInvalidPersistedCronJob({ state, raw, index, reason: invalidReason });
+      continue;
+    }
+    jobs.push(hydrated);
     if (legacyJobIdIssue) {
       const resolvedId = typeof hydrated.id === "string" ? hydrated.id : undefined;
       state.deps.log.warn(
