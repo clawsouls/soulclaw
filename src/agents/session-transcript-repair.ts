@@ -189,7 +189,7 @@ function normalizeLegacyToolResultId(
   if (toolResultName && toolCallName && toolResultName !== toolCallName) {
     return message;
   }
-  return { ...message, toolCallId: toolCall.id };
+  return { ...message, toolCallId: toolCall.id, isError: true };
 }
 
 export { makeMissingToolResult };
