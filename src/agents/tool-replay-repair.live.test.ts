@@ -72,11 +72,19 @@ function createNoopTools() {
   ];
 }
 
-function replayValidationTools(model: Model<Api>) {
-  // Responses-family providers may force a new tool call whenever tools are
-  // present. These live probes validate repaired historical transcript shape,
-  // not fresh tool invocation.
-  return isOpenAIResponsesFamily(model.api) ? undefined : createNoopTools();
+function replayValidationTools() {
+  return createNoopTools();
+}
+
+function disableResponsesReplayToolChoice(payload: unknown, model: Model<Api>): unknown {
+  if (!isOpenAIResponsesFamily(model.api) || !payload || typeof payload !== "object") {
+    return undefined;
+  }
+  const next = payload as { tool_choice?: unknown };
+  // Replay probes include historical tool calls to validate transcript repair,
+  // but they should not force a fresh noop tool call during the live request.
+  next.tool_choice = "none";
+  return next;
 }
 
 function buildReplayMessages(model: Model<Api>): AgentMessage[] {
@@ -270,12 +278,13 @@ describeLive("tool replay repair live", () => {
           {
             systemPrompt: "You are a concise assistant. Follow the user's instruction exactly.",
             messages: sanitized as never,
-            tools: replayValidationTools(model),
+            tools: replayValidationTools(),
           },
           {
             apiKey: requireApiKey(apiKeyInfo, model.provider),
             reasoning: "low",
             maxTokens: 96,
+            onPayload: disableResponsesReplayToolChoice,
           },
           120_000,
         );
@@ -345,12 +354,13 @@ describeLive("tool replay repair live", () => {
           {
             systemPrompt: "You are a concise assistant. Follow the user's instruction exactly.",
             messages: transformed as never,
-            tools: replayValidationTools(model),
+            tools: replayValidationTools(),
           },
           {
             apiKey: requireApiKey(apiKeyInfo, model.provider),
             reasoning: "low",
             maxTokens: 96,
+            onPayload: disableResponsesReplayToolChoice,
           },
           120_000,
         );
