@@ -13,6 +13,7 @@ import {
   resolveExtensionBatchPlan,
   resolveExtensionTestPlan,
 } from "../../scripts/lib/extension-test-plan.mjs";
+import { buildVitestBatchPnpmArgs } from "../../scripts/lib/vitest-batch-runner.mjs";
 import {
   parseExtensionIds,
   resolveExtensionBatchParallelism,
@@ -604,6 +605,25 @@ describe("scripts/test-extension.mjs", () => {
       extensionIds: ["telegram"],
       passthroughArgs: ["--coverage", "extensions/telegram/src/index.test.ts", "--run"],
     });
+  });
+
+  it("places Vitest passthrough options before batch target roots", () => {
+    expect(
+      buildVitestBatchPnpmArgs({
+        args: ["--exclude", "extensions/codex/src/app-server/run-attempt.test.ts"],
+        config: "test/vitest/vitest.extensions.config.ts",
+        targets: ["extensions/codex"],
+      }),
+    ).toEqual([
+      "exec",
+      "vitest",
+      "run",
+      "--config",
+      "test/vitest/vitest.extensions.config.ts",
+      "--exclude",
+      "extensions/codex/src/app-server/run-attempt.test.ts",
+      "extensions/codex",
+    ]);
   });
 
   it("treats extensions without tests as a no-op by default", () => {
