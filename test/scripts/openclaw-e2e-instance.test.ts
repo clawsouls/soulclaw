@@ -241,18 +241,18 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
     }
   });
 
-  it("fails package installs when no timeout binary is available", () => {
+  it("uses the Node watchdog when timeout is unavailable", () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-e2e-instance-no-timeout-"));
     try {
       const npmArgsPath = path.join(tempDir, "npm-args.txt");
       const logPath = path.join(tempDir, "install.log");
       const packagePath = path.join(tempDir, "openclaw.tgz");
+      const nodeBinDir = path.dirname(process.execPath);
       fs.writeFileSync(packagePath, "");
       fs.writeFileSync(
         path.join(tempDir, "npm"),
         ["#!/bin/sh", "set -eu", 'printf "%s\\n" "$*" >"$OPENCLAW_TEST_NPM_ARGS"', ""].join("\n"),
       );
-      fs.symlinkSync("/bin/cat", path.join(tempDir, "cat"));
       fs.chmodSync(path.join(tempDir, "npm"), 0o755);
 
       const result = spawnSync(
@@ -269,7 +269,7 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
           encoding: "utf8",
           env: {
             ...process.env,
-            PATH: tempDir,
+            PATH: `${tempDir}:${nodeBinDir}`,
             OPENCLAW_CURRENT_PACKAGE_TGZ: packagePath,
             OPENCLAW_E2E_NPM_INSTALL_TIMEOUT: "42s",
             OPENCLAW_TEST_NPM_ARGS: npmArgsPath,
@@ -277,15 +277,46 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
         },
       );
 
-      expect(result.status).not.toBe(0);
-      expect(result.stderr).toContain(
-        "timeout or gtimeout is required for OpenClaw E2E command timeout 42s",
+      expect(result.status).toBe(0);
+      expect(fs.readFileSync(logPath, "utf8")).toContain("using Node watchdog");
+      expect(fs.readFileSync(npmArgsPath, "utf8").trim()).toBe(
+        `install -g ${packagePath} --no-fund --no-audit`,
       );
-      expect(result.stderr).toContain("npm install failed for fixture package");
-      expect(fs.readFileSync(logPath, "utf8")).toContain(
-        "timeout or gtimeout is required for OpenClaw E2E command timeout 42s",
+    } finally {
+      fs.rmSync(tempDir, { force: true, recursive: true });
+    }
+  });
+
+  it("bounds commands with the Node watchdog when timeout is unavailable", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-e2e-instance-node-watchdog-"));
+    try {
+      const nodeBinDir = path.dirname(process.execPath);
+      const startedAt = Date.now();
+      const result = spawnSync(
+        "/bin/bash",
+        [
+          "-c",
+          [
+            "set -euo pipefail",
+            `source ${shellQuote(helperPath)}`,
+            `openclaw_e2e_maybe_timeout 200ms ${shellQuote(process.execPath)} -e ${shellQuote("setInterval(() => {}, 1000)")}`,
+          ].join("; "),
+        ],
+        {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            PATH: `${tempDir}:${nodeBinDir}`,
+          },
+          timeout: 5_000,
+        },
       );
-      expect(fs.existsSync(npmArgsPath)).toBe(false);
+      const elapsedMs = Date.now() - startedAt;
+
+      expect(result.status).toBe(124);
+      expect(elapsedMs).toBeLessThan(4_000);
+      expect(result.stderr).toContain("using Node watchdog");
+      expect(result.stderr).toContain("OpenClaw E2E command timed out after 200ms");
     } finally {
       fs.rmSync(tempDir, { force: true, recursive: true });
     }
