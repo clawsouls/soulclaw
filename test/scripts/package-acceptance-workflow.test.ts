@@ -637,6 +637,8 @@ describe("package artifact reuse", () => {
     expect(scheduler).toContain("function liveDockerHarnessScriptCommand");
     expect(scheduler).toContain('liveDockerHarnessScriptCommand("test-live-build-docker.sh")');
     expect(liveDockerAuth).toContain("codex-cli | openai | openai-codex)");
+    expect(liveDockerAuth).toContain("openclaw_live_init_docker_run_args()");
+    expect(liveDockerAuth).toContain('timeout_value="${2:-${OPENCLAW_LIVE_DOCKER_RUN_TIMEOUT:-2700s}}"');
     expect(harness).toContain('source "$TRUSTED_HARNESS_DIR/scripts/lib/live-docker-auth.sh"');
     expect(harness).not.toContain('source "$ROOT_DIR/scripts/lib/live-docker-auth.sh"');
     expect(harness).toContain(
@@ -647,9 +649,14 @@ describe("package artifact reuse", () => {
     );
     expect(harness).toContain('node --import tsx "$trusted_scripts_dir/prepare-codex-ci-auth.ts"');
     expect(harness).toContain('source "$trusted_scripts_dir/lib/live-docker-stage.sh"');
-    for (const script of sharedLiveScripts) {
+    for (const script of [harness, ...sharedLiveScripts]) {
       expect(script).toContain('source "$TRUSTED_HARNESS_DIR/scripts/lib/live-docker-auth.sh"');
       expect(script).not.toContain('source "$ROOT_DIR/scripts/lib/live-docker-auth.sh"');
+      expect(script).toContain("openclaw_live_init_docker_run_args DOCKER_RUN_ARGS");
+      expect(script).toContain("DOCKER_RUN_ARGS+=(--rm -t \\");
+      expect(script).not.toContain("DOCKER_RUN_ARGS=(docker run --rm -t \\");
+    }
+    for (const script of sharedLiveScripts) {
       expect(script).toContain(
         'OPENCLAW_LIVE_DOCKER_REPO_ROOT="$ROOT_DIR" "$TRUSTED_HARNESS_DIR/scripts/test-live-build-docker.sh"',
       );
@@ -661,6 +668,24 @@ describe("package artifact reuse", () => {
         "openclaw_live_append_array DOCKER_RUN_ARGS DOCKER_TRUSTED_HARNESS_MOUNT",
       );
     }
+    expect(readFileSync("scripts/test-live-models-docker.sh", "utf8")).toContain(
+      'OPENCLAW_LIVE_MODELS_DOCKER_RUN_TIMEOUT:-2100s',
+    );
+    expect(readFileSync("scripts/test-live-gateway-models-docker.sh", "utf8")).toContain(
+      'OPENCLAW_LIVE_GATEWAY_DOCKER_RUN_TIMEOUT:-2100s',
+    );
+    expect(readFileSync("scripts/test-live-cli-backend-docker.sh", "utf8")).toContain(
+      'OPENCLAW_LIVE_CLI_BACKEND_DOCKER_RUN_TIMEOUT:-2700s',
+    );
+    expect(readFileSync("scripts/test-live-acp-bind-docker.sh", "utf8")).toContain(
+      'OPENCLAW_LIVE_ACP_BIND_DOCKER_RUN_TIMEOUT:-2700s',
+    );
+    expect(readFileSync("scripts/test-live-codex-harness-docker.sh", "utf8")).toContain(
+      'OPENCLAW_LIVE_CODEX_HARNESS_DOCKER_RUN_TIMEOUT:-2100s',
+    );
+    expect(readFileSync("scripts/test-live-subagent-announce-docker.sh", "utf8")).toContain(
+      'OPENCLAW_LIVE_SUBAGENT_DOCKER_RUN_TIMEOUT:-1200s',
+    );
     expect(build).toContain('ROOT_DIR="${OPENCLAW_LIVE_DOCKER_REPO_ROOT:-$SCRIPT_ROOT_DIR}"');
     expect(build).toContain('source "$SCRIPT_ROOT_DIR/scripts/lib/docker-build.sh"');
     expect(stage).toContain(
