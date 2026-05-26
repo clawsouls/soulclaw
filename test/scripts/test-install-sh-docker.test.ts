@@ -126,6 +126,8 @@ describe("test-install-sh-docker", () => {
 
     expect(script).toContain('DOCKER_PULL_TIMEOUT="${OPENCLAW_DOCKER_SETUP_PULL_TIMEOUT:-600s}"');
     expect(script).toContain("run_docker_pull()");
+    expect(script).toContain("timeout --kill-after=1s 1s true");
+    expect(script).toContain('timeout --kill-after=30s "$DOCKER_PULL_TIMEOUT" docker pull "$image"');
     expect(script).toContain('timeout "$DOCKER_PULL_TIMEOUT" docker pull "$image"');
     expect(script).toContain('run_docker_pull "$IMAGE_NAME"');
     expect(script).not.toContain('docker pull "$IMAGE_NAME"');
@@ -138,6 +140,8 @@ describe("test-install-sh-docker", () => {
       'PODMAN_PULL_TIMEOUT="${OPENCLAW_PODMAN_SETUP_PULL_TIMEOUT:-600s}"',
     );
     expect(script).toContain("run_podman_pull()");
+    expect(script).toContain("timeout --kill-after=1s 1s true");
+    expect(script).toContain('timeout --kill-after=30s "$PODMAN_PULL_TIMEOUT" podman pull "$image"');
     expect(script).toContain('timeout "$PODMAN_PULL_TIMEOUT" podman pull "$image"');
     expect(script).toContain('run_podman_pull "$OPENCLAW_IMAGE"');
     expect(script).not.toContain('podman pull "$OPENCLAW_IMAGE"');
