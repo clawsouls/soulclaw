@@ -81,6 +81,9 @@ docker_e2e_package_mount_args() {
   local package_tgz="$1"
   local target="${2:-/tmp/openclaw-current.tgz}"
   DOCKER_E2E_PACKAGE_ARGS=(-v "$package_tgz:$target:ro" -e "OPENCLAW_CURRENT_PACKAGE_TGZ=$target")
+  if [ -n "${OPENCLAW_E2E_NPM_INSTALL_TIMEOUT:-}" ]; then
+    DOCKER_E2E_PACKAGE_ARGS+=(-e "OPENCLAW_E2E_NPM_INSTALL_TIMEOUT=$OPENCLAW_E2E_NPM_INSTALL_TIMEOUT")
+  fi
 }
 
 docker_e2e_cleanup_package_tgz() {

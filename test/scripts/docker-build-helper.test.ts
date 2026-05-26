@@ -24,11 +24,9 @@ const ONBOARD_DOCKER_E2E_PATH = "scripts/e2e/onboard-docker.sh";
 const KITCHEN_SINK_PLUGIN_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-plugin-docker.sh";
 const KITCHEN_SINK_RPC_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-rpc-docker.sh";
 const CODEX_ON_DEMAND_DOCKER_E2E_PATH = "scripts/e2e/codex-on-demand-docker.sh";
-const CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH =
-  "scripts/e2e/codex-npm-plugin-live-docker.sh";
+const CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH = "scripts/e2e/codex-npm-plugin-live-docker.sh";
 const LIVE_PLUGIN_TOOL_DOCKER_E2E_PATH = "scripts/e2e/live-plugin-tool-docker.sh";
-const NPM_ONBOARD_CHANNEL_AGENT_DOCKER_E2E_PATH =
-  "scripts/e2e/npm-onboard-channel-agent-docker.sh";
+const NPM_ONBOARD_CHANNEL_AGENT_DOCKER_E2E_PATH = "scripts/e2e/npm-onboard-channel-agent-docker.sh";
 const SKILL_INSTALL_DOCKER_E2E_PATH = "scripts/e2e/skill-install-docker.sh";
 const PLUGIN_BINDING_COMMAND_ESCAPE_DOCKER_E2E_PATH =
   "scripts/e2e/plugin-binding-command-escape-docker.sh";
@@ -123,9 +121,7 @@ describe("docker build helper", () => {
     );
     expect(cleanupSmoke).not.toContain('docker run --rm --platform "$PLATFORM" -t "$IMAGE_NAME"');
 
-    expect(installE2eSmoke).toContain(
-      'source "$ROOT_DIR/scripts/lib/docker-e2e-container.sh"',
-    );
+    expect(installE2eSmoke).toContain('source "$ROOT_DIR/scripts/lib/docker-e2e-container.sh"');
     expect(installE2eSmoke).toContain(
       'DOCKER_COMMAND_TIMEOUT="${DOCKER_COMMAND_TIMEOUT:-${OPENCLAW_INSTALL_E2E_DOCKER_TIMEOUT:-2700s}}"',
     );
@@ -470,6 +466,35 @@ test -f "$external_dir/openclaw-current.tgz"
     }
   });
 
+  it("propagates the shared E2E npm install timeout into package-backed containers", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-package-timeout-env-"));
+
+    try {
+      const rootDir = process.cwd();
+      const script = `
+set -euo pipefail
+ROOT_DIR=${shellQuote(rootDir)}
+TMPDIR=${shellQuote(workDir)}
+export ROOT_DIR TMPDIR
+source "$ROOT_DIR/scripts/lib/docker-e2e-package.sh"
+
+package="$TMPDIR/openclaw-current.tgz"
+printf fixture >"$package"
+export OPENCLAW_E2E_NPM_INSTALL_TIMEOUT=42s
+docker_e2e_package_mount_args "$package"
+printf "%s\\n" "\${DOCKER_E2E_PACKAGE_ARGS[@]}" >"$TMPDIR/package-args"
+
+grep -qx -- "-e" "$TMPDIR/package-args"
+grep -qx -- "OPENCLAW_CURRENT_PACKAGE_TGZ=/tmp/openclaw-current.tgz" "$TMPDIR/package-args"
+grep -qx -- "OPENCLAW_E2E_NPM_INSTALL_TIMEOUT=42s" "$TMPDIR/package-args"
+`;
+
+      execFileSync("bash", ["-lc", script], { encoding: "utf8" });
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
   it("keeps the harness run wrapper available with pre-sourced Docker command helpers", () => {
     const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-package-helper-guard-"));
 
@@ -571,7 +596,7 @@ test -f "$TMPDIR/docker-cmd-seen"
 
     expect(runner).toContain("OPENCLAW_ONBOARD_MAX_MEMORY_MIB");
     expect(runner).toContain("OPENCLAW_ONBOARD_MAX_CPU_PERCENT");
-    expect(runner).toContain("--name \"$CONTAINER_NAME\"");
+    expect(runner).toContain('--name "$CONTAINER_NAME"');
     expect(runner).toContain("docker_e2e_docker_cmd stats --no-stream");
     expect(runner).toContain("assert-resource-ceiling.mjs");
     expect(runner).not.toContain("docker_e2e_run_with_harness -t");
@@ -616,7 +641,9 @@ test -f "$TMPDIR/docker-cmd-seen"
     expect(runner).toContain(
       'DOCKER_COMMAND_TIMEOUT="$CLIENT_TIMEOUT" run_logged gateway-network-client docker_e2e_docker_run_cmd run --rm',
     );
-    expect(runner).not.toContain('run_logged gateway-network-client timeout "$CLIENT_TIMEOUT" docker run --rm');
+    expect(runner).not.toContain(
+      'run_logged gateway-network-client timeout "$CLIENT_TIMEOUT" docker run --rm',
+    );
   });
 
   it("copies root lifecycle scripts before cleanup-smoke installs dependencies", () => {
@@ -924,7 +951,9 @@ test -f "$TMPDIR/docker-cmd-seen"
     expect(runner).not.toMatch(/(^|\n)docker run --rm/u);
     expect(runner).toContain("expected focused Vitest summary for exactly 3 passed tests");
     expect(dockerfile).toContain("OPENCLAW_DISABLE_BUNDLED_PLUGIN_POSTINSTALL=1");
-    expect(dockerfile).toContain("pnpm install --frozen-lockfile --ignore-scripts --filter openclaw");
+    expect(dockerfile).toContain(
+      "pnpm install --frozen-lockfile --ignore-scripts --filter openclaw",
+    );
   });
 
   it("routes QR import Docker smoke through the timeout-aware run helper", () => {
