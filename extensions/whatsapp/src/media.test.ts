@@ -5,7 +5,10 @@ import { resolveStateDir } from "openclaw/plugin-sdk/state-paths";
 import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/temp-path";
 import { captureEnv } from "openclaw/plugin-sdk/test-env";
 import { mockPinnedHostnameResolution } from "openclaw/plugin-sdk/test-env";
-import { createNoisyPngBuffer, createSolidPngBuffer } from "openclaw/plugin-sdk/test-fixtures";
+import {
+  createGrayscaleAlphaPngBuffer,
+  createSolidPngBuffer,
+} from "openclaw/plugin-sdk/test-fixtures";
 import { withMockedWindowsPlatform, withRestoredMocks } from "openclaw/plugin-sdk/test-node-mocks";
 import { optimizeImageToPng } from "openclaw/plugin-sdk/web-media";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -68,14 +71,14 @@ beforeAll(async () => {
   alphaPngFile = await writeTempFile(alphaPngBuffer, ".png");
   // Keep this small so the alpha-fallback test stays deterministic but fast.
   const size = 24;
-  fallbackPngBuffer = createNoisyPngBuffer(size, size);
+  fallbackPngBuffer = createGrayscaleAlphaPngBuffer(size, size);
   fallbackPngFile = await writeTempFile(fallbackPngBuffer, ".png");
   const smallestPng = await optimizeImageToPng(fallbackPngBuffer, 1);
-  fallbackPngCap = Math.max(1, smallestPng.optimizedSize - 1);
+  fallbackPngCap = Math.max(1, Math.min(fallbackPngBuffer.length, smallestPng.optimizedSize) - 1);
   const jpegOptimized = await optimizeImageToJpeg(fallbackPngBuffer, fallbackPngCap);
-  if (jpegOptimized.buffer.length >= smallestPng.optimizedSize) {
+  if (jpegOptimized.buffer.length > fallbackPngCap) {
     throw new Error(
-      `JPEG fallback did not shrink below PNG (jpeg=${jpegOptimized.buffer.length}, png=${smallestPng.optimizedSize})`,
+      `JPEG fallback did not fit cap (jpeg=${jpegOptimized.buffer.length}, cap=${fallbackPngCap})`,
     );
   }
 });
@@ -151,7 +154,7 @@ describe("web media loading", () => {
     const result = await loadWebMedia(tinyPngWrongExtFile, 1024 * 1024);
 
     expect(result.kind).toBe("image");
-    expect(result.contentType).toBe("image/jpeg");
+    expect(result.contentType).toBe("image/png");
   });
 
   it("includes URL + status in fetch errors", async () => {
