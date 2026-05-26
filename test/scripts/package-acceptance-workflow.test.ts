@@ -416,6 +416,7 @@ describe("package artifact reuse", () => {
 
   it("bounds shared Docker image pulls so package acceptance cannot stall forever", () => {
     const pullHelper = readFileSync("scripts/ci-docker-pull-retry.sh", "utf8");
+    const dockerE2ePlanAction = readFileSync(DOCKER_E2E_PLAN_ACTION, "utf8");
 
     expect(pullHelper).toContain("OPENCLAW_DOCKER_PULL_ATTEMPTS");
     expect(pullHelper).toContain("OPENCLAW_DOCKER_PULL_TIMEOUT_SECONDS");
@@ -426,6 +427,8 @@ describe("package artifact reuse", () => {
     expect(pullHelper).toContain(
       'timeout --kill-after=30s "${timeout_seconds}s" docker pull "$image"',
     );
+    expect(dockerE2ePlanAction.match(/bash scripts\/ci-docker-pull-retry\.sh/g)?.length).toBe(2);
+    expect(dockerE2ePlanAction).not.toContain('docker pull "${OPENCLAW_DOCKER_E2E_');
   });
 
   it("uses Blacksmith Docker build caching for prepared E2E images", () => {
