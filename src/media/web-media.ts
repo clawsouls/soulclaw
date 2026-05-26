@@ -21,7 +21,6 @@ import {
   createImageProcessor,
   readImageMetadataFromHeader,
   readImageProbeFromHeader,
-  shouldAttemptTransparencyPreservingEncode,
 } from "./media-services.js";
 import {
   detectMime,
@@ -357,7 +356,8 @@ type OptimizedImage = {
   buffer: Buffer;
   optimizedSize: number;
   resizeSide: number;
-  format: "jpeg" | "png";
+  format: "jpeg" | "png" | "webp";
+  mimeType: string;
   quality?: number;
   compressionLevel?: number;
 };
@@ -654,7 +654,7 @@ async function optimizeImageWithFallback(params: {
       maxSide: grid.sides,
       quality: grid.qualities,
     },
-    transparency: shouldAttemptTransparencyPreservingEncode(buffer) ? "prefer" : "flatten",
+    transparency: "auto",
   });
   if (optimized.chosen.transparency === "flattened" && shouldLogVerbose()) {
     logVerbose(`Image transparency flattened to fit ${formatMb(cap, 0)}MB optimization budget`);
@@ -663,7 +663,8 @@ async function optimizeImageWithFallback(params: {
     buffer: optimized.data,
     optimizedSize: optimized.bytes,
     resizeSide: optimized.chosen.maxSide ?? Math.max(optimized.width, optimized.height),
-    format: optimized.format === "png" ? "png" : "jpeg",
+    format: optimized.format,
+    mimeType: optimized.mimeType,
     ...(optimized.chosen.quality === undefined ? {} : { quality: optimized.chosen.quality }),
     ...(optimized.chosen.compressionLevel === undefined
       ? {}
@@ -720,7 +721,7 @@ export async function optimizeImageBufferForWebMedia(params: {
   }
   return {
     buffer: optimized.buffer,
-    contentType: optimized.format === "png" ? "image/png" : "image/jpeg",
+    contentType: optimized.mimeType,
     kind: "image",
     fileName:
       optimized.format === "jpeg" && isHeicSource(params)
@@ -784,7 +785,6 @@ async function loadWebMediaInternal(
       throw new Error(formatCapReduce("Media", cap, optimized.buffer.length));
     }
 
-    const contentType = optimized.format === "png" ? "image/png" : "image/jpeg";
     const fileName =
       optimized.format === "jpeg" && meta && isHeicSource(meta)
         ? toJpegFileName(meta.fileName)
@@ -792,7 +792,7 @@ async function loadWebMediaInternal(
 
     return {
       buffer: optimized.buffer,
-      contentType,
+      contentType: optimized.mimeType,
       kind: "image" as const,
       fileName,
     };

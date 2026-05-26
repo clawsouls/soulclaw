@@ -80,14 +80,6 @@ export function readImageProbeFromHeader(buffer: Buffer): ImageProbe | null {
   return readRastermillImageProbeFromHeader(buffer);
 }
 
-export function shouldAttemptTransparencyPreservingEncode(buffer: Buffer): boolean {
-  const probe = readRastermillImageProbeFromHeader(buffer);
-  if (probe?.hasAlpha !== true) {
-    return false;
-  }
-  return probe.format === "png" || probe.format === "gif" || probe.format === "webp";
-}
-
 function wrapRastermillUnavailable(operation: string, error: unknown): never {
   if (error instanceof RastermillUnavailableError) {
     throw new ImageProcessorUnavailableError(operation, error.message, error.causes);

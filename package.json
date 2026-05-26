@@ -1838,7 +1838,7 @@
     "playwright-core": "1.60.0",
     "qrcode": "1.5.4",
     "quickjs-wasi": "2.2.0",
-    "rastermill": "https://codeload.github.com/openclaw/rastermill/tar.gz/48457f54bbbe8061cdf358069eee202e27b553be",
+    "rastermill": "https://codeload.github.com/openclaw/rastermill/tar.gz/89405b23b10e32bcbedbd0e2aa56ba790e94d148",
     "tar": "7.5.15",
     "tokenjuice": "0.7.1",
     "tree-sitter-bash": "0.25.1",
