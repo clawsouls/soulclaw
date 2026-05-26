@@ -52,9 +52,8 @@ openclaw_e2e_maybe_timeout() {
     timeout_bin="gtimeout"
   fi
   if [ -z "$timeout_bin" ]; then
-    echo "timeout command not found; running OpenClaw E2E command without timeout $timeout_value" >&2
-    "$@"
-    return
+    echo "timeout or gtimeout is required for OpenClaw E2E command timeout $timeout_value" >&2
+    return 127
   fi
   if "$timeout_bin" --kill-after=1s 1s true >/dev/null 2>&1; then
     "$timeout_bin" --kill-after=30s "$timeout_value" "$@"
