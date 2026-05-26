@@ -80,6 +80,20 @@ describe("test-install-sh-docker", () => {
     expect(dockerfile).toContain("node scripts/check-package-dist-imports.mjs /app");
   });
 
+  it("bounds installer smoke container runs", () => {
+    const script = readFileSync(SCRIPT_PATH, "utf8");
+
+    expect(script).toContain(
+      'INSTALL_SMOKE_DOCKER_RUN_TIMEOUT="${OPENCLAW_INSTALL_SMOKE_DOCKER_RUN_TIMEOUT:-2700s}"',
+    );
+    expect(script).toContain("run_install_smoke_container()");
+    expect(script).toContain(
+      'DOCKER_COMMAND_TIMEOUT="$INSTALL_SMOKE_DOCKER_RUN_TIMEOUT" docker_e2e_docker_run_cmd run "$@"',
+    );
+    expect(script.match(/run_install_smoke_container --rm -t/g)?.length).toBe(6);
+    expect(script).not.toContain("docker run --rm -t \\");
+  });
+
   it("runs the root Dockerfile build with the CI heap limit", () => {
     const dockerfile = readFileSync("Dockerfile", "utf8");
 
