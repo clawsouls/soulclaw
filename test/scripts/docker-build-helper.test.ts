@@ -10,6 +10,8 @@ const DOCKER_E2E_PACKAGE_HELPER_PATH = "scripts/lib/docker-e2e-package.sh";
 const DOCKER_E2E_IMAGE_HELPER_PATH = "scripts/lib/docker-e2e-image.sh";
 const DOCKER_E2E_SCENARIOS_PATH = "scripts/lib/docker-e2e-scenarios.mjs";
 const INSTALL_E2E_RUNNER_PATH = "scripts/docker/install-sh-e2e/run.sh";
+const CLEANUP_DOCKER_SMOKE_PATH = "scripts/test-cleanup-docker.sh";
+const INSTALL_E2E_DOCKER_SMOKE_PATH = "scripts/test-install-sh-e2e-docker.sh";
 const LIVE_CLI_BACKEND_DOCKER_PATH = "scripts/test-live-cli-backend-docker.sh";
 const LIVE_BUILD_DOCKER_PATH = "scripts/test-live-build-docker.sh";
 const OPENAI_WEB_SEARCH_MINIMAL_E2E_PATH = "scripts/e2e/openai-web-search-minimal-docker.sh";
@@ -106,6 +108,29 @@ describe("docker build helper", () => {
       expect(script, path).not.toMatch(/\bdocker build\b/);
       expect(script, path).not.toMatch(/run_logged\s+\S+\s+docker\s+build/);
     }
+  });
+
+  it("routes standalone Docker smoke runs through the timeout-aware helper", () => {
+    const cleanupSmoke = readFileSync(CLEANUP_DOCKER_SMOKE_PATH, "utf8");
+    const installE2eSmoke = readFileSync(INSTALL_E2E_DOCKER_SMOKE_PATH, "utf8");
+
+    expect(cleanupSmoke).toContain('source "$ROOT_DIR/scripts/lib/docker-e2e-container.sh"');
+    expect(cleanupSmoke).toContain(
+      'DOCKER_COMMAND_TIMEOUT="${DOCKER_COMMAND_TIMEOUT:-${OPENCLAW_CLEANUP_SMOKE_DOCKER_TIMEOUT:-600s}}"',
+    );
+    expect(cleanupSmoke).toContain(
+      'docker_e2e_docker_run_cmd run --rm --platform "$PLATFORM" -t "$IMAGE_NAME"',
+    );
+    expect(cleanupSmoke).not.toContain('docker run --rm --platform "$PLATFORM" -t "$IMAGE_NAME"');
+
+    expect(installE2eSmoke).toContain(
+      'source "$ROOT_DIR/scripts/lib/docker-e2e-container.sh"',
+    );
+    expect(installE2eSmoke).toContain(
+      'DOCKER_COMMAND_TIMEOUT="${DOCKER_COMMAND_TIMEOUT:-${OPENCLAW_INSTALL_E2E_DOCKER_TIMEOUT:-2700s}}"',
+    );
+    expect(installE2eSmoke).toContain("docker_e2e_docker_run_cmd run --rm \\");
+    expect(installE2eSmoke).not.toContain("docker run --rm \\");
   });
 
   it("lets Testbox fall back to building when a reused Docker image is missing", () => {
