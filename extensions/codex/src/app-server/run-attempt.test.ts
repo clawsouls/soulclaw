@@ -421,7 +421,7 @@ function createAppServerHarness(
   return {
     request,
     requests,
-    async waitForMethod(method: string, timeoutMs = appServerHarnessWait.timeout) {
+    async waitForMethod(method: string, timeoutMs: number = appServerHarnessWait.timeout) {
       await vi.waitFor(
         () => {
           if (!requests.some((entry) => entry.method === method)) {
