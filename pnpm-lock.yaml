@@ -152,8 +152,8 @@ importers:
         specifier: 2.2.0
         version: 2.2.0
       rastermill:
-        specifier: https://codeload.github.com/openclaw/rastermill/tar.gz/53272509b6ccd574e547c8398e1f5d70e878d109
-        version: https://codeload.github.com/openclaw/rastermill/tar.gz/53272509b6ccd574e547c8398e1f5d70e878d109
+        specifier: https://codeload.github.com/openclaw/rastermill/tar.gz/48457f54bbbe8061cdf358069eee202e27b553be
+        version: https://codeload.github.com/openclaw/rastermill/tar.gz/48457f54bbbe8061cdf358069eee202e27b553be
       tar:
         specifier: 7.5.15
         version: 7.5.15
@@ -6310,8 +6310,8 @@ packages:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
     engines: {node: '>= 0.6'}
 
-  rastermill@https://codeload.github.com/openclaw/rastermill/tar.gz/53272509b6ccd574e547c8398e1f5d70e878d109:
-    resolution: {gitHosted: true, integrity: sha512-Qy71Ao4MmQZj5CaGITv+XWqa117JVvJBJjRE7y+Sz+S73B2CH8zyZ3vTp3Tq6MaHeIMbbnobJ3ywl7nm6jmy5A==, tarball: https://codeload.github.com/openclaw/rastermill/tar.gz/53272509b6ccd574e547c8398e1f5d70e878d109}
+  rastermill@https://codeload.github.com/openclaw/rastermill/tar.gz/48457f54bbbe8061cdf358069eee202e27b553be:
+    resolution: {gitHosted: true, integrity: sha512-wGbsJuFVkrwgWcaLESPi9OXFIV9MoJQtO8OwKUitKz6Q+XAsSvBhg08lE7JlBmutYFZofzMv6/GyxMl1ITwMqg==, tarball: https://codeload.github.com/openclaw/rastermill/tar.gz/48457f54bbbe8061cdf358069eee202e27b553be}
     version: 0.2.0
     engines: {node: '>=20'}
 
@@ -12304,7 +12304,7 @@ snapshots:
 
   range-parser@1.2.1: {}
 
-  rastermill@https://codeload.github.com/openclaw/rastermill/tar.gz/53272509b6ccd574e547c8398e1f5d70e878d109:
+  rastermill@https://codeload.github.com/openclaw/rastermill/tar.gz/48457f54bbbe8061cdf358069eee202e27b553be:
     dependencies:
       '@silvia-odwyer/photon-node': 0.3.4
 
