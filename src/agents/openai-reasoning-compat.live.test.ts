@@ -20,7 +20,7 @@ import { discoverAuthStorage, discoverModels } from "./pi-model-discovery.js";
 
 const LIVE = isLiveTestEnabled();
 const REQUIRE_PROFILE_KEYS = isLiveProfileKeyModeEnabled();
-const DEFAULT_TARGET_MODEL_REF = "openai-codex/gpt-5.1-codex-mini";
+const DEFAULT_TARGET_MODEL_REF = "openai-codex/gpt-5.4-mini";
 const TARGET_MODEL_REF =
   process.env.OPENCLAW_LIVE_OPENAI_REASONING_COMPAT_MODEL?.trim() || DEFAULT_TARGET_MODEL_REF;
 const describeLive = LIVE ? describe : describe.skip;
