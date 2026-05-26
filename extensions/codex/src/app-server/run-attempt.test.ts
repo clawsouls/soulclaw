@@ -6830,7 +6830,13 @@ describe("runCodexAppServerAttempt", () => {
       await harness.waitForMethod("turn/start");
       await harness.completeTurn({ threadId: "thread-1", turnId: "turn-1" });
       await run;
-      await flushDiagnosticEvents();
+      await vi.waitFor(
+        () =>
+          expect(diagnosticEvents.some((event) => event.type === "model.call.completed")).toBe(
+            true,
+          ),
+        fastWait,
+      );
 
       const startedEvent = diagnosticEvents.find((event) => event.type === "model.call.started");
       const completedEvent = diagnosticEvents.find(
