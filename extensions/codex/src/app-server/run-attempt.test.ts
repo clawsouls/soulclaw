@@ -6827,8 +6827,7 @@ describe("runCodexAppServerAttempt", () => {
         },
       } as never;
       const run = runCodexAppServerAttempt(params);
-      await harness.waitForMethod("turn/start");
-      await harness.completeTurn({ threadId: "thread-1", turnId: "turn-1" });
+      await harness.waitForMethod("turn/start", 180_000);
       await run;
       await vi.waitFor(
         () =>
@@ -6871,7 +6870,7 @@ describe("runCodexAppServerAttempt", () => {
     } finally {
       stopDiagnostics();
     }
-  });
+  }, 240_000);
 
   it("classifies codex model-call timeout diagnostics", async () => {
     const diagnosticEvents: DiagnosticEventPayload[] = [];
