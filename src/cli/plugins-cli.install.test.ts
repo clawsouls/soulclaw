@@ -1077,17 +1077,19 @@ describe("plugins cli install", () => {
     const bundledPath = "/app/dist/extensions/discord";
 
     loadConfig.mockReturnValue(cfg);
-    findBundledPluginSourceMock.mockImplementation(
-      ({ lookup }: { lookup: { kind: "pluginId" | "npmSpec"; value: string } }) =>
-        lookup.kind === "npmSpec" && lookup.value === "@openclaw/discord"
-          ? {
-              pluginId: "discord",
-              localPath: bundledPath,
-              npmSpec: "@openclaw/discord",
-              version: "2026.5.24-beta.2",
-            }
-          : undefined,
-    );
+    findBundledPluginSourceMock.mockImplementation((params: unknown) => {
+      const { lookup } = params as {
+        lookup: { kind: "pluginId" | "npmSpec"; value: string };
+      };
+      return lookup.kind === "npmSpec" && lookup.value === "@openclaw/discord"
+        ? {
+            pluginId: "discord",
+            localPath: bundledPath,
+            npmSpec: "@openclaw/discord",
+            version: "2026.5.24-beta.2",
+          }
+        : undefined;
+    });
     enablePluginInConfig.mockReturnValue({ config: enabledCfg });
     recordPluginInstall.mockReturnValue(enabledCfg);
     applyExclusiveSlotSelection.mockReturnValue({
