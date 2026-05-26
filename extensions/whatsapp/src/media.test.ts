@@ -69,17 +69,20 @@ beforeAll(async () => {
   tinyPngWrongExtFile = await writeTempFile(tinyPngBuffer, ".bin");
   alphaPngBuffer = createSolidPngBuffer(64, 64, { r: 255, g: 0, b: 0, a: 128 });
   alphaPngFile = await writeTempFile(alphaPngBuffer, ".png");
-  // Keep this small so the alpha-fallback test stays deterministic but fast.
-  const size = 24;
-  fallbackPngBuffer = createGrayscaleAlphaPngBuffer(size, size);
-  fallbackPngFile = await writeTempFile(fallbackPngBuffer, ".png");
-  const smallestPng = await optimizeImageToPng(fallbackPngBuffer, 1);
-  fallbackPngCap = Math.max(1, Math.min(fallbackPngBuffer.length, smallestPng.optimizedSize) - 1);
-  const jpegOptimized = await optimizeImageToJpeg(fallbackPngBuffer, fallbackPngCap);
-  if (jpegOptimized.buffer.length > fallbackPngCap) {
-    throw new Error(
-      `JPEG fallback did not fit cap (jpeg=${jpegOptimized.buffer.length}, cap=${fallbackPngCap})`,
-    );
+  for (const size of [24, 32, 40, 48, 64]) {
+    const buffer = createGrayscaleAlphaPngBuffer(size, size);
+    const smallestPng = await optimizeImageToPng(buffer, 1);
+    const cap = Math.max(1, Math.min(buffer.length, smallestPng.optimizedSize) - 1);
+    const jpegOptimized = await optimizeImageToJpeg(buffer, cap);
+    if (jpegOptimized.buffer.length <= cap) {
+      fallbackPngBuffer = buffer;
+      fallbackPngFile = await writeTempFile(buffer, ".png");
+      fallbackPngCap = cap;
+      break;
+    }
+  }
+  if (!fallbackPngFile) {
+    throw new Error("No PNG alpha fallback fixture could fit the JPEG cap");
   }
 });
 
