@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 const SCRIPT_PATH = "scripts/test-install-sh-docker.sh";
 const DOCKER_SETUP_PATH = "scripts/docker/setup.sh";
 const PODMAN_SETUP_PATH = "scripts/podman/setup.sh";
+const PODMAN_RUN_PATH = "scripts/run-openclaw-podman.sh";
 const SMOKE_RUNNER_PATH = "scripts/docker/install-sh-smoke/run.sh";
 const BUN_GLOBAL_SMOKE_PATH = "scripts/e2e/bun-global-install-smoke.sh";
 const BUN_GLOBAL_ASSERTIONS_PATH = "scripts/e2e/lib/bun-global-install/assertions.mjs";
@@ -140,6 +141,18 @@ describe("test-install-sh-docker", () => {
     expect(script).toContain('timeout "$PODMAN_PULL_TIMEOUT" podman pull "$image"');
     expect(script).toContain('run_podman_pull "$OPENCLAW_IMAGE"');
     expect(script).not.toContain('podman pull "$OPENCLAW_IMAGE"');
+  });
+
+  it("bounds detached Podman launches without timing out onboarding", () => {
+    const script = readFileSync(PODMAN_RUN_PATH, "utf8");
+
+    expect(script).toContain('PODMAN_RUN_TIMEOUT="${OPENCLAW_PODMAN_RUN_TIMEOUT:-600s}"');
+    expect(script).toContain("OPENCLAW_PODMAN_RUN_TIMEOUT|OPENCLAW_PODMAN_GATEWAY_HOST_PORT");
+    expect(script).toContain("run_podman_detached()");
+    expect(script).toContain('timeout "$PODMAN_RUN_TIMEOUT" podman run "$@"');
+    expect(script).toContain('podman run --pull="$PODMAN_PULL" --rm -it \\');
+    expect(script).toContain('run_podman_detached --pull="$PODMAN_PULL" -d --replace \\');
+    expect(script).not.toContain('podman run --pull="$PODMAN_PULL" -d --replace \\');
   });
 
   it("passes image-scoped pip packages through Docker and Podman setup", () => {
