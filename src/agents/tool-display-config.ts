@@ -359,9 +359,6 @@ export const TOOL_DISPLAY_CONFIG: ToolDisplayConfig = {
           label: "stop",
           detailKeys: ["sessionId", "title"],
         },
-        status: {
-          label: "status",
-        },
         import: {
           label: "import",
           detailKeys: ["title", "providerId", "speakerLabel"],
@@ -369,6 +366,9 @@ export const TOOL_DISPLAY_CONFIG: ToolDisplayConfig = {
         summarize: {
           label: "summarize",
           detailKeys: ["sessionId", "title"],
+        },
+        status: {
+          label: "status",
         },
       },
     },
