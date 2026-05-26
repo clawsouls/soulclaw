@@ -5,7 +5,7 @@ import type {
   ChannelDoctorAdapter,
   ChannelDoctorSequenceResult,
 } from "openclaw/plugin-sdk/channel-contract";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-types";
+import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
 import { normalizeAgentId } from "openclaw/plugin-sdk/routing";
 import {
   loadSessionStore,
