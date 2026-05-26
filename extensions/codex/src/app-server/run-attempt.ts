@@ -2409,10 +2409,20 @@ export async function runCodexAppServerAttempt(
     });
     embeddedAgentLog.debug("codex app-server raw notification received", correlation);
     if (notification.method === "turn/completed" && correlation.matchesActiveTurn === false) {
-      embeddedAgentLog.warn(
-        "codex app-server turn/completed did not match active turn",
-        correlation,
-      );
+      if (correlation.matchesActiveThread) {
+        embeddedAgentLog.warn(
+          "codex app-server turn/completed did not match active turn",
+          correlation,
+        );
+      } else {
+        embeddedAgentLog.debug(
+          "codex app-server turn/completed ignored for other subscribed thread",
+          correlation,
+        );
+      }
+    }
+    if (isCodexNotificationOutsideActiveRun(correlation)) {
+      return Promise.resolve();
     }
     if (!projector || !turnId) {
       userInputBridge?.handleNotification(notification);
@@ -5022,6 +5032,20 @@ function isTurnNotification(
   turnId: string,
 ): boolean {
   return isCodexNotificationForTurn(value, threadId, turnId);
+}
+
+function isCodexNotificationOutsideActiveRun(
+  correlation: ReturnType<typeof describeCodexNotificationCorrelation>,
+): boolean {
+  const hasThreadScope = Boolean(correlation.threadId || correlation.nestedTurnThreadId);
+  if (!hasThreadScope) {
+    return false;
+  }
+  if (!correlation.matchesActiveThread) {
+    return true;
+  }
+  const hasTurnScope = Boolean(correlation.turnId || correlation.nestedTurnId);
+  return hasTurnScope && correlation.matchesActiveTurn === false;
 }
 
 function isCurrentThreadTurnRequestParams(

@@ -8629,6 +8629,55 @@ describe("runCodexAppServerAttempt", () => {
     expect(result.timedOut).toBe(false);
   });
 
+  it("ignores turn/completed notifications for other subscribed threads", async () => {
+    const warn = vi.spyOn(embeddedAgentLog, "warn").mockImplementation(() => undefined);
+    const harness = createStartedThreadHarness();
+    const run = runCodexAppServerAttempt(
+      createParams(path.join(tempDir, "session.jsonl"), path.join(tempDir, "workspace")),
+    );
+    let resolved = false;
+    void run.then(() => {
+      resolved = true;
+    });
+
+    await harness.waitForMethod("turn/start");
+    await harness.notify({
+      method: "turn/completed",
+      params: {
+        threadId: "thread-other",
+        turn: {
+          id: "turn-other",
+          status: "completed",
+          items: [],
+        },
+      },
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(resolved).toBe(false);
+    expect(
+      warn.mock.calls.some(([message]) =>
+        String(message).includes("turn/completed did not match active turn"),
+      ),
+    ).toBe(false);
+
+    await harness.notify({
+      method: "turn/completed",
+      params: {
+        threadId: "thread-1",
+        turn: {
+          id: "turn-1",
+          status: "completed",
+          items: [{ type: "agentMessage", id: "msg-right", text: "final completion" }],
+        },
+      },
+    });
+
+    const result = await run;
+    expect(result.assistantTexts).toEqual(["final completion"]);
+    expect(result.aborted).toBe(false);
+    expect(result.timedOut).toBe(false);
+  });
+
   it("releases completion and native hook relay state when Codex raw-events an interrupted turn marker", async () => {
     const harness = createStartedThreadHarness();
     const run = runCodexAppServerAttempt(
