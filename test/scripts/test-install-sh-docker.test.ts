@@ -106,6 +106,16 @@ describe("test-install-sh-docker", () => {
     expect(script).toContain('--build-arg "OPENCLAW_INSTALL_BROWSER=${OPENCLAW_INSTALL_BROWSER}"');
   });
 
+  it("bounds Docker setup image pulls", () => {
+    const script = readFileSync(DOCKER_SETUP_PATH, "utf8");
+
+    expect(script).toContain('DOCKER_PULL_TIMEOUT="${OPENCLAW_DOCKER_SETUP_PULL_TIMEOUT:-600s}"');
+    expect(script).toContain("run_docker_pull()");
+    expect(script).toContain('timeout "$DOCKER_PULL_TIMEOUT" docker pull "$image"');
+    expect(script).toContain('run_docker_pull "$IMAGE_NAME"');
+    expect(script).not.toContain('docker pull "$IMAGE_NAME"');
+  });
+
   it("passes image-scoped pip packages through Docker and Podman setup", () => {
     const dockerSetup = readFileSync(DOCKER_SETUP_PATH, "utf8");
     const podmanSetup = readFileSync(PODMAN_SETUP_PATH, "utf8");
