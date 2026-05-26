@@ -8656,7 +8656,7 @@ describe("runCodexAppServerAttempt", () => {
     expect(resolved).toBe(false);
     expect(
       warn.mock.calls.some(([message]) =>
-        String(message).includes("turn/completed did not match active turn"),
+        message.includes("turn/completed did not match active turn"),
       ),
     ).toBe(false);
 
