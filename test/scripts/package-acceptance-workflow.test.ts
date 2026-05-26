@@ -122,6 +122,7 @@ describe("package acceptance workflow", () => {
       actions?: { job?: string };
     };
     const workflow = readWorkflow(CRABBOX_HYDRATE_WORKFLOW);
+    const workflowText = readFileSync(CRABBOX_HYDRATE_WORKFLOW, "utf8");
     const hydrate = workflowJob(CRABBOX_HYDRATE_WORKFLOW, "hydrate");
     const hydrateGithub = workflowJob(CRABBOX_HYDRATE_WORKFLOW, "hydrate-github");
 
@@ -135,6 +136,10 @@ describe("package acceptance workflow", () => {
     expect(workflowStep(hydrate, "Setup pnpm and dependencies").run).toContain("COREPACK_HOME");
     expect(workflowStep(hydrate, "Mark Crabbox ready").run).toContain("COREPACK_HOME");
     expect(workflowStep(hydrate, "Hydrate provider env helper").env).toBeUndefined();
+    expect(workflowText).toContain("OPENCLAW_CRABBOX_HYDRATE_DOWNLOAD_TIMEOUT_SECONDS:-300");
+    expect(workflowText).toContain("OPENCLAW_CRABBOX_HYDRATE_DOWNLOAD_RETRIES:-3");
+    expect(workflowText).toContain("--retry-all-errors");
+    expect(workflowText).not.toContain("curl -fsSL https://get.docker.com | sudo sh");
 
     expect(hydrateGithub.if).toBe("${{ inputs.crabbox_job == 'hydrate-github' }}");
     expect(workflowStep(hydrateGithub, "Setup Node environment").uses).toBe(
