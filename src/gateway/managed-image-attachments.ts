@@ -206,7 +206,8 @@ async function resizeManagedImageBufferToLimits(params: {
   buffer: Buffer;
   limits: ManagedImageAttachmentLimits;
 }): Promise<{ buffer: Buffer; contentType: string; width: number; height: number }> {
-  const resized = await createImageProcessor().encodeToLimits(params.buffer, {
+  const resized = await createImageProcessor().encode(params.buffer, {
+    format: "auto",
     limits: {
       maxWidth: params.limits.maxWidth,
       maxHeight: params.limits.maxHeight,

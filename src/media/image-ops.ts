@@ -180,7 +180,7 @@ export async function optimizeImageToPng(
 }> {
   let out;
   try {
-    out = await createImageProcessor().encodeWithinBytes(buffer, {
+    out = await createImageProcessor().encode(buffer, {
       format: "png",
       maxBytes,
       search: options?.sides === undefined ? {} : { maxSide: options.sides },

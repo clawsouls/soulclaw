@@ -646,7 +646,8 @@ async function optimizeImageWithFallback(params: {
 }): Promise<OptimizedImage> {
   const { buffer, cap } = params;
   const grid = resolveImageCompressionGrid(params.imageCompression);
-  const optimized = await createImageProcessor().encodeBest(buffer, {
+  const optimized = await createImageProcessor().encode(buffer, {
+    format: "auto",
     maxBytes: cap,
     opaque: { format: "jpeg" },
     transparent: { format: "png" },
@@ -1008,7 +1009,8 @@ export async function optimizeImageToJpeg(
   quality: number;
 }> {
   const { sides, qualities } = resolveImageCompressionGrid(opts.imageCompression);
-  const optimized = await createImageProcessor().encodeBest(buffer, {
+  const optimized = await createImageProcessor().encode(buffer, {
+    format: "auto",
     maxBytes,
     opaque: { format: "jpeg" },
     search: {
