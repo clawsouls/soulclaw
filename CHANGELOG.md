@@ -6,6 +6,12 @@ Docs: https://docs.openclaw.ai
 
 ### Changes
 
+### Fixes
+
+## 2026.5.26
+
+### Changes
+
 - Voice: expose shared realtime turn-context tracking through the realtime voice SDK and reuse it for Discord speaker attribution and wake-name context recovery.
 - Voice: reuse shared realtime output activity tracking in Google Meet command and node audio bridges, including recent-output checks for local barge-in detection.
 - Voice: expose shared realtime output activity tracking through the realtime voice SDK and reuse it for Discord playback activity and barge-in decisions.
