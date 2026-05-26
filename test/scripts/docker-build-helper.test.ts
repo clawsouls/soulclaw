@@ -58,6 +58,7 @@ const PACKAGE_COMPAT_PATH = "scripts/e2e/lib/package-compat.mjs";
 const UPDATE_CHANNEL_SWITCH_DOCKER_E2E_PATH = "scripts/e2e/update-channel-switch-docker.sh";
 const UPDATE_CHANNEL_SWITCH_ASSERTIONS_PATH =
   "scripts/e2e/lib/update-channel-switch/assertions.mjs";
+const GATEWAY_NETWORK_DOCKER_E2E_PATH = "scripts/e2e/gateway-network-docker.sh";
 const CENTRALIZED_BUILD_SCRIPTS = [
   "scripts/docker/setup.sh",
   "scripts/e2e/browser-cdp-snapshot-docker.sh",
@@ -576,6 +577,15 @@ test -f "$TMPDIR/docker-cmd-seen"
       expect(runner, path).not.toMatch(/(^|\n)\s*docker rm -f "\$CONTAINER_NAME"/u);
       expect(runner, path).toContain('docker_e2e_docker_cmd rm -f "$CONTAINER_NAME"');
     }
+  });
+
+  it("routes the gateway network client through the timeout-aware run helper", () => {
+    const runner = readFileSync(GATEWAY_NETWORK_DOCKER_E2E_PATH, "utf8");
+
+    expect(runner).toContain(
+      'DOCKER_COMMAND_TIMEOUT="$CLIENT_TIMEOUT" run_logged gateway-network-client docker_e2e_docker_run_cmd run --rm',
+    );
+    expect(runner).not.toContain('run_logged gateway-network-client timeout "$CLIENT_TIMEOUT" docker run --rm');
   });
 
   it("copies root lifecycle scripts before cleanup-smoke installs dependencies", () => {
