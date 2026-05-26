@@ -387,10 +387,12 @@ jobs:
           pre-commit run --config "${PRE_COMMIT_CONFIG_PATH:-.pre-commit-config.yaml}" zizmor --files "${workflow_files[@]}"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24.x"
-          check-latest: false
+        env:
+          REQUESTED_NODE_VERSION: "24.x"
+        run: |
+          set -euo pipefail
+          source .github/actions/setup-pnpm-store-cache/ensure-node.sh
+          openclaw_ensure_node "$REQUESTED_NODE_VERSION"
 
       - name: Audit production dependencies
         run: node scripts/pre-commit/pnpm-audit-prod.mjs --audit-level=high
@@ -1504,10 +1506,12 @@ jobs:
           }
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24.x
-          check-latest: false
+        env:
+          REQUESTED_NODE_VERSION: "24.x"
+        run: |
+          set -euo pipefail
+          source .github/actions/setup-pnpm-store-cache/ensure-node.sh
+          openclaw_ensure_node "$REQUESTED_NODE_VERSION"
 
       - name: Setup pnpm
         uses: ./.github/actions/setup-pnpm-store-cache

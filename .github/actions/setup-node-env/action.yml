@@ -36,10 +36,13 @@ runs:
         fi
 
     - name: Setup Node.js
-      uses: actions/setup-node@v6
-      with:
-        node-version: ${{ inputs.node-version }}
-        check-latest: false
+      shell: bash
+      env:
+        REQUESTED_NODE_VERSION: ${{ inputs.node-version }}
+      run: |
+        set -euo pipefail
+        source "$GITHUB_ACTION_PATH/../setup-pnpm-store-cache/ensure-node.sh"
+        openclaw_ensure_node "$REQUESTED_NODE_VERSION"
 
     - name: Setup pnpm
       uses: ./.github/actions/setup-pnpm-store-cache
