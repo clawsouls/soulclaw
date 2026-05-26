@@ -54,6 +54,7 @@ const PLUGIN_UPDATE_SCENARIO_PATH = "scripts/e2e/lib/plugin-update/unchanged-sce
 const PLUGIN_UPDATE_CORRUPT_SCENARIO_PATH =
   "scripts/e2e/lib/plugin-update/corrupt-update-scenario.sh";
 const PLUGIN_UPDATE_PROBE_PATH = "scripts/e2e/lib/plugin-update/probe.mjs";
+const PLUGIN_LIFECYCLE_MATRIX_DOCKER_E2E_PATH = "scripts/e2e/plugin-lifecycle-matrix-docker.sh";
 const DOCTOR_SWITCH_DOCKER_E2E_PATH = "scripts/e2e/doctor-install-switch-docker.sh";
 const DOCTOR_SWITCH_SCENARIO_PATH = "scripts/e2e/lib/doctor-install-switch/scenario.sh";
 const PACKAGE_COMPAT_PATH = "scripts/e2e/lib/package-compat.mjs";
@@ -490,7 +491,7 @@ docker_e2e_package_mount_args "$external_dir/openclaw-current.tgz"
 unset DOCKER_COMMAND_TIMEOUT
 rm -f "$TMPDIR/docker-timeout-seen"
 docker_e2e_run_with_harness image-name bash -lc true
-test ! -e "$TMPDIR/docker-timeout-seen"
+test "$(cat "$TMPDIR/docker-timeout-seen")" = "--kill-after=30s 3600s"
 test -f "$external_dir/openclaw-current.tgz"
 `;
 
@@ -527,6 +528,20 @@ grep -qx -- "OPENCLAW_E2E_NPM_INSTALL_TIMEOUT=42s" "$TMPDIR/package-args"
     } finally {
       rmSync(workDir, { recursive: true, force: true });
     }
+  });
+
+  it("passes plugin lifecycle sampler timeout overrides into Docker", () => {
+    const runner = readFileSync(PLUGIN_LIFECYCLE_MATRIX_DOCKER_E2E_PATH, "utf8");
+
+    expect(runner).toContain('if [ -n "${OPENCLAW_PLUGIN_LIFECYCLE_PHASE_TIMEOUT_MS:-}" ]; then');
+    expect(runner).toContain(
+      'DOCKER_ENV_ARGS+=(-e "OPENCLAW_PLUGIN_LIFECYCLE_PHASE_TIMEOUT_MS=$OPENCLAW_PLUGIN_LIFECYCLE_PHASE_TIMEOUT_MS")',
+    );
+    expect(runner).toContain('if [ -n "${OPENCLAW_PLUGIN_LIFECYCLE_TIMEOUT_KILL_GRACE_MS:-}" ]; then');
+    expect(runner).toContain(
+      'DOCKER_ENV_ARGS+=(-e "OPENCLAW_PLUGIN_LIFECYCLE_TIMEOUT_KILL_GRACE_MS=$OPENCLAW_PLUGIN_LIFECYCLE_TIMEOUT_KILL_GRACE_MS")',
+    );
+    expect(runner).toContain('docker_e2e_run_with_harness \\\n  "${DOCKER_ENV_ARGS[@]}"');
   });
 
   it("wraps direct Docker E2E npm installs with the shared timeout helper", () => {
@@ -583,6 +598,25 @@ set -euo pipefail
 ROOT_DIR=${shellQuote(rootDir)}
 TMPDIR=${shellQuote(workDir)}
 export ROOT_DIR TMPDIR
+
+mkdir -p "$TMPDIR/bin"
+cat >"$TMPDIR/bin/timeout" <<'SH'
+#!/usr/bin/env bash
+case "$1" in
+  --kill-after=1s)
+    exit 0
+    ;;
+  --kill-after=30s)
+    shift 2
+    ;;
+  *)
+    shift
+    ;;
+esac
+"$@"
+SH
+chmod +x "$TMPDIR/bin/timeout"
+export PATH="$TMPDIR/bin:$PATH"
 
 docker_e2e_docker_cmd() {
   printf "%s\\n" "$*" >"$TMPDIR/docker-cmd-seen"
