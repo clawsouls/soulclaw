@@ -149,7 +149,8 @@ if [[ "$SKIP_DSYM" != "1" ]]; then
       if [[ -f "$DWARF_ARM" && -f "$DWARF_X86" ]]; then
         /usr/bin/lipo -create "$DWARF_ARM" "$DWARF_X86" -output "$DWARF_OUT"
       else
-        echo "WARN: Missing DWARF binaries for dSYM merge (continuing)" >&2
+        echo "Error: missing DWARF binaries for dSYM merge (set SKIP_DSYM=1 to skip symbols)" >&2
+        exit 1
       fi
     else
       cp -R "${DSYM_ARM64:-$DSYM_X86}" "$TMP_DSYM"
@@ -159,6 +160,7 @@ if [[ "$SKIP_DSYM" != "1" ]]; then
     ditto -c -k --keepParent "$TMP_DSYM" "$DSYM_ZIP"
     rm -rf "$TMP_DSYM"
   else
-    echo "WARN: dSYM not found; skipping zip (set SKIP_DSYM=1 to silence)" >&2
+    echo "Error: dSYM not found (set SKIP_DSYM=1 to skip symbols)" >&2
+    exit 1
   fi
 fi

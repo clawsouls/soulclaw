@@ -79,6 +79,17 @@ describe("package-mac-dist plist validation", () => {
     expect(releaseBlock).not.toContain("*.debug");
   });
 
+  it("fails closed when required dSYM outputs are missing", () => {
+    const script = readFileSync(scriptPath, "utf8");
+    const dsymBlock = script.slice(script.indexOf('if [[ "$SKIP_DSYM" != "1" ]]'));
+
+    expect(dsymBlock).toContain("Error: missing DWARF binaries for dSYM merge");
+    expect(dsymBlock).toContain("Error: dSYM not found");
+    expect(dsymBlock).toContain("exit 1");
+    expect(dsymBlock).not.toContain("WARN:");
+    expect(dsymBlock).not.toContain("continuing");
+  });
+
   it.runIf(process.platform === "darwin")(
     "prints required plist keys and fails when a key is missing",
     () => {
