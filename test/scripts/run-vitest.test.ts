@@ -55,7 +55,8 @@ describe("scripts/run-vitest", () => {
 
   it("reports missing explicit test files before Vitest can silently ignore them", () => {
     const fsImpl = {
-      existsSync: (filePath: string) => filePath.endsWith("src/agents/bash-tools.test.ts"),
+      existsSync: (filePath: string) =>
+        filePath.replaceAll("\\", "/").endsWith("src/agents/bash-tools.test.ts"),
     };
 
     expect(
