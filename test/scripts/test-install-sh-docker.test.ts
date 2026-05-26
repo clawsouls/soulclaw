@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
@@ -419,5 +420,31 @@ describe("bun global install smoke", () => {
     expect(releaseChecks).toContain("install_smoke_release_checks:");
     expect(releaseChecks).toContain("uses: ./.github/workflows/install-smoke.yml");
     expect(releaseChecks).toContain("run_bun_global_install_smoke: true");
+  });
+
+  it("kills Bun global install smoke commands that ignore TERM after timeout", () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        BUN_GLOBAL_ASSERTIONS_PATH,
+        "run-with-timeout",
+        "50",
+        process.execPath,
+        "-e",
+        "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);",
+      ],
+      {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          OPENCLAW_BUN_GLOBAL_SMOKE_TIMEOUT_KILL_GRACE_MS: "50",
+        },
+        timeout: 5000,
+      },
+    );
+
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`command timed out after 50ms: ${process.execPath}`);
   });
 });
