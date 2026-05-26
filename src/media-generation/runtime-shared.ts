@@ -465,6 +465,29 @@ export function resolveClosestResolution<TResolution extends string>(params: {
   if (params.requestedResolution && supported.includes(params.requestedResolution)) {
     return params.requestedResolution;
   }
+  const requestedNumeric = parseResolutionRank(params.requestedResolution);
+  if (typeof requestedNumeric === "number") {
+    let bestValue: TResolution | undefined;
+    let bestScore: { primary: number; secondary: number; tertiary: string } | null = null;
+    for (const candidate of supported) {
+      const candidateNumeric = parseResolutionRank(candidate);
+      if (typeof candidateNumeric !== "number") {
+        continue;
+      }
+      const score = {
+        primary: Math.abs(candidateNumeric - requestedNumeric),
+        secondary: candidateNumeric < requestedNumeric ? 1 : 0,
+        tertiary: candidate,
+      };
+      if (compareScores(score, bestScore)) {
+        bestValue = candidate;
+        bestScore = score;
+      }
+    }
+    if (bestValue) {
+      return bestValue;
+    }
+  }
   const order: readonly string[] = params.order ?? IMAGE_RESOLUTION_ORDER;
   const requestedIndex = params.requestedResolution
     ? order.indexOf(params.requestedResolution)
@@ -491,6 +514,18 @@ export function resolveClosestResolution<TResolution extends string>(params: {
     }
   }
   return bestValue;
+}
+
+function parseResolutionRank(resolution: string | undefined): number | undefined {
+  const match = resolution?.trim().match(/^(\d+(?:\.\d+)?)([kp])$/iu);
+  if (!match) {
+    return undefined;
+  }
+  const value = Number(match[1]);
+  if (!Number.isFinite(value)) {
+    return undefined;
+  }
+  return match[2]?.toUpperCase() === "K" ? value * 1000 : value;
 }
 
 export function normalizeDurationToClosestMax(

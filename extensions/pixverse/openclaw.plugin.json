@@ -1,0 +1,34 @@
+{
+  "id": "pixverse",
+  "activation": {
+    "onStartup": false
+  },
+  "enabledByDefault": true,
+  "providerAuthEnvVars": {
+    "pixverse": ["PIXVERSE_API_KEY"]
+  },
+  "providerAuthChoices": [
+    {
+      "provider": "pixverse",
+      "method": "api-key",
+      "choiceId": "pixverse-api-key",
+      "choiceLabel": "PixVerse API key",
+      "groupId": "pixverse",
+      "groupLabel": "PixVerse",
+      "groupHint": "API key",
+      "onboardingScopes": ["image-generation"],
+      "optionKey": "pixverseApiKey",
+      "cliFlag": "--pixverse-api-key",
+      "cliOption": "--pixverse-api-key <key>",
+      "cliDescription": "PixVerse API key"
+    }
+  ],
+  "contracts": {
+    "videoGenerationProviders": ["pixverse"]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}
