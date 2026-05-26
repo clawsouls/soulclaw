@@ -478,7 +478,7 @@ test -f "$TMPDIR/docker-cmd-seen"
     expect(runner).toContain("OPENCLAW_ONBOARD_MAX_MEMORY_MIB");
     expect(runner).toContain("OPENCLAW_ONBOARD_MAX_CPU_PERCENT");
     expect(runner).toContain("--name \"$CONTAINER_NAME\"");
-    expect(runner).toContain("docker stats --no-stream");
+    expect(runner).toContain("docker_e2e_docker_cmd stats --no-stream");
     expect(runner).toContain("assert-resource-ceiling.mjs");
     expect(runner).not.toContain("docker_e2e_run_with_harness -t");
   });
@@ -493,6 +493,11 @@ test -f "$TMPDIR/docker-cmd-seen"
 
       expect(runner, path).toContain('RUN_LOG="$(mktemp');
       expect(runner, path).toContain('STATS_LOG="$(mktemp');
+      expect(runner, path).toContain('docker_e2e_docker_run_cmd run --name "$CONTAINER_NAME"');
+      expect(runner, path).toContain('docker_e2e_docker_cmd inspect "$CONTAINER_NAME"');
+      expect(runner, path).toContain("docker_e2e_docker_cmd stats --no-stream");
+      expect(runner, path).not.toMatch(/(^|\n)docker run --name "\$CONTAINER_NAME"/u);
+      expect(runner, path).not.toMatch(/(^|\n)docker (?:inspect|stats) /u);
       expect(runner, path).toMatch(/cleanup\(\) \{[\s\S]*rm -f "\$RUN_LOG" "\$STATS_LOG"/u);
     }
   });
