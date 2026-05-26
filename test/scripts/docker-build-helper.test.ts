@@ -51,6 +51,8 @@ const PLUGINS_DOCKER_ASSERTIONS_PATH = "scripts/e2e/lib/plugins/assertions.mjs";
 const PLUGINS_DOCKER_NPM_REGISTRY_PATH = "scripts/e2e/lib/plugins/npm-registry-server.mjs";
 const PLUGIN_UPDATE_DOCKER_E2E_PATH = "scripts/e2e/plugin-update-unchanged-docker.sh";
 const PLUGIN_UPDATE_SCENARIO_PATH = "scripts/e2e/lib/plugin-update/unchanged-scenario.sh";
+const PLUGIN_UPDATE_CORRUPT_SCENARIO_PATH =
+  "scripts/e2e/lib/plugin-update/corrupt-update-scenario.sh";
 const PLUGIN_UPDATE_PROBE_PATH = "scripts/e2e/lib/plugin-update/probe.mjs";
 const DOCTOR_SWITCH_DOCKER_E2E_PATH = "scripts/e2e/doctor-install-switch-docker.sh";
 const DOCTOR_SWITCH_SCENARIO_PATH = "scripts/e2e/lib/doctor-install-switch/scenario.sh";
@@ -58,6 +60,9 @@ const PACKAGE_COMPAT_PATH = "scripts/e2e/lib/package-compat.mjs";
 const UPDATE_CHANNEL_SWITCH_DOCKER_E2E_PATH = "scripts/e2e/update-channel-switch-docker.sh";
 const UPDATE_CHANNEL_SWITCH_ASSERTIONS_PATH =
   "scripts/e2e/lib/update-channel-switch/assertions.mjs";
+const RELEASE_UPGRADE_USER_JOURNEY_SCENARIO_PATH =
+  "scripts/e2e/lib/release-upgrade-user-journey/scenario.sh";
+const UPGRADE_SURVIVOR_RUN_SCRIPT = "scripts/e2e/lib/upgrade-survivor/run.sh";
 const GATEWAY_NETWORK_DOCKER_E2E_PATH = "scripts/e2e/gateway-network-docker.sh";
 const CENTRALIZED_BUILD_SCRIPTS = [
   "scripts/docker/setup.sh",
@@ -492,6 +497,36 @@ grep -qx -- "OPENCLAW_E2E_NPM_INSTALL_TIMEOUT=42s" "$TMPDIR/package-args"
       execFileSync("bash", ["-lc", script], { encoding: "utf8" });
     } finally {
       rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
+  it("wraps direct Docker E2E npm installs with the shared timeout helper", () => {
+    const multiNode = readFileSync(MULTI_NODE_UPDATE_DOCKER_E2E_PATH, "utf8");
+    const updateChannel = readFileSync(UPDATE_CHANNEL_SWITCH_DOCKER_E2E_PATH, "utf8");
+    const doctorSwitch = readFileSync(DOCTOR_SWITCH_SCENARIO_PATH, "utf8");
+    const releaseUpgrade = readFileSync(RELEASE_UPGRADE_USER_JOURNEY_SCENARIO_PATH, "utf8");
+    const upgradeSurvivor = readFileSync(UPGRADE_SURVIVOR_RUN_SCRIPT, "utf8");
+    const pluginCorrupt = readFileSync(PLUGIN_UPDATE_CORRUPT_SCENARIO_PATH, "utf8");
+
+    expect(multiNode).toContain(
+      'openclaw_e2e_install_package "$ARTIFACTS/install-a.log" "OpenClaw package under node-A prefix" "$NPM_PREFIX_A"',
+    );
+    expect(updateChannel).toContain(
+      'openclaw_e2e_maybe_timeout "${OPENCLAW_E2E_NPM_INSTALL_TIMEOUT:-600s}" npm install --omit=optional --no-fund --no-audit',
+    );
+    expect(updateChannel).toContain(
+      'openclaw_e2e_maybe_timeout "${OPENCLAW_E2E_NPM_INSTALL_TIMEOUT:-600s}" npm install -g --prefix /tmp/npm-prefix --omit=optional "$pkg_tgz_path"',
+    );
+    expect(doctorSwitch).toContain(
+      'openclaw_e2e_maybe_timeout "${OPENCLAW_E2E_NPM_INSTALL_TIMEOUT:-600s}" npm install --omit=optional --no-fund --no-audit',
+    );
+    expect(doctorSwitch).toContain(
+      'openclaw_e2e_maybe_timeout "${OPENCLAW_E2E_NPM_INSTALL_TIMEOUT:-600s}" npm install -g --prefix /tmp/npm-prefix --omit=optional "$package_tgz"',
+    );
+    for (const script of [releaseUpgrade, upgradeSurvivor, pluginCorrupt]) {
+      expect(script).toContain(
+        'openclaw_e2e_maybe_timeout "${OPENCLAW_E2E_NPM_INSTALL_TIMEOUT:-600s}" npm install -g',
+      );
     }
   });
 
