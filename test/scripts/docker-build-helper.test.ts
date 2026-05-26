@@ -32,6 +32,7 @@ const PLUGIN_BINDING_COMMAND_ESCAPE_DOCKER_E2E_PATH =
   "scripts/e2e/plugin-binding-command-escape-docker.sh";
 const PLUGIN_BINDING_COMMAND_ESCAPE_DOCKERFILE_PATH =
   "scripts/e2e/plugin-binding-command-escape.Dockerfile";
+const QR_IMPORT_DOCKER_E2E_PATH = "scripts/e2e/qr-import-docker.sh";
 const MULTI_NODE_UPDATE_DOCKER_E2E_PATH = "scripts/e2e/multi-node-update-docker.sh";
 const BUNDLED_PLUGIN_INSTALL_UNINSTALL_E2E_PATH =
   "scripts/e2e/bundled-plugin-install-uninstall-docker.sh";
@@ -802,9 +803,20 @@ test -f "$TMPDIR/docker-cmd-seen"
 
     expect(runner).toContain("--reporter=verbose -t");
     expect(runner).not.toContain("-- --reporter=verbose");
+    expect(runner).toContain("docker_e2e_docker_run_cmd run --rm");
+    expect(runner).toContain('docker_e2e_docker_cmd rm -f "$CONTAINER_NAME"');
+    expect(runner).not.toMatch(/(^|\n)docker run --rm/u);
     expect(runner).toContain("expected focused Vitest summary for exactly 3 passed tests");
     expect(dockerfile).toContain("OPENCLAW_DISABLE_BUNDLED_PLUGIN_POSTINSTALL=1");
     expect(dockerfile).toContain("pnpm install --frozen-lockfile --ignore-scripts --filter openclaw");
+  });
+
+  it("routes QR import Docker smoke through the timeout-aware run helper", () => {
+    const runner = readFileSync(QR_IMPORT_DOCKER_E2E_PATH, "utf8");
+
+    expect(runner).toContain("scripts/lib/docker-e2e-container.sh");
+    expect(runner).toContain("run_logged qr-import-run docker_e2e_docker_run_cmd run --rm -t");
+    expect(runner).not.toContain("run_logged qr-import-run docker run --rm");
   });
 
   it("covers plugin install/update sources in the Docker plugin sweep", () => {
