@@ -270,6 +270,17 @@ set -euo pipefail
 ROOT_DIR=${shellQuote(rootDir)}
 TMPDIR=${shellQuote(workDir)}
 export ROOT_DIR TMPDIR
+export DOCKER_COMMAND_TIMEOUT=3s
+
+mkdir -p "$TMPDIR/bin"
+cat >"$TMPDIR/bin/timeout" <<'SH'
+#!/usr/bin/env bash
+printf "%s\\n" "$1" >"$TMPDIR/docker-timeout-seen"
+shift
+"$@"
+SH
+chmod +x "$TMPDIR/bin/timeout"
+export PATH="$TMPDIR/bin:$PATH"
 
 node() {
   local script="$1"
@@ -332,6 +343,7 @@ pack_dir="$(dirname "$package_tgz")"
 docker_e2e_package_mount_args "$package_tgz"
 DOCKER_STUB_STATUS=7 docker_e2e_run_with_harness image-name bash -lc true || run_status="$?"
 test "\${run_status:-0}" = "7"
+test "$(cat "$TMPDIR/docker-timeout-seen")" = "3s"
 test -f "$TMPDIR/package-mount-seen"
 test ! -e "$pack_dir"
 
@@ -339,8 +351,46 @@ external_dir="$TMPDIR/external-package"
 mkdir -p "$external_dir"
 printf fixture >"$external_dir/openclaw-current.tgz"
 docker_e2e_package_mount_args "$external_dir/openclaw-current.tgz"
+unset DOCKER_COMMAND_TIMEOUT
+rm -f "$TMPDIR/docker-timeout-seen"
 docker_e2e_run_with_harness image-name bash -lc true
+test ! -e "$TMPDIR/docker-timeout-seen"
 test -f "$external_dir/openclaw-current.tgz"
+`;
+
+      execFileSync("bash", ["-lc", script], { encoding: "utf8" });
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the harness run wrapper available with pre-sourced Docker command helpers", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-package-helper-guard-"));
+
+    try {
+      const rootDir = process.cwd();
+      const script = `
+set -euo pipefail
+ROOT_DIR=${shellQuote(rootDir)}
+TMPDIR=${shellQuote(workDir)}
+export ROOT_DIR TMPDIR
+
+docker_e2e_docker_cmd() {
+  printf "%s\\n" "$*" >"$TMPDIR/docker-cmd-seen"
+}
+
+docker() {
+  printf "%s\\n" "$*" >"$TMPDIR/docker-run-seen"
+}
+export -f docker
+
+source "$ROOT_DIR/scripts/lib/docker-e2e-package.sh"
+
+docker_e2e_run_with_harness image-name bash -lc true
+test -f "$TMPDIR/docker-run-seen"
+
+docker_e2e_run_detached_with_harness image-name
+test -f "$TMPDIR/docker-cmd-seen"
 `;
 
       execFileSync("bash", ["-lc", script], { encoding: "utf8" });
