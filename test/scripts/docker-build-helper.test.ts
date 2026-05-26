@@ -878,6 +878,17 @@ test -f "$TMPDIR/docker-cmd-seen"
     expect(pluginsAssertions).toContain("expected modern installRecords in installed plugin index");
   });
 
+  it("routes doctor install switch commands through the E2E timeout helper", () => {
+    const scenario = readFileSync(DOCTOR_SWITCH_SCENARIO_PATH, "utf8");
+
+    expect(scenario).toContain('command_timeout="${OPENCLAW_DOCKER_DOCTOR_SWITCH_COMMAND_TIMEOUT:-900s}"');
+    expect(scenario).toContain('openclaw_e2e_maybe_timeout "$command_timeout" bash -c "$install_cmd"');
+    expect(scenario).toContain('openclaw_e2e_maybe_timeout "$command_timeout" bash -c "$doctor_cmd"');
+    expect(scenario).toContain('openclaw_e2e_maybe_timeout "$command_timeout" "$npm_bin" gateway install --wrapper "$wrapper" --force');
+    expect(scenario).toContain('openclaw_e2e_maybe_timeout "$command_timeout" node "$git_cli" doctor --repair --force --yes');
+    expect(scenario).not.toMatch(/^\s*if ! timeout "\$command_timeout"/mu);
+  });
+
   it("prepares pnpm workspace package fixtures without package dependencies", () => {
     const root = mkdtempSync(join(tmpdir(), "openclaw-update-channel-fixture-"));
     try {
