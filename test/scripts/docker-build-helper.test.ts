@@ -503,6 +503,20 @@ test -f "$TMPDIR/docker-cmd-seen"
     }
   });
 
+  it("routes named Docker E2E container cleanup through the timeout-aware helper", () => {
+    for (const path of readdirSync("scripts/e2e")
+      .filter((entry) => entry.endsWith("-docker.sh"))
+      .map((entry) => join("scripts/e2e", entry))) {
+      const runner = readFileSync(path, "utf8");
+      if (!runner.includes('CONTAINER_NAME="')) {
+        continue;
+      }
+
+      expect(runner, path).not.toMatch(/(^|\n)\s*docker rm -f "\$CONTAINER_NAME"/u);
+      expect(runner, path).toContain('docker_e2e_docker_cmd rm -f "$CONTAINER_NAME"');
+    }
+  });
+
   it("copies root lifecycle scripts before cleanup-smoke installs dependencies", () => {
     const dockerfile = readFileSync(CLEANUP_SMOKE_DOCKERFILE_PATH, "utf8");
     const installIndex = dockerfile.indexOf("pnpm install --frozen-lockfile");
