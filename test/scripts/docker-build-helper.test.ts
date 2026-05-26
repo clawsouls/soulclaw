@@ -146,8 +146,14 @@ describe("docker build helper", () => {
     expect(e2eImageHelper).toContain("Docker image not available; building");
     expect(e2eImageHelper).toContain('docker_e2e_docker_cmd image inspect "$image_name"');
     expect(e2eImageHelper).toContain('docker_e2e_docker_cmd pull "$image_name"');
-    expect(liveBuild).toContain("docker image inspect");
-    expect(liveBuild).toContain("docker pull");
+    expect(liveBuild).toContain('source "$SCRIPT_ROOT_DIR/scripts/lib/docker-e2e-container.sh"');
+    expect(liveBuild).toContain(
+      'DOCKER_COMMAND_TIMEOUT="${DOCKER_COMMAND_TIMEOUT:-${OPENCLAW_LIVE_DOCKER_PULL_TIMEOUT:-600s}}"',
+    );
+    expect(liveBuild).toContain('docker_e2e_docker_cmd image inspect "$LIVE_IMAGE_NAME"');
+    expect(liveBuild).toContain('docker_e2e_docker_cmd pull "$LIVE_IMAGE_NAME"');
+    expect(liveBuild).not.toContain('docker image inspect "$LIVE_IMAGE_NAME"');
+    expect(liveBuild).not.toContain('docker pull "$LIVE_IMAGE_NAME"');
     expect(liveBuild).toContain("Live-test image not available; building");
     expect(liveCliBackend).toContain(
       'OPENCLAW_LIVE_DOCKER_REPO_ROOT="$ROOT_DIR" "$TRUSTED_HARNESS_DIR/scripts/test-live-build-docker.sh"',
