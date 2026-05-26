@@ -130,6 +130,18 @@ describe("test-install-sh-docker", () => {
     expect(script).not.toContain('docker pull "$IMAGE_NAME"');
   });
 
+  it("bounds Podman setup image pulls", () => {
+    const script = readFileSync(PODMAN_SETUP_PATH, "utf8");
+
+    expect(script).toContain(
+      'PODMAN_PULL_TIMEOUT="${OPENCLAW_PODMAN_SETUP_PULL_TIMEOUT:-600s}"',
+    );
+    expect(script).toContain("run_podman_pull()");
+    expect(script).toContain('timeout "$PODMAN_PULL_TIMEOUT" podman pull "$image"');
+    expect(script).toContain('run_podman_pull "$OPENCLAW_IMAGE"');
+    expect(script).not.toContain('podman pull "$OPENCLAW_IMAGE"');
+  });
+
   it("passes image-scoped pip packages through Docker and Podman setup", () => {
     const dockerSetup = readFileSync(DOCKER_SETUP_PATH, "utf8");
     const podmanSetup = readFileSync(PODMAN_SETUP_PATH, "utf8");
