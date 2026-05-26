@@ -9,6 +9,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Mac: prefer the freshly packaged app in restart flows and collect dSYMs only for requested build architectures so stale installed apps and unrequested arch symbol directories cannot break validation.
+- CI: bound Docker package build, inventory, pack, and tarball checks with process-group timeouts so stuck package children cannot wedge Docker E2E preparation.
 
 ## 2026.5.26
 
