@@ -76,14 +76,16 @@ jobs:
       android_matrix: ${{ steps.manifest.outputs.android_matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.target_ref || github.sha }}
-          fetch-depth: 1
-          fetch-tags: false
-          token: ""
-          persist-credentials: false
-          submodules: false
+        env:
+          CHECKOUT_REPO: ${{ github.repository }}
+          CHECKOUT_REF: ${{ inputs.target_ref || github.sha }}
+        run: |
+          set -euo pipefail
+          git init "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" config gc.auto 0
+          git -C "$GITHUB_WORKSPACE" remote add origin "https://github.com/${CHECKOUT_REPO}.git"
+          git -C "$GITHUB_WORKSPACE" fetch --no-tags --depth=1 origin "+${CHECKOUT_REF}:refs/remotes/origin/checkout"
+          git -C "$GITHUB_WORKSPACE" checkout --detach refs/remotes/origin/checkout
 
       - name: Resolve checkout SHA
         id: checkout_ref
@@ -300,14 +302,16 @@ jobs:
       PRE_COMMIT_HOME: .cache/pre-commit-security-fast
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.target_ref || github.sha }}
-          fetch-depth: 1
-          fetch-tags: false
-          token: ""
-          persist-credentials: false
-          submodules: false
+        env:
+          CHECKOUT_REPO: ${{ github.repository }}
+          CHECKOUT_REF: ${{ inputs.target_ref || github.sha }}
+        run: |
+          set -euo pipefail
+          git init "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" config gc.auto 0
+          git -C "$GITHUB_WORKSPACE" remote add origin "https://github.com/${CHECKOUT_REPO}.git"
+          git -C "$GITHUB_WORKSPACE" fetch --no-tags --depth=1 origin "+${CHECKOUT_REF}:refs/remotes/origin/checkout"
+          git -C "$GITHUB_WORKSPACE" checkout --detach refs/remotes/origin/checkout
 
       - name: Ensure security base commit
         if: github.event_name != 'workflow_dispatch'
@@ -1399,13 +1403,13 @@ jobs:
           install-bun: "false"
 
       - name: Checkout ClawHub docs source
-        uses: actions/checkout@v6
-        with:
-          repository: openclaw/clawhub
-          path: clawhub-source
-          fetch-depth: 1
-          token: ""
-          persist-credentials: false
+        run: |
+          set -euo pipefail
+          git init clawhub-source
+          git -C clawhub-source config gc.auto 0
+          git -C clawhub-source remote add origin "https://github.com/openclaw/clawhub.git"
+          git -C clawhub-source fetch --no-tags --depth=1 origin "+HEAD:refs/remotes/origin/checkout"
+          git -C clawhub-source checkout --detach refs/remotes/origin/checkout
 
       - name: Check docs
         env:
@@ -1421,12 +1425,16 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.preflight.outputs.checkout_revision }}
-          token: ""
-          persist-credentials: false
-          submodules: false
+        env:
+          CHECKOUT_REPO: ${{ github.repository }}
+          CHECKOUT_SHA: ${{ needs.preflight.outputs.checkout_revision }}
+        run: |
+          set -euo pipefail
+          git init "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" config gc.auto 0
+          git -C "$GITHUB_WORKSPACE" remote add origin "https://github.com/${CHECKOUT_REPO}.git"
+          git -C "$GITHUB_WORKSPACE" fetch --no-tags --depth=1 origin "+${CHECKOUT_SHA}:refs/remotes/origin/checkout"
+          git -C "$GITHUB_WORKSPACE" checkout --detach refs/remotes/origin/checkout
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -1465,12 +1473,16 @@ jobs:
       matrix: ${{ fromJson(needs.preflight.outputs.checks_windows_matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.preflight.outputs.checkout_revision }}
-          token: ""
-          persist-credentials: false
-          submodules: false
+        env:
+          CHECKOUT_REPO: ${{ github.repository }}
+          CHECKOUT_SHA: ${{ needs.preflight.outputs.checkout_revision }}
+        run: |
+          set -euo pipefail
+          git init "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" config gc.auto 0
+          git -C "$GITHUB_WORKSPACE" remote add origin "https://github.com/${CHECKOUT_REPO}.git"
+          git -C "$GITHUB_WORKSPACE" fetch --no-tags --depth=1 origin "+${CHECKOUT_SHA}:refs/remotes/origin/checkout"
+          git -C "$GITHUB_WORKSPACE" checkout --detach refs/remotes/origin/checkout
 
       - name: Try to exclude workspace from Windows Defender (best-effort)
         shell: pwsh
@@ -1559,12 +1571,16 @@ jobs:
       matrix: ${{ fromJson(needs.preflight.outputs.macos_node_matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.preflight.outputs.checkout_revision }}
-          token: ""
-          persist-credentials: false
-          submodules: false
+        env:
+          CHECKOUT_REPO: ${{ github.repository }}
+          CHECKOUT_SHA: ${{ needs.preflight.outputs.checkout_revision }}
+        run: |
+          set -euo pipefail
+          git init "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" config gc.auto 0
+          git -C "$GITHUB_WORKSPACE" remote add origin "https://github.com/${CHECKOUT_REPO}.git"
+          git -C "$GITHUB_WORKSPACE" fetch --no-tags --depth=1 origin "+${CHECKOUT_SHA}:refs/remotes/origin/checkout"
+          git -C "$GITHUB_WORKSPACE" checkout --detach refs/remotes/origin/checkout
 
       - name: Setup Node environment
         uses: ./.github/actions/setup-node-env
@@ -1601,12 +1617,16 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.preflight.outputs.checkout_revision }}
-          token: ""
-          persist-credentials: false
-          submodules: false
+        env:
+          CHECKOUT_REPO: ${{ github.repository }}
+          CHECKOUT_SHA: ${{ needs.preflight.outputs.checkout_revision }}
+        run: |
+          set -euo pipefail
+          git init "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" config gc.auto 0
+          git -C "$GITHUB_WORKSPACE" remote add origin "https://github.com/${CHECKOUT_REPO}.git"
+          git -C "$GITHUB_WORKSPACE" fetch --no-tags --depth=1 origin "+${CHECKOUT_SHA}:refs/remotes/origin/checkout"
+          git -C "$GITHUB_WORKSPACE" checkout --detach refs/remotes/origin/checkout
 
       - name: Install XcodeGen / SwiftLint / SwiftFormat
         run: brew install xcodegen swiftlint swiftformat
