@@ -57,6 +57,9 @@ openclaw_find_toolcache_node() {
     "/Users/runner/hostedtoolcache" \
     "/c/hostedtoolcache/windows"
   do
+    if [[ ! -d "$root" && "$root" == *\\* ]] && command -v cygpath >/dev/null 2>&1; then
+      root="$(cygpath -u "$root" 2>/dev/null || printf '%s' "$root")"
+    fi
     if [[ -d "$root/node" ]]; then
       roots+=("$root/node")
     elif [[ "$(basename "$root")" == "node" && -d "$root" ]]; then
