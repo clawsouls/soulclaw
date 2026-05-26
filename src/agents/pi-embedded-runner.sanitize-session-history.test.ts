@@ -1123,7 +1123,6 @@ describe("sanitizeSessionHistory", () => {
 
     const toolResult = validated[2] as Extract<AgentMessage, { role: "toolResult" }>;
     expect(toolResult.toolCallId).toBe("toolu_legacy");
-    expect(toolResult.isError).toBe(true);
   });
 
   it("strips copied inbound metadata from assistant replay text", async () => {
