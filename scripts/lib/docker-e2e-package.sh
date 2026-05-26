@@ -46,6 +46,7 @@ docker_e2e_prepare_package_tgz() {
     rm -rf "$pack_dir"
     return 1
   fi
+  touch "$pack_dir/.openclaw-docker-e2e-generated-package"
   docker_e2e_abs_path "$package_tgz"
 }
 
@@ -70,6 +71,33 @@ docker_e2e_package_mount_args() {
   DOCKER_E2E_PACKAGE_ARGS=(-v "$package_tgz:$target:ro" -e "OPENCLAW_CURRENT_PACKAGE_TGZ=$target")
 }
 
+docker_e2e_cleanup_package_tgz() {
+  local package_tgz="${1:-}"
+  [ -n "$package_tgz" ] || return 0
+  [ "$(basename "$package_tgz")" = "openclaw-current.tgz" ] || return 0
+
+  local pack_dir
+  pack_dir="$(dirname "$package_tgz")"
+  if [ -f "$pack_dir/.openclaw-docker-e2e-generated-package" ]; then
+    rm -rf "$pack_dir"
+  fi
+}
+
+docker_e2e_cleanup_package_mount_args() {
+  local expect_volume_path=0
+  local arg
+  for arg in "${DOCKER_E2E_PACKAGE_ARGS[@]:-}"; do
+    if [ "$expect_volume_path" = "1" ]; then
+      docker_e2e_cleanup_package_tgz "${arg%%:*}"
+      expect_volume_path=0
+      continue
+    fi
+    if [ "$arg" = "-v" ]; then
+      expect_volume_path=1
+    fi
+  done
+}
+
 docker_e2e_harness_mount_args() {
   DOCKER_E2E_HARNESS_ARGS=(
     -v "$ROOT_DIR/scripts/e2e:/app/scripts/e2e:ro"
@@ -80,7 +108,10 @@ docker_e2e_harness_mount_args() {
 
 docker_e2e_run_with_harness() {
   docker_e2e_harness_mount_args
-  docker run --rm "${DOCKER_E2E_HARNESS_ARGS[@]}" "$@"
+  local run_status=0
+  docker run --rm "${DOCKER_E2E_HARNESS_ARGS[@]}" "$@" || run_status="$?"
+  docker_e2e_cleanup_package_mount_args
+  return "$run_status"
 }
 
 docker_e2e_run_detached_with_harness() {

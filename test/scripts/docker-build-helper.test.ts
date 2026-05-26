@@ -255,6 +255,95 @@ fi
     }
   });
 
+  it("cleans generated package mounts after harness Docker runs", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-package-mount-cleanup-"));
+
+    try {
+      const rootDir = process.cwd();
+      const script = `
+set -euo pipefail
+ROOT_DIR=${shellQuote(rootDir)}
+TMPDIR=${shellQuote(workDir)}
+export ROOT_DIR TMPDIR
+
+node() {
+  local script="$1"
+  shift
+  if [[ "$script" != "$ROOT_DIR/scripts/package-openclaw-for-docker.mjs" ]]; then
+    command node "$script" "$@"
+    return
+  fi
+
+  local output_dir=""
+  local output_name=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --output-dir)
+        output_dir="$2"
+        shift 2
+        ;;
+      --output-name)
+        output_name="$2"
+        shift 2
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  mkdir -p "$output_dir"
+  printf fixture >"$output_dir/$output_name"
+  printf "%s\\n" "$output_dir/$output_name"
+}
+export -f node
+
+source "$ROOT_DIR/scripts/lib/docker-e2e-package.sh"
+
+docker() {
+  local mount_path=""
+  local expect_volume_path=0
+  local arg
+  for arg in "$@"; do
+    if [[ "$expect_volume_path" == "1" ]]; then
+      mount_path="\${arg%%:*}"
+      expect_volume_path=0
+      continue
+    fi
+    if [[ "$arg" == "-v" ]]; then
+      expect_volume_path=1
+    fi
+  done
+
+  test -n "$mount_path"
+  test -f "$mount_path"
+  printf "%s\\n" "$mount_path" >"$TMPDIR/package-mount-seen"
+  return "\${DOCKER_STUB_STATUS:-0}"
+}
+export -f docker
+
+package_tgz="$(docker_e2e_prepare_package_tgz mount-cleanup)"
+pack_dir="$(dirname "$package_tgz")"
+docker_e2e_package_mount_args "$package_tgz"
+DOCKER_STUB_STATUS=7 docker_e2e_run_with_harness image-name bash -lc true || run_status="$?"
+test "\${run_status:-0}" = "7"
+test -f "$TMPDIR/package-mount-seen"
+test ! -e "$pack_dir"
+
+external_dir="$TMPDIR/external-package"
+mkdir -p "$external_dir"
+printf fixture >"$external_dir/openclaw-current.tgz"
+docker_e2e_package_mount_args "$external_dir/openclaw-current.tgz"
+docker_e2e_run_with_harness image-name bash -lc true
+test -f "$external_dir/openclaw-current.tgz"
+`;
+
+      execFileSync("bash", ["-lc", script], { encoding: "utf8" });
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
   it("includes procps in the shared Docker E2E image for process watchdogs", () => {
     const dockerfile = readFileSync("scripts/e2e/Dockerfile", "utf8");
 
