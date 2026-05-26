@@ -127,8 +127,7 @@ const installModelCatalogMock = () =>
 installModelCatalogMock();
 
 vi.doMock("../../../src/agents/model-catalog.runtime.js", () => ({
-  loadManifestModelCatalog: (...args: unknown[]) =>
-    modelCatalogMocks.loadManifestModelCatalog(...args),
+  loadManifestModelCatalog: () => modelCatalogMocks.loadManifestModelCatalog(),
   loadModelCatalog: (...args: unknown[]) => modelCatalogMocks.loadModelCatalog(...args),
 }));
 
