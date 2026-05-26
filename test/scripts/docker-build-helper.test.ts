@@ -21,6 +21,8 @@ const OPENWEBUI_DOCKER_E2E_PATH = "scripts/e2e/openwebui-docker.sh";
 const ONBOARD_DOCKER_E2E_PATH = "scripts/e2e/onboard-docker.sh";
 const KITCHEN_SINK_PLUGIN_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-plugin-docker.sh";
 const KITCHEN_SINK_RPC_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-rpc-docker.sh";
+const CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH =
+  "scripts/e2e/codex-npm-plugin-live-docker.sh";
 const PLUGIN_BINDING_COMMAND_ESCAPE_DOCKER_E2E_PATH =
   "scripts/e2e/plugin-binding-command-escape-docker.sh";
 const PLUGIN_BINDING_COMMAND_ESCAPE_DOCKERFILE_PATH =
@@ -344,6 +346,18 @@ test -f "$external_dir/openclaw-current.tgz"
     } finally {
       rmSync(workDir, { recursive: true, force: true });
     }
+  });
+
+  it("cleans Codex npm plugin live package artifacts on every exit path", () => {
+    const runner = readFileSync(CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH, "utf8");
+
+    expect(runner).toContain('CODEX_PLUGIN_PACK_DIR=""');
+    expect(runner).toContain('run_log=""');
+    expect(runner).toMatch(
+      /cleanup\(\) \{[\s\S]*rm -rf "\$CODEX_PLUGIN_PACK_DIR"[\s\S]*docker_e2e_cleanup_package_tgz "\$PACKAGE_TGZ"[\s\S]*rm -f "\$run_log"/u,
+    );
+    expect(runner).toContain("trap cleanup EXIT");
+    expect(runner).not.toContain('rm -f "$run_log"\n  exit 1');
   });
 
   it("includes procps in the shared Docker E2E image for process watchdogs", () => {
