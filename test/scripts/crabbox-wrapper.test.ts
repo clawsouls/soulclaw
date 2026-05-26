@@ -274,6 +274,9 @@ describe("scripts/crabbox-wrapper", () => {
     expect(remoteCommand).toContain("shasum -a 256 -c -");
     expect(remoteCommand).not.toContain("set -euo pipefail");
     expect(remoteCommand).toContain('return "$status"');
+    expect(remoteCommand).toContain('if [ -z "${TMPDIR:-}" ]; then export TMPDIR="/tmp"; fi;');
+    expect(remoteCommand).toContain('mkdir -p "$TMPDIR"');
+    expect(remoteCommand).toContain('usable TMPDIR not found: $TMPDIR');
     expect(remoteCommand).toContain("node --version >&2");
     expect(remoteCommand).toContain("pnpm --version >&2");
     expectGroupedShellCommand(remoteCommand, "pnpm --version");
@@ -328,6 +331,7 @@ describe("scripts/crabbox-wrapper", () => {
       "bootstrapping a pinned user-local Node toolchain before the command",
     );
     expect(output.scriptContent).toContain("openclaw_crabbox_bootstrap_macos_js");
+    expect(output.scriptContent).toContain('if [ ! -d "$TMPDIR" ]; then mkdir -p "$TMPDIR"');
     expect(output.scriptContent).toContain("openclaw_crabbox_bootstrap_macos_js || exit $?");
     expect(output.scriptContent).toContain(`\n${script}`);
   });
