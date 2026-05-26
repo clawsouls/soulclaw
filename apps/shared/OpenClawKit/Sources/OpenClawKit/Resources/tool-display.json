@@ -500,23 +500,25 @@
       ]
     },
     "transcripts": {
-      "emoji": "📝",
+      "emoji": "🧾",
       "title": "Transcripts",
       "actions": {
         "start": {
           "label": "start",
           "detailKeys": [
+            "title",
             "providerId",
             "accountId",
             "guildId",
             "channelId",
-            "title"
+            "meetingUrl"
           ]
         },
         "stop": {
           "label": "stop",
           "detailKeys": [
-            "sessionId"
+            "sessionId",
+            "title"
           ]
         },
         "status": {
@@ -525,15 +527,16 @@
         "import": {
           "label": "import",
           "detailKeys": [
-            "providerId",
             "title",
+            "providerId",
             "speakerLabel"
           ]
         },
         "summarize": {
           "label": "summarize",
           "detailKeys": [
-            "sessionId"
+            "sessionId",
+            "title"
           ]
         }
       }
@@ -932,48 +935,6 @@
         "text",
         "channel"
       ]
-    },
-    "transcripts": {
-      "emoji": "🧾",
-      "title": "Transcripts",
-      "actions": {
-        "start": {
-          "label": "start",
-          "detailKeys": [
-            "title",
-            "providerId",
-            "accountId",
-            "guildId",
-            "channelId",
-            "meetingUrl"
-          ]
-        },
-        "stop": {
-          "label": "stop",
-          "detailKeys": [
-            "sessionId",
-            "title"
-          ]
-        },
-        "import": {
-          "label": "import",
-          "detailKeys": [
-            "title",
-            "providerId",
-            "speakerLabel"
-          ]
-        },
-        "summarize": {
-          "label": "summarize",
-          "detailKeys": [
-            "sessionId",
-            "title"
-          ]
-        },
-        "status": {
-          "label": "status"
-        }
-      }
     }
   }
 }

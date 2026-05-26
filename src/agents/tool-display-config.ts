@@ -348,27 +348,27 @@ export const TOOL_DISPLAY_CONFIG: ToolDisplayConfig = {
       detailKeys: ["path", "from", "lines"],
     },
     transcripts: {
-      emoji: "📝",
+      emoji: "🧾",
       title: "Transcripts",
       actions: {
         start: {
           label: "start",
-          detailKeys: ["providerId", "accountId", "guildId", "channelId", "title"],
+          detailKeys: ["title", "providerId", "accountId", "guildId", "channelId", "meetingUrl"],
         },
         stop: {
           label: "stop",
-          detailKeys: ["sessionId"],
+          detailKeys: ["sessionId", "title"],
         },
         status: {
           label: "status",
         },
         import: {
           label: "import",
-          detailKeys: ["providerId", "title", "speakerLabel"],
+          detailKeys: ["title", "providerId", "speakerLabel"],
         },
         summarize: {
           label: "summarize",
-          detailKeys: ["sessionId"],
+          detailKeys: ["sessionId", "title"],
         },
       },
     },
@@ -591,31 +591,6 @@ export const TOOL_DISPLAY_CONFIG: ToolDisplayConfig = {
       emoji: "🔊",
       title: "TTS",
       detailKeys: ["text", "channel"],
-    },
-    transcripts: {
-      emoji: "🧾",
-      title: "Transcripts",
-      actions: {
-        start: {
-          label: "start",
-          detailKeys: ["title", "providerId", "accountId", "guildId", "channelId", "meetingUrl"],
-        },
-        stop: {
-          label: "stop",
-          detailKeys: ["sessionId", "title"],
-        },
-        import: {
-          label: "import",
-          detailKeys: ["title", "providerId", "speakerLabel"],
-        },
-        summarize: {
-          label: "summarize",
-          detailKeys: ["sessionId", "title"],
-        },
-        status: {
-          label: "status",
-        },
-      },
     },
   },
 };
