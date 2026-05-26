@@ -360,6 +360,8 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     "scripts/deadcode-unused-files.allowlist.mjs",
     ["test/scripts/check-deadcode-unused-files.test.ts"],
   ],
+  ["scripts/lib/docker-e2e-container.sh", ["test/scripts/docker-build-helper.test.ts"]],
+  ["scripts/lib/docker-e2e-package.sh", ["test/scripts/docker-build-helper.test.ts"]],
   ["scripts/lib/live-docker-stage.sh", ["test/scripts/live-docker-stage.test.ts"]],
   ["scripts/lib/openclaw-test-state.mjs", ["test/scripts/openclaw-test-state.test.ts"]],
   ["scripts/lib/vitest-local-scheduling.mjs", ["test/scripts/vitest-local-scheduling.test.ts"]],
@@ -420,6 +422,7 @@ const TOOLING_TEST_TARGETS = new Map([
     ["test/scripts/check-deadcode-unused-files.test.ts"],
   ],
   ["test/scripts/ci-docker-pull-retry.test.ts", ["test/scripts/ci-docker-pull-retry.test.ts"]],
+  ["test/scripts/docker-build-helper.test.ts", ["test/scripts/docker-build-helper.test.ts"]],
   ["test/scripts/live-docker-stage.test.ts", ["test/scripts/live-docker-stage.test.ts"]],
   ["test/scripts/openclaw-test-state.test.ts", ["test/scripts/openclaw-test-state.test.ts"]],
   [
