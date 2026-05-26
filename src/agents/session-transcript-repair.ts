@@ -176,6 +176,22 @@ function normalizeToolResultName(
   return message;
 }
 
+function normalizeLegacyToolResultId(
+  message: Extract<AgentMessage, { role: "toolResult" }>,
+  toolCalls: Array<{ id: string; name?: string }>,
+): Extract<AgentMessage, { role: "toolResult" }> {
+  if (extractToolResultId(message) || toolCalls.length !== 1) {
+    return message;
+  }
+  const [toolCall] = toolCalls;
+  const toolResultName = normalizeOptionalString((message as { toolName?: unknown }).toolName);
+  const toolCallName = normalizeOptionalString(toolCall.name);
+  if (toolResultName && toolCallName && toolResultName !== toolCallName) {
+    return message;
+  }
+  return { ...message, toolCallId: toolCall.id };
+}
+
 export { makeMissingToolResult };
 
 type ToolCallInputRepairReport = {
@@ -221,6 +237,11 @@ function collectFollowingToolResults(
   index: number,
 ): { ids: Set<string>; displaced: boolean } {
   const ids = new Set<string>();
+  const assistant = messages[index];
+  const currentToolCalls =
+    assistant && typeof assistant === "object" && assistant.role === "assistant"
+      ? extractToolCallsFromAssistant(assistant)
+      : [];
   let sawNonToolResult = false;
   let displaced = false;
   for (let nextIndex = index + 1; nextIndex < messages.length; nextIndex += 1) {
@@ -233,7 +254,8 @@ function collectFollowingToolResults(
       break;
     }
     if (message.role === "toolResult") {
-      const resultIds = extractToolResultIds(message);
+      const normalizedLegacyResult = normalizeLegacyToolResultId(message, currentToolCalls);
+      const resultIds = extractToolResultIds(normalizedLegacyResult);
       for (const id of resultIds) {
         ids.add(id);
       }
@@ -495,13 +517,19 @@ export function repairToolUseResultPairing(
       }
 
       if (nextRole === "toolResult") {
-        const toolResult = next as Extract<AgentMessage, { role: "toolResult" }>;
+        const toolResult = normalizeLegacyToolResultId(
+          next as Extract<AgentMessage, { role: "toolResult" }>,
+          toolCalls,
+        );
         const id = extractToolResultId(toolResult);
         if (id && toolCallIds.has(id)) {
           if (seenToolResultIds.has(id)) {
             droppedDuplicateCount += 1;
             changed = true;
             continue;
+          }
+          if (toolResult !== next) {
+            changed = true;
           }
           const normalizedToolResult = normalizeToolResultName(
             toolResult,
