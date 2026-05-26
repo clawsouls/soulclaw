@@ -118,6 +118,8 @@ describe("docker build helper", () => {
     expect(helper).toContain("OPENCLAW_TESTBOX");
     expect(e2eImageHelper).toContain("docker_build_on_missing_enabled");
     expect(e2eImageHelper).toContain("Docker image not available; building");
+    expect(e2eImageHelper).toContain('docker_e2e_docker_cmd image inspect "$image_name"');
+    expect(e2eImageHelper).toContain('docker_e2e_docker_cmd pull "$image_name"');
     expect(liveBuild).toContain("docker image inspect");
     expect(liveBuild).toContain("docker pull");
     expect(liveBuild).toContain("Live-test image not available; building");
@@ -129,6 +131,65 @@ describe("docker build helper", () => {
     expect(liveCliBackend).not.toContain(
       'echo "==> Reuse live-test image: $LIVE_IMAGE_NAME (OPENCLAW_SKIP_DOCKER_BUILD=1)"',
     );
+  });
+
+  it("keeps reused Docker image probes behind the timeout-aware helper", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-image-reuse-timeout-"));
+
+    try {
+      const rootDir = process.cwd();
+      const script = `
+set -euo pipefail
+ROOT_DIR=${shellQuote(rootDir)}
+TMPDIR=${shellQuote(workDir)}
+export ROOT_DIR TMPDIR
+export DOCKER_COMMAND_TIMEOUT=3s
+export OPENCLAW_SKIP_DOCKER_BUILD=1
+
+mkdir -p "$TMPDIR/bin"
+cat >"$TMPDIR/bin/timeout" <<'SH'
+#!/usr/bin/env bash
+printf "%s|%s\\n" "$1" "$2 $3 $4" >>"$TMPDIR/timeout-seen"
+shift
+"$@"
+SH
+chmod +x "$TMPDIR/bin/timeout"
+export PATH="$TMPDIR/bin:$PATH"
+
+docker() {
+  printf "%s\\n" "$*" >>"$TMPDIR/docker-seen"
+  case "$1 $2" in
+    "image inspect")
+      return 1
+      ;;
+    "pull openclaw-reuse-image")
+      return 0
+      ;;
+    *)
+      return 9
+      ;;
+  esac
+}
+export -f docker
+
+source "$ROOT_DIR/scripts/lib/docker-e2e-image.sh"
+
+docker_e2e_build_or_reuse \\
+  openclaw-reuse-image \\
+  reuse-timeout-proof \\
+  "$ROOT_DIR/scripts/e2e/Dockerfile" \\
+  "$ROOT_DIR" \\
+  functional
+
+test "$(grep -c '^3s|' "$TMPDIR/timeout-seen")" = "2"
+grep -q '^image inspect openclaw-reuse-image$' "$TMPDIR/docker-seen"
+grep -q '^pull openclaw-reuse-image$' "$TMPDIR/docker-seen"
+`;
+
+      execFileSync("bash", ["-lc", script], { encoding: "utf8" });
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
   });
 
   it("removes functional Docker build package inputs after the build", () => {
