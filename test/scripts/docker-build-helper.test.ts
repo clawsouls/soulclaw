@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -70,6 +70,14 @@ const CENTRALIZED_BUILD_SCRIPTS = [
   "scripts/test-install-sh-e2e-docker.sh",
   "scripts/test-live-build-docker.sh",
 ] as const;
+
+function packageBackedDockerRunnerPaths(): string[] {
+  return readdirSync("scripts/e2e")
+    .filter((entry) => entry.endsWith("-docker.sh"))
+    .map((entry) => join("scripts/e2e", entry))
+    .filter((path) => readFileSync(path, "utf8").includes("docker_e2e_prepare_package_tgz"))
+    .sort();
+}
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/gu, `'\\''`)}'`;
@@ -428,6 +436,21 @@ test -f "$TMPDIR/docker-cmd-seen"
         /cleanup\(\) \{[\s\S]*docker_e2e_cleanup_package_tgz "\$PACKAGE_TGZ"[\s\S]*rm -f "\$run_log"/u,
       );
       expect(runner, path).toContain("trap cleanup EXIT");
+      expect(runner, path).not.toContain('rm -f "$run_log"\n  exit 1');
+    }
+  });
+
+  it("cleans every prepared Docker package tarball on every runner exit path", () => {
+    const paths = packageBackedDockerRunnerPaths();
+
+    expect(paths.length).toBeGreaterThan(0);
+    for (const path of paths) {
+      const runner = readFileSync(path, "utf8");
+
+      expect(runner, path).toMatch(
+        /docker_e2e_cleanup_package_tgz "\$\{PACKAGE_TGZ:-\}"|docker_e2e_cleanup_package_tgz "\$PACKAGE_TGZ"/u,
+      );
+      expect(runner, path).toMatch(/trap cleanup(?:_outer)? EXIT/u);
       expect(runner, path).not.toContain('rm -f "$run_log"\n  exit 1');
     }
   });
