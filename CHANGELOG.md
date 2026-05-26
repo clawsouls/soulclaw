@@ -11,6 +11,7 @@ Docs: https://docs.openclaw.ai
 - Crabbox: bootstrap raw AWS macOS JavaScript commands launched through `/usr/bin/env` so native mac runners without preinstalled Node, Corepack, or pnpm can still run wrapped Node and pnpm proof.
 - macOS: let app packaging fall back to `corepack pnpm` when a fresh native runner has Node/Corepack but no pnpm shim on `PATH`.
 - E2E: keep package/onboarding/plugin smoke commands bounded on macOS shells that have Node but no GNU `timeout` or `gtimeout` binary.
+- macOS: resolve Parallels npm-update smoke commands from the guest `PATH` so Intel Homebrew and other native mac layouts are not forced through `/opt/homebrew`.
 
 ## 2026.5.26
 
