@@ -8,7 +8,10 @@ openclaw_node_version_matches() {
   fi
   case "$requested" in
     *x)
-      [[ "${actual%%.*}" == "${requested%%.*}" ]]
+      [[ "${actual%%.*}" == "${requested%%.*}" ]] || return 1
+      if [[ "${requested%%.*}" == "22" ]]; then
+        openclaw_node_version_at_least "$actual" "22.19.0"
+      fi
       ;;
     *.*.*)
       [[ "$actual" == "$requested" ]]
@@ -20,6 +23,28 @@ openclaw_node_version_matches() {
       [[ "${actual%%.*}" == "$requested" ]]
       ;;
   esac
+}
+
+openclaw_node_version_at_least() {
+  local actual="$1"
+  local minimum="$2"
+  local actual_major actual_minor actual_patch minimum_major minimum_minor minimum_patch
+  IFS=. read -r actual_major actual_minor actual_patch <<< "$actual"
+  IFS=. read -r minimum_major minimum_minor minimum_patch <<< "$minimum"
+  actual_minor="${actual_minor:-0}"
+  actual_patch="${actual_patch:-0}"
+  minimum_minor="${minimum_minor:-0}"
+  minimum_patch="${minimum_patch:-0}"
+
+  if (( actual_major != minimum_major )); then
+    (( actual_major > minimum_major ))
+    return
+  fi
+  if (( actual_minor != minimum_minor )); then
+    (( actual_minor > minimum_minor ))
+    return
+  fi
+  (( actual_patch >= minimum_patch ))
 }
 
 openclaw_active_node_version() {
