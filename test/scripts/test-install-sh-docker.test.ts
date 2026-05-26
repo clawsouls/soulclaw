@@ -153,6 +153,8 @@ describe("test-install-sh-docker", () => {
     expect(script).toContain('PODMAN_RUN_TIMEOUT="${OPENCLAW_PODMAN_RUN_TIMEOUT:-600s}"');
     expect(script).toContain("OPENCLAW_PODMAN_RUN_TIMEOUT|OPENCLAW_PODMAN_GATEWAY_HOST_PORT");
     expect(script).toContain("run_podman_detached()");
+    expect(script).toContain("timeout --kill-after=1s 1s true");
+    expect(script).toContain('timeout --kill-after=30s "$PODMAN_RUN_TIMEOUT" podman run "$@"');
     expect(script).toContain('timeout "$PODMAN_RUN_TIMEOUT" podman run "$@"');
     expect(script).toContain('podman run --pull="$PODMAN_PULL" --rm -it \\');
     expect(script).toContain('run_podman_detached --pull="$PODMAN_PULL" -d --replace \\');
