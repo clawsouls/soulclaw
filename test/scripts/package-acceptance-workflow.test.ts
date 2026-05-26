@@ -87,13 +87,19 @@ describe("package acceptance workflow", () => {
     const setupPnpmAction = readFileSync(SETUP_PNPM_STORE_CACHE_ACTION, "utf8");
 
     expect(packageJson.packageManager).toMatch(/^pnpm@\d+\.\d+\.\d+\+sha512\.[a-f0-9]+$/u);
-    expect(setupPnpmAction).toContain("uses: pnpm/action-setup@");
-    expect(setupPnpmAction).toContain("package_json_file: ${{ inputs.package-manager-file }}");
+    expect(setupPnpmAction).toContain("Setup pnpm from packageManager");
     expect(setupPnpmAction).toContain(
-      "cache: ${{ inputs.use-actions-cache == 'true' && runner.os != 'Windows' }}",
+      "PACKAGE_MANAGER_FILE: ${{ inputs.package-manager-file }}",
     );
-    expect(setupPnpmAction).toContain("cache_dependency_path: ${{ inputs.lockfile-path }}");
-    expect(setupPnpmAction).not.toContain("actions/cache");
+    expect(setupPnpmAction).toContain('case "$package_manager" in');
+    expect(setupPnpmAction).toContain('corepack prepare "$package_manager" --activate');
+    expect(setupPnpmAction).toContain(
+      "if: ${{ inputs.use-actions-cache == 'true' && runner.os != 'Windows' }}",
+    );
+    expect(setupPnpmAction).toContain(
+      "key: pnpm-store-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles(inputs.lockfile-path) }}",
+    );
+    expect(setupPnpmAction).not.toContain("pnpm/action-setup");
     expect(setupPnpmAction).not.toContain("shasum");
     expect(setupPnpmAction).not.toContain("PNPM_VERSION_INPUT");
     expect(setupPnpmAction).not.toContain("version: ${{ inputs.pnpm-version }}");
@@ -681,8 +687,23 @@ describe("package artifact reuse", () => {
     expect(readFileSync("scripts/test-live-acp-bind-docker.sh", "utf8")).toContain(
       'OPENCLAW_LIVE_ACP_BIND_DOCKER_RUN_TIMEOUT:-2700s',
     );
+    expect(readFileSync("scripts/test-live-acp-bind-docker.sh", "utf8")).toContain(
+      'OPENCLAW_LIVE_ACP_BIND_SETUP_TIMEOUT_SECONDS:-180',
+    );
+    expect(readFileSync("scripts/test-live-acp-bind-docker.sh", "utf8")).toContain(
+      "run_setup_command npm install -g @anthropic-ai/claude-code",
+    );
+    expect(readFileSync("scripts/test-live-acp-bind-docker.sh", "utf8")).toContain(
+      "run_setup_command bash -lc 'curl -fsSL https://app.factory.ai/cli | sh'",
+    );
     expect(readFileSync("scripts/test-live-codex-harness-docker.sh", "utf8")).toContain(
       'OPENCLAW_LIVE_CODEX_HARNESS_DOCKER_RUN_TIMEOUT:-2100s',
+    );
+    expect(readFileSync("scripts/test-live-codex-harness-docker.sh", "utf8")).toContain(
+      'OPENCLAW_LIVE_CODEX_HARNESS_SETUP_TIMEOUT_SECONDS:-180',
+    );
+    expect(readFileSync("scripts/test-live-codex-harness-docker.sh", "utf8")).toContain(
+      "run_setup_command npm install -g @openai/codex",
     );
     expect(readFileSync("scripts/test-live-subagent-announce-docker.sh", "utf8")).toContain(
       'OPENCLAW_LIVE_SUBAGENT_DOCKER_RUN_TIMEOUT:-1200s',
