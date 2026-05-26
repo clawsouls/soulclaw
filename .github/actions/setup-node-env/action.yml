@@ -49,9 +49,10 @@ runs:
 
     - name: Setup Bun
       if: inputs.install-bun == 'true'
-      uses: oven-sh/setup-bun@v2.2.0
-      with:
-        bun-version: "1.3.13"
+      shell: bash
+      run: |
+        set -euo pipefail
+        npm install -g bun@1.3.13
 
     - name: Runtime versions
       shell: bash
