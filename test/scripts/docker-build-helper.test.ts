@@ -1043,7 +1043,12 @@ test -f "$TMPDIR/docker-cmd-seen"
 
     expect(runner).toContain("--reporter=verbose -t");
     expect(runner).not.toContain("-- --reporter=verbose");
-    expect(runner).toContain("docker_e2e_docker_run_cmd run --rm");
+    expect(runner).toContain(
+      'DOCKER_RUN_TIMEOUT="${OPENCLAW_PLUGIN_BINDING_COMMAND_ESCAPE_DOCKER_RUN_TIMEOUT:-900s}"',
+    );
+    expect(runner).toContain(
+      'DOCKER_COMMAND_TIMEOUT="$DOCKER_RUN_TIMEOUT" docker_e2e_docker_run_cmd run --rm',
+    );
     expect(runner).toContain('docker_e2e_docker_cmd rm -f "$CONTAINER_NAME"');
     expect(runner).not.toMatch(/(^|\n)docker run --rm/u);
     expect(runner).toContain("expected focused Vitest summary for exactly 3 passed tests");
