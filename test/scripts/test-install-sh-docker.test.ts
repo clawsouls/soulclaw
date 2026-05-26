@@ -245,7 +245,7 @@ describe("install-sh smoke runner", () => {
     );
     expect(script).toContain("run_with_heartbeat");
     expect(script).toContain("npm_install_global");
-    expect(script).toContain('timeout --foreground "${INSTALL_COMMAND_TIMEOUT}s"');
+    expect(script).toContain('timeout --kill-after=30s "${INSTALL_COMMAND_TIMEOUT}s"');
     expect(script).toContain("==> Still running");
     expect(script).toContain("print_install_audit");
     expect(script).toContain('install -g "$@"');
