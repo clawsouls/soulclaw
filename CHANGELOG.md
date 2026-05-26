@@ -8,6 +8,8 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Mac: prefer the freshly packaged app in restart flows and collect dSYMs only for requested build architectures so stale installed apps and unrequested arch symbol directories cannot break validation.
+
 ## 2026.5.26
 
 ### Changes
