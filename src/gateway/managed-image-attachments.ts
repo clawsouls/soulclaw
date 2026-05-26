@@ -8,10 +8,9 @@ import { tryReadJson, writeJson } from "../infra/json-files.js";
 import { safeFileURLToPath } from "../infra/local-file-access.js";
 import { assertLocalMediaAllowed } from "../media/local-media-access.js";
 import {
+  createImageProcessor,
   getImageMetadata,
   hasAlphaChannel,
-  resizeToJpeg,
-  resizeToPng,
 } from "../media/media-services.js";
 import { isPassThroughRemoteMediaSource } from "../media/media-source-url.js";
 import { MEDIA_MAX_BYTES, saveMediaBuffer, saveMediaSource } from "../media/store.js";
@@ -238,26 +237,24 @@ async function resizeManagedImageBufferToLimits(params: {
     };
   }
 
-  const preserveAlpha = await hasAlphaChannel(params.buffer).catch(() => false);
-  const resizedBuffer = preserveAlpha
-    ? await resizeToPng({
-        buffer: params.buffer,
-        maxSide: Math.max(target.width, target.height),
-        compressionLevel: 9,
-        withoutEnlargement: true,
-      })
-    : await resizeToJpeg({
-        buffer: params.buffer,
-        maxSide: Math.max(target.width, target.height),
-        quality: 92,
-        withoutEnlargement: true,
-      });
+  const preserveAlpha = await hasAlphaChannel(params.buffer);
+  const resized = await createImageProcessor().encodeBest(params.buffer, {
+    resize: {
+      width: target.width,
+      height: target.height,
+      fit: "inside",
+      enlarge: false,
+    },
+    opaque: { format: "jpeg", quality: 92 },
+    transparent: { format: "png", compressionLevel: 9 },
+    transparency: preserveAlpha ? "preserve" : "flatten",
+  });
 
   return {
-    buffer: resizedBuffer,
-    contentType: preserveAlpha ? "image/png" : "image/jpeg",
-    width: target.width,
-    height: target.height,
+    buffer: resized.data,
+    contentType: resized.format === "png" ? "image/png" : "image/jpeg",
+    width: resized.width,
+    height: resized.height,
   };
 }
 
