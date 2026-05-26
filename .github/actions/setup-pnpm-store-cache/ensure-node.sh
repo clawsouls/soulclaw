@@ -71,26 +71,24 @@ openclaw_find_toolcache_node() {
 
 openclaw_resolve_node_download_version() {
   local requested_node="$1"
-  case "$requested_node" in
-    *x | *X)
-      local major="${requested_node%%.*}"
-      curl -fsSL https://nodejs.org/dist/index.json |
-        OPENCLAW_NODE_MAJOR="$major" python3 -c 'import json, os, sys
-major = int(os.environ["OPENCLAW_NODE_MAJOR"])
+  if [[ "$requested_node" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    [[ "$requested_node" == v* ]] && printf '%s\n' "$requested_node" || printf 'v%s\n' "$requested_node"
+    return 0
+  fi
+
+  local prefix="${requested_node#v}"
+  prefix="${prefix%%[xX]*}"
+  prefix="v${prefix}"
+  [[ "$prefix" == *. ]] || prefix="${prefix}."
+  curl -fsSL https://nodejs.org/dist/index.json |
+    OPENCLAW_NODE_PREFIX="$prefix" python3 -c 'import json, os, sys
+prefix = os.environ["OPENCLAW_NODE_PREFIX"]
 for item in json.load(sys.stdin):
     version = item.get("version", "")
-    if version.startswith(f"v{major}."):
+    if version.startswith(prefix):
         print(version)
         break
-' OPENCLAW_NODE_MAJOR="$major"
-      ;;
-    v*)
-      printf '%s\n' "$requested_node"
-      ;;
-    *)
-      printf 'v%s\n' "$requested_node"
-      ;;
-  esac
+'
 }
 
 openclaw_node_download_platform() {
