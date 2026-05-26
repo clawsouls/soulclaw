@@ -23,6 +23,7 @@ const KITCHEN_SINK_PLUGIN_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-plugin-doc
 const KITCHEN_SINK_RPC_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-rpc-docker.sh";
 const CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH =
   "scripts/e2e/codex-npm-plugin-live-docker.sh";
+const SKILL_INSTALL_DOCKER_E2E_PATH = "scripts/e2e/skill-install-docker.sh";
 const PLUGIN_BINDING_COMMAND_ESCAPE_DOCKER_E2E_PATH =
   "scripts/e2e/plugin-binding-command-escape-docker.sh";
 const PLUGIN_BINDING_COMMAND_ESCAPE_DOCKERFILE_PATH =
@@ -358,6 +359,17 @@ test -f "$external_dir/openclaw-current.tgz"
     );
     expect(runner).toContain("trap cleanup EXIT");
     expect(runner).not.toContain('rm -f "$run_log"\n  exit 1');
+  });
+
+  it("runs skill install through the package-cleaning Docker harness", () => {
+    const runner = readFileSync(SKILL_INSTALL_DOCKER_E2E_PATH, "utf8");
+
+    expect(runner).toContain('docker_e2e_package_mount_args "$PACKAGE_TGZ"');
+    expect(runner).toMatch(
+      /run_logged_print \\\n\s+skill-install-run \\\n\s+docker_e2e_run_with_harness \\/u,
+    );
+    expect(runner).not.toContain("docker_e2e_harness_mount_args");
+    expect(runner).not.toContain("docker run --rm");
   });
 
   it("includes procps in the shared Docker E2E image for process watchdogs", () => {
