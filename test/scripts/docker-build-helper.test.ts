@@ -21,8 +21,12 @@ const OPENWEBUI_DOCKER_E2E_PATH = "scripts/e2e/openwebui-docker.sh";
 const ONBOARD_DOCKER_E2E_PATH = "scripts/e2e/onboard-docker.sh";
 const KITCHEN_SINK_PLUGIN_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-plugin-docker.sh";
 const KITCHEN_SINK_RPC_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-rpc-docker.sh";
+const CODEX_ON_DEMAND_DOCKER_E2E_PATH = "scripts/e2e/codex-on-demand-docker.sh";
 const CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH =
   "scripts/e2e/codex-npm-plugin-live-docker.sh";
+const LIVE_PLUGIN_TOOL_DOCKER_E2E_PATH = "scripts/e2e/live-plugin-tool-docker.sh";
+const NPM_ONBOARD_CHANNEL_AGENT_DOCKER_E2E_PATH =
+  "scripts/e2e/npm-onboard-channel-agent-docker.sh";
 const SKILL_INSTALL_DOCKER_E2E_PATH = "scripts/e2e/skill-install-docker.sh";
 const PLUGIN_BINDING_COMMAND_ESCAPE_DOCKER_E2E_PATH =
   "scripts/e2e/plugin-binding-command-escape-docker.sh";
@@ -409,6 +413,23 @@ test -f "$TMPDIR/docker-cmd-seen"
     );
     expect(runner).toContain("trap cleanup EXIT");
     expect(runner).not.toContain('rm -f "$run_log"\n  exit 1');
+  });
+
+  it("cleans package-backed onboarding and plugin Docker artifacts on every exit path", () => {
+    for (const path of [
+      CODEX_ON_DEMAND_DOCKER_E2E_PATH,
+      LIVE_PLUGIN_TOOL_DOCKER_E2E_PATH,
+      NPM_ONBOARD_CHANNEL_AGENT_DOCKER_E2E_PATH,
+    ]) {
+      const runner = readFileSync(path, "utf8");
+
+      expect(runner, path).toContain('run_log=""');
+      expect(runner, path).toMatch(
+        /cleanup\(\) \{[\s\S]*docker_e2e_cleanup_package_tgz "\$PACKAGE_TGZ"[\s\S]*rm -f "\$run_log"/u,
+      );
+      expect(runner, path).toContain("trap cleanup EXIT");
+      expect(runner, path).not.toContain('rm -f "$run_log"\n  exit 1');
+    }
   });
 
   it("runs skill install through the package-cleaning Docker harness", () => {
