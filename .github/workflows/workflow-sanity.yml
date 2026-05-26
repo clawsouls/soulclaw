@@ -27,6 +27,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          token: ""
+          persist-credentials: false
 
       - name: Fail on tabs in workflow files
         run: |
@@ -59,6 +62,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          token: ""
+          persist-credentials: false
 
       - name: Install actionlint
         shell: bash
@@ -91,6 +97,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          token: ""
+          persist-credentials: false
 
       - name: Setup Node environment
         uses: ./.github/actions/setup-node-env
