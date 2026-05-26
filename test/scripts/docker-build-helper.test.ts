@@ -182,8 +182,19 @@ export OPENCLAW_SKIP_DOCKER_BUILD=1
 mkdir -p "$TMPDIR/bin"
 cat >"$TMPDIR/bin/timeout" <<'SH'
 #!/usr/bin/env bash
-printf "%s|%s\\n" "$1" "$2 $3 $4" >>"$TMPDIR/timeout-seen"
-shift
+case "$1" in
+  --kill-after=1s)
+    exit 0
+    ;;
+  --kill-after=30s)
+    printf "%s %s|%s\\n" "$1" "$2" "$3 $4 $5" >>"$TMPDIR/timeout-seen"
+    shift 2
+    ;;
+  *)
+    printf "%s|%s\\n" "$1" "$2 $3 $4" >>"$TMPDIR/timeout-seen"
+    shift
+    ;;
+esac
 "$@"
 SH
 chmod +x "$TMPDIR/bin/timeout"
@@ -214,7 +225,7 @@ docker_e2e_build_or_reuse \\
   "$ROOT_DIR" \\
   functional
 
-test "$(grep -c '^3s|' "$TMPDIR/timeout-seen")" = "2"
+test "$(grep -c '^--kill-after=30s 3s|' "$TMPDIR/timeout-seen")" = "2"
 grep -q '^image inspect openclaw-reuse-image$' "$TMPDIR/docker-seen"
 grep -q '^pull openclaw-reuse-image$' "$TMPDIR/docker-seen"
 `;
@@ -382,8 +393,19 @@ export DOCKER_COMMAND_TIMEOUT=3s
 mkdir -p "$TMPDIR/bin"
 cat >"$TMPDIR/bin/timeout" <<'SH'
 #!/usr/bin/env bash
-printf "%s\\n" "$1" >"$TMPDIR/docker-timeout-seen"
-shift
+case "$1" in
+  --kill-after=1s)
+    exit 0
+    ;;
+  --kill-after=30s)
+    printf "%s %s\\n" "$1" "$2" >"$TMPDIR/docker-timeout-seen"
+    shift 2
+    ;;
+  *)
+    printf "%s\\n" "$1" >"$TMPDIR/docker-timeout-seen"
+    shift
+    ;;
+esac
 "$@"
 SH
 chmod +x "$TMPDIR/bin/timeout"
@@ -450,7 +472,7 @@ pack_dir="$(dirname "$package_tgz")"
 docker_e2e_package_mount_args "$package_tgz"
 DOCKER_STUB_STATUS=7 docker_e2e_run_with_harness image-name bash -lc true || run_status="$?"
 test "\${run_status:-0}" = "7"
-test "$(cat "$TMPDIR/docker-timeout-seen")" = "3s"
+test "$(cat "$TMPDIR/docker-timeout-seen")" = "--kill-after=30s 3s"
 test -f "$TMPDIR/package-mount-seen"
 test ! -e "$pack_dir"
 
