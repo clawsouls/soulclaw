@@ -1,6 +1,6 @@
 ---
 name: release-openclaw-announcement
-description: "Draft or post OpenClaw beta/stable Discord release announcements from changelog, GitHub release, npm, and validation evidence. Use when announcing a beta, stable release, release candidate, or asking what users should test after an OpenClaw release."
+description: "Draft or post OpenClaw beta/stable Discord release announcements from changelog, GitHub release, registry, and validation evidence. Use when announcing a beta, stable release, release candidate, or asking what users should test after an OpenClaw release."
 ---
 
 # OpenClaw Release Announcement
@@ -15,7 +15,7 @@ Before drafting focus areas, read real release evidence:
 1. Current GitHub release body for the tag.
 2. `CHANGELOG.md` section for the released base version.
 3. Commits since the previous shipped version or the operator-specified base.
-4. npm package metadata for the exact version and current dist-tag.
+4. Registry/package metadata for the exact version and current dist-tag.
 5. Validation status that is relevant to user confidence.
 
 Do not claim a full changelog audit unless you did it. If you only read the
@@ -27,11 +27,16 @@ CI mechanics:
 
 - install/update paths
 - OS/platform-specific behavior
-- channels and media paths
+- Gateway startup/restart, config, and runtime behavior
 - provider/model/runtime routing
-- Gateway startup/restart and config behavior
 - plugin loading and local plugin development
+- channels and media paths
 - security/data-loss/user-impact fixes
+
+Do not let late release-branch fixes automatically dominate the announcement.
+If the version includes a large delta from the previous shipped version, rank
+focus areas by the whole release delta and expected user impact; mention late
+fixes in their natural category.
 
 ## Required Copy
 
@@ -46,13 +51,13 @@ Every beta announcement must make beta status explicit and include:
   openclaw --version
   ```
 - fresh install path:
-  `Install from https://openclaw.ai or npm with npm install -g openclaw@beta`
-- exact npm fallback:
-  ```sh
-  npm install -g openclaw@VERSION
-  ```
-- GitHub release link and npm version link
+  `Install from https://openclaw.ai`
+- GitHub release link
 - concise validation note, without making CI the headline
+
+Do not suggest npm install commands in beta announcements unless the operator
+explicitly asks for npm-specific copy or troubleshooting text. It is fine to use
+registry metadata as evidence; do not turn that into public install guidance.
 
 For stable announcements, use the stable channel wording:
 
