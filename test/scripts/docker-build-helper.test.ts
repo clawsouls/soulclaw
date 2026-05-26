@@ -681,12 +681,14 @@ test -f "$TMPDIR/docker-cmd-seen"
   });
 
   it("cleans resource-sampled Docker E2E temp logs on every exit path", () => {
-    for (const path of [
-      ONBOARD_DOCKER_E2E_PATH,
-      KITCHEN_SINK_PLUGIN_DOCKER_E2E_PATH,
-      KITCHEN_SINK_RPC_DOCKER_E2E_PATH,
+    for (const { path, label } of [
+      { path: ONBOARD_DOCKER_E2E_PATH, label: "onboard" },
+      { path: KITCHEN_SINK_PLUGIN_DOCKER_E2E_PATH, label: "kitchen-sink" },
+      { path: KITCHEN_SINK_RPC_DOCKER_E2E_PATH, label: "kitchen-sink-rpc" },
     ]) {
       const runner = readFileSync(path, "utf8");
+      const resourceAssertion =
+        `node scripts/e2e/lib/docker-stats/assert-resource-ceiling.mjs "$STATS_LOG" "$MAX_MEMORY_MIB" "$MAX_CPU_PERCENT" ${label}`;
 
       expect(runner, path).toContain('RUN_LOG="$(mktemp');
       expect(runner, path).toContain('STATS_LOG="$(mktemp');
@@ -699,6 +701,9 @@ test -f "$TMPDIR/docker-cmd-seen"
       expect(runner, path).not.toMatch(/(^|\n)docker run --name "\$CONTAINER_NAME"/u);
       expect(runner, path).not.toMatch(/(^|\n)docker (?:inspect|stats) /u);
       expect(runner, path).toMatch(/cleanup\(\) \{[\s\S]*rm -f "\$RUN_LOG" "\$STATS_LOG"/u);
+      expect(runner, path).toContain(`if [ "$run_status" -eq 0 ]; then\n  ${resourceAssertion}`);
+      expect(runner, path).toContain(`elif [ -s "$STATS_LOG" ]; then\n  ${resourceAssertion} || true`);
+      expect(runner, path).not.toContain(`${resourceAssertion}\n\nexit "$run_status"`);
     }
   });
 
