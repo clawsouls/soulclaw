@@ -125,6 +125,23 @@ function isReplaySafeThinkingAssistantTurn(
   return sawToolCall;
 }
 
+function hasSessionsSpawnAttachmentToolCall(content: unknown[]): boolean {
+  for (const block of content) {
+    if (!isRawToolCallBlock(block) || block.name !== "sessions_spawn") {
+      continue;
+    }
+    const input = block.input;
+    if (!input || typeof input !== "object") {
+      continue;
+    }
+    const attachments = (input as { attachments?: unknown }).attachments;
+    if (Array.isArray(attachments) && attachments.length > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function makeMissingToolResult(params: {
   toolCallId: string;
   toolName?: string;
@@ -298,9 +315,9 @@ function repairToolCallInputs(
       countRawToolCallBlocks(msg.content) > 0
     ) {
       // Signed Anthropic thinking blocks must remain byte-for-byte stable on
-      // replay. Preserve the turn only if every sibling tool call is already
-      // valid and already has a real tool result. Otherwise drop the
-      // whole assistant turn rather than mutating provider-owned content.
+      // replay. Preserve the turn when every sibling tool call is already valid;
+      // the later pairing repair can synthesize missing legacy tool results
+      // without mutating provider-owned assistant content.
       const replaySafeToolCalls = extractToolCallsFromAssistant(msg);
       const followingToolResults = collectFollowingToolResults(messages, index);
       if (
@@ -308,8 +325,9 @@ function repairToolCallInputs(
         replaySafeToolCalls.every(
           (toolCall) =>
             !preservedThinkingToolCallIds.has(toolCall.id) &&
-            (!followingToolResults.displaced || !priorToolCallIds.has(toolCall.id)) &&
-            followingToolResults.ids.has(toolCall.id),
+            (!hasSessionsSpawnAttachmentToolCall(msg.content) ||
+              followingToolResults.ids.has(toolCall.id)) &&
+            (!followingToolResults.displaced || !priorToolCallIds.has(toolCall.id)),
         )
       ) {
         for (const toolCall of replaySafeToolCalls) {
