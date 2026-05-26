@@ -521,9 +521,6 @@
             "title"
           ]
         },
-        "status": {
-          "label": "status"
-        },
         "import": {
           "label": "import",
           "detailKeys": [
@@ -538,6 +535,9 @@
             "sessionId",
             "title"
           ]
+        },
+        "status": {
+          "label": "status"
         }
       }
     },
