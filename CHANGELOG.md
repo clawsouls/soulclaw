@@ -21,6 +21,8 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Telegram/network: treat `ENETDOWN` as a transient pre-connect network failure so Telegram sends, gateway unhandled-rejection handling, and cron network retries follow the same recovery path as sibling network outages. (#86762) Thanks @TurboTheTurtle.
+- Agents/sessions: include visibility metadata on restricted `sessions_list` results so scoped counts are clearly reported without widening access or exposing hidden-session counts. (#86944) Thanks @ferminquant.
 - Gateway/DNS: validate wide-area discovery domains before deriving zone paths or writing zone files, so invalid `discovery.wideArea.domain` and `dns setup --domain` values fail with a DNS-name diagnostic instead of falling through to unrelated configuration errors. Thanks @mmaps.
 - Agents/BTW: route fallback side-question streams through the embedded stream resolver so Anthropic-compatible MiniMax requests use the same capped transport as normal chat. (#86312) Thanks @neeravmakwana.
 - Telegram: treat `/command@TargetBot` bot-command entities as explicit mentions for the addressed bot so `requireMention` groups no longer drop targeted commands or captions. Fixes #84462. (#86553) Thanks @luoyanglang.
