@@ -1333,7 +1333,8 @@ function mergeBaseForChangedGate() {
 function remoteGitBootstrapForChangedGate(changedGateBase) {
   const quotedBase = shellQuote(changedGateBase);
   return [
-    "if ! git rev-parse --git-dir >/dev/null 2>&1; then",
+    "if ! git status --short >/dev/null 2>&1; then",
+    "rm -rf .git;",
     "git init -q;",
     "git remote add origin https://github.com/openclaw/openclaw.git 2>/dev/null || git remote set-url origin https://github.com/openclaw/openclaw.git;",
     `git fetch -q --depth=1 origin ${quotedBase}:refs/remotes/origin/main;`,

@@ -1584,6 +1584,9 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     expect(result.status).toBe(0);
     expect(result.stderr).toContain("syncing from temporary full checkout");
     expect(result.stderr).toContain("overlaying local HEAD as worktree changes from origin/main");
+    expect(parseFakeCrabboxOutput(result).args.join(" ")).toContain(
+      "if ! git status --short >/dev/null 2>&1; then rm -rf .git;",
+    );
     expect(parseFakeCrabboxOutput(result).cwd).toContain("openclaw-crabbox-sync-");
   });
 
