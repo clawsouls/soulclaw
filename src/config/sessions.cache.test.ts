@@ -246,7 +246,7 @@ describe("Session Store Cache", () => {
     structuredCloneSpy.mockRestore();
   });
 
-  it("does not parse serialized stores when writing or reading object-cache hits", () => {
+  it("parses serialized stores only when cloning object-cache hits", () => {
     const testStore = createSingleSessionStore(
       createSessionEntry({
         origin: { provider: "openai" },
@@ -255,17 +255,19 @@ describe("Session Store Cache", () => {
     const serialized = JSON.stringify(testStore);
     const parseSpy = vi.spyOn(JSON, "parse");
 
-    writeSessionStoreCache({ storePath, store: testStore, serialized });
+    try {
+      writeSessionStoreCache({ storePath, store: testStore, serialized });
 
-    expect(parseSpy).not.toHaveBeenCalled();
+      expect(parseSpy).not.toHaveBeenCalled();
 
-    testStore["session:1"].origin = { provider: "mutated" };
-    const cached = readSessionStoreCache({ storePath });
+      testStore["session:1"].origin = { provider: "mutated" };
+      const cached = readSessionStoreCache({ storePath });
 
-    expect(cached?.["session:1"].origin?.provider).toBe("openai");
-    expect(parseSpy).not.toHaveBeenCalled();
-
-    parseSpy.mockRestore();
+      expect(cached?.["session:1"].origin?.provider).toBe("openai");
+      expect(parseSpy).toHaveBeenCalledOnce();
+    } finally {
+      parseSpy.mockRestore();
+    }
   });
 
   it("clones cached session records without invoking prototype setters", () => {

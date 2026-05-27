@@ -286,12 +286,19 @@ export function getSerializedSessionStore(storePath: string): string | undefined
   return SESSION_STORE_SERIALIZED_CACHE.get(storePath)?.serialized;
 }
 
-export function setSerializedSessionStore(storePath: string, serialized?: string): void {
+export function setSerializedSessionStore(
+  storePath: string,
+  serialized?: string,
+  sizeBytesHint?: number,
+): void {
   deleteSerializedSessionStore(storePath);
   if (serialized === undefined) {
     return;
   }
-  const sizeBytes = Buffer.byteLength(serialized, "utf8");
+  const sizeBytes =
+    typeof sizeBytesHint === "number" && Number.isFinite(sizeBytesHint) && sizeBytesHint >= 0
+      ? sizeBytesHint
+      : Buffer.byteLength(serialized, "utf8");
   const maxEntries = getSerializedSessionStoreCacheMaxEntries();
   const maxBytes = getSerializedSessionStoreCacheMaxBytes();
   if (maxEntries <= 0 || maxBytes <= 0 || sizeBytes > maxBytes) {
@@ -359,7 +366,7 @@ export function readSessionStoreCache(params: {
   if (params.clone === false) {
     return cached.store;
   }
-  return cloneSessionStoreRecord(cached.store);
+  return cloneSessionStoreRecord(cached.store, cached.serialized);
 }
 
 export function takeMutableSessionStoreCache(params: {
@@ -398,5 +405,5 @@ export function writeSessionStoreCache(params: {
     sizeBytes: params.sizeBytes,
     serialized: params.serialized,
   });
-  setSerializedSessionStore(params.storePath, params.serialized);
+  setSerializedSessionStore(params.storePath, params.serialized, params.sizeBytes);
 }
