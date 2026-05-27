@@ -87,6 +87,9 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
         [
           "#!/bin/sh",
           "set -eu",
+          'if [ "${1:-}" = "--kill-after=1s" ]; then',
+          "  exit 0",
+          "fi",
           'printf "%s\\n" "$*" >"$OPENCLAW_TEST_TIMEOUT_ARGS"',
           'while [ "$#" -gt 0 ] && [ "$1" != "npm" ]; do shift; done',
           'exec "$@"',
@@ -211,6 +214,9 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
         [
           "#!/bin/bash",
           "set -euo pipefail",
+          'if [ "${1:-}" = "--kill-after=1s" ]; then',
+          "  exit 0",
+          "fi",
           'printf "%s\\n" "$*" >"$OPENCLAW_TEST_TIMEOUT_ARGS"',
           'while [ "$#" -gt 0 ] && [ "$1" != "npm" ]; do shift; done',
           'exec "$@"',
