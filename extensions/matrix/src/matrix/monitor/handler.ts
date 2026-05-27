@@ -1876,14 +1876,13 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
                 await draftStream.discardPending();
               }
               const draftEventId = draftStream.eventId();
-              const matchingDraftTextNeedsNormalMentionDelivery =
+              const draftFinalTextNeedsNormalMentionDelivery =
                 Boolean(draftEventId) &&
                 typeof payload.text === "string" &&
                 Boolean(payload.text.trim()) &&
                 !payload.isError &&
                 !payloadReplyMismatch &&
                 !mustDeliverFinalNormally &&
-                draftStream.matchesPreparedText(payload.text) &&
                 (await matrixTextWouldActivateMentions(client, payload.text));
 
               if (
@@ -1893,7 +1892,7 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
                 !hasMedia &&
                 !payloadReplyMismatch &&
                 !mustDeliverFinalNormally &&
-                !matchingDraftTextNeedsNormalMentionDelivery
+                !draftFinalTextNeedsNormalMentionDelivery
               ) {
                 const finalPreviewText = payload.text;
                 await deliverWithFinalizableLivePreviewAdapter<
@@ -1976,14 +1975,14 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
                   typeof payloadText === "string" &&
                   Boolean(payloadText.trim()) &&
                   payloadTextMatchesDraft;
-                const matchingMediaTextNeedsNormalMentionDelivery =
+                const mediaTextNeedsNormalMentionDelivery =
                   typeof payloadText === "string" &&
-                  reusesDraftTextUnchanged &&
+                  Boolean(payloadText.trim()) &&
                   (await matrixTextWouldActivateMentions(client, payloadText));
                 const requiresFinalTextEdit =
                   quietDraftStreaming ||
                   (typeof payloadText === "string" && !payloadTextMatchesDraft);
-                if (textEditOk && matchingMediaTextNeedsNormalMentionDelivery) {
+                if (textEditOk && mediaTextNeedsNormalMentionDelivery) {
                   textEditOk = false;
                 } else if (textEditOk && payloadText && requiresFinalTextEdit) {
                   const { editMessageMatrix } = await loadMatrixSendModule();
@@ -2038,7 +2037,7 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
                   (payload.isError ||
                     payloadReplyMismatch ||
                     mustDeliverFinalNormally ||
-                    matchingDraftTextNeedsNormalMentionDelivery);
+                    draftFinalTextNeedsNormalMentionDelivery);
                 if (draftRedacted && draftEventId) {
                   await redactMatrixDraftEvent(client, roomId, draftEventId);
                 }
