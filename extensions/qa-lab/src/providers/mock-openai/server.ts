@@ -643,7 +643,7 @@ function execCommandFromToolProgressPrompt(prompt: string) {
   );
 }
 
-function buildToolCallEventsWithArgs(name: string, args: Record<string, unknown>): StreamEvent[] {
+function buildMockFunctionCall(name: string, args: Record<string, unknown>) {
   const serialized = JSON.stringify(args);
   const callSuffix = createHash("sha1")
     .update(name)
@@ -653,42 +653,46 @@ function buildToolCallEventsWithArgs(name: string, args: Record<string, unknown>
     .slice(0, 10);
   const callId = `call_mock_${name}_${callSuffix}`;
   const itemId = `fc_mock_${name}_${callSuffix}`;
+  const item = {
+    type: "function_call",
+    id: itemId,
+    call_id: callId,
+    name,
+    arguments: serialized,
+  };
+  return {
+    callId,
+    item,
+    itemId,
+    responseId: `resp_mock_${name}_${callSuffix}`,
+    serialized,
+  };
+}
+
+function buildToolCallEventsWithArgs(name: string, args: Record<string, unknown>): StreamEvent[] {
+  const call = buildMockFunctionCall(name, args);
   return [
     {
       type: "response.output_item.added",
       item: {
         type: "function_call",
-        id: itemId,
-        call_id: callId,
+        id: call.itemId,
+        call_id: call.callId,
         name,
         arguments: "",
       },
     },
-    { type: "response.function_call_arguments.delta", delta: serialized },
+    { type: "response.function_call_arguments.delta", delta: call.serialized },
     {
       type: "response.output_item.done",
-      item: {
-        type: "function_call",
-        id: itemId,
-        call_id: callId,
-        name,
-        arguments: serialized,
-      },
+      item: call.item,
     },
     {
       type: "response.completed",
       response: {
-        id: `resp_mock_${name}_${callSuffix}`,
+        id: call.responseId,
         status: "completed",
-        output: [
-          {
-            type: "function_call",
-            id: itemId,
-            call_id: callId,
-            name,
-            arguments: serialized,
-          },
-        ],
+        output: [call.item],
         usage: { input_tokens: 64, output_tokens: 16, total_tokens: 80 },
       },
     },
@@ -1449,6 +1453,78 @@ function buildAssistantOutputItem(spec: MockAssistantMessageSpec) {
   } as const;
 }
 
+function appendAssistantMessageEvents(events: StreamEvent[], spec: MockAssistantMessageSpec) {
+  events.push({
+    type: "response.output_item.added",
+    item: {
+      type: "message",
+      id: spec.id,
+      role: "assistant",
+      ...(spec.phase ? { phase: spec.phase } : {}),
+      content: [],
+      status: "in_progress",
+    },
+  });
+  for (const delta of spec.streamDeltas ?? []) {
+    events.push({
+      type: "response.output_text.delta",
+      item_id: spec.id,
+      output_index: 0,
+      content_index: 0,
+      delta,
+    });
+  }
+  if ((spec.streamDeltas ?? []).length > 0) {
+    events.push({
+      type: "response.output_text.done",
+      item_id: spec.id,
+      output_index: 0,
+      content_index: 0,
+      text: spec.text,
+    });
+  }
+  events.push({
+    type: "response.output_item.done",
+    item: buildAssistantOutputItem(spec),
+  });
+}
+
+function buildAssistantThenToolCallEvents(
+  spec: MockAssistantMessageSpec,
+  name: string,
+  args: Record<string, unknown>,
+): StreamEvent[] {
+  const call = buildMockFunctionCall(name, args);
+  const message = buildAssistantOutputItem(spec);
+  const events: StreamEvent[] = [];
+  appendAssistantMessageEvents(events, spec);
+  events.push({
+    type: "response.output_item.added",
+    item: {
+      type: "function_call",
+      id: call.itemId,
+      call_id: call.callId,
+      name,
+      arguments: "",
+    },
+  });
+  events.push({ type: "response.function_call_arguments.delta", delta: call.serialized });
+  events.push({
+    type: "response.output_item.done",
+    item: call.item,
+  });
+  events.push({
+    type: "response.completed",
+    response: {
+      id: call.responseId,
+      status: "completed",
+      output: [message, call.item],
+      usage: { input_tokens: 64, output_tokens: 32, total_tokens: 96 },
+    },
+  });
+  return events;
+}
+
 function buildAssistantEvents(specsOrText: MockAssistantMessageSpec[] | string): StreamEvent[] {
   const specs =
     typeof specsOrText === "string"
@@ -1861,13 +1937,21 @@ async function buildResponsesPayload(
     return buildAssistantEvents(toolProgressReplyDirective);
   }
   if (QA_BLOCK_STREAMING_PROMPT_RE.test(allInputText) && blockStreamingMarkers) {
+    if (!toolOutput) {
+      return buildAssistantThenToolCallEvents(
+        {
+          id: "msg_mock_block_1",
+          phase: "final_answer",
+          streamDeltas: splitMockStreamingText(blockStreamingMarkers.first),
+          text: blockStreamingMarkers.first,
+        },
+        "read",
+        {
+          path: readTargetFromPrompt(blockStreamingPrompt),
+        },
+      );
+    }
     return buildAssistantEvents([
-      {
-        id: "msg_mock_block_1",
-        phase: "final_answer",
-        streamDeltas: splitMockStreamingText(blockStreamingMarkers.first),
-        text: blockStreamingMarkers.first,
-      },
       {
         id: "msg_mock_block_2",
         phase: "final_answer",
