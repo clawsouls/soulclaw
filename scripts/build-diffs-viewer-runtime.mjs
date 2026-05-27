@@ -31,7 +31,7 @@ if (!target) {
 const outputPath = path.join(repoRoot, target.output);
 await fs.mkdir(path.dirname(outputPath), { recursive: true });
 
-await build({
+const result = await build({
   entryPoints: [path.join(repoRoot, target.entry)],
   bundle: true,
   platform: "browser",
@@ -40,7 +40,7 @@ await build({
   minify: true,
   legalComments: "none",
   outfile: outputPath,
-  write: true,
+  write: false,
   plugins: target.shikiAlias
     ? [
         {
@@ -55,5 +55,21 @@ await build({
     : [],
 });
 
-const runtime = await fs.readFile(outputPath, "utf8");
-await fs.writeFile(outputPath, runtime.replace(/[ \t]+$/gm, ""));
+const outputFile = result.outputFiles?.[0];
+if (!outputFile) {
+  throw new Error(`esbuild did not produce ${target.output}`);
+}
+
+const runtime = outputFile.text.replace(/[ \t]+$/gm, "");
+let previousRuntime = null;
+try {
+  previousRuntime = await fs.readFile(outputPath, "utf8");
+} catch (error) {
+  if (error?.code !== "ENOENT") {
+    throw error;
+  }
+}
+
+if (previousRuntime !== runtime) {
+  await fs.writeFile(outputPath, runtime);
+}
