@@ -1002,6 +1002,7 @@ grep -qx -- "OPENCLAW_E2E_COMMAND_TIMEOUT=23s" "$TMPDIR/package-args"
       CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH,
       LIVE_PLUGIN_TOOL_DOCKER_E2E_PATH,
       NPM_ONBOARD_CHANNEL_AGENT_DOCKER_E2E_PATH,
+      UPDATE_CHANNEL_SWITCH_DOCKER_E2E_PATH,
       RELEASE_UPGRADE_USER_JOURNEY_SCENARIO_PATH,
       "scripts/e2e/lib/release-media-memory/scenario.sh",
       "scripts/e2e/lib/release-plugin-marketplace/scenario.sh",
