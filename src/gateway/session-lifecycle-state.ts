@@ -160,6 +160,7 @@ export async function persistGatewaySessionLifecycleEvent(params: {
   await updateSessionStoreEntry({
     storePath: sessionEntry.storePath,
     sessionKey: sessionEntry.canonicalKey,
+    takeCacheOwnership: true,
     update: async (entry) =>
       derivePersistedSessionLifecyclePatch({
         entry,
