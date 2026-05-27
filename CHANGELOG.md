@@ -13,6 +13,7 @@ Docs: https://docs.openclaw.ai
 - E2E: keep package/onboarding/plugin smoke commands bounded on macOS shells that have Node but no GNU `timeout` or `gtimeout` binary.
 - macOS: resolve Parallels npm-update smoke commands from the guest `PATH` so Intel Homebrew and other native mac layouts are not forced through `/opt/homebrew`.
 - Gateway: keep dev smoke scripts on the current protocol version and make the kitchen-sink RPC walk fail on dropped diagnostics or aggregate Gateway RSS spikes.
+- Gateway: make the CPU scenario checker fail when completed Gateway runs report hot CPU observations instead of only writing them to artifacts.
 
 ## 2026.5.26
 
