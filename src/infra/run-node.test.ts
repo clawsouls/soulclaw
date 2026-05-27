@@ -59,6 +59,8 @@ const DIST_RUNTIME_EXTENSION_SKILL = "dist-runtime/extensions/demo/skills/SKILL.
 const DIST_OPENCLAW_ALIAS_PACKAGE = "dist/extensions/node_modules/openclaw/package.json";
 const DIST_OPENCLAW_ALIAS_PLUGIN_SDK_INDEX =
   "dist/extensions/node_modules/openclaw/plugin-sdk/index.js";
+const DIST_OPENCLAW_ALIAS_PLUGIN_SDK_STRING_COERCE =
+  "dist/extensions/node_modules/openclaw/plugin-sdk/string-coerce-runtime.js";
 const DIFFS_PACKAGE = "extensions/diffs/package.json";
 const DIFFS_VIEWER_RUNTIME_SOURCE = "extensions/diffs/assets/viewer-runtime.js";
 const DIST_DIFFS_VIEWER_RUNTIME = "dist/extensions/diffs/assets/viewer-runtime.js";
@@ -2189,6 +2191,62 @@ describe("run-node script", () => {
       expect(requirement).toEqual({
         shouldSync: true,
         reason: "missing_runtime_postbuild_output",
+      });
+    });
+  });
+
+  it("does not require private OpenClaw SDK dist files that package exports omit", async () => {
+    await withTempDir({ prefix: "openclaw-run-node-" }, async (tmp) => {
+      await setupTrackedProject(tmp, {
+        files: {
+          [ROOT_SRC]: "export const value = 1;\n",
+          [ROOT_PACKAGE]: JSON.stringify(
+            {
+              name: "openclaw-test",
+              exports: {
+                "./plugin-sdk": "./dist/plugin-sdk/index.js",
+                "./plugin-sdk/string-coerce-runtime": "./dist/plugin-sdk/string-coerce-runtime.js",
+              },
+            },
+            null,
+            2,
+          ),
+          [DIST_PLUGIN_SDK_INDEX]: "export * from './core.js';\n",
+          "dist/plugin-sdk/string-coerce-runtime.js": "export const publicRuntime = true;\n",
+          "dist/plugin-sdk/ssrf-runtime-internal.js": "export const internal = true;\n",
+          [DIST_OPENCLAW_ALIAS_PACKAGE]:
+            '{"name":"openclaw","type":"module","exports":{"./plugin-sdk":"./plugin-sdk/index.js","./plugin-sdk/string-coerce-runtime":"./plugin-sdk/string-coerce-runtime.js"}}\n',
+          [DIST_OPENCLAW_ALIAS_PLUGIN_SDK_INDEX]:
+            "export * from '../../../../plugin-sdk/index.js';\n",
+          [DIST_OPENCLAW_ALIAS_PLUGIN_SDK_STRING_COERCE]:
+            "export * from '../../../../plugin-sdk/string-coerce-runtime.js';\n",
+          [RUNTIME_POSTBUILD_STAMP]: '{"head":"abc123"}\n',
+        },
+        buildPaths: [
+          ROOT_SRC,
+          ROOT_PACKAGE,
+          DIST_ENTRY,
+          DIST_PLUGIN_SDK_INDEX,
+          "dist/plugin-sdk/string-coerce-runtime.js",
+          "dist/plugin-sdk/ssrf-runtime-internal.js",
+          DIST_OPENCLAW_ALIAS_PACKAGE,
+          DIST_OPENCLAW_ALIAS_PLUGIN_SDK_INDEX,
+          DIST_OPENCLAW_ALIAS_PLUGIN_SDK_STRING_COERCE,
+          BUILD_STAMP,
+          RUNTIME_POSTBUILD_STAMP,
+        ],
+      });
+
+      const requirement = resolveRuntimePostBuildRequirement(
+        createBuildRequirementDeps(tmp, {
+          gitHead: "abc123\n",
+          gitStatus: "",
+        }),
+      );
+
+      expect(requirement).toEqual({
+        shouldSync: false,
+        reason: "clean",
       });
     });
   });
