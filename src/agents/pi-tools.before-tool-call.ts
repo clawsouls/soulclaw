@@ -106,6 +106,10 @@ type HookOutcome =
     }
   | { blocked: false; params: unknown };
 type PluginApprovalRequest = NonNullable<PluginHookBeforeToolCallResult["requireApproval"]>;
+type BeforeToolCallWrapperOptions = {
+  approvalMode?: "request" | "report";
+  emitDiagnostics: boolean;
+};
 
 export type BeforeToolCallPolicyDiagnosticState = {
   hasBeforeToolCallHook: boolean;
@@ -910,7 +914,7 @@ export async function runBeforeToolCallHook(args: {
 export function wrapToolWithBeforeToolCallHook(
   tool: AnyAgentTool,
   ctx?: HookContext,
-  options: { emitDiagnostics?: boolean } = {},
+  options: { approvalMode?: "request" | "report"; emitDiagnostics?: boolean } = {},
 ): AnyAgentTool {
   const execute = tool.execute;
   if (!execute) {
@@ -918,7 +922,10 @@ export function wrapToolWithBeforeToolCallHook(
   }
   const toolName = tool.name || "tool";
   const diagnosticIdentity = resolveToolDiagnosticIdentity(tool);
-  const diagnosticOptions = { emitDiagnostics: options.emitDiagnostics !== false };
+  const hookOptions: BeforeToolCallWrapperOptions = {
+    ...(options.approvalMode ? { approvalMode: options.approvalMode } : {}),
+    emitDiagnostics: options.emitDiagnostics !== false,
+  };
   const wrappedTool: AnyAgentTool = {
     ...tool,
     execute: async (toolCallId, params, signal, onUpdate) => {
@@ -931,6 +938,7 @@ export function wrapToolWithBeforeToolCallHook(
         toolCallId,
         ctx,
         signal,
+        approvalMode: hookOptions.approvalMode,
       });
       if (outcome.blocked) {
         if (outcome.kind !== "veto") {
@@ -950,7 +958,7 @@ export function wrapToolWithBeforeToolCallHook(
           ...(toolCallId && { toolCallId }),
           paramsSummary: summarizeToolParams(outcome.params ?? hookParams),
         };
-        if (diagnosticOptions.emitDiagnostics) {
+        if (hookOptions.emitDiagnostics) {
           emitTrustedDiagnosticEvent({
             type: "tool.execution.blocked",
             ...eventBase,
@@ -992,7 +1000,7 @@ export function wrapToolWithBeforeToolCallHook(
         ...(toolCallId && { toolCallId }),
         paramsSummary: summarizeToolParams(executeParams),
       };
-      if (diagnosticOptions.emitDiagnostics) {
+      if (hookOptions.emitDiagnostics) {
         emitTrustedDiagnosticEvent({
           type: "tool.execution.started",
           ...eventBase,
@@ -1014,7 +1022,7 @@ export function wrapToolWithBeforeToolCallHook(
           toolParams: executeParams,
           ctx,
         });
-        if (diagnosticOptions.emitDiagnostics) {
+        if (hookOptions.emitDiagnostics) {
           if (skillMatch) {
             emitSkillUsedDiagnostic({
               ctx,
@@ -1033,7 +1041,7 @@ export function wrapToolWithBeforeToolCallHook(
       } catch (err) {
         const cause = unwrapErrorCause(err);
         const errorCode = diagnosticHttpStatusCode(cause);
-        if (diagnosticOptions.emitDiagnostics) {
+        if (hookOptions.emitDiagnostics) {
           emitTrustedDiagnosticEvent({
             type: "tool.execution.error",
             ...eventBase,
@@ -1060,7 +1068,7 @@ export function wrapToolWithBeforeToolCallHook(
     enumerable: true,
   });
   Object.defineProperty(wrappedTool, BEFORE_TOOL_CALL_DIAGNOSTIC_OPTIONS, {
-    value: diagnosticOptions,
+    value: hookOptions,
     enumerable: false,
   });
   return wrappedTool;
@@ -1076,6 +1084,17 @@ export function setBeforeToolCallDiagnosticsEnabled(tool: AnyAgentTool, enabled:
   const options = taggedTool[BEFORE_TOOL_CALL_DIAGNOSTIC_OPTIONS];
   if (options && typeof options === "object" && "emitDiagnostics" in options) {
     (options as { emitDiagnostics: boolean }).emitDiagnostics = enabled;
+  }
+}
+
+export function setBeforeToolCallApprovalMode(
+  tool: AnyAgentTool,
+  approvalMode: "request" | "report" | undefined,
+): void {
+  const taggedTool = tool as unknown as Record<symbol, unknown>;
+  const options = taggedTool[BEFORE_TOOL_CALL_DIAGNOSTIC_OPTIONS];
+  if (options && typeof options === "object") {
+    (options as BeforeToolCallWrapperOptions).approvalMode = approvalMode;
   }
 }
 

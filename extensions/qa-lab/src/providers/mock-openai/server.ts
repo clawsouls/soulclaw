@@ -1513,6 +1513,20 @@ function buildReasoningAndAssistantEvents(params: {
       },
     },
     {
+      type: "response.output_text.delta",
+      item_id: answerItem.id,
+      output_index: 1,
+      content_index: 0,
+      delta: params.answerText,
+    },
+    {
+      type: "response.output_text.done",
+      item_id: answerItem.id,
+      output_index: 1,
+      content_index: 0,
+      text: params.answerText,
+    },
+    {
       type: "response.output_item.done",
       item: answerItem,
     },
@@ -1664,13 +1678,13 @@ async function buildResponsesPayload(
     }
     return buildAssistantEvents("BUG-SHOULD-NOT-AUTO-RETRY");
   }
-  if (QA_THINKING_VISIBILITY_MAX_PROMPT_RE.test(prompt)) {
+  if (QA_THINKING_VISIBILITY_MAX_PROMPT_RE.test(allInputText)) {
     return buildReasoningAndAssistantEvents({
       reasoningId: "rs_mock_thinking_visibility_max",
       answerText: "THINKING-MAX-OK",
     });
   }
-  if (QA_THINKING_VISIBILITY_OFF_PROMPT_RE.test(prompt)) {
+  if (QA_THINKING_VISIBILITY_OFF_PROMPT_RE.test(allInputText)) {
     return buildAssistantEvents("THINKING-OFF-OK");
   }
   if (QA_EMPTY_RESPONSE_RECOVERY_PROMPT_RE.test(allInputText)) {

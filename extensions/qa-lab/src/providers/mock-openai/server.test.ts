@@ -3859,6 +3859,14 @@ describe("qa mock openai server", () => {
     expect(maxReasoning.summary).toEqual([]);
     expect(outputItem(maxPayload, 1).type).toBe("message");
     expect(outputText(maxPayload, 1)).toBe("THINKING-MAX-OK");
+
+    const maxStream = await expectResponsesText(server, {
+      stream: true,
+      model: "gpt-5.5",
+      input: [makeUserInput(QA_THINKING_VISIBILITY_MAX_PROMPT)],
+    });
+    expect(maxStream).toContain('"type":"response.output_text.delta"');
+    expect(maxStream).toContain('"delta":"THINKING-MAX-OK"');
   });
 
   it("keeps the reasoning-only side-effect path ready for no-auto-retry QA coverage", async () => {

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { wrapToolWithBeforeToolCallHook } from "../agents/pi-tools.before-tool-call.js";
 import type { AnyAgentTool } from "../agents/tools/common.js";
 import {
   initializeGlobalHookRunner,
@@ -226,7 +227,7 @@ describe("plugin tools MCP server", () => {
     expect(failed.content).toEqual([{ type: "text", text: "Tool error: boom" }]);
   });
 
-  it("blocks tool execution when before_tool_call requires approval on the MCP bridge", async () => {
+  it("reports approval requirements without opening plugin approvals on the MCP bridge", async () => {
     let hookCalls = 0;
     const execute = vi.fn().mockResolvedValue({
       content: "Stored.",
@@ -248,7 +249,6 @@ describe("plugin tools MCP server", () => {
         },
       ]),
     );
-    callGatewayTool.mockRejectedValueOnce(new Error("gateway unavailable"));
     const tool = {
       name: "memory_store",
       description: "Store memory",
@@ -262,10 +262,46 @@ describe("plugin tools MCP server", () => {
       arguments: { text: "remember this" },
     });
     expect(hookCalls).toBe(1);
+    expect(callGatewayTool).not.toHaveBeenCalled();
     expect(execute).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
-    expect(result.content).toEqual([
-      { type: "text", text: "Tool error: Plugin approval required (gateway unavailable)" },
-    ]);
+    expect(result.content).toEqual([{ type: "text", text: "Tool error: Approval required" }]);
+  });
+
+  it("switches pre-wrapped plugin tools to approval report mode on the MCP bridge", async () => {
+    const execute = vi.fn().mockResolvedValue({
+      content: "Stored.",
+    });
+    initializeGlobalHookRunner(
+      createMockPluginRegistry([
+        {
+          hookName: "before_tool_call",
+          handler: async () => ({
+            requireApproval: {
+              pluginId: "test-plugin",
+              title: "Approval required",
+              description: "Approval required",
+            },
+          }),
+        },
+      ]),
+    );
+    callGatewayTool.mockRejectedValue(new Error("gateway unavailable"));
+    const tool = wrapToolWithBeforeToolCallHook({
+      name: "memory_store",
+      description: "Store memory",
+      parameters: { type: "object", properties: {} },
+      execute,
+    } as unknown as AnyAgentTool);
+
+    const handlers = createPluginToolsMcpHandlers([tool]);
+    const result = await handlers.callTool({
+      name: "memory_store",
+      arguments: { text: "remember this" },
+    });
+    expect(callGatewayTool).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+    expect(result.isError).toBe(true);
+    expect(result.content).toEqual([{ type: "text", text: "Tool error: Approval required" }]);
   });
 });

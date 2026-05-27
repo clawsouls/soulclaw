@@ -1,5 +1,6 @@
 import {
   isToolWrappedWithBeforeToolCallHook,
+  setBeforeToolCallApprovalMode,
   wrapToolWithBeforeToolCallHook,
 } from "../agents/pi-tools.before-tool-call.js";
 import type { AnyAgentTool } from "../agents/tools/common.js";
@@ -22,11 +23,12 @@ function resolveJsonSchemaForTool(tool: AnyAgentTool): Record<string, unknown> {
 export function createPluginToolsMcpHandlers(tools: AnyAgentTool[]) {
   const wrappedTools = tools.map((tool) => {
     if (isToolWrappedWithBeforeToolCallHook(tool)) {
+      setBeforeToolCallApprovalMode(tool, "report");
       return tool;
     }
     // The ACPX MCP bridge should enforce the same pre-execution hook boundary
     // as the agent and HTTP tool execution paths.
-    return wrapToolWithBeforeToolCallHook(tool);
+    return wrapToolWithBeforeToolCallHook(tool, undefined, { approvalMode: "report" });
   });
   const toolMap = new Map<string, AnyAgentTool>();
   for (const tool of wrappedTools) {
