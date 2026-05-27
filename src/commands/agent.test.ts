@@ -721,6 +721,10 @@ describe("agentCommand", () => {
           updatedAt: Date.now(),
           thinkingLevel: "low",
         },
+        "agent:main:other": {
+          sessionId: "session-other",
+          updatedAt: Date.now(),
+        },
       });
       mockConfig(home, store, { models: {} });
 
@@ -736,6 +740,7 @@ describe("agentCommand", () => {
       expect(prepared.sessionStore).not.toBe(cached);
       expect(prepared.sessionEntry).not.toBe(cached[sessionKey]);
       expect(prepared.sessionStore?.[sessionKey]).toBe(prepared.sessionEntry);
+      expect(prepared.sessionStore?.["agent:main:other"]).toBeUndefined();
     });
   });
 

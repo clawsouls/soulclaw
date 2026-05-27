@@ -351,11 +351,11 @@ function createAgentCommandSessionWorkingCopy(params: {
   if (params.sessionEntry) {
     result.sessionEntry = { ...params.sessionEntry };
   }
-  if (params.sessionStore) {
-    result.sessionStore = { ...params.sessionStore };
-    if (params.sessionKey && result.sessionEntry) {
-      result.sessionStore[params.sessionKey] = result.sessionEntry;
-    }
+  if (params.sessionStore || params.sessionKey) {
+    result.sessionStore = {};
+  }
+  if (params.sessionKey && result.sessionEntry && result.sessionStore) {
+    result.sessionStore[params.sessionKey] = result.sessionEntry;
   }
   return result;
 }
