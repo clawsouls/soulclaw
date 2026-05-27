@@ -373,6 +373,7 @@ describeLive("subagent announce live", () => {
       const parentToken = `PARENT_SAW_${childToken}`;
       const parentStartedToken = `PARENT_READY_${nonce}`;
       const steerToken = `STEER_${nonce}`;
+      const steerMessage = `${steerToken}: reply exactly ${childToken} now.`;
       const childTask = [
         `Immediately call sessions_yield with message="waiting for ${steerToken}".`,
         `After a steering message containing ${steerToken} arrives, reply exactly ${childToken}.`,
@@ -492,7 +493,7 @@ describeLive("subagent announce live", () => {
         cfg,
         controller: resolveSubagentController({ cfg, agentSessionKey: sessionKey }),
         entry: spawnedRun,
-        message: steerToken,
+        message: steerMessage,
       });
       expect(["accepted", "done"]).toContain(steerResult.status);
 
