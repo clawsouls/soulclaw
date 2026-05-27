@@ -147,6 +147,7 @@ export function hasBeforeToolCallPolicy(): boolean {
 const log = createSubsystemLogger("agents/tools");
 const BEFORE_TOOL_CALL_WRAPPED = Symbol("beforeToolCallWrapped");
 const BEFORE_TOOL_CALL_DIAGNOSTIC_OPTIONS = Symbol("beforeToolCallDiagnosticOptions");
+const BEFORE_TOOL_CALL_SOURCE_TOOL = Symbol("beforeToolCallSourceTool");
 const BEFORE_TOOL_CALL_HOOK_FAILURE_REASON =
   "Tool call blocked because before_tool_call hook failed";
 const MAX_TRACKED_ADJUSTED_PARAMS = 1024;
@@ -1071,6 +1072,10 @@ export function wrapToolWithBeforeToolCallHook(
     value: hookOptions,
     enumerable: false,
   });
+  Object.defineProperty(wrappedTool, BEFORE_TOOL_CALL_SOURCE_TOOL, {
+    value: tool,
+    enumerable: false,
+  });
   return wrappedTool;
 }
 
@@ -1087,15 +1092,18 @@ export function setBeforeToolCallDiagnosticsEnabled(tool: AnyAgentTool, enabled:
   }
 }
 
-export function setBeforeToolCallApprovalMode(
+export function rewrapToolWithBeforeToolCallHook(
   tool: AnyAgentTool,
-  approvalMode: "request" | "report" | undefined,
-): void {
+  ctx?: HookContext,
+  options: { approvalMode?: "request" | "report"; emitDiagnostics?: boolean } = {},
+): AnyAgentTool {
   const taggedTool = tool as unknown as Record<symbol, unknown>;
-  const options = taggedTool[BEFORE_TOOL_CALL_DIAGNOSTIC_OPTIONS];
-  if (options && typeof options === "object") {
-    (options as BeforeToolCallWrapperOptions).approvalMode = approvalMode;
-  }
+  const source = taggedTool[BEFORE_TOOL_CALL_SOURCE_TOOL];
+  return wrapToolWithBeforeToolCallHook(
+    source && typeof source === "object" ? (source as AnyAgentTool) : tool,
+    ctx,
+    options,
+  );
 }
 
 export function copyBeforeToolCallHookMarker(source: AnyAgentTool, target: AnyAgentTool): void {
@@ -1106,6 +1114,14 @@ export function copyBeforeToolCallHookMarker(source: AnyAgentTool, target: AnyAg
     value: true,
     enumerable: true,
   });
+  const taggedSource = source as unknown as Record<symbol, unknown>;
+  const sourceTool = taggedSource[BEFORE_TOOL_CALL_SOURCE_TOOL];
+  if (sourceTool && typeof sourceTool === "object") {
+    Object.defineProperty(target, BEFORE_TOOL_CALL_SOURCE_TOOL, {
+      value: sourceTool,
+      enumerable: false,
+    });
+  }
 }
 
 export function consumeAdjustedParamsForToolCall(toolCallId: string, runId?: string): unknown {
@@ -1117,6 +1133,7 @@ export function consumeAdjustedParamsForToolCall(toolCallId: string, runId?: str
 
 export const testing = {
   BEFORE_TOOL_CALL_DIAGNOSTIC_OPTIONS,
+  BEFORE_TOOL_CALL_SOURCE_TOOL,
   BEFORE_TOOL_CALL_WRAPPED,
   buildAdjustedParamsKey,
   adjustedParamsByToolCallId,

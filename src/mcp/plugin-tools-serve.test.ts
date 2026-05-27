@@ -303,5 +303,11 @@ describe("plugin tools MCP server", () => {
     expect(execute).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
     expect(result.content).toEqual([{ type: "text", text: "Tool error: Approval required" }]);
+
+    await expect(tool.execute("agent-tool-call", { text: "remember this" })).rejects.toThrow(
+      "Plugin approval required (gateway unavailable)",
+    );
+    expect(callGatewayTool).toHaveBeenCalledTimes(1);
+    expect(execute).not.toHaveBeenCalled();
   });
 });

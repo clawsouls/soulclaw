@@ -4011,6 +4011,26 @@ describe("qa mock openai server", () => {
     expect(maxStream).toContain('"delta":"THINKING-MAX-OK"');
   });
 
+  it("keeps stale thinking visibility prompts from overriding later marker turns", async () => {
+    const server = await startMockServer();
+
+    const payload = await expectResponsesJson<{
+      output?: Array<{ content?: Array<{ text?: string }> }>;
+    }>(server, {
+      stream: false,
+      model: "gpt-5.5",
+      input: [
+        makeUserInput(QA_THINKING_VISIBILITY_MAX_PROMPT),
+        {
+          role: "assistant",
+          content: [{ type: "output_text", text: "THINKING-MAX-OK" }],
+        },
+        makeUserInput("Marker exact marker: `fresh-thinking-marker`"),
+      ],
+    });
+    expect(outputText(payload)).toBe("fresh-thinking-marker");
+  });
+
   it("keeps the reasoning-only side-effect path ready for no-auto-retry QA coverage", async () => {
     const server = await startMockServer();
 

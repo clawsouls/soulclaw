@@ -1730,13 +1730,13 @@ async function buildResponsesPayload(
     }
     return buildAssistantEvents("BUG-SHOULD-NOT-AUTO-RETRY");
   }
-  if (QA_THINKING_VISIBILITY_MAX_PROMPT_RE.test(allInputText)) {
+  if (QA_THINKING_VISIBILITY_MAX_PROMPT_RE.test(prompt)) {
     return buildReasoningAndAssistantEvents({
       reasoningId: "rs_mock_thinking_visibility_max",
       answerText: "THINKING-MAX-OK",
     });
   }
-  if (QA_THINKING_VISIBILITY_OFF_PROMPT_RE.test(allInputText)) {
+  if (QA_THINKING_VISIBILITY_OFF_PROMPT_RE.test(prompt)) {
     return buildAssistantEvents("THINKING-OFF-OK");
   }
   if (QA_EMPTY_RESPONSE_RECOVERY_PROMPT_RE.test(allInputText)) {
