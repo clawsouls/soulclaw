@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { clearLoadInstalledPluginIndexInstallRecordsCache } from "../plugins/installed-plugin-index-records.js";
 import { validateConfigObjectWithPlugins } from "./validation.js";
 
 vi.unmock("../version.js");
@@ -851,6 +852,7 @@ describe("config plugin validation", () => {
       ),
       "utf-8",
     );
+    clearLoadInstalledPluginIndexInstallRecordsCache();
     try {
       const res = validateInSuite({
         agents: { list: [{ id: "openclaw" }] },
