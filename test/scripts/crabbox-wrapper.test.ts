@@ -218,8 +218,9 @@ describe("scripts/crabbox-wrapper", () => {
     expect(result.status).toBe(2);
     expect(result.stdout).toBe("");
     expect(result.stderr).toContain("provider=aws requires a configured Crabbox broker");
-    expect(result.stderr).toContain("crabbox login --provider aws");
-    expect(result.stderr).not.toContain("crabbox.openclaw.ai");
+    expect(result.stderr).toContain(
+      "crabbox login --url https://crabbox.openclaw.ai --provider aws",
+    );
   });
 
   it("allows explicit direct AWS debugging without broker auth", () => {

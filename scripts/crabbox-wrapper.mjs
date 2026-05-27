@@ -428,7 +428,7 @@ function enforceBrokeredAws(commandArgs, providerName) {
   console.error(
     [
       "[crabbox] provider=aws requires a configured Crabbox broker for OpenClaw proof.",
-      "[crabbox] run `crabbox login --provider aws`, then retry.",
+      "[crabbox] run `crabbox login --url https://crabbox.openclaw.ai --provider aws`, then retry.",
       "[crabbox] for intentional direct AWS provider debugging, set OPENCLAW_CRABBOX_ALLOW_DIRECT_AWS=1.",
     ].join("\n"),
   );
