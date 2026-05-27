@@ -31,6 +31,15 @@ export async function resolveSandboxedBridgeMediaPath(params: {
     : { resolved: params.mediaPath };
   const filePath = normalizeFileUrl(mediaPathInfo.resolved);
   const rewrittenFrom = mediaPathInfo.rewrittenFrom;
+  if (rewrittenFrom) {
+    const stat = await params.sandbox.bridge.stat({
+      filePath,
+      cwd: params.sandbox.root,
+    });
+    if (!stat) {
+      throw new Error(`Sandbox media reference is not staged: ${rewrittenFrom}`);
+    }
+  }
   const enforceWorkspaceBoundary = async (hostPath: string) => {
     if (!params.sandbox.workspaceOnly) {
       return;
