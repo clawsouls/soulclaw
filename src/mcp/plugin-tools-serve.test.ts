@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { wrapToolWithBeforeToolCallHook } from "../agents/pi-tools.before-tool-call.js";
+import {
+  type HookContext,
+  wrapToolWithBeforeToolCallHook,
+} from "../agents/pi-tools.before-tool-call.js";
 import type { AnyAgentTool } from "../agents/tools/common.js";
 import {
   initializeGlobalHookRunner,
@@ -277,28 +280,41 @@ describe("plugin tools MCP server", () => {
     const execute = vi.fn().mockResolvedValue({
       content: "Stored.",
     });
+    const originalContext = {
+      agentId: "agent-with-plugins",
+      sessionKey: "session-with-plugins",
+    } satisfies HookContext;
     initializeGlobalHookRunner(
       createMockPluginRegistry([
         {
           hookName: "before_tool_call",
-          handler: async () => ({
-            requireApproval: {
-              pluginId: "test-plugin",
-              title: "Approval required",
-              description: "Approval required",
-              onResolution,
-            },
-          }),
+          handler: async (_event, ctx) => {
+            const hookContext = ctx as HookContext | undefined;
+            if (hookContext?.sessionKey !== originalContext.sessionKey) {
+              return undefined;
+            }
+            return {
+              requireApproval: {
+                pluginId: "test-plugin",
+                title: "Approval required",
+                description: "Approval required",
+                onResolution,
+              },
+            };
+          },
         },
       ]),
     );
     callGatewayTool.mockRejectedValue(new Error("gateway unavailable"));
-    const tool = wrapToolWithBeforeToolCallHook({
-      name: "memory_store",
-      description: "Store memory",
-      parameters: { type: "object", properties: {} },
-      execute,
-    } as unknown as AnyAgentTool);
+    const tool = wrapToolWithBeforeToolCallHook(
+      {
+        name: "memory_store",
+        description: "Store memory",
+        parameters: { type: "object", properties: {} },
+        execute,
+      } as unknown as AnyAgentTool,
+      originalContext,
+    );
 
     const handlers = createPluginToolsMcpHandlers([tool]);
     const result = await handlers.callTool({

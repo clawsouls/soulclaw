@@ -148,6 +148,7 @@ const log = createSubsystemLogger("agents/tools");
 const BEFORE_TOOL_CALL_WRAPPED = Symbol("beforeToolCallWrapped");
 const BEFORE_TOOL_CALL_DIAGNOSTIC_OPTIONS = Symbol("beforeToolCallDiagnosticOptions");
 const BEFORE_TOOL_CALL_SOURCE_TOOL = Symbol("beforeToolCallSourceTool");
+const BEFORE_TOOL_CALL_HOOK_CONTEXT = Symbol("beforeToolCallHookContext");
 const BEFORE_TOOL_CALL_HOOK_FAILURE_REASON =
   "Tool call blocked because before_tool_call hook failed";
 const MAX_TRACKED_ADJUSTED_PARAMS = 1024;
@@ -1088,6 +1089,10 @@ export function wrapToolWithBeforeToolCallHook(
     value: tool,
     enumerable: false,
   });
+  Object.defineProperty(wrappedTool, BEFORE_TOOL_CALL_HOOK_CONTEXT, {
+    value: ctx,
+    enumerable: false,
+  });
   return wrappedTool;
 }
 
@@ -1111,9 +1116,14 @@ export function rewrapToolWithBeforeToolCallHook(
 ): AnyAgentTool {
   const taggedTool = tool as unknown as Record<symbol, unknown>;
   const source = taggedTool[BEFORE_TOOL_CALL_SOURCE_TOOL];
+  const wrappedContext = taggedTool[BEFORE_TOOL_CALL_HOOK_CONTEXT];
+  const preservedContext =
+    wrappedContext && typeof wrappedContext === "object"
+      ? (wrappedContext as HookContext)
+      : undefined;
   return wrapToolWithBeforeToolCallHook(
     source && typeof source === "object" ? (source as AnyAgentTool) : tool,
-    ctx,
+    ctx ?? preservedContext,
     options,
   );
 }
@@ -1134,6 +1144,11 @@ export function copyBeforeToolCallHookMarker(source: AnyAgentTool, target: AnyAg
       enumerable: false,
     });
   }
+  const hookContext = taggedSource[BEFORE_TOOL_CALL_HOOK_CONTEXT];
+  Object.defineProperty(target, BEFORE_TOOL_CALL_HOOK_CONTEXT, {
+    value: hookContext,
+    enumerable: false,
+  });
 }
 
 export function consumeAdjustedParamsForToolCall(toolCallId: string, runId?: string): unknown {
@@ -1145,6 +1160,7 @@ export function consumeAdjustedParamsForToolCall(toolCallId: string, runId?: str
 
 export const testing = {
   BEFORE_TOOL_CALL_DIAGNOSTIC_OPTIONS,
+  BEFORE_TOOL_CALL_HOOK_CONTEXT,
   BEFORE_TOOL_CALL_SOURCE_TOOL,
   BEFORE_TOOL_CALL_WRAPPED,
   buildAdjustedParamsKey,
