@@ -28,6 +28,15 @@ function writeFakeCrabbox(binDir: string, helpText: string): string {
     `  process.stdout.write(${JSON.stringify(helpText)});`,
     "  process.exit(0);",
     "}",
+    'if (args[0] === "config" && args[1] === "show" && args.includes("--json")) {',
+    "  const status = Number.parseInt(process.env.OPENCLAW_FAKE_CRABBOX_CONFIG_STATUS || '0', 10);",
+    "  if (status !== 0) {",
+    "    process.stderr.write('config unavailable\\n');",
+    "    process.exit(status);",
+    "  }",
+    "  process.stdout.write(process.env.OPENCLAW_FAKE_CRABBOX_CONFIG_JSON || '{\"coordinator\":\"configured-broker\",\"brokerAuth\":\"configured\"}');",
+    "  process.exit(0);",
+    "}",
     "const scriptIndex = args.findIndex((arg) => arg === '--script' || arg === '-script');",
     "const scriptPath = scriptIndex >= 0 ? args[scriptIndex + 1] : '';",
     "const scriptContent = scriptPath ? require('node:fs').readFileSync(scriptPath, 'utf8') : '';",
@@ -75,6 +84,9 @@ function runWrapper(
   helpText: string,
   args: string[],
   options: {
+    configJson?: Record<string, unknown>;
+    configStatus?: number;
+    env?: Record<string, string>;
     extraPathEntries?: string[];
     gitResponses?: Record<string, { status?: number; stdout?: string; stderr?: string }>;
     input?: string;
@@ -92,6 +104,13 @@ function runWrapper(
         .filter(Boolean)
         .join(path.delimiter),
       OPENCLAW_CRABBOX_WRAPPER_IGNORE_REPO_BINARY: "1",
+      ...(options.configJson
+        ? { OPENCLAW_FAKE_CRABBOX_CONFIG_JSON: JSON.stringify(options.configJson) }
+        : {}),
+      ...(options.configStatus
+        ? { OPENCLAW_FAKE_CRABBOX_CONFIG_STATUS: String(options.configStatus) }
+        : {}),
+      ...(options.env ?? {}),
       ...(options.gitResponses
         ? { OPENCLAW_FAKE_GIT_RESPONSES: JSON.stringify(options.gitResponses) }
         : {}),
@@ -184,6 +203,40 @@ describe("scripts/crabbox-wrapper", () => {
       "macos",
       "--market",
       "on-demand",
+      "--",
+      "echo ok",
+    ]);
+  });
+
+  it("fails closed for AWS proof when broker auth is missing", () => {
+    const result = runWrapper(
+      "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
+      ["run", "--provider", "aws", "--", "echo ok"],
+      { configJson: { coordinator: "", brokerAuth: "missing" } },
+    );
+
+    expect(result.status).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("provider=aws requires a configured Crabbox broker");
+    expect(result.stderr).toContain("crabbox login --provider aws");
+    expect(result.stderr).not.toContain("crabbox.openclaw.ai");
+  });
+
+  it("allows explicit direct AWS debugging without broker auth", () => {
+    const result = runWrapper(
+      "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
+      ["run", "--provider", "aws", "--", "echo ok"],
+      {
+        configJson: { coordinator: "", brokerAuth: "missing" },
+        env: { OPENCLAW_CRABBOX_ALLOW_DIRECT_AWS: "1" },
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(parseFakeCrabboxOutput(result).args).toEqual([
+      "run",
+      "--provider",
+      "aws",
       "--",
       "echo ok",
     ]);

@@ -630,7 +630,7 @@ Install/auth for owned Crabbox if needed:
 
 ```sh
 brew install openclaw/tap/crabbox
-crabbox login --url https://crabbox.openclaw.ai --provider aws
+crabbox login --provider aws
 ```
 
 New users should self-resolve broker auth before anyone asks for AWS keys:
@@ -641,7 +641,7 @@ crabbox doctor
 crabbox whoami
 ```
 
-- If broker auth is missing, run `crabbox login --url https://crabbox.openclaw.ai --provider aws`.
+- If broker auth is missing, run `crabbox login --provider aws`.
 - If the CLI asks for `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, or AWS
   profile setup during normal OpenClaw validation, assume the agent selected
   the wrong path. Use brokered `crabbox login` or an existing brokered lease
@@ -649,7 +649,7 @@ crabbox whoami
 - Ask for AWS keys only for explicit direct-provider/account administration,
   not for normal brokered OpenClaw proof.
 - Trusted automation may still use
-  `printf '%s' "$CRABBOX_COORDINATOR_TOKEN" | crabbox login --url https://crabbox.openclaw.ai --provider aws --token-stdin`.
+  `printf '%s' "$CRABBOX_COORDINATOR_TOKEN" | crabbox login --provider aws --token-stdin`.
 
 macOS config lives at:
 
