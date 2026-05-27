@@ -2,10 +2,12 @@ const normalizeRepoPath = (value) => value.replaceAll("\\", "/");
 
 const commandsLightEntries = [
   { source: "src/commands/cleanup-utils.ts", test: "src/commands/cleanup-utils.test.ts" },
+  { test: "src/commands/auth-choice.test.ts" },
   {
     source: "src/commands/dashboard.links.ts",
     test: "src/commands/dashboard.links.test.ts",
   },
+  { test: "src/commands/daemon-install-helpers.test.ts" },
   { source: "src/commands/doctor-browser.ts", test: "src/commands/doctor-browser.test.ts" },
   {
     source: "src/commands/doctor-gateway-auth-token.ts",
@@ -39,10 +41,9 @@ const commandsLightEntries = [
     source: "src/commands/gateway-status/helpers.ts",
     test: "src/commands/gateway-status/helpers.test.ts",
   },
-  {
-    source: "src/commands/models/auth.ts",
-    test: "src/commands/models/auth.test.ts",
-  },
+  { test: "src/commands/models/auth.test.ts" },
+  { test: "src/commands/models/list.auth-index.test.ts" },
+  { test: "src/commands/models/list.list-command.forward-compat.test.ts" },
   {
     source: "src/commands/models/list.status-command.ts",
     test: "src/commands/models/list.status.test.ts",
@@ -79,13 +80,19 @@ const commandsLightEntries = [
 ];
 
 const commandsLightIncludePatternByFile = new Map(
-  commandsLightEntries.flatMap(({ source, test }) => [
-    [source, test],
-    [test, test],
-  ]),
+  commandsLightEntries.flatMap(({ source, test }) =>
+    source
+      ? [
+          [source, test],
+          [test, test],
+        ]
+      : [[test, test]],
+  ),
 );
 
-export const commandsLightSourceFiles = commandsLightEntries.map(({ source }) => source);
+export const commandsLightSourceFiles = commandsLightEntries.flatMap(({ source }) =>
+  source ? [source] : [],
+);
 export const commandsLightTestFiles = commandsLightEntries.map(({ test }) => test);
 
 export function isCommandsLightTarget(file) {
