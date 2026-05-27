@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
 import type { MatrixQaObservedEvent } from "../../substrate/events.js";
 import {
   MATRIX_QA_BLOCK_ROOM_KEY,
@@ -18,6 +20,7 @@ import {
   buildMatrixPartialStreamingPrompt,
   buildMatrixQuietStreamingPrompt,
   buildMatrixQaToken,
+  buildMatrixToolProgressTaskContent,
   buildMatrixToolProgressErrorPrompt,
   buildMatrixToolProgressMentionSafetyPrompt,
   buildMatrixToolProgressPrompt,
@@ -29,6 +32,7 @@ import {
   createMatrixQaScenarioClient,
   isMatrixQaExactMarkerReply,
   isMatrixQaMessageLikeKind,
+  MATRIX_QA_TOOL_PROGRESS_TASK_FILENAME,
   primeMatrixQaActorCursor,
   primeMatrixQaDriverScenarioClient,
   resolveMatrixQaNoReplyWindowMs,
@@ -872,6 +876,7 @@ async function runMatrixToolProgressScenario(
 ) {
   const { client, startSince } = await primeMatrixQaDriverScenarioClient(context);
   const startObservedIndex = context.observedEvents.length;
+  await writeMatrixToolProgressTaskFile(context, params.finalText);
   const triggerBody = params.triggerBodyBuilder(context.sutUserId, params.finalText);
   const driverEventId = await client.sendTextMessage({
     body: triggerBody,
@@ -1017,6 +1022,20 @@ async function runMatrixToolProgressScenario(
   } satisfies MatrixQaScenarioExecution;
 }
 
+async function writeMatrixToolProgressTaskFile(
+  context: MatrixQaScenarioContext,
+  finalText: string,
+) {
+  if (!context.gatewayWorkspaceDir) {
+    return;
+  }
+  await writeFile(
+    path.join(context.gatewayWorkspaceDir, MATRIX_QA_TOOL_PROGRESS_TASK_FILENAME),
+    `${buildMatrixToolProgressTaskContent(finalText)}\n`,
+    "utf8",
+  );
+}
+
 export async function runToolProgressPreviewScenario(context: MatrixQaScenarioContext) {
   return runMatrixToolProgressScenario(context, {
     expectedPreviewKind: "notice",
@@ -1054,7 +1073,8 @@ export async function runToolProgressPreviewOptOutScenario(context: MatrixQaScen
   const { client, startSince } = await primeMatrixQaDriverScenarioClient(context);
   const startObservedIndex = context.observedEvents.length;
   const finalText = buildMatrixQaToken("MATRIX_QA_TOOL_PROGRESS_OPTOUT");
-  const triggerBody = buildMatrixToolProgressPrompt(context.sutUserId, finalText);
+  await writeMatrixToolProgressTaskFile(context, finalText);
+  const triggerBody = buildMatrixToolProgressPrompt(context.sutUserId);
   const driverEventId = await client.sendTextMessage({
     body: triggerBody,
     mentionUserIds: [context.sutUserId],

@@ -136,7 +136,9 @@ function mockMatrixQaRoomClient(params: {
   events: Array<{
     event:
       | MatrixQaObservedEvent
-      | ((client: { sendTextMessage: ReturnType<typeof vi.fn> }) => MatrixQaObservedEvent);
+      | ((client: {
+          sendTextMessage: ReturnType<typeof vi.fn>;
+        }) => MatrixQaObservedEvent | Promise<MatrixQaObservedEvent>);
     since: string;
   }>;
 }) {
@@ -144,10 +146,14 @@ function mockMatrixQaRoomClient(params: {
   const sendTextMessage = vi.fn().mockResolvedValue(params.driverEventId);
   const waitForRoomEvent = vi.fn();
   for (const entry of params.events) {
-    waitForRoomEvent.mockImplementationOnce(async () => ({
-      event: typeof entry.event === "function" ? entry.event({ sendTextMessage }) : entry.event,
-      since: entry.since,
-    }));
+    waitForRoomEvent.mockImplementationOnce(async () => {
+      const event =
+        typeof entry.event === "function" ? await entry.event({ sendTextMessage }) : entry.event;
+      return {
+        event,
+        since: entry.since,
+      };
+    });
   }
   createMatrixQaClient.mockReturnValue({
     primeRoom,
@@ -3078,56 +3084,73 @@ describe("matrix live qa scenarios", () => {
 
   it("captures Matrix tool progress inside the quiet preview before finalizing", async () => {
     const previewEventId = "$tool-progress-preview";
-    const { sendTextMessage } = mockMatrixQaRoomClient({
-      driverEventId: "$tool-progress-trigger",
-      events: [
-        {
-          event: matrixQaMessageEvent({
-            kind: "notice",
-            eventId: previewEventId,
-            body: "Barnacling...\n`📖 Read: from /tmp/qa/workspace/QA_KICKOFF_TASK.md`",
-          }),
-          since: "driver-sync-preview",
-        },
-        {
-          event: ({ sendTextMessage }) =>
-            matrixQaMessageEvent({
+    const gatewayWorkspaceDir = await mkdtemp(path.join(os.tmpdir(), "matrix-qa-workspace-"));
+    try {
+      const { sendTextMessage } = mockMatrixQaRoomClient({
+        driverEventId: "$tool-progress-trigger",
+        events: [
+          {
+            event: matrixQaMessageEvent({
               kind: "notice",
-              eventId: "$tool-progress-final",
-              body: readMatrixQaReplyDirective(
-                mockMessageBody(sendTextMessage, "sendTextMessage"),
-                "MATRIX_QA_TOOL_PROGRESS_FIXED",
-              ),
-              relatesTo: {
-                relType: "m.replace",
-                eventId: previewEventId,
-              },
+              eventId: previewEventId,
+              body: "Barnacling...\n`📖 Read: from /tmp/qa/workspace/QA_KICKOFF_TASK.md`",
             }),
-          since: "driver-sync-next",
-        },
-      ],
-    });
+            since: "driver-sync-preview",
+          },
+          {
+            event: async () => {
+              const task = await readFile(
+                path.join(gatewayWorkspaceDir, "QA_KICKOFF_TASK.md"),
+                "utf8",
+              );
+              const token = task.trim().split("\n").at(-1) ?? "";
+              return matrixQaMessageEvent({
+                kind: "notice",
+                eventId: "$tool-progress-final",
+                body: token,
+                relatesTo: {
+                  relType: "m.replace",
+                  eventId: previewEventId,
+                },
+              });
+            },
+            since: "driver-sync-next",
+          },
+        ],
+      });
 
-    const scenario = requireMatrixQaScenario("matrix-room-tool-progress-preview");
+      const scenario = requireMatrixQaScenario("matrix-room-tool-progress-preview");
 
-    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
-    const artifacts = result.artifacts as {
-      driverEventId?: unknown;
-      previewBodyPreview?: unknown;
-      previewEventId?: unknown;
-      reply?: { eventId?: unknown };
-    };
-    expect(artifacts.driverEventId).toBe("$tool-progress-trigger");
-    expect(artifacts.previewBodyPreview).toBe(
-      "Barnacling...\n`📖 Read: from /tmp/qa/workspace/QA_KICKOFF_TASK.md`",
-    );
-    expect(artifacts.previewEventId).toBe("$tool-progress-preview");
-    expect(artifacts.reply?.eventId).toBe("$tool-progress-final");
-    const prompt = mockMessageBody(sendTextMessage, "sendTextMessage");
-    expect(prompt).toContain("call the read tool exactly once on `QA_KICKOFF_TASK.md`");
-    expect(prompt).toContain("answering from memory or sending the marker before the tool result fails");
-    expect(prompt).toContain("Do not read `HEARTBEAT.md`");
-    expect(prompt).toContain("reply with only this exact marker and no other text");
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        gatewayWorkspaceDir,
+      });
+      const artifacts = result.artifacts as {
+        driverEventId?: unknown;
+        previewBodyPreview?: unknown;
+        previewEventId?: unknown;
+        reply?: { eventId?: unknown; tokenMatched?: unknown };
+        token?: string;
+      };
+      expect(artifacts.driverEventId).toBe("$tool-progress-trigger");
+      expect(artifacts.previewBodyPreview).toBe(
+        "Barnacling...\n`📖 Read: from /tmp/qa/workspace/QA_KICKOFF_TASK.md`",
+      );
+      expect(artifacts.previewEventId).toBe("$tool-progress-preview");
+      expect(artifacts.reply?.eventId).toBe("$tool-progress-final");
+      expect(artifacts.reply?.tokenMatched).toBe(true);
+      const prompt = mockMessageBody(sendTextMessage, "sendTextMessage");
+      expect(prompt).toContain("call the read tool exactly once on `QA_KICKOFF_TASK.md`");
+      expect(prompt).toContain("the only valid final marker is inside that file");
+      expect(prompt).toContain("Do not read `HEARTBEAT.md`");
+      expect(prompt).toContain("reply with only the exact marker from the file");
+      expect(prompt).not.toContain(String(artifacts.token));
+      await expect(
+        readFile(path.join(gatewayWorkspaceDir, "QA_KICKOFF_TASK.md"), "utf8"),
+      ).resolves.toContain(String(artifacts.token));
+    } finally {
+      await rm(gatewayWorkspaceDir, { force: true, recursive: true });
+    }
   });
 
   it("accepts non-read Matrix tool progress lines in quiet previews", async () => {
