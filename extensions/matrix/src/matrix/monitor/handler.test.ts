@@ -1139,6 +1139,58 @@ describe("matrix monitor handler pairing account scope", () => {
     }
   });
 
+  it("waits for the shared-session notice before dispatching the DM reply", async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "matrix-dm-shared-notice-order-"));
+    const storePath = path.join(tempDir, "sessions.json");
+    let resolveNotice: ((value: string) => void) | undefined;
+    const noticeSent = new Promise<string>((resolve) => {
+      resolveNotice = resolve;
+    });
+    const sendNotice = vi.fn(() => noticeSent);
+    const dispatchReplyFromConfig = vi.fn(async () => ({
+      counts: { block: 0, final: 0, tool: 0 },
+      queuedFinal: false,
+    }));
+
+    try {
+      writeMatrixSessionMeta(storePath, "agent:ops:main", {
+        chatType: "direct",
+        from: "matrix:@user:example.org",
+        to: "room:!other:example.org",
+        nativeChannelId: "!other:example.org",
+      });
+
+      const { handler } = createMatrixHandlerTestHarness({
+        dispatchReplyFromConfig,
+        isDirectMessage: true,
+        resolveStorePath: () => storePath,
+        client: {
+          sendMessage: sendNotice,
+        },
+      });
+
+      const handled = handler(
+        "!dm:example.org",
+        createMatrixTextMessageEvent({
+          eventId: "$dm1",
+          body: "follow up",
+        }),
+      );
+
+      await vi.waitFor(() => {
+        expect(sendNotice).toHaveBeenCalledTimes(1);
+      });
+      expect(dispatchReplyFromConfig).not.toHaveBeenCalled();
+
+      resolveNotice?.("$notice");
+      await handled;
+
+      expect(dispatchReplyFromConfig).toHaveBeenCalledTimes(1);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("checks flat DM collision notices against the current DM session key", async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "matrix-dm-flat-notice-"));
     const storePath = path.join(tempDir, "sessions.json");

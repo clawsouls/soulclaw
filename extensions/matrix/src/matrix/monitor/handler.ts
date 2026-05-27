@@ -2201,16 +2201,16 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
                 sharedDmContextNotice &&
                 markTrackedRoomIfFirst(sharedDmContextNoticeRooms, roomId)
               ) {
-                client
-                  .sendMessage(roomId, {
+                try {
+                  await client.sendMessage(roomId, {
                     msgtype: "m.notice",
                     body: sharedDmContextNotice,
-                  })
-                  .catch((err) => {
-                    logVerboseMessage(
-                      `matrix: failed sending shared DM session notice room=${roomId}: ${String(err)}`,
-                    );
                   });
+                } catch (err) {
+                  logVerboseMessage(
+                    `matrix: failed sending shared DM session notice room=${roomId}: ${String(err)}`,
+                  );
+                }
               }
 
               return await core.channel.reply.withReplyDispatcher({
