@@ -841,7 +841,6 @@ export async function startGatewayServer(
       const runtimeConfig = getRuntimeConfig();
       return resolveGatewayPluginConfig({
         config: runtimeConfig,
-        env: process.env,
       });
     },
     channelLogs,

@@ -304,7 +304,6 @@ export const channelsHandlers: GatewayRequestHandlers = {
     const runtimeConfig = context.getRuntimeConfig();
     const cfg = resolveGatewayPluginConfig({
       config: runtimeConfig,
-      env: process.env,
     });
     const runtime = context.getRuntimeSnapshot();
     const plugins = listChannelPlugins();
@@ -583,7 +582,6 @@ export const channelsHandlers: GatewayRequestHandlers = {
       const runtimeConfig = context.getRuntimeConfig();
       const cfg = resolveGatewayPluginConfig({
         config: runtimeConfig,
-        env: process.env,
       });
       const payload = await startChannelAccount({
         channelId,

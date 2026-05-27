@@ -134,7 +134,6 @@ async function resolveRequestedChannel(params: {
   const runtimeConfig = params.context.getRuntimeConfig();
   const cfg = resolveGatewayPluginConfig({
     config: runtimeConfig,
-    env: process.env,
   });
   let channel = normalizedChannel;
   if (!channel) {
