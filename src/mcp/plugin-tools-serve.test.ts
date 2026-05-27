@@ -6,6 +6,7 @@ import {
   resetGlobalHookRunner,
 } from "../plugins/hook-runner-global.js";
 import { createMockPluginRegistry } from "../plugins/hooks.test-helpers.js";
+import { PluginApprovalResolutions } from "../plugins/types.js";
 import { createPluginToolsMcpHandlers } from "./plugin-tools-handlers.js";
 
 const callGatewayTool = vi.hoisted(() => vi.fn());
@@ -229,6 +230,7 @@ describe("plugin tools MCP server", () => {
 
   it("reports approval requirements without opening plugin approvals on the MCP bridge", async () => {
     let hookCalls = 0;
+    const onResolution = vi.fn();
     const execute = vi.fn().mockResolvedValue({
       content: "Stored.",
     });
@@ -243,6 +245,7 @@ describe("plugin tools MCP server", () => {
                 pluginId: "test-plugin",
                 title: "Approval required",
                 description: "Approval required",
+                onResolution,
               },
             };
           },
@@ -266,9 +269,11 @@ describe("plugin tools MCP server", () => {
     expect(execute).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
     expect(result.content).toEqual([{ type: "text", text: "Tool error: Approval required" }]);
+    expect(onResolution).toHaveBeenCalledWith(PluginApprovalResolutions.CANCELLED);
   });
 
   it("switches pre-wrapped plugin tools to approval report mode on the MCP bridge", async () => {
+    const onResolution = vi.fn();
     const execute = vi.fn().mockResolvedValue({
       content: "Stored.",
     });
@@ -281,6 +286,7 @@ describe("plugin tools MCP server", () => {
               pluginId: "test-plugin",
               title: "Approval required",
               description: "Approval required",
+              onResolution,
             },
           }),
         },
@@ -303,11 +309,15 @@ describe("plugin tools MCP server", () => {
     expect(execute).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
     expect(result.content).toEqual([{ type: "text", text: "Tool error: Approval required" }]);
+    expect(onResolution).toHaveBeenCalledTimes(1);
+    expect(onResolution).toHaveBeenLastCalledWith(PluginApprovalResolutions.CANCELLED);
 
     await expect(tool.execute("agent-tool-call", { text: "remember this" })).rejects.toThrow(
       "Plugin approval required (gateway unavailable)",
     );
     expect(callGatewayTool).toHaveBeenCalledTimes(1);
+    expect(onResolution).toHaveBeenCalledTimes(2);
+    expect(onResolution).toHaveBeenLastCalledWith(PluginApprovalResolutions.CANCELLED);
     expect(execute).not.toHaveBeenCalled();
   });
 });

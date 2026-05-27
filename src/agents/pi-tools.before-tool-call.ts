@@ -360,6 +360,23 @@ function emitSkillUsedDiagnostic(params: {
   });
 }
 
+function notifyPluginApprovalResolution(
+  approval: PluginApprovalRequest,
+  resolution: PluginApprovalResolution,
+): void {
+  const onResolution = approval.onResolution;
+  if (typeof onResolution !== "function") {
+    return;
+  }
+  try {
+    void Promise.resolve(onResolution(resolution)).catch((err) => {
+      log.warn(`plugin onResolution callback failed: ${String(err)}`);
+    });
+  } catch (err) {
+    log.warn(`plugin onResolution callback failed: ${String(err)}`);
+  }
+}
+
 async function requestPluginToolApproval(params: {
   approval: PluginApprovalRequest;
   toolName: string;
@@ -370,19 +387,6 @@ async function requestPluginToolApproval(params: {
   overrideParams?: unknown;
 }): Promise<HookOutcome> {
   const approval = params.approval;
-  const safeOnResolution = (resolution: PluginApprovalResolution): void => {
-    const onResolution = approval.onResolution;
-    if (typeof onResolution !== "function") {
-      return;
-    }
-    try {
-      void Promise.resolve(onResolution(resolution)).catch((err) => {
-        log.warn(`plugin onResolution callback failed: ${String(err)}`);
-      });
-    } catch (err) {
-      log.warn(`plugin onResolution callback failed: ${String(err)}`);
-    }
-  };
   try {
     const requestResult: {
       id?: string;
@@ -412,7 +416,7 @@ async function requestPluginToolApproval(params: {
     );
     const id = requestResult?.id;
     if (!id) {
-      safeOnResolution(PluginApprovalResolutions.CANCELLED);
+      notifyPluginApprovalResolution(approval, PluginApprovalResolutions.CANCELLED);
       return {
         blocked: true,
         kind: "failure",
@@ -429,7 +433,7 @@ async function requestPluginToolApproval(params: {
     if (hasImmediateDecision) {
       decision = requestResult?.decision;
       if (decision === null) {
-        safeOnResolution(PluginApprovalResolutions.CANCELLED);
+        notifyPluginApprovalResolution(approval, PluginApprovalResolutions.CANCELLED);
         return {
           blocked: true,
           kind: "failure",
@@ -480,7 +484,7 @@ async function requestPluginToolApproval(params: {
       decision === PluginApprovalResolutions.DENY
         ? decision
         : PluginApprovalResolutions.TIMEOUT;
-    safeOnResolution(resolution);
+    notifyPluginApprovalResolution(approval, resolution);
     if (
       decision === PluginApprovalResolutions.ALLOW_ONCE ||
       decision === PluginApprovalResolutions.ALLOW_ALWAYS
@@ -514,7 +518,7 @@ async function requestPluginToolApproval(params: {
       params: params.baseParams,
     };
   } catch (err) {
-    safeOnResolution(PluginApprovalResolutions.CANCELLED);
+    notifyPluginApprovalResolution(approval, PluginApprovalResolutions.CANCELLED);
     if (isAbortSignalCancellation(err, params.signal)) {
       log.warn(`plugin approval wait cancelled by run abort: ${String(err)}`);
       return {
@@ -803,6 +807,10 @@ export async function runBeforeToolCallHook(args: {
     }
     if (trustedPolicyResult?.requireApproval) {
       if (args.approvalMode === "report") {
+        notifyPluginApprovalResolution(
+          trustedPolicyResult.requireApproval,
+          PluginApprovalResolutions.CANCELLED,
+        );
         return {
           blocked: true,
           kind: "failure",
@@ -869,6 +877,10 @@ export async function runBeforeToolCallHook(args: {
 
     if (hookResult?.requireApproval) {
       if (args.approvalMode === "report") {
+        notifyPluginApprovalResolution(
+          hookResult.requireApproval,
+          PluginApprovalResolutions.CANCELLED,
+        );
         return {
           blocked: true,
           kind: "failure",
