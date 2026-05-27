@@ -1091,6 +1091,51 @@ describe("deliverSubagentAnnouncement completion delivery", () => {
     );
   });
 
+  it("does not raw-send channel completions just because the requester key is direct", async () => {
+    const callGateway = createGatewayMock({
+      result: {
+        payloads: [],
+      },
+    });
+    const sendMessage = createSendMessageMock();
+
+    const result = await deliverSlackChannelAnnouncement({
+      callGateway,
+      sendMessage,
+      sessionId: "requester-session-channel",
+      isActive: false,
+      expectsCompletionMessage: true,
+      directIdempotencyKey: "announce-channel-direct-key-empty",
+      requesterSessionKey: "agent:main:discord:dm:U123",
+      internalEvents: [
+        {
+          type: "task_completion",
+          source: "subagent",
+          childSessionKey: "agent:worker:subagent:child",
+          childSessionId: "child-session-id",
+          announceType: "subagent task",
+          taskLabel: "channel completion smoke",
+          status: "ok",
+          statusLabel: "completed successfully",
+          result: "child completion output",
+          replyInstruction: "Summarize the result.",
+        },
+      ],
+    });
+
+    expectRecordFields(result, {
+      delivered: true,
+      path: "direct",
+    });
+    expectGatewayAgentParams(callGateway, {
+      deliver: true,
+      channel: "slack",
+      accountId: "acct-1",
+      to: "channel:C123",
+    });
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
   it("directly delivers direct-message subagent text when the announce agent returns incomplete", async () => {
     const callGateway = vi.fn(async () => {
       throw new Error(

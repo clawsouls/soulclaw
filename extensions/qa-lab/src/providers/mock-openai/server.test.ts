@@ -3176,6 +3176,44 @@ describe("qa mock openai server", () => {
     expect(payload.output?.[0]?.content?.[0]?.text).toBe("fresh-marker-ok");
   });
 
+  it("keeps stale consecutive image prompts from overriding later marker turns", async () => {
+    const server = await startMockServer();
+
+    const response = await fetch(`${server.baseUrl}/v1/responses`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        stream: false,
+        model: "mock-openai/gpt-5.5",
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: "Image understanding check: describe the top and bottom colors.",
+              },
+              {
+                type: "input_image",
+                source: {
+                  type: "base64",
+                  mime_type: "image/png",
+                  data: QA_IMAGE_PNG_BASE64,
+                },
+              },
+            ],
+          },
+          makeUserInput("Marker exact marker: `fresh-consecutive-marker-ok`"),
+        ],
+      }),
+    });
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as {
+      output?: Array<{ content?: Array<{ text?: string }> }>;
+    };
+    expect(payload.output?.[0]?.content?.[0]?.text).toBe("fresh-consecutive-marker-ok");
+  });
+
   it("handles deeply nested image input shapes without recursive traversal failure", async () => {
     const server = await startQaMockOpenAiServer({
       host: "127.0.0.1",

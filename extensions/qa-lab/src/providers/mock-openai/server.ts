@@ -561,16 +561,12 @@ function extractLatestImageUserTurn(input: ResponsesInputItem[]) {
     return { text: "", imageInputCount: 0 };
   }
 
-  let startIndex = latestUserIndex;
-  while (
-    startIndex > 0 &&
-    input[startIndex - 1]?.role === "user" &&
-    Array.isArray(input[startIndex - 1]?.content)
-  ) {
-    startIndex -= 1;
+  const latestUserItem = input[latestUserIndex];
+  if (!latestUserItem) {
+    return { text: "", imageInputCount: 0 };
   }
 
-  const imageTurnItems = input.slice(startIndex, latestUserIndex + 1);
+  const imageTurnItems = [latestUserItem];
   const imageInputCount = countImageInputs(imageTurnItems.map((item) => item.content));
   if (imageInputCount === 0) {
     return { text: "", imageInputCount: 0 };

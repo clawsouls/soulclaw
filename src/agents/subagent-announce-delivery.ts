@@ -755,10 +755,11 @@ function isDirectMessageDeliveryTarget(
   if (target.threadId) {
     return false;
   }
-  if (deriveSessionChatTypeFromKey(requesterSessionKey) === "direct") {
-    return true;
+  const targetChatType = inferDeliveryTargetChatType(target);
+  if (targetChatType) {
+    return targetChatType === "direct";
   }
-  return inferDeliveryTargetChatType(target) === "direct";
+  return deriveSessionChatTypeFromKey(requesterSessionKey) === "direct";
 }
 
 function resolveTextCompletionDirectFallback(events: readonly AgentInternalEvent[] | undefined) {
