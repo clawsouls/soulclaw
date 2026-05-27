@@ -921,7 +921,7 @@ test -f "$external_dir/openclaw-current.tgz"
     }
   });
 
-  it("propagates the shared E2E npm install timeout into package-backed containers", () => {
+  it("propagates shared E2E command timeouts into package-backed containers", () => {
     const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-package-timeout-env-"));
 
     try {
@@ -936,12 +936,14 @@ source "$ROOT_DIR/scripts/lib/docker-e2e-package.sh"
 package="$TMPDIR/openclaw-current.tgz"
 printf fixture >"$package"
 export OPENCLAW_E2E_NPM_INSTALL_TIMEOUT=42s
+export OPENCLAW_E2E_COMMAND_TIMEOUT=23s
 docker_e2e_package_mount_args "$package"
 printf "%s\\n" "\${DOCKER_E2E_PACKAGE_ARGS[@]}" >"$TMPDIR/package-args"
 
 grep -qx -- "-e" "$TMPDIR/package-args"
 grep -qx -- "OPENCLAW_CURRENT_PACKAGE_TGZ=/tmp/openclaw-current.tgz" "$TMPDIR/package-args"
 grep -qx -- "OPENCLAW_E2E_NPM_INSTALL_TIMEOUT=42s" "$TMPDIR/package-args"
+grep -qx -- "OPENCLAW_E2E_COMMAND_TIMEOUT=23s" "$TMPDIR/package-args"
 `;
 
       execFileSync("bash", ["-lc", script], { encoding: "utf8" });
@@ -992,6 +994,29 @@ grep -qx -- "OPENCLAW_E2E_NPM_INSTALL_TIMEOUT=42s" "$TMPDIR/package-args"
         'openclaw_e2e_maybe_timeout "${OPENCLAW_E2E_NPM_INSTALL_TIMEOUT:-600s}" npm install -g',
       );
     }
+  });
+
+  it("wraps package-backed scenario OpenClaw CLI calls with the shared timeout helper", () => {
+    const paths = [
+      CODEX_ON_DEMAND_DOCKER_E2E_PATH,
+      CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH,
+      LIVE_PLUGIN_TOOL_DOCKER_E2E_PATH,
+      NPM_ONBOARD_CHANNEL_AGENT_DOCKER_E2E_PATH,
+      RELEASE_UPGRADE_USER_JOURNEY_SCENARIO_PATH,
+      "scripts/e2e/lib/release-media-memory/scenario.sh",
+      "scripts/e2e/lib/release-plugin-marketplace/scenario.sh",
+      "scripts/e2e/lib/release-typed-onboarding/scenario.sh",
+      "scripts/e2e/lib/release-user-journey/scenario.sh",
+    ];
+
+    for (const path of paths) {
+      const script = readFileSync(path, "utf8");
+
+      expect(script, path).toContain("openclaw_e2e_enable_openclaw_cli_timeout");
+    }
+    expect(readFileSync(RELEASE_UPGRADE_USER_JOURNEY_SCENARIO_PATH, "utf8")).toContain(
+      'openclaw_e2e_run_command node "$baseline_entry" onboard',
+    );
   });
 
   it("kills timed Docker scenario runners after the grace period", () => {
