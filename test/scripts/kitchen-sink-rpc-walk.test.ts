@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -15,6 +16,7 @@ import {
   runCommand,
   sampleProcess,
   sampleWindowsProcessByPort,
+  stopGateway,
   summarizeProcessSamples,
   usesBuiltOpenClawEntry,
 } from "../../scripts/e2e/kitchen-sink-rpc-walk.mjs";
@@ -36,6 +38,36 @@ describe("kitchen-sink RPC isolated state", () => {
     await expect(cleanupKitchenSinkEnv(root)).resolves.toBe(true);
 
     expect(existsSync(root)).toBe(false);
+  });
+});
+
+describe("kitchen-sink RPC gateway teardown", () => {
+  it("releases gateway handles when the process ignores teardown signals", async () => {
+    const child = new EventEmitter() as EventEmitter & {
+      exitCode: number | null;
+      kill: ReturnType<typeof vi.fn>;
+      signalCode: NodeJS.Signals | null;
+      stderr: { destroy: ReturnType<typeof vi.fn> };
+      stdin: { destroy: ReturnType<typeof vi.fn> };
+      stdout: { destroy: ReturnType<typeof vi.fn> };
+      unref: ReturnType<typeof vi.fn>;
+    };
+    child.exitCode = null;
+    child.signalCode = null;
+    child.kill = vi.fn(() => true);
+    child.stderr = { destroy: vi.fn() };
+    child.stdin = { destroy: vi.fn() };
+    child.stdout = { destroy: vi.fn() };
+    child.unref = vi.fn();
+
+    await stopGateway(child, { killGraceMs: 1, teardownGraceMs: 1 });
+
+    expect(child.kill).toHaveBeenNthCalledWith(1, "SIGTERM");
+    expect(child.kill).toHaveBeenNthCalledWith(2, "SIGKILL");
+    expect(child.stdin.destroy).toHaveBeenCalledOnce();
+    expect(child.stdout.destroy).toHaveBeenCalledOnce();
+    expect(child.stderr.destroy).toHaveBeenCalledOnce();
+    expect(child.unref).toHaveBeenCalledOnce();
   });
 });
 

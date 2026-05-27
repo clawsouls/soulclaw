@@ -28,6 +28,8 @@ const INSTALL_TIMEOUT_MS = readPositiveInt(
 );
 const RPC_TIMEOUT_MS = readPositiveInt(process.env.OPENCLAW_KITCHEN_SINK_RPC_CALL_MS, 60000);
 const MAX_RSS_MIB = readPositiveInt(process.env.OPENCLAW_KITCHEN_SINK_MAX_RSS_MIB, 2048);
+const GATEWAY_TEARDOWN_GRACE_MS = 10000;
+const GATEWAY_TEARDOWN_KILL_GRACE_MS = 2000;
 const OUTPUT_CAPTURE_CHARS = readPositiveInt(
   process.env.OPENCLAW_KITCHEN_SINK_OUTPUT_CAPTURE_CHARS,
   1024 * 1024,
@@ -537,18 +539,34 @@ async function startGateway(runner, port, env, logPath) {
   return child;
 }
 
-async function stopGateway(child) {
-  if (!child || child.exitCode !== null) {
+export async function stopGateway(child, options = {}) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) {
     return;
   }
+  const teardownGraceMs = Math.max(0, options.teardownGraceMs ?? GATEWAY_TEARDOWN_GRACE_MS);
+  const killGraceMs = Math.max(0, options.killGraceMs ?? GATEWAY_TEARDOWN_KILL_GRACE_MS);
+  const exited = new Promise((resolve) => child.once("exit", resolve));
+  const waitForExit = async (ms) =>
+    child.exitCode !== null || child.signalCode !== null
+      ? true
+      : await Promise.race([exited.then(() => true), delay(ms).then(() => false)]);
+
   signalGateway(child, "SIGTERM");
-  const started = Date.now();
-  while (child.exitCode === null && Date.now() - started < 10000) {
-    await delay(100);
+  if (await waitForExit(teardownGraceMs)) {
+    return;
   }
-  if (child.exitCode === null) {
-    signalGateway(child, "SIGKILL");
+  signalGateway(child, "SIGKILL");
+  if (await waitForExit(killGraceMs)) {
+    return;
   }
+  releaseUnsettledGatewayChild(child);
+}
+
+function releaseUnsettledGatewayChild(child) {
+  child.stdin?.destroy?.();
+  child.stdout?.destroy?.();
+  child.stderr?.destroy?.();
+  child.unref?.();
 }
 
 function signalGateway(child, signal) {
