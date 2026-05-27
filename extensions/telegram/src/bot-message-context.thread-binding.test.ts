@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { telegramRouteTestSessionRuntime } from "./bot-message-context.route-test-support.js";
 import { buildTelegramMessageContextForTest } from "./bot-message-context.test-harness.js";
+import type { TelegramConversationBindingMode } from "./conversation-route.js";
 
 const recordInboundSessionMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const resolveTelegramConversationRouteMock = vi.hoisted(() => vi.fn());
@@ -32,12 +33,13 @@ function createBoundRoute(params: {
   accountId: string;
   sessionKey: string;
   agentId: string;
-  pluginOwnedRuntimeBinding?: boolean;
+  bindingMode?: TelegramConversationBindingMode;
 }) {
   return {
-    configuredBinding: null,
-    configuredBindingSessionKey: "",
-    pluginOwnedRuntimeBinding: params.pluginOwnedRuntimeBinding ?? false,
+    bindingMode: params.bindingMode ?? {
+      kind: "runtime-bound",
+      sessionKey: params.sessionKey,
+    },
     route: {
       accountId: params.accountId,
       agentId: params.agentId,
@@ -112,7 +114,7 @@ describe("buildTelegramMessageContext thread binding override", () => {
         accountId: "default",
         sessionKey: "plugin-binding:openclaw-codex-app-server:session-1",
         agentId: "main",
-        pluginOwnedRuntimeBinding: true,
+        bindingMode: { kind: "plugin-owned-runtime" },
       }),
     );
 

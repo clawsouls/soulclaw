@@ -156,12 +156,10 @@ describe("resolveTelegramConversationBaseSessionKey", () => {
     });
 
     expect(touch).not.toHaveBeenCalled();
-    expect(result.configuredBinding).toBeNull();
-    expect(result.configuredBindingSessionKey).toBe("");
+    expect(result.bindingMode).toEqual({ kind: "none" });
     expect(result.route.agentId).toBe("main");
     expect(result.route.sessionKey).toBe("agent:main:main");
     expect(result.route.matchedBy).toBe("default");
-    expect(result.pluginOwnedRuntimeBinding).toBe(false);
   });
 
   it("detects plugin-owned runtime bindings without replacing the route", () => {
@@ -205,11 +203,9 @@ describe("resolveTelegramConversationBaseSessionKey", () => {
     });
 
     expect(touch).toHaveBeenCalledWith("binding-plugin-owned", undefined);
-    expect(result.configuredBinding).toBeNull();
-    expect(result.configuredBindingSessionKey).toBe("");
+    expect(result.bindingMode).toEqual({ kind: "plugin-owned-runtime" });
     expect(result.route.agentId).toBe("main");
     expect(result.route.sessionKey).toBe("agent:main:telegram:group:-1001234567890:topic:11");
     expect(result.route.matchedBy).toBe("default");
-    expect(result.pluginOwnedRuntimeBinding).toBe(true);
   });
 });

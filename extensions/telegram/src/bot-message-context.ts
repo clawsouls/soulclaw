@@ -242,17 +242,16 @@ export const buildTelegramMessageContext = async ({
   const freshCfg =
     loadFreshConfig?.() ??
     (runtime?.getRuntimeConfig ?? (await loadTelegramMessageContextRuntime()).getRuntimeConfig)();
-  let { route, configuredBinding, configuredBindingSessionKey, pluginOwnedRuntimeBinding } =
-    resolveTelegramConversationRoute({
-      cfg: freshCfg,
-      accountId: account.accountId,
-      chatId,
-      isGroup,
-      resolvedThreadId,
-      replyThreadId,
-      senderId,
-      topicAgentId: topicConfig?.agentId,
-    });
+  let { route, bindingMode } = resolveTelegramConversationRoute({
+    cfg: freshCfg,
+    accountId: account.accountId,
+    chatId,
+    isGroup,
+    resolvedThreadId,
+    replyThreadId,
+    senderId,
+    topicAgentId: topicConfig?.agentId,
+  });
   const requiresExplicitAccountBinding = (
     candidate: ReturnType<typeof resolveTelegramConversationRoute>["route"],
   ): boolean =>
@@ -372,7 +371,7 @@ export const buildTelegramMessageContext = async ({
   }
   let initialTypingCueSent = false;
   const ensureConfiguredBindingReady = async (): Promise<boolean> => {
-    if (!configuredBinding) {
+    if (bindingMode.kind !== "configured") {
       return true;
     }
     const ensureConfiguredBindingRouteReady =
@@ -380,22 +379,22 @@ export const buildTelegramMessageContext = async ({
       (await loadTelegramMessageContextRuntime()).ensureConfiguredBindingRouteReady;
     const ensured = await ensureConfiguredBindingRouteReady({
       cfg: freshCfg,
-      bindingResolution: configuredBinding,
+      bindingResolution: bindingMode.binding,
     });
     if (ensured.ok) {
       logVerbose(
-        `telegram: using configured ACP binding for ${configuredBinding.record.conversation.conversationId} -> ${configuredBindingSessionKey}`,
+        `telegram: using configured ACP binding for ${bindingMode.binding.record.conversation.conversationId} -> ${bindingMode.sessionKey}`,
       );
       return true;
     }
     logVerbose(
-      `telegram: configured ACP binding unavailable for ${configuredBinding.record.conversation.conversationId}: ${ensured.error}`,
+      `telegram: configured ACP binding unavailable for ${bindingMode.binding.record.conversation.conversationId}: ${ensured.error}`,
     );
     logInboundDrop({
       log: logVerbose,
       channel: "telegram",
       reason: "configured ACP binding unavailable",
-      target: configuredBinding.record.conversation.conversationId,
+      target: bindingMode.binding.record.conversation.conversationId,
     });
     return false;
   };
@@ -432,7 +431,7 @@ export const buildTelegramMessageContext = async ({
   });
   const baseRequireMention = resolveGroupRequireMention(chatId);
   const requireMention =
-    isGroup && pluginOwnedRuntimeBinding
+    isGroup && bindingMode.kind === "plugin-owned-runtime"
       ? false
       : firstDefined(
           topicConfig?.requireMention,

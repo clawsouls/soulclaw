@@ -20,6 +20,27 @@ import {
   resolveTelegramDirectPeerId,
 } from "./bot/helpers.js";
 
+type TelegramResolvedRoute = ReturnType<typeof resolveAgentRoute>;
+type ConfiguredTelegramBinding = NonNullable<ConfiguredBindingRouteResult["bindingResolution"]>;
+
+export type TelegramConversationBindingMode =
+  | { kind: "none" }
+  | {
+      kind: "configured";
+      binding: ConfiguredTelegramBinding;
+      sessionKey: string;
+    }
+  | {
+      kind: "runtime-bound";
+      sessionKey: string;
+    }
+  | { kind: "plugin-owned-runtime" };
+
+export type TelegramConversationRouteResult = {
+  route: TelegramResolvedRoute;
+  bindingMode: TelegramConversationBindingMode;
+};
+
 export function resolveTelegramConversationRoute(params: {
   cfg: OpenClawConfig;
   accountId: string;
@@ -29,12 +50,7 @@ export function resolveTelegramConversationRoute(params: {
   replyThreadId?: number;
   senderId?: string | number | null;
   topicAgentId?: string | null;
-}): {
-  route: ReturnType<typeof resolveAgentRoute>;
-  configuredBinding: ConfiguredBindingRouteResult["bindingResolution"];
-  configuredBindingSessionKey: string;
-  pluginOwnedRuntimeBinding: boolean;
-} {
+}): TelegramConversationRouteResult {
   const peerId = params.isGroup
     ? buildTelegramGroupPeerId(params.chatId, params.resolvedThreadId)
     : resolveTelegramDirectPeerId({
@@ -102,9 +118,14 @@ export function resolveTelegramConversationRoute(params: {
       parentConversationId: params.isGroup ? String(params.chatId) : undefined,
     },
   });
-  let configuredBinding = configuredRoute.bindingResolution;
-  let configuredBindingSessionKey = configuredRoute.boundSessionKey ?? "";
   route = configuredRoute.route;
+  let bindingMode: TelegramConversationBindingMode = configuredRoute.bindingResolution
+    ? {
+        kind: "configured",
+        binding: configuredRoute.bindingResolution,
+        sessionKey: configuredRoute.boundSessionKey ?? route.sessionKey,
+      }
+    : { kind: "none" };
 
   const runtimeBindingConversationId =
     params.replyThreadId != null
@@ -119,12 +140,10 @@ export function resolveTelegramConversationRoute(params: {
     },
   });
   route = runtimeRoute.route;
-  const pluginOwnedRuntimeBinding = Boolean(
-    runtimeRoute.bindingRecord && !runtimeRoute.boundSessionKey,
-  );
   if (runtimeRoute.bindingRecord) {
-    configuredBinding = null;
-    configuredBindingSessionKey = "";
+    bindingMode = runtimeRoute.boundSessionKey
+      ? { kind: "runtime-bound", sessionKey: runtimeRoute.boundSessionKey }
+      : { kind: "plugin-owned-runtime" };
     logVerbose(
       runtimeRoute.boundSessionKey
         ? `telegram: routed via bound conversation ${runtimeBindingConversationId} -> ${runtimeRoute.boundSessionKey}`
@@ -134,9 +153,7 @@ export function resolveTelegramConversationRoute(params: {
 
   return {
     route,
-    configuredBinding,
-    configuredBindingSessionKey,
-    pluginOwnedRuntimeBinding,
+    bindingMode,
   };
 }
 
