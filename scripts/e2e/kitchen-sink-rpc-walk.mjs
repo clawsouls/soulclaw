@@ -132,11 +132,7 @@ function formatCapturedOutput(label, buffer) {
 
 export function runCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
-    const {
-      timeoutKillGraceMs = 2000,
-      timeoutMs = COMMAND_TIMEOUT_MS,
-      ...spawnOptions
-    } = options;
+    const { timeoutKillGraceMs = 2000, timeoutMs = COMMAND_TIMEOUT_MS, ...spawnOptions } = options;
     const child = childProcess.spawn(command, args, {
       stdio: ["ignore", "pipe", "pipe"],
       ...spawnOptions,
@@ -149,10 +145,7 @@ export function runCommand(command, args, options = {}) {
     const timer = setTimeout(() => {
       timedOut = true;
       signalProcessGroup(child, "SIGTERM");
-      forceKillTimer = setTimeout(
-        () => signalProcessGroup(child, "SIGKILL"),
-        timeoutKillGraceMs,
-      );
+      forceKillTimer = setTimeout(() => signalProcessGroup(child, "SIGKILL"), timeoutKillGraceMs);
       forceKillTimer.unref();
     }, timeoutMs);
     child.stdout?.on("data", (chunk) => {
@@ -672,6 +665,46 @@ function assertToolInvokeResult(payload) {
   }
 }
 
+export function assertDiagnosticStabilityClean(payload) {
+  const problems = [];
+  if (!payload || typeof payload !== "object") {
+    throw new Error(`diagnostics.stability returned invalid payload: ${JSON.stringify(payload)}`);
+  }
+  if ((payload.dropped ?? 0) > 0) {
+    problems.push(`dropped=${payload.dropped}`);
+  }
+  const payloadLarge = payload.summary?.payloadLarge;
+  if (payloadLarge) {
+    if ((payloadLarge.rejected ?? 0) > 0) {
+      problems.push(`payload.large rejected=${payloadLarge.rejected}`);
+    }
+    if ((payloadLarge.truncated ?? 0) > 0) {
+      problems.push(`payload.large truncated=${payloadLarge.truncated}`);
+    }
+  }
+  const asyncDropCount = countDiagnosticEvents(payload, "diagnostic.async_queue.dropped");
+  if (asyncDropCount > 0) {
+    problems.push(`async diagnostic drops=${asyncDropCount}`);
+  }
+  if (problems.length > 0) {
+    throw new Error(
+      `diagnostics.stability reported instability: ${problems.join(", ")}\n${tailText(
+        JSON.stringify(payload, null, 2),
+      )}`,
+    );
+  }
+}
+
+function countDiagnosticEvents(payload, type) {
+  const summaryCount = payload.summary?.byType?.[type];
+  if (Number.isFinite(summaryCount)) {
+    return summaryCount;
+  }
+  return (Array.isArray(payload.events) ? payload.events : []).filter(
+    (event) => event?.type === type,
+  ).length;
+}
+
 export async function sampleProcess(pid, options = {}) {
   const platform = options.platform ?? process.platform;
   const run = options.runCommand ?? runCommand;
@@ -690,7 +723,9 @@ export function summarizeProcessSamples(samples) {
     return null;
   }
   const peakRssSample = validSamples.reduce((peak, sample) =>
-    sample.rssMiB > peak.rssMiB ? sample : peak,
+    (sample.aggregateRssMiB ?? sample.rssMiB) > (peak.aggregateRssMiB ?? peak.rssMiB)
+      ? sample
+      : peak,
   );
   const numericCpuSamples = validSamples
     .map((sample) => sample.cpuPercent)
@@ -710,20 +745,24 @@ async function samplePosixProcess(pid, run, commandLineNeedles = []) {
   if (needles.length > 0) {
     return samplePosixProcessTree(pid, run, needles);
   }
+  return samplePosixProcessWithDescendants(pid, run);
+}
+
+async function samplePosixProcessWithDescendants(pid, run) {
+  const safePid = Number(pid);
+  if (!Number.isInteger(safePid) || safePid <= 0) {
+    return null;
+  }
   try {
-    const { stdout } = await run("ps", ["-o", "rss=,pcpu=", "-p", String(pid)], {
+    const { stdout } = await run("ps", ["-axo", "pid=,ppid=,rss=,pcpu=,command="], {
       timeoutMs: 5000,
     });
-    const [rssKbRaw, cpuRaw] = stdout.trim().split(/\s+/u);
-    const rssKb = Number.parseInt(rssKbRaw ?? "", 10);
-    const cpuPercent = Number.parseFloat(cpuRaw ?? "");
-    if (!Number.isFinite(rssKb)) {
+    const rows = parsePosixProcessRows(stdout);
+    const selected = rows.find((row) => row.processId === safePid);
+    if (!selected) {
       return null;
     }
-    return {
-      rssMiB: Math.round((rssKb / 1024) * 10) / 10,
-      cpuPercent: Number.isFinite(cpuPercent) ? cpuPercent : null,
-    };
+    return formatPosixProcessTreeSample(selected, collectPosixProcessTree(rows, safePid));
   } catch {
     return null;
   }
@@ -760,7 +799,10 @@ async function samplePosixProcessTree(pid, run, commandLineNeedles) {
     if (!selected) {
       return null;
     }
-    return formatPosixProcessSample(selected);
+    return formatPosixProcessTreeSample(
+      selected,
+      collectPosixProcessTree(rows, selected.processId),
+    );
   } catch {
     return null;
   }
@@ -824,8 +866,17 @@ function selectPeakRssProcess(rows) {
 function formatPosixProcessSample(row) {
   return {
     rssMiB: Math.round((row.rssKb / 1024) * 10) / 10,
+    aggregateRssMiB: Math.round((row.rssKb / 1024) * 10) / 10,
     cpuPercent: row.cpuPercent,
     processId: row.processId,
+  };
+}
+
+function formatPosixProcessTreeSample(selected, rows) {
+  const aggregateRssKb = rows.reduce((sum, row) => sum + row.rssKb, 0);
+  return {
+    ...formatPosixProcessSample(selected),
+    aggregateRssMiB: Math.round((aggregateRssKb / 1024) * 10) / 10,
   };
 }
 
@@ -926,30 +977,25 @@ async function sampleWindowsProcess(pid, run, commandLineNeedles = []) {
     .map((needle) => String(needle ?? "").trim())
     .filter((needle) => needle.length > 0);
   const powershellNeedles = `@(${needles.map(powershellSingleQuoted).join(", ")})`;
-  const command =
-    needles.length === 0
-      ? [
-          "$ErrorActionPreference = 'Stop'",
-          `$process = Get-Process -Id ${safePid} -ErrorAction Stop`,
-          "$cpu = 0",
-          "if ($null -ne $process.CPU) { $cpu = $process.CPU }",
-          "[Console]::Out.Write(('{0} {1} {2}' -f $process.WorkingSet64, $cpu, $process.Id))",
-        ].join("; ")
-      : [
-          "$ErrorActionPreference = 'Stop'",
-          `$rootPid = ${safePid}`,
-          `$commandLineNeedles = ${powershellNeedles}`,
-          "$ids = [System.Collections.Generic.HashSet[int]]::new()",
-          "[void]$ids.Add($rootPid)",
-          'if ($commandLineNeedles.Count -gt 0) { $queryNeedle = $commandLineNeedles[$commandLineNeedles.Count - 1].Replace("\'", "\'\'"); $candidates = Get-CimInstance Win32_Process -Filter "CommandLine LIKE \'%$queryNeedle%\'" | Select-Object ProcessId, CommandLine; foreach ($process in $candidates) { if ([int]$process.ProcessId -eq $PID) { continue }; $line = [string]$process.CommandLine; $matches = $true; foreach ($needle in $commandLineNeedles) { if ($line.IndexOf($needle, [StringComparison]::OrdinalIgnoreCase) -lt 0) { $matches = $false; break } }; if ($matches) { [void]$ids.Add([int]$process.ProcessId) } } }',
-          "if ($ids.Count -le 1) { $processes = Get-CimInstance Win32_Process | Select-Object ProcessId, ParentProcessId; $changed = $true; while ($changed) { $changed = $false; foreach ($process in $processes) { if ($ids.Contains([int]$process.ParentProcessId) -and -not $ids.Contains([int]$process.ProcessId)) { [void]$ids.Add([int]$process.ProcessId); $changed = $true } } } }",
-          "$samples = foreach ($id in $ids) { try { Get-Process -Id $id -ErrorAction Stop } catch {} }",
-          "$process = $samples | Sort-Object WorkingSet64 -Descending | Select-Object -First 1",
-          "if ($null -eq $process) { exit 2 }",
-          "$cpu = 0",
-          "if ($null -ne $process.CPU) { $cpu = $process.CPU }",
-          "[Console]::Out.Write(('{0} {1} {2}' -f $process.WorkingSet64, $cpu, $process.Id))",
-        ].join("; ");
+  const command = [
+    "$ErrorActionPreference = 'Stop'",
+    `$rootPid = ${safePid}`,
+    `$commandLineNeedles = ${powershellNeedles}`,
+    "$ids = [System.Collections.Generic.HashSet[int]]::new()",
+    "[void]$ids.Add($rootPid)",
+    'if ($commandLineNeedles.Count -gt 0) { $queryNeedle = $commandLineNeedles[$commandLineNeedles.Count - 1].Replace("\'", "\'\'"); $candidates = Get-CimInstance Win32_Process -Filter "CommandLine LIKE \'%$queryNeedle%\'" | Select-Object ProcessId, CommandLine; foreach ($process in $candidates) { if ([int]$process.ProcessId -eq $PID) { continue }; $line = [string]$process.CommandLine; $matches = $true; foreach ($needle in $commandLineNeedles) { if ($line.IndexOf($needle, [StringComparison]::OrdinalIgnoreCase) -lt 0) { $matches = $false; break } }; if ($matches) { [void]$ids.Add([int]$process.ProcessId) } } }',
+    "$processes = Get-CimInstance Win32_Process | Select-Object ProcessId, ParentProcessId",
+    "$changed = $true",
+    "$whileGuard = 0",
+    "while ($changed -and $whileGuard -lt 1024) { $whileGuard += 1; $changed = $false; foreach ($process in $processes) { if ($ids.Contains([int]$process.ParentProcessId) -and -not $ids.Contains([int]$process.ProcessId)) { [void]$ids.Add([int]$process.ProcessId); $changed = $true } } }",
+    "$samples = foreach ($id in $ids) { try { Get-Process -Id $id -ErrorAction Stop } catch {} }",
+    "$process = $samples | Sort-Object WorkingSet64 -Descending | Select-Object -First 1",
+    "if ($null -eq $process) { exit 2 }",
+    "$totalWorkingSet = ($samples | Measure-Object -Property WorkingSet64 -Sum).Sum",
+    "$cpu = 0",
+    "if ($null -ne $process.CPU) { $cpu = $process.CPU }",
+    "[Console]::Out.Write(('{0} {1} {2} {3}' -f $process.WorkingSet64, $cpu, $process.Id, $totalWorkingSet))",
+  ].join("; ");
   for (const powershell of ["powershell.exe", "powershell"]) {
     try {
       const { stdout } = await run(
@@ -957,8 +1003,14 @@ async function sampleWindowsProcess(pid, run, commandLineNeedles = []) {
         ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", command],
         { timeoutMs: 15000 },
       );
-      const [workingSetBytesRaw, cpuSecondsRaw, processIdRaw] = stdout.trim().split(/\s+/u);
+      const [workingSetBytesRaw, cpuSecondsRaw, processIdRaw, aggregateWorkingSetBytesRaw] = stdout
+        .trim()
+        .split(/\s+/u);
       const workingSetBytes = Number.parseInt(workingSetBytesRaw ?? "", 10);
+      const aggregateWorkingSetBytes = Number.parseInt(
+        aggregateWorkingSetBytesRaw ?? workingSetBytesRaw ?? "",
+        10,
+      );
       const cpuSeconds = Number.parseFloat(cpuSecondsRaw ?? "");
       const processId = Number.parseInt(processIdRaw ?? "", 10);
       if (!Number.isFinite(workingSetBytes)) {
@@ -966,6 +1018,9 @@ async function sampleWindowsProcess(pid, run, commandLineNeedles = []) {
       }
       return {
         rssMiB: Math.round((workingSetBytes / 1024 / 1024) * 10) / 10,
+        aggregateRssMiB: Number.isFinite(aggregateWorkingSetBytes)
+          ? Math.round((aggregateWorkingSetBytes / 1024 / 1024) * 10) / 10
+          : Math.round((workingSetBytes / 1024 / 1024) * 10) / 10,
         cpuPercent: null,
         cpuSeconds: Number.isFinite(cpuSeconds) ? cpuSeconds : null,
         processId: Number.isFinite(processId) ? processId : safePid,
@@ -983,6 +1038,11 @@ export function assertResourceCeiling(sample) {
   }
   if (sample.rssMiB > MAX_RSS_MIB) {
     throw new Error(`gateway RSS exceeded ${MAX_RSS_MIB} MiB: ${sample.rssMiB} MiB`);
+  }
+  if ((sample.aggregateRssMiB ?? sample.rssMiB) > MAX_RSS_MIB) {
+    throw new Error(
+      `gateway aggregate RSS exceeded ${MAX_RSS_MIB} MiB: ${sample.aggregateRssMiB} MiB`,
+    );
   }
 }
 
@@ -1169,7 +1229,8 @@ export async function main() {
         `plugins.uiDescriptors returned invalid payload: ${JSON.stringify(uiDescriptors)}`,
       );
     }
-    await retryRpcCall("diagnostics.stability", {}, { runner, port, env });
+    const stability = await retryRpcCall("diagnostics.stability", {}, { runner, port, env });
+    assertDiagnosticStabilityClean(stability);
     await sampleInFlight?.catch(() => {});
     const finalSample = await sampleGateway();
     assertResourceCeiling(finalSample);
