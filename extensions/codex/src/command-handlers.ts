@@ -1932,7 +1932,8 @@ function parseCodexCliSessionsArgs(args: string[]): ParsedCodexCliSessionsArgs {
     }
     if (arg === "--limit") {
       const value = readRequiredOptionValue(args, index);
-      const parsedLimit = value && /^\+?\d+$/.test(value.trim()) ? Number(value.trim()) : NaN;
+      const parsedLimit =
+        value && /^\+?\d+$/.test(value.trim()) ? Number(value.trim()) : Number.NaN;
       if (!Number.isSafeInteger(parsedLimit) || parsedLimit <= 0) {
         parsed.help = true;
         continue;
