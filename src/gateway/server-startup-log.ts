@@ -11,7 +11,7 @@ import {
 import { resolveThinkingDefault } from "../agents/model-thinking-default.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { getResolvedLoggerSettings } from "../logging.js";
-import { collectEnabledInsecureOrDangerousFlags } from "../security/dangerous-config-flags.js";
+import { collectEnabledInsecureOrDangerousFlagsFromCurrentSnapshot } from "../security/dangerous-config-flags-current.js";
 import { normalizeSortedUniqueStringEntries } from "../shared/string-normalization.js";
 
 type StartupThinkLevel =
@@ -24,7 +24,7 @@ type StartupThinkLevel =
   | "adaptive"
   | "max";
 
-export function logGatewayStartup(params: {
+export async function logGatewayStartup(params: {
   cfg: OpenClawConfig;
   bindHost: string;
   bindHosts?: string[];
@@ -61,9 +61,11 @@ export function logGatewayStartup(params: {
     params.log.info("gateway: running in Nix mode (config managed externally)");
   }
 
-  const enabledDangerousFlags = collectEnabledInsecureOrDangerousFlags(params.cfg, {
-    preferCurrentPluginMetadataSnapshot: true,
-  });
+  const enabledDangerousFlags =
+    collectEnabledInsecureOrDangerousFlagsFromCurrentSnapshot(params.cfg) ??
+    (await import("../security/dangerous-config-flags.js")).collectEnabledInsecureOrDangerousFlags(
+      params.cfg,
+    );
   if (enabledDangerousFlags.length > 0) {
     const warning =
       `security warning: dangerous config flags enabled: ${enabledDangerousFlags.join(", ")}. ` +
