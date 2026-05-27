@@ -521,6 +521,64 @@ describe("Discord native plugin command dispatch", () => {
     });
   });
 
+  it("passes the configured binding agent to plugin-owned Discord command sessions", async () => {
+    const cfg = createConfig();
+    const interaction = createInteraction();
+    const pluginSessionKey = "plugin-binding:openclaw-codex-app-server:dm";
+    discordNativeCommandTesting.setResolveDiscordNativeInteractionRouteState(async () => ({
+      ...createConfiguredRouteState({
+        sessionKey: pluginSessionKey,
+        agentId: "main",
+      }),
+      configuredBinding: {
+        statefulTarget: {
+          kind: "stateful",
+          driverId: "codex",
+          sessionKey: pluginSessionKey,
+          agentId: "codex",
+        },
+      } as never,
+    }));
+    runtimeModuleMocks.getSessionEntry.mockReturnValue({
+      sessionId: "codex-session",
+      authProfileOverride: "openai-codex:owner@example.com",
+      updatedAt: Date.now(),
+    });
+
+    registerPairPlugin();
+    const command = await createPluginCommand({
+      cfg,
+      name: "pair",
+    });
+    const executeSpy = runtimeModuleMocks.executePluginCommand.mockResolvedValue({
+      text: "paired:now",
+    });
+
+    await (command as { run: (interaction: unknown) => Promise<void> }).run(
+      Object.assign(interaction, {
+        options: {
+          getString: () => "now",
+          getBoolean: () => null,
+          getFocused: () => "",
+        },
+      }) as unknown,
+    );
+
+    expectPluginCommandExecution({
+      mock: executeSpy,
+      commandName: "pair",
+      expected: {
+        agentId: "codex",
+        sessionKey: pluginSessionKey,
+        authProfileId: "openai-codex:owner@example.com",
+      },
+    });
+    expect(runtimeModuleMocks.getSessionEntry).toHaveBeenCalledWith({
+      agentId: "codex",
+      sessionKey: pluginSessionKey,
+    });
+  });
+
   it("does not treat Discord DM allowlist users as scoped plugin command owners", async () => {
     const cfg = {
       channels: {
