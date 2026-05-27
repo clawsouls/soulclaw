@@ -6,6 +6,7 @@ import { getRuntimeConfig, readConfigFileSnapshot, replaceConfigFile } from "../
 import { applyPluginAutoEnable } from "../config/plugin-auto-enable.js";
 import { danger } from "../globals.js";
 import { resolveMessageChannelSelection } from "../infra/outbound/channel-selection.js";
+import { parseStrictPositiveInteger } from "../infra/parse-finite-number.js";
 import { defaultRuntime } from "../runtime.js";
 import {
   normalizeOptionalString,
@@ -18,22 +19,12 @@ import { formatHelpExamples } from "./help-format.js";
 import { commitConfigWithPendingPluginInstalls } from "./plugins-install-record-commit.js";
 
 function parseLimit(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    if (value <= 0) {
-      return null;
-    }
-    return Math.floor(value);
-  }
-  if (typeof value !== "string") {
+  if (value === undefined || value === null || value === "") {
     return null;
   }
-  const raw = normalizeOptionalString(value) ?? "";
-  if (!raw) {
-    return null;
-  }
-  const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return null;
+  const parsed = parseStrictPositiveInteger(value);
+  if (parsed === undefined) {
+    throw new Error("--limit must be a positive integer.");
   }
   return parsed;
 }
