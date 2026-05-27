@@ -4173,6 +4173,7 @@ describe("matrix live qa scenarios", () => {
     );
     expect(body).toContain("Never put both markers in the same assistant text block.");
     expect(scenario.configOverrides?.toolProfile).toBe("coding");
+    expect(scenario.providerMode).toBe("mock-openai");
     expect(mockObjectArg(waitForRoomEvent, "waitForRoomEvent", 1).since).toBe(
       "driver-sync-block-one",
     );

@@ -820,6 +820,12 @@ function extractLastCapture(text: string, pattern: RegExp) {
   return lastMatch?.[1]?.trim() || null;
 }
 
+function extractCaptures(text: string, pattern: RegExp) {
+  const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+  const globalPattern = new RegExp(pattern.source, flags);
+  return Array.from(text.matchAll(globalPattern), (match) => match[1]?.trim()).filter(Boolean);
+}
+
 function extractLastMatchingUserText(texts: string[], pattern: RegExp) {
   for (let index = texts.length - 1; index >= 0; index -= 1) {
     const text = texts[index] ?? "";
@@ -870,6 +876,29 @@ function extractLabeledMarkerDirective(text: string, label: string) {
     text,
     new RegExp(`${escapedLabel}:\\s*([^\\s\\\`.,;:!?]+(?:-[^\\s\\\`.,;:!?]+)*)`, "i"),
   );
+}
+
+function extractBlockStreamingMarkerDirectives(text: string) {
+  const firstLabeledMarker = extractLabeledMarkerDirective(text, "first exact marker");
+  const secondLabeledMarker = extractLabeledMarkerDirective(text, "second exact marker");
+  if (firstLabeledMarker && secondLabeledMarker) {
+    return {
+      first: firstLabeledMarker,
+      second: secondLabeledMarker,
+    };
+  }
+
+  const markers = extractCaptures(text, /exact marker\b[^:\n]{0,120}:\s*`([^`]+)`/i);
+  if (markers.length < 2) {
+    return null;
+  }
+  const [first, second] = markers.slice(-2);
+  return first && second
+    ? {
+        first,
+        second,
+      }
+    : null;
 }
 
 function extractQuotedToolArg(text: string, name: string) {
@@ -1604,15 +1633,14 @@ async function buildResponsesPayload(
     extractExactReplyDirective(prompt) ?? extractExactReplyDirective(allInputText);
   const exactMarkerDirective =
     extractExactMarkerDirective(prompt) ?? extractExactMarkerDirective(allInputText);
+  const blockStreamingPrompt =
+    extractLastMatchingUserText(extractAllUserTexts(input), QA_BLOCK_STREAMING_PROMPT_RE) ||
+    prompt ||
+    allInputText;
+  const blockStreamingMarkers =
+    extractBlockStreamingMarkerDirectives(blockStreamingPrompt) ??
+    extractBlockStreamingMarkerDirectives(allInputText);
   const latestImageUserTurn = extractLatestImageUserTurn(input);
-  const firstExactMarkerDirective = extractLabeledMarkerDirective(
-    allInputText,
-    "first exact marker",
-  );
-  const secondExactMarkerDirective = extractLabeledMarkerDirective(
-    allInputText,
-    "second exact marker",
-  );
   const isGroupChat = allInputText.includes('"is_group_chat": true');
   const isBaselineUnmentionedChannelChatter = /\bno bot ping here\b/i.test(prompt);
   const hasReasoningOnlyRetryInstruction = allInputText.includes(QA_REASONING_ONLY_RETRY_NEEDLE);
@@ -1832,23 +1860,19 @@ async function buildResponsesPayload(
     }
     return buildAssistantEvents(toolProgressReplyDirective);
   }
-  if (
-    QA_BLOCK_STREAMING_PROMPT_RE.test(allInputText) &&
-    firstExactMarkerDirective &&
-    secondExactMarkerDirective
-  ) {
+  if (QA_BLOCK_STREAMING_PROMPT_RE.test(allInputText) && blockStreamingMarkers) {
     return buildAssistantEvents([
       {
         id: "msg_mock_block_1",
         phase: "final_answer",
-        streamDeltas: splitMockStreamingText(firstExactMarkerDirective),
-        text: firstExactMarkerDirective,
+        streamDeltas: splitMockStreamingText(blockStreamingMarkers.first),
+        text: blockStreamingMarkers.first,
       },
       {
         id: "msg_mock_block_2",
         phase: "final_answer",
-        streamDeltas: splitMockStreamingText(secondExactMarkerDirective),
-        text: secondExactMarkerDirective,
+        streamDeltas: splitMockStreamingText(blockStreamingMarkers.second),
+        text: blockStreamingMarkers.second,
       },
     ]);
   }

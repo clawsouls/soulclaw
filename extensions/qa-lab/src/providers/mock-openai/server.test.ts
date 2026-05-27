@@ -323,7 +323,14 @@ describe("qa mock openai server", () => {
         stream: true,
         input: [
           makeUserInput(
-            "Block streaming QA check: emit exactly two assistant message blocks in order. First exact marker: `BLOCK_ONE_OK`. Second exact marker: `BLOCK_TWO_OK`.",
+            [
+              "Block streaming QA check: complete this whole sequence in one turn.",
+              "Step 1: send an assistant text block containing only this exact marker: `BLOCK_ONE_OK`.",
+              "That first marker block must be emitted before any tool call.",
+              "Step 2: after the first marker block, use the read tool exactly once on `QA_KICKOFF_TASK.md`.",
+              "Step 3: after that read completes, send a final assistant text block containing only this exact marker: `BLOCK_TWO_OK`.",
+              "Never put both markers in the same assistant text block.",
+            ].join("\n"),
           ),
         ],
       }),

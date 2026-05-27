@@ -1,19 +1,45 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { build } from "esbuild";
 
-const scriptPath = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../../scripts/build-diffs-viewer-runtime.mjs",
-);
-const result = spawnSync(process.execPath, [scriptPath, "full"], { stdio: "inherit" });
-if (result.error) {
-  throw result.error;
+const extensionRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = path.resolve(extensionRoot, "../..");
+const outputPath = path.join(extensionRoot, "assets/viewer-runtime.js");
+
+await fs.mkdir(path.dirname(outputPath), { recursive: true });
+
+const result = await build({
+  entryPoints: [path.join(repoRoot, "extensions/diffs/src/viewer-client.ts")],
+  bundle: true,
+  platform: "browser",
+  target: "es2020",
+  format: "esm",
+  minify: true,
+  legalComments: "none",
+  outfile: outputPath,
+  write: false,
+});
+
+const outputFile = result.outputFiles?.[0];
+if (!outputFile) {
+  throw new Error(
+    "esbuild did not produce extensions/diffs-language-pack/assets/viewer-runtime.js",
+  );
 }
-if (result.signal) {
-  console.error(`build-diffs-viewer-runtime exited with signal ${result.signal}`);
-  process.exit(1);
+
+const runtime = outputFile.text.replace(/[ \t]+$/gm, "");
+let previousRuntime = null;
+try {
+  previousRuntime = await fs.readFile(outputPath, "utf8");
+} catch (error) {
+  if (error?.code !== "ENOENT") {
+    throw error;
+  }
 }
-process.exit(result.status ?? 0);
+
+if (previousRuntime !== runtime) {
+  await fs.writeFile(outputPath, runtime);
+}
