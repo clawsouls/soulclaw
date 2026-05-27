@@ -489,6 +489,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Agents: validate a forced plugin harness against the candidate provider/model before pinning it, so unsupported fallback-chain candidates fail with a clear harness error instead of producing a late `Model provider X not found` from the underlying harness. Codex harness `supports()` now also accepts the canonical `openai` and `openai-codex` routing ids so documented Codex configs keep working. Thanks @cathrynlavery.
 - Control UI/WebChat: keep selected external-channel sessions live by mirroring Codex prompts at turn start, streaming hidden runs only to exact selected-session subscribers, and deduplicating accumulated stream snapshots around tool cards. Fixes #83528, #82611, refs #83949. Thanks @BunsDev.
 - CLI/tasks: include stale-running task maintenance decisions in `openclaw tasks maintenance --json` so retained and reconcile candidates explain backing-session, cron, CLI, and wedged-subagent state. (#84691) Thanks @efpiva.
 - Codex app-server: keep system-prompt reports working when bootstrap hooks provide workspace files with only a path and content, so hook-supplied SOUL/IDENTITY/TOOLS/USER context still reports injected characters correctly. (#84736) Thanks @JARVIS-Glasses.
