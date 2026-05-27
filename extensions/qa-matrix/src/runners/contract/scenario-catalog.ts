@@ -1230,6 +1230,7 @@ const MATRIX_QA_MEDIA_PROFILE_SCENARIO_IDS = [
 ] satisfies MatrixQaScenarioId[];
 
 const MATRIX_QA_EXPLICIT_ONLY_SCENARIO_IDS = new Set<MatrixQaScenarioId>([
+  "matrix-room-block-streaming",
   "matrix-subagent-thread-spawn",
 ]);
 

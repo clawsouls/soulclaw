@@ -315,7 +315,6 @@ describe("matrix live qa scenarios", () => {
       "matrix-room-tool-progress-preview-opt-out",
       "matrix-room-tool-progress-error",
       "matrix-room-tool-progress-mention-safety",
-      "matrix-room-block-streaming",
       "matrix-room-image-understanding-attachment",
       "matrix-room-generated-image-delivery",
       "matrix-media-type-coverage",
