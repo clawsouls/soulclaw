@@ -1036,6 +1036,12 @@ function buildAssistantText(
   if (isHeartbeatPrompt(prompt)) {
     return "HEARTBEAT_OK";
   }
+  if (/roundtrip image inspection check/i.test(allInputText) && imageInputCount > 0) {
+    return "Protocol note: the generated attachment shows the same QA lighthouse scene from the previous step.";
+  }
+  if (/image understanding check/i.test(allInputText) && imageInputCount > 0) {
+    return "Protocol note: the attached image is split horizontally, with red on top and blue on the bottom.";
+  }
   if (/\bmarker\b/i.test(allInputText) && exactReplyDirective) {
     return exactReplyDirective;
   }
@@ -1117,12 +1123,6 @@ function buildAssistantText(
       "- Keep a local copy before using the asset.",
       "- Re-open the copied file for final verification.",
     ].join("\n");
-  }
-  if (/roundtrip image inspection check/i.test(prompt) && imageInputCount > 0) {
-    return "Protocol note: the generated attachment shows the same QA lighthouse scene from the previous step.";
-  }
-  if (/image understanding check/i.test(prompt) && imageInputCount > 0) {
-    return "Protocol note: the attached image is split horizontally, with red on top and blue on the bottom.";
   }
   if (
     /interrupted by a gateway reload/i.test(prompt) &&
@@ -1565,6 +1565,7 @@ async function buildResponsesPayload(
     extractExactReplyDirective(prompt) ?? extractExactReplyDirective(allInputText);
   const exactMarkerDirective =
     extractExactMarkerDirective(prompt) ?? extractExactMarkerDirective(allInputText);
+  const imageInputCount = countImageInputs(input);
   const firstExactMarkerDirective = extractLabeledMarkerDirective(
     allInputText,
     "first exact marker",
@@ -1650,6 +1651,16 @@ async function buildResponsesPayload(
   }
   if (/fanout worker beta/i.test(prompt)) {
     return buildAssistantEvents("BETA-OK");
+  }
+  if (/roundtrip image inspection check/i.test(allInputText) && imageInputCount > 0) {
+    return buildAssistantEvents(
+      "Protocol note: the generated attachment shows the same QA lighthouse scene from the previous step.",
+    );
+  }
+  if (/image understanding check/i.test(allInputText) && imageInputCount > 0) {
+    return buildAssistantEvents(
+      "Protocol note: the attached image is split horizontally, with red on top and blue on the bottom.",
+    );
   }
   if (QA_REASONING_ONLY_RECOVERY_PROMPT_RE.test(allInputText)) {
     if (!scenarioToolOutput) {

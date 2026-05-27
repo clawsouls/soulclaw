@@ -937,6 +937,90 @@ describe("deliverSubagentAnnouncement completion delivery", () => {
     expect(queueEmbeddedPiMessageWithOutcome).not.toHaveBeenCalled();
   });
 
+  it("directly delivers direct-message subagent text when the announce agent returns no visible output", async () => {
+    const callGateway = createGatewayMock({
+      result: {
+        payloads: [],
+      },
+    });
+    const sendMessage = createSendMessageMock();
+
+    const result = await deliverDiscordDirectMessageCompletion({
+      callGateway,
+      sendMessage,
+      internalEvents: [
+        {
+          type: "task_completion",
+          source: "subagent",
+          childSessionKey: "agent:worker:subagent:child",
+          childSessionId: "child-session-id",
+          announceType: "subagent task",
+          taskLabel: "direct completion smoke",
+          status: "ok",
+          statusLabel: "completed successfully",
+          result: "child completion output",
+          replyInstruction: "Summarize the result.",
+        },
+      ],
+    });
+
+    expectRecordFields(result, {
+      delivered: true,
+      path: "direct",
+    });
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: "discord",
+        accountId: "acct-1",
+        to: "dm:U123",
+        content: "child completion output",
+        idempotencyKey: "announce-dm-fallback-empty:text-direct",
+      }),
+    );
+  });
+
+  it("directly delivers direct-message subagent text when the announce agent returns incomplete", async () => {
+    const callGateway = vi.fn(async () => {
+      throw new Error(
+        "FailoverError: mock-openai/gpt-5.5 ended with an incomplete terminal response: code=incomplete_result",
+      );
+    }) as unknown as typeof runtimeCallGateway;
+    const sendMessage = createSendMessageMock();
+
+    const result = await deliverDiscordDirectMessageCompletion({
+      callGateway,
+      sendMessage,
+      internalEvents: [
+        {
+          type: "task_completion",
+          source: "subagent",
+          childSessionKey: "agent:worker:subagent:child",
+          childSessionId: "child-session-id",
+          announceType: "subagent task",
+          taskLabel: "direct completion smoke",
+          status: "ok",
+          statusLabel: "completed successfully",
+          result: "child completion output",
+          replyInstruction: "Summarize the result.",
+        },
+      ],
+    });
+
+    expectRecordFields(result, {
+      delivered: true,
+      path: "direct",
+    });
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: "discord",
+        accountId: "acct-1",
+        to: "dm:U123",
+        content: "child completion output",
+        idempotencyKey: "announce-dm-fallback-empty:text-direct",
+      }),
+    );
+  });
+
   it("uses in-process agent dispatch for dormant completion requesters", async () => {
     const callGateway = createGatewayMock();
     const dispatchGatewayMethodInProcess = createInProcessGatewayMock({
