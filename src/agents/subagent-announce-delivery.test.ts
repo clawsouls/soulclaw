@@ -1003,6 +1003,41 @@ describe("deliverSubagentAnnouncement completion delivery", () => {
     );
   });
 
+  it("does not directly deliver failed subagent placeholder output", async () => {
+    const callGateway = createGatewayMock({
+      result: {
+        payloads: [],
+      },
+    });
+    const sendMessage = createSendMessageMock();
+
+    const result = await deliverDiscordDirectMessageCompletion({
+      callGateway,
+      sendMessage,
+      internalEvents: [
+        {
+          type: "task_completion",
+          source: "subagent",
+          childSessionKey: "agent:worker:subagent:child",
+          childSessionId: "child-session-id",
+          announceType: "subagent task",
+          taskLabel: "direct completion smoke",
+          status: "error",
+          statusLabel: "failed: all models failed",
+          result: "(no output)",
+          replyInstruction: "Summarize the result.",
+        },
+      ],
+    });
+
+    expectRecordFields(result, {
+      delivered: false,
+      path: "direct",
+      error: "completion agent did not produce a visible reply",
+    });
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
   it("directly delivers unprefixed direct targets recognized by the channel grammar", async () => {
     registerDirectTargetTestChannel("qa-channel");
     const callGateway = createGatewayMock({

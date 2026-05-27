@@ -767,12 +767,27 @@ function resolveTextCompletionDirectFallback(events: readonly AgentInternalEvent
     if (event?.type !== "task_completion" || event.source !== "subagent") {
       continue;
     }
+    if (event.status !== "ok") {
+      continue;
+    }
     const result = typeof event.result === "string" ? event.result.trim() : "";
-    if (result) {
+    if (result && result !== "(no output)") {
       return result;
     }
   }
   return undefined;
+}
+
+function hasFailedSubagentNoOutputCompletion(events: readonly AgentInternalEvent[] | undefined) {
+  return (
+    events?.some(
+      (event) =>
+        event.type === "task_completion" &&
+        event.source === "subagent" &&
+        event.status !== "ok" &&
+        event.result.trim() === "(no output)",
+    ) === true
+  );
 }
 
 async function deliverTextCompletionDirect(params: {
@@ -1189,6 +1204,13 @@ async function sendSubagentAnnounceDirectly(params: {
       });
       if (textDelivery) {
         return textDelivery;
+      }
+      if (hasFailedSubagentNoOutputCompletion(params.internalEvents)) {
+        return {
+          delivered: false,
+          path: "direct",
+          error: "completion agent did not produce a visible reply",
+        };
       }
     }
     if (
