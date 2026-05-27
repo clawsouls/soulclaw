@@ -1,5 +1,7 @@
 import { completionRequiresMessageToolDelivery } from "../auto-reply/reply/completion-delivery-policy.js";
 import { isSilentReplyPayloadText, SILENT_REPLY_TOKEN } from "../auto-reply/tokens.js";
+import { getLoadedChannelPluginForRead } from "../channels/plugins/registry-loaded-read.js";
+import type { ChannelId } from "../channels/plugins/types.public.js";
 import { routeFromConversationRef, routeToDeliveryFields } from "../channels/route-projection.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import type { ConversationRef } from "../infra/outbound/session-binding-service.js";
@@ -10,6 +12,7 @@ import {
   isAgentMediatedCompletionSourceTool,
   shouldPreserveUserFacingSessionStateForInputProvenance,
 } from "../sessions/input-provenance.js";
+import { deriveSessionChatTypeFromKey } from "../sessions/session-chat-type-shared.js";
 import { isCronRunSessionKey, isCronSessionKey } from "../sessions/session-key-utils.js";
 import { isNonTerminalAgentRunStatus } from "../shared/agent-run-status.js";
 import { normalizeOptionalLowercaseString } from "../shared/string-coerce.js";
@@ -714,18 +717,48 @@ async function deliverGeneratedMediaCompletionDirect(params: {
   }
 }
 
-function isDirectMessageDeliveryTarget(target: { to?: string; threadId?: string }): boolean {
+function inferDeliveryTargetChatType(target: {
+  channel?: string;
+  to?: string;
+}): "direct" | "group" | "channel" | undefined {
+  const normalizedTo = normalizeOptionalLowercaseString(target.to);
+  if (!normalizedTo) {
+    return undefined;
+  }
+  if (
+    normalizedTo.startsWith("dm:") ||
+    normalizedTo.startsWith("direct:") ||
+    normalizedTo.startsWith("user:") ||
+    normalizedTo.includes(":dm:") ||
+    normalizedTo.includes(":direct:")
+  ) {
+    return "direct";
+  }
+  if (normalizedTo.startsWith("channel:") || normalizedTo.startsWith("thread:")) {
+    return "channel";
+  }
+  if (normalizedTo.startsWith("group:")) {
+    return "group";
+  }
+  const channel = normalizeMessageChannel(target.channel);
+  return channel
+    ? getLoadedChannelPluginForRead(channel as ChannelId)?.messaging?.inferTargetChatType?.({
+        to: target.to ?? "",
+      })
+    : undefined;
+}
+
+function isDirectMessageDeliveryTarget(
+  target: { channel?: string; to?: string; threadId?: string },
+  requesterSessionKey: string,
+): boolean {
   if (target.threadId) {
     return false;
   }
-  const normalizedTo = normalizeOptionalLowercaseString(target.to);
-  return Boolean(
-    normalizedTo &&
-    (normalizedTo.startsWith("dm:") ||
-      normalizedTo.startsWith("direct:") ||
-      normalizedTo.includes(":dm:") ||
-      normalizedTo.includes(":direct:")),
-  );
+  if (deriveSessionChatTypeFromKey(requesterSessionKey) === "direct") {
+    return true;
+  }
+  return inferDeliveryTargetChatType(target) === "direct";
 }
 
 function resolveTextCompletionDirectFallback(events: readonly AgentInternalEvent[] | undefined) {
@@ -761,7 +794,7 @@ async function deliverTextCompletionDirect(params: {
     !params.deliveryTarget.deliver ||
     !params.deliveryTarget.channel ||
     !params.deliveryTarget.to ||
-    !isDirectMessageDeliveryTarget(params.deliveryTarget)
+    !isDirectMessageDeliveryTarget(params.deliveryTarget, params.requesterSessionKey)
   ) {
     return undefined;
   }

@@ -3,6 +3,8 @@ import {
   testing as sessionBindingServiceTesting,
   registerSessionBindingAdapter,
 } from "../infra/outbound/session-binding-service.js";
+import { setActivePluginRegistry } from "../plugins/runtime.js";
+import { createChannelTestPluginBase, createTestRegistry } from "../test-utils/channel-plugins.js";
 import type { AgentInternalEvent } from "./internal-events.js";
 import type {
   EmbeddedPiQueueFailureReason,
@@ -23,6 +25,7 @@ import { resolveAnnounceOrigin } from "./subagent-announce-origin.js";
 
 afterEach(() => {
   sessionBindingServiceTesting.resetSessionBindingAdaptersForTests();
+  setActivePluginRegistry(createTestRegistry());
   testing.setDepsForTest();
 });
 
@@ -133,6 +136,27 @@ function expectRecordFields(record: unknown, expected: Record<string, unknown>) 
 
 function asMock(fn: unknown) {
   return fn as ReturnType<typeof vi.fn>;
+}
+
+function registerDirectTargetTestChannel(channelId: string): void {
+  setActivePluginRegistry(
+    createTestRegistry([
+      {
+        pluginId: channelId,
+        source: "test",
+        plugin: {
+          ...createChannelTestPluginBase({
+            id: channelId,
+            capabilities: { chatTypes: ["direct", "channel"] },
+          }),
+          messaging: {
+            inferTargetChatType: ({ to }: { to: string }) =>
+              to.startsWith("channel:") || to.startsWith("thread:") ? "channel" : "direct",
+          },
+        },
+      },
+    ]),
+  );
 }
 
 function mockCallArg(fn: unknown, callIndex = 0, argIndex = 0) {
@@ -975,6 +999,59 @@ describe("deliverSubagentAnnouncement completion delivery", () => {
         to: "dm:U123",
         content: "child completion output",
         idempotencyKey: "announce-dm-fallback-empty:text-direct",
+      }),
+    );
+  });
+
+  it("directly delivers unprefixed direct targets recognized by the channel grammar", async () => {
+    registerDirectTargetTestChannel("qa-channel");
+    const callGateway = createGatewayMock({
+      result: {
+        payloads: [],
+      },
+    });
+    const sendMessage = createSendMessageMock();
+
+    const result = await deliverSlackChannelAnnouncement({
+      callGateway,
+      sendMessage,
+      sessionId: "requester-session-qa",
+      isActive: false,
+      expectsCompletionMessage: true,
+      directIdempotencyKey: "announce-qa-fallback-empty",
+      requesterSessionKey: "agent:qa:subagent-direct-fallback:1234",
+      requesterOrigin: {
+        channel: "qa-channel",
+        to: "qa-operator",
+        accountId: "default",
+      },
+      internalEvents: [
+        {
+          type: "task_completion",
+          source: "subagent",
+          childSessionKey: "agent:worker:subagent:child",
+          childSessionId: "child-session-id",
+          announceType: "subagent task",
+          taskLabel: "qa direct completion smoke",
+          status: "ok",
+          statusLabel: "completed successfully",
+          result: "child completion output",
+          replyInstruction: "Summarize the result.",
+        },
+      ],
+    });
+
+    expectRecordFields(result, {
+      delivered: true,
+      path: "direct",
+    });
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: "qa-channel",
+        accountId: "default",
+        to: "qa-operator",
+        content: "child completion output",
+        idempotencyKey: "announce-qa-fallback-empty:text-direct",
       }),
     );
   });
