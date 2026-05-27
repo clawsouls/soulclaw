@@ -49,7 +49,11 @@ import {
 import { createChannelMessageReplyPipeline } from "../../plugin-sdk/channel-message.js";
 import type { ChannelRouteRef } from "../../plugin-sdk/channel-route.js";
 import { isPluginOwnedSessionBindingRecord } from "../../plugins/conversation-binding.js";
-import { normalizeInputProvenance, type InputProvenance } from "../../sessions/input-provenance.js";
+import {
+  INTER_SESSION_PROMPT_PREFIX_BASE,
+  normalizeInputProvenance,
+  type InputProvenance,
+} from "../../sessions/input-provenance.js";
 import { resolveSendPolicy } from "../../sessions/send-policy.js";
 import { parseAgentSessionKey } from "../../sessions/session-key-utils.js";
 import {
@@ -57,6 +61,7 @@ import {
   type UserTurnInput,
   type UserTurnTranscriptRecorder,
 } from "../../sessions/user-turn-transcript.js";
+import { asOptionalRecord } from "../../shared/record-coerce.js";
 import { uniqueStrings } from "../../shared/string-normalization.js";
 import { deliveryContextFromSession } from "../../utils/delivery-context.shared.js";
 import {
@@ -2049,6 +2054,85 @@ function isSourceReplyTranscriptMirrorPayload(payload: ReplyPayload | undefined)
   return Boolean(payload && getReplyPayloadMetadata(payload)?.sourceReplyTranscriptMirror);
 }
 
+function readChatHistoryRecordTimestampMs(message: unknown): number | undefined {
+  const meta = asOptionalRecord(asOptionalRecord(message)?.["__openclaw"]);
+  const value = meta?.recordTimestampMs;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  const timestamp = asOptionalRecord(message)?.timestamp;
+  return typeof timestamp === "number" && Number.isFinite(timestamp) ? timestamp : undefined;
+}
+
+function isSubagentAnnounceInterSessionUserChatHistoryMessage(message: unknown): boolean {
+  const record = asOptionalRecord(message);
+  if (!record || record.role !== "user") {
+    return false;
+  }
+  const provenance = normalizeInputProvenance(record.provenance);
+  if (provenance?.kind === "inter_session" && provenance.sourceTool === "subagent_announce") {
+    return true;
+  }
+  const text = extractChatHistoryBlockText(record);
+  return (
+    typeof text === "string" &&
+    text.includes(INTER_SESSION_PROMPT_PREFIX_BASE) &&
+    text.includes("sourceTool=subagent_announce")
+  );
+}
+
+function isChatHistoryAssistantMessage(message: unknown): boolean {
+  return asOptionalRecord(message)?.role === "assistant";
+}
+
+export function dropPreSessionStartAnnouncePairs(
+  messages: unknown[],
+  sessionStartedAt: number | undefined,
+): unknown[] {
+  if (sessionStartedAt === undefined || messages.length === 0) {
+    return messages;
+  }
+  let changed = false;
+  const kept: unknown[] = [];
+  for (let i = 0; i < messages.length; i++) {
+    const current = messages[i];
+    if (isSubagentAnnounceInterSessionUserChatHistoryMessage(current)) {
+      const ts = readChatHistoryRecordTimestampMs(current);
+      if (typeof ts === "number" && ts < sessionStartedAt) {
+        const next = messages[i + 1];
+        const nextTs = readChatHistoryRecordTimestampMs(next);
+        if (
+          isChatHistoryAssistantMessage(next) &&
+          typeof nextTs === "number" &&
+          nextTs < sessionStartedAt
+        ) {
+          // Skip only an assistant reply that is also pre-session-start; recent
+          // or timestampless assistants may be real fresh-session context.
+          i++;
+        }
+        changed = true;
+        continue;
+      }
+    }
+    kept.push(current);
+  }
+  return changed ? kept : messages;
+}
+
+function dropLocalHistoryOverreadContextMessage(
+  messages: unknown[],
+  contextMessage: unknown | undefined,
+): unknown[] {
+  if (contextMessage === undefined) {
+    return messages;
+  }
+  const index = messages.indexOf(contextMessage);
+  if (index < 0) {
+    return messages;
+  }
+  return [...messages.slice(0, index), ...messages.slice(index + 1)];
+}
+
 export const chatHandlers: GatewayRequestHandlers = {
   "chat.history": async ({ params, respond, context }) => {
     if (!validateChatHistoryParams(params)) {
@@ -2075,22 +2159,39 @@ export const chatHandlers: GatewayRequestHandlers = {
     const defaultLimit = 200;
     const requested = typeof limit === "number" ? limit : defaultLimit;
     const max = Math.min(hardMax, requested);
+    const localReadMax = max > 0 ? max + 1 : 0;
     const maxHistoryBytes = getMaxChatHistoryMessagesBytes();
     const localMessages =
       sessionId && storePath
         ? await readRecentSessionMessagesAsync(sessionId, storePath, entry?.sessionFile, {
-            maxMessages: max,
+            maxMessages: localReadMax,
             maxBytes: Math.max(maxHistoryBytes * 2, 1024 * 1024),
           })
         : [];
+    const overreadContextMessage = localMessages.length > max ? localMessages[0] : undefined;
+    const localMessagesWithBoundaryFilter = dropLocalHistoryOverreadContextMessage(
+      dropPreSessionStartAnnouncePairs(
+        localMessages,
+        typeof entry?.sessionStartedAt === "number" ? entry.sessionStartedAt : undefined,
+      ),
+      overreadContextMessage,
+    );
     const rawMessages = augmentChatHistoryWithCliSessionImports({
       entry,
       provider: resolvedSessionModel.provider,
-      localMessages,
+      localMessages: localMessagesWithBoundaryFilter,
     });
+    // Drop subagent_announce pairs (user inter-session announce + adjacent
+    // assistant) whose record timestamp predates the current session's
+    // sessionStartedAt. Run after CLI history imports too, because those
+    // timestamped messages share the same chat.history response surface.
+    const recencyFilteredMessages = dropPreSessionStartAnnouncePairs(
+      rawMessages,
+      typeof entry?.sessionStartedAt === "number" ? entry.sessionStartedAt : undefined,
+    );
     const effectiveMaxChars = resolveEffectiveChatHistoryMaxChars(cfg, maxChars);
     const normalized = augmentChatHistoryWithCanvasBlocks(
-      projectRecentChatDisplayMessages(rawMessages, {
+      projectRecentChatDisplayMessages(recencyFilteredMessages, {
         maxChars: effectiveMaxChars,
         maxMessages: max,
       }),
