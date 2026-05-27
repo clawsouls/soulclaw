@@ -22,7 +22,12 @@ import type {
   VideoGenerationSourceAsset,
 } from "openclaw/plugin-sdk/video-generation";
 
-const DEFAULT_PIXVERSE_BASE_URL = "https://app-api.pixverse.ai/openapi/v2";
+const PIXVERSE_BASE_URL_BY_REGION = {
+  international: "https://app-api.pixverse.ai/openapi/v2",
+  cn: "https://app-api.pixverseai.cn/openapi/v2",
+} as const;
+const DEFAULT_PIXVERSE_REGION = "international";
+const DEFAULT_PIXVERSE_BASE_URL = PIXVERSE_BASE_URL_BY_REGION[DEFAULT_PIXVERSE_REGION];
 const DEFAULT_PIXVERSE_MODEL = "v6";
 const DEFAULT_PIXVERSE_QUALITY = "540p";
 const DEFAULT_TIMEOUT_MS = 300_000;
@@ -41,6 +46,8 @@ const PIXVERSE_TEXT_ASPECT_RATIOS = [
   "21:9",
 ] as const;
 const PIXVERSE_QUALITIES = ["360p", "540p", "720p", "1080p"] as const;
+
+type PixVerseApiRegion = keyof typeof PIXVERSE_BASE_URL_BY_REGION;
 
 type PixVerseEnvelope<T> = {
   ErrCode?: unknown;
@@ -68,10 +75,31 @@ type PixVerseVideoResultResponse = {
 };
 
 function resolvePixVerseBaseUrl(req: VideoGenerationRequest): string {
-  return (
-    normalizeOptionalString(req.cfg?.models?.providers?.pixverse?.baseUrl) ??
-    DEFAULT_PIXVERSE_BASE_URL
-  );
+  const provider = req.cfg?.models?.providers?.pixverse;
+  const configuredBaseUrl = normalizeOptionalString(provider?.baseUrl);
+  if (configuredBaseUrl) {
+    return configuredBaseUrl;
+  }
+  const region = resolvePixVerseApiRegion(provider?.region);
+  return PIXVERSE_BASE_URL_BY_REGION[region];
+}
+
+function resolvePixVerseApiRegion(value: unknown): PixVerseApiRegion {
+  const region = normalizeOptionalString(value)?.toLowerCase();
+  switch (region) {
+    case "cn":
+    case "china":
+    case "mainland":
+    case "pai":
+      return "cn";
+    case "global":
+    case "intl":
+    case "international":
+    case undefined:
+      return DEFAULT_PIXVERSE_REGION;
+    default:
+      throw new Error(`Unsupported PixVerse API region "${region}". Use "international" or "cn".`);
+  }
 }
 
 function normalizePixVerseModel(model: string | undefined): string {

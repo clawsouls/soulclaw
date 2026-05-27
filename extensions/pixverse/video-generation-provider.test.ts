@@ -329,4 +329,91 @@ describe("pixverse video generation provider", () => {
       "https://proxy.example/openapi/v2/video/result/123",
     );
   });
+
+  it("uses the configured CN API region", async () => {
+    postJsonRequestMock.mockResolvedValue({
+      response: {
+        json: async () => ({
+          ErrCode: 0,
+          ErrMsg: "success",
+          Resp: { video_id: 123 },
+        }),
+      },
+      release: vi.fn(async () => {}),
+    });
+    fetchWithTimeoutMock.mockResolvedValueOnce({
+      json: async () => ({
+        ErrCode: 0,
+        ErrMsg: "success",
+        Resp: { id: 123, status: 1, url: "https://media.pixverse.ai/out.mp4" },
+      }),
+      headers: new Headers(),
+    });
+
+    const provider = buildPixVerseVideoGenerationProvider();
+    await provider.generateVideo({
+      provider: "pixverse",
+      model: "v6",
+      prompt: "cn endpoint",
+      cfg: {
+        models: {
+          providers: {
+            pixverse: {
+              region: "cn",
+            },
+          },
+        },
+      } as never,
+    });
+
+    expect(firstPostJsonRequest().url).toBe(
+      "https://app-api.pixverseai.cn/openapi/v2/video/text/generate",
+    );
+    expect(fetchWithTimeoutMock.mock.calls[0]?.[0]).toBe(
+      "https://app-api.pixverseai.cn/openapi/v2/video/result/123",
+    );
+  });
+
+  it("prefers configured baseUrl over API region", async () => {
+    postJsonRequestMock.mockResolvedValue({
+      response: {
+        json: async () => ({
+          ErrCode: 0,
+          ErrMsg: "success",
+          Resp: { video_id: 123 },
+        }),
+      },
+      release: vi.fn(async () => {}),
+    });
+    fetchWithTimeoutMock.mockResolvedValueOnce({
+      json: async () => ({
+        ErrCode: 0,
+        ErrMsg: "success",
+        Resp: { id: 123, status: 1, url: "https://media.pixverse.ai/out.mp4" },
+      }),
+      headers: new Headers(),
+    });
+
+    const provider = buildPixVerseVideoGenerationProvider();
+    await provider.generateVideo({
+      provider: "pixverse",
+      model: "v6",
+      prompt: "custom base",
+      cfg: {
+        models: {
+          providers: {
+            pixverse: {
+              baseUrl: "https://proxy.example/openapi/v2",
+              region: "cn",
+            },
+          },
+        },
+      } as never,
+    });
+
+    expect(firstPostJsonRequest().url).toBe("https://proxy.example/openapi/v2/video/text/generate");
+    expect(fetchWithTimeoutMock.mock.calls[0]?.[0]).toBe(
+      "https://proxy.example/openapi/v2/video/result/123",
+    );
+  });
 });

@@ -9,15 +9,16 @@ read_when:
 
 OpenClaw ships a bundled `pixverse` provider for hosted PixVerse video generation. The plugin is enabled by default and registers the `pixverse` provider against the `videoGenerationProviders` contract.
 
-| Property        | Value                                                                 |
-| --------------- | --------------------------------------------------------------------- |
-| Provider id     | `pixverse`                                                            |
-| Plugin          | bundled, `enabledByDefault: true`                                     |
-| Auth env var    | `PIXVERSE_API_KEY`                                                    |
-| Onboarding flag | `--auth-choice pixverse-api-key`                                      |
-| Direct CLI flag | `--pixverse-api-key <key>`                                            |
-| API             | PixVerse Platform API v2 (`video_id` submission plus result polling)  |
-| Default model   | `pixverse/v6`                                                         |
+| Property           | Value                                                                |
+| ------------------ | -------------------------------------------------------------------- |
+| Provider id        | `pixverse`                                                           |
+| Plugin             | bundled, `enabledByDefault: true`                                    |
+| Auth env var       | `PIXVERSE_API_KEY`                                                   |
+| Onboarding flag    | `--auth-choice pixverse-api-key`                                     |
+| Direct CLI flag    | `--pixverse-api-key <key>`                                           |
+| API                | PixVerse Platform API v2 (`video_id` submission plus result polling) |
+| Default model      | `pixverse/v6`                                                        |
+| Default API region | International                                                        |
 
 ## Getting started
 
@@ -41,19 +42,19 @@ OpenClaw ships a bundled `pixverse` provider for hosted PixVerse video generatio
 
 The provider exposes PixVerse generation models through OpenClaw's shared video tool.
 
-| Mode           | Models                 | Reference input         |
-| -------------- | ---------------------- | ----------------------- |
-| Text-to-video  | `v6` (default), `c1`   | None                    |
-| Image-to-video | `v6` (default), `c1`   | 1 local or remote image |
+| Mode           | Models               | Reference input         |
+| -------------- | -------------------- | ----------------------- |
+| Text-to-video  | `v6` (default), `c1` | None                    |
+| Image-to-video | `v6` (default), `c1` | 1 local or remote image |
 
 Local image references are uploaded to PixVerse before the image-to-video request. Remote image URLs are passed through the PixVerse image upload endpoint as `image_url`.
 
-| Option        | Supported values                                      |
-| ------------- | ----------------------------------------------------- |
-| Duration      | 1-15 seconds                                          |
-| Resolution    | `360P`, `540P`, `720P`, `1080P`                       |
-| Aspect ratio  | `16:9`, `4:3`, `1:1`, `3:4`, `9:16`, `2:3`, `3:2`, `21:9` for text-to-video |
-| Generated audio | `audio: true`                                      |
+| Option          | Supported values                                                            |
+| --------------- | --------------------------------------------------------------------------- |
+| Duration        | 1-15 seconds                                                                |
+| Resolution      | `360P`, `540P`, `720P`, `1080P`                                             |
+| Aspect ratio    | `16:9`, `4:3`, `1:1`, `3:4`, `9:16`, `2:3`, `3:2`, `21:9` for text-to-video |
+| Generated audio | `audio: true`                                                               |
 
 <Note>
 PixVerse image template generation is not exposed through `image_generate` yet. That API is template-id driven, while OpenClaw's shared image-generation contract does not currently have a PixVerse-specific typed option bag.
@@ -63,14 +64,14 @@ PixVerse image template generation is not exposed through `image_generate` yet. 
 
 The video provider accepts these optional provider-specific keys:
 
-| Option                         | Type     | Effect                                 |
-| ------------------------------ | -------- | -------------------------------------- |
-| `seed`                         | number   | Deterministic seed when supported      |
-| `negativePrompt` / `negative_prompt` | string | Negative prompt                         |
-| `quality`                      | string   | PixVerse quality such as `720p`        |
-| `motionMode` / `motion_mode`   | string   | Image-to-video motion mode             |
-| `cameraMovement` / `camera_movement` | string | PixVerse camera movement preset         |
-| `templateId` / `template_id`   | number   | Activated PixVerse template id         |
+| Option                               | Type   | Effect                            |
+| ------------------------------------ | ------ | --------------------------------- |
+| `seed`                               | number | Deterministic seed when supported |
+| `negativePrompt` / `negative_prompt` | string | Negative prompt                   |
+| `quality`                            | string | PixVerse quality such as `720p`   |
+| `motionMode` / `motion_mode`         | string | Image-to-video motion mode        |
+| `cameraMovement` / `camera_movement` | string | PixVerse camera movement preset   |
+| `templateId` / `template_id`         | number | Activated PixVerse template id    |
 
 ## Configuration
 
@@ -89,8 +90,27 @@ The video provider accepts these optional provider-specific keys:
 ## Advanced configuration
 
 <AccordionGroup>
+  <Accordion title="API region">
+    OpenClaw defaults to the international PixVerse API. Set `models.providers.pixverse.region`
+    when your key belongs to a specific PixVerse platform region:
+
+    ```json5
+    {
+      models: {
+        providers: {
+          pixverse: {
+            region: "cn", // "international" or "cn"
+          },
+        },
+      },
+    }
+    ```
+
+  </Accordion>
+
   <Accordion title="Custom base URL">
     Set `models.providers.pixverse.baseUrl` only when routing through a trusted compatible proxy.
+    `baseUrl` takes precedence over `region`.
 
     ```json5
     {
@@ -103,6 +123,7 @@ The video provider accepts these optional provider-specific keys:
       },
     }
     ```
+
   </Accordion>
 
   <Accordion title="Task polling">
