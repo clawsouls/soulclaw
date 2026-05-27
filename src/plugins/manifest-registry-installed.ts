@@ -32,7 +32,7 @@ function isDeepFrozenJsonLike(value: unknown, seen = new WeakSet<object>()): boo
   if (!value || typeof value !== "object") {
     return true;
   }
-  const object = value as object;
+  const object = value;
   if (seen.has(object)) {
     return true;
   }

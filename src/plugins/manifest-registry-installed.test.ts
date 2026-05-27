@@ -86,10 +86,10 @@ function createIndexWithFileSignatures(rootDir: string): InstalledPluginIndex {
   const index = createIndex(rootDir);
   return {
     ...index,
-    plugins: index.plugins.map((record) => ({
-      ...record,
-      manifestFile: fileSignature(record.manifestPath),
-    })),
+    plugins: index.plugins.map((record) => {
+      record.manifestFile = fileSignature(record.manifestPath);
+      return record;
+    }),
   };
 }
 
