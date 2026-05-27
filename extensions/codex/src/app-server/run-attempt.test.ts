@@ -27,6 +27,7 @@ import { CODEX_GPT5_BEHAVIOR_CONTRACT } from "../../prompt-overlay.js";
 import { defaultCodexAppInventoryCache } from "./app-inventory-cache.js";
 import * as authBridge from "./auth-bridge.js";
 import { resolveCodexAppServerEnvApiKeyCacheKey } from "./auth-bridge.js";
+import { CodexAppServerRpcError } from "./client.js";
 import { readCodexPluginConfig, resolveCodexAppServerRuntimeOptions } from "./config.js";
 import {
   CODEX_OPENCLAW_DYNAMIC_TOOL_NAMESPACE,
@@ -65,6 +66,7 @@ import {
 } from "./sandbox-exec-server.js";
 import { createSandboxContext } from "./sandbox-exec-server.test-helpers.js";
 import { readCodexAppServerBinding, writeCodexAppServerBinding } from "./session-binding.js";
+import * as sharedClientModule from "./shared-client.js";
 import { createCodexTestModel } from "./test-support.js";
 import { buildTurnStartParams, startOrResumeThread } from "./thread-lifecycle.js";
 
@@ -3487,6 +3489,134 @@ describe("runCodexAppServerAttempt", () => {
       ["thread/resume"],
       ["thread/resume", "turn/start", "thread/unsubscribe"],
     ]);
+  });
+
+  it("does not retire the shared Codex client when a spawned helper run fails with a logical thread/start error", async () => {
+    const clearSpy = vi.spyOn(sharedClientModule, "clearSharedCodexAppServerClientIfCurrent");
+    clearSpy.mockClear();
+    let failedClient: unknown;
+    setCodexAppServerClientFactoryForTest(async () => {
+      const c = {
+        request: vi.fn(async (method: string) => {
+          if (method === "thread/start") {
+            throw new CodexAppServerRpcError(
+              { message: "401 authentication_error: Invalid bearer token" },
+              "thread/start",
+            );
+          }
+          return {};
+        }),
+        addNotificationHandler: vi.fn(() => () => undefined),
+        addRequestHandler: vi.fn(() => () => undefined),
+      };
+      failedClient = c;
+      return c as never;
+    });
+    const params = createParams(
+      path.join(tempDir, "session.jsonl"),
+      path.join(tempDir, "workspace"),
+    );
+    params.spawnedBy = "agent:main:session-parent";
+
+    await expect(runCodexAppServerAttempt(params)).rejects.toThrow("Invalid bearer token");
+    const calledWithFailedClient = clearSpy.mock.calls.some(([arg]) => arg === failedClient);
+    expect(calledWithFailedClient).toBe(false);
+    clearSpy.mockRestore();
+  });
+
+  it("retires the shared Codex client when a spawned helper run times out during thread/start", async () => {
+    const clearSpy = vi.spyOn(sharedClientModule, "clearSharedCodexAppServerClientIfCurrent");
+    clearSpy.mockClear();
+    let failedClient: unknown;
+    setCodexAppServerClientFactoryForTest(async () => {
+      const c = {
+        request: vi.fn(async (method: string) => {
+          if (method === "thread/start") {
+            return await new Promise<never>(() => undefined);
+          }
+          return {};
+        }),
+        addNotificationHandler: vi.fn(() => () => undefined),
+        addRequestHandler: vi.fn(() => () => undefined),
+      };
+      failedClient = c;
+      return c as never;
+    });
+    const params = createParams(
+      path.join(tempDir, "session.jsonl"),
+      path.join(tempDir, "workspace"),
+    );
+    params.spawnedBy = "agent:main:session-parent";
+    params.timeoutMs = 1;
+
+    await expect(runCodexAppServerAttempt(params, { startupTimeoutFloorMs: 1 })).rejects.toThrow(
+      "codex app-server startup timed out",
+    );
+    const calledWithFailedClient = clearSpy.mock.calls.some(([arg]) => arg === failedClient);
+    expect(calledWithFailedClient).toBe(true);
+    clearSpy.mockRestore();
+  });
+
+  it("retires the shared Codex client when a spawned helper hits a thread/start write failure", async () => {
+    const clearSpy = vi.spyOn(sharedClientModule, "clearSharedCodexAppServerClientIfCurrent");
+    clearSpy.mockClear();
+    let failedClient: unknown;
+    setCodexAppServerClientFactoryForTest(async () => {
+      const c = {
+        request: vi.fn(async (method: string) => {
+          if (method === "thread/start") {
+            throw new Error("write EPIPE");
+          }
+          return {};
+        }),
+        addNotificationHandler: vi.fn(() => () => undefined),
+        addRequestHandler: vi.fn(() => () => undefined),
+      };
+      failedClient = c;
+      return c as never;
+    });
+    const params = createParams(
+      path.join(tempDir, "session.jsonl"),
+      path.join(tempDir, "workspace"),
+    );
+    params.spawnedBy = "agent:main:session-parent";
+
+    await expect(runCodexAppServerAttempt(params)).rejects.toThrow("write EPIPE");
+    const calledWithFailedClient = clearSpy.mock.calls.some(([arg]) => arg === failedClient);
+    expect(calledWithFailedClient).toBe(true);
+    clearSpy.mockRestore();
+  });
+
+  it("retires the shared Codex client when a top-level run fails with a logical thread/start error", async () => {
+    const clearSpy = vi.spyOn(sharedClientModule, "clearSharedCodexAppServerClientIfCurrent");
+    clearSpy.mockClear();
+    let failedClient: unknown;
+    setCodexAppServerClientFactoryForTest(async () => {
+      const c = {
+        request: vi.fn(async (method: string) => {
+          if (method === "thread/start") {
+            throw new CodexAppServerRpcError(
+              { message: "401 authentication_error: Invalid bearer token" },
+              "thread/start",
+            );
+          }
+          return {};
+        }),
+        addNotificationHandler: vi.fn(() => () => undefined),
+        addRequestHandler: vi.fn(() => () => undefined),
+      };
+      failedClient = c;
+      return c as never;
+    });
+    const params = createParams(
+      path.join(tempDir, "session.jsonl"),
+      path.join(tempDir, "workspace"),
+    );
+
+    await expect(runCodexAppServerAttempt(params)).rejects.toThrow("Invalid bearer token");
+    const calledWithFailedClient = clearSpy.mock.calls.some(([arg]) => arg === failedClient);
+    expect(calledWithFailedClient).toBe(true);
+    clearSpy.mockRestore();
   });
 
   it("passes configured app-server policy, sandbox, service tier, and model on resume", async () => {
