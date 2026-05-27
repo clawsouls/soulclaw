@@ -1128,6 +1128,10 @@ test -f "$TMPDIR/docker-cmd-seen"
 
     expect(runner).toContain("OPENCLAW_ONBOARD_MAX_MEMORY_MIB");
     expect(runner).toContain("OPENCLAW_ONBOARD_MAX_CPU_PERCENT");
+    expect(runner).toContain(
+      'COMMAND_TIMEOUT="${OPENCLAW_ONBOARD_COMMAND_TIMEOUT:-${OPENCLAW_E2E_COMMAND_TIMEOUT:-300s}}"',
+    );
+    expect(runner).toContain('-e "OPENCLAW_E2E_COMMAND_TIMEOUT=$COMMAND_TIMEOUT"');
     expect(runner).toContain('--name "$CONTAINER_NAME"');
     expect(runner).toContain("docker_e2e_docker_cmd stats --no-stream");
     expect(runner).toContain("assert-resource-ceiling.mjs");

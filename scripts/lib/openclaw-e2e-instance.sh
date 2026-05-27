@@ -332,7 +332,8 @@ openclaw_e2e_assert_log_not_contains() {
 openclaw_e2e_run_logged() {
   local label="$1" log_path="/tmp/openclaw-onboard-${1}.log"
   shift
-  "$@" >"$log_path" 2>&1 || { cat "$log_path"; exit 1; }
+  local timeout_value="${OPENCLAW_E2E_COMMAND_TIMEOUT:-300s}"
+  openclaw_e2e_maybe_timeout "$timeout_value" "$@" >"$log_path" 2>&1 || { cat "$log_path"; exit 1; }
 }
 openclaw_e2e_dump_logs() {
   local path

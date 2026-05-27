@@ -321,4 +321,69 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
       fs.rmSync(tempDir, { force: true, recursive: true });
     }
   });
+
+  it("wraps logged OpenClaw E2E commands with the configured timeout", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-e2e-instance-run-logged-"));
+    const logLabel = path.basename(tempDir);
+    const logPath = `/tmp/openclaw-onboard-${logLabel}.log`;
+    try {
+      const timeoutArgsPath = path.join(tempDir, "timeout-args.txt");
+      const commandArgsPath = path.join(tempDir, "command-args.txt");
+      fs.writeFileSync(
+        path.join(tempDir, "timeout"),
+        [
+          "#!/usr/bin/env bash",
+          "set -euo pipefail",
+          'printf "%s\\n" "$*" >"$OPENCLAW_TEST_TIMEOUT_ARGS"',
+          'while [ "$#" -gt 0 ] && [ "$1" != "fixture-command" ]; do shift; done',
+          'exec "$@"',
+          "",
+        ].join("\n"),
+      );
+      fs.writeFileSync(
+        path.join(tempDir, "fixture-command"),
+        [
+          "#!/usr/bin/env bash",
+          "set -euo pipefail",
+          'printf "%s\\n" "$*" >"$OPENCLAW_TEST_COMMAND_ARGS"',
+          'printf "fixture output\\n"',
+          "",
+        ].join("\n"),
+      );
+      fs.chmodSync(path.join(tempDir, "timeout"), 0o755);
+      fs.chmodSync(path.join(tempDir, "fixture-command"), 0o755);
+
+      const result = spawnSync(
+        "/bin/bash",
+        [
+          "-c",
+          [
+            "set -euo pipefail",
+            `source ${shellQuote(helperPath)}`,
+            `openclaw_e2e_run_logged ${shellQuote(logLabel)} fixture-command one two`,
+          ].join("; "),
+        ],
+        {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            PATH: `${tempDir}:${process.env.PATH ?? ""}`,
+            OPENCLAW_E2E_COMMAND_TIMEOUT: "17s",
+            OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
+            OPENCLAW_TEST_COMMAND_ARGS: commandArgsPath,
+          },
+        },
+      );
+
+      expect(result.status).toBe(0);
+      expect(fs.readFileSync(timeoutArgsPath, "utf8").trim()).toBe(
+        "--kill-after=30s 17s fixture-command one two",
+      );
+      expect(fs.readFileSync(commandArgsPath, "utf8").trim()).toBe("one two");
+      expect(fs.readFileSync(logPath, "utf8")).toContain("fixture output");
+    } finally {
+      fs.rmSync(tempDir, { force: true, recursive: true });
+      fs.rmSync(logPath, { force: true });
+    }
+  });
 });
