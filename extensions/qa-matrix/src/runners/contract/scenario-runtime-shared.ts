@@ -121,10 +121,12 @@ export function buildMatrixToolProgressErrorPrompt(sutUserId: string, text: stri
 }
 
 export function buildMatrixToolProgressMentionSafetyPrompt(sutUserId: string, text: string) {
+  const command = `rg -n '${MATRIX_QA_TOOL_PROGRESS_MENTION_FILENAME}' . ; sleep 2`;
   return [
-    `${sutUserId} Tool progress QA check: call the read tool exactly once on \`${MATRIX_QA_TOOL_PROGRESS_MENTION_FILENAME}\` before answering.`,
-    `Do not use search for this check.`,
-    `After the read completes, reply exactly \`${text}\`.`,
+    `${sutUserId} Tool progress QA check: call the exec tool exactly once with this exact command before answering: \`${command}\`.`,
+    `The QA harness must observe that exec tool call in a Matrix tool-progress preview.`,
+    `Do not guess or send any marker before the tool result returns.`,
+    `After that exec command completes or fails, reply exactly \`${text}\`.`,
   ].join(" ");
 }
 

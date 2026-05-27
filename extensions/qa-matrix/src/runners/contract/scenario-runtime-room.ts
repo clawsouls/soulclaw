@@ -32,7 +32,6 @@ import {
   createMatrixQaScenarioClient,
   isMatrixQaExactMarkerReply,
   isMatrixQaMessageLikeKind,
-  MATRIX_QA_TOOL_PROGRESS_MENTION_FILENAME,
   MATRIX_QA_TOOL_PROGRESS_TASK_FILENAME,
   primeMatrixQaActorCursor,
   primeMatrixQaDriverScenarioClient,
@@ -870,7 +869,6 @@ async function runMatrixToolProgressScenario(
     finalText: string;
     allowFinalOnly?: boolean;
     allowTopLevelFinalWithProgress?: boolean;
-    taskFilename?: string;
     label: string;
     allowGenericProgressLine?: boolean;
     mentionSafety?: boolean;
@@ -880,7 +878,7 @@ async function runMatrixToolProgressScenario(
 ) {
   const { client, startSince } = await primeMatrixQaDriverScenarioClient(context);
   const startObservedIndex = context.observedEvents.length;
-  await writeMatrixToolProgressTaskFile(context, params.finalText, params.taskFilename);
+  await writeMatrixToolProgressTaskFile(context, params.finalText);
   const triggerBody = params.triggerBodyBuilder(context.sutUserId, params.finalText);
   const driverEventId = await client.sendTextMessage({
     body: triggerBody,
@@ -1188,13 +1186,12 @@ async function runMatrixToolProgressScenario(
 async function writeMatrixToolProgressTaskFile(
   context: MatrixQaScenarioContext,
   finalText: string,
-  taskFilename = MATRIX_QA_TOOL_PROGRESS_TASK_FILENAME,
 ) {
   if (!context.gatewayWorkspaceDir) {
     return;
   }
   await writeFile(
-    path.join(context.gatewayWorkspaceDir, taskFilename),
+    path.join(context.gatewayWorkspaceDir, MATRIX_QA_TOOL_PROGRESS_TASK_FILENAME),
     `${buildMatrixToolProgressTaskContent(finalText)}\n`,
     "utf8",
   );
@@ -1231,7 +1228,6 @@ export async function runToolProgressMentionSafetyScenario(context: MatrixQaScen
     finalText: buildMatrixQaToken("MATRIX_QA_TOOL_PROGRESS_MENTION_SAFE"),
     label: "tool progress mention safety",
     mentionSafety: true,
-    taskFilename: MATRIX_QA_TOOL_PROGRESS_MENTION_FILENAME,
     progressPattern: /@room|@alice:matrix-qa\.test|!room:matrix-qa\.test/i,
     triggerBodyBuilder: buildMatrixToolProgressMentionSafetyPrompt,
   });
