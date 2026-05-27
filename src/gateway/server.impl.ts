@@ -1114,14 +1114,13 @@ export async function startGatewayServer(
     getActiveTaskCount = earlyRuntime.getActiveTaskCount;
     runtimeState.skillsChangeUnsub = earlyRuntime.skillsChangeUnsub;
 
-    const [{ startGatewayEventSubscriptions }, gatewayRuntimeServices] = await startupTrace.measure(
-      "runtime.post-early-imports",
-      () =>
+    const [{ startGatewayEventSubscriptions }, { startGatewayRuntimeServices }] =
+      await startupTrace.measure("runtime.post-early-imports", () =>
         Promise.all([
           import("./server-runtime-subscriptions.js"),
-          import("./server-runtime-services.js"),
+          import("./server-runtime-startup-services.js"),
         ]),
-    );
+      );
     const runtimeSubscriptions = await startupTrace.measure("runtime.subscriptions", () =>
       startGatewayEventSubscriptions({
         broadcast,
@@ -1138,7 +1137,7 @@ export async function startGatewayServer(
     Object.assign(runtimeState, runtimeSubscriptions);
 
     const runtimeServices = await startupTrace.measure("runtime.services", () =>
-      gatewayRuntimeServices.startGatewayRuntimeServices({
+      startGatewayRuntimeServices({
         minimalTestGateway,
         cfgAtStart,
         channelManager,
@@ -1516,6 +1515,13 @@ export async function startGatewayServer(
     const sessionDeliveryRecoveryMaxEnqueuedAt = Date.now();
     let postAttachRuntimeReturned = false;
     let scheduledServicesActivated = false;
+    let scheduledServicesModulePromise: Promise<
+      typeof import("./server-runtime-services.js")
+    > | null = null;
+    const loadScheduledServicesModule = () => {
+      scheduledServicesModulePromise ??= import("./server-runtime-services.js");
+      return scheduledServicesModulePromise;
+    };
     const activateScheduledServicesWhenReady = () => {
       if (
         closePreludeStarted ||
@@ -1525,20 +1531,25 @@ export async function startGatewayServer(
       ) {
         return;
       }
-      const activated = gatewayRuntimeServices.activateGatewayScheduledServices({
-        minimalTestGateway,
-        cfgAtStart,
-        deps,
-        sessionDeliveryRecoveryMaxEnqueuedAt,
-        cron: runtimeState.cronState.cron,
-        startCron: false,
-        logCron,
-        log,
-        pluginLookUpTable,
-      });
       scheduledServicesActivated = true;
-      runtimeState.heartbeatRunner = activated.heartbeatRunner;
-      runtimeState.stopModelPricingRefresh = activated.stopModelPricingRefresh;
+      void loadScheduledServicesModule().then((gatewayRuntimeServices) => {
+        if (closePreludeStarted) {
+          return;
+        }
+        const activated = gatewayRuntimeServices.activateGatewayScheduledServices({
+          minimalTestGateway,
+          cfgAtStart,
+          deps,
+          sessionDeliveryRecoveryMaxEnqueuedAt,
+          cron: runtimeState.cronState.cron,
+          startCron: false,
+          logCron,
+          log,
+          pluginLookUpTable,
+        });
+        runtimeState.heartbeatRunner = activated.heartbeatRunner;
+        runtimeState.stopModelPricingRefresh = activated.stopModelPricingRefresh;
+      });
     };
     ({
       stopGatewayUpdateCheck: runtimeState.stopGatewayUpdateCheck,
@@ -1693,6 +1704,7 @@ export async function startGatewayServer(
       log.warn(`gateway: failed to promote config last-known-good backup: ${String(err)}`);
     });
     if (!minimalTestGateway) {
+      const gatewayRuntimeServices = await loadScheduledServicesModule();
       postReadyMaintenanceTimer = gatewayRuntimeServices.scheduleGatewayPostReadyMaintenance({
         delayMs: POST_READY_MAINTENANCE_DELAY_MS,
         isClosing: () => closePreludeStarted,
