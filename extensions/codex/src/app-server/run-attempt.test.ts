@@ -1,6 +1,5 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { SessionManager } from "@earendil-works/pi-coding-agent";
 import {
   abortAgentHarnessRun,
   embeddedAgentLog,
@@ -8,6 +7,7 @@ import {
   type AgentEventPayload,
   type EmbeddedRunAttemptParams,
 } from "openclaw/plugin-sdk/agent-harness-runtime";
+import { SessionManager } from "openclaw/plugin-sdk/agent-sessions";
 import {
   onInternalDiagnosticEvent,
   waitForDiagnosticEventsDrained,
@@ -955,8 +955,8 @@ describe("runCodexAppServerAttempt", () => {
           text: "Unscoped structured command guidance.",
         },
         {
-          text: "PI main command guidance.",
-          surfaces: ["pi_main"],
+          text: "OpenClaw main command guidance.",
+          surfaces: ["openclaw_main"],
         },
       ],
       handler: async () => ({ text: "ok" }),
@@ -969,7 +969,7 @@ describe("runCodexAppServerAttempt", () => {
     expect(instructions).toContain("Codex app-server command guidance.");
     expect(instructions).not.toContain("Legacy global command guidance.");
     expect(instructions).not.toContain("Unscoped structured command guidance.");
-    expect(instructions).not.toContain("PI main command guidance.");
+    expect(instructions).not.toContain("OpenClaw main command guidance.");
   });
 
   it("keeps OpenClaw skills out of Codex developer instructions", async () => {
