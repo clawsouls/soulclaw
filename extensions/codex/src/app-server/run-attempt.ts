@@ -796,13 +796,18 @@ export async function runCodexAppServerAttempt(
     timeoutMs: params.timeoutMs,
     timeoutFloorMs: options.startupTimeoutFloorMs,
   });
-  try {
-    emitCodexAppServerEvent(params, {
-      stream: "codex_app_server.lifecycle",
-      data: { phase: "startup" },
-    });
+  const buildNativeHookRelayFinalConfigPatch = (
+    decision: { action: "resume"; binding: CodexAppServerThreadBinding } | { action: "start" },
+  ) => {
+    nativeHookRelay?.unregister();
     nativeHookRelay = createCodexNativeHookRelay({
       options: options.nativeHookRelay,
+      generation:
+        decision.action === "resume" ? decision.binding.nativeHookRelayGeneration : undefined,
+      generationMismatchGraceMs:
+        decision.action === "resume" && !decision.binding.nativeHookRelayGeneration
+          ? CODEX_NATIVE_HOOK_RELAY_TTL_GRACE_MS
+          : undefined,
       events: nativeHookRelayEvents,
       agentId: sessionAgentId,
       sessionId: params.sessionId,
@@ -815,15 +820,24 @@ export async function runCodexAppServerAttempt(
       turnStartTimeoutMs: params.timeoutMs,
       signal: runAbortController.signal,
     });
-    const nativeHookRelayConfig = nativeHookRelay
-      ? buildCodexNativeHookRelayConfig({
-          relay: nativeHookRelay,
-          events: nativeHookRelayEvents,
-          hookTimeoutSec: options.nativeHookRelay?.hookTimeoutSec,
-        })
-      : options.nativeHookRelay?.enabled === false
-        ? buildCodexNativeHookRelayDisabledConfig()
-        : undefined;
+    return {
+      configPatch: nativeHookRelay
+        ? buildCodexNativeHookRelayConfig({
+            relay: nativeHookRelay,
+            events: nativeHookRelayEvents,
+            hookTimeoutSec: options.nativeHookRelay?.hookTimeoutSec,
+          })
+        : options.nativeHookRelay?.enabled === false
+          ? buildCodexNativeHookRelayDisabledConfig()
+          : undefined,
+      nativeHookRelayGeneration: nativeHookRelay?.generation,
+    };
+  };
+  try {
+    emitCodexAppServerEvent(params, {
+      stream: "codex_app_server.lifecycle",
+      data: { phase: "startup" },
+    });
     const startupResult = await startCodexAttemptThread({
       attemptClientFactory,
       appServer,
@@ -839,7 +853,7 @@ export async function runCodexAppServerAttempt(
       effectiveWorkspace,
       dynamicTools: toolBridge.specs,
       developerInstructions: promptBuild.developerInstructions,
-      finalConfigPatch: nativeHookRelayConfig,
+      buildFinalConfigPatch: buildNativeHookRelayFinalConfigPatch,
       bundleMcpThreadConfig,
       nativeToolSurfaceEnabled,
       sandboxExecServerEnabled,
