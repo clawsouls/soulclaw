@@ -555,6 +555,35 @@ function countImageInputs(value: unknown): number {
   return count;
 }
 
+function extractLatestImageUserTurn(input: ResponsesInputItem[]) {
+  const latestUserIndex = findLastUserIndex(input);
+  if (latestUserIndex < 0) {
+    return { text: "", imageInputCount: 0 };
+  }
+
+  let startIndex = latestUserIndex;
+  while (
+    startIndex > 0 &&
+    input[startIndex - 1]?.role === "user" &&
+    Array.isArray(input[startIndex - 1]?.content)
+  ) {
+    startIndex -= 1;
+  }
+
+  const imageTurnItems = input.slice(startIndex, latestUserIndex + 1);
+  const imageInputCount = countImageInputs(imageTurnItems.map((item) => item.content));
+  if (imageInputCount === 0) {
+    return { text: "", imageInputCount: 0 };
+  }
+  return {
+    text: imageTurnItems
+      .map((item) => extractInputText(item.content as unknown[]))
+      .filter(Boolean)
+      .join("\n"),
+    imageInputCount,
+  };
+}
+
 function parseToolOutputJson(toolOutput: string): Record<string, unknown> | null {
   if (!toolOutput.trim()) {
     return null;
@@ -1009,7 +1038,7 @@ function buildAssistantText(
     extractExactMarkerDirective(prompt) ?? extractExactMarkerDirective(allInputText);
   const finishExactlyDirective =
     extractFinishExactlyDirective(prompt) ?? extractFinishExactlyDirective(allInputText);
-  const imageInputCount = countImageInputs(input);
+  const latestImageUserTurn = extractLatestImageUserTurn(input);
   const activeMemorySummary = extractActiveMemorySummary(allInputText);
   const snackPreference = extractSnackPreference(activeMemorySummary ?? memorySnippet);
   const sessionsSpawnError = extractToolErrorForNamedCall({
@@ -1036,10 +1065,16 @@ function buildAssistantText(
   if (isHeartbeatPrompt(prompt)) {
     return "HEARTBEAT_OK";
   }
-  if (/roundtrip image inspection check/i.test(allInputText) && imageInputCount > 0) {
+  if (
+    /roundtrip image inspection check/i.test(latestImageUserTurn.text) &&
+    latestImageUserTurn.imageInputCount > 0
+  ) {
     return "Protocol note: the generated attachment shows the same QA lighthouse scene from the previous step.";
   }
-  if (/image understanding check/i.test(allInputText) && imageInputCount > 0) {
+  if (
+    /image understanding check/i.test(latestImageUserTurn.text) &&
+    latestImageUserTurn.imageInputCount > 0
+  ) {
     return "Protocol note: the attached image is split horizontally, with red on top and blue on the bottom.";
   }
   if (/\bmarker\b/i.test(allInputText) && exactReplyDirective) {
@@ -1565,7 +1600,7 @@ async function buildResponsesPayload(
     extractExactReplyDirective(prompt) ?? extractExactReplyDirective(allInputText);
   const exactMarkerDirective =
     extractExactMarkerDirective(prompt) ?? extractExactMarkerDirective(allInputText);
-  const imageInputCount = countImageInputs(input);
+  const latestImageUserTurn = extractLatestImageUserTurn(input);
   const firstExactMarkerDirective = extractLabeledMarkerDirective(
     allInputText,
     "first exact marker",
@@ -1652,12 +1687,18 @@ async function buildResponsesPayload(
   if (/fanout worker beta/i.test(prompt)) {
     return buildAssistantEvents("BETA-OK");
   }
-  if (/roundtrip image inspection check/i.test(allInputText) && imageInputCount > 0) {
+  if (
+    /roundtrip image inspection check/i.test(latestImageUserTurn.text) &&
+    latestImageUserTurn.imageInputCount > 0
+  ) {
     return buildAssistantEvents(
       "Protocol note: the generated attachment shows the same QA lighthouse scene from the previous step.",
     );
   }
-  if (/image understanding check/i.test(allInputText) && imageInputCount > 0) {
+  if (
+    /image understanding check/i.test(latestImageUserTurn.text) &&
+    latestImageUserTurn.imageInputCount > 0
+  ) {
     return buildAssistantEvents(
       "Protocol note: the attached image is split horizontally, with red on top and blue on the bottom.",
     );
