@@ -4,6 +4,7 @@ import { renderQaMarkdownReport } from "../../report.js";
 import { testing as liveTesting } from "./runtime.js";
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.useRealTimers();
 });
 
@@ -104,6 +105,37 @@ describe("matrix live qa runtime", () => {
         process.env.OPENCLAW_QA_MATRIX_TIMEOUT_MS = previous;
       }
     }
+  });
+
+  it("does not start Matrix QA work after the hard run deadline expires", async () => {
+    const task = vi.fn(async () => "started");
+    vi.spyOn(Date, "now").mockReturnValue(1_001);
+
+    await expect(
+      liveTesting.withMatrixQaRunDeadline(
+        {
+          deadlineMs: 1_000,
+          timeoutMs: 30_000,
+        },
+        "Matrix scenario late",
+        task,
+      ),
+    ).rejects.toThrow(/Matrix scenario late not started because Matrix QA run timed out/u);
+    expect(task).not.toHaveBeenCalled();
+  });
+
+  it("passes the remaining Matrix QA run budget to the phase timeout", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_000);
+
+    expect(
+      liveTesting.remainingMatrixQaRunMs(
+        {
+          deadlineMs: 1_250,
+          timeoutMs: 30_000,
+        },
+        "Matrix canary",
+      ),
+    ).toBe(250);
   });
 
   it("normalizes the Matrix QA canary timeout env", () => {
