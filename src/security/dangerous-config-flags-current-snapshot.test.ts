@@ -45,7 +45,7 @@ describe("collectEnabledInsecureOrDangerousFlags current metadata snapshot", () 
           },
         ],
       ]),
-    } as ReturnType<typeof getCurrentPluginMetadataSnapshot>);
+    } as unknown as ReturnType<typeof getCurrentPluginMetadataSnapshot>);
 
     const flags = collectEnabledInsecureOrDangerousFlags(
       asConfig({
