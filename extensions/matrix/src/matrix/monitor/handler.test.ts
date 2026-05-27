@@ -3097,7 +3097,7 @@ describe("matrix monitor handler draft streaming", () => {
       "draft options",
     );
     expect(draftOptions.msgtype).not.toBe("m.notice");
-    expect(draftOptions.includeMentions).not.toBe(false);
+    expect(draftOptions.includeMentions).toBe(false);
 
     await deliver({ text: "Single block" }, { kind: "final" });
 
