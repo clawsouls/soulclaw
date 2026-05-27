@@ -274,11 +274,11 @@ function extractStateUpsertPersistenceOptions(): Array<{
     };
     const current = readySessionMeta();
     const next = payload.mutate(current, { acp: current });
-    if (next?.state && payload.skipMaintenance === true && payload.takeCacheOwnership === true) {
+    if (next?.state && payload.skipMaintenance && payload.takeCacheOwnership) {
       options.push({
         state: next.state,
-        ...(payload.skipMaintenance === true ? { skipMaintenance: true } : {}),
-        ...(payload.takeCacheOwnership === true ? { takeCacheOwnership: true } : {}),
+        ...(payload.skipMaintenance ? { skipMaintenance: true } : {}),
+        ...(payload.takeCacheOwnership ? { takeCacheOwnership: true } : {}),
       });
     }
   }
