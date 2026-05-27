@@ -732,11 +732,23 @@ function resolveFallbackCandidateCacheKey(
   }
   const workspaceDir = getActivePluginRegistryWorkspaceDirFromState();
   const env = process.env;
+  const pluginMetadata = getCurrentPluginMetadataSnapshot({
+    env,
+    workspaceDir,
+    allowWorkspaceScopedSnapshot: true,
+  });
+  const providerLoadMetadata = getCurrentPluginMetadataSnapshot({
+    config: params.cfg,
+    env,
+    workspaceDir,
+    allowWorkspaceScopedSnapshot: true,
+  });
   if (
     isPluginProvidersLoadInFlight({
       config: params.cfg,
       workspaceDir,
       env,
+      ...(providerLoadMetadata ? { pluginMetadataSnapshot: providerLoadMetadata } : {}),
       activate: false,
       bundledProviderAllowlistCompat: true,
       bundledProviderVitestCompat: true,
@@ -744,11 +756,6 @@ function resolveFallbackCandidateCacheKey(
   ) {
     return null;
   }
-  const pluginMetadata = getCurrentPluginMetadataSnapshot({
-    env,
-    workspaceDir,
-    allowWorkspaceScopedSnapshot: true,
-  });
   const registryState = getPluginRegistryState();
   return JSON.stringify({
     provider: params.provider,

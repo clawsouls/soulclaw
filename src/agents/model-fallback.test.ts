@@ -23,7 +23,7 @@ import {
   FallbackSummaryError,
   testing,
   runWithImageModelFallback,
-  runWithModelFallback,
+  runWithModelFallback as runWithModelFallbackBase,
 } from "./model-fallback.js";
 import { classifyEmbeddedPiRunResultForModelFallback } from "./pi-embedded-runner/result-fallback-classifier.js";
 import type { EmbeddedPiRunResult } from "./pi-embedded-runner/types.js";
@@ -166,6 +166,10 @@ vi.mock("./model-fallback-auth.runtime.js", () => authRuntimeMock.runtime);
 const makeCfg = makeModelFallbackCfg;
 let authTempRoot = "";
 let authTempCounter = 0;
+const emptyManifestPlugins = [] as const;
+
+const runWithModelFallback: typeof runWithModelFallbackBase = (params) =>
+  runWithModelFallbackBase({ manifestPlugins: emptyManifestPlugins, ...params });
 
 beforeAll(() => {
   setDefaultPluginMetadataSnapshot();
