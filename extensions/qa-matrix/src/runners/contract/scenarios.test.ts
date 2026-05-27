@@ -3865,64 +3865,87 @@ describe("matrix live qa scenarios", () => {
 
   it("keeps Matrix-looking tool progress mentions inert in partial previews", async () => {
     const previewEventId = "$tool-progress-mention-preview";
-    mockMatrixQaRoomClient({
-      driverEventId: "$tool-progress-mention-trigger",
-      events: [
-        {
-          event: matrixQaMessageEvent({
-            kind: "message",
-            eventId: previewEventId,
-            body: "Working...\n- `tool: read`",
-          }),
-          since: "driver-sync-preview",
-        },
-        {
-          event: matrixQaMessageEvent({
-            kind: "message",
-            eventId: "$tool-progress-mention-edit",
-            body: "Working...\n- `tool: read`\n- `read from matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt`",
-            formattedBody:
-              "Working...<br><ul><li><code>read from matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt</code></li></ul>",
-            mentions: {},
-            relatesTo: {
-              relType: "m.replace",
-              eventId: previewEventId,
-            },
-          }),
-          since: "driver-sync-progress",
-        },
-        {
-          event: ({ sendTextMessage }) =>
-            matrixQaMessageEvent({
+    const gatewayWorkspaceDir = await mkdtemp(path.join(os.tmpdir(), "matrix-qa-workspace-"));
+    try {
+      const { sendTextMessage } = mockMatrixQaRoomClient({
+        driverEventId: "$tool-progress-mention-trigger",
+        events: [
+          {
+            event: matrixQaMessageEvent({
               kind: "message",
-              eventId: "$tool-progress-mention-final",
-              body: readMatrixQaReplyDirective(
-                mockMessageBody(sendTextMessage, "sendTextMessage"),
-                "MATRIX_QA_TOOL_PROGRESS_MENTION_SAFE_FIXED",
-              ),
+              eventId: previewEventId,
+              body: "Working...\n- `tool: read`",
+            }),
+            since: "driver-sync-preview",
+          },
+          {
+            event: matrixQaMessageEvent({
+              kind: "message",
+              eventId: "$tool-progress-mention-edit",
+              body: "Working...\n- `tool: read`\n- `read from matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt`",
+              formattedBody:
+                "Working...<br><ul><li><code>read from matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt</code></li></ul>",
+              mentions: {},
               relatesTo: {
                 relType: "m.replace",
                 eventId: previewEventId,
               },
             }),
-          since: "driver-sync-next",
-        },
-      ],
-    });
+            since: "driver-sync-progress",
+          },
+          {
+            event: ({ sendTextMessage }) =>
+              matrixQaMessageEvent({
+                kind: "message",
+                eventId: "$tool-progress-mention-final",
+                body: readMatrixQaReplyDirective(
+                  mockMessageBody(sendTextMessage, "sendTextMessage"),
+                  "MATRIX_QA_TOOL_PROGRESS_MENTION_SAFE_FIXED",
+                ),
+                relatesTo: {
+                  relType: "m.replace",
+                  eventId: previewEventId,
+                },
+              }),
+            since: "driver-sync-next",
+          },
+        ],
+      });
 
-    const scenario = requireMatrixQaScenario("matrix-room-tool-progress-mention-safety");
+      const scenario = requireMatrixQaScenario("matrix-room-tool-progress-mention-safety");
 
-    const result = await runMatrixQaScenario(scenario, matrixQaScenarioContext());
-    const artifacts = result.artifacts as {
-      driverEventId?: unknown;
-      previewEventId?: unknown;
-      previewMentions?: unknown;
-      reply?: { eventId?: unknown };
-    };
-    expect(artifacts.driverEventId).toBe("$tool-progress-mention-trigger");
-    expect(artifacts.previewEventId).toBe("$tool-progress-mention-preview");
-    expect(artifacts.previewMentions).toEqual({});
-    expect(artifacts.reply?.eventId).toBe("$tool-progress-mention-final");
+      const result = await runMatrixQaScenario(scenario, {
+        ...matrixQaScenarioContext(),
+        gatewayWorkspaceDir,
+      });
+      const artifacts = result.artifacts as {
+        driverEventId?: unknown;
+        previewEventId?: unknown;
+        previewMentions?: unknown;
+        reply?: { eventId?: unknown };
+        token?: unknown;
+      };
+      expect(artifacts.driverEventId).toBe("$tool-progress-mention-trigger");
+      expect(artifacts.previewEventId).toBe("$tool-progress-mention-preview");
+      expect(artifacts.previewMentions).toEqual({});
+      expect(artifacts.reply?.eventId).toBe("$tool-progress-mention-final");
+      const prompt = mockMessageBody(sendTextMessage, "sendTextMessage");
+      expect(prompt).toContain(
+        "call the read tool exactly once on `matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt`",
+      );
+      expect(prompt).toContain("Do not use search for this check.");
+      await expect(
+        readFile(
+          path.join(
+            gatewayWorkspaceDir,
+            "matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt",
+          ),
+          "utf8",
+        ),
+      ).resolves.toContain(String(artifacts.token));
+    } finally {
+      await rm(gatewayWorkspaceDir, { force: true, recursive: true });
+    }
   });
 
   it("preserves separate finalized block events when Matrix block streaming is enabled", async () => {

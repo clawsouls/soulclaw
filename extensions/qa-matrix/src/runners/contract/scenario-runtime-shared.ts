@@ -92,6 +92,8 @@ export function buildMatrixPartialStreamingPrompt(sutUserId: string, text: strin
 }
 
 export const MATRIX_QA_TOOL_PROGRESS_TASK_FILENAME = "QA_KICKOFF_TASK.md";
+export const MATRIX_QA_TOOL_PROGRESS_MENTION_FILENAME =
+  "matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt";
 
 export function buildMatrixToolProgressTaskContent(text: string) {
   return [
@@ -120,7 +122,8 @@ export function buildMatrixToolProgressErrorPrompt(sutUserId: string, text: stri
 
 export function buildMatrixToolProgressMentionSafetyPrompt(sutUserId: string, text: string) {
   return [
-    `${sutUserId} Tool progress QA check: read \`matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt\` before answering.`,
+    `${sutUserId} Tool progress QA check: call the read tool exactly once on \`${MATRIX_QA_TOOL_PROGRESS_MENTION_FILENAME}\` before answering.`,
+    `Do not use search for this check.`,
     `After the read completes, reply exactly \`${text}\`.`,
   ].join(" ");
 }
