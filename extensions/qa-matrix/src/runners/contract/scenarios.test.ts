@@ -3982,6 +3982,52 @@ describe("matrix live qa scenarios", () => {
     );
   });
 
+  it("does not accept top-level finals after a Matrix mention-safety preview", async () => {
+    const context = matrixQaScenarioContext();
+    const primeRoom = vi.fn().mockResolvedValue("driver-sync-start");
+    const sendTextMessage = vi.fn().mockResolvedValue("$tool-progress-mention-stale-trigger");
+    const previewEvent = matrixQaMessageEvent({
+      kind: "message",
+      eventId: "$tool-progress-mention-stale-preview",
+      body:
+        "Working...\n- `read matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt failed`",
+      formattedBody:
+        "Working...<br><ul><li><code>read matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt failed</code></li></ul>",
+      mentions: {},
+    });
+    const waitForRoomEvent = vi
+      .fn()
+      .mockImplementationOnce(async () => {
+        context.observedEvents.push(previewEvent);
+        return { event: previewEvent, since: "driver-sync-preview" };
+      })
+      .mockImplementationOnce(async (params: { predicate: (event: MatrixQaObservedEvent) => boolean }) => {
+        const topLevelFinal = matrixQaMessageEvent({
+          kind: "message",
+          eventId: "$tool-progress-mention-stale-final",
+          body: readMatrixQaReplyDirective(
+            mockMessageBody(sendTextMessage, "sendTextMessage"),
+            "MATRIX_QA_TOOL_PROGRESS_MENTION_SAFE_FIXED",
+          ),
+        });
+        expect(params.predicate(topLevelFinal)).toBe(false);
+        context.observedEvents.push(topLevelFinal);
+        throw new Error("timed out after 8000ms waiting for Matrix room event");
+      });
+    createMatrixQaClient.mockReturnValue({
+      primeRoom,
+      sendTextMessage,
+      waitForRoomEvent,
+    });
+
+    const scenario = requireMatrixQaScenario("matrix-room-tool-progress-mention-safety");
+
+    await expect(runMatrixQaScenario(scenario, context)).rejects.toThrow(
+      /timed out after 8000ms waiting for Matrix room event/,
+    );
+    expect(waitForRoomEvent).toHaveBeenCalledTimes(2);
+  });
+
   it("preserves separate finalized block events when Matrix block streaming is enabled", async () => {
     const primeRoom = vi.fn().mockResolvedValue("driver-sync-start");
     const sendTextMessage = vi.fn().mockResolvedValue("$block-stream-trigger");

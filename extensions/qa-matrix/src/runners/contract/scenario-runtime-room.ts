@@ -868,6 +868,7 @@ async function runMatrixToolProgressScenario(
     expectedPreviewKind: MatrixQaObservedEvent["kind"];
     finalText: string;
     allowFinalOnly?: boolean;
+    allowFinalBeforeProgress?: boolean;
     allowTopLevelFinalWithProgress?: boolean;
     label: string;
     allowGenericProgressLine?: boolean;
@@ -926,7 +927,9 @@ async function runMatrixToolProgressScenario(
       observedEvents: context.observedEvents,
       predicate: (event) =>
         isProgressEvent(event) ||
-        ((params.allowFinalOnly === true || params.allowTopLevelFinalWithProgress === true) &&
+        ((params.allowFinalOnly === true ||
+          params.allowFinalBeforeProgress === true ||
+          params.allowTopLevelFinalWithProgress === true) &&
           isFinalReply(event)),
       roomId: context.roomId,
       since: startSince,
@@ -946,7 +949,10 @@ async function runMatrixToolProgressScenario(
       );
     });
   if (isFinalReply(preview.event)) {
-    if (params.allowTopLevelFinalWithProgress === true && params.allowFinalOnly !== true) {
+    if (
+      (params.allowFinalBeforeProgress === true || params.allowTopLevelFinalWithProgress === true) &&
+      params.allowFinalOnly !== true
+    ) {
       const progressAfterFinal = await client
         .waitForRoomEvent({
           observedEvents: context.observedEvents,
@@ -1230,7 +1236,7 @@ export async function runToolProgressMentionSafetyScenario(context: MatrixQaScen
     expectedPreviewKind: "message",
     finalText: buildMatrixQaToken("MATRIX_QA_TOOL_PROGRESS_MENTION_SAFE"),
     label: "tool progress mention safety",
-    allowTopLevelFinalWithProgress: true,
+    allowFinalBeforeProgress: true,
     mentionSafety: true,
     progressPattern: /@room|@alice:matrix-qa\.test|!room:matrix-qa\.test/i,
     triggerBodyBuilder: buildMatrixToolProgressMentionSafetyPrompt,
