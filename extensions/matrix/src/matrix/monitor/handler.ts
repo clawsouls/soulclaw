@@ -155,6 +155,15 @@ function loadMatrixDraftStream(): Promise<typeof import("../draft-stream.js")> {
   return matrixDraftStreamPromise;
 }
 
+async function matrixTextWouldActivateMentions(
+  client: MatrixClient,
+  text: string,
+): Promise<boolean> {
+  const { resolveMatrixMentionsForBody } = await loadMatrixSendModule();
+  const mentions = await resolveMatrixMentionsForBody({ client, body: text });
+  return mentions.room === true || (mentions.user_ids?.length ?? 0) > 0;
+}
+
 const MAX_TRACKED_PAIRING_REPLY_SENDERS = 512;
 const MAX_TRACKED_SHARED_DM_CONTEXT_NOTICES = 512;
 type MatrixAllowBotsMode = "off" | "mentions" | "all";
@@ -1867,6 +1876,15 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
                 await draftStream.discardPending();
               }
               const draftEventId = draftStream.eventId();
+              const matchingDraftTextNeedsNormalMentionDelivery =
+                Boolean(draftEventId) &&
+                typeof payload.text === "string" &&
+                Boolean(payload.text.trim()) &&
+                !payload.isError &&
+                !payloadReplyMismatch &&
+                !mustDeliverFinalNormally &&
+                draftStream.matchesPreparedText(payload.text) &&
+                (await matrixTextWouldActivateMentions(client, payload.text));
 
               if (
                 draftEventId &&
@@ -1874,7 +1892,8 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
                 !payload.isError &&
                 !hasMedia &&
                 !payloadReplyMismatch &&
-                !mustDeliverFinalNormally
+                !mustDeliverFinalNormally &&
+                !matchingDraftTextNeedsNormalMentionDelivery
               ) {
                 const finalPreviewText = payload.text;
                 await deliverWithFinalizableLivePreviewAdapter<
@@ -1957,10 +1976,16 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
                   typeof payloadText === "string" &&
                   Boolean(payloadText.trim()) &&
                   payloadTextMatchesDraft;
+                const matchingMediaTextNeedsNormalMentionDelivery =
+                  typeof payloadText === "string" &&
+                  reusesDraftTextUnchanged &&
+                  (await matrixTextWouldActivateMentions(client, payloadText));
                 const requiresFinalTextEdit =
                   quietDraftStreaming ||
                   (typeof payloadText === "string" && !payloadTextMatchesDraft);
-                if (textEditOk && payloadText && requiresFinalTextEdit) {
+                if (textEditOk && matchingMediaTextNeedsNormalMentionDelivery) {
+                  textEditOk = false;
+                } else if (textEditOk && payloadText && requiresFinalTextEdit) {
                   const { editMessageMatrix } = await loadMatrixSendModule();
                   textEditOk = await editMessageMatrix(roomId, draftEventId, payloadText, {
                     client,
@@ -2010,7 +2035,10 @@ export function createMatrixRoomMessageHandler(params: MatrixMonitorHandlerParam
               } else {
                 const draftRedacted =
                   Boolean(draftEventId) &&
-                  (payload.isError || payloadReplyMismatch || mustDeliverFinalNormally);
+                  (payload.isError ||
+                    payloadReplyMismatch ||
+                    mustDeliverFinalNormally ||
+                    matchingDraftTextNeedsNormalMentionDelivery);
                 if (draftRedacted && draftEventId) {
                   await redactMatrixDraftEvent(client, roomId, draftEventId);
                 }
