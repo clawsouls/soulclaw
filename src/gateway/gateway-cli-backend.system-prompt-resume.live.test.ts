@@ -44,6 +44,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { resolveCliBackendConfig } from "../agents/cli-backends.js";
 import { isLiveTestEnabled } from "../agents/live-test-helpers.js";
+import { resolveShellFromPath } from "../agents/shell-utils.js";
 import { clearRuntimeConfigSnapshot, type OpenClawConfig } from "../config/config.js";
 import { isTruthyEnvValue } from "../infra/env.js";
 import {
@@ -78,6 +79,18 @@ const DEFAULT_MODEL = "claude-cli/claude-haiku-4-5";
 const REQUEST_TIMEOUT_MS = 5 * 60_000;
 const AGENT_TIMEOUT_SECONDS = Math.max(1, Math.ceil(REQUEST_TIMEOUT_MS / 1000) - 10);
 
+async function isExecutableCommandAvailable(command: string): Promise<boolean> {
+  if (command.includes("/") || command.includes(path.sep)) {
+    try {
+      await fs.access(command, fs.constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return Boolean(resolveShellFromPath(command));
+}
+
 describeLive("system-prompt-override on resumed cli sessions (issue #80374)", () => {
   it(
     "resumed session honors NEW systemPromptOverride (changing-marker proof, server restart between turns)",
@@ -88,14 +101,6 @@ describeLive("system-prompt-override on resumed cli sessions (issue #80374)", ()
           process.env.OPENCLAW_LIVE_CLI_BACKEND_PRESERVE_ENV,
         ) ?? [],
       );
-      const previousEnv = snapshotCliBackendLiveEnv();
-      clearRuntimeConfigSnapshot();
-      applyCliBackendLiveEnv(preservedEnv);
-
-      const token = `test-${randomUUID()}`;
-      process.env.OPENCLAW_GATEWAY_TOKEN = token;
-      const port = await getFreeGatewayPort();
-
       const rawModel = process.env.OPENCLAW_LIVE_CLI_BACKEND_MODEL ?? DEFAULT_MODEL;
       const modelSelection = resolveCliBackendLiveModelSelection({
         rawModel,
@@ -107,12 +112,32 @@ describeLive("system-prompt-override on resumed cli sessions (issue #80374)", ()
       const backendResolved = resolveCliBackendConfig(providerId);
       const providerDefaults = backendResolved?.config;
 
-      const cliCommand = process.env.OPENCLAW_LIVE_CLI_BACKEND_COMMAND ?? providerDefaults?.command;
+      const explicitCliCommand = process.env.OPENCLAW_LIVE_CLI_BACKEND_COMMAND;
+      const cliCommand = explicitCliCommand ?? providerDefaults?.command;
       if (!cliCommand) {
         throw new Error(
           `OPENCLAW_LIVE_CLI_BACKEND_COMMAND is required for provider "${providerId}".`,
         );
       }
+      if (!(await isExecutableCommandAvailable(cliCommand))) {
+        if (explicitCliCommand) {
+          throw new Error(
+            `OPENCLAW_LIVE_CLI_BACKEND_COMMAND is not executable or not on PATH: ${cliCommand}`,
+          );
+        }
+        console.warn(
+          `[sp-resume-proof] skip: CLI backend command "${cliCommand}" is not executable or not on PATH; set OPENCLAW_LIVE_CLI_BACKEND_COMMAND to run this live proof.`,
+        );
+        return;
+      }
+
+      const previousEnv = snapshotCliBackendLiveEnv();
+      clearRuntimeConfigSnapshot();
+      applyCliBackendLiveEnv(preservedEnv);
+
+      const token = `test-${randomUUID()}`;
+      process.env.OPENCLAW_GATEWAY_TOKEN = token;
+      const port = await getFreeGatewayPort();
 
       const { args: cliArgs, resumeArgs: cliResumeArgs } = resolveCliBackendLiveArgs({
         providerId,
