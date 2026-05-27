@@ -2556,7 +2556,7 @@ export async function runCodexAppServerAttempt(
       threadId: thread.threadId,
       ...(turnId ? { turnId } : {}),
     });
-    embeddedAgentLog.debug("codex app-server raw notification received", correlation);
+    embeddedAgentLog.trace("codex app-server raw notification received", correlation);
     if (notification.method === "turn/completed" && correlation.matchesActiveTurn === false) {
       if (correlation.matchesActiveThread) {
         embeddedAgentLog.warn(

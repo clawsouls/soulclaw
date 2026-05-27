@@ -97,6 +97,7 @@ const DEFAULT_REDACT_PATTERNS: string[] = [
   String.raw`\bbot(\d{6,}:[A-Za-z0-9_-]{20,})\b`,
   String.raw`\b(\d{6,}:[A-Za-z0-9_-]{20,})\b`,
 ];
+let defaultResolvedPatterns: RegExp[] | undefined;
 
 export type RedactOptions = {
   mode?: RedactSensitiveMode;
@@ -136,8 +137,13 @@ function parsePattern(raw: RedactPattern): RegExp | null {
 }
 
 function resolvePatterns(value?: RedactPattern[]): RegExp[] {
-  const source = value?.length ? value : DEFAULT_REDACT_PATTERNS;
-  return source.map(parsePattern).filter((re): re is RegExp => Boolean(re));
+  if (!value?.length) {
+    defaultResolvedPatterns ??= DEFAULT_REDACT_PATTERNS.map(parsePattern).filter(
+      (re): re is RegExp => Boolean(re),
+    );
+    return defaultResolvedPatterns;
+  }
+  return value.map(parsePattern).filter((re): re is RegExp => Boolean(re));
 }
 
 function maskToken(token: string): string {

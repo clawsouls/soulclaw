@@ -385,7 +385,9 @@ export function writeSessionStoreCache(params: {
   takeOwnership?: boolean;
 }): void {
   const store =
-    params.takeOwnership === true ? params.store : cloneSessionStoreRecord(params.store);
+    params.takeOwnership === true
+      ? params.store
+      : cloneSessionStoreRecord(params.store, params.serialized);
   if (params.takeOwnership === true) {
     internSessionStoreLargeStrings(store);
   }
