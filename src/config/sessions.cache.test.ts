@@ -557,6 +557,28 @@ describe("Session Store Cache", () => {
     expect(after["session:1"].displayName).toBe("Updated Session");
   });
 
+  it("can publish writer-owned session updates directly into the object cache", async () => {
+    await saveSessionStore(storePath, createSingleSessionStore());
+
+    const persisted = await updateSessionStore(
+      storePath,
+      (store) => {
+        const next = {
+          ...store["session:1"],
+          displayName: "Writer owned",
+          updatedAt: Date.now() + 1,
+        };
+        store["session:1"] = next;
+        return next;
+      },
+      { takeCacheOwnership: true },
+    );
+
+    const cached = loadSessionStore(storePath, { clone: false });
+    expect(cached["session:1"]).toBe(persisted);
+    expect(cached["session:1"].displayName).toBe("Writer owned");
+  });
+
   it("builds immutable session snapshots lazily after writes", async () => {
     await saveSessionStore(storePath, createSingleSessionStore());
 
