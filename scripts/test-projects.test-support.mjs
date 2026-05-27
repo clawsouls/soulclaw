@@ -948,6 +948,8 @@ let cachedImportGraph = null;
 let cachedImportGraphCwd = null;
 let cachedImportGraphFiles = null;
 let cachedImportGraphFilesCwd = null;
+const cachedImportGraphGrepMatches = new Map();
+const cachedDirectImporters = new Map();
 
 function isImportableGraphFile(relative) {
   return IMPORTABLE_FILE_EXTENSIONS.some((ext) => relative.endsWith(ext));
@@ -998,6 +1000,11 @@ function resolveImportGraphSearchTerm(relative) {
 }
 
 function listImportGraphGrepMatches(cwd, term) {
+  const cacheKey = `${cwd}\0${term}`;
+  if (cachedImportGraphGrepMatches.has(cacheKey)) {
+    return cachedImportGraphGrepMatches.get(cacheKey);
+  }
+
   const result = spawnSync(
     "git",
     ["grep", "-l", "--fixed-strings", term, "--", ...SOURCE_ROOTS_FOR_IMPORT_GRAPH],
@@ -1008,25 +1015,36 @@ function listImportGraphGrepMatches(cwd, term) {
     },
   );
   if (result.status === 1) {
+    cachedImportGraphGrepMatches.set(cacheKey, []);
     return [];
   }
   if (result.status !== 0) {
+    cachedImportGraphGrepMatches.set(cacheKey, null);
     return null;
   }
-  return result.stdout
+  const matches = result.stdout
     .split("\n")
     .map((line) => normalizePathPattern(line.trim()))
     .filter((line) => line.length > 0 && isImportableGraphFile(line));
+  cachedImportGraphGrepMatches.set(cacheKey, matches);
+  return matches;
 }
 
 function findDirectImportersWithGitGrep(cwd, importedFile, fileSet) {
+  const cacheKey = `${cwd}\0${importedFile}`;
+  if (cachedDirectImporters.has(cacheKey)) {
+    return cachedDirectImporters.get(cacheKey);
+  }
+
   const term = resolveImportGraphSearchTerm(importedFile);
   if (!term) {
+    cachedDirectImporters.set(cacheKey, null);
     return null;
   }
 
   const candidates = listImportGraphGrepMatches(cwd, term);
   if (!candidates || candidates.length > 800) {
+    cachedDirectImporters.set(cacheKey, null);
     return null;
   }
 
@@ -1049,6 +1067,7 @@ function findDirectImportersWithGitGrep(cwd, importedFile, fileSet) {
       }
     }
   }
+  cachedDirectImporters.set(cacheKey, importers);
   return importers;
 }
 
