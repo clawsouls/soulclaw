@@ -731,8 +731,20 @@ export function createPluginRuntimeMock(overrides: DeepPartial<PluginRuntime> = 
         run: runChannelTurnMock,
         runAssembled:
           dispatchAssembledChannelTurnMock as unknown as PluginRuntime["channel"]["turn"]["runAssembled"],
-        runResolved:
-          runChannelTurnMock as unknown as PluginRuntime["channel"]["turn"]["runResolved"],
+        runResolved: vi.fn(
+          async (params: Parameters<PluginRuntime["channel"]["turn"]["runResolved"]>[0]) =>
+            await runChannelTurnMock({
+              channel: params.channel,
+              accountId: params.accountId,
+              raw: params.raw,
+              log: params.log,
+              adapter: {
+                ingest: (raw) =>
+                  typeof params.input === "function" ? params.input(raw) : params.input,
+                resolveTurn: params.resolveTurn,
+              },
+            }),
+        ) as unknown as PluginRuntime["channel"]["turn"]["runResolved"],
         buildContext: buildChannelInboundEventContextMock,
         runPrepared: runPreparedChannelTurnMock,
         dispatchAssembled:

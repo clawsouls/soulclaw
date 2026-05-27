@@ -14,6 +14,65 @@ describe("createPluginRuntimeMock", () => {
     expect(vi.isMockFunction(debouncer.cancelKey)).toBe(true);
   });
 
+  it("keeps deprecated turn runtime aliases aligned with inbound mocks", async () => {
+    const runtime = createPluginRuntimeMock();
+    const channel = "test";
+
+    expect(runtime.channel.turn.run).toBe(runtime.channel.inbound.run);
+    expect(runtime.channel.turn.runAssembled).toBe(runtime.channel.inbound.dispatchReply);
+    expect(runtime.channel.turn.buildContext).toBe(runtime.channel.inbound.buildContext);
+    expect(runtime.channel.turn.runPrepared).toBe(runtime.channel.inbound.runPreparedReply);
+    expect(runtime.channel.turn.dispatchAssembled).toBe(runtime.channel.inbound.dispatchReply);
+
+    const input = vi.fn((raw: { id: string }) => ({
+      id: raw.id,
+      rawText: "hello",
+    }));
+    const recordInboundSession = vi.fn();
+    const runDispatch = vi.fn(async () => ({
+      visibleReplySent: true,
+    }));
+    const resolveTurn = vi.fn(async () => ({
+      channel,
+      storePath: "/tmp/openclaw-test",
+      routeSessionKey: "agent:main:test:direct:u1",
+      ctxPayload: {
+        Body: "hello",
+        CommandAuthorized: false,
+        SessionKey: "agent:main:test:direct:u1",
+      },
+      recordInboundSession,
+      runDispatch,
+    }));
+
+    const result = await runtime.channel.turn.runResolved({
+      channel,
+      raw: { id: "m1" },
+      input,
+      resolveTurn,
+    });
+
+    expect(input).toHaveBeenCalledWith({ id: "m1" });
+    expect(resolveTurn).toHaveBeenCalledWith(
+      { id: "m1", rawText: "hello" },
+      { kind: "message", canStartAgentTurn: true },
+      {},
+    );
+    expect(recordInboundSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storePath: "/tmp/openclaw-test",
+        sessionKey: "agent:main:test:direct:u1",
+      }),
+    );
+    expect(runDispatch).toHaveBeenCalled();
+    expect(result).toEqual(
+      expect.objectContaining({
+        admission: { kind: "dispatch" },
+        dispatched: true,
+      }),
+    );
+  });
+
   it("routes untrusted group prompt facts into untrusted structured context", () => {
     const runtime = createPluginRuntimeMock();
 
