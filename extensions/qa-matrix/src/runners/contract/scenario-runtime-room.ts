@@ -981,6 +981,9 @@ async function runMatrixToolProgressScenario(
           `Matrix tool progress leaked outside preview event: ${unexpectedWorkingEvents.map((event) => `${event.eventId}:${event.body ?? ""}`).join("; ")}`,
         );
       }
+      if (params.mentionSafety) {
+        assertMatrixQaToolProgressMentionsInert(progressAfterFinal.event);
+      }
       advanceMatrixQaActorCursor({
         actorId: "driver",
         syncState: context.syncState,
