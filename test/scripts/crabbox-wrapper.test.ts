@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const tempDirs: string[] = [];
 const repoRoot = process.cwd();
@@ -17,17 +17,9 @@ function makeFakeCrabbox(helpText: string): string {
 function writeFakeCrabbox(binDir: string, helpText: string): string {
   mkdirSync(binDir, { recursive: true });
   const crabboxPath = path.join(binDir, "crabbox");
-  const script = [
-    "#!/usr/bin/env node",
+  const helperPath = path.join(binDir, "fake-crabbox-json.cjs");
+  const helperScript = [
     "const args = process.argv.slice(2);",
-    'if (args[0] === "--version") {',
-    '  console.log("crabbox 0.15.0");',
-    "  process.exit(0);",
-    "}",
-    'if (args[0] === "run" && args[1] === "--help") {',
-    `  process.stdout.write(${JSON.stringify(helpText)});`,
-    "  process.exit(0);",
-    "}",
     'if (args[0] === "config" && args[1] === "show" && args.includes("--json")) {',
     "  const status = Number.parseInt(process.env.OPENCLAW_FAKE_CRABBOX_CONFIG_STATUS || '0', 10);",
     "  if (status !== 0) {",
@@ -42,6 +34,39 @@ function writeFakeCrabbox(binDir: string, helpText: string): string {
     "const scriptContent = scriptPath ? require('node:fs').readFileSync(scriptPath, 'utf8') : '';",
     "console.log(JSON.stringify({ args, cwd: process.cwd(), scriptContent }));",
   ].join("\n");
+  writeFileSync(helperPath, `${helperScript}\n`, "utf8");
+
+  if (process.platform !== "win32") {
+    const script = [
+      "#!/bin/sh",
+      'if [ "$1" = "--version" ]; then',
+      '  printf "%s\\n" "crabbox 0.15.0"',
+      "  exit 0",
+      "fi",
+      'if [ "$1" = "run" ] && [ "$2" = "--help" ]; then',
+      `  printf "%s" ${shellSingleQuote(helpText)}`,
+      "  exit 0",
+      "fi",
+      `exec ${shellSingleQuote(process.execPath)} ${shellSingleQuote(helperPath)} "$@"`,
+    ].join("\n");
+    writeFileSync(crabboxPath, `${script}\n`, "utf8");
+    chmodSync(crabboxPath, 0o755);
+    return crabboxPath;
+  }
+
+  const script = [
+    "#!/usr/bin/env node",
+    "const args = process.argv.slice(2);",
+    'if (args[0] === "--version") {',
+    '  console.log("crabbox 0.15.0");',
+    "  process.exit(0);",
+    "}",
+    'if (args[0] === "run" && args[1] === "--help") {',
+    `  process.stdout.write(${JSON.stringify(helpText)});`,
+    "  process.exit(0);",
+    "}",
+    `require(${JSON.stringify(helperPath)});`,
+  ].join("\n");
   writeFileSync(crabboxPath, `${script}\n`, "utf8");
   writeFileSync(
     `${crabboxPath}.cmd`,
@@ -50,6 +75,10 @@ function writeFakeCrabbox(binDir: string, helpText: string): string {
   );
   chmodSync(crabboxPath, 0o755);
   return crabboxPath;
+}
+
+function shellSingleQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function makeFakeGit(
@@ -142,13 +171,13 @@ function expectGroupedShellCommand(remoteCommand: string, command: string): void
   }
 }
 
-afterEach(() => {
+afterAll(() => {
   for (const dir of tempDirs.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-describe("scripts/crabbox-wrapper", () => {
+describe.concurrent("scripts/crabbox-wrapper", () => {
   const advertisedProviderAliasHelp = [
     "provider: hetzner, aws, gcp, local-container, blacksmith-testbox,",
     "  namespace-devbox, runpod, semaphore, cloudflare, railway, exe-dev, or ssh",
@@ -397,7 +426,7 @@ describe("scripts/crabbox-wrapper", () => {
     expect(remoteCommand).toContain("openclaw_crabbox_env");
     expect(remoteCommand).not.toContain("export -f env openclaw_crabbox_env");
     expect(remoteCommand).not.toContain('env() { openclaw_crabbox_env "$@"; };');
-    expect(remoteCommand).toContain('PATH=$PATH:${1#PATH=}');
+    expect(remoteCommand).toContain("PATH=$PATH:${1#PATH=}");
     expect(remoteCommand).toContain("pnpm --version >&2");
     expectGroupedShellCommand(
       remoteCommand,
@@ -429,8 +458,8 @@ describe("scripts/crabbox-wrapper", () => {
     const remoteCommand = normalizeShellLineEndings(output.args.at(-1) ?? "");
     expect(result.status).toBe(0);
     expect(remoteCommand).toContain("openclaw_crabbox_bootstrap_macos_js");
-    expect(remoteCommand).toContain('-u|--unset|-C|--chdir)');
-    expect(remoteCommand).toContain('-i|--ignore-environment)');
+    expect(remoteCommand).toContain("-u|--unset|-C|--chdir)");
+    expect(remoteCommand).toContain("-i|--ignore-environment)");
     expect(remoteCommand).toContain("pnpm --version >&2");
     expectGroupedShellCommand(
       remoteCommand,
@@ -518,7 +547,7 @@ describe("scripts/crabbox-wrapper", () => {
   });
 
   it("does not shadow unrelated env calls in AWS macOS shell commands", () => {
-    const shellScript = 'node --version; env -i PATH=/usr/bin:/bin printenv PATH';
+    const shellScript = "node --version; env -i PATH=/usr/bin:/bin printenv PATH";
     const result = runWrapper(
       "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
       ["run", "--provider", "aws", "--target", "macos", "--shell", "--", shellScript],
@@ -536,18 +565,7 @@ describe("scripts/crabbox-wrapper", () => {
   it("does not bootstrap env split-string commands after ignore-environment", () => {
     const result = runWrapper(
       "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
-      [
-        "run",
-        "--provider",
-        "aws",
-        "--target",
-        "macos",
-        "--",
-        "env",
-        "-i",
-        "-S",
-        "pnpm --version",
-      ],
+      ["run", "--provider", "aws", "--target", "macos", "--", "env", "-i", "-S", "pnpm --version"],
     );
 
     const output = parseFakeCrabboxOutput(result);
@@ -1690,17 +1708,7 @@ describe("scripts/crabbox-wrapper", () => {
   it("preserves sparse changed-gate Git bootstrap for direct timeout-wrapped shell commands", () => {
     const result = runWrapper(
       "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
-      [
-        "run",
-        "--provider",
-        "aws",
-        "--",
-        "timeout",
-        "1200s",
-        "bash",
-        "-lc",
-        "pnpm check:changed",
-      ],
+      ["run", "--provider", "aws", "--", "timeout", "1200s", "bash", "-lc", "pnpm check:changed"],
       {
         gitResponses: {
           ["config\u0000--bool\u0000core.sparseCheckout"]: { stdout: "true\n" },
