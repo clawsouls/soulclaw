@@ -53,7 +53,8 @@ describe("docsSearchCommand", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(String(url)).toBe("https://docs.openclaw.ai/api/search?q=plugin+allowlist");
+    expect(url).toBeInstanceOf(URL);
+    expect(url.href).toBe("https://docs.openclaw.ai/api/search?q=plugin+allowlist");
     expect(init).toMatchObject({ headers: { Accept: "application/json" } });
   });
 
