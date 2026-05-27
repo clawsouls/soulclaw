@@ -580,6 +580,10 @@ describe("plugin-sdk root alias", () => {
     );
   });
 
+  it("does not depend on single-letter bundled export aliases", () => {
+    expect(rootAliasSource).not.toMatch(/\bmod\.[A-Za-z_$]\b/u);
+  });
+
   it("resolves the diagnostic event export by function name when dist aliases shift", () => {
     let subscribeCount = 0;
     let unsubscribeCount = 0;
