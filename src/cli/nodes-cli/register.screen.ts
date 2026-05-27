@@ -12,6 +12,7 @@ import {
   buildNodeInvokeParams,
   callGatewayCli,
   nodesCallOpts,
+  parseOptionalNodeFiniteNumber,
   parseOptionalNodeNonNegativeInteger,
   parseOptionalNodePositiveInteger,
   resolveNodeId,
@@ -39,7 +40,9 @@ export function registerNodesScreenCommands(nodes: Command) {
           const nodeId = await resolveNodeId(opts, opts.node ?? "");
           const durationMs = parseDurationMs(opts.duration ?? "");
           const screenIndex = parseOptionalNodeNonNegativeInteger(opts.screen ?? "0", "--screen");
-          const fps = Number.parseFloat(opts.fps ?? "10");
+          const fps = parseOptionalNodeFiniteNumber(opts.fps ?? "10", "--fps", {
+            minExclusive: 0,
+          });
           const timeoutMs = parseOptionalNodePositiveInteger(
             opts.invokeTimeout,
             "--invoke-timeout",

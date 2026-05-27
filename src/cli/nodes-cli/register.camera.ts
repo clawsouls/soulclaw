@@ -20,6 +20,7 @@ import {
   buildNodeInvokeParams,
   callGatewayCli,
   nodesCallOpts,
+  parseOptionalNodeFiniteNumber,
   parseOptionalNodeNonNegativeInteger,
   parseOptionalNodePositiveInteger,
   resolveNode,
@@ -134,7 +135,10 @@ export function registerNodesCameraCommands(nodes: Command) {
                   })();
 
           const maxWidth = parseOptionalNodePositiveInteger(opts.maxWidth, "--max-width");
-          const quality = opts.quality ? Number.parseFloat(opts.quality) : undefined;
+          const quality = parseOptionalNodeFiniteNumber(opts.quality, "--quality", {
+            minInclusive: 0,
+            maxInclusive: 1,
+          });
           const delayMs = parseOptionalNodeNonNegativeInteger(opts.delayMs, "--delay-ms");
           const deviceId = normalizeOptionalString(opts.deviceId);
           if (deviceId && facings.length > 1) {

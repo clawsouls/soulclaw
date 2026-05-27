@@ -213,6 +213,14 @@ describe("nodes-cli coverage", () => {
       flag: "--invoke-timeout",
     },
     {
+      args: ["nodes", "camera", "snap", "--node", "mac-1", "--quality", "0.8jpg"],
+      flag: "--quality",
+    },
+    {
+      args: ["nodes", "camera", "snap", "--node", "mac-1", "--quality", "1.1"],
+      flag: "--quality",
+    },
+    {
       args: ["nodes", "camera", "clip", "--node", "mac-1", "--invoke-timeout", "90s"],
       flag: "--invoke-timeout",
     },
@@ -223,6 +231,14 @@ describe("nodes-cli coverage", () => {
     {
       args: ["nodes", "screen", "record", "--node", "mac-1", "--invoke-timeout", "120s"],
       flag: "--invoke-timeout",
+    },
+    {
+      args: ["nodes", "screen", "record", "--node", "mac-1", "--fps", "10fps"],
+      flag: "--fps",
+    },
+    {
+      args: ["nodes", "screen", "record", "--node", "mac-1", "--fps", "0"],
+      flag: "--fps",
     },
     {
       args: ["nodes", "notify", "--node", "mac-1", "--title", "Ping", "--invoke-timeout", "15s"],

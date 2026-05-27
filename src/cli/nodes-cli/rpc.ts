@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Command } from "commander";
 import type { OperatorScope } from "../../gateway/method-scopes.js";
 import {
+  parseStrictFiniteNumber,
   parseStrictNonNegativeInteger,
   parseStrictPositiveInteger,
 } from "../../infra/parse-finite-number.js";
@@ -92,6 +93,34 @@ export function parseOptionalNodeNonNegativeInteger(
   const parsed = parseStrictNonNegativeInteger(value);
   if (parsed === undefined) {
     throw new Error(`${flag} must be a non-negative integer.`);
+  }
+  return parsed;
+}
+
+export function parseOptionalNodeFiniteNumber(
+  value: unknown,
+  flag: string,
+  bounds?: {
+    minExclusive?: number;
+    minInclusive?: number;
+    maxInclusive?: number;
+  },
+): number | undefined {
+  if (!hasOptionalValue(value)) {
+    return undefined;
+  }
+  const parsed = parseStrictFiniteNumber(value);
+  if (parsed === undefined) {
+    throw new Error(`${flag} must be a finite number.`);
+  }
+  if (bounds?.minExclusive !== undefined && parsed <= bounds.minExclusive) {
+    throw new Error(`${flag} must be greater than ${bounds.minExclusive}.`);
+  }
+  if (bounds?.minInclusive !== undefined && parsed < bounds.minInclusive) {
+    throw new Error(`${flag} must be at least ${bounds.minInclusive}.`);
+  }
+  if (bounds?.maxInclusive !== undefined && parsed > bounds.maxInclusive) {
+    throw new Error(`${flag} must be at most ${bounds.maxInclusive}.`);
   }
   return parsed;
 }
