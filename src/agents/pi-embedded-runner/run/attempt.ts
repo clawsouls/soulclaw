@@ -195,6 +195,10 @@ import {
 import { UNKNOWN_TOOL_THRESHOLD } from "../../tool-loop-detection.js";
 import { normalizeToolName } from "../../tool-policy.js";
 import {
+  filterRuntimeCompatibleTools,
+  type RuntimeToolSchemaDiagnostic,
+} from "../../tool-schema-projection.js";
+import {
   addClientToolsToToolSearchCatalog,
   applyToolSearchCatalog,
   clearToolSearchCatalog,
@@ -478,6 +482,40 @@ function collectTrustedLocalMediaToolNames(params: {
     ),
     ...params.trustedPluginToolNames,
   ]);
+}
+
+function logRuntimeToolSchemaQuarantine(params: {
+  diagnostics: readonly RuntimeToolSchemaDiagnostic[];
+  tools: readonly Parameters<typeof getPluginToolMeta>[0][];
+  runId: string;
+  sessionKey?: string;
+  sessionId?: string;
+}): void {
+  if (params.diagnostics.length === 0) {
+    return;
+  }
+  const summary = params.diagnostics
+    .map((diagnostic) => {
+      const tool = params.tools[diagnostic.toolIndex];
+      const pluginId = tool ? getPluginToolMeta(tool)?.pluginId : undefined;
+      const owner = pluginId ? ` plugin=${pluginId}` : "";
+      emitTrustedDiagnosticEvent({
+        type: "tool.execution.blocked",
+        runId: params.runId,
+        ...(params.sessionKey ? { sessionKey: params.sessionKey } : {}),
+        ...(params.sessionId ? { sessionId: params.sessionId } : {}),
+        toolName: diagnostic.toolName,
+        toolSource: pluginId ? "plugin" : "core",
+        ...(pluginId ? { toolOwner: pluginId } : {}),
+        deniedReason: "unsupported_tool_schema",
+        reason: diagnostic.violations.join(", "),
+      });
+      return `${diagnostic.toolName}${owner}: ${diagnostic.violations.join(", ")}`;
+    })
+    .join("; ");
+  log.warn(
+    `[tools] quarantined ${params.diagnostics.length} unsupported tool schema${params.diagnostics.length === 1 ? "" : "s"} before model runtime projection: ${summary}. Run openclaw doctor for details.`,
+  );
 }
 
 const MAX_BTW_SNAPSHOT_MESSAGES = 100;
@@ -1917,11 +1955,22 @@ export async function runEmbeddedAttempt(
             model: params.model,
           })
         : filteredBundledTools;
-    const uncompactedEffectiveTools = filterLocalModelLeanTools({
+    const projectedUncompactedEffectiveTools = filterLocalModelLeanTools({
       tools: [...tools, ...normalizedBundledTools],
       config: params.config,
       agentId: sessionAgentId,
     });
+    const uncompactedToolSchemaProjection = filterRuntimeCompatibleTools(
+      projectedUncompactedEffectiveTools,
+    );
+    logRuntimeToolSchemaQuarantine({
+      diagnostics: uncompactedToolSchemaProjection.diagnostics,
+      tools: projectedUncompactedEffectiveTools,
+      runId: params.runId,
+      sessionKey: params.sessionKey,
+      sessionId: params.sessionId,
+    });
+    const uncompactedEffectiveTools = [...uncompactedToolSchemaProjection.tools];
     let effectiveTools = uncompactedEffectiveTools;
     const catalogToolHookContext = {
       agentId: sessionAgentId,
@@ -1978,11 +2027,20 @@ export async function runEmbeddedAttempt(
           toolHookContext: catalogToolHookContext,
         });
     toolSearchCatalogApplied = true;
-    effectiveTools = filterLocalModelLeanTools({
+    const projectedToolSearchTools = filterLocalModelLeanTools({
       tools: toolSearch.tools,
       config: params.config,
       agentId: sessionAgentId,
     });
+    const toolSearchSchemaProjection = filterRuntimeCompatibleTools(projectedToolSearchTools);
+    logRuntimeToolSchemaQuarantine({
+      diagnostics: toolSearchSchemaProjection.diagnostics,
+      tools: projectedToolSearchTools,
+      runId: params.runId,
+      sessionKey: params.sessionKey,
+      sessionId: params.sessionId,
+    });
+    effectiveTools = [...toolSearchSchemaProjection.tools];
     if (toolSearch.compacted) {
       prepStages.mark(codeModeControlsEnabledForRun ? "code-mode" : "tool-search");
       log.info(
