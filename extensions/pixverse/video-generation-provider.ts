@@ -5,13 +5,12 @@ import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runt
 import {
   assertOkOrThrowHttpError,
   createProviderOperationDeadline,
-  createProviderOperationTimeoutResolver,
-  fetchProviderOperationResponse,
+  pollProviderOperationJson,
   postJsonRequest,
   postMultipartRequest,
   resolveProviderOperationTimeoutMs,
   resolveProviderHttpRequestConfig,
-  waitProviderOperationPollInterval,
+  sanitizeConfiguredModelProviderRequest,
   type ProviderOperationDeadline,
 } from "openclaw/plugin-sdk/provider-http";
 import { asFiniteNumber, normalizeOptionalString } from "openclaw/plugin-sdk/string-coerce-runtime";
@@ -21,14 +20,15 @@ import type {
   VideoGenerationRequest,
   VideoGenerationSourceAsset,
 } from "openclaw/plugin-sdk/video-generation";
+import {
+  DEFAULT_PIXVERSE_MODEL_ID,
+  DEFAULT_PIXVERSE_REGION,
+  PIXVERSE_BASE_URL_BY_REGION,
+  PIXVERSE_PROVIDER_ID,
+  type PixVerseApiRegion,
+} from "./constants.js";
 
-const PIXVERSE_BASE_URL_BY_REGION = {
-  international: "https://app-api.pixverse.ai/openapi/v2",
-  cn: "https://app-api.pixverseai.cn/openapi/v2",
-} as const;
-const DEFAULT_PIXVERSE_REGION = "international";
 const DEFAULT_PIXVERSE_BASE_URL = PIXVERSE_BASE_URL_BY_REGION[DEFAULT_PIXVERSE_REGION];
-const DEFAULT_PIXVERSE_MODEL = "v6";
 const DEFAULT_PIXVERSE_QUALITY = "540p";
 const DEFAULT_TIMEOUT_MS = 300_000;
 const POLL_INTERVAL_MS = 5_000;
@@ -46,8 +46,6 @@ const PIXVERSE_TEXT_ASPECT_RATIOS = [
   "21:9",
 ] as const;
 const PIXVERSE_QUALITIES = ["360p", "540p", "720p", "1080p"] as const;
-
-type PixVerseApiRegion = keyof typeof PIXVERSE_BASE_URL_BY_REGION;
 
 type PixVerseEnvelope<T> = {
   ErrCode?: unknown;
@@ -75,7 +73,7 @@ type PixVerseVideoResultResponse = {
 };
 
 function resolvePixVerseBaseUrl(req: VideoGenerationRequest): string {
-  const provider = req.cfg?.models?.providers?.pixverse;
+  const provider = req.cfg?.models?.providers?.[PIXVERSE_PROVIDER_ID];
   const configuredBaseUrl = normalizeOptionalString(provider?.baseUrl);
   if (configuredBaseUrl) {
     return configuredBaseUrl;
@@ -104,7 +102,7 @@ function resolvePixVerseApiRegion(value: unknown): PixVerseApiRegion {
 
 function normalizePixVerseModel(model: string | undefined): string {
   const normalized = normalizeOptionalString(model)?.replace(/^pixverse\//iu, "");
-  return normalized?.toLowerCase() || DEFAULT_PIXVERSE_MODEL;
+  return normalized?.toLowerCase() || DEFAULT_PIXVERSE_MODEL_ID;
 }
 
 function resolvePixVerseQuality(req: VideoGenerationRequest): string {
@@ -142,19 +140,15 @@ function appendOptionalString(body: Record<string, unknown>, key: string, value:
   }
 }
 
-function buildHeaderEntries(apiKey: string, contentType?: string): Record<string, string> {
-  const headers: Record<string, string> = {
-    "API-KEY": apiKey,
-    "Ai-trace-id": randomUUID(),
-  };
+function buildPixVerseHeaders(headers: Headers, contentType?: string): Headers {
+  const next = new Headers(headers);
+  next.set("Ai-trace-id", randomUUID());
   if (contentType) {
-    headers["Content-Type"] = contentType;
+    next.set("Content-Type", contentType);
+  } else {
+    next.delete("Content-Type");
   }
-  return headers;
-}
-
-function buildHeaders(apiKey: string, contentType?: string): Headers {
-  return new Headers(buildHeaderEntries(apiKey, contentType));
+  return next;
 }
 
 function readPixVerseSuccess<T>(payload: PixVerseEnvelope<T>, label: string): T {
@@ -285,44 +279,31 @@ function readPixVerseFailureMessage(payload: PixVerseVideoResultResponse): strin
 
 async function pollPixVerseVideo(params: {
   videoId: number;
-  apiKey: string;
   baseUrl: string;
   deadline: ProviderOperationDeadline;
   fetchFn: typeof fetch;
+  allowPrivateNetwork: boolean;
+  dispatcherPolicy?: Parameters<typeof postJsonRequest>[0]["dispatcherPolicy"];
+  headers: Headers;
 }): Promise<PixVerseVideoResultResponse> {
-  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
-    const response = await fetchProviderOperationResponse({
-      stage: "poll",
-      url: `${params.baseUrl}/video/result/${params.videoId}`,
-      init: {
-        method: "GET",
-        headers: buildHeaders(params.apiKey),
-      },
-      timeoutMs: createProviderOperationTimeoutResolver({
-        deadline: params.deadline,
-        defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-      }),
-      fetchFn: params.fetchFn,
-      provider: "pixverse",
-      requestFailedMessage: "PixVerse video status request failed",
-    });
-    const payload = await readPixVerseJson<PixVerseVideoResultResponse>(
-      response,
-      "PixVerse video status request failed",
-    );
-    if (readPixVerseStatus(payload) === 1) {
-      return payload;
-    }
-    const failureMessage = readPixVerseFailureMessage(payload);
-    if (failureMessage) {
-      throw new Error(failureMessage);
-    }
-    await waitProviderOperationPollInterval({
-      deadline: params.deadline,
-      pollIntervalMs: POLL_INTERVAL_MS,
-    });
-  }
-  throw new Error(`PixVerse video generation task ${params.videoId} did not finish in time`);
+  const readResult = (payload: PixVerseEnvelope<PixVerseVideoResultResponse>) =>
+    readPixVerseSuccess(payload, "PixVerse video status request failed");
+  const payload = await pollProviderOperationJson<PixVerseEnvelope<PixVerseVideoResultResponse>>({
+    url: `${params.baseUrl}/video/result/${params.videoId}`,
+    headers: () => buildPixVerseHeaders(params.headers),
+    deadline: params.deadline,
+    defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
+    fetchFn: params.fetchFn,
+    maxAttempts: MAX_POLL_ATTEMPTS,
+    pollIntervalMs: POLL_INTERVAL_MS,
+    requestFailedMessage: "PixVerse video status request failed",
+    timeoutMessage: `PixVerse video generation task ${params.videoId} did not finish in time`,
+    isComplete: (candidate) => readPixVerseStatus(readResult(candidate)) === 1,
+    getFailureMessage: (candidate) => readPixVerseFailureMessage(readResult(candidate)),
+    allowPrivateNetwork: params.allowPrivateNetwork,
+    dispatcherPolicy: params.dispatcherPolicy,
+  });
+  return readResult(payload);
 }
 
 function extractPixVerseVideo(payload: PixVerseVideoResultResponse): GeneratedVideoAsset {
@@ -344,14 +325,14 @@ function extractPixVerseVideo(payload: PixVerseVideoResultResponse): GeneratedVi
 
 export function buildPixVerseVideoGenerationProvider(): VideoGenerationProvider {
   return {
-    id: "pixverse",
+    id: PIXVERSE_PROVIDER_ID,
     label: "PixVerse",
-    defaultModel: DEFAULT_PIXVERSE_MODEL,
+    defaultModel: DEFAULT_PIXVERSE_MODEL_ID,
     defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
     models: [...PIXVERSE_VIDEO_MODELS],
     isConfigured: ({ agentDir }) =>
       isProviderApiKeyConfigured({
-        provider: "pixverse",
+        provider: PIXVERSE_PROVIDER_ID,
         agentDir,
       }),
     capabilities: {
@@ -416,7 +397,7 @@ export function buildPixVerseVideoGenerationProvider(): VideoGenerationProvider 
       }
 
       const auth = await resolveApiKeyForProvider({
-        provider: "pixverse",
+        provider: PIXVERSE_PROVIDER_ID,
         cfg: req.cfg,
         agentDir: req.agentDir,
         store: req.authStore,
@@ -427,6 +408,7 @@ export function buildPixVerseVideoGenerationProvider(): VideoGenerationProvider 
 
       const model = normalizePixVerseModel(req.model);
       const fetchFn = fetch;
+      const providerConfig = req.cfg?.models?.providers?.[PIXVERSE_PROVIDER_ID];
       const deadline = createProviderOperationDeadline({
         timeoutMs: req.timeoutMs,
         label: "PixVerse video generation",
@@ -435,8 +417,11 @@ export function buildPixVerseVideoGenerationProvider(): VideoGenerationProvider 
         resolveProviderHttpRequestConfig({
           baseUrl: resolvePixVerseBaseUrl(req),
           defaultBaseUrl: DEFAULT_PIXVERSE_BASE_URL,
-          defaultHeaders: buildHeaderEntries(auth.apiKey, "application/json"),
-          provider: "pixverse",
+          request: sanitizeConfiguredModelProviderRequest(providerConfig?.request),
+          defaultHeaders: {
+            "API-KEY": auth.apiKey,
+          },
+          provider: PIXVERSE_PROVIDER_ID,
           capability: "video",
           transport: "http",
         });
@@ -446,7 +431,7 @@ export function buildPixVerseVideoGenerationProvider(): VideoGenerationProvider 
       if (image) {
         const upload = await postMultipartRequest({
           url: `${baseUrl}/image/upload`,
-          headers: buildHeaders(auth.apiKey),
+          headers: buildPixVerseHeaders(headers),
           body: buildUploadImageForm(image),
           timeoutMs: resolveProviderOperationTimeoutMs({
             deadline,
@@ -472,7 +457,7 @@ export function buildPixVerseVideoGenerationProvider(): VideoGenerationProvider 
       const endpoint = imageId === undefined ? "/video/text/generate" : "/video/img/generate";
       const create = await postJsonRequest({
         url: `${baseUrl}${endpoint}`,
-        headers,
+        headers: buildPixVerseHeaders(headers, "application/json"),
         body: buildVideoBody(req, model, imageId),
         timeoutMs: resolveProviderOperationTimeoutMs({
           deadline,
@@ -492,10 +477,12 @@ export function buildPixVerseVideoGenerationProvider(): VideoGenerationProvider 
         );
         const completed = await pollPixVerseVideo({
           videoId,
-          apiKey: auth.apiKey,
           baseUrl,
           deadline,
           fetchFn,
+          allowPrivateNetwork,
+          dispatcherPolicy,
+          headers,
         });
         return {
           videos: [extractPixVerseVideo(completed)],

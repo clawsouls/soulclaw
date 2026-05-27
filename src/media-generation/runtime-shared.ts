@@ -466,17 +466,17 @@ export function resolveClosestResolution<TResolution extends string>(params: {
     return params.requestedResolution;
   }
   const requestedNumeric = parseResolutionRank(params.requestedResolution);
-  if (typeof requestedNumeric === "number") {
+  if (requestedNumeric) {
     let bestValue: TResolution | undefined;
     let bestScore: { primary: number; secondary: number; tertiary: string } | null = null;
     for (const candidate of supported) {
       const candidateNumeric = parseResolutionRank(candidate);
-      if (typeof candidateNumeric !== "number") {
+      if (!candidateNumeric || candidateNumeric.unit !== requestedNumeric.unit) {
         continue;
       }
       const score = {
-        primary: Math.abs(candidateNumeric - requestedNumeric),
-        secondary: candidateNumeric < requestedNumeric ? 1 : 0,
+        primary: Math.abs(candidateNumeric.value - requestedNumeric.value),
+        secondary: candidateNumeric.value < requestedNumeric.value ? 1 : 0,
         tertiary: candidate,
       };
       if (compareScores(score, bestScore)) {
@@ -516,7 +516,9 @@ export function resolveClosestResolution<TResolution extends string>(params: {
   return bestValue;
 }
 
-function parseResolutionRank(resolution: string | undefined): number | undefined {
+function parseResolutionRank(
+  resolution: string | undefined,
+): { value: number; unit: "K" | "P" } | undefined {
   const match = resolution?.trim().match(/^(\d+(?:\.\d+)?)([kp])$/iu);
   if (!match) {
     return undefined;
@@ -525,7 +527,11 @@ function parseResolutionRank(resolution: string | undefined): number | undefined
   if (!Number.isFinite(value)) {
     return undefined;
   }
-  return match[2]?.toUpperCase() === "K" ? value * 1000 : value;
+  const unit = match[2]?.toUpperCase() === "K" ? "K" : "P";
+  return {
+    value: unit === "K" ? value * 1000 : value,
+    unit,
+  };
 }
 
 export function normalizeDurationToClosestMax(

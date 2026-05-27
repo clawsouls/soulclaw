@@ -5,8 +5,14 @@ import {
 import { expectExplicitVideoGenerationCapabilities } from "openclaw/plugin-sdk/provider-test-contracts";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-const { postJsonRequestMock, postMultipartRequestMock, fetchWithTimeoutMock } =
-  getProviderHttpMocks();
+const {
+  postJsonRequestMock,
+  postMultipartRequestMock,
+  fetchWithTimeoutMock,
+  pollProviderOperationJsonMock,
+  resolveProviderHttpRequestConfigMock,
+  sanitizeConfiguredModelProviderRequestMock,
+} = getProviderHttpMocks();
 
 let buildPixVerseVideoGenerationProvider: typeof import("./video-generation-provider.js").buildPixVerseVideoGenerationProvider;
 
@@ -30,6 +36,23 @@ function firstMultipartRequest() {
     throw new Error("expected PixVerse image upload request");
   }
   return call[0] as { url?: string; body?: FormData; headers?: Headers };
+}
+
+function firstPollRequest() {
+  const [call] = pollProviderOperationJsonMock.mock.calls;
+  if (!call) {
+    throw new Error("expected PixVerse status poll request");
+  }
+  return call[0] as {
+    url?: string;
+    allowPrivateNetwork?: boolean;
+    dispatcherPolicy?: unknown;
+  };
+}
+
+function pollFetchHeaders(callIndex: number): Headers | undefined {
+  const [, init] = fetchWithTimeoutMock.mock.calls[callIndex] ?? [];
+  return (init as { headers?: Headers } | undefined)?.headers;
 }
 
 describe("pixverse video generation provider", () => {
@@ -328,6 +351,142 @@ describe("pixverse video generation provider", () => {
     expect(fetchWithTimeoutMock.mock.calls[0]?.[0]).toBe(
       "https://proxy.example/openapi/v2/video/result/123",
     );
+  });
+
+  it("uses the guarded provider transport for status polling", async () => {
+    const dispatcherPolicy = { mode: "direct" };
+    resolveProviderHttpRequestConfigMock.mockReturnValueOnce({
+      baseUrl: "https://proxy.example/openapi/v2",
+      allowPrivateNetwork: true,
+      headers: new Headers({ "API-KEY": "provider-key", "X-Proxy": "enabled" }),
+      dispatcherPolicy,
+    } as never);
+    postJsonRequestMock.mockResolvedValue({
+      response: {
+        json: async () => ({
+          ErrCode: 0,
+          ErrMsg: "success",
+          Resp: { video_id: 123 },
+        }),
+      },
+      release: vi.fn(async () => {}),
+    });
+    fetchWithTimeoutMock.mockResolvedValueOnce({
+      json: async () => ({
+        ErrCode: 0,
+        ErrMsg: "success",
+        Resp: { id: 123, status: 1, url: "https://media.pixverse.ai/out.mp4" },
+      }),
+      headers: new Headers(),
+    });
+
+    const provider = buildPixVerseVideoGenerationProvider();
+    await provider.generateVideo({
+      provider: "pixverse",
+      model: "v6",
+      prompt: "custom base",
+      cfg: {},
+    });
+
+    expect(firstPostJsonRequest().url).toBe("https://proxy.example/openapi/v2/video/text/generate");
+    expect(firstPostJsonRequest().headers?.get("X-Proxy")).toBe("enabled");
+    expect(firstPollRequest()).toMatchObject({
+      url: "https://proxy.example/openapi/v2/video/result/123",
+      allowPrivateNetwork: true,
+      dispatcherPolicy,
+    });
+    const pollHeaders = pollFetchHeaders(0);
+    expect(pollHeaders?.get("X-Proxy")).toBe("enabled");
+  });
+
+  it("passes configured provider request overrides into the HTTP resolver", async () => {
+    const request = {
+      allowPrivateNetwork: true,
+      headers: { "X-Proxy": "enabled" },
+    };
+    postJsonRequestMock.mockResolvedValue({
+      response: {
+        json: async () => ({
+          ErrCode: 0,
+          ErrMsg: "success",
+          Resp: { video_id: 123 },
+        }),
+      },
+      release: vi.fn(async () => {}),
+    });
+    fetchWithTimeoutMock.mockResolvedValueOnce({
+      json: async () => ({
+        ErrCode: 0,
+        ErrMsg: "success",
+        Resp: { id: 123, status: 1, url: "https://media.pixverse.ai/out.mp4" },
+      }),
+      headers: new Headers(),
+    });
+
+    const provider = buildPixVerseVideoGenerationProvider();
+    await provider.generateVideo({
+      provider: "pixverse",
+      model: "v6",
+      prompt: "custom request config",
+      cfg: {
+        models: {
+          providers: {
+            pixverse: {
+              request,
+            },
+          },
+        },
+      } as never,
+    });
+
+    expect(sanitizeConfiguredModelProviderRequestMock).toHaveBeenCalledWith(request);
+    expect(resolveProviderHttpRequestConfigMock).toHaveBeenCalledWith(
+      expect.objectContaining({ request }),
+    );
+  });
+
+  it("uses a fresh trace id for each status poll", async () => {
+    postJsonRequestMock.mockResolvedValue({
+      response: {
+        json: async () => ({
+          ErrCode: 0,
+          ErrMsg: "success",
+          Resp: { video_id: 123 },
+        }),
+      },
+      release: vi.fn(async () => {}),
+    });
+    fetchWithTimeoutMock
+      .mockResolvedValueOnce({
+        json: async () => ({
+          ErrCode: 0,
+          ErrMsg: "success",
+          Resp: { id: 123, status: 5 },
+        }),
+        headers: new Headers(),
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({
+          ErrCode: 0,
+          ErrMsg: "success",
+          Resp: { id: 123, status: 1, url: "https://media.pixverse.ai/out.mp4" },
+        }),
+        headers: new Headers(),
+      });
+
+    const provider = buildPixVerseVideoGenerationProvider();
+    await provider.generateVideo({
+      provider: "pixverse",
+      model: "v6",
+      prompt: "fresh trace ids",
+      cfg: {},
+    });
+
+    const firstHeaders = pollFetchHeaders(0);
+    const secondHeaders = pollFetchHeaders(1);
+    expect(firstHeaders?.get("Ai-trace-id")).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(secondHeaders?.get("Ai-trace-id")).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(secondHeaders?.get("Ai-trace-id")).not.toBe(firstHeaders?.get("Ai-trace-id"));
   });
 
   it("uses the configured CN API region", async () => {
