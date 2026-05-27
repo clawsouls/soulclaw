@@ -1161,6 +1161,29 @@ test -f "$TMPDIR/docker-cmd-seen"
     }
   });
 
+  it("bounds kitchen-sink plugin CLI commands inside the Docker sweep", () => {
+    const runner = readFileSync(KITCHEN_SINK_PLUGIN_DOCKER_E2E_PATH, "utf8");
+    const sweep = readFileSync("scripts/e2e/lib/kitchen-sink-plugin/sweep.sh", "utf8");
+
+    expect(runner).toContain(
+      'KITCHEN_SINK_CLI_TIMEOUT="${OPENCLAW_KITCHEN_SINK_PLUGIN_CLI_TIMEOUT:-${KITCHEN_SINK_CLI_TIMEOUT:-180s}}"',
+    );
+    expect(runner).toContain('-e "KITCHEN_SINK_CLI_TIMEOUT=$KITCHEN_SINK_CLI_TIMEOUT"');
+    expect(sweep).toContain('KITCHEN_SINK_CLI_TIMEOUT="${KITCHEN_SINK_CLI_TIMEOUT:-180s}"');
+    expect(sweep).toContain("run_kitchen_sink_openclaw_logged()");
+    expect(sweep).toContain("run_kitchen_sink_openclaw_capture()");
+    expect(sweep).toContain(
+      'run_logged_print "$label" openclaw_e2e_maybe_timeout "$KITCHEN_SINK_CLI_TIMEOUT" node "$OPENCLAW_ENTRY" "$@"',
+    );
+    for (const line of sweep.split("\n")) {
+      if (!line.includes('node "$OPENCLAW_ENTRY" plugins')) {
+        continue;
+      }
+
+      expect(line).toContain("openclaw_e2e_maybe_timeout");
+    }
+  });
+
   it("routes named Docker E2E container cleanup through the timeout-aware helper", () => {
     for (const path of readdirSync("scripts/e2e")
       .filter((entry) => entry.endsWith("-docker.sh"))
