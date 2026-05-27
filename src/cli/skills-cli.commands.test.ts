@@ -289,6 +289,13 @@ describe("skills cli commands", () => {
     ).toBe(true);
   });
 
+  it("rejects partial numeric search limits", async () => {
+    await expect(runCommand(["skills", "search", "calendar", "--limit", "10ms"])).rejects.toThrow(
+      "--limit must be a positive integer.",
+    );
+    expect(searchSkillsFromClawHubMock).not.toHaveBeenCalled();
+  });
+
   it("installs a skill from ClawHub into the active workspace", async () => {
     installSkillFromClawHubMock.mockResolvedValue({
       ok: true,

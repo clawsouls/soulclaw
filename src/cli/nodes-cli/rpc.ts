@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { Command } from "commander";
 import type { OperatorScope } from "../../gateway/method-scopes.js";
+import {
+  parseStrictNonNegativeInteger,
+  parseStrictPositiveInteger,
+} from "../../infra/parse-finite-number.js";
 import { createLazyImportLoader } from "../../shared/lazy-promise.js";
 import { resolveNodeFromNodeList } from "../../shared/node-resolve.js";
 import { normalizeLowercaseStringOrEmpty } from "../../shared/string-coerce.js";
@@ -61,6 +65,35 @@ export function buildNodeInvokeParams(params: {
     invokeParams.timeoutMs = params.timeoutMs;
   }
   return invokeParams;
+}
+
+function hasOptionalValue(value: unknown): boolean {
+  return value !== undefined && value !== null && value !== "";
+}
+
+export function parseOptionalNodePositiveInteger(value: unknown, flag: string): number | undefined {
+  if (!hasOptionalValue(value)) {
+    return undefined;
+  }
+  const parsed = parseStrictPositiveInteger(value);
+  if (parsed === undefined) {
+    throw new Error(`${flag} must be a positive integer.`);
+  }
+  return parsed;
+}
+
+export function parseOptionalNodeNonNegativeInteger(
+  value: unknown,
+  flag: string,
+): number | undefined {
+  if (!hasOptionalValue(value)) {
+    return undefined;
+  }
+  const parsed = parseStrictNonNegativeInteger(value);
+  if (parsed === undefined) {
+    throw new Error(`${flag} must be a non-negative integer.`);
+  }
+  return parsed;
 }
 
 export function unauthorizedHintForMessage(message: string): string | null {
