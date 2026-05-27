@@ -654,4 +654,32 @@ describe("matrix live qa runtime", () => {
     await vi.advanceTimersByTimeAsync(300);
     await expectation;
   });
+
+  it("caps Matrix readiness status RPCs and sleeps to the remaining timeout budget", async () => {
+    vi.useFakeTimers();
+    const gateway = {
+      call: vi.fn().mockResolvedValue({
+        channelAccounts: {
+          matrix: [{ accountId: "sut", running: true, connected: true, healthState: "degraded" }],
+        },
+      }),
+    };
+
+    const waitPromise = liveTesting.waitForMatrixChannelReady(gateway as never, "sut", {
+      timeoutMs: 250,
+      pollMs: 1_000,
+    });
+    const expectation = expect(waitPromise).rejects.toThrow(
+      'matrix account "sut" did not become ready',
+    );
+    await vi.advanceTimersByTimeAsync(250);
+
+    await expectation;
+    expect(gateway.call).toHaveBeenCalledTimes(1);
+    expect(gateway.call).toHaveBeenCalledWith(
+      "channels.status",
+      { probe: false, timeoutMs: 250 },
+      { timeoutMs: 250 },
+    );
+  });
 });

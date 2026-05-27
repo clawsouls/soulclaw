@@ -444,13 +444,16 @@ async function waitForMatrixChannelReady(
   const pollMs = opts?.pollMs ?? 500;
   const timeoutMs = opts?.timeoutMs ?? 60_000;
   const startedAt = Date.now();
+  const deadlineMs = startedAt + timeoutMs;
   let lastAccounts: unknown;
-  while (Date.now() - startedAt < timeoutMs) {
+  while (Date.now() < deadlineMs) {
+    const remainingMs = Math.max(1, deadlineMs - Date.now());
+    const statusTimeoutMs = Math.min(5_000, remainingMs);
     try {
       const payload = (await gateway.call(
         "channels.status",
-        { probe: false, timeoutMs: 2_000 },
-        { timeoutMs: 5_000 },
+        { probe: false, timeoutMs: Math.min(2_000, statusTimeoutMs) },
+        { timeoutMs: statusTimeoutMs },
       )) as {
         channelAccounts?: Record<
           string,
@@ -472,7 +475,7 @@ async function waitForMatrixChannelReady(
     } catch {
       // retry
     }
-    await sleep(pollMs);
+    await sleep(Math.min(pollMs, Math.max(1, deadlineMs - Date.now())));
   }
   throw new Error(
     `matrix account "${accountId}" did not become ready; last matrix accounts: ${JSON.stringify(
