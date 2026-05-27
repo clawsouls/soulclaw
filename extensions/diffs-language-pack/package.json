@@ -1,7 +1,7 @@
 {
-  "name": "@openclaw/diffs",
-  "version": "2026.5.27",
-  "description": "OpenClaw diff viewer plugin",
+  "name": "@openclaw/diffs-language-pack",
+  "version": "2026.5.26",
+  "description": "OpenClaw diffs viewer syntax highlighting language pack",
   "repository": {
     "type": "git",
     "url": "https://github.com/openclaw/openclaw"
@@ -9,14 +9,6 @@
   "type": "module",
   "scripts": {
     "build:viewer": "node scripts/build-viewer.mjs"
-  },
-  "dependencies": {
-    "@pierre/diffs": "1.2.2",
-    "@pierre/theme": "1.0.3",
-    "@shikijs/langs": "3.23.0",
-    "playwright-core": "1.60.0",
-    "typebox": "1.1.38",
-    "zod": "4.4.3"
   },
   "devDependencies": {
     "@openclaw/plugin-sdk": "workspace:*"
@@ -26,19 +18,20 @@
       "./index.ts"
     ],
     "install": {
-      "npmSpec": "@openclaw/diffs",
-      "localPath": "extensions/diffs",
+      "npmSpec": "@openclaw/diffs-language-pack",
+      "clawhubSpec": "clawhub:@openclaw/diffs-language-pack",
+      "localPath": "extensions/diffs-language-pack",
       "defaultChoice": "npm",
       "minHostVersion": ">=2026.4.30"
     },
     "compat": {
-      "pluginApi": ">=2026.5.27"
+      "pluginApi": ">=2026.5.26"
     },
     "assetScripts": {
       "build": "pnpm build:viewer"
     },
     "build": {
-      "openclawVersion": "2026.5.27",
+      "openclawVersion": "2026.5.26",
       "staticAssets": [
         {
           "source": "./assets/viewer-runtime.js",
