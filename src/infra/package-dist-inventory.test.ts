@@ -140,6 +140,7 @@ describe("package dist inventory", () => {
         );
         const omittedQaCompat = path.join(packageRoot, "dist", "plugin-sdk", "qa-channel.js");
         const omittedRuntimeChunk = path.join(packageRoot, "dist", "qa-runtime-AbC123.js");
+        const omittedTopLevelMap = path.join(packageRoot, "dist", "runtime.js.map");
         const omittedMap = path.join(packageRoot, "dist", "plugin-sdk", "runtime.js.map");
 
         await fs.mkdir(path.dirname(packagedRuntime), { recursive: true });
@@ -165,6 +166,7 @@ describe("package dist inventory", () => {
         await fs.writeFile(omittedNestedHelper, "export {};\n", "utf8");
         await fs.writeFile(omittedQaCompat, "export {};\n", "utf8");
         await fs.writeFile(omittedRuntimeChunk, "export {};\n", "utf8");
+        await fs.writeFile(omittedTopLevelMap, "{}", "utf8");
         await fs.writeFile(omittedMap, "{}", "utf8");
 
         await expect(writePackageDistInventory(packageRoot)).resolves.toEqual([
