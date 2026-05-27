@@ -10,6 +10,7 @@ import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../gateway/protocol/
 import { readConnectPairingRequiredMessage } from "../gateway/protocol/connect-error-details.js";
 import { computeBackoff } from "../infra/backoff.js";
 import { formatErrorMessage } from "../infra/errors.js";
+import { parseStrictPositiveInteger } from "../infra/parse-finite-number.js";
 import { readConfiguredLogTail } from "../logging/log-tail.js";
 import { parseLogLine } from "../logging/parse-log-line.js";
 import { redactSensitiveLines, resolveRedactOptions } from "../logging/redact.js";
@@ -81,21 +82,24 @@ const JOURNAL_CURSOR_PREFIX = "-- cursor: ";
 const JOURNAL_MAX_LIMIT = 5000;
 const JOURNAL_MAX_BYTES = 1_000_000;
 
-function parsePositiveInt(value: string | undefined, fallback: number): number {
+function parsePositiveInt(value: string | undefined, fallback: number, flag: string): number {
   if (!value) {
     return fallback;
   }
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  const parsed = parseStrictPositiveInteger(value);
+  if (parsed === undefined) {
+    throw new Error(`${flag} must be a positive integer.`);
+  }
+  return parsed;
 }
 
 async function fetchLogs(
   opts: LogsCliOptions,
   cursors: LogCursorState,
   showProgress: boolean,
+  params: { limit: number; maxBytes: number },
 ): Promise<LogsTailPayload> {
-  const limit = parsePositiveInt(opts.limit, 200);
-  const maxBytes = parsePositiveInt(opts.maxBytes, 250_000);
+  const { limit, maxBytes } = params;
   if (cursors.forceJournal) {
     const journalPayload = await readSystemdJournalFallback({
       cursor: cursors.journal,
@@ -493,7 +497,9 @@ export function registerLogsCli(program: Command) {
 
   logs.action(async (opts: LogsCliOptions) => {
     const { logLine, errorLine, emitJsonLine } = createLogWriters();
-    const interval = parsePositiveInt(opts.interval, 1000);
+    const interval = parsePositiveInt(opts.interval, 1000, "--interval");
+    const limit = parsePositiveInt(opts.limit, 200, "--limit");
+    const maxBytes = parsePositiveInt(opts.maxBytes, 250_000, "--max-bytes");
     let gatewayCursor: number | undefined;
     let journalCursor: string | undefined;
     let journalSince: string | undefined;
@@ -515,6 +521,7 @@ export function registerLogsCli(program: Command) {
           opts,
           { gateway: gatewayCursor, journal: journalCursor, journalSince, forceJournal },
           showProgress,
+          { limit, maxBytes },
         );
       } catch (err) {
         if (err instanceof JournalFallbackUnavailableError) {

@@ -880,6 +880,41 @@ describe("channelsAddCommand", () => {
     expect(runtime.exit).not.toHaveBeenCalled();
   });
 
+  it("drops malformed numeric channel setup options before plugin setup", async () => {
+    const applyAccountConfig = vi.fn(({ cfg, input }: ApplyAccountConfigParams) => ({
+      ...cfg,
+      channels: {
+        ...cfg.channels,
+        matrix: {
+          enabled: true,
+          initialSyncLimit: input.initialSyncLimit,
+        },
+      },
+    }));
+    const plugin = {
+      ...createChannelTestPluginBase({ id: "matrix", label: "Matrix" }),
+      setup: { applyAccountConfig },
+    };
+    configMocks.readConfigFileSnapshot.mockResolvedValue({ ...baseConfigSnapshot });
+    setActivePluginRegistry(createTestRegistry([{ pluginId: "matrix", plugin, source: "test" }]));
+
+    await channelsAddCommand(
+      {
+        channel: "matrix",
+        initialSyncLimit: "10x",
+      },
+      runtime,
+      { hasFlags: true },
+    );
+
+    expect(applyAccountConfig).toHaveBeenCalledTimes(1);
+    expect(
+      (applyAccountConfig.mock.calls[0]?.[0] as ApplyAccountConfigParams | undefined)?.input
+        .initialSyncLimit,
+    ).toBeUndefined();
+    expect(writtenChannel("matrix").initialSyncLimit).toBeUndefined();
+  });
+
   it("falls back from untrusted workspace catalog shadows when adding by alias", async () => {
     configMocks.readConfigFileSnapshot.mockResolvedValue({ ...baseConfigSnapshot });
     setActivePluginRegistry(createTestRegistry());
