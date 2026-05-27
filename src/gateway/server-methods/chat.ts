@@ -2121,7 +2121,7 @@ export function dropPreSessionStartAnnouncePairs(
 
 function dropLocalHistoryOverreadContextMessage(
   messages: unknown[],
-  contextMessage: unknown | undefined,
+  contextMessage: unknown,
 ): unknown[] {
   if (contextMessage === undefined) {
     return messages;
