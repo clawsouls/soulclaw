@@ -8,6 +8,10 @@ import YAML from "yaml";
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const dockerfilePath = join(repoRoot, "Dockerfile");
 const dockerReleaseWorkflowPath = join(repoRoot, ".github/workflows/docker-release.yml");
+const fullReleaseValidationWorkflowPath = join(
+  repoRoot,
+  ".github/workflows/full-release-validation.yml",
+);
 const dockerSetupDockerfilePaths = ["Dockerfile", "scripts/docker/sandbox/Dockerfile"] as const;
 const pnpmWorkspacePath = join(repoRoot, "pnpm-workspace.yaml");
 
@@ -299,6 +303,17 @@ describe("Dockerfile", () => {
     expect(workflow).toContain("test -f /app/src/agents/templates/HEARTBEAT.md");
     expect(workflow).toContain('grep -F "Missing workspace template:"');
     expect(workflow).toContain('test -f "${temp_root}/home/.openclaw/workspace/HEARTBEAT.md"');
+  });
+
+  it("keeps runtime workspace template smoke in full release validation", async () => {
+    const workflow = await readFile(fullReleaseValidationWorkflowPath, "utf8");
+
+    expect(workflow).toContain("Build and smoke test final Docker runtime image");
+    expect(workflow).toContain('-t "${image_ref}"');
+    expect(workflow).toContain("test -f /app/src/agents/templates/HEARTBEAT.md");
+    expect(workflow).toContain('grep -F "Missing workspace template:"');
+    expect(workflow).toContain('test -f "${temp_root}/home/.openclaw/workspace/HEARTBEAT.md"');
+    expect(workflow).not.toContain("scripts/docker/runtime-workspace-template-smoke.sh");
   });
 
   it("does not override bundled plugin discovery in runtime images", async () => {
