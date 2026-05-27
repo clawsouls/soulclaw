@@ -867,6 +867,7 @@ async function runMatrixToolProgressScenario(
   params: {
     expectedPreviewKind: MatrixQaObservedEvent["kind"];
     finalText: string;
+    allowFinalOnly?: boolean;
     label: string;
     allowGenericProgressLine?: boolean;
     mentionSafety?: boolean;
@@ -896,9 +897,13 @@ async function runMatrixToolProgressScenario(
       predicate: (event) =>
         event.roomId === context.roomId &&
         event.sender === context.sutUserId &&
-        event.kind === params.expectedPreviewKind &&
-        (event.relatesTo === undefined ||
-          (event.relatesTo.relType === "m.replace" && matchesExpectedProgress(event.body))),
+        ((event.kind === params.expectedPreviewKind &&
+          (event.relatesTo === undefined ||
+            (event.relatesTo.relType === "m.replace" && matchesExpectedProgress(event.body)))) ||
+          (params.allowFinalOnly === true &&
+            event.relatesTo === undefined &&
+            isMatrixQaMessageLikeKind(event.kind) &&
+            doesMatrixQaReplyBodyMatchToken(event, params.finalText))),
       roomId: context.roomId,
       since: startSince,
       timeoutMs: context.timeoutMs,
@@ -916,6 +921,44 @@ async function runMatrixToolProgressScenario(
         }),
       );
     });
+  if (
+    params.allowFinalOnly === true &&
+    doesMatrixQaReplyBodyMatchToken(preview.event, params.finalText)
+  ) {
+    const unexpectedWorkingEvents = findMatrixQaUnexpectedWorkingEvents({
+      events: context.observedEvents,
+      finalEventId: preview.event.eventId,
+      startIndex: startObservedIndex,
+      sutUserId: context.sutUserId,
+    });
+    if (unexpectedWorkingEvents.length > 0) {
+      throw new Error(
+        `Matrix tool progress leaked outside preview event: ${unexpectedWorkingEvents.map((event) => `${event.eventId}:${event.body ?? ""}`).join("; ")}`,
+      );
+    }
+    advanceMatrixQaActorCursor({
+      actorId: "driver",
+      syncState: context.syncState,
+      nextSince: preview.since,
+      startSince,
+    });
+    const finalReply = buildMatrixReplyArtifact(preview.event, params.finalText);
+    return {
+      artifacts: {
+        driverEventId,
+        previewEventId: undefined,
+        reply: finalReply,
+        token: params.finalText,
+        triggerBody,
+      },
+      details: [
+        `driver event: ${driverEventId}`,
+        `scenario: ${params.label}`,
+        "preview event: <none>; final delivered before observable tool-progress preview",
+        ...buildMatrixReplyDetails("final reply", finalReply),
+      ].join("\n"),
+    } satisfies MatrixQaScenarioExecution;
+  }
   const previewRootEventId = getPreviewRootEventId(preview.event);
   const progress = matchesExpectedProgress(preview.event.body)
     ? preview
@@ -1041,6 +1084,7 @@ export async function runToolProgressPreviewScenario(context: MatrixQaScenarioCo
     expectedPreviewKind: "notice",
     finalText: buildMatrixQaToken("MATRIX_QA_TOOL_PROGRESS"),
     label: "tool progress preview",
+    allowFinalOnly: true,
     allowGenericProgressLine: true,
     progressPattern: /\b(?:tool:\s*)?read\s*:\s*from\b|\btool:\s*read\b/i,
     triggerBodyBuilder: buildMatrixToolProgressPrompt,
