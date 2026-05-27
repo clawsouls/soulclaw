@@ -539,11 +539,12 @@ describe("scripts/lib/plugin-prerelease-test-plan.mjs", () => {
     expect(fullReleaseWorkflow.jobs.docker_runtime_assets_preflight.if).toBe(
       "inputs.rerun_group == 'all'",
     );
-    expect(
-      fullReleaseWorkflow.jobs.docker_runtime_assets_preflight.steps.find(
-        (step) => step.name === "Verify Docker runtime-assets prune path",
-      ).run,
-    ).toContain("--target runtime-assets");
+    const dockerPreflightStep = fullReleaseWorkflow.jobs.docker_runtime_assets_preflight.steps.find(
+      (step) => step.name === "Build and smoke test final Docker runtime image",
+    );
+    expect(dockerPreflightStep).toBeDefined();
+    expect(dockerPreflightStep?.run).toContain("docker build");
+    expect(dockerPreflightStep?.run).toContain("node /app/openclaw.mjs agent");
     expect(fullReleaseWorkflow.jobs.plugin_prerelease["timeout-minutes"]).toBe(
       "${{ inputs.release_profile == 'full' && 300 || inputs.release_profile == 'stable' && 240 || 60 }}",
     );

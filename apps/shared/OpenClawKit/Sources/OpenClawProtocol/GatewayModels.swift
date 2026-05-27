@@ -5194,6 +5194,86 @@ public struct SkillsDetailResult: Codable, Sendable {
     }
 }
 
+public struct SkillsSecurityVerdictsParams: Codable, Sendable {
+    public let agentid: String?
+
+    public init(
+        agentid: String?)
+    {
+        self.agentid = agentid
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case agentid = "agentId"
+    }
+}
+
+public struct SkillsSecurityVerdictsResult: Codable, Sendable {
+    public let schema: String
+    public let items: [[String: AnyCodable]]
+
+    public init(
+        schema: String,
+        items: [[String: AnyCodable]])
+    {
+        self.schema = schema
+        self.items = items
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case schema
+        case items
+    }
+}
+
+public struct SkillsSkillCardParams: Codable, Sendable {
+    public let agentid: String?
+    public let skillkey: String
+
+    public init(
+        agentid: String?,
+        skillkey: String)
+    {
+        self.agentid = agentid
+        self.skillkey = skillkey
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case agentid = "agentId"
+        case skillkey = "skillKey"
+    }
+}
+
+public struct SkillsSkillCardResult: Codable, Sendable {
+    public let schema: String
+    public let skillkey: String
+    public let path: String
+    public let sizebytes: Int
+    public let content: String
+
+    public init(
+        schema: String,
+        skillkey: String,
+        path: String,
+        sizebytes: Int,
+        content: String)
+    {
+        self.schema = schema
+        self.skillkey = skillkey
+        self.path = path
+        self.sizebytes = sizebytes
+        self.content = content
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case schema
+        case skillkey = "skillKey"
+        case path
+        case sizebytes = "sizeBytes"
+        case content
+    }
+}
+
 public struct SkillsUploadBeginParams: Codable, Sendable {
     public let kind: String
     public let slug: String
