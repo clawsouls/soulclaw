@@ -174,10 +174,30 @@ describe("run-oxlint", () => {
   });
 
   it("splits core oxlint shards when requested", () => {
-    expect(createOxlintShards({ splitCore: true }).slice(0, 3)).toEqual([
+    const shards = createOxlintShards({
+      cwd: "/repo",
+      splitCore: true,
+      readDir: (target: string) => {
+        if (target.endsWith("/src")) {
+          return [
+            { name: "zeta.ts", isDirectory: () => false, isFile: () => true },
+            { name: "omega.ts", isDirectory: () => false, isFile: () => true },
+            { name: "notes.md", isDirectory: () => false, isFile: () => true },
+            { name: "alpha", isDirectory: () => true, isFile: () => false },
+          ] as never;
+        }
+        return [];
+      },
+    });
+
+    expect(shards.slice(0, 4)).toEqual([
       {
-        name: "core:src",
-        args: ["--tsconfig", "config/tsconfig/oxlint.core.json", "src"],
+        name: "core:src:alpha",
+        args: ["--tsconfig", "config/tsconfig/oxlint.core.json", "src/alpha"],
+      },
+      {
+        name: "core:src:root",
+        args: ["--tsconfig", "config/tsconfig/oxlint.core.json", "src/omega.ts", "src/zeta.ts"],
       },
       {
         name: "core:ui",
@@ -191,12 +211,7 @@ describe("run-oxlint", () => {
   });
 
   it("parses shard runner flags without forwarding them to oxlint", () => {
-    const parsed = parseShardRunnerArgs([
-      "--only=core",
-      "--split-core",
-      "--max-warnings",
-      "0",
-    ]);
+    const parsed = parseShardRunnerArgs(["--only=core", "--split-core", "--max-warnings", "0"]);
 
     expect([...parsed.only]).toEqual(["core"]);
     expect(parsed.splitCore).toBe(true);
@@ -204,9 +219,20 @@ describe("run-oxlint", () => {
   });
 
   it("filters split core shards by shard family", () => {
-    const shards = filterOxlintShards(createOxlintShards({ splitCore: true }), new Set(["core"]));
+    const shards = filterOxlintShards(
+      createOxlintShards({
+        cwd: "/repo",
+        splitCore: true,
+        readDir: () => [{ name: "alpha", isDirectory: () => true, isFile: () => false }] as never,
+      }),
+      new Set(["core"]),
+    );
 
-    expect(shards.map((shard) => shard.name)).toEqual(["core:src", "core:ui", "core:packages"]);
+    expect(shards.map((shard) => shard.name)).toEqual([
+      "core:src:alpha",
+      "core:ui",
+      "core:packages",
+    ]);
   });
 
   it("falls back to the full extension shard when Windows extension dirs are unavailable", () => {

@@ -19,7 +19,8 @@ const CORE_SHARD = {
   name: "core",
   args: ["--tsconfig", "config/tsconfig/oxlint.core.json", "src", "ui", "packages"],
 };
-const CORE_SPLIT_TARGETS = ["src", "ui", "packages"];
+const CORE_TS_CONFIG = "config/tsconfig/oxlint.core.json";
+const CORE_SPLIT_TARGETS = ["ui", "packages"];
 const EXTENSIONS_SHARD = {
   name: "extensions",
   args: ["--tsconfig", EXTENSION_TS_CONFIG, EXTENSIONS_DIR],
@@ -36,18 +37,28 @@ export function createOxlintShards({
   readDir = fs.readdirSync,
   splitCore = false,
 } = {}) {
-  const coreShards = splitCore ? createCoreOxlintShards() : [CORE_SHARD];
+  const coreShards = splitCore ? createCoreOxlintShards({ cwd, readDir }) : [CORE_SHARD];
   const extensionShards =
     platform === "win32" ? createWindowsExtensionShards({ cwd, env, readDir }) : [EXTENSIONS_SHARD];
 
   return [...coreShards, ...extensionShards, SCRIPTS_SHARD];
 }
 
-export function createCoreOxlintShards() {
-  return CORE_SPLIT_TARGETS.map((target) => ({
-    name: `core:${target}`,
-    args: ["--tsconfig", "config/tsconfig/oxlint.core.json", target],
+export function createCoreOxlintShards({ cwd = process.cwd(), readDir = fs.readdirSync } = {}) {
+  const sourceShards = listSourceRootTargetGroups({ cwd, readDir }).map((targets) => ({
+    name: targets.length === 1 ? `core:${targets[0].replaceAll("/", ":")}` : "core:src:root",
+    args: ["--tsconfig", CORE_TS_CONFIG, ...targets],
   }));
+  const sourceEntries = sourceShards.length > 0 ? sourceShards : [createCoreShard("src")];
+
+  return [...sourceEntries, ...CORE_SPLIT_TARGETS.map((target) => createCoreShard(target))];
+}
+
+function createCoreShard(target) {
+  return {
+    name: `core:${target}`,
+    args: ["--tsconfig", CORE_TS_CONFIG, target],
+  };
 }
 
 export function createWindowsExtensionShards({
@@ -149,6 +160,26 @@ function listExtensionEntries({ cwd, readDir }) {
     dirs,
     rootFiles,
   };
+}
+
+function listSourceRootTargetGroups({ cwd, readDir }) {
+  let entries;
+  try {
+    entries = readDir(path.join(cwd, "src"), { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const dirs = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => `src/${entry.name}`)
+    .toSorted((left, right) => left.localeCompare(right));
+  const rootFiles = entries
+    .filter((entry) => entry.isFile() && OXLINT_SOURCE_FILE_PATTERN.test(entry.name))
+    .map((entry) => `src/${entry.name}`)
+    .toSorted((left, right) => left.localeCompare(right));
+
+  return [...dirs.map((target) => [target]), ...(rootFiles.length > 0 ? [rootFiles] : [])];
 }
 
 export async function main(extraArgs = process.argv.slice(2), runtimeEnv = process.env) {
