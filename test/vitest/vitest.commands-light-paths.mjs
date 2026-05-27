@@ -12,8 +12,40 @@ const commandsLightEntries = [
     test: "src/commands/doctor-gateway-auth-token.test.ts",
   },
   {
+    source: "src/commands/doctor/shared/channel-plugin-blockers.ts",
+    test: "src/commands/doctor/shared/channel-plugin-blockers.test.ts",
+  },
+  {
+    source: "src/commands/doctor/shared/missing-configured-plugin-install.ts",
+    test: "src/commands/doctor/shared/missing-configured-plugin-install.test.ts",
+  },
+  {
+    source: "src/commands/doctor/shared/preview-warnings.ts",
+    test: "src/commands/doctor/shared/preview-warnings.test.ts",
+  },
+  {
+    source: "src/commands/doctor/shared/release-configured-plugin-installs.ts",
+    test: "src/commands/doctor/shared/release-configured-plugin-installs.test.ts",
+  },
+  {
+    source: "src/commands/doctor/shared/stale-plugin-config.ts",
+    test: "src/commands/doctor/shared/stale-plugin-config.test.ts",
+  },
+  {
+    source: "src/commands/doctor/shared/stale-oauth-profile-shadows.ts",
+    test: "src/commands/doctor/shared/stale-oauth-profile-shadows.test.ts",
+  },
+  {
     source: "src/commands/gateway-status/helpers.ts",
     test: "src/commands/gateway-status/helpers.test.ts",
+  },
+  {
+    source: "src/commands/models/auth.ts",
+    test: "src/commands/models/auth.test.ts",
+  },
+  {
+    source: "src/commands/models/list.status-command.ts",
+    test: "src/commands/models/list.status.test.ts",
   },
   {
     source: "src/commands/sandbox-formatters.ts",
