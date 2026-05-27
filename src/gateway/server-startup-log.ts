@@ -61,7 +61,9 @@ export function logGatewayStartup(params: {
     params.log.info("gateway: running in Nix mode (config managed externally)");
   }
 
-  const enabledDangerousFlags = collectEnabledInsecureOrDangerousFlags(params.cfg);
+  const enabledDangerousFlags = collectEnabledInsecureOrDangerousFlags(params.cfg, {
+    preferCurrentPluginMetadataSnapshot: true,
+  });
   if (enabledDangerousFlags.length > 0) {
     const warning =
       `security warning: dangerous config flags enabled: ${enabledDangerousFlags.join(", ")}. ` +
