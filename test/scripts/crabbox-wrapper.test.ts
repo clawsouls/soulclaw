@@ -317,6 +317,22 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     expect(parseFakeCrabboxOutput(result).args).toContain("local-container");
   });
 
+  it("only forces the short local-container Docker work root on Linux", () => {
+    const result = runWrapper(
+      "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
+      ["run", "--provider", "local-container", "--", "echo ok"],
+    );
+
+    expect(result.status).toBe(0);
+    const expectedMessage =
+      "[crabbox] provider=docker using short host-visible work root for OpenClaw Docker tests";
+    if (process.platform === "linux") {
+      expect(result.stderr).toContain(expectedMessage);
+    } else {
+      expect(result.stderr).not.toContain(expectedMessage);
+    }
+  });
+
   it("defaults AWS macOS runs to on-demand capacity", () => {
     const result = runWrapper(
       "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
