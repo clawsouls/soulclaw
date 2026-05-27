@@ -271,6 +271,27 @@ describe("installScheduledTask", () => {
     });
   });
 
+  it("omits /RU for workgroup accounts so schtasks can use the current local user", async () => {
+    await withUserProfileDir(async (_tmpDir, env) => {
+      schtasksResponses.push(okSchtasksResponse, missingTaskResponse);
+
+      await installDefaultGatewayTask({
+        ...env,
+        USERDOMAIN: "WORKGROUP",
+        USERNAME: "alice",
+      });
+
+      expectInitialTaskQueries();
+      const createCall = schtasksCalls[2];
+      expect(createCall?.slice(0, 5)).toEqual(["/Create", "/F", "/TN", "OpenClaw Gateway", "/XML"]);
+      expect(createCall).not.toContain("/RU");
+      const captured = xmlPayloadCaptures.find((entry) => entry.index === 2);
+      expect(captured?.xml).toContain("<UserId>alice</UserId>");
+      expect(captured?.xml).not.toContain("<GroupId>S-1-5-32-545</GroupId>");
+      expectTaskRunCall(3);
+    });
+  });
+
   it("re-applies the XML on /Change so upgraded tasks adopt battery flags (#59299)", async () => {
     await withUserProfileDir(async (_tmpDir, env) => {
       // /Query yes, /Query /TN yes, /Change ok, /Create /XML ok (upgrade), /Run ok.
@@ -296,7 +317,9 @@ describe("installScheduledTask", () => {
       const upgradeCapture = xmlPayloadCaptures.find((entry) => entry.index === 3);
       expect(upgradeCapture).toBeDefined();
       const upgradeXml = upgradeCapture?.xml ?? "";
-      expect(upgradeXml).toContain("<DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>");
+      expect(upgradeXml).toContain(
+        "<DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>",
+      );
       expect(upgradeXml).toContain("<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>");
       expectTaskRunCall(4);
     });

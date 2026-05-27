@@ -200,10 +200,23 @@ function resolveTaskUser(env: GatewayServiceEnv): string | null {
     return username;
   }
   const domain = env.USERDOMAIN;
+  if (normalizeLowercaseStringOrEmpty(domain) === "workgroup") {
+    return username;
+  }
   if (domain) {
     return `${domain}\\${username}`;
   }
   return username;
+}
+
+function resolveSchtasksCreateUser(env: GatewayServiceEnv, taskUser: string | null): string | null {
+  // Workgroup hosts can report USERDOMAIN=WORKGROUP even though schtasks wants
+  // the current local account. Keep the XML user-scoped, but omit /RU so
+  // Task Scheduler binds the task to the caller instead of prompting.
+  if (normalizeLowercaseStringOrEmpty(env.USERDOMAIN) === "workgroup") {
+    return null;
+  }
+  return taskUser;
 }
 
 function shouldUseHiddenWindowsTaskLauncher(env: GatewayServiceEnv): boolean {
@@ -1170,9 +1183,10 @@ async function activateScheduledTask(params: {
   let create: Awaited<ReturnType<typeof execSchtasks>>;
   try {
     const xmlArgs = ["/Create", "/F", "/TN", taskName, "/XML", xmlPath];
-    const xmlArgsWithUser = taskUser ? [...xmlArgs, "/RU", taskUser, "/NP"] : xmlArgs;
+    const createUser = resolveSchtasksCreateUser(params.env, taskUser);
+    const xmlArgsWithUser = createUser ? [...xmlArgs, "/RU", createUser, "/NP"] : xmlArgs;
     create = await execSchtasks(xmlArgsWithUser);
-    if (create.code !== 0 && taskUser) {
+    if (create.code !== 0 && createUser) {
       // Retry without the elevated `/RU` form, matching the pre-XML behavior
       // for accounts whose service password cannot be stored.
       create = await execSchtasks(xmlArgs);
