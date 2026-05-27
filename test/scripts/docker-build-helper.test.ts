@@ -1526,6 +1526,12 @@ test -f "$TMPDIR/docker-cmd-seen"
     const assertions = readFileSync(PLUGINS_DOCKER_ASSERTIONS_PATH, "utf8");
     const npmRegistry = readFileSync(PLUGINS_DOCKER_NPM_REGISTRY_PATH, "utf8");
 
+    expect(sweep).toContain('OPENCLAW_PLUGINS_CLI_TIMEOUT="${OPENCLAW_PLUGINS_CLI_TIMEOUT:-180s}"');
+    expect(sweep).toContain(
+      'run_logged "$label" openclaw_e2e_maybe_timeout "$OPENCLAW_PLUGINS_CLI_TIMEOUT" node "$OPENCLAW_ENTRY" "$@"',
+    );
+    expect(sweep).not.toContain('run_logged install-npm node "$OPENCLAW_ENTRY"');
+
     expect(sweep).toContain('plugins install "$dir_plugin"');
     expect(sweep).toContain("plugins update demo-plugin-dir");
     expect(assertions).toContain('Skipping "demo-plugin-dir" (source: path).');
@@ -1544,6 +1550,8 @@ test -f "$TMPDIR/docker-cmd-seen"
 
     expect(clawhub).toContain('plugins install "$CLAWHUB_PLUGIN_SPEC"');
     expect(clawhub).toContain('plugins update "$CLAWHUB_PLUGIN_ID"');
+    expect(clawhub).toContain("run_plugins_openclaw_logged install-clawhub");
+    expect(clawhub).toContain('openclaw_e2e_maybe_timeout "$OPENCLAW_PLUGINS_CLI_TIMEOUT"');
     expect(clawhub).toContain("clawhub:@openclaw/kitchen-sink");
     expect(assertions).toContain("clawhub-updated");
     expect(assertions).toContain("record.clawpackSha256");

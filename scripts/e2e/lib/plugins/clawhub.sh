@@ -50,19 +50,19 @@ run_plugins_clawhub_scenario() {
 
     node scripts/e2e/lib/plugins/assertions.mjs clawhub-preflight
 
-    run_logged install-clawhub node "$OPENCLAW_ENTRY" plugins install "$CLAWHUB_PLUGIN_SPEC"
+    run_plugins_openclaw_logged install-clawhub plugins install "$CLAWHUB_PLUGIN_SPEC"
     node "$OPENCLAW_ENTRY" plugins list --json >"$OPENCLAW_PLUGINS_TMP_DIR/plugins-clawhub-installed.json"
     node "$OPENCLAW_ENTRY" plugins inspect "$CLAWHUB_PLUGIN_ID" --json >"$OPENCLAW_PLUGINS_TMP_DIR/plugins-clawhub-inspect.json"
 
     node scripts/e2e/lib/plugins/assertions.mjs clawhub-installed
 
-    node "$OPENCLAW_ENTRY" plugins update "$CLAWHUB_PLUGIN_ID" >"$OPENCLAW_PLUGINS_TMP_DIR/plugins-clawhub-update.log" 2>&1
+    openclaw_e2e_maybe_timeout "$OPENCLAW_PLUGINS_CLI_TIMEOUT" node "$OPENCLAW_ENTRY" plugins update "$CLAWHUB_PLUGIN_ID" >"$OPENCLAW_PLUGINS_TMP_DIR/plugins-clawhub-update.log" 2>&1
     node "$OPENCLAW_ENTRY" plugins list --json >"$OPENCLAW_PLUGINS_TMP_DIR/plugins-clawhub-updated.json"
     node "$OPENCLAW_ENTRY" plugins inspect "$CLAWHUB_PLUGIN_ID" --json >"$OPENCLAW_PLUGINS_TMP_DIR/plugins-clawhub-updated-inspect.json"
 
     node scripts/e2e/lib/plugins/assertions.mjs clawhub-updated
 
-    run_logged uninstall-clawhub node "$OPENCLAW_ENTRY" plugins uninstall "$CLAWHUB_PLUGIN_SPEC" --force
+    run_plugins_openclaw_logged uninstall-clawhub plugins uninstall "$CLAWHUB_PLUGIN_SPEC" --force
     node "$OPENCLAW_ENTRY" plugins list --json >"$OPENCLAW_PLUGINS_TMP_DIR/plugins-clawhub-uninstalled.json"
 
     node scripts/e2e/lib/plugins/assertions.mjs clawhub-removed
