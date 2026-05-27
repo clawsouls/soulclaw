@@ -1520,8 +1520,9 @@ test -f "$TMPDIR/docker-cmd-seen"
     expect(runner).not.toContain("run_logged qr-import-run docker run --rm");
   });
 
-  it("covers plugin install/update sources in the Docker plugin sweep", () => {
+  it("covers plugin CLI sources in the Docker plugin sweep", () => {
     const sweep = readFileSync(PLUGINS_DOCKER_SWEEP_PATH, "utf8");
+    const marketplace = readFileSync(PLUGINS_DOCKER_MARKETPLACE_PATH, "utf8");
     const clawhub = readFileSync(PLUGINS_DOCKER_CLAWHUB_PATH, "utf8");
     const assertions = readFileSync(PLUGINS_DOCKER_ASSERTIONS_PATH, "utf8");
     const npmRegistry = readFileSync(PLUGINS_DOCKER_NPM_REGISTRY_PATH, "utf8");
@@ -1530,7 +1531,23 @@ test -f "$TMPDIR/docker-cmd-seen"
     expect(sweep).toContain(
       'run_logged "$label" openclaw_e2e_maybe_timeout "$OPENCLAW_PLUGINS_CLI_TIMEOUT" node "$OPENCLAW_ENTRY" "$@"',
     );
+    expect(sweep).toContain("run_plugins_openclaw_capture()");
+    expect(sweep).toContain(
+      'openclaw_e2e_maybe_timeout "$OPENCLAW_PLUGINS_CLI_TIMEOUT" node "$OPENCLAW_ENTRY" "$@" >"$output_file"',
+    );
     expect(sweep).not.toContain('run_logged install-npm node "$OPENCLAW_ENTRY"');
+    for (const [path, script] of [
+      [PLUGINS_DOCKER_SWEEP_PATH, sweep],
+      [PLUGINS_DOCKER_MARKETPLACE_PATH, marketplace],
+      [PLUGINS_DOCKER_CLAWHUB_PATH, clawhub],
+    ] as const) {
+      const unboundedPluginCliLines = script
+        .split("\n")
+        .filter((line) => line.includes('node "$OPENCLAW_ENTRY" plugins'))
+        .filter((line) => !line.includes("openclaw_e2e_maybe_timeout"));
+
+      expect(unboundedPluginCliLines, path).toEqual([]);
+    }
 
     expect(sweep).toContain('plugins install "$dir_plugin"');
     expect(sweep).toContain("plugins update demo-plugin-dir");
