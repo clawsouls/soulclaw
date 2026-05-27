@@ -272,7 +272,7 @@ export const ircSetupWizard: ChannelSetupWizard = {
       },
       validate: ({ value }) => {
         const raw = normalizeStringifiedOptionalString(value) ?? "";
-        const parsed = /^\+?\d+$/.test(raw.trim()) ? Number(raw.trim()) : NaN;
+        const parsed = /^\+?\d+$/.test(raw.trim()) ? Number(raw.trim()) : Number.NaN;
         return Number.isSafeInteger(parsed) && parsed >= 1 && parsed <= 65535
           ? undefined
           : "Use a port between 1 and 65535";

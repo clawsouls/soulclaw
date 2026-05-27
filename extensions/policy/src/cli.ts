@@ -313,7 +313,11 @@ function normalizeWatchIntervalMs(value: string | number | undefined): number {
     return 2000;
   }
   const raw =
-    typeof value === "number" ? value : /^\+?\d+$/.test(value.trim()) ? Number(value.trim()) : NaN;
+    typeof value === "number"
+      ? value
+      : /^\+?\d+$/.test(value.trim())
+        ? Number(value.trim())
+        : Number.NaN;
   if (!Number.isSafeInteger(raw) || raw < 250) {
     throw new Error("--interval-ms must be an integer >= 250.");
   }

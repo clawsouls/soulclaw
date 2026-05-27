@@ -598,10 +598,14 @@ function installFastLocalImageProviderStubs(...providers: MediaUnderstandingProv
     }),
     loadImageWebMediaRuntime: async () => ({
       loadWebMedia: async (mediaUrl, options) => {
+        const inboundRoots =
+          options && typeof options === "object" && "inboundRoots" in options
+            ? options.inboundRoots
+            : [];
         if (
           !isInboundPathAllowed({
             filePath: mediaUrl,
-            roots: options?.inboundRoots ?? [],
+            roots: inboundRoots ?? [],
           })
         ) {
           throw new Error(`Local media path is not under an allowed directory: ${mediaUrl}`);
