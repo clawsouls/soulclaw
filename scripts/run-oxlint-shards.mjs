@@ -19,6 +19,7 @@ const CORE_SHARD = {
   name: "core",
   args: ["--tsconfig", "config/tsconfig/oxlint.core.json", "src", "ui", "packages"],
 };
+const CORE_SPLIT_TARGETS = ["src", "ui", "packages"];
 const EXTENSIONS_SHARD = {
   name: "extensions",
   args: ["--tsconfig", EXTENSION_TS_CONFIG, EXTENSIONS_DIR],
@@ -33,11 +34,20 @@ export function createOxlintShards({
   env = process.env,
   platform = process.platform,
   readDir = fs.readdirSync,
+  splitCore = false,
 } = {}) {
+  const coreShards = splitCore ? createCoreOxlintShards() : [CORE_SHARD];
   const extensionShards =
     platform === "win32" ? createWindowsExtensionShards({ cwd, env, readDir }) : [EXTENSIONS_SHARD];
 
-  return [CORE_SHARD, ...extensionShards, SCRIPTS_SHARD];
+  return [...coreShards, ...extensionShards, SCRIPTS_SHARD];
+}
+
+export function createCoreOxlintShards() {
+  return CORE_SPLIT_TARGETS.map((target) => ({
+    name: `core:${target}`,
+    args: ["--tsconfig", "config/tsconfig/oxlint.core.json", target],
+  }));
 }
 
 export function createWindowsExtensionShards({
@@ -143,13 +153,14 @@ function listExtensionEntries({ cwd, readDir }) {
 
 export async function main(extraArgs = process.argv.slice(2), runtimeEnv = process.env) {
   const runner = path.resolve("scripts", "run-oxlint.mjs");
+  const shardArgs = parseShardRunnerArgs(extraArgs);
   const env = resolveLocalHeavyCheckEnv(runtimeEnv);
-  const hasMetadataOnlyFlag = extraArgs.some((arg) =>
+  const hasMetadataOnlyFlag = shardArgs.oxlintArgs.some((arg) =>
     ["--help", "-h", "--version", "-V", "--rules", "--print-config", "--init"].includes(arg),
   );
   const shouldAcquireParentLock =
     !hasMetadataOnlyFlag ||
-    shouldAcquireLocalHeavyCheckLockForOxlint(extraArgs, {
+    shouldAcquireLocalHeavyCheckLockForOxlint(shardArgs.oxlintArgs, {
       cwd: process.cwd(),
       env,
     });
@@ -168,7 +179,9 @@ export async function main(extraArgs = process.argv.slice(2), runtimeEnv = proce
     cwd: process.cwd(),
     env,
     platform: process.platform,
+    splitCore: shardArgs.splitCore,
   });
+  const selectedShards = filterOxlintShards(shards, shardArgs.only);
 
   try {
     const prepareResult = spawnSync(
@@ -186,13 +199,24 @@ export async function main(extraArgs = process.argv.slice(2), runtimeEnv = proce
     if ((prepareResult.status ?? 1) !== 0) {
       process.exitCode = prepareResult.status ?? 1;
     } else {
-      const runSerial = shouldRunOxlintShardsSerial({
-        env,
-        platform: process.platform,
-      });
+      const runSerial =
+        shardArgs.splitCore ||
+        shouldRunOxlintShardsSerial({
+          env,
+          platform: process.platform,
+        });
       const results = runSerial
-        ? await runShardsSerial({ entries: shards, env, extraArgs, runner })
-        : await Promise.all(shards.map((shard) => runShard({ env, extraArgs, runner, shard })));
+        ? await runShardsSerial({
+            entries: selectedShards,
+            env,
+            extraArgs: shardArgs.oxlintArgs,
+            runner,
+          })
+        : await Promise.all(
+            selectedShards.map((shard) =>
+              runShard({ env, extraArgs: shardArgs.oxlintArgs, runner, shard }),
+            ),
+          );
       process.exitCode = results.find((status) => status !== 0) ?? 0;
     }
   } finally {
@@ -214,6 +238,46 @@ function resolveHostResources(hostResources) {
     logicalCpuCount:
       typeof os.availableParallelism === "function" ? os.availableParallelism() : os.cpus().length,
   };
+}
+
+export function parseShardRunnerArgs(args) {
+  const only = new Set();
+  const oxlintArgs = [];
+  let splitCore = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--split-core") {
+      splitCore = true;
+      continue;
+    }
+    if (arg === "--only") {
+      const value = args[index + 1];
+      if (value) {
+        only.add(value);
+        index += 1;
+      }
+      continue;
+    }
+    if (arg.startsWith("--only=")) {
+      const value = arg.slice("--only=".length);
+      if (value) {
+        only.add(value);
+      }
+      continue;
+    }
+    oxlintArgs.push(arg);
+  }
+
+  return { only, oxlintArgs, splitCore };
+}
+
+export function filterOxlintShards(shards, only) {
+  if (only.size === 0) {
+    return shards;
+  }
+
+  return shards.filter((shard) => only.has(shard.name) || only.has(shard.name.split(":")[0]));
 }
 
 async function runShardsSerial({ entries, env, extraArgs, runner }) {
