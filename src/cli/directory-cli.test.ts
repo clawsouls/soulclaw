@@ -317,5 +317,7 @@ describe("registerDirectoryCli", () => {
     await expect(program.parseAsync(args, { from: "user" })).rejects.toThrow("exit:1");
 
     expect(runtimeErrors().join("\n")).toContain("--limit must be a positive integer.");
+    expect(mocks.resolveInstallableChannelPlugin).not.toHaveBeenCalled();
+    expect(mocks.replaceConfigFile).not.toHaveBeenCalled();
   });
 });

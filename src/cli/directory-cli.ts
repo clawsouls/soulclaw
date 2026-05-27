@@ -155,6 +155,7 @@ export function registerDirectoryCli(program: Command) {
     title: string;
     emptyMessage: string;
   }) => {
+    const limit = parseLimit(params.opts.limit);
     const { cfg, channelId, accountId, plugin } = await resolve({
       channel: params.opts.channel as string | undefined,
       account: params.opts.account as string | undefined,
@@ -170,7 +171,7 @@ export function registerDirectoryCli(program: Command) {
       cfg,
       accountId,
       query: (params.opts.query as string | undefined) ?? null,
-      limit: parseLimit(params.opts.limit),
+      limit,
       runtime: defaultRuntime,
     });
     if (params.opts.json) {
@@ -266,6 +267,7 @@ export function registerDirectoryCli(program: Command) {
     .option("--limit <n>", "Limit results")
     .action(async (opts) => {
       try {
+        const limit = parseLimit(opts.limit);
         const { cfg, channelId, accountId, plugin } = await resolve({
           channel: opts.channel as string | undefined,
           account: opts.account as string | undefined,
@@ -282,7 +284,7 @@ export function registerDirectoryCli(program: Command) {
           cfg,
           accountId,
           groupId,
-          limit: parseLimit(opts.limit),
+          limit,
           runtime: defaultRuntime,
         });
         if (opts.json) {
