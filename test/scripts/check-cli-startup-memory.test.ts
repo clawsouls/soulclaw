@@ -20,6 +20,11 @@ afterEach(() => {
 });
 
 describe("check-cli-startup-memory", () => {
+  it("keeps the Linux help startup budget tight while allowing macOS RSS overhead", () => {
+    expect(testing.resolveDefaultLimitsMb("linux").help).toBe(100);
+    expect(testing.resolveDefaultLimitsMb("darwin").help).toBeGreaterThan(100);
+  });
+
   it("does not create a temp home before argument validation succeeds", () => {
     if (process.platform !== "darwin" && process.platform !== "linux") {
       return;

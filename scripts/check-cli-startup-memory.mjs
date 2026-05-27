@@ -62,11 +62,18 @@ function parseArgs(argv) {
   return options;
 }
 
-const DEFAULT_LIMITS_MB = {
-  help: 100,
-  statusJson: 400,
-  gatewayStatus: 500,
-};
+function resolveDefaultLimitsMb(platform = process.platform) {
+  return {
+    // Linux CI is the tight startup regression signal. macOS consistently reports
+    // higher RSS for the same launcher path, so keep it supported without hiding
+    // Linux help-path regressions.
+    help: platform === "darwin" ? 300 : 100,
+    statusJson: 400,
+    gatewayStatus: 500,
+  };
+}
+
+const DEFAULT_LIMITS_MB = resolveDefaultLimitsMb();
 
 const cases = [
   {
@@ -334,6 +341,7 @@ function runStartupMemoryCheck(argv = process.argv.slice(2), params = {}) {
 export const testing = {
   cases,
   parseArgs,
+  resolveDefaultLimitsMb,
   runCase,
   runStartupMemoryCheck,
 };
