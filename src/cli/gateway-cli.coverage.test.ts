@@ -353,6 +353,18 @@ describe("gateway-cli coverage", () => {
     }
   });
 
+  it.each([
+    ["--log-lines", "5000x"],
+    ["--log-bytes", "1mb"],
+  ])("rejects partial gateway diagnostics export %s", async (flag, value) => {
+    callGateway.mockClear();
+
+    await expectGatewayExit(["gateway", "diagnostics", "export", flag, value, "--json"]);
+
+    expect(runtimeErrors.join("\n")).toContain(`${flag} must be a positive integer`);
+    expect(callGateway).not.toHaveBeenCalled();
+  });
+
   it("registers gateway discover and prints json output", async () => {
     discoverGatewayBeacons.mockClear();
     discoverGatewayBeacons.mockResolvedValueOnce([
