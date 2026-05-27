@@ -30,6 +30,20 @@ function base64(script: string): string {
   return execFileSync("base64", { input: script, encoding: "utf8" }).replace(/\s+/gu, "");
 }
 
+function shellTestEnv(overrides: Record<string, string | undefined>): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {
+    HOME: process.env.HOME ?? os.tmpdir(),
+    PATH: process.env.PATH ?? "",
+    TMPDIR: process.env.TMPDIR ?? os.tmpdir(),
+  };
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value !== undefined) {
+      env[key] = value;
+    }
+  }
+  return env;
+}
+
 describe("scripts/lib/openclaw-e2e-instance.sh", () => {
   it("sources decoded test-state scripts", () => {
     const result = runHelper(base64('export OPENCLAW_E2E_INSTANCE_TEST="ok"\n'));
@@ -92,14 +106,13 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
         ],
         {
           encoding: "utf8",
-          env: {
-            ...process.env,
+          env: shellTestEnv({
             PATH: `${tempDir}:${process.env.PATH ?? ""}`,
             OPENCLAW_CURRENT_PACKAGE_TGZ: packagePath,
             OPENCLAW_E2E_NPM_INSTALL_TIMEOUT: "42s",
             OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
             OPENCLAW_TEST_NPM_ARGS: npmArgsPath,
-          },
+          }),
         },
       );
 
@@ -157,14 +170,13 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
         ],
         {
           encoding: "utf8",
-          env: {
-            ...process.env,
+          env: shellTestEnv({
             PATH: `${tempDir}:${process.env.PATH ?? ""}`,
             OPENCLAW_CURRENT_PACKAGE_TGZ: packagePath,
             OPENCLAW_E2E_NPM_INSTALL_TIMEOUT: "42s",
             OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
             OPENCLAW_TEST_NPM_ARGS: npmArgsPath,
-          },
+          }),
         },
       );
 
@@ -218,14 +230,13 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
         ],
         {
           encoding: "utf8",
-          env: {
-            ...process.env,
+          env: shellTestEnv({
             PATH: tempDir,
             OPENCLAW_CURRENT_PACKAGE_TGZ: packagePath,
             OPENCLAW_E2E_NPM_INSTALL_TIMEOUT: "42s",
             OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
             OPENCLAW_TEST_NPM_ARGS: npmArgsPath,
-          },
+          }),
         },
       );
 
@@ -267,13 +278,12 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
         ],
         {
           encoding: "utf8",
-          env: {
-            ...process.env,
+          env: shellTestEnv({
             PATH: `${tempDir}:${nodeBinDir}`,
             OPENCLAW_CURRENT_PACKAGE_TGZ: packagePath,
             OPENCLAW_E2E_NPM_INSTALL_TIMEOUT: "42s",
             OPENCLAW_TEST_NPM_ARGS: npmArgsPath,
-          },
+          }),
         },
       );
 
@@ -304,10 +314,9 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
         ],
         {
           encoding: "utf8",
-          env: {
-            ...process.env,
+          env: shellTestEnv({
             PATH: `${tempDir}:${nodeBinDir}`,
-          },
+          }),
           timeout: 5_000,
         },
       );
@@ -411,13 +420,12 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
         ],
         {
           encoding: "utf8",
-          env: {
-            ...process.env,
+          env: shellTestEnv({
             PATH: `${tempDir}:${process.env.PATH ?? ""}`,
             OPENCLAW_E2E_COMMAND_TIMEOUT: "17s",
             OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
             OPENCLAW_TEST_COMMAND_ARGS: commandArgsPath,
-          },
+          }),
         },
       );
 
@@ -475,13 +483,12 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
         ],
         {
           encoding: "utf8",
-          env: {
-            ...process.env,
+          env: shellTestEnv({
             PATH: `${tempDir}:${process.env.PATH ?? ""}`,
             OPENCLAW_E2E_COMMAND_TIMEOUT: "23s",
             OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
             OPENCLAW_TEST_COMMAND_ARGS: commandArgsPath,
-          },
+          }),
         },
       );
 
@@ -537,13 +544,12 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
         ],
         {
           encoding: "utf8",
-          env: {
-            ...process.env,
+          env: shellTestEnv({
             PATH: `${tempDir}:${process.env.PATH ?? ""}`,
             OPENCLAW_E2E_COMMAND_TIMEOUT: "31s",
             OPENCLAW_TEST_TIMEOUT_ARGS: timeoutArgsPath,
             OPENCLAW_TEST_SCRIPT_ARGS: scriptArgsPath,
-          },
+          }),
         },
       );
 
