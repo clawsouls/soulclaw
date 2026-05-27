@@ -246,6 +246,20 @@ describe("Dockerfile", () => {
     );
   });
 
+  it("keeps runtime workspace templates in final images", async () => {
+    const dockerfile = await readFile(dockerfilePath, "utf8");
+    const runtimeStageIndex = dockerfile.lastIndexOf("FROM base-runtime");
+    const templatesCopyIndex = dockerfile.indexOf(
+      "COPY --from=runtime-assets --chown=node:node /app/src/agents/templates ./src/agents/templates",
+      runtimeStageIndex,
+    );
+    const userIndex = dockerfile.indexOf("USER node", runtimeStageIndex);
+
+    expect(runtimeStageIndex).toBeGreaterThan(-1);
+    expect(templatesCopyIndex).toBeGreaterThan(runtimeStageIndex);
+    expect(templatesCopyIndex).toBeLessThan(userIndex);
+  });
+
   it("keeps package manager patch files in runtime images", async () => {
     const dockerfile = collapseDockerContinuations(await readFile(dockerfilePath, "utf8"));
     const pnpmWorkspace = YAML.parse(await readFile(pnpmWorkspacePath, "utf8")) as {
@@ -275,6 +289,16 @@ describe("Dockerfile", () => {
 
     expect(workflow.match(new RegExp(releaseKeepList, "g"))).toHaveLength(2);
     expect(workflow).not.toContain("OPENCLAW_EXTENSIONS=diagnostics-otel\n");
+  });
+
+  it("smokes runtime workspace templates before Docker release manifests publish", async () => {
+    const workflow = await readFile(dockerReleaseWorkflowPath, "utf8");
+
+    expect(workflow).toContain("Smoke test amd64 runtime workspace templates");
+    expect(workflow).toContain("Smoke test arm64 runtime workspace templates");
+    expect(workflow).toContain("test -f /app/src/agents/templates/HEARTBEAT.md");
+    expect(workflow).toContain('grep -F "Missing workspace template:"');
+    expect(workflow).toContain('test -f "${temp_root}/home/.openclaw/workspace/HEARTBEAT.md"');
   });
 
   it("does not override bundled plugin discovery in runtime images", async () => {
