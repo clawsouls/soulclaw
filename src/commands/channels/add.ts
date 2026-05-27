@@ -80,8 +80,15 @@ async function resolveCatalogChannelEntry(raw: string, cfg: OpenClawConfig | nul
   });
 }
 
-function parseOptionalInt(value: unknown): number | undefined {
-  return parseStrictNonNegativeInteger(value);
+function parseOptionalInt(value: unknown, flag: string): number | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+  const parsed = parseStrictNonNegativeInteger(value);
+  if (parsed === undefined) {
+    throw new Error(`${flag} must be a non-negative integer.`);
+  }
+  return parsed;
 }
 
 function parseOptionalDelimitedInput(value: unknown): string[] | undefined {
@@ -111,7 +118,7 @@ function buildChannelSetupInput(opts: ChannelsAddOptions): ChannelSetupInput {
     input.secretFile ??= readOptionalString(input.tokenFile);
   }
 
-  input.initialSyncLimit = parseOptionalInt(opts.initialSyncLimit);
+  input.initialSyncLimit = parseOptionalInt(opts.initialSyncLimit, "--initial-sync-limit");
   input.groupChannels = parseOptionalDelimitedInput(opts.groupChannels);
   input.dmAllowlist = parseOptionalDelimitedInput(opts.dmAllowlist);
   return input as ChannelSetupInput;
