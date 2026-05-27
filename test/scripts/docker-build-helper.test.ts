@@ -32,6 +32,7 @@ const ONBOARD_DOCKER_E2E_PATH = "scripts/e2e/onboard-docker.sh";
 const KITCHEN_SINK_PLUGIN_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-plugin-docker.sh";
 const KITCHEN_SINK_RPC_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-rpc-docker.sh";
 const CODEX_ON_DEMAND_DOCKER_E2E_PATH = "scripts/e2e/codex-on-demand-docker.sh";
+const CODEX_MEDIA_PATH_SCENARIO_PATH = "scripts/e2e/lib/codex-media-path/scenario.sh";
 const CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH = "scripts/e2e/codex-npm-plugin-live-docker.sh";
 const LIVE_PLUGIN_TOOL_DOCKER_E2E_PATH = "scripts/e2e/live-plugin-tool-docker.sh";
 const NPM_ONBOARD_CHANNEL_AGENT_DOCKER_E2E_PATH = "scripts/e2e/npm-onboard-channel-agent-docker.sh";
@@ -999,6 +1000,7 @@ grep -qx -- "OPENCLAW_E2E_COMMAND_TIMEOUT=23s" "$TMPDIR/package-args"
   it("wraps package-backed scenario OpenClaw CLI calls with the shared timeout helper", () => {
     const paths = [
       CODEX_ON_DEMAND_DOCKER_E2E_PATH,
+      CODEX_MEDIA_PATH_SCENARIO_PATH,
       CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH,
       LIVE_PLUGIN_TOOL_DOCKER_E2E_PATH,
       NPM_ONBOARD_CHANNEL_AGENT_DOCKER_E2E_PATH,
