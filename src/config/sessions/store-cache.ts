@@ -196,7 +196,8 @@ function cloneJsonLikeValue<T>(value: T): T {
     return value;
   }
   if (Array.isArray(value)) {
-    const cloned = new Array(value.length);
+    const cloned: unknown[] = [];
+    cloned.length = value.length;
     for (let index = 0; index < value.length; index += 1) {
       if (!(index in value)) {
         continue;
