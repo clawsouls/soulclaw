@@ -3879,7 +3879,7 @@ describe("matrix live qa scenarios", () => {
           event: matrixQaMessageEvent({
             kind: "message",
             eventId: previewEventId,
-            body: "Working...\n- `tool: exec`",
+            body: "Working...\n- `tool: read`",
           }),
           since: "driver-sync-preview",
         },
@@ -3888,9 +3888,9 @@ describe("matrix live qa scenarios", () => {
             kind: "message",
             eventId: "$tool-progress-mention-edit",
             body:
-              'Working...\n- `search "matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt" in . -> run sleep 2`',
+              "Working...\n- `read matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt failed`",
             formattedBody:
-              'Working...<br><ul><li><code>search "matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt" in . -&gt; run sleep 2</code></li></ul>',
+              "Working...<br><ul><li><code>read matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt failed</code></li></ul>",
             mentions: {},
             relatesTo: {
               relType: "m.replace",
@@ -3933,12 +3933,9 @@ describe("matrix live qa scenarios", () => {
     expect(artifacts.reply?.eventId).toBe("$tool-progress-mention-final");
     const prompt = mockMessageBody(sendTextMessage, "sendTextMessage");
     expect(prompt).toContain(
-      "call the exec tool exactly once with this exact command before answering",
+      "read the missing workspace file `matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt` before answering",
     );
-    expect(prompt).toContain(
-      "`rg -n 'matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt' . ; sleep 2`",
-    );
-    expect(prompt).toContain("The QA harness must observe that exec tool call");
+    expect(prompt).toContain("The QA harness must observe that failed read");
   });
 
   it("preserves separate finalized block events when Matrix block streaming is enabled", async () => {
