@@ -234,8 +234,9 @@ async function requestBodyHasStreamTrue(
 function parseRetryAfterSeconds(headers: Headers): number | undefined {
   const retryAfterMs = headers.get("retry-after-ms");
   if (retryAfterMs) {
-    const milliseconds = Number(retryAfterMs.trim());
-    if (Number.isFinite(milliseconds) && milliseconds >= 0) {
+    const trimmedRetryAfterMs = retryAfterMs.trim();
+    const milliseconds = Number(trimmedRetryAfterMs);
+    if (/^\d+(?:\.\d+)?$/.test(trimmedRetryAfterMs) && Number.isFinite(milliseconds)) {
       return milliseconds / 1000;
     }
   }
