@@ -2127,7 +2127,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     ]);
   });
 
-  it("keeps clean sparse local-container syncs on the original checkout", () => {
+  it("uses a temporary full checkout when local-container syncs clean sparse worktrees", () => {
     const result = runWrapper(
       "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
       ["run", "--provider", "local-container", "--", "echo ok"],
@@ -2140,8 +2140,8 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     );
 
     expect(result.status).toBe(0);
-    expect(result.stderr).not.toContain("syncing from temporary full checkout");
-    expect(parseFakeCrabboxOutput(result).cwd).toBe(repoRoot);
+    expect(result.stderr).toContain("syncing from temporary full checkout");
+    expect(parseFakeCrabboxOutput(result).cwd).toContain("openclaw-crabbox-sync-");
   });
 
   it("uses a temporary full checkout when existing AWS leases sync clean sparse worktrees", () => {

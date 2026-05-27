@@ -1628,7 +1628,7 @@ function isWorktreeClean() {
 }
 
 function shouldUseFullCheckoutForCleanSparseRemoteSync(commandArgs, providerName) {
-  if (commandArgs[0] !== "run" || isLocalContainerProvider(providerName)) {
+  if (commandArgs[0] !== "run") {
     return false;
   }
   if (hasOption(commandArgs, "--no-sync")) {
