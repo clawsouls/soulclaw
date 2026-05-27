@@ -761,6 +761,23 @@ describe("sendSingleTextMessageMatrix", () => {
     expect(formattedBody).not.toContain("matrix.to");
   });
 
+  it("does not activate filename-embedded Matrix mentions in normal text", async () => {
+    const { client, sendMessage } = makeClient();
+
+    await sendSingleTextMessageMatrix(
+      "room:!room:example",
+      "read matrix-progress-@room-@alice:matrix-qa.test-!room:matrix-qa.test.txt failed",
+      {
+        client,
+        cfg: {} as never,
+      },
+    );
+
+    const content = sentContent(sendMessage);
+    expect(content["m.mentions"]).toEqual({});
+    expect((content as { formatted_body?: string }).formatted_body).not.toContain("matrix.to");
+  });
+
   it("merges extra content fields into single-event sends", async () => {
     const { client, sendMessage } = makeClient();
 
