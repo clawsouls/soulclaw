@@ -8,6 +8,10 @@ vi.mock("./agent-model-discovery.js", () => ({
 
 import { appendPrioritizedDynamicLiveModels } from "./live-model-dynamic-candidates.js";
 
+vi.mock("./agent-model-discovery.js", () => ({
+  normalizeDiscoveredAgentModel: <T>(value: T) => value,
+}));
+
 const REGISTRY = { find: () => undefined } as never;
 const DYNAMIC_PROVIDER = "dynamic-test-provider";
 type DynamicModelResolver = NonNullable<
