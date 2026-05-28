@@ -560,7 +560,7 @@ async function readLastNonzeroUsageFromSessionLog(logPath: string): Promise<Sess
     return usage
       ? {
           usage,
-          trailingBytes: 0,
+          trailingBytes: Math.max(0, stat.size - Buffer.byteLength(leadingPartial, "utf8")),
           byteSize: stat.size,
         }
       : { byteSize: stat.size };
