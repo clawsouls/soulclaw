@@ -223,11 +223,11 @@ export async function fetchWithGuard(params: {
 }
 
 async function discardIgnoredResponseBody(response: Response): Promise<void> {
-  const cancelBody = response.body?.cancel;
-  if (typeof cancelBody !== "function") {
+  const body = response.body;
+  if (!body) {
     return;
   }
-  await cancelBody.call(response.body).catch(() => undefined);
+  await body.cancel().catch(() => undefined);
 }
 
 function decodeTextContent(buffer: Buffer, charset: string | undefined): string {

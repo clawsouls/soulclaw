@@ -62,7 +62,7 @@ describe("iMessage monitor attachment policy", () => {
     const client = {
       request: vi.fn(async () => ({ subscription: 1 })),
       waitForClose: vi.fn(async () => {
-        onNotification?.({
+        void onNotification?.({
           method: "message",
           params: {
             message: {
