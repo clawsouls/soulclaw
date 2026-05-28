@@ -5,7 +5,7 @@ const { spawnMock } = vi.hoisted(() => ({
   spawnMock: vi.fn(),
 }));
 
-const tailscaleSpawnOptions = { stdio: ["ignore", "pipe", "pipe"] } as const;
+const tailscaleSpawnOptions = { stdio: ["ignore", "pipe", "ignore"] } as const;
 
 vi.mock("node:child_process", async () => {
   const { mockNodeBuiltinModule } = await import("openclaw/plugin-sdk/test-node-mocks");

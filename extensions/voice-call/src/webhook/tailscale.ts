@@ -36,7 +36,7 @@ function runTailscaleCommand(
 ): Promise<{ code: number; stdout: string }> {
   return new Promise((resolve) => {
     const proc = spawn("tailscale", args, {
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["ignore", "pipe", "ignore"],
     });
 
     let stdout: TailscaleCommandStdout = { bytes: 0, exceeded: false, text: "" };
