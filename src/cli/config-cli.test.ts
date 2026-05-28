@@ -2804,6 +2804,28 @@ describe("config cli", () => {
       expect(mockReadConfigFileSnapshot).not.toHaveBeenCalled();
       expect(mockWriteConfigFile).not.toHaveBeenCalled();
     });
+
+    it("rejects impractical array indexes for config set", async () => {
+      const resolved = { agents: { list: [] } } as unknown as OpenClawConfig;
+      setSnapshot(resolved, resolved);
+
+      await expect(
+        runConfigCommand(["config", "set", "agents.list.4294967294.id", '"main"']),
+      ).rejects.toThrow('Expected numeric index for array segment "4294967294"');
+
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+    });
+
+    it("rejects signed array indexes for config set", async () => {
+      const resolved = { agents: { list: [{ id: "main" }] } } as unknown as OpenClawConfig;
+      setSnapshot(resolved, resolved);
+
+      await expect(
+        runConfigCommand(["config", "set", "agents.list.+0.id", '"other"']),
+      ).rejects.toThrow('Expected numeric index for array segment "+0"');
+
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+    });
   });
 
   describe("config unset - issue #6070", () => {
