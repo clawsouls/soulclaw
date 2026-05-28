@@ -13,7 +13,11 @@ import {
   sanitizeConfiguredModelProviderRequest,
   type ProviderOperationDeadline,
 } from "openclaw/plugin-sdk/provider-http";
-import { asFiniteNumber, normalizeOptionalString } from "openclaw/plugin-sdk/string-coerce-runtime";
+import {
+  asFiniteNumber,
+  asSafeIntegerInRange,
+  normalizeOptionalString,
+} from "openclaw/plugin-sdk/string-coerce-runtime";
 import type {
   GeneratedVideoAsset,
   VideoGenerationProvider,
@@ -34,6 +38,7 @@ const DEFAULT_TIMEOUT_MS = 300_000;
 const POLL_INTERVAL_MS = 5_000;
 const MAX_POLL_ATTEMPTS = 180;
 const MAX_DURATION_SECONDS = 15;
+const PIXVERSE_SEED_MAX = 2_147_483_647;
 const PIXVERSE_VIDEO_MODELS = ["v6", "c1"] as const;
 const PIXVERSE_TEXT_ASPECT_RATIOS = [
   "16:9",
@@ -134,10 +139,14 @@ function appendOptionalNumber(body: Record<string, unknown>, key: string, value:
 }
 
 function appendOptionalInt32Seed(body: Record<string, unknown>, value: unknown): void {
-  const seed = asFiniteNumber(value);
-  if (seed != null && Number.isSafeInteger(seed) && seed >= 0 && seed <= 2_147_483_647) {
+  const seed = asSafeIntegerInRange(value, { min: 0, max: PIXVERSE_SEED_MAX });
+  if (seed !== undefined) {
     body.seed = seed;
   }
+}
+
+function readPixVerseSeed(value: unknown): number | undefined {
+  return asSafeIntegerInRange(value, { min: 0, max: PIXVERSE_SEED_MAX });
 }
 
 function appendOptionalString(body: Record<string, unknown>, key: string, value: unknown): void {
@@ -498,7 +507,7 @@ export function buildPixVerseVideoGenerationProvider(): VideoGenerationProvider 
             endpoint,
             videoId,
             status: readPixVerseStatus(completed),
-            seed: asFiniteNumber(completed.seed),
+            seed: readPixVerseSeed(completed.seed),
             size: asFiniteNumber(completed.size),
           },
         };
