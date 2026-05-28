@@ -55,7 +55,7 @@ Docs: https://docs.openclaw.ai
 - Gateway/performance: cache plugin metadata fingerprints and stable plugin index fingerprints, borrow read-only session metadata safely, keep the active session working store hot, keep status on a bounded fast path, and preserve model auth profile suffixes. (#86439)
 - Package/install/release: align npm package exclusions and inventory, omit unpacked test helpers, skip Homebrew until macOS packages need it, cap tsdown heap in containers, bound install/release smoke waits, and harden post-publish verification.
 - Codex/Auth: bound ChatGPT OAuth token exchange and refresh requests, and honor cancellation across Codex and Anthropic OAuth login flows.
-- QA/E2E/CI: bound Telegram, kitchen-sink, Open WebUI, ClawHub, MCP, Discord, realtime, labeler, and GitHub API waits; fail empty explicit test, live-media, gateway CPU, plugin gauntlet, and beta-smoke runs instead of false-greening.
+- QA/E2E/CI: bound Telegram, kitchen-sink, Open WebUI, ClawHub, MCP, Discord, realtime, labeler, and GitHub API waits; fail empty explicit test, live-media, gateway CPU, startup benchmark, plugin gauntlet, and beta-smoke runs instead of false-greening.
 - Agents/Codex: keep spawned agent bootstrap files rooted in the agent workspace while running task commands, transcripts, and compaction from the requested cwd. (#87218) Thanks @mbelinky.
 
 ## 2026.5.26
