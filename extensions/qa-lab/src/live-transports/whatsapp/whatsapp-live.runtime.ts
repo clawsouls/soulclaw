@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -132,6 +132,7 @@ type WhatsAppQaSummary = {
     total: number;
   };
   credentials: {
+    credentialFingerprint?: string;
     credentialId?: string;
     kind: string;
     ownerId?: string;
@@ -692,6 +693,7 @@ function toObservedWhatsAppArtifacts(params: {
 
 function renderWhatsAppQaMarkdown(params: {
   cleanupIssues: string[];
+  credentialFingerprint?: string;
   credentialSource: "convex" | "env";
   finishedAt: string;
   gatewayDebugDirPath?: string;
@@ -704,6 +706,9 @@ function renderWhatsAppQaMarkdown(params: {
     "# WhatsApp QA Report",
     "",
     `- Credential source: \`${params.credentialSource}\``,
+    ...(params.credentialFingerprint
+      ? [`- Credential fingerprint: \`${params.credentialFingerprint}\``]
+      : []),
     `- SUT phone: \`${params.redactMetadata ? "<redacted>" : (params.sutPhoneE164 ?? "<unavailable>")}\``,
     `- Metadata redaction: \`${params.redactMetadata ? "enabled" : "disabled"}\``,
     `- Started: ${params.startedAt}`,
@@ -729,6 +734,14 @@ function renderWhatsAppQaMarkdown(params: {
     lines.push("");
   }
   return lines.join("\n");
+}
+
+function fingerprintWhatsAppCredentialId(credentialId: string | undefined) {
+  if (!credentialId) {
+    return undefined;
+  }
+  const digest = createHash("sha256").update(credentialId).digest("hex").slice(0, 16);
+  return `sha256:${digest}`;
 }
 
 function createMissingGroupJidScenarioResult(params: {
@@ -970,12 +983,14 @@ export async function runWhatsAppQaLive(params: {
   const passed = scenarioResults.filter((entry) => entry.status === "pass").length;
   const failed = scenarioResults.filter((entry) => entry.status === "fail").length;
   const skipped = scenarioResults.filter((entry) => entry.status === "skip").length;
+  const credentialFingerprint = fingerprintWhatsAppCredentialId(credentialLease?.credentialId);
   const summary: WhatsAppQaSummary = {
     credentials: credentialLease
       ? {
           source: credentialLease.source,
           kind: credentialLease.kind,
           role: credentialLease.role,
+          credentialFingerprint,
           credentialId: redactPublicMetadata ? undefined : credentialLease.credentialId,
           ownerId: redactPublicMetadata ? undefined : credentialLease.ownerId,
         }
@@ -1016,6 +1031,7 @@ export async function runWhatsAppQaLive(params: {
     reportPath,
     `${renderWhatsAppQaMarkdown({
       cleanupIssues,
+      credentialFingerprint,
       credentialSource: credentialLease?.source ?? requestedCredentialSource,
       finishedAt,
       gatewayDebugDirPath: preservedGatewayDebugArtifacts ? gatewayDebugDirPath : undefined,
@@ -1041,8 +1057,10 @@ export const testing = {
   buildWhatsAppQaConfig,
   createMissingGroupJidScenarioResult,
   findScenarios,
+  fingerprintWhatsAppCredentialId,
   isTransientWhatsAppQaDriverError,
   parseWhatsAppQaCredentialPayload,
+  renderWhatsAppQaMarkdown,
   resolveWhatsAppQaRuntimeEnv,
   resolveWhatsAppMetadataRedaction,
   toObservedWhatsAppArtifacts,
