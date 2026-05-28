@@ -311,7 +311,11 @@ async function assertMediaContentLength(params: {
 }
 
 async function discardIgnoredResponseBody(res: Response): Promise<void> {
-  await res.body?.cancel().catch(() => undefined);
+  const cancelBody = res.body?.cancel;
+  if (typeof cancelBody !== "function") {
+    return;
+  }
+  await cancelBody.call(res.body).catch(() => undefined);
 }
 
 function resolveRemoteFileName(params: {
