@@ -2265,12 +2265,11 @@ export async function dispatchReplyFromConfig(
     const onPatchSummaryFromReplyOptions = params.replyOptions?.onPatchSummary;
     const allowSuppressedSourceProgressCallbacks =
       params.replyOptions?.allowProgressCallbacksWhenSourceDeliverySuppressed === true;
-    const shouldAllowQuietDirectNativeProgressCallbacks = (options?: {
+    const shouldAllowQuietChannelOwnedProgressCallbacks = (options?: {
       requiresToolSummaryVisibility?: boolean;
     }) =>
       options?.requiresToolSummaryVisibility === true &&
-      params.replyOptions?.suppressDefaultToolProgressMessages === true &&
-      chatType === "direct";
+      params.replyOptions?.suppressDefaultToolProgressMessages === true;
     let hasPendingDirectBlockReplyDelivery = false;
     const waitForPendingDirectBlockReplyDelivery = async (abortSignal?: AbortSignal) => {
       if (!hasPendingDirectBlockReplyDelivery) {
@@ -2289,7 +2288,7 @@ export async function dispatchReplyFromConfig(
       if (
         options?.requiresToolSummaryVisibility === true &&
         !shouldSendToolSummaries() &&
-        !shouldAllowQuietDirectNativeProgressCallbacks(options)
+        !shouldAllowQuietChannelOwnedProgressCallbacks(options)
       ) {
         return false;
       }
