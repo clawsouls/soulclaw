@@ -713,11 +713,15 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
       socket.write(`GET ${url.pathname} HTTP/1.1\r\nHost: ${url.host}\r\n\r\n`);
       await Promise.race([
         server.close(),
-        delay(1_000).then(() => Promise.reject(new Error("close timed out"))),
+        delay(1_000).then(() => {
+          throw new Error("close timed out");
+        }),
       ]);
       await Promise.race([
         new Promise<void>((resolve) => socket.once("close", resolve)),
-        delay(1_000).then(() => Promise.reject(new Error("socket close timed out"))),
+        delay(1_000).then(() => {
+          throw new Error("socket close timed out");
+        }),
       ]);
     } finally {
       await server?.close().catch(() => {});
