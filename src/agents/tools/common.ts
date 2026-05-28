@@ -211,6 +211,7 @@ export function readPositiveIntegerParam(
   key: string,
   options: {
     message?: string;
+    max?: number;
   } = {},
 ): number | undefined {
   const value = readNumberParam(params, key, {
@@ -218,6 +219,9 @@ export function readPositiveIntegerParam(
     strict: true,
   });
   if (value === undefined && readParamRaw(params, key) !== undefined) {
+    throw new ToolInputError(options.message ?? `${key} must be a positive integer`);
+  }
+  if (value !== undefined && options.max !== undefined && value > options.max) {
     throw new ToolInputError(options.message ?? `${key} must be a positive integer`);
   }
   return value;

@@ -102,6 +102,12 @@ describe("readNumberParam", () => {
         message: "timeoutMs must be a positive integer in milliseconds.",
       }),
     ).toThrow("timeoutMs must be a positive integer in milliseconds.");
+    expect(() =>
+      readPositiveIntegerParam({ maxResults: 21 }, "maxResults", {
+        max: 20,
+        message: "maxResults must be an integer from 1 to 20",
+      }),
+    ).toThrow("maxResults must be an integer from 1 to 20");
   });
 });
 
