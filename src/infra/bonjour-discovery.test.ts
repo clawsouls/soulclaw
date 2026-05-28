@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { runCommandWithTimeout } from "../process/exec.js";
-import { discoverGatewayBeacons } from "./bonjour-discovery.js";
+import { discoverGatewayBeacons, resolveGatewayDiscoveryEndpoint } from "./bonjour-discovery.js";
 
 const WIDE_AREA_DOMAIN = "openclaw.internal.";
 
@@ -185,6 +185,52 @@ describe("bonjour-discovery", () => {
     expect(beacon.instanceName).toBe("Studio Gateway");
     expect(beacon.displayName).toBe("Peter’s Mac Studio");
     expect(beacon.txt?.displayName).toBe("Peter’s Mac Studio");
+  });
+
+  it("rejects malformed and out-of-range advertised ports", async () => {
+    const run = vi.fn(async (argv: string[]) => {
+      const domain = argv[3] ?? "";
+      if (argv[0] === "dns-sd" && argv[1] === "-B" && domain === "local.") {
+        return {
+          stdout: ["Add 2 3 local. _openclaw-gw._tcp. Broken Gateway", ""].join("\n"),
+          stderr: "",
+          code: 0,
+          signal: null,
+          killed: false,
+        };
+      }
+
+      if (argv[0] === "dns-sd" && argv[1] === "-L") {
+        return {
+          stdout: [
+            "Broken Gateway._openclaw-gw._tcp. can be reached at broken.local:18789abc",
+            "txtvers=1 displayName=Broken gatewayPort=70000 sshPort=22x",
+            "",
+          ].join("\n"),
+          stderr: "",
+          code: 0,
+          signal: null,
+          killed: false,
+        };
+      }
+
+      throw new Error(`unexpected argv: ${argv.join(" ")}`);
+    });
+
+    const beacons = await discoverGatewayBeacons({
+      platform: "darwin",
+      timeoutMs: 800,
+      domains: ["local."],
+      run: run as unknown as typeof runCommandWithTimeout,
+    });
+
+    expect(beacons).toHaveLength(1);
+    const beacon = beacons[0] as BeaconRecord;
+    expect(beacon.host).toBe("broken.local");
+    expect(beacon.port).toBeUndefined();
+    expect(beacon.gatewayPort).toBeUndefined();
+    expect(beacon.sshPort).toBeUndefined();
+    expect(resolveGatewayDiscoveryEndpoint(beacon)).toBeNull();
   });
 
   it("falls back to tailnet DNS probing for wide-area when split DNS is not configured", async () => {
