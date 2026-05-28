@@ -4,7 +4,10 @@ import { dirname, join, win32 } from "node:path";
 import { bundledDistPluginFile, bundledPluginFile } from "openclaw/plugin-sdk/test-fixtures";
 import { describe, expect, it } from "vitest";
 import { listBundledPluginPackArtifacts } from "../scripts/lib/bundled-plugin-build-entries.mjs";
-import { listPluginSdkDistArtifacts } from "../scripts/lib/plugin-sdk-entries.mjs";
+import {
+  listPluginSdkDistArtifacts,
+  listPrivateLocalOnlyPluginSdkDistArtifacts,
+} from "../scripts/lib/plugin-sdk-entries.mjs";
 import {
   WORKSPACE_TEMPLATE_PACK_PATHS,
   createWorkspaceBootstrapSmokeEnv,
@@ -47,6 +50,7 @@ function makePackResult(filename: string, unpackedSize: number) {
 }
 
 const requiredPluginSdkPackPaths = [...listPluginSdkDistArtifacts(), "dist/plugin-sdk/compat.js"];
+const privateLocalOnlyPluginSdkPackPaths = listPrivateLocalOnlyPluginSdkDistArtifacts();
 const requiredBundledPluginPackPaths = listBundledPluginPackArtifacts();
 
 describe("collectAppcastSparkleVersionErrors", () => {
@@ -472,6 +476,20 @@ describe("collectForbiddenPackPaths", () => {
     expect(pkg.files).toContain("!dist/plugin-sdk/src/**");
   });
 
+  it("blocks private local-only plugin SDK artifacts from npm pack output", () => {
+    expect(
+      collectForbiddenPackPaths(["dist/index.js", ...privateLocalOnlyPluginSdkPackPaths]),
+    ).toEqual([...privateLocalOnlyPluginSdkPackPaths].toSorted());
+  });
+
+  it("keeps private local-only plugin SDK artifacts excluded by package files", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { files?: string[] };
+
+    for (const entry of privateLocalOnlyPluginSdkPackPaths) {
+      expect(pkg.files).toContain(`!${entry}`);
+    }
+  });
+
   it("blocks legacy runtime dependency stamps from npm pack output", () => {
     expect(
       collectForbiddenPackPaths([
@@ -768,6 +786,7 @@ describe("createPackedPluginSdkTypescriptSmokeProject", () => {
       expect(source).toContain('"openclaw/plugin-sdk/runtime-env"');
       expect(source).toContain("type PublicPluginSdkModules = [");
       expect(source).not.toContain("TelegramAccountConfig");
+      expect(source).not.toContain("openclaw/plugin-sdk/channel-contract-testing");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

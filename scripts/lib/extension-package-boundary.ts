@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, posix, resolve } from "node:path";
+import { privateLocalOnlyPluginSdkEntrypoints } from "./plugin-sdk-entries.mjs";
 
 export const EXTENSION_PACKAGE_BOUNDARY_INCLUDE = ["./*.ts", "./src/**/*.ts"] as const;
 export const EXTENSION_PACKAGE_BOUNDARY_EXCLUDE = [
@@ -11,10 +12,19 @@ export const EXTENSION_PACKAGE_BOUNDARY_EXCLUDE = [
   "./src/**/*test-harness.ts",
   "./src/**/*test-support.ts",
 ] as const;
+
+const privateLocalOnlyPluginSdkPackageDtsPaths = Object.fromEntries(
+  privateLocalOnlyPluginSdkEntrypoints.map((entrypoint) => [
+    `openclaw/plugin-sdk/${entrypoint}`,
+    [`../packages/plugin-sdk/dist/src/plugin-sdk/${entrypoint}.d.ts`],
+  ]),
+) as Record<string, readonly string[]>;
+
 export const EXTENSION_PACKAGE_BOUNDARY_BASE_PATHS = {
   "openclaw/extension-api": ["../src/extensionAPI.ts"],
   "openclaw/plugin-sdk": ["../dist/plugin-sdk/index.d.ts"],
   "openclaw/plugin-sdk/*": ["../dist/plugin-sdk/*.d.ts"],
+  ...privateLocalOnlyPluginSdkPackageDtsPaths,
   "openclaw/plugin-sdk/account-id": ["../dist/plugin-sdk/account-id.d.ts"],
   "openclaw/plugin-sdk/channel-entry-contract": ["../dist/plugin-sdk/channel-entry-contract.d.ts"],
   "openclaw/plugin-sdk/browser-maintenance": [
