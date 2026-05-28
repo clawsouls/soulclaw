@@ -184,6 +184,15 @@ function asNonNegativeInteger(value: unknown): number | undefined {
   return number !== undefined && Number.isSafeInteger(number) && number >= 0 ? number : undefined;
 }
 
+function asGoogleRealtimeThinkingBudget(value: unknown): number | undefined {
+  const budget = asFiniteNumber(value);
+  return budget !== undefined &&
+    Number.isSafeInteger(budget) &&
+    (budget === -1 || (budget >= 0 && budget <= 24_576))
+    ? budget
+    : undefined;
+}
+
 function resolveGoogleRealtimeProviderConfigRecord(
   config: Record<string, unknown>,
 ): Record<string, unknown> | undefined {
@@ -226,7 +235,7 @@ function normalizeProviderConfig(
     sessionResumption: asBoolean(raw?.sessionResumption),
     contextWindowCompression: asBoolean(raw?.contextWindowCompression),
     thinkingLevel: asThinkingLevel(raw?.thinkingLevel),
-    thinkingBudget: asFiniteNumber(raw?.thinkingBudget),
+    thinkingBudget: asGoogleRealtimeThinkingBudget(raw?.thinkingBudget),
   };
 }
 
