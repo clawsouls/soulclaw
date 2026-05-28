@@ -240,11 +240,20 @@ export async function startTailscaleTunnel(config: {
     const proc = spawn("tailscale", [config.mode, "--bg", "--yes", "--set-path", path, localUrl], {
       stdio: ["ignore", "pipe", "pipe"],
     });
+    let stdout = emptyBoundedChildOutput();
+    let stderr = emptyBoundedChildOutput();
 
     const timeout = setTimeout(() => {
       proc.kill("SIGKILL");
       reject(new Error(`Tailscale ${config.mode} timed out`));
     }, 10000);
+
+    proc.stdout.on("data", (data) => {
+      stdout = appendBoundedChildOutput(stdout, data.toString());
+    });
+    proc.stderr.on("data", (data) => {
+      stderr = appendBoundedChildOutput(stderr, data.toString());
+    });
 
     proc.on("close", (code) => {
       clearTimeout(timeout);
@@ -260,7 +269,9 @@ export async function startTailscaleTunnel(config: {
           },
         });
       } else {
-        reject(new Error(`Tailscale ${config.mode} failed with code ${code}`));
+        const output = stderr.text ? stderr : stdout;
+        const detail = output.text ? `: ${formatBoundedChildOutput(output)}` : "";
+        reject(new Error(`Tailscale ${config.mode} failed with code ${code}${detail}`));
       }
     });
 
