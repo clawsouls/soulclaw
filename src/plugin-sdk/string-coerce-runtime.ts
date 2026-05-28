@@ -15,6 +15,7 @@ export {
   readStringValue,
 } from "../shared/string-coerce.js";
 export {
+  asFiniteNumberInRange,
   asFiniteNumber,
   asPositiveSafeInteger,
   parseFiniteNumber,
