@@ -152,7 +152,9 @@ function filterSessionStoreToConfiguredAgents(
   );
 }
 
-function inheritSessionRuntimeSelection(parentEntry: SessionEntry | undefined): Partial<SessionEntry> {
+function inheritSessionRuntimeSelection(
+  parentEntry: SessionEntry | undefined,
+): Partial<SessionEntry> {
   if (!parentEntry) {
     return {};
   }
@@ -173,6 +175,7 @@ function inheritSessionRuntimeSelection(parentEntry: SessionEntry | undefined): 
     ...(parentEntry.thinkingLevel ? { thinkingLevel: parentEntry.thinkingLevel } : {}),
     ...(typeof parentEntry.fastMode === "boolean" ? { fastMode: parentEntry.fastMode } : {}),
     ...(parentEntry.verboseLevel ? { verboseLevel: parentEntry.verboseLevel } : {}),
+    ...(parentEntry.traceLevel ? { traceLevel: parentEntry.traceLevel } : {}),
     ...(parentEntry.reasoningLevel ? { reasoningLevel: parentEntry.reasoningLevel } : {}),
     ...(parentEntry.elevatedLevel ? { elevatedLevel: parentEntry.elevatedLevel } : {}),
     ...(parentEntry.authProfileOverride
