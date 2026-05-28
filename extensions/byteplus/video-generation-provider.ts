@@ -30,6 +30,8 @@ const DEFAULT_TIMEOUT_MS = 120_000;
 const POLL_INTERVAL_MS = 5_000;
 const MAX_POLL_ATTEMPTS = 120;
 const BYTEPLUS_SEED_MAX = 2_147_483_647;
+const BYTEPLUS_MIN_DURATION_SECONDS = 2;
+const BYTEPLUS_MAX_DURATION_SECONDS = 12;
 
 type BytePlusTaskCreateResponse = {
   id?: unknown;
@@ -123,6 +125,16 @@ function resolveBytePlusImageUrl(req: VideoGenerationRequest): string | undefine
 
 function resolveBytePlusSeed(value: unknown): number | undefined {
   return asSafeIntegerInRange(value, { min: -1, max: BYTEPLUS_SEED_MAX });
+}
+
+function resolveBytePlusDurationSeconds(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return undefined;
+  }
+  return asSafeIntegerInRange(Math.round(value), {
+    min: BYTEPLUS_MIN_DURATION_SECONDS,
+    max: BYTEPLUS_MAX_DURATION_SECONDS,
+  });
 }
 
 async function pollBytePlusTask(params: {
@@ -306,8 +318,9 @@ export function buildBytePlusVideoGenerationProvider(): VideoGenerationProvider 
       if (resolution) {
         body.resolution = resolution;
       }
-      if (typeof req.durationSeconds === "number" && Number.isFinite(req.durationSeconds)) {
-        body.duration = Math.max(1, Math.round(req.durationSeconds));
+      const duration = resolveBytePlusDurationSeconds(req.durationSeconds);
+      if (duration !== undefined) {
+        body.duration = duration;
       }
       if (typeof req.audio === "boolean") {
         body.generate_audio = req.audio;
