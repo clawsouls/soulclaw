@@ -607,6 +607,26 @@ describe("selectAgentHarness", () => {
     expect(result.sessionIdUsed).toBe("openclaw");
   });
 
+  it("treats explicit OpenClaw runtime overrides as the built-in PI harness", async () => {
+    registerSuccessfulCodexHarness();
+
+    const harness = selectAgentHarness({
+      provider: "openai",
+      modelId: "gpt-5.4",
+      agentHarnessRuntimeOverride: "openclaw",
+    });
+
+    expect(harness.id).toBe("pi");
+
+    const result = await runAgentHarnessAttempt({
+      ...createAttemptParams(),
+      provider: "openai",
+      modelId: "gpt-5.4",
+      agentHarnessRuntimeOverride: "openclaw",
+    });
+    expect(result.sessionIdUsed).toBe("pi");
+  });
+
   it("allows per-agent model runtime policy overrides", () => {
     const config = agentModelRuntimeConfig("anthropic/sonnet-4.6", "codex", "strict");
 
