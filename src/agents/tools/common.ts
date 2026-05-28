@@ -227,6 +227,27 @@ export function readPositiveIntegerParam(
   return value;
 }
 
+export function readNonNegativeIntegerParam(
+  params: Record<string, unknown>,
+  key: string,
+  options: {
+    message?: string;
+    max?: number;
+  } = {},
+): number | undefined {
+  const value = readNumberParam(params, key, {
+    nonNegativeInteger: true,
+    strict: true,
+  });
+  if (value === undefined && readParamRaw(params, key) != null) {
+    throw new ToolInputError(options.message ?? `${key} must be a non-negative integer`);
+  }
+  if (value !== undefined && options.max !== undefined && value > options.max) {
+    throw new ToolInputError(options.message ?? `${key} must be a non-negative integer`);
+  }
+  return value;
+}
+
 export function readStringArrayParam(
   params: Record<string, unknown>,
   key: string,

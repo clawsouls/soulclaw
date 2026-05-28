@@ -11,6 +11,7 @@ export {
   createActionGate,
   imageResultFromFile,
   jsonResult,
+  readNonNegativeIntegerParam,
   parseAvailableTags,
   readNumberParam,
   readPositiveIntegerParam,
