@@ -131,9 +131,11 @@ describe("native PDF provider API calls", () => {
 
     const error = await pdfNativeProviders
       .anthropicAnalyzePdf(makeAnthropicAnalyzeParams())
-      .catch((caught: unknown) => caught as Error);
+      .catch((caught: unknown) => caught);
 
-    expect(error).toBeInstanceOf(Error);
+    if (!(error instanceof Error)) {
+      throw new Error("expected Anthropic PDF request to throw an Error");
+    }
     expect(error.message).toContain("Anthropic PDF request failed");
     expect(error.message).not.toContain("tail-marker");
     expect(error.message.length).toBeLessThan(500);
@@ -160,13 +162,15 @@ describe("native PDF provider API calls", () => {
     const error = await Promise.race([
       pdfNativeProviders
         .anthropicAnalyzePdf(makeAnthropicAnalyzeParams())
-        .catch((caught: unknown) => caught as Error),
+        .catch((caught: unknown) => caught),
       new Promise<Error>((_resolve, reject) => {
         setTimeout(() => reject(new Error("timed out waiting for bounded error body")), 500);
       }),
     ]);
 
-    expect(error).toBeInstanceOf(Error);
+    if (!(error instanceof Error)) {
+      throw new Error("expected Anthropic PDF request to throw an Error");
+    }
     expect(error.message).toContain("Anthropic PDF request failed");
     expect(canceled).toBe(true);
   });
