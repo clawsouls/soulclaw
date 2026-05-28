@@ -571,6 +571,7 @@ function estimatePostUsageTrailingBytes(lines: string[]): number {
 type TranscriptTokenEstimate = {
   promptTokens: number;
   outputTokens?: number;
+  transcriptByteSize?: number;
   transcriptBytesTokens?: number;
 };
 
@@ -620,6 +621,7 @@ async function estimatePromptTokensFromSessionTranscript(params: {
       return {
         promptTokens: Math.ceil(promptTokens),
         outputTokens: Math.ceil(outputTokens),
+        transcriptByteSize: snapshot.byteSize,
         transcriptBytesTokens,
       };
     }
@@ -648,6 +650,7 @@ async function estimatePromptTokensFromSessionTranscript(params: {
           typeof outputTokens === "number" && Number.isFinite(outputTokens) && outputTokens > 0
             ? Math.ceil(outputTokens)
             : undefined,
+        transcriptByteSize: snapshot.byteSize,
         transcriptBytesTokens,
       };
     }
@@ -657,6 +660,7 @@ async function estimatePromptTokensFromSessionTranscript(params: {
     }
     return {
       promptTokens: Math.ceil(estimatedTokens),
+      transcriptByteSize: snapshot.byteSize,
       transcriptBytesTokens,
     };
   } catch {
@@ -740,29 +744,11 @@ export async function runPreflightCompactionIfNeeded(params: {
     typeof persistedTotalTokens === "number" &&
     Number.isFinite(persistedTotalTokens) &&
     persistedTotalTokens > 0;
-  const maxActiveTranscriptBytes = resolveMaxActiveTranscriptBytes(params.cfg);
-  const shouldCheckActiveTranscriptBytes = typeof maxActiveTranscriptBytes === "number";
-  const transcriptSizeSnapshot = shouldCheckActiveTranscriptBytes
-    ? await readSessionLogSnapshot({
-        sessionId: entry.sessionId,
-        sessionEntry:
-          entry.sessionFile || !params.followupRun.run.sessionFile
-            ? entry
-            : { ...entry, sessionFile: params.followupRun.run.sessionFile },
-        sessionKey: params.sessionKey ?? params.followupRun.run.sessionKey,
-        opts: { storePath: params.storePath },
-        includeByteSize: true,
-        includeUsage: false,
-      })
-    : undefined;
-  const activeTranscriptBytes = transcriptSizeSnapshot?.byteSize;
-  const shouldCompactByTranscriptBytes =
-    typeof activeTranscriptBytes === "number" &&
-    typeof maxActiveTranscriptBytes === "number" &&
-    activeTranscriptBytes >= maxActiveTranscriptBytes;
   const promptTokenEstimate = estimatePromptTokensForMemoryFlush(
     params.promptForEstimate ?? params.followupRun.prompt,
   );
+  const maxActiveTranscriptBytes = resolveMaxActiveTranscriptBytes(params.cfg);
+  const shouldCheckActiveTranscriptBytes = typeof maxActiveTranscriptBytes === "number";
   const transcriptUsageTokens =
     typeof freshPersistedTokens === "number"
       ? undefined
@@ -773,6 +759,26 @@ export async function runPreflightCompactionIfNeeded(params: {
           sessionFile: entry.sessionFile ?? params.followupRun.run.sessionFile,
           storePath: params.storePath,
         });
+  const transcriptSizeSnapshot =
+    shouldCheckActiveTranscriptBytes && transcriptUsageTokens?.transcriptByteSize === undefined
+      ? await readSessionLogSnapshot({
+          sessionId: entry.sessionId,
+          sessionEntry:
+            entry.sessionFile || !params.followupRun.run.sessionFile
+              ? entry
+              : { ...entry, sessionFile: params.followupRun.run.sessionFile },
+          sessionKey: params.sessionKey ?? params.followupRun.run.sessionKey,
+          opts: { storePath: params.storePath },
+          includeByteSize: true,
+          includeUsage: false,
+        })
+      : undefined;
+  const activeTranscriptBytes =
+    transcriptUsageTokens?.transcriptByteSize ?? transcriptSizeSnapshot?.byteSize;
+  const shouldCompactByTranscriptBytes =
+    typeof activeTranscriptBytes === "number" &&
+    typeof maxActiveTranscriptBytes === "number" &&
+    activeTranscriptBytes >= maxActiveTranscriptBytes;
   const stalePersistedPromptTokens = hasPersistedTotalTokens
     ? Math.floor(persistedTotalTokens)
     : undefined;
