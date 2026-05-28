@@ -121,4 +121,42 @@ describe("elevenlabs speech provider", () => {
     expect(result?.outputFormat).toBe("pcm_22050");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("drops out-of-range voice settings before synthesis", async () => {
+    const provider = buildElevenLabsSpeechProvider();
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = parseRequestBody(init);
+      expect(body.voice_settings).toEqual({
+        stability: 0.5,
+        similarity_boost: 0.75,
+        style: 0,
+        use_speaker_boost: true,
+        speed: 1,
+      });
+      return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await provider.synthesizeTelephony?.({
+      text: "hello",
+      cfg: {} as never,
+      providerConfig: {
+        apiKey: "xi-test",
+        voiceSettings: {
+          stability: -1,
+          similarityBoost: 2,
+          style: Number.NaN,
+          speed: 3,
+        },
+      },
+      providerOverrides: {
+        voiceSettings: {
+          speed: 0.1,
+        },
+      },
+      timeoutMs: 1_000,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
