@@ -33,6 +33,7 @@ import {
 } from "../config/validation.js";
 import { SecretProviderSchema } from "../config/zod-schema.core.js";
 import { danger, info, success } from "../globals.js";
+import { parseStrictPositiveInteger } from "../infra/parse-finite-number.js";
 import { type RuntimeEnv, writeRuntimeJson } from "../runtime.js";
 import { defaultRuntime } from "../runtime.js";
 import {
@@ -1014,8 +1015,8 @@ function parseOptionalPositiveInteger(raw: string | undefined, flag: string): nu
   if (!trimmed) {
     throw new Error(`${flag} must not be empty.`);
   }
-  const parsed = Number(trimmed);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
+  const parsed = parseStrictPositiveInteger(trimmed);
+  if (parsed === undefined) {
     throw new Error(`${flag} must be a positive integer.`);
   }
   return parsed;

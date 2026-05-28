@@ -1504,6 +1504,25 @@ describe("config cli", () => {
       });
     });
 
+    it("rejects exponent-style provider builder integer options", async () => {
+      await expect(
+        runConfigCommand([
+          "config",
+          "set",
+          "secrets.providers.runner",
+          "--provider-source",
+          "exec",
+          "--provider-command",
+          "op",
+          "--provider-timeout-ms",
+          "1e3",
+        ]),
+      ).rejects.toThrow("--provider-timeout-ms must be a positive integer.");
+
+      expect(mockReadConfigFileSnapshot).not.toHaveBeenCalled();
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+    });
+
     it("runs resolvability checks in builder dry-run mode without writing", async () => {
       const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
