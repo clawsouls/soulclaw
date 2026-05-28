@@ -156,6 +156,14 @@ describe("browser state option collisions", () => {
     expect(getBrowserCliRuntime().exit).toHaveBeenCalledWith(1);
   });
 
+  it("rejects non-decimal viewport dimensions before resize dispatch", async () => {
+    await runBrowserCommand(["set", "viewport", "1e3", "768"]);
+
+    expect(mocks.runBrowserResizeWithOutput).not.toHaveBeenCalled();
+    expectErrorMessage("Invalid width: must be a positive integer");
+    expect(getBrowserCliRuntime().exit).toHaveBeenCalledWith(1);
+  });
+
   it("errors when set media receives an invalid value", async () => {
     await runBrowserCommand(["set", "media", "sepia"]);
 

@@ -14,6 +14,17 @@ function parseOnOff(raw: string): boolean | null {
   return parsed === undefined ? null : parsed;
 }
 
+function parsePositiveInteger(value: unknown, label: string): number | undefined {
+  const raw = typeof value === "string" ? value.trim() : String(value);
+  const parsed = /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+    defaultRuntime.error(danger(`Invalid ${label}: must be a positive integer`));
+    defaultRuntime.exit(1);
+    return undefined;
+  }
+  return parsed;
+}
+
 function runBrowserCommand(action: () => Promise<void>) {
   return runCommandWithRuntime(defaultRuntime, action, (err) => {
     defaultRuntime.error(danger(String(err)));
@@ -58,10 +69,15 @@ export function registerBrowserStateCommands(
   set
     .command("viewport")
     .description("Set viewport size (alias for resize)")
-    .argument("<width>", "Viewport width", (v: string) => Number(v))
-    .argument("<height>", "Viewport height", (v: string) => Number(v))
+    .argument("<width>", "Viewport width")
+    .argument("<height>", "Viewport height")
     .option("--target-id <id>", "CDP target id (or unique prefix)")
-    .action(async (width: number, height: number, opts, cmd) => {
+    .action(async (widthRaw: string, heightRaw: string, opts, cmd) => {
+      const width = parsePositiveInteger(widthRaw, "width");
+      const height = parsePositiveInteger(heightRaw, "height");
+      if (width === undefined || height === undefined) {
+        return;
+      }
       const parent = parentOpts(cmd);
       const profile = parent?.browserProfile;
       await runBrowserCommand(async () => {
