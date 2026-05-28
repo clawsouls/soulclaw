@@ -197,7 +197,7 @@ export function runReleaseCheckCommand(
 ): string {
   const output = execFileSync(invocation.command, invocation.args, {
     cwd: options.cwd,
-    encoding: options.encoding ?? "utf8",
+    encoding: options.encoding,
     env: invocation.env ?? options.env,
     killSignal: "SIGKILL",
     maxBuffer:
@@ -215,7 +215,7 @@ export function runReleaseCheckCommand(
         DEFAULT_RELEASE_CHECK_COMMAND_TIMEOUT_MS,
       ),
     windowsVerbatimArguments: invocation.windowsVerbatimArguments,
-  });
+  }) as Buffer | string | null;
   if (output == null) {
     return "";
   }
