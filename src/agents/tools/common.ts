@@ -163,6 +163,7 @@ export function readNumberParam(
     integer?: boolean;
     strict?: boolean;
     positiveInteger?: boolean;
+    nonNegativeInteger?: boolean;
   } = {},
 ): number | undefined {
   const {
@@ -171,6 +172,7 @@ export function readNumberParam(
     integer = false,
     strict = false,
     positiveInteger = false,
+    nonNegativeInteger = false,
   } = options;
   const raw = readParamRaw(params, key);
   let value: number | undefined;
@@ -193,6 +195,9 @@ export function readNumberParam(
   }
   if (positiveInteger) {
     return Number.isSafeInteger(value) && value > 0 ? value : undefined;
+  }
+  if (nonNegativeInteger) {
+    return Number.isSafeInteger(value) && value >= 0 ? value : undefined;
   }
   return integer ? Math.trunc(value) : value;
 }

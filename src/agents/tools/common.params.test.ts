@@ -74,6 +74,22 @@ describe("readNumberParam", () => {
       }),
     ).toBeUndefined();
   });
+
+  it("accepts only nonnegative safe integers when nonNegativeInteger is true", () => {
+    expect(readNumberParam({ cacheAge: 0 }, "cacheAge", { nonNegativeInteger: true })).toBe(0);
+    expect(readNumberParam({ cacheAge: "42" }, "cacheAge", { nonNegativeInteger: true })).toBe(42);
+    expect(
+      readNumberParam({ cacheAge: "42.9" }, "cacheAge", { nonNegativeInteger: true }),
+    ).toBeUndefined();
+    expect(
+      readNumberParam({ cacheAge: -1 }, "cacheAge", { nonNegativeInteger: true }),
+    ).toBeUndefined();
+    expect(
+      readNumberParam({ cacheAge: Number.POSITIVE_INFINITY }, "cacheAge", {
+        nonNegativeInteger: true,
+      }),
+    ).toBeUndefined();
+  });
 });
 
 describe("snake_case aliases", () => {
