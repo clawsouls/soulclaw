@@ -8,7 +8,7 @@ import { keyHint } from "../../modes/interactive/components/keybinding-hints.js"
 import type { AgentTool } from "../../runtime/index.js";
 import { ensureTool } from "../../utils/tools-manager.js";
 import type { ToolDefinition, ToolRenderResultOptions } from "../extensions/types.js";
-import { normalizePositiveLimit } from "./limits.js";
+import { appendBoundedTextTail, normalizePositiveLimit } from "./limits.js";
 import { resolveToCwd } from "./path-utils.js";
 import { getTextOutput, invalidArgText, shortenPath, str } from "./render-utils.js";
 import type { FindToolDetails } from "./tool-contracts.js";
@@ -277,7 +277,7 @@ export function createFindToolDefinition(
             };
 
             child.stderr?.on("data", (chunk) => {
-              stderr += chunk.toString();
+              stderr = appendBoundedTextTail(stderr, chunk);
             });
 
             rl.on("line", (line) => {
