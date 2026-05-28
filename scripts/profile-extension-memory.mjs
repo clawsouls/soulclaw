@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { ensureExtensionMemoryBuild } from "./ensure-extension-memory-build.mjs";
 import { formatErrorMessage } from "./lib/error-format.mjs";
 
@@ -168,9 +169,17 @@ function summarizeStderr(stderr, lines = 8, maxChars = STDERR_PREVIEW_MAX_CHARS)
   )}`;
 }
 
-async function runCase({ repoRoot, env, hookPath, name, body, timeoutMs }) {
+export async function runCase({
+  repoRoot,
+  env,
+  hookPath,
+  name,
+  body,
+  timeoutMs,
+  spawnImpl = spawn,
+}) {
   return await new Promise((resolve) => {
-    const child = spawn(
+    const child = spawnImpl(
       process.execPath,
       ["--import", hookPath, "--input-type=module", "--eval", body],
       {
@@ -185,10 +194,21 @@ async function runCase({ repoRoot, env, hookPath, name, body, timeoutMs }) {
     let stderrRssTail = "";
     let maxRssMb = null;
     let timedOut = false;
+    let settled = false;
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill("SIGKILL");
     }, timeoutMs);
+    timer.unref?.();
+
+    function settle(result) {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      resolve(result);
+    }
 
     child.stdout.on("data", (chunk) => {
       stdout = appendBoundedOutput(stdout, chunk);
@@ -199,14 +219,27 @@ async function runCase({ repoRoot, env, hookPath, name, body, timeoutMs }) {
       maxRssMb = rssScan.maxRssMb;
       stderr = appendBoundedOutput(stderr, chunk);
     });
-    child.on("close", (code, signal) => {
-      clearTimeout(timer);
+    child.on("error", (error) => {
       const stderrText = formatCapturedOutput(stderr);
-      resolve({
+      settle({
+        name,
+        code: null,
+        signal: null,
+        timedOut,
+        error: formatErrorMessage(error),
+        stdout: formatCapturedOutput(stdout),
+        stderr: stderrText,
+        maxRssMb: maxRssMb ?? parseMaxRssMb(stderrText),
+      });
+    });
+    child.on("close", (code, signal) => {
+      const stderrText = formatCapturedOutput(stderr);
+      settle({
         name,
         code,
         signal,
         timedOut,
+        error: null,
         stdout: formatCapturedOutput(stdout),
         stderr: stderrText,
         maxRssMb: maxRssMb ?? parseMaxRssMb(stderrText),
@@ -411,9 +444,11 @@ async function main() {
   }
 }
 
-try {
-  await main();
-} catch (error) {
-  console.error(`[extension-memory] ${formatErrorMessage(error)}`);
-  process.exit(1);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    await main();
+  } catch (error) {
+    console.error(`[extension-memory] ${formatErrorMessage(error)}`);
+    process.exit(1);
+  }
 }

@@ -1,8 +1,10 @@
 import { spawnSync } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { runCase } from "../../scripts/profile-extension-memory.mjs";
 
 const SCRIPT_PATH = path.resolve("scripts/profile-extension-memory.mjs");
 
@@ -59,15 +61,7 @@ describe("scripts/profile-extension-memory", () => {
       );
 
       const result = runProfileExtensionMemory(
-        [
-          "--extension",
-          "noisy",
-          "--skip-combined",
-          "--concurrency",
-          "1",
-          "--json",
-          reportPath,
-        ],
+        ["--extension", "noisy", "--skip-combined", "--concurrency", "1", "--json", reportPath],
         root,
       );
 
@@ -84,5 +78,38 @@ describe("scripts/profile-extension-memory", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it("resolves spawn errors without waiting for the timeout", async () => {
+    const startedAt = Date.now();
+    const result = await runCase({
+      repoRoot: process.cwd(),
+      env: process.env,
+      hookPath: "missing-hook.mjs",
+      name: "spawn-error",
+      body: "",
+      timeoutMs: 30_000,
+      spawnImpl: () => {
+        const child = new EventEmitter() as EventEmitter & {
+          kill: () => boolean;
+          stderr: EventEmitter;
+          stdout: EventEmitter;
+        };
+        child.stderr = new EventEmitter();
+        child.stdout = new EventEmitter();
+        child.kill = () => true;
+        queueMicrotask(() => child.emit("error", new Error("spawn denied")));
+        return child;
+      },
+    });
+
+    expect(Date.now() - startedAt).toBeLessThan(1000);
+    expect(result).toMatchObject({
+      code: null,
+      error: "spawn denied",
+      name: "spawn-error",
+      signal: null,
+      timedOut: false,
+    });
   });
 });
