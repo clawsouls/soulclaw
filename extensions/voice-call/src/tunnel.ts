@@ -206,7 +206,7 @@ async function runNgrokCommand(args: string[]): Promise<string> {
 export async function isNgrokAvailable(): Promise<boolean> {
   return new Promise((resolve) => {
     const proc = spawn("ngrok", ["version"], {
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: "ignore",
     });
 
     proc.on("close", (code) => {

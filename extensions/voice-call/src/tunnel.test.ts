@@ -59,7 +59,7 @@ describe("voice-call tunnels", () => {
 
     await expect(result).resolves.toBe(true);
     expect(mocks.spawn).toHaveBeenCalledWith("ngrok", ["version"], {
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: "ignore",
     });
   });
 
