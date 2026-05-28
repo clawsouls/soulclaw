@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createActionGate,
+  readPositiveIntegerParam,
   readNumberParam,
   readReactionParams,
   readStringOrNumberParam,
@@ -89,6 +90,18 @@ describe("readNumberParam", () => {
         nonNegativeInteger: true,
       }),
     ).toBeUndefined();
+  });
+
+  it("throws for invalid present positive integer params", () => {
+    expect(readPositiveIntegerParam({ timeoutMs: "42" }, "timeoutMs")).toBe(42);
+    expect(() => readPositiveIntegerParam({ timeoutMs: "42.5" }, "timeoutMs")).toThrow(
+      "timeoutMs must be a positive integer",
+    );
+    expect(() =>
+      readPositiveIntegerParam({ timeoutMs: 0 }, "timeoutMs", {
+        message: "timeoutMs must be a positive integer in milliseconds.",
+      }),
+    ).toThrow("timeoutMs must be a positive integer in milliseconds.");
   });
 });
 

@@ -206,6 +206,23 @@ export function readNumberParam(
   return integer ? Math.trunc(value) : value;
 }
 
+export function readPositiveIntegerParam(
+  params: Record<string, unknown>,
+  key: string,
+  options: {
+    message?: string;
+  } = {},
+): number | undefined {
+  const value = readNumberParam(params, key, {
+    positiveInteger: true,
+    strict: true,
+  });
+  if (value === undefined && readParamRaw(params, key) !== undefined) {
+    throw new ToolInputError(options.message ?? `${key} must be a positive integer`);
+  }
+  return value;
+}
+
 export function readStringArrayParam(
   params: Record<string, unknown>,
   key: string,
