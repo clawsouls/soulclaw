@@ -157,9 +157,21 @@ export function readStringOrNumberParam(
 export function readNumberParam(
   params: Record<string, unknown>,
   key: string,
-  options: { required?: boolean; label?: string; integer?: boolean; strict?: boolean } = {},
+  options: {
+    required?: boolean;
+    label?: string;
+    integer?: boolean;
+    strict?: boolean;
+    positiveInteger?: boolean;
+  } = {},
 ): number | undefined {
-  const { required = false, label = key, integer = false, strict = false } = options;
+  const {
+    required = false,
+    label = key,
+    integer = false,
+    strict = false,
+    positiveInteger = false,
+  } = options;
   const raw = readParamRaw(params, key);
   let value: number | undefined;
   if (typeof raw === "number" && Number.isFinite(raw)) {
@@ -178,6 +190,9 @@ export function readNumberParam(
       throw new ToolInputError(`${label} required`);
     }
     return undefined;
+  }
+  if (positiveInteger) {
+    return Number.isSafeInteger(value) && value > 0 ? value : undefined;
   }
   return integer ? Math.trunc(value) : value;
 }

@@ -57,6 +57,23 @@ describe("readNumberParam", () => {
     const params = { messageId: "42.9" };
     expect(readNumberParam(params, "messageId", { integer: true })).toBe(42);
   });
+
+  it("accepts only positive safe integers when positiveInteger is true", () => {
+    expect(readNumberParam({ tokenBudget: "42" }, "tokenBudget", { positiveInteger: true })).toBe(
+      42,
+    );
+    expect(
+      readNumberParam({ tokenBudget: "42.9" }, "tokenBudget", { positiveInteger: true }),
+    ).toBeUndefined();
+    expect(
+      readNumberParam({ tokenBudget: 0 }, "tokenBudget", { positiveInteger: true }),
+    ).toBeUndefined();
+    expect(
+      readNumberParam({ tokenBudget: Number.POSITIVE_INFINITY }, "tokenBudget", {
+        positiveInteger: true,
+      }),
+    ).toBeUndefined();
+  });
 });
 
 describe("snake_case aliases", () => {
