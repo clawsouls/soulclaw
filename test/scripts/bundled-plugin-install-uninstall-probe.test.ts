@@ -180,6 +180,20 @@ describe("bundled plugin install/uninstall probe", () => {
     expect(readyLogSeen()).toBe(true);
   });
 
+  it("treats signaled gateway children as already stopped", async () => {
+    const runtimeSmoke = await import(pathToFileURL(runtimeSmokePath).href);
+    const child = {
+      exitCode: null,
+      kill: vi.fn(),
+      signalCode: "SIGTERM",
+    };
+
+    expect(runtimeSmoke.hasChildExited(child)).toBe(true);
+    await runtimeSmoke.stopGateway(child);
+
+    expect(child.kill).not.toHaveBeenCalled();
+  });
+
   it("does not treat shallow HTTP listen logs as runtime readiness", async () => {
     const runtimeSmoke = await import(pathToFileURL(runtimeSmokePath).href);
     const root = makePackageRoot();
