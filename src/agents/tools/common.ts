@@ -1,8 +1,12 @@
 import type { TSchema } from "typebox";
 import { readLocalFileSafely } from "../../infra/fs-safe.js";
-import { parseStrictFiniteNumber } from "../../infra/parse-finite-number.js";
 import { detectMime } from "../../media/mime.js";
 import { readSnakeCaseParamRaw } from "../../param-key.js";
+import {
+  asPositiveSafeInteger,
+  asSafeIntegerInRange,
+  parseStrictFiniteNumber,
+} from "../../shared/number-coercion.js";
 import { normalizeStringEntries } from "../../shared/string-normalization.js";
 import type { ImageSanitizationLimits } from "../image-sanitization.js";
 import type { AgentTool, AgentToolResult, AgentToolUpdateCallback } from "../runtime/index.js";
@@ -194,10 +198,10 @@ export function readNumberParam(
     return undefined;
   }
   if (positiveInteger) {
-    return Number.isSafeInteger(value) && value > 0 ? value : undefined;
+    return asPositiveSafeInteger(value);
   }
   if (nonNegativeInteger) {
-    return Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+    return asSafeIntegerInRange(value, { min: 0 });
   }
   return integer ? Math.trunc(value) : value;
 }
