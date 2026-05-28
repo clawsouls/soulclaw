@@ -532,13 +532,17 @@ describe("RequestClient", () => {
     await expectRateLimitError(client.get("/channels/c1/messages"), { retryAfter: 7 });
   });
 
-  it("rejects non-decimal Retry-After numeric strings", async () => {
+  it.each([
+    ["hex", "0x10"],
+    ["fractional", "1.5"],
+    ["overflow", `1${"0".repeat(309)}`],
+  ])("rejects invalid Retry-After numeric strings: %s", async (_label, header) => {
     const client = new RequestClient("test-token", {
       queueRequests: false,
       fetch: async () =>
         new Response(JSON.stringify({ message: "Slow down", retry_after: "1e3", global: false }), {
           status: 429,
-          headers: { "Retry-After": "0x10" },
+          headers: { "Retry-After": header },
         }),
     });
 
