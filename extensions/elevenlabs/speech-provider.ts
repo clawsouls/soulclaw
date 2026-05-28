@@ -83,6 +83,13 @@ function normalizeVoiceSetting(value: unknown, min: number, max: number): number
   return number !== undefined && number >= min && number <= max ? number : undefined;
 }
 
+function normalizeElevenLabsSeed(value: unknown): number | undefined {
+  const seed = asFiniteNumber(value);
+  return seed !== undefined && Number.isSafeInteger(seed) && seed >= 0 && seed <= 4_294_967_295
+    ? seed
+    : undefined;
+}
+
 function normalizeVoiceSettings(
   rawVoiceSettings: Record<string, unknown> | undefined,
 ): Partial<ElevenLabsProviderConfig["voiceSettings"]> {
@@ -119,7 +126,7 @@ function normalizeElevenLabsProviderConfig(
     baseUrl: normalizeElevenLabsBaseUrl(trimToUndefined(raw?.baseUrl)),
     voiceId: trimToUndefined(raw?.voiceId) ?? DEFAULT_ELEVENLABS_VOICE_ID,
     modelId: trimToUndefined(raw?.modelId) ?? DEFAULT_ELEVENLABS_MODEL_ID,
-    seed: asFiniteNumber(raw?.seed),
+    seed: normalizeElevenLabsSeed(raw?.seed),
     applyTextNormalization: trimToUndefined(raw?.applyTextNormalization) as
       | "auto"
       | "on"
@@ -141,7 +148,7 @@ function readElevenLabsProviderConfig(config: SpeechProviderConfig): ElevenLabsP
     baseUrl: normalizeElevenLabsBaseUrl(trimToUndefined(config.baseUrl) ?? defaults.baseUrl),
     voiceId: trimToUndefined(config.voiceId) ?? defaults.voiceId,
     modelId: trimToUndefined(config.modelId) ?? defaults.modelId,
-    seed: asFiniteNumber(config.seed) ?? defaults.seed,
+    seed: normalizeElevenLabsSeed(config.seed) ?? defaults.seed,
     applyTextNormalization:
       (trimToUndefined(config.applyTextNormalization) as "auto" | "on" | "off" | undefined) ??
       defaults.applyTextNormalization,
@@ -389,9 +396,9 @@ export function buildElevenLabsSpeechProvider(): SpeechProviderPlugin {
         ...(trimToUndefined(talkProviderConfig.modelId) == null
           ? {}
           : { modelId: trimToUndefined(talkProviderConfig.modelId) }),
-        ...(asFiniteNumber(talkProviderConfig.seed) == null
+        ...(normalizeElevenLabsSeed(talkProviderConfig.seed) == null
           ? {}
-          : { seed: asFiniteNumber(talkProviderConfig.seed) }),
+          : { seed: normalizeElevenLabsSeed(talkProviderConfig.seed) }),
         ...(trimToUndefined(talkProviderConfig.applyTextNormalization) == null
           ? {}
           : {
@@ -441,7 +448,9 @@ export function buildElevenLabsSpeechProvider(): SpeechProviderPlugin {
         ...(trimToUndefined(params.outputFormat) == null
           ? {}
           : { outputFormat: trimToUndefined(params.outputFormat) }),
-        ...(asFiniteNumber(params.seed) == null ? {} : { seed: asFiniteNumber(params.seed) }),
+        ...(normalizeElevenLabsSeed(params.seed) == null
+          ? {}
+          : { seed: normalizeElevenLabsSeed(params.seed) }),
         ...(normalize == null
           ? {}
           : { applyTextNormalization: normalizeApplyTextNormalization(normalize) }),
@@ -492,7 +501,7 @@ export function buildElevenLabsSpeechProvider(): SpeechProviderPlugin {
         voiceId: trimToUndefined(overrides.voiceId) ?? config.voiceId,
         modelId: trimToUndefined(overrides.modelId) ?? config.modelId,
         outputFormat,
-        seed: asFiniteNumber(overrides.seed) ?? config.seed,
+        seed: normalizeElevenLabsSeed(overrides.seed) ?? config.seed,
         applyTextNormalization:
           (trimToUndefined(overrides.applyTextNormalization) as
             | "auto"
@@ -530,7 +539,7 @@ export function buildElevenLabsSpeechProvider(): SpeechProviderPlugin {
         voiceId: trimToUndefined(overrides.voiceId) ?? config.voiceId,
         modelId: trimToUndefined(overrides.modelId) ?? config.modelId,
         outputFormat,
-        seed: asFiniteNumber(overrides.seed) ?? config.seed,
+        seed: normalizeElevenLabsSeed(overrides.seed) ?? config.seed,
         applyTextNormalization:
           (trimToUndefined(overrides.applyTextNormalization) as
             | "auto"
@@ -567,7 +576,7 @@ export function buildElevenLabsSpeechProvider(): SpeechProviderPlugin {
         voiceId: trimToUndefined(overrides.voiceId) ?? config.voiceId,
         modelId: trimToUndefined(overrides.modelId) ?? config.modelId,
         outputFormat,
-        seed: asFiniteNumber(overrides.seed) ?? config.seed,
+        seed: normalizeElevenLabsSeed(overrides.seed) ?? config.seed,
         applyTextNormalization:
           (trimToUndefined(overrides.applyTextNormalization) as
             | "auto"

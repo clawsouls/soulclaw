@@ -159,4 +159,29 @@ describe("elevenlabs speech provider", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("drops malformed seed values before synthesis", async () => {
+    const provider = buildElevenLabsSpeechProvider();
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = parseRequestBody(init);
+      expect(body).not.toHaveProperty("seed");
+      return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await provider.synthesizeTelephony?.({
+      text: "hello",
+      cfg: {} as never,
+      providerConfig: {
+        apiKey: "xi-test",
+        seed: 1.5,
+      },
+      providerOverrides: {
+        seed: Number.POSITIVE_INFINITY,
+      },
+      timeoutMs: 1_000,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
