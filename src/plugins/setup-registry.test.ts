@@ -824,17 +824,20 @@ describe("setup-registry module loader", () => {
       ],
       diagnostics: [],
     });
+    const registerSetup = vi.fn(
+      (api: {
+        registerProvider: (provider: { id: string; label: string; auth: [] }) => void;
+        registerCliBackend: (backend: { id: string; config: { command: string } }) => void;
+      }) => {
+        api.registerProvider({ id: "openai", label: "OpenAI", auth: [] });
+        api.registerProvider({ id: "anthropic", label: "Anthropic", auth: [] });
+        api.registerCliBackend({ id: "codex-cli", config: { command: "codex" } });
+        api.registerCliBackend({ id: "claude-cli", config: { command: "claude" } });
+      },
+    );
     const loadSetupModule = vi.fn(() => ({
       default: {
-        register(api: {
-          registerProvider: (provider: { id: string; label: string; auth: [] }) => void;
-          registerCliBackend: (backend: { id: string; config: { command: string } }) => void;
-        }) {
-          api.registerProvider({ id: "openai", label: "OpenAI", auth: [] });
-          api.registerProvider({ id: "anthropic", label: "Anthropic", auth: [] });
-          api.registerCliBackend({ id: "codex-cli", config: { command: "codex" } });
-          api.registerCliBackend({ id: "claude-cli", config: { command: "claude" } });
-        },
+        register: registerSetup,
       },
     }));
     mocks.createJiti.mockImplementation(() => loadSetupModule);
@@ -861,6 +864,7 @@ describe("setup-registry module loader", () => {
       env: {},
       pluginIds: ["anthropic"],
     });
-    expect(loadSetupModule).toHaveBeenCalledTimes(7);
+    expect(loadSetupModule).toHaveBeenCalledTimes(1);
+    expect(registerSetup).toHaveBeenCalledTimes(7);
   });
 });

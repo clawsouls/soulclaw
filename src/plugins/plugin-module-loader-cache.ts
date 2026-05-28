@@ -223,19 +223,33 @@ function createPluginModuleLoader(params: {
     ...params,
     sourceTransformTryNative: params.tryNative,
   });
+  const loadedTargetExports = new Map<string, unknown>();
+  const loadCachedTarget = (target: string, rest: unknown[], load: () => unknown): unknown => {
+    if (rest.length > 0) {
+      return load();
+    }
+    if (loadedTargetExports.has(target)) {
+      return loadedTargetExports.get(target);
+    }
+    const loaded = load();
+    loadedTargetExports.set(target, loaded);
+    return loaded;
+  };
   // When the caller has explicitly opted out of native loading (for example
   // `bundled-capability-runtime` in Vitest+dist mode, which depends on
   // jiti's alias rewriting to surface a narrow SDK slice), route every
   // target through jiti so those alias rewrites still apply.
   if (!params.tryNative) {
     return ((target: string, ...rest: unknown[]) => {
-      pluginModuleLoaderStats.calls += 1;
-      pluginModuleLoaderStats.sourceTransformForced += 1;
-      recordSourceTransformTarget(target);
-      return (getLoadWithSourceTransform() as (t: string, ...a: unknown[]) => unknown)(
-        target,
-        ...rest,
-      );
+      return loadCachedTarget(target, rest, () => {
+        pluginModuleLoaderStats.calls += 1;
+        pluginModuleLoaderStats.sourceTransformForced += 1;
+        recordSourceTransformTarget(target);
+        return (getLoadWithSourceTransform() as (t: string, ...a: unknown[]) => unknown)(
+          target,
+          ...rest,
+        );
+      });
     }) as PluginModuleLoader;
   }
   // Otherwise prefer native require() for already-compiled JS artifacts
@@ -246,24 +260,26 @@ function createPluginModuleLoader(params: {
   // async-module fallbacks `tryNativeRequireJavaScriptModule` declines to
   // handle.
   return ((target: string, ...rest: unknown[]) => {
-    pluginModuleLoaderStats.calls += 1;
-    const native = tryNativeRequireJavaScriptModule(target, {
-      allowWindows: true,
-      aliasMap: params.aliasMap,
-      fallbackOnMissingDependency: true,
-      fallbackOnNativeError: true,
+    return loadCachedTarget(target, rest, () => {
+      pluginModuleLoaderStats.calls += 1;
+      const native = tryNativeRequireJavaScriptModule(target, {
+        allowWindows: true,
+        aliasMap: params.aliasMap,
+        fallbackOnMissingDependency: true,
+        fallbackOnNativeError: true,
+      });
+      if (native.ok) {
+        pluginModuleLoaderStats.nativeHits += 1;
+        return native.moduleExport;
+      }
+      pluginModuleLoaderStats.nativeMisses += 1;
+      pluginModuleLoaderStats.sourceTransformFallbacks += 1;
+      recordSourceTransformTarget(target);
+      return (getLoadWithSourceTransform() as (t: string, ...a: unknown[]) => unknown)(
+        target,
+        ...rest,
+      );
     });
-    if (native.ok) {
-      pluginModuleLoaderStats.nativeHits += 1;
-      return native.moduleExport;
-    }
-    pluginModuleLoaderStats.nativeMisses += 1;
-    pluginModuleLoaderStats.sourceTransformFallbacks += 1;
-    recordSourceTransformTarget(target);
-    return (getLoadWithSourceTransform() as (t: string, ...a: unknown[]) => unknown)(
-      target,
-      ...rest,
-    );
   }) as PluginModuleLoader;
 }
 
