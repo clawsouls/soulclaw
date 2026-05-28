@@ -28,6 +28,25 @@ export function asFiniteNumberInRange(
   return number;
 }
 
+export function asSafeIntegerInRange(
+  value: unknown,
+  range: {
+    min?: number;
+    max?: number;
+  },
+): number | undefined {
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    return undefined;
+  }
+  if (range.min !== undefined && value < range.min) {
+    return undefined;
+  }
+  if (range.max !== undefined && value > range.max) {
+    return undefined;
+  }
+  return value;
+}
+
 export function parseFiniteNumber(value: unknown): number | undefined {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : undefined;

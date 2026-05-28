@@ -13,7 +13,11 @@ import {
   waitProviderOperationPollInterval,
   type ProviderOperationTimeoutMs,
 } from "openclaw/plugin-sdk/provider-http";
-import { isRecord, normalizeOptionalString } from "openclaw/plugin-sdk/string-coerce-runtime";
+import {
+  asSafeIntegerInRange,
+  isRecord,
+  normalizeOptionalString,
+} from "openclaw/plugin-sdk/string-coerce-runtime";
 import type {
   GeneratedVideoAsset,
   VideoGenerationProvider,
@@ -25,6 +29,7 @@ const DEFAULT_BYTEPLUS_VIDEO_MODEL = "seedance-1-0-lite-t2v-250428";
 const DEFAULT_TIMEOUT_MS = 120_000;
 const POLL_INTERVAL_MS = 5_000;
 const MAX_POLL_ATTEMPTS = 120;
+const BYTEPLUS_SEED_MAX = 2_147_483_647;
 
 type BytePlusTaskCreateResponse = {
   id?: unknown;
@@ -114,6 +119,10 @@ function resolveBytePlusImageUrl(req: VideoGenerationRequest): string | undefine
     throw new Error("BytePlus reference image is missing image data.");
   }
   return toDataUrl(input.buffer, normalizeOptionalString(input.mimeType) ?? "image/png");
+}
+
+function resolveBytePlusSeed(value: unknown): number | undefined {
+  return asSafeIntegerInRange(value, { min: -1, max: BYTEPLUS_SEED_MAX });
 }
 
 async function pollBytePlusTask(params: {
@@ -310,7 +319,7 @@ export function buildBytePlusVideoGenerationProvider(): VideoGenerationProvider 
       // Forward declared providerOptions: seed, draft, camerafixed.
       // draft=true forces 480p resolution for faster generation.
       const opts = req.providerOptions ?? {};
-      const seed = typeof opts.seed === "number" ? opts.seed : undefined;
+      const seed = resolveBytePlusSeed(opts.seed);
       const draft = opts.draft === true;
       // Official JSON body field is camera_fixed (with underscore).
       const cameraFixed = typeof opts.camera_fixed === "boolean" ? opts.camera_fixed : undefined;
