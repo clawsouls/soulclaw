@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -15,6 +15,7 @@ import { normalizeStringEntries, uniqueStrings } from "openclaw/plugin-sdk/strin
 import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/temp-path";
 import { z } from "zod";
 import { startQaGatewayChild } from "../../gateway-child.js";
+import { fingerprintQaCredentialId } from "../../qa-credentials-fingerprint.runtime.js";
 import { DEFAULT_QA_LIVE_PROVIDER_MODE } from "../../providers/index.js";
 import {
   defaultQaModelForMode,
@@ -736,14 +737,6 @@ function renderWhatsAppQaMarkdown(params: {
   return lines.join("\n");
 }
 
-function fingerprintWhatsAppCredentialId(credentialId: string | undefined) {
-  if (!credentialId) {
-    return undefined;
-  }
-  const digest = createHash("sha256").update(credentialId).digest("hex").slice(0, 16);
-  return `sha256:${digest}`;
-}
-
 function createMissingGroupJidScenarioResult(params: {
   explicitScenarioSelection: boolean;
   scenario: WhatsAppQaScenarioDefinition;
@@ -983,7 +976,7 @@ export async function runWhatsAppQaLive(params: {
   const passed = scenarioResults.filter((entry) => entry.status === "pass").length;
   const failed = scenarioResults.filter((entry) => entry.status === "fail").length;
   const skipped = scenarioResults.filter((entry) => entry.status === "skip").length;
-  const credentialFingerprint = fingerprintWhatsAppCredentialId(credentialLease?.credentialId);
+  const credentialFingerprint = fingerprintQaCredentialId(credentialLease?.credentialId);
   const summary: WhatsAppQaSummary = {
     credentials: credentialLease
       ? {
@@ -1057,7 +1050,7 @@ export const testing = {
   buildWhatsAppQaConfig,
   createMissingGroupJidScenarioResult,
   findScenarios,
-  fingerprintWhatsAppCredentialId,
+  fingerprintWhatsAppCredentialId: fingerprintQaCredentialId,
   isTransientWhatsAppQaDriverError,
   parseWhatsAppQaCredentialPayload,
   renderWhatsAppQaMarkdown,
