@@ -32,6 +32,10 @@ type WorkflowStep = {
 };
 
 type WorkflowJob = {
+  concurrency?: {
+    group?: string;
+    "cancel-in-progress"?: boolean | string;
+  };
   env?: Record<string, string>;
   if?: string;
   name?: string;
@@ -1178,6 +1182,26 @@ describe("package artifact reuse", () => {
     expectTextToIncludeAll(runStep.run, [
       'export OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ="${package_tgzs[0]}"',
     ]);
+  });
+
+  it("serializes CI Telegram bot consumers across release and QA workflows", () => {
+    const sharedTelegramCredential = {
+      group: "openclaw-telegram-ci-credential",
+      "cancel-in-progress": false,
+    };
+
+    expect(workflowJob(NPM_TELEGRAM_WORKFLOW, "run_package_telegram_e2e").concurrency).toEqual(
+      sharedTelegramCredential,
+    );
+    expect(
+      workflowJob(RELEASE_CHECKS_WORKFLOW, "qa_live_telegram_release_checks").concurrency,
+    ).toEqual(sharedTelegramCredential);
+    expect(workflowJob(QA_LIVE_TRANSPORTS_WORKFLOW, "run_live_telegram").concurrency).toEqual(
+      sharedTelegramCredential,
+    );
+    expect(
+      workflowJob(".github/workflows/mantis-telegram-live.yml", "run_telegram_live").concurrency,
+    ).toEqual(sharedTelegramCredential);
   });
 
   it("keeps release QA and repo E2E lanes off scarce 32-core runners", () => {
