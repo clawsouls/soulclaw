@@ -4,6 +4,7 @@ import {
   asToolParamsRecord,
   jsonResult,
   readNumberParam,
+  readPositiveIntegerParam,
   readStringParam,
   type MemoryCorpusSearchResult,
   type OpenClawConfig,
@@ -443,8 +444,8 @@ export function createMemoryGetTool(options: {
       async (_toolCallId, params) => {
         const rawParams = asToolParamsRecord(params);
         const relPath = readStringParam(rawParams, "path", { required: true });
-        const from = readNumberParam(rawParams, "from", { integer: true });
-        const lines = readNumberParam(rawParams, "lines", { integer: true });
+        const from = readPositiveIntegerParam(rawParams, "from");
+        const lines = readPositiveIntegerParam(rawParams, "lines");
         const requestedCorpus = readStringParam(rawParams, "corpus") as
           | "memory"
           | "wiki"
