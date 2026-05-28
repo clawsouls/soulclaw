@@ -10,6 +10,7 @@ import {
   tryNormalizeBotFrameworkServiceUrl,
 } from "./bot-framework-service-url.js";
 import { formatUnknownError } from "./errors.js";
+import { createMSTeamsHttpError } from "./http-error.js";
 import type { MSTeamsAdapter } from "./messenger.js";
 import type { MSTeamsCredentials, MSTeamsFederatedCredentials } from "./token.js";
 import { buildUserAgent } from "./user-agent.js";
@@ -491,9 +492,8 @@ async function updateActivityViaRest(params: {
 
   try {
     if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      throw Object.assign(new Error(`updateActivity failed: HTTP ${response.status} ${body}`), {
-        statusCode: response.status,
+      throw await createMSTeamsHttpError(response, "updateActivity failed", {
+        statusPrefix: "HTTP ",
       });
     }
 
@@ -538,9 +538,8 @@ async function deleteActivityViaRest(params: {
 
   try {
     if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      throw Object.assign(new Error(`deleteActivity failed: HTTP ${response.status} ${body}`), {
-        statusCode: response.status,
+      throw await createMSTeamsHttpError(response, "deleteActivity failed", {
+        statusPrefix: "HTTP ",
       });
     }
   } finally {
