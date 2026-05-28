@@ -218,7 +218,7 @@ export function readPositiveIntegerParam(
     positiveInteger: true,
     strict: true,
   });
-  if (value === undefined && readParamRaw(params, key) !== undefined) {
+  if (value === undefined && readParamRaw(params, key) != null) {
     throw new ToolInputError(options.message ?? `${key} must be a positive integer`);
   }
   if (value !== undefined && options.max !== undefined && value > options.max) {

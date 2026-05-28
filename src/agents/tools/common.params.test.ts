@@ -94,6 +94,7 @@ describe("readNumberParam", () => {
 
   it("throws for invalid present positive integer params", () => {
     expect(readPositiveIntegerParam({ timeoutMs: "42" }, "timeoutMs")).toBe(42);
+    expect(readPositiveIntegerParam({ timeoutMs: null }, "timeoutMs")).toBeUndefined();
     expect(() => readPositiveIntegerParam({ timeoutMs: "42.5" }, "timeoutMs")).toThrow(
       "timeoutMs must be a positive integer",
     );
