@@ -7,7 +7,7 @@ import {
   SELF_HOSTED_DEFAULT_COST,
   SELF_HOSTED_DEFAULT_MAX_TOKENS,
 } from "openclaw/plugin-sdk/provider-setup";
-import { uniqueStrings } from "openclaw/plugin-sdk/string-coerce-runtime";
+import { asPositiveSafeInteger, uniqueStrings } from "openclaw/plugin-sdk/string-coerce-runtime";
 import { LMSTUDIO_DEFAULT_BASE_URL, LMSTUDIO_DEFAULT_LOAD_CONTEXT_LENGTH } from "./defaults.js";
 
 export type LmstudioModelWire = {
@@ -365,14 +365,8 @@ export function normalizeLmstudioConfiguredCatalogEntry(
   }
   const id = record.id.trim();
   const name = typeof record.name === "string" && record.name.trim().length > 0 ? record.name : id;
-  const contextWindow =
-    typeof record.contextWindow === "number" && record.contextWindow > 0
-      ? record.contextWindow
-      : undefined;
-  const contextTokens =
-    typeof record.contextTokens === "number" && record.contextTokens > 0
-      ? record.contextTokens
-      : undefined;
+  const contextWindow = asPositiveSafeInteger(record.contextWindow);
+  const contextTokens = asPositiveSafeInteger(record.contextTokens);
   const reasoning = typeof record.reasoning === "boolean" ? record.reasoning : undefined;
   const input = Array.isArray(record.input)
     ? record.input.filter(

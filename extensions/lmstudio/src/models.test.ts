@@ -10,6 +10,7 @@ import {
   fetchLmstudioModels,
 } from "./models.fetch.js";
 import {
+  normalizeLmstudioConfiguredCatalogEntry,
   normalizeLmstudioProviderConfig,
   resolveLmstudioInferenceBase,
   resolveLmstudioReasoningCompat,
@@ -130,6 +131,32 @@ describe("lmstudio-models", () => {
         headers: { "X-Proxy-Auth": "token" },
       },
       models: [],
+    });
+  });
+
+  it("drops malformed configured catalog token metadata", () => {
+    expect(
+      normalizeLmstudioConfiguredCatalogEntry({
+        id: "bad-window",
+        contextWindow: Number.POSITIVE_INFINITY,
+        contextTokens: 4096.5,
+      }),
+    ).toMatchObject({
+      id: "bad-window",
+      contextWindow: undefined,
+      contextTokens: undefined,
+    });
+
+    expect(
+      normalizeLmstudioConfiguredCatalogEntry({
+        id: "bad-tokens",
+        contextWindow: -1,
+        contextTokens: 0,
+      }),
+    ).toMatchObject({
+      id: "bad-tokens",
+      contextWindow: undefined,
+      contextTokens: undefined,
     });
   });
 
