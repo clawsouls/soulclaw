@@ -420,7 +420,7 @@ function deriveTranscriptUsageSnapshot(
     trailingBytesTokens:
       typeof snapshot.trailingBytes === "number" &&
       Number.isFinite(snapshot.trailingBytes) &&
-      snapshot.trailingBytes > 0
+      snapshot.trailingBytes >= 0
         ? Math.ceil(snapshot.trailingBytes / FALLBACK_TRANSCRIPT_BYTES_PER_TOKEN)
         : undefined,
   };
@@ -525,15 +525,20 @@ async function readLastNonzeroUsageFromSessionLog(logPath: string): Promise<Sess
       const appendedPartialBytes = Buffer.byteLength(leadingPartial, "utf8");
       const combined = `${chunk}${leadingPartial}`;
       const lines = combined.split(/\n+/);
-      leadingPartial = lines.shift() ?? "";
+      const firstLine = lines.shift() ?? "";
+      if (start > 0) {
+        leadingPartial = firstLine;
+      } else {
+        leadingPartial = "";
+        lines.unshift(firstLine);
+      }
       const suffixBytesBeforeChunk = stat.size - position;
       const suffixBytesOutsideCombined = Math.max(0, suffixBytesBeforeChunk - appendedPartialBytes);
       for (let i = lines.length - 1; i >= 0; i -= 1) {
         const usage = parseUsageFromTranscriptLine(lines[i] ?? "");
         if (usage) {
           const trailingLines = lines.slice(i + 1);
-          const trailingBytesInChunk =
-            Buffer.byteLength(trailingLines.join("\n"), "utf8") + trailingLines.length;
+          const trailingBytesInChunk = estimatePostUsageTrailingBytes(trailingLines);
           return {
             usage,
             trailingBytes: suffixBytesOutsideCombined + trailingBytesInChunk,
@@ -554,6 +559,13 @@ async function readLastNonzeroUsageFromSessionLog(logPath: string): Promise<Sess
   } finally {
     await handle.close();
   }
+}
+
+function estimatePostUsageTrailingBytes(lines: string[]): number {
+  if (!lines.some((line) => line.trim())) {
+    return 0;
+  }
+  return Buffer.byteLength(lines.join("\n"), "utf8") + lines.length;
 }
 
 type TranscriptTokenEstimate = {
@@ -595,6 +607,22 @@ async function estimatePromptTokensFromSessionTranscript(params: {
         : undefined;
     const promptTokens = snapshot.usage?.promptTokens;
     const trailingBytesTokens = snapshot.usage?.trailingBytesTokens;
+    const outputTokens = snapshot.usage?.outputTokens;
+    if (
+      typeof promptTokens === "number" &&
+      Number.isFinite(promptTokens) &&
+      promptTokens > 0 &&
+      trailingBytesTokens === 0 &&
+      typeof outputTokens === "number" &&
+      Number.isFinite(outputTokens) &&
+      outputTokens > 0
+    ) {
+      return {
+        promptTokens: Math.ceil(promptTokens),
+        outputTokens: Math.ceil(outputTokens),
+        transcriptBytesTokens,
+      };
+    }
     const messages = (await readSessionMessagesAsync(
       sessionId,
       params.storePath,
@@ -613,7 +641,6 @@ async function estimatePromptTokensFromSessionTranscript(params: {
       return Number.isFinite(tokens) && tokens > 0 ? Math.ceil(tokens) : undefined;
     })();
     if (typeof promptTokens === "number" && Number.isFinite(promptTokens) && promptTokens > 0) {
-      const outputTokens = snapshot.usage?.outputTokens;
       const usagePromptTokens = Math.ceil(promptTokens) + (trailingBytesTokens ?? 0);
       return {
         promptTokens: Math.max(usagePromptTokens, estimatedMessageTokens ?? 0),
