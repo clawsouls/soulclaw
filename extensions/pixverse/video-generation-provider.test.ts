@@ -224,6 +224,30 @@ describe("pixverse video generation provider", () => {
     });
   });
 
+  it("rejects fractional video ids before polling", async () => {
+    postJsonRequestMock.mockResolvedValue({
+      response: {
+        json: async () => ({
+          ErrCode: 0,
+          ErrMsg: "success",
+          Resp: { video_id: 123.5 },
+        }),
+      },
+      release: vi.fn(async () => {}),
+    });
+
+    const provider = buildPixVerseVideoGenerationProvider();
+    await expect(
+      provider.generateVideo({
+        provider: "pixverse",
+        model: "pixverse/v6",
+        prompt: "a quiet city street at sunrise",
+        cfg: {},
+      }),
+    ).rejects.toThrow("PixVerse video generation response missing video_id");
+    expect(fetchWithTimeoutMock).not.toHaveBeenCalled();
+  });
+
   it("uploads local image input before submitting image-to-video", async () => {
     postMultipartRequestMock.mockResolvedValue({
       response: {

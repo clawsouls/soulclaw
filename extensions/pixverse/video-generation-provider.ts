@@ -193,7 +193,7 @@ async function readPixVerseJson<T>(response: Pick<Response, "json">, label: stri
 }
 
 function readPixVerseVideoId(payload: PixVerseVideoCreateResponse): number {
-  const videoId = asFiniteNumber(payload.video_id);
+  const videoId = asSafeIntegerInRange(payload.video_id, { min: 0 });
   if (videoId == null) {
     throw new Error("PixVerse video generation response missing video_id");
   }
@@ -201,7 +201,7 @@ function readPixVerseVideoId(payload: PixVerseVideoCreateResponse): number {
 }
 
 function readPixVerseImageId(payload: PixVerseUploadImageResponse): number {
-  const imageId = asFiniteNumber(payload.img_id);
+  const imageId = asSafeIntegerInRange(payload.img_id, { min: 0 });
   if (imageId == null) {
     throw new Error("PixVerse image upload response missing img_id");
   }
@@ -209,7 +209,7 @@ function readPixVerseImageId(payload: PixVerseUploadImageResponse): number {
 }
 
 function readPixVerseStatus(payload: PixVerseVideoResultResponse): number {
-  const status = asFiniteNumber(payload.status);
+  const status = asSafeIntegerInRange(payload.status, { min: 0 });
   if (status == null) {
     throw new Error("PixVerse video status response missing status");
   }
