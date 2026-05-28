@@ -167,9 +167,9 @@ function requireRecord(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function requireArray(value: unknown, label: string): unknown[] {
+function requireArray(value: unknown, label: string): Array<unknown> {
   expect(Array.isArray(value), label).toBe(true);
-  return value as unknown[];
+  return value as Array<unknown>;
 }
 
 function expectFields(record: Record<string, unknown>, expected: Record<string, unknown>) {
@@ -183,9 +183,10 @@ function expectPluginRecordFields(record: unknown, expected: Record<string, unkn
 }
 
 function expectDiagnosticCodes(diagnostics: unknown, expectedCodes: string[]) {
-  const codes = requireArray(diagnostics, "diagnostics").map(
-    (diagnostic) => requireRecord(diagnostic, "diagnostic").code,
-  );
+  const codes: Array<unknown> = [];
+  for (const diagnostic of requireArray(diagnostics, "diagnostics")) {
+    codes.push(requireRecord(diagnostic, "diagnostic").code);
+  }
   expect(codes).toEqual(expectedCodes);
 }
 
