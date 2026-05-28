@@ -312,6 +312,23 @@ describe("buildGoogleRealtimeVoiceProvider", () => {
     expect(lastConnectParams().config).not.toHaveProperty("temperature");
   });
 
+  it("drops malformed VAD timing values before connecting", async () => {
+    const provider = buildGoogleRealtimeVoiceProvider();
+    const bridge = provider.createBridge({
+      providerConfig: {
+        apiKey: "gemini-key",
+        prefixPaddingMs: -1,
+        silenceDurationMs: 250.5,
+      },
+      onAudio: vi.fn(),
+      onClearAudio: vi.fn(),
+    });
+
+    await bridge.connect();
+
+    expect(lastConnectParams().config).not.toHaveProperty("realtimeInputConfig");
+  });
+
   it("creates constrained browser sessions for Google Live Talk", async () => {
     const provider = buildGoogleRealtimeVoiceProvider();
 

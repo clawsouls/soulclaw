@@ -179,6 +179,11 @@ function asTurnCoverage(value: unknown): GoogleRealtimeTurnCoverage | undefined 
   }
 }
 
+function asNonNegativeInteger(value: unknown): number | undefined {
+  const number = asFiniteNumber(value);
+  return number !== undefined && Number.isSafeInteger(number) && number >= 0 ? number : undefined;
+}
+
 function resolveGoogleRealtimeProviderConfigRecord(
   config: Record<string, unknown>,
 ): Record<string, unknown> | undefined {
@@ -210,8 +215,8 @@ function normalizeProviderConfig(
     voice: trimToUndefined(raw?.voice),
     temperature: asFiniteNumber(raw?.temperature),
     apiVersion: trimToUndefined(raw?.apiVersion),
-    prefixPaddingMs: asFiniteNumber(raw?.prefixPaddingMs),
-    silenceDurationMs: asFiniteNumber(raw?.silenceDurationMs),
+    prefixPaddingMs: asNonNegativeInteger(raw?.prefixPaddingMs),
+    silenceDurationMs: asNonNegativeInteger(raw?.silenceDurationMs),
     startSensitivity: asSensitivity(raw?.startSensitivity),
     endSensitivity: asSensitivity(raw?.endSensitivity),
     activityHandling: asActivityHandling(raw?.activityHandling),
@@ -305,10 +310,10 @@ function buildRealtimeInputConfig(
     ...(startSensitivity ? { startOfSpeechSensitivity: startSensitivity } : {}),
     ...(endSensitivity ? { endOfSpeechSensitivity: endSensitivity } : {}),
     ...(typeof config.prefixPaddingMs === "number"
-      ? { prefixPaddingMs: Math.max(0, Math.floor(config.prefixPaddingMs)) }
+      ? { prefixPaddingMs: config.prefixPaddingMs }
       : {}),
     ...(typeof config.silenceDurationMs === "number"
-      ? { silenceDurationMs: Math.max(0, Math.floor(config.silenceDurationMs)) }
+      ? { silenceDurationMs: config.silenceDurationMs }
       : {}),
   };
   const realtimeInputConfig = {
