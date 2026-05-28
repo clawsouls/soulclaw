@@ -388,6 +388,24 @@ describe("bundled plugin install/uninstall probe", () => {
     expect(result.stderr).toContain("Available: admin-http-rpc");
   });
 
+  it("bounds plugin list selection when the CLI hangs", () => {
+    const root = makePackageRoot();
+    fs.writeFileSync(
+      path.join(root, "dist", "index.js"),
+      "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);\n",
+      "utf8",
+    );
+
+    const startedAt = Date.now();
+    const result = runProbe(root, {
+      OPENCLAW_BUNDLED_PLUGIN_LIST_TIMEOUT_MS: "100",
+    });
+
+    expect(Date.now() - startedAt).toBeLessThan(2_500);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Timed out listing packaged bundled plugins after 100ms");
+  });
+
   it("loads runtime smoke manifests from the selected packaged root", () => {
     const root = makePackageRoot();
     writePluginManifest(root, "dist/extensions/runtime-only", {
