@@ -154,10 +154,10 @@ function createIndex(
 
 function createPersistableIndex(pluginId: string): InstalledPluginIndex {
   const index = createIndex(pluginId);
-  return {
-    ...index,
-    plugins: index.plugins.map((plugin) => ({ ...plugin, enabled: false })),
-  };
+  for (const plugin of index.plugins) {
+    plugin.enabled = false;
+  }
+  return index;
 }
 
 function requireRecord(value: unknown, label: string): Record<string, unknown> {
