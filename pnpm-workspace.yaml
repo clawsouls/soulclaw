@@ -54,6 +54,7 @@ minimumReleaseAgeExclude:
   - "sqlite-vec"
   - "sqlite-vec-*"
   - "rastermill"
+  - "clawpdf"
 
 nodeLinker: hoisted
 blockExoticSubdeps: true
@@ -89,7 +90,6 @@ allowBuilds:
   "@google/genai": true
   "@lydell/node-pty": true
   "@matrix-org/matrix-sdk-crypto-nodejs": true
-  "@napi-rs/canvas": true
   "@tloncorp/api": true
   "@tloncorp/tlon-skill": true
   baileys: true
@@ -103,6 +103,7 @@ allowBuilds:
   tree-sitter-bash: false
   openclaw: true
   "@openclaw/proxyline": true
+  clawpdf: true
   rastermill: true
 
 packageExtensions:
