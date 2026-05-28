@@ -28,14 +28,24 @@ describe("ensure-cli-startup-build", () => {
     const root = makeTempRoot();
     mkdirSync(path.join(root, "dist"), { recursive: true });
     writeFileSync(path.join(root, "dist", "entry.js"), "export {};\n", "utf8");
+    writeFileSync(
+      path.join(root, "dist", "cli-startup-metadata.json"),
+      '{"rootHelpText":"help\\n"}\n',
+      "utf8",
+    );
 
     expect(hasCliStartupBuild({ rootDir: root })).toBe(true);
   });
 
-  it("skips the build profile when dist entry output already exists", () => {
+  it("skips the build profile when dist entry output and startup metadata already exist", () => {
     const root = makeTempRoot();
     mkdirSync(path.join(root, "dist"), { recursive: true });
     writeFileSync(path.join(root, "dist", "entry.mjs"), "export {};\n", "utf8");
+    writeFileSync(
+      path.join(root, "dist", "cli-startup-metadata.json"),
+      '{"rootHelpText":"help\\n"}\n',
+      "utf8",
+    );
 
     const result = ensureCliStartupBuild({
       rootDir: root,
@@ -45,6 +55,35 @@ describe("ensure-cli-startup-build", () => {
     });
 
     expect(result).toEqual({ built: false });
+  });
+
+  it("runs the cliStartup build profile when startup metadata is missing", () => {
+    const root = makeTempRoot();
+    mkdirSync(path.join(root, "dist"), { recursive: true });
+    writeFileSync(path.join(root, "dist", "entry.js"), "export {};\n", "utf8");
+    const calls: unknown[] = [];
+
+    const result = ensureCliStartupBuild({
+      rootDir: root,
+      nodeExecPath: "/node",
+      spawnSync: (command, args, options) => {
+        calls.push({ command, args, options });
+        return { status: 0 };
+      },
+      stdio: "pipe",
+    });
+
+    expect(result).toEqual({ built: true });
+    expect(calls).toEqual([
+      {
+        command: "/node",
+        args: [path.join(root, "scripts", "build-all.mjs"), "cliStartup"],
+        options: expect.objectContaining({
+          cwd: root,
+          stdio: "pipe",
+        }),
+      },
+    ]);
   });
 
   it("runs the cliStartup build profile when dist entry output is missing", () => {

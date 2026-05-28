@@ -7,11 +7,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const entryCandidates = ["dist/entry.js", "dist/entry.mjs"];
+const startupMetadataPath = "dist/cli-startup-metadata.json";
 
 export function hasCliStartupBuild(params = {}) {
   const rootDir = params.rootDir ?? repoRoot;
   const exists = params.existsSync ?? existsSync;
-  return entryCandidates.some((relativePath) => exists(path.join(rootDir, relativePath)));
+  const hasEntry = entryCandidates.some((relativePath) => exists(path.join(rootDir, relativePath)));
+  return hasEntry && exists(path.join(rootDir, startupMetadataPath));
 }
 
 export function ensureCliStartupBuild(params = {}) {
@@ -24,7 +26,9 @@ export function ensureCliStartupBuild(params = {}) {
   const spawn = params.spawnSync ?? spawnSync;
   const buildScript = path.join(rootDir, "scripts", "build-all.mjs");
 
-  console.error("[cli-startup-build] dist/entry missing; running cliStartup build profile");
+  console.error(
+    "[cli-startup-build] dist startup entry or metadata missing; running cliStartup build profile",
+  );
   const result = spawn(nodeExecPath, [buildScript, "cliStartup"], {
     cwd: rootDir,
     env: params.env ?? process.env,

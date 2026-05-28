@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { ensureExtensionMemoryBuild } from "./ensure-extension-memory-build.mjs";
 import { formatErrorMessage } from "./lib/error-format.mjs";
 
 const DEFAULT_CONCURRENCY = 6;
@@ -241,6 +242,10 @@ function findExtensionEntries(repoRoot) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const repoRoot = process.cwd();
+  ensureExtensionMemoryBuild({
+    rootDir: repoRoot,
+    requiredExtensionIds: options.extensions,
+  });
   const allEntries = findExtensionEntries(repoRoot);
   const selectedEntries =
     options.extensions.length === 0
