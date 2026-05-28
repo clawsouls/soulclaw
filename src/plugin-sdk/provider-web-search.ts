@@ -9,6 +9,7 @@ import type {
 } from "../plugins/types.js";
 export {
   jsonResult,
+  readNonNegativeIntegerParam,
   readNumberParam,
   readPositiveIntegerParam,
   readStringArrayParam,
