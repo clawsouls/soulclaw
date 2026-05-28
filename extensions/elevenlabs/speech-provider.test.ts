@@ -184,4 +184,28 @@ describe("elevenlabs speech provider", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("drops malformed latency tier overrides before synthesis", async () => {
+    const provider = buildElevenLabsSpeechProvider();
+    const fetchMock = vi.fn(async (url: string) => {
+      expect(new URL(url).searchParams.has("optimize_streaming_latency")).toBe(false);
+      return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await provider.synthesize?.({
+      text: "hello",
+      target: "audio",
+      cfg: {} as never,
+      providerConfig: {
+        apiKey: "xi-test",
+      },
+      providerOverrides: {
+        latencyTier: 2.5,
+      },
+      timeoutMs: 1_000,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

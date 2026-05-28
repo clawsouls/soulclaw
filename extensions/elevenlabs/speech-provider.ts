@@ -90,6 +90,16 @@ function normalizeElevenLabsSeed(value: unknown): number | undefined {
     : undefined;
 }
 
+function normalizeElevenLabsLatencyTier(value: unknown): number | undefined {
+  const latencyTier = asFiniteNumber(value);
+  return latencyTier !== undefined &&
+    Number.isSafeInteger(latencyTier) &&
+    latencyTier >= 0 &&
+    latencyTier <= 4
+    ? latencyTier
+    : undefined;
+}
+
 function normalizeVoiceSettings(
   rawVoiceSettings: Record<string, unknown> | undefined,
 ): Partial<ElevenLabsProviderConfig["voiceSettings"]> {
@@ -420,7 +430,7 @@ export function buildElevenLabsSpeechProvider(): SpeechProviderPlugin {
     resolveTalkOverrides: ({ params }) => {
       const normalize = trimToUndefined(params.normalize);
       const language = normalizeLowercaseStringOrEmpty(trimToUndefined(params.language));
-      const latencyTier = asFiniteNumber(params.latencyTier);
+      const latencyTier = normalizeElevenLabsLatencyTier(params.latencyTier);
       const voiceSettings = {
         ...(normalizeVoiceSetting(params.speed, 0.5, 2) == null
           ? {}
@@ -493,7 +503,7 @@ export function buildElevenLabsSpeechProvider(): SpeechProviderPlugin {
       const outputFormat =
         trimToUndefined(overrides.outputFormat) ??
         (req.target === "voice-note" ? "opus_48000_64" : "mp3_44100_128");
-      const latencyTier = asFiniteNumber(overrides.latencyTier);
+      const latencyTier = normalizeElevenLabsLatencyTier(overrides.latencyTier);
       const audioBuffer = await elevenLabsTTS({
         text: req.text,
         apiKey,
@@ -531,7 +541,7 @@ export function buildElevenLabsSpeechProvider(): SpeechProviderPlugin {
       const outputFormat =
         trimToUndefined(overrides.outputFormat) ??
         (req.target === "voice-note" ? "opus_48000_64" : "mp3_44100_128");
-      const latencyTier = asFiniteNumber(overrides.latencyTier);
+      const latencyTier = normalizeElevenLabsLatencyTier(overrides.latencyTier);
       const stream = await elevenLabsTTSStream({
         text: req.text,
         apiKey,
