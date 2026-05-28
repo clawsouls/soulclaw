@@ -371,6 +371,16 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
     ]);
   });
 
+  it("keeps the Windows packaged-upgrade fallback install out of npm lifecycle scripts", () => {
+    const source = readFileSync("scripts/openclaw-cross-os-release-checks.ts", "utf8");
+    const fallbackInstallSource = source.slice(
+      source.indexOf('runTimedLanePhase(lane, "update-fallback-install"'),
+      source.indexOf('runTimedLanePhase(lane, "update-status"'),
+    );
+
+    expect(fallbackInstallSource).toContain("ignoreScripts: true");
+  });
+
   it("keeps packaged-upgrade release updates out of service restart flow", () => {
     const args = buildPackagedUpgradeUpdateArgs("http://127.0.0.1:49152/openclaw-current.tgz");
     expect(args.slice(0, 6)).toEqual([

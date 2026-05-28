@@ -978,6 +978,7 @@ async function runUpgradeLane(params) {
           env,
           packageSpec: params.candidateUrl,
           logPath: join(params.logsDir, "upgrade-update-fallback-install.log"),
+          ignoreScripts: true,
         });
       });
     } else {
