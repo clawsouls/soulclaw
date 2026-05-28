@@ -12,6 +12,9 @@ export function readDiscordCode(body: unknown): number | undefined {
   return undefined;
 }
 
+const RETRY_AFTER_HEADER_DELAY_RE = /^\d+$/;
+const RETRY_AFTER_BODY_SECONDS_RE = /^(?:\d+\.?\d*|\.\d+)$/;
+
 export function readDiscordMessage(body: unknown, fallback: string): string {
   const value =
     body && typeof body === "object" && "message" in body
@@ -24,19 +27,21 @@ function readRetryAfterHeader(value: string | null, now = Date.now()): number | 
   if (!value) {
     return undefined;
   }
-  const seconds = Number(value);
-  if (Number.isFinite(seconds)) {
-    return seconds;
+  const trimmed = value.trim();
+  if (RETRY_AFTER_HEADER_DELAY_RE.test(trimmed)) {
+    return Number(trimmed);
   }
-  const retryAt = Date.parse(value);
+  const retryAt = Date.parse(trimmed);
   return Number.isFinite(retryAt) ? (retryAt - now) / 1000 : undefined;
 }
 
 function coerceRetryAfterSeconds(value: unknown): number | undefined {
-  if (typeof value !== "number" && typeof value !== "string") {
-    return undefined;
-  }
-  const seconds = typeof value === "number" ? value : Number(value);
+  const seconds =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && RETRY_AFTER_BODY_SECONDS_RE.test(value.trim())
+        ? Number(value.trim())
+        : undefined;
   return Number.isFinite(seconds) && seconds >= 0 ? Math.max(0, seconds) : undefined;
 }
 
