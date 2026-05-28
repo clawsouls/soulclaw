@@ -265,6 +265,32 @@ describe("setup-registry module loader", () => {
     expect(firstRecordArg(mocks.loadPluginManifestRegistry).pluginIds).toEqual(["test-plugin"]);
   });
 
+  it("uses built setup artifacts for bundled source records when available", () => {
+    const packageRoot = makeTempDir();
+    const pluginRoot = path.join(packageRoot, "extensions", "slack");
+    const sourceSetup = path.join(pluginRoot, "setup-entry.ts");
+    const builtSetup = path.join(packageRoot, "dist", "extensions", "slack", "setup-entry.js");
+    fs.mkdirSync(path.dirname(sourceSetup), { recursive: true });
+    fs.mkdirSync(path.dirname(builtSetup), { recursive: true });
+    fs.writeFileSync(sourceSetup, "export default {};\n", "utf-8");
+    fs.writeFileSync(builtSetup, "export default {};\n", "utf-8");
+    mocks.loadPluginManifestRegistry.mockReturnValue({
+      plugins: [
+        {
+          id: "slack",
+          origin: "bundled",
+          rootDir: pluginRoot,
+          setupSource: sourceSetup,
+        },
+      ],
+      diagnostics: [],
+    });
+
+    resolvePluginSetupRegistry({ env: {} });
+
+    expect(mockArg(mocks.createJiti, 0, 0)).toBe(builtSetup);
+  });
+
   it("skips setup-api loading when config has no relevant migration triggers", () => {
     const pluginRoot = makeTempDir();
     fs.writeFileSync(path.join(pluginRoot, "setup-api.js"), "export default {};\n", "utf-8");
