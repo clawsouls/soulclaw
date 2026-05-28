@@ -3359,7 +3359,11 @@ async function runDashboardSmoke(params) {
   throw new Error(`Dashboard HTML did not become ready at ${dashboardUrl}.`);
 }
 
-async function stopGateway(gateway) {
+export function hasChildExited(child) {
+  return child.exitCode !== null || (child.signalCode ?? null) !== null;
+}
+
+export async function stopGateway(gateway) {
   try {
     if (!gateway?.child?.pid) {
       return;
@@ -3377,12 +3381,12 @@ async function stopGateway(gateway) {
       }
       return;
     }
-    if (gateway.child.exitCode !== null) {
+    if (hasChildExited(gateway.child)) {
       return;
     }
     gateway.child.kill("SIGTERM");
     const exitedAfterTerm = await waitForChildExit(gateway.child, 2_000);
-    if (!exitedAfterTerm && gateway.child.exitCode === null) {
+    if (!exitedAfterTerm && !hasChildExited(gateway.child)) {
       gateway.child.kill("SIGKILL");
       await waitForChildExit(gateway.child, 5_000);
     }
@@ -3392,7 +3396,7 @@ async function stopGateway(gateway) {
 }
 
 async function waitForChildExit(child, timeoutMs) {
-  if (child.exitCode !== null) {
+  if (hasChildExited(child)) {
     return true;
   }
   return new Promise((resolvePromise) => {
