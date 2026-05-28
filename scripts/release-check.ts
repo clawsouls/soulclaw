@@ -175,8 +175,8 @@ const PACKED_PLUGIN_SDK_TYPESCRIPT_SMOKE_FIXTURE = resolve(
 );
 
 function positiveEnvInt(name: string, fallback: number): number {
-  const raw = process.env[name];
-  if (raw === undefined || raw === "") {
+  const raw = process.env[name]?.trim();
+  if (raw === undefined || raw === "" || !/^[0-9]+$/u.test(raw)) {
     return fallback;
   }
   const value = Number.parseInt(raw, 10);

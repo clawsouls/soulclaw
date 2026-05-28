@@ -10,6 +10,24 @@ import {
 } from "./lib/bundled-plugin-build-entries.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const DEFAULT_BUILD_TIMEOUT_MS = 10 * 60 * 1000;
+
+function positiveEnvInt(name, env, fallback) {
+  const raw = env[name]?.trim();
+  if (raw === undefined || raw === "" || !/^[0-9]+$/.test(raw)) {
+    return fallback;
+  }
+  const value = Number.parseInt(raw, 10);
+  return Number.isSafeInteger(value) && value > 0 ? value : fallback;
+}
+
+export function resolveExtensionMemoryBuildTimeoutMs(env = process.env) {
+  return positiveEnvInt(
+    "OPENCLAW_EXTENSION_MEMORY_BUILD_TIMEOUT_MS",
+    env,
+    DEFAULT_BUILD_TIMEOUT_MS,
+  );
+}
 
 function collectExpectedExtensionMemoryEntryIds(rootDir, env) {
   try {
@@ -80,7 +98,9 @@ export function ensureExtensionMemoryBuild(params = {}) {
   const result = spawn(nodeExecPath, [buildScript, "cliStartup"], {
     cwd: rootDir,
     env: params.env ?? process.env,
+    killSignal: params.killSignal ?? "SIGKILL",
     stdio: params.stdio ?? "inherit",
+    timeout: params.timeoutMs ?? resolveExtensionMemoryBuildTimeoutMs(params.env ?? process.env),
   });
   if (result.error) {
     throw result.error;

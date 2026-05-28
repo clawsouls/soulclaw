@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   ensureCliStartupBuild,
   hasCliStartupBuild,
+  resolveCliStartupBuildTimeoutMs,
 } from "../../scripts/ensure-cli-startup-build.mjs";
 
 const tempRoots: string[] = [];
@@ -80,7 +81,9 @@ describe("ensure-cli-startup-build", () => {
         args: [path.join(root, "scripts", "build-all.mjs"), "cliStartup"],
         options: expect.objectContaining({
           cwd: root,
+          killSignal: "SIGKILL",
           stdio: "pipe",
+          timeout: 10 * 60 * 1000,
         }),
       },
     ]);
@@ -107,9 +110,34 @@ describe("ensure-cli-startup-build", () => {
         args: [path.join(root, "scripts", "build-all.mjs"), "cliStartup"],
         options: expect.objectContaining({
           cwd: root,
+          killSignal: "SIGKILL",
           stdio: "pipe",
+          timeout: 10 * 60 * 1000,
         }),
       },
+    ]);
+  });
+
+  it("uses the configured cliStartup build timeout", () => {
+    const root = makeTempRoot();
+    const calls: unknown[] = [];
+
+    ensureCliStartupBuild({
+      rootDir: root,
+      env: { OPENCLAW_CLI_STARTUP_BUILD_TIMEOUT_MS: "1234" },
+      spawnSync: (command, args, options) => {
+        calls.push({ command, args, options });
+        return { status: 0 };
+      },
+      stdio: "pipe",
+    });
+
+    expect(calls).toEqual([
+      expect.objectContaining({
+        options: expect.objectContaining({
+          timeout: 1234,
+        }),
+      }),
     ]);
   });
 
@@ -135,5 +163,25 @@ describe("ensure-cli-startup-build", () => {
         stdio: "pipe",
       }),
     ).toThrow("spawn denied");
+  });
+});
+
+describe("resolveCliStartupBuildTimeoutMs", () => {
+  it("uses a positive environment timeout", () => {
+    expect(resolveCliStartupBuildTimeoutMs({ OPENCLAW_CLI_STARTUP_BUILD_TIMEOUT_MS: "4321" })).toBe(
+      4321,
+    );
+  });
+
+  it("falls back when the environment timeout is invalid", () => {
+    expect(resolveCliStartupBuildTimeoutMs({ OPENCLAW_CLI_STARTUP_BUILD_TIMEOUT_MS: "nope" })).toBe(
+      10 * 60 * 1000,
+    );
+  });
+
+  it("falls back when the environment timeout has a numeric prefix", () => {
+    expect(resolveCliStartupBuildTimeoutMs({ OPENCLAW_CLI_STARTUP_BUILD_TIMEOUT_MS: "10m" })).toBe(
+      10 * 60 * 1000,
+    );
   });
 });

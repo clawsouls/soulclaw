@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   ensureExtensionMemoryBuild,
   hasBuiltExtensionMemoryEntries,
+  resolveExtensionMemoryBuildTimeoutMs,
 } from "../../scripts/ensure-extension-memory-build.mjs";
 
 const tempRoots: string[] = [];
@@ -97,9 +98,35 @@ describe("ensure-extension-memory-build", () => {
         args: [path.join(root, "scripts", "build-all.mjs"), "cliStartup"],
         options: expect.objectContaining({
           cwd: root,
+          killSignal: "SIGKILL",
           stdio: "pipe",
+          timeout: 10 * 60 * 1000,
         }),
       },
+    ]);
+  });
+
+  it("uses the configured extension memory build timeout", () => {
+    const root = makeTempRoot();
+    const calls: unknown[] = [];
+
+    ensureExtensionMemoryBuild({
+      rootDir: root,
+      env: { OPENCLAW_EXTENSION_MEMORY_BUILD_TIMEOUT_MS: "1234" },
+      requiredExtensionIds: ["discord"],
+      spawnSync: (command, args, options) => {
+        calls.push({ command, args, options });
+        return { status: 0 };
+      },
+      stdio: "pipe",
+    });
+
+    expect(calls).toEqual([
+      expect.objectContaining({
+        options: expect.objectContaining({
+          timeout: 1234,
+        }),
+      }),
     ]);
   });
 
@@ -113,5 +140,31 @@ describe("ensure-extension-memory-build", () => {
         stdio: "pipe",
       }),
     ).toThrow("cliStartup build profile failed with exit code 1");
+  });
+});
+
+describe("resolveExtensionMemoryBuildTimeoutMs", () => {
+  it("uses a positive environment timeout", () => {
+    expect(
+      resolveExtensionMemoryBuildTimeoutMs({
+        OPENCLAW_EXTENSION_MEMORY_BUILD_TIMEOUT_MS: "4321",
+      }),
+    ).toBe(4321);
+  });
+
+  it("falls back when the environment timeout is invalid", () => {
+    expect(
+      resolveExtensionMemoryBuildTimeoutMs({
+        OPENCLAW_EXTENSION_MEMORY_BUILD_TIMEOUT_MS: "nope",
+      }),
+    ).toBe(10 * 60 * 1000);
+  });
+
+  it("falls back when the environment timeout has a numeric prefix", () => {
+    expect(
+      resolveExtensionMemoryBuildTimeoutMs({
+        OPENCLAW_EXTENSION_MEMORY_BUILD_TIMEOUT_MS: "10m",
+      }),
+    ).toBe(10 * 60 * 1000);
   });
 });

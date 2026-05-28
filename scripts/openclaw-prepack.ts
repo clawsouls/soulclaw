@@ -93,8 +93,8 @@ function ensurePreparedArtifacts(): void {
 }
 
 function positiveEnvInt(name: string, env: NodeJS.ProcessEnv, fallback: number): number {
-  const raw = env[name];
-  if (raw === undefined || raw === "") {
+  const raw = env[name]?.trim();
+  if (raw === undefined || raw === "" || !/^[0-9]+$/u.test(raw)) {
     return fallback;
   }
   const value = Number.parseInt(raw, 10);

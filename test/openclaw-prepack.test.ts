@@ -64,4 +64,10 @@ describe("resolvePrepackCommandTimeoutMs", () => {
       30 * 60 * 1000,
     );
   });
+
+  it("falls back when the environment timeout has a numeric prefix", () => {
+    expect(resolvePrepackCommandTimeoutMs({ OPENCLAW_PREPACK_COMMAND_TIMEOUT_MS: "10m" })).toBe(
+      30 * 60 * 1000,
+    );
+  });
 });

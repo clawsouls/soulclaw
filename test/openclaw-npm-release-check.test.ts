@@ -471,6 +471,14 @@ describe("resolveNpmReleaseCheckCommandTimeoutMs", () => {
       }),
     ).toBe(10 * 60 * 1000);
   });
+
+  it("falls back when the environment timeout has a numeric prefix", () => {
+    expect(
+      resolveNpmReleaseCheckCommandTimeoutMs({
+        OPENCLAW_NPM_RELEASE_CHECK_COMMAND_TIMEOUT_MS: "10m",
+      }),
+    ).toBe(10 * 60 * 1000);
+  });
 });
 
 describe("parseNpmPackJsonOutput", () => {
