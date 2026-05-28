@@ -256,7 +256,7 @@ export function createMemorySearchTool(options: {
       async (_toolCallId, params) => {
         const rawParams = asToolParamsRecord(params);
         const query = readStringParam(rawParams, "query", { required: true });
-        const maxResults = readNumberParam(rawParams, "maxResults");
+        const maxResults = readPositiveIntegerParam(rawParams, "maxResults");
         const minScore = readNumberParam(rawParams, "minScore");
         const requestedCorpus = readStringParam(rawParams, "corpus") as
           | "memory"

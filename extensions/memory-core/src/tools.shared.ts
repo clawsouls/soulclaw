@@ -30,7 +30,7 @@ export async function loadMemoryToolRuntime(): Promise<MemoryToolRuntime> {
 
 export const MemorySearchSchema = Type.Object({
   query: Type.String(),
-  maxResults: Type.Optional(Type.Number()),
+  maxResults: Type.Optional(Type.Integer({ minimum: 1 })),
   minScore: Type.Optional(Type.Number()),
   corpus: Type.Optional(stringEnum(["memory", "wiki", "all", "sessions"])),
 });

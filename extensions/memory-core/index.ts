@@ -62,7 +62,7 @@ const MemorySearchSchema = {
   type: "object",
   properties: {
     query: { type: "string" },
-    maxResults: { type: "number" },
+    maxResults: { type: "integer", minimum: 1 },
     minScore: { type: "number" },
     corpus: { type: "string", enum: ["memory", "wiki", "all", "sessions"] },
   },
