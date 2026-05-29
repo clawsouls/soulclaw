@@ -147,6 +147,7 @@ describe("models-config", () => {
         null,
         2,
       )}\n`,
+      pluginCatalogWrites: {},
     });
   });
 
