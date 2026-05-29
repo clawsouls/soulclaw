@@ -168,6 +168,11 @@ describe("setupOfficialPluginInstalls", () => {
           hint: "OpenClaw PixVerse video generation provider plugin",
         },
         {
+          value: "tokenjuice",
+          label: "Tokenjuice",
+          hint: "OpenClaw tokenjuice exec output compaction plugin",
+        },
+        {
           value: "voice-call",
           label: "Voice Call",
           hint: "OpenClaw voice-call plugin",
