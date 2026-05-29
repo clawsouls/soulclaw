@@ -79,6 +79,7 @@ const THINKING_TAG_RE = /<\s*\/?\s*(?:(?:antml:)?(?:think(?:ing)?|thought)|antth
 const ANTHROPIC_MAGIC_STRING_TRIGGER_REFUSAL = "ANTHROPIC_MAGIC_STRING_TRIGGER_REFUSAL";
 const GATEWAY_LIVE_DEFAULT_TIMEOUT_MS = 20 * 60 * 1000;
 const GATEWAY_LIVE_UNBOUNDED_TIMEOUT_MS = 60 * 60 * 1000;
+const EXPLICIT_LIVE_FALLBACK_CONTEXT_WINDOW = 128_000;
 const GATEWAY_LIVE_MAX_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 const GATEWAY_LIVE_PROBE_TIMEOUT_MS = Math.max(
   30_000,
@@ -904,6 +905,14 @@ function createGatewayLiveTestModel(provider: string, id: string): Model {
   } as Model;
 }
 
+function createExplicitLiveFallbackModel(provider: string, id: string): Model {
+  return {
+    ...createGatewayLiveTestModel(provider, id),
+    contextWindow: EXPLICIT_LIVE_FALLBACK_CONTEXT_WINDOW,
+    maxTokens: 4_096,
+  };
+}
+
 describe("resolveExplicitLiveModelCandidates", () => {
   it("uses targeted registry lookup for explicit provider/model filters", () => {
     const model = createGatewayLiveTestModel("xai", "grok-4.3");
@@ -979,7 +988,11 @@ describe("resolveExplicitLiveModelCandidates", () => {
       targetMatcher: matcher,
     });
 
-    expect(candidates).toEqual([createGatewayLiveTestModel("openai", "gpt-5.5")]);
+    if (!candidates) {
+      throw new Error("expected explicit fallback candidates");
+    }
+    expect(candidates).toEqual([createExplicitLiveFallbackModel("openai", "gpt-5.5")]);
+    expect(candidates[0]?.contextWindow).toBeGreaterThanOrEqual(4_000);
   });
 
   it("falls back to enumeration for ambiguous model-only filters", () => {
@@ -2156,7 +2169,7 @@ function resolveExplicitLiveModelCandidates(params: {
     }
     const model =
       params.modelRegistry.find(ref.provider, ref.modelId) ??
-      createGatewayLiveTestModel(ref.provider, ref.modelId);
+      createExplicitLiveFallbackModel(ref.provider, ref.modelId);
     if (
       !params.targetMatcher.matchesProvider(model.provider) ||
       !params.targetMatcher.matchesModel(model.provider, model.id)
