@@ -208,6 +208,24 @@
       }
     },
     {
+      "name": "@openclaw/pixverse-provider",
+      "description": "OpenClaw PixVerse video generation provider plugin",
+      "source": "official",
+      "kind": "plugin",
+      "openclaw": {
+        "plugin": {
+          "id": "pixverse",
+          "label": "PixVerse"
+        },
+        "install": {
+          "clawhubSpec": "clawhub:@openclaw/pixverse-provider",
+          "npmSpec": "@openclaw/pixverse-provider",
+          "defaultChoice": "npm",
+          "minHostVersion": ">=2026.5.26"
+        }
+      }
+    },
+    {
       "name": "@openclaw/voice-call",
       "description": "OpenClaw voice-call plugin",
       "source": "official",
