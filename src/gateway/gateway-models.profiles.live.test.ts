@@ -308,6 +308,7 @@ function formatGatewayLiveFilterSet(filter: ReadonlySet<string> | null): string 
 }
 
 function assertGatewayLiveSelectedSomeModels(params: {
+  allowProviderDriftSkip: boolean;
   label: string;
   modelFilter: ReadonlySet<string> | null;
   providerFilter: ReadonlySet<string> | null;
@@ -316,6 +317,15 @@ function assertGatewayLiveSelectedSomeModels(params: {
   wantedCount: number;
 }): void {
   if (params.wantedCount > 0 || (!params.modelFilter && !params.providerFilter)) {
+    return;
+  }
+  if (
+    params.allowProviderDriftSkip &&
+    params.providerFilter &&
+    [...params.providerFilter].every((provider) =>
+      shouldSkipEmptyResponseForLiveModel({ provider, allowNotFoundSkip: true }),
+    )
+  ) {
     return;
   }
   const mode = params.useExplicit ? "explicit" : "high-signal";
@@ -572,6 +582,7 @@ function shouldSkipEmptyResponseForLiveModel(params: {
   return (
     params.provider === "google-antigravity" ||
     params.provider === "minimax" ||
+    params.provider === "minimax-portal" ||
     params.provider === "openai-codex" ||
     params.provider === "zai"
   );
@@ -786,6 +797,7 @@ describe("assertGatewayLiveSelectedSomeModels", () => {
   it("allows unfiltered sweeps with no high-signal models", () => {
     expect(() =>
       assertGatewayLiveSelectedSomeModels({
+        allowProviderDriftSkip: false,
         label: "all-models",
         modelFilter: null,
         providerFilter: null,
@@ -799,6 +811,7 @@ describe("assertGatewayLiveSelectedSomeModels", () => {
   it("fails filtered sweeps that select no models", () => {
     expect(() =>
       assertGatewayLiveSelectedSomeModels({
+        allowProviderDriftSkip: false,
         label: "all-models",
         modelFilter: null,
         providerFilter: new Set(["openai"]),
@@ -807,6 +820,20 @@ describe("assertGatewayLiveSelectedSomeModels", () => {
         wantedCount: 0,
       }),
     ).toThrow(/selected no high-signal live models/);
+  });
+
+  it("allows modern provider-drift skips for empty MiniMax provider sweeps", () => {
+    expect(() =>
+      assertGatewayLiveSelectedSomeModels({
+        allowProviderDriftSkip: true,
+        label: "all-models",
+        modelFilter: null,
+        providerFilter: new Set(["minimax", "minimax-portal"]),
+        total: 0,
+        useExplicit: false,
+        wantedCount: 0,
+      }),
+    ).not.toThrow();
   });
 });
 
@@ -1064,6 +1091,16 @@ describe("resolveGatewayLiveModelThinkingLevel", () => {
       }),
     ).toBe("off");
   });
+
+  it("does not let provider profiles override model-level thinking support", () => {
+    expect(
+      resolveGatewayLiveModelThinkingLevel({
+        cfg: {},
+        model: createGatewayLiveTestModel("openai", "gpt-5.5"),
+        requestedLevel: "high",
+      }),
+    ).toBe("off");
+  });
 });
 
 describe("buildLiveGatewayConfig", () => {
@@ -1076,6 +1113,35 @@ describe("buildLiveGatewayConfig", () => {
     expect(cfg.agents?.defaults?.models?.["openai/gpt-5.5"]).toEqual({
       agentRuntime: { id: "openclaw" },
     });
+  });
+
+  it("keeps discovered live model metadata ahead of stale configured model rows", () => {
+    const discovered = {
+      ...createGatewayLiveTestModel("google", "gemini-3-flash-preview"),
+      contextWindow: 128_000,
+    };
+    const cfg = buildLiveGatewayConfig({
+      cfg: {
+        models: {
+          providers: {
+            google: {
+              api: "google-ai",
+              baseUrl: "https://generativelanguage.googleapis.com",
+              models: [
+                {
+                  id: "gemini-3-flash-preview",
+                  input: ["text"],
+                  contextWindow: 1_000,
+                },
+              ],
+            },
+          },
+        },
+      },
+      candidates: [discovered],
+    });
+
+    expect(cfg.models?.providers?.google?.models?.[0]?.contextWindow).toBe(128_000);
   });
 });
 
@@ -1258,6 +1324,7 @@ describe("shouldSkipEmptyResponseForLiveModel", () => {
     { provider: "opencode-go", allowNotFoundSkip: false, expected: true },
     { provider: "minimax", allowNotFoundSkip: false, expected: false },
     { provider: "minimax", allowNotFoundSkip: true, expected: true },
+    { provider: "minimax-portal", allowNotFoundSkip: true, expected: true },
     { provider: "zai", allowNotFoundSkip: true, expected: true },
     { provider: "openai-codex", allowNotFoundSkip: true, expected: true },
     { provider: "xai", allowNotFoundSkip: true, expected: false },
@@ -2004,12 +2071,12 @@ function mergeLiveProviderConfig(params: {
   const baseModels = params.base?.models ?? [];
   const discoveredModels = params.discovered.models ?? [];
   const mergedModels = new Map<string, NonNullable<ModelProviderConfig["models"]>[number]>();
-  for (const model of discoveredModels) {
+  for (const model of baseModels) {
     if (model.id) {
       mergedModels.set(model.id, model);
     }
   }
-  for (const model of baseModels) {
+  for (const model of discoveredModels) {
     if (model.id) {
       mergedModels.set(model.id, model);
     }
@@ -2117,18 +2184,22 @@ function resolveGatewayLiveModelThinkingLevel(params: {
       provider: model.provider,
       modelId: model.id,
       reasoning: model.reasoning,
+      compat: model.compat,
     },
   });
   if (profile) {
     const levelIds = profile.levels.map((level) => level.id);
     if (levelIds.includes(normalized)) {
-      return normalized;
+      return clampThinkingLevel(model, normalized);
     }
     if (profile.defaultLevel) {
-      return profile.defaultLevel;
+      return clampThinkingLevel(model, profile.defaultLevel as ModelThinkingLevel);
     }
     if (levelIds.length === 1) {
-      return levelIds[0] ?? requestedLevel;
+      const [onlyLevel] = levelIds;
+      return onlyLevel
+        ? clampThinkingLevel(model, onlyLevel as ModelThinkingLevel)
+        : requestedLevel;
     }
   }
   return clampThinkingLevel(model, normalized);
@@ -3167,6 +3238,7 @@ describeLive("gateway live (dev agent, profile keys)", () => {
         }
         logProgress(`[all-models] wanted=${wanted.length} total=${all.length}`);
         assertGatewayLiveSelectedSomeModels({
+          allowProviderDriftSkip: useModern,
           label: "all-models",
           modelFilter: filter,
           providerFilter: PROVIDERS,
