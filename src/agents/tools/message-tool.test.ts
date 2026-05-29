@@ -109,6 +109,9 @@ type RunMessageActionInput = {
   agentId?: string;
   cfg?: unknown;
   defaultAccountId?: string;
+  gateway?: {
+    timeoutMs?: unknown;
+  };
   params?: Record<string, unknown>;
   requesterSenderId?: string;
   sandboxRoot?: string;
