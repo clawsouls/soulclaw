@@ -63,4 +63,29 @@ describe("browser element commands", () => {
     ).rejects.toThrow("--timeout-ms must be a positive integer.");
     expect(mocks.callBrowserRequest).not.toHaveBeenCalled();
   });
+
+  it("accepts signed and zero-padded integer action options", async () => {
+    const delayProgram = createElementProgram();
+    await delayProgram.parseAsync(["browser", "click-coords", "10", "20", "--delay-ms", "+0005"], {
+      from: "user",
+    });
+    const delayRequest = mocks.callBrowserRequest.mock.calls.at(-1)?.[1] as
+      | { body?: { delayMs?: number } }
+      | undefined;
+    expect(delayRequest?.body?.delayMs).toBe(5);
+
+    const timeoutProgram = createElementProgram();
+    await timeoutProgram.parseAsync(
+      ["browser", "scrollintoview", "ref-1", "--timeout-ms", "+020000"],
+      { from: "user" },
+    );
+    const timeoutRequest = mocks.callBrowserRequest.mock.calls.at(-1)?.[1] as
+      | { body?: { timeoutMs?: number } }
+      | undefined;
+    const timeoutOptions = mocks.callBrowserRequest.mock.calls.at(-1)?.[2] as
+      | { timeoutMs?: number }
+      | undefined;
+    expect(timeoutRequest?.body?.timeoutMs).toBe(20_000);
+    expect(timeoutOptions?.timeoutMs).toBeGreaterThan(20_000);
+  });
 });
