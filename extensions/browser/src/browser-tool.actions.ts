@@ -1,5 +1,9 @@
 import type { AgentToolResult } from "openclaw/plugin-sdk/agent-core";
 import {
+  readNonNegativeIntegerParam,
+  readPositiveIntegerParam,
+} from "openclaw/plugin-sdk/param-readers";
+import {
   DEFAULT_AI_SNAPSHOT_MAX_CHARS,
   browserAct,
   browserConsoleMessages,
@@ -346,16 +350,18 @@ export async function executeSnapshotAction(params: {
     input.refs === "aria" || input.refs === "role" ? input.refs : undefined;
   const hasMaxChars = Object.hasOwn(input, "maxChars");
   const targetId = normalizeOptionalString(input.targetId);
-  const limit =
-    typeof input.limit === "number" && Number.isFinite(input.limit) ? input.limit : undefined;
-  const maxChars =
-    typeof input.maxChars === "number" && Number.isFinite(input.maxChars) && input.maxChars > 0
-      ? Math.floor(input.maxChars)
-      : undefined;
+  const limit = readPositiveIntegerParam(input, "limit", {
+    message: "limit must be a positive integer.",
+  });
+  const maxCharsRaw = readNonNegativeIntegerParam(input, "maxChars", {
+    message: "maxChars must be a non-negative integer.",
+  });
+  const maxChars = maxCharsRaw !== undefined && maxCharsRaw > 0 ? maxCharsRaw : undefined;
   const interactive = typeof input.interactive === "boolean" ? input.interactive : undefined;
   const compact = typeof input.compact === "boolean" ? input.compact : undefined;
-  const depth =
-    typeof input.depth === "number" && Number.isFinite(input.depth) ? input.depth : undefined;
+  const depth = readNonNegativeIntegerParam(input, "depth", {
+    message: "depth must be a non-negative integer.",
+  });
   const selector = normalizeOptionalString(input.selector);
   const frame = normalizeOptionalString(input.frame);
   const resolvedMaxChars =
@@ -369,7 +375,9 @@ export async function executeSnapshotAction(params: {
         ? maxChars
         : undefined;
   const snapshotTimeoutMs =
-    normalizePositiveTimeoutMs(input.timeoutMs) ?? DEFAULT_BROWSER_SNAPSHOT_TIMEOUT_MS;
+    readPositiveIntegerParam(input, "timeoutMs", {
+      message: "timeoutMs must be a positive integer.",
+    }) ?? DEFAULT_BROWSER_SNAPSHOT_TIMEOUT_MS;
   const snapshotQuery = {
     ...(format ? { format } : {}),
     targetId,

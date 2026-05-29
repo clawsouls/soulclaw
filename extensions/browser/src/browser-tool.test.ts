@@ -458,6 +458,44 @@ describe("browser tool snapshot maxChars", () => {
     expect(opts.maxChars).toBe(override);
   });
 
+  it("parses string snapshot numeric options", async () => {
+    const tool = createBrowserTool();
+    await tool.execute?.("call-1", {
+      action: "snapshot",
+      target: "host",
+      snapshotFormat: "ai",
+      depth: "2",
+      limit: "4",
+      maxChars: "2000",
+      timeoutMs: "9000",
+    });
+
+    const opts = lastMockCallArg<{
+      depth?: number;
+      limit?: number;
+      maxChars?: number;
+      timeoutMs?: number;
+    }>(browserClientMocks.browserSnapshot, 1);
+    expect(opts.depth).toBe(2);
+    expect(opts.limit).toBe(4);
+    expect(opts.maxChars).toBe(2000);
+    expect(opts.timeoutMs).toBe(9000);
+  });
+
+  it("rejects fractional snapshot numeric options", async () => {
+    const tool = createBrowserTool();
+
+    await expect(
+      tool.execute?.("call-1", {
+        action: "snapshot",
+        target: "host",
+        snapshotFormat: "ai",
+        maxChars: 12.5,
+      }),
+    ).rejects.toThrow("maxChars must be a non-negative integer.");
+    expect(browserClientMocks.browserSnapshot).not.toHaveBeenCalled();
+  });
+
   it("skips the default when maxChars is explicitly zero", async () => {
     const tool = createBrowserTool();
     await tool.execute?.("call-1", {
