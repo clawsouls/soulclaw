@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
-const WORKFLOW = ".github/workflows/dependency-change-awareness.yml";
+const WORKFLOW = ".github/workflows/dependency-guard.yml";
 const CODEOWNERS = ".github/CODEOWNERS";
 
 type WorkflowStep = {
@@ -13,11 +13,13 @@ type WorkflowStep = {
 };
 
 type WorkflowJob = {
+  name?: string;
   steps?: WorkflowStep[];
 };
 
 type Workflow = {
   jobs?: Record<string, WorkflowJob>;
+  name?: string;
   permissions?: Record<string, string>;
 };
 
@@ -25,7 +27,15 @@ function readWorkflow(): Workflow {
   return parse(readFileSync(WORKFLOW, "utf8")) as Workflow;
 }
 
-describe("dependency change awareness workflow", () => {
+describe("dependency guard workflow", () => {
+  it("uses the dependency guard check name", () => {
+    const parsed = readWorkflow();
+
+    expect(parsed.name).toBe("Dependency Guard");
+    expect(parsed.jobs).toHaveProperty("dependency-guard");
+    expect(parsed.jobs?.["dependency-guard"]?.name).toBeUndefined();
+  });
+
   it("uses a metadata-only pull_request_target workflow with minimal write permissions", () => {
     const workflow = readFileSync(WORKFLOW, "utf8");
     const parsed = readWorkflow();
@@ -57,29 +67,29 @@ describe("dependency change awareness workflow", () => {
       expect(workflow).not.toContain(snippet);
     }
 
-    const steps = readWorkflow().jobs?.["dependency-change-awareness"]?.steps ?? [];
+    const steps = readWorkflow().jobs?.["dependency-guard"]?.steps ?? [];
     expect(steps).toHaveLength(2);
     expect(steps[0].uses).toBe("actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd");
     expect(steps[0].with?.ref).toBe("${{ github.event.pull_request.base.sha }}");
     expect(steps[0].with?.["persist-credentials"]).toBe(false);
-    expect(steps[1].run).toBe("node scripts/github/dependency-change-awareness.mjs");
+    expect(steps[1].run).toBe("node scripts/github/dependency-guard.mjs");
   });
 
   it("uses a dedicated checked-in script and bounded sticky comments", () => {
     const workflow = readFileSync(WORKFLOW, "utf8");
-    const steps = readWorkflow().jobs?.["dependency-change-awareness"]?.steps ?? [];
+    const steps = readWorkflow().jobs?.["dependency-guard"]?.steps ?? [];
     const runStep = steps[1];
-    const script = readFileSync("scripts/github/dependency-change-awareness.mjs", "utf8");
+    const script = readFileSync("scripts/github/dependency-guard.mjs", "utf8");
 
     expect(runStep.env?.OPENCLAW_SECURITY_TEAM_SLUG).toBe("openclaw-secops");
     expect(runStep.env?.OPENCLAW_SECURITY_APPROVERS).toBe("vincentkoc,steipete,joshavant");
-    expect(workflow).toContain("scripts/github/dependency-change-awareness.mjs");
+    expect(workflow).toContain("scripts/github/dependency-guard.mjs");
     expect(script).toContain('"dependencies-changed"');
     expect(script).not.toContain('"blocked: dependencies"');
   });
 
   it("detects the intended dependency-related file surfaces", () => {
-    const script = readFileSync("scripts/github/dependency-change-awareness.mjs", "utf8");
+    const script = readFileSync("scripts/github/dependency-guard.mjs", "utf8");
     expect(script).toContain('filename.endsWith("package.json")');
     expect(script).toContain('filename.endsWith("package-lock.json")');
     expect(script).toContain('filename.endsWith("npm-shrinkwrap.json")');
@@ -90,7 +100,7 @@ describe("dependency change awareness workflow", () => {
   });
 
   it("blocks package lockfile and manifest graph changes unless secops approves the current head sha", () => {
-    const script = readFileSync("scripts/github/dependency-change-awareness.mjs", "utf8");
+    const script = readFileSync("scripts/github/dependency-guard.mjs", "utf8");
     expect(script).toContain('filename.endsWith("pnpm-lock.yaml")');
     expect(script).toContain('filename.endsWith("package-lock.json")');
     expect(script).toContain('filename.endsWith("npm-shrinkwrap.json")');
@@ -110,13 +120,13 @@ describe("dependency change awareness workflow", () => {
   it("requires secops review for future workflow or guard changes", () => {
     const codeowners = readFileSync(CODEOWNERS, "utf8");
     expect(codeowners).toContain(
-      "/.github/workflows/dependency-change-awareness.yml @openclaw/openclaw-secops",
+      "/.github/workflows/dependency-guard.yml @openclaw/openclaw-secops",
     );
     expect(codeowners).toContain(
-      "/test/scripts/dependency-change-awareness-workflow.test.ts @openclaw/openclaw-secops",
+      "/test/scripts/dependency-guard-workflow.test.ts @openclaw/openclaw-secops",
     );
     expect(codeowners).toContain(
-      "/scripts/github/dependency-change-awareness.mjs @openclaw/openclaw-secops",
+      "/scripts/github/dependency-guard.mjs @openclaw/openclaw-secops",
     );
     expect(codeowners).toContain("/package-lock.json @openclaw/openclaw-secops");
     expect(codeowners).toContain("/npm-shrinkwrap.json @openclaw/openclaw-secops");

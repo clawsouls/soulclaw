@@ -2,7 +2,7 @@
 
 import { appendFile, readFile } from "node:fs/promises";
 
-export const dependencyChangeMarker = "<!-- openclaw:dependency-change-awareness -->";
+export const dependencyChangeMarker = "<!-- openclaw:dependency-guard -->";
 export const dependencyGraphGuardMarker = "<!-- openclaw:dependency-graph-guard -->";
 export const dependencyChangedLabel = "dependencies-changed";
 export const allowDependenciesCommand = "/allow-dependencies-change";
@@ -316,7 +316,7 @@ function githubApi(token) {
   const baseHeaders = {
     accept: "application/vnd.github+json",
     authorization: `Bearer ${token}`,
-    "user-agent": "openclaw-dependency-change-awareness",
+    "user-agent": "openclaw-dependency-guard",
     "x-github-api-version": "2022-11-28",
   };
   const request = async (path, options = {}) => {
@@ -521,7 +521,7 @@ async function main() {
         renderClearedDependencyGuardComment({ headSha: pullRequest.head?.sha }),
       );
     }
-    await writeSummary("## Dependency Change Awareness\n\nNo dependency-related file changes detected.");
+    await writeSummary("## Dependency Guard\n\nNo dependency-related file changes detected.");
     console.log("No dependency-related file changes detected.");
     return;
   }
@@ -533,7 +533,7 @@ async function main() {
   );
   await writeSummary(
     [
-      "## Dependency Change Awareness",
+      "## Dependency Guard",
       "",
       `Detected ${dependencyGraphFiles.length} dependency-related file change(s).`,
       "",

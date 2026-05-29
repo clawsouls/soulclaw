@@ -1,4 +1,4 @@
-name: Dependency Change Awareness
+name: Dependency Guard
 
 on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] checks trusted base script only; never checks out PR head
@@ -10,11 +10,11 @@ permissions:
   issues: write
 
 concurrency:
-  group: dependency-change-awareness-${{ github.event.pull_request.number }}
+  group: dependency-guard-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  dependency-change-awareness:
+  dependency-guard:
     if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -30,4 +30,4 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           OPENCLAW_SECURITY_APPROVERS: vincentkoc,steipete,joshavant
           OPENCLAW_SECURITY_TEAM_SLUG: openclaw-secops
-        run: node scripts/github/dependency-change-awareness.mjs
+        run: node scripts/github/dependency-guard.mjs

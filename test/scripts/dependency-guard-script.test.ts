@@ -15,12 +15,12 @@ import {
   renderClearedDependencyGuardComment,
   sanitizeDisplayValue,
   securityApproverSet,
-} from "../../scripts/github/dependency-change-awareness.mjs";
+} from "../../scripts/github/dependency-guard.mjs";
 
 const headSha = "a".repeat(40);
 const staleSha = "b".repeat(40);
 
-describe("dependency change awareness script", () => {
+describe("dependency guard script", () => {
   it("detects dependency awareness file surfaces", () => {
     expect(isDependencyFile("pnpm-lock.yaml")).toBe(true);
     expect(isDependencyFile("package.json")).toBe(false);
