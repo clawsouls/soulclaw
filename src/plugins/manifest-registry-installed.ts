@@ -21,12 +21,27 @@ import {
 } from "./manifest.js";
 import { isPathInside, safeRealpathSync } from "./path-safety.js";
 import { tracePluginLifecyclePhase } from "./plugin-lifecycle-trace.js";
+import { registerPluginMetadataProcessMemoLifecycleClear } from "./plugin-metadata-lifecycle.js";
 import {
   normalizePluginDependencySpecs,
   type PluginDependencySpecMap,
 } from "./status-dependencies.js";
 
 const installedManifestRegistryIndexFingerprintCache = new WeakMap<InstalledPluginIndex, string>();
+const installedPackageMetadataCache = new Map<string, InstalledPackageMetadata>();
+const MAX_INSTALLED_PACKAGE_METADATA_CACHE_ENTRIES = 256;
+
+type InstalledPackageMetadata = {
+  packageManifest?: OpenClawPackageManifest;
+  packageDependencies?: PluginDependencySpecMap;
+  packageOptionalDependencies?: PluginDependencySpecMap;
+};
+
+export function clearInstalledManifestRegistryProcessCaches(): void {
+  installedPackageMetadataCache.clear();
+}
+
+registerPluginMetadataProcessMemoLifecycleClear(clearInstalledManifestRegistryProcessCaches);
 
 function isDeepFrozenJsonLike(value: unknown, seen = new WeakSet<object>()): boolean {
   if (!value || typeof value !== "object") {
@@ -104,6 +119,38 @@ function formatFileSignature(
   signature: Pick<InstalledPluginFileSignature, "size" | "mtimeMs">,
 ): string {
   return `${filePath}:${signature.size}:${signature.mtimeMs}`;
+}
+
+function rememberInstalledPackageMetadata(
+  key: string | undefined,
+  metadata: InstalledPackageMetadata,
+): InstalledPackageMetadata {
+  if (!key) {
+    return metadata;
+  }
+  installedPackageMetadataCache.set(key, metadata);
+  while (installedPackageMetadataCache.size > MAX_INSTALLED_PACKAGE_METADATA_CACHE_ENTRIES) {
+    const oldest = installedPackageMetadataCache.keys().next().value;
+    if (oldest === undefined) {
+      break;
+    }
+    installedPackageMetadataCache.delete(oldest);
+  }
+  return metadata;
+}
+
+function buildInstalledPackageMetadataCacheKey(params: {
+  packageJsonPath?: string;
+  record: InstalledPluginIndexRecord;
+}): string | undefined {
+  if (!params.packageJsonPath || !params.record.packageJson?.hash) {
+    return undefined;
+  }
+  return hashJson({
+    packageJsonPath: path.resolve(params.packageJsonPath),
+    packageJson: params.record.packageJson,
+    packageChannel: params.record.packageChannel ?? null,
+  });
 }
 
 function buildInstalledManifestRegistryIndexKey(index: InstalledPluginIndex) {
@@ -418,11 +465,7 @@ function normalizePersistedPackageChannel(value: unknown): PluginPackageChannel 
 function resolveInstalledPackageMetadata(
   record: InstalledPluginIndexRecord,
   realpathCache: Map<string, string>,
-): {
-  packageManifest?: OpenClawPackageManifest;
-  packageDependencies?: PluginDependencySpecMap;
-  packageOptionalDependencies?: PluginDependencySpecMap;
-} {
+): InstalledPackageMetadata {
   const recordPackageChannel = normalizePersistedPackageChannel(record.packageChannel);
   const fallbackPackageManifest = recordPackageChannel
     ? {
@@ -432,8 +475,16 @@ function resolveInstalledPackageMetadata(
   const packageJsonPath = record.packageJson?.path
     ? resolvePackageJsonPath(record, realpathCache)
     : undefined;
+  const cacheKey = buildInstalledPackageMetadataCacheKey({ packageJsonPath, record });
+  const cached = cacheKey ? installedPackageMetadataCache.get(cacheKey) : undefined;
+  if (cached) {
+    return cached;
+  }
   if (!packageJsonPath) {
-    return fallbackPackageManifest ? { packageManifest: fallbackPackageManifest } : {};
+    return rememberInstalledPackageMetadata(
+      cacheKey,
+      fallbackPackageManifest ? { packageManifest: fallbackPackageManifest } : {},
+    );
   }
   const packageJson = tryReadJsonSync<PackageManifest>(packageJsonPath);
   if (packageJson) {
@@ -443,11 +494,11 @@ function resolveInstalledPackageMetadata(
       optionalDependencies: packageJson.optionalDependencies,
     });
     if (!packageManifest) {
-      return {
+      return rememberInstalledPackageMetadata(cacheKey, {
         ...(fallbackPackageManifest ? { packageManifest: fallbackPackageManifest } : {}),
         packageDependencies: dependencies.dependencies,
         packageOptionalDependencies: dependencies.optionalDependencies,
-      };
+      });
     }
     const packageChannel = normalizePersistedPackageChannel(packageManifest.channel);
     const channel =
@@ -458,16 +509,19 @@ function resolveInstalledPackageMetadata(
           }
         : undefined;
     const { channel: _ignoredChannel, ...packageManifestWithoutChannel } = packageManifest;
-    return {
+    return rememberInstalledPackageMetadata(cacheKey, {
       packageManifest: {
         ...packageManifestWithoutChannel,
         ...(channel ? { channel } : {}),
       },
       packageDependencies: dependencies.dependencies,
       packageOptionalDependencies: dependencies.optionalDependencies,
-    };
+    });
   }
-  return fallbackPackageManifest ? { packageManifest: fallbackPackageManifest } : {};
+  return rememberInstalledPackageMetadata(
+    cacheKey,
+    fallbackPackageManifest ? { packageManifest: fallbackPackageManifest } : {},
+  );
 }
 
 function toPluginCandidate(
