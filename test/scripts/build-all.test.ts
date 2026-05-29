@@ -198,12 +198,15 @@ describe("resolveBuildAllSteps", () => {
 
   it("skips bundled tsdown declarations for CI artifacts", () => {
     const tsdown = resolveBuildAllSteps("ciArtifacts").find((step) => step.label === "tsdown");
+    if (!tsdown) {
+      throw new Error("Missing ciArtifacts tsdown step");
+    }
 
     expect(BUILD_ALL_PROFILE_STEP_ENV.ciArtifacts.tsdown).toEqual({
       OPENCLAW_RUN_NODE_SKIP_DTS_BUILD: "1",
     });
     expect(
-      resolveBuildAllStep(tsdown!, { env: { OPENCLAW_RUN_NODE_SKIP_DTS_BUILD: "0" } }).options.env,
+      resolveBuildAllStep(tsdown, { env: { OPENCLAW_RUN_NODE_SKIP_DTS_BUILD: "0" } }).options.env,
     ).toMatchObject({
       OPENCLAW_RUN_NODE_SKIP_DTS_BUILD: "1",
     });

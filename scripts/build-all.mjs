@@ -186,7 +186,7 @@ export function resolveBuildAllSteps(profile = "full") {
 }
 
 function resolveStepEnv(step, env, platform) {
-  const stepEnv = step.env ? { ...env, ...step.env } : env;
+  const stepEnv = step.env ? Object.assign({}, env, step.env) : env;
   if (platform !== "win32" || !step.windowsNodeOptions) {
     return stepEnv;
   }
