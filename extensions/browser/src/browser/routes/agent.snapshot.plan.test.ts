@@ -58,6 +58,16 @@ describe("resolveSnapshotPlan", () => {
     expect(plan.timeoutMs).toBe(12345);
   });
 
+  it("caps timeoutMs from the snapshot query string to Node's safe timer range", () => {
+    const plan = resolveSnapshotPlan({
+      profile: profile("openclaw"),
+      query: { timeoutMs: "3000000000" },
+      hasPlaywright: true,
+    });
+
+    expect(plan.timeoutMs).toBe(2_147_483_647);
+  });
+
   it("ignores non-positive timeoutMs values", () => {
     expect(
       resolveSnapshotPlan({

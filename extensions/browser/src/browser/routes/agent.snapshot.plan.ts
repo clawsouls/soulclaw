@@ -13,6 +13,7 @@ import {
   shouldUsePlaywrightForAriaSnapshot,
   shouldUsePlaywrightForScreenshot,
 } from "../profile-capabilities.js";
+import { normalizeBrowserTimerDelayMs } from "../timer-delay.js";
 import { toBoolean, toNumber, toStringOrEmpty } from "./utils.js";
 
 type BrowserSnapshotPlan = {
@@ -79,7 +80,7 @@ export function resolveSnapshotPlan(params: {
   const timeoutMsRaw = toNumber(params.query.timeoutMs);
   const timeoutMs =
     timeoutMsRaw !== undefined && Number.isFinite(timeoutMsRaw) && timeoutMsRaw > 0
-      ? Math.max(1, Math.floor(timeoutMsRaw))
+      ? normalizeBrowserTimerDelayMs(timeoutMsRaw)
       : undefined;
 
   return {

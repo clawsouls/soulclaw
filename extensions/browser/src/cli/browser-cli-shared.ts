@@ -3,9 +3,8 @@ import {
   BROWSER_REQUEST_GATEWAY_METHOD,
   BROWSER_REQUEST_GATEWAY_SCOPES,
 } from "../browser-gateway-contract.js";
+import { normalizeBrowserTimerDelayMs } from "../browser/timer-delay.js";
 import { callGatewayFromCli, type GatewayRpcOpts } from "./core-api.js";
-
-const MAX_SAFE_TIMEOUT_DELAY_MS = 2_147_483_647;
 
 export type BrowserParentOpts = GatewayRpcOpts & {
   json?: boolean;
@@ -45,10 +44,6 @@ function parsePositiveInteger(raw: string, flag: string): number {
   return parsed;
 }
 
-function normalizeCliTimeoutMs(timeoutMs: number): number {
-  return Math.min(MAX_SAFE_TIMEOUT_DELAY_MS, Math.max(1, Math.floor(timeoutMs)));
-}
-
 export async function callBrowserRequest<T>(
   opts: BrowserParentOpts,
   params: BrowserRequestParams,
@@ -56,9 +51,9 @@ export async function callBrowserRequest<T>(
 ): Promise<T> {
   const resolvedTimeoutMs =
     typeof extra?.timeoutMs === "number" && Number.isFinite(extra.timeoutMs)
-      ? normalizeCliTimeoutMs(extra.timeoutMs)
+      ? normalizeBrowserTimerDelayMs(extra.timeoutMs)
       : typeof opts.timeout === "string"
-        ? normalizeCliTimeoutMs(parsePositiveInteger(opts.timeout, "--timeout"))
+        ? normalizeBrowserTimerDelayMs(parsePositiveInteger(opts.timeout, "--timeout"))
         : undefined;
   const resolvedTimeout =
     typeof resolvedTimeoutMs === "number" && Number.isFinite(resolvedTimeoutMs)
