@@ -623,6 +623,74 @@ describe("normalizeCronJobCreate", () => {
     expect(validateCronAddParams(normalized)).toBe(true);
   });
 
+  it("normalizes string every schedule numbers for create jobs", () => {
+    const normalized = normalizeCronJobCreate({
+      name: "every-string",
+      schedule: {
+        everyMs: "60000",
+        anchorMs: "123.9",
+      },
+      sessionTarget: "main",
+      wakeMode: "next-heartbeat",
+      payload: {
+        kind: "systemEvent",
+        text: "hi",
+      },
+    }) as unknown as Record<string, unknown>;
+
+    const schedule = normalized.schedule as Record<string, unknown>;
+    expect(schedule).toEqual({
+      kind: "every",
+      everyMs: 60_000,
+      anchorMs: 123,
+    });
+    expect(validateCronAddParams(normalized)).toBe(true);
+  });
+
+  it("normalizes string every schedule numbers for patches", () => {
+    const normalized = normalizeCronJobPatch({
+      schedule: {
+        kind: "every",
+        everyMs: "60000",
+        anchorMs: "123.9",
+      },
+    }) as unknown as Record<string, unknown>;
+
+    const schedule = normalized.schedule as Record<string, unknown>;
+    expect(schedule).toEqual({
+      kind: "every",
+      everyMs: 60_000,
+      anchorMs: 123,
+    });
+    expect(validateCronUpdateParams({ id: "job", patch: normalized })).toBe(true);
+  });
+
+  it("keeps invalid every schedule numbers invalid for validation", () => {
+    const zeroEvery = normalizeCronJobCreate({
+      name: "every-zero",
+      schedule: {
+        kind: "every",
+        everyMs: "0",
+      },
+      sessionTarget: "main",
+      wakeMode: "next-heartbeat",
+      payload: {
+        kind: "systemEvent",
+        text: "hi",
+      },
+    }) as unknown as Record<string, unknown>;
+    expect(validateCronAddParams(zeroEvery)).toBe(false);
+
+    const negativeAnchor = normalizeCronJobPatch({
+      schedule: {
+        kind: "every",
+        everyMs: "60000",
+        anchorMs: "-1",
+      },
+    }) as unknown as Record<string, unknown>;
+    expect(validateCronUpdateParams({ id: "job", patch: negativeAnchor })).toBe(false);
+  });
+
   it("coerces sessionTarget and wakeMode casing", () => {
     const normalized = normalizeCronJobCreate({
       name: "casing",
