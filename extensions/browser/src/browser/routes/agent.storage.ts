@@ -2,6 +2,7 @@ import {
   normalizeOptionalString,
   readStringValue,
 } from "openclaw/plugin-sdk/string-coerce-runtime";
+import { formatErrorMessage } from "../../infra/errors.js";
 import type { BrowserRouteContext } from "../server-context.js";
 import {
   readBody,
@@ -9,10 +10,19 @@ import {
   resolveTargetIdFromQuery,
   withPlaywrightRouteContext,
 } from "./agent.shared.js";
+import { readRouteFiniteNumber } from "./route-numeric.js";
 import type { BrowserRequest, BrowserResponse, BrowserRouteRegistrar } from "./types.js";
 import { asyncBrowserRoute, jsonError, toBoolean, toNumber, toStringOrEmpty } from "./utils.js";
 
 type StorageKind = "local" | "session";
+
+type GeolocationOptions = {
+  clear: boolean;
+  latitude?: number;
+  longitude?: number;
+  accuracy?: number;
+  origin?: string;
+};
 
 export function parseStorageKind(raw: string): StorageKind | null {
   if (raw === "local" || raw === "session") {
@@ -65,6 +75,49 @@ function parseStorageMutationFromRequest(req: BrowserRequest, res: BrowserRespon
     return null;
   }
   return { body, parsed };
+}
+
+function assertRange(
+  value: number | undefined,
+  fieldName: string,
+  min: number,
+  max: number,
+): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value < min || value > max) {
+    throw new Error(`${fieldName} must be between ${min} and ${max}.`);
+  }
+  return value;
+}
+
+export function parseGeolocationOptions(body: Record<string, unknown>): GeolocationOptions {
+  const clear = toBoolean(body.clear) ?? false;
+  const origin = toStringOrEmpty(body.origin) || undefined;
+  if (clear) {
+    return { clear, origin };
+  }
+  const latitude = assertRange(
+    readRouteFiniteNumber(body.latitude, "latitude"),
+    "latitude",
+    -90,
+    90,
+  );
+  const longitude = assertRange(
+    readRouteFiniteNumber(body.longitude, "longitude"),
+    "longitude",
+    -180,
+    180,
+  );
+  const accuracy = readRouteFiniteNumber(body.accuracy, "accuracy");
+  if (accuracy !== undefined && accuracy < 0) {
+    throw new Error("accuracy must be non-negative.");
+  }
+  if (!clear && (latitude === undefined || longitude === undefined)) {
+    throw new Error("latitude and longitude are required (or set clear=true)");
+  }
+  return { clear, latitude, longitude, accuracy, origin };
 }
 
 export function registerBrowserAgentStorageRoutes(
@@ -357,11 +410,12 @@ export function registerBrowserAgentStorageRoutes(
     asyncBrowserRoute(async (req, res) => {
       const body = readBody(req);
       const targetId = resolveTargetIdFromBody(body);
-      const clear = toBoolean(body.clear) ?? false;
-      const latitude = toNumber(body.latitude);
-      const longitude = toNumber(body.longitude);
-      const accuracy = toNumber(body.accuracy) ?? undefined;
-      const origin = toStringOrEmpty(body.origin) || undefined;
+      let geolocation: GeolocationOptions;
+      try {
+        geolocation = parseGeolocationOptions(body);
+      } catch (err) {
+        return jsonError(res, 400, formatErrorMessage(err));
+      }
 
       await withPlaywrightRouteContext({
         req,
@@ -373,11 +427,7 @@ export function registerBrowserAgentStorageRoutes(
           await pw.setGeolocationViaPlaywright({
             cdpUrl,
             targetId: tab.targetId,
-            latitude,
-            longitude,
-            accuracy,
-            origin,
-            clear,
+            ...geolocation,
           });
           res.json({ ok: true, targetId: tab.targetId });
         },
