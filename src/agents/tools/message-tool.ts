@@ -40,7 +40,12 @@ import { stripFormattedReasoningMessage } from "../../shared/text/formatted-reas
 import { normalizeMessageChannel } from "../../utils/message-channel.js";
 import { resolveSessionAgentId } from "../agent-scope.js";
 import { listAllChannelSupportedActions, listChannelSupportedActions } from "../channel-tools.js";
-import { channelTargetSchema, channelTargetsSchema, stringEnum } from "../schema/typebox.js";
+import {
+  channelTargetSchema,
+  channelTargetsSchema,
+  optionalPositiveIntegerSchema,
+  stringEnum,
+} from "../schema/typebox.js";
 import type { AnyAgentTool } from "./common.js";
 import { jsonResult, readStringParam } from "./common.js";
 import { gatewayCallOptionSchemaProperties } from "./gateway-schema.js";
@@ -349,8 +354,8 @@ function buildPollSchema() {
       case "stringArray":
         props[name] = Type.Optional(Type.Array(Type.String()));
         break;
-      case "number":
-        props[name] = Type.Optional(Type.Number());
+      case "positiveInteger":
+        props[name] = optionalPositiveIntegerSchema();
         break;
       case "boolean":
         props[name] = Type.Optional(Type.Boolean());

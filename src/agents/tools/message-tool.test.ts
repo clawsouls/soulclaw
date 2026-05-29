@@ -390,6 +390,14 @@ describe("message tool gateway timeout", () => {
     expect(getToolProperties(tool).timeoutMs).toMatchObject({ type: "integer", minimum: 1 });
   });
 
+  it("advertises shared poll duration as a positive integer", () => {
+    const tool = createMessageTool();
+    expect(getToolProperties(tool).pollDurationHours).toMatchObject({
+      type: "integer",
+      minimum: 1,
+    });
+  });
+
   it.each([-1, 1.5, "fast"])(
     "rejects invalid timeoutMs value %s before dispatch",
     async (timeoutMs) => {
