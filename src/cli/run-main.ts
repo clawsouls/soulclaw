@@ -70,6 +70,9 @@ const CLI_PROXY_ENV_KEYS = [
 
 const loadRootHelpLiveConfigModule = async () => await import("./root-help-live-config.js");
 const loadRootHelpMetadataModule = async () => await import("./root-help-metadata.js");
+const loadProxyLifecycleModule = async () => await import("../infra/net/proxy/proxy-lifecycle.js");
+const loadCrestodianModule = async () => await import("../crestodian/crestodian.js");
+const loadProgressModule = async () => await import("./progress.js");
 
 function createGatewayCliMainStartupTrace(argv: string[]) {
   const enabled =
@@ -523,7 +526,7 @@ export async function runCli(argv: string[] = process.argv) {
     const handle = proxyHandle;
     proxyHandle = null;
     if (handle) {
-      const { stopProxy } = await import("../infra/net/proxy/proxy-lifecycle.js");
+      const { stopProxy } = await loadProxyLifecycleModule();
       await stopProxy(handle);
     }
   };
@@ -538,7 +541,7 @@ export async function runCli(argv: string[] = process.argv) {
     if (unownedPrimary) {
       throw new Error(await resolveUnownedCliPrimaryMessage({ primary: unownedPrimary, config }));
     }
-    const { startProxy } = await import("../infra/net/proxy/proxy-lifecycle.js");
+    const { startProxy } = await loadProxyLifecycleModule();
     proxyHandle = await startProxy(config?.proxy ?? undefined);
   }
 
@@ -671,8 +674,8 @@ export async function runCli(argv: string[] = process.argv) {
         process.exitCode = 1;
         return;
       }
-      const { runCrestodian } = await import("../crestodian/crestodian.js");
-      const { createCliProgress } = await import("./progress.js");
+      const { runCrestodian } = await loadCrestodianModule();
+      const { createCliProgress } = await loadProgressModule();
       const progress = createCliProgress({
         label: "Starting Crestodian…",
         indeterminate: true,
@@ -696,7 +699,7 @@ export async function runCli(argv: string[] = process.argv) {
     }
 
     if (shouldRunModernOnboardCrestodian) {
-      const { runCrestodian } = await import("../crestodian/crestodian.js");
+      const { runCrestodian } = await loadCrestodianModule();
       const nonInteractive = normalizedArgv.includes("--non-interactive");
       await runCrestodian({
         message: nonInteractive ? "overview" : undefined,
@@ -736,7 +739,7 @@ export async function runCli(argv: string[] = process.argv) {
       return;
     }
 
-    const { createCliProgress } = await import("./progress.js");
+    const { createCliProgress } = await loadProgressModule();
     const startupProgress = createCliProgress({
       label: "Loading OpenClaw CLI…",
       indeterminate: true,
