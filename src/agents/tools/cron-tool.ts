@@ -578,12 +578,10 @@ Use jobId canonical; id accepted compat. contextMessages (0-10) adds previous me
       const params = args as Record<string, unknown>;
       const action = readStringParam(params, "action", { required: true });
       assertCronSelfRemoveScope(opts, action, params);
+      const parsedGatewayOpts = readGatewayCallOptions(params);
       const gatewayOpts: GatewayCallOptions = {
-        ...readGatewayCallOptions(params),
-        timeoutMs:
-          typeof params.timeoutMs === "number" && Number.isFinite(params.timeoutMs)
-            ? params.timeoutMs
-            : 60_000,
+        ...parsedGatewayOpts,
+        timeoutMs: parsedGatewayOpts.timeoutMs ?? 60_000,
       };
 
       switch (action) {
