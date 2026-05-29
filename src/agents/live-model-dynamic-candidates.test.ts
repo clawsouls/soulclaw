@@ -4,6 +4,7 @@ import type { Model } from "../llm/types.js";
 
 const providerRuntimeMocks = vi.hoisted(() => ({
   prepareProviderDynamicModel: vi.fn(),
+  resolveProviderModernModelRef: vi.fn(),
   runProviderDynamicModel: vi.fn(),
 }));
 
@@ -46,6 +47,8 @@ describe("appendPrioritizedDynamicLiveModels", () => {
   beforeEach(() => {
     providerRuntimeMocks.prepareProviderDynamicModel.mockReset();
     providerRuntimeMocks.prepareProviderDynamicModel.mockResolvedValue(undefined);
+    providerRuntimeMocks.resolveProviderModernModelRef.mockReset();
+    providerRuntimeMocks.resolveProviderModernModelRef.mockReturnValue(undefined);
     providerRuntimeMocks.runProviderDynamicModel.mockReset();
     providerRuntimeMocks.runProviderDynamicModel.mockReturnValue(undefined);
   });
