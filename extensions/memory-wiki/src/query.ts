@@ -1473,7 +1473,7 @@ export async function searchMemoryWiki(params: {
     operation: "wiki_search",
   });
   await initializeMemoryWikiVault(effectiveConfig);
-  const maxResults = Math.max(1, params.maxResults ?? 10);
+  const maxResults = normalizePositiveInteger(params.maxResults, 10);
   const mode = params.mode ?? "auto";
 
   const wikiResults = shouldSearchWiki(effectiveConfig)

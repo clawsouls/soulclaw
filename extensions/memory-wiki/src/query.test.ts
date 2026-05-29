@@ -208,6 +208,29 @@ describe("searchMemoryWiki", () => {
     expect(getActiveMemorySearchManagerMock).not.toHaveBeenCalled();
   });
 
+  it("uses the default search limit for non-finite maxResults", async () => {
+    const { rootDir, config } = await createQueryVault({
+      initialize: true,
+    });
+    await fs.writeFile(
+      path.join(rootDir, "sources", "alpha.md"),
+      renderWikiMarkdown({
+        frontmatter: { pageType: "source", id: "source.alpha", title: "Alpha Source" },
+        body: "# Alpha Source\n\nalpha body text\n",
+      }),
+      "utf8",
+    );
+
+    const results = await searchMemoryWiki({
+      config,
+      query: "alpha",
+      maxResults: Number.NaN,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.path).toBe("sources/alpha.md");
+  });
+
   it("does not match generated related blocks during wiki search", async () => {
     const { rootDir, config } = await createQueryVault({
       initialize: true,
