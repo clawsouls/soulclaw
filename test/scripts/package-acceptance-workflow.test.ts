@@ -184,10 +184,24 @@ describe("package acceptance workflow", () => {
     );
     const hydrateWindowsFetch = workflowStep(hydrateWindowsDaemon, "Fetch main ref");
     expect(hydrateWindowsFetch.shell).toBe("powershell");
-    expect(hydrateWindowsFetch.run).toContain("Start-Process git");
-    expect(hydrateWindowsFetch.run).toContain("WaitForExit(30000)");
-    expect(hydrateWindowsFetch.run).toContain('"fetch"');
-    expect(hydrateWindowsFetch.run).toContain('"--depth=50"');
+    expect(hydrateWindowsFetch.run).toContain(
+      "$fetchInfo = New-Object System.Diagnostics.ProcessStartInfo",
+    );
+    expect(hydrateWindowsFetch.run).toContain('$fetchInfo.FileName = "git"');
+    expect(hydrateWindowsFetch.run).toContain("$fetchInfo.WorkingDirectory = $repo");
+    expect(hydrateWindowsFetch.run).toContain("$fetchInfo.UseShellExecute = $false");
+    expect(hydrateWindowsFetch.run).not.toContain("$fetchInfo.RedirectStandardOutput = $true");
+    expect(hydrateWindowsFetch.run).not.toContain("$fetchInfo.RedirectStandardError = $true");
+    expect(hydrateWindowsFetch.run).toContain("$fetch = New-Object System.Diagnostics.Process");
+    expect(hydrateWindowsFetch.run).toContain("$fetch.StartInfo = $fetchInfo");
+    expect(hydrateWindowsFetch.run).toContain("$fetch.WaitForExit(30000)");
+    expect(hydrateWindowsFetch.run).toContain("$fetch.Kill()");
+    expect(hydrateWindowsFetch.run).not.toContain("StandardOutput.ReadToEnd()");
+    expect(hydrateWindowsFetch.run).not.toContain("StandardError.ReadToEnd()");
+    expect(hydrateWindowsFetch.run).toContain("git fetch failed with exit code $($fetch.ExitCode)");
+    expect(hydrateWindowsFetch.run).toContain(
+      '--no-tags --no-progress --prune --no-recurse-submodules --depth=50',
+    );
     expect(hydrateWindowsFetch.run).toContain('"+refs/heads/main:refs/remotes/origin/main"');
     expect(workflowStep(hydrateWindowsDaemon, "Mark Crabbox ready").shell).toBe("powershell");
     expect(workflowStep(hydrateWindowsDaemon, "Mark Crabbox ready").run).toContain('"NODE_BIN"');
