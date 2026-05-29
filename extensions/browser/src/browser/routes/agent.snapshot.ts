@@ -43,8 +43,9 @@ import {
   shouldUsePlaywrightForScreenshot,
 } from "./agent.snapshot.plan.js";
 import { EXISTING_SESSION_LIMITS } from "./existing-session-limits.js";
+import { readRoutePositiveInteger } from "./route-numeric.js";
 import type { BrowserResponse, BrowserRouteRegistrar } from "./types.js";
-import { asyncBrowserRoute, jsonError, toBoolean, toNumber, toStringOrEmpty } from "./utils.js";
+import { asyncBrowserRoute, jsonError, toBoolean, toStringOrEmpty } from "./utils.js";
 
 const CHROME_MCP_OVERLAY_ATTR = "data-openclaw-mcp-overlay";
 
@@ -368,11 +369,16 @@ export function registerBrowserAgentSnapshotRoutes(
       const element = toStringOrEmpty(body.element) || undefined;
       const labels = toBoolean(body.labels) ?? false;
       const type = body.type === "jpeg" ? "jpeg" : "png";
-      const timeoutMsRaw = toNumber(body.timeoutMs);
-      const timeoutMs =
-        timeoutMsRaw !== undefined
-          ? normalizeBrowserTimerDelayMs(timeoutMsRaw)
-          : DEFAULT_BROWSER_SCREENSHOT_TIMEOUT_MS;
+      let timeoutMs: number;
+      try {
+        const timeoutMsRaw = readRoutePositiveInteger(body.timeoutMs, "timeoutMs");
+        timeoutMs =
+          timeoutMsRaw !== undefined
+            ? normalizeBrowserTimerDelayMs(timeoutMsRaw)
+            : DEFAULT_BROWSER_SCREENSHOT_TIMEOUT_MS;
+      } catch (err) {
+        return jsonError(res, 400, String(err instanceof Error ? err.message : err));
+      }
 
       if (fullPage && (ref || element)) {
         return jsonError(res, 400, "fullPage is not supported for element screenshots");

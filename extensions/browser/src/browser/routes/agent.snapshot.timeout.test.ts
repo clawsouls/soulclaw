@@ -169,4 +169,18 @@ describe("browser agent snapshot timeout routing", () => {
       }),
     );
   });
+
+  it("rejects loose screenshot timeoutMs values before dispatching", async () => {
+    const handler = getScreenshotHandler();
+    const response = createBrowserRouteResponse();
+
+    await handler?.(
+      { params: {}, query: {}, body: { type: "png", timeoutMs: "1e3" } },
+      response.res,
+    );
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body).toEqual({ error: "timeoutMs must be a positive integer." });
+    expect(cdpMocks.captureScreenshot).not.toHaveBeenCalled();
+  });
 });
