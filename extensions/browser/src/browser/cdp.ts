@@ -1049,7 +1049,7 @@ export async function getDomText(opts: {
   maxChars?: number;
   selector?: string;
 }): Promise<{ text: string }> {
-  const maxChars = Math.max(0, Math.min(5_000_000, Math.floor(opts.maxChars ?? 200_000)));
+  const maxChars = resolveIntegerOption(opts.maxChars, 200_000, { min: 0, max: 5_000_000 });
   const selectorExpr = opts.selector ? JSON.stringify(opts.selector) : "null";
   const expression = `(() => {
     const fmt = ${JSON.stringify(opts.format)};

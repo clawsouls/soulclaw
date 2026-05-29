@@ -885,6 +885,30 @@ describe("cdp internal", () => {
       const obj = await getDomText({ wsUrl: server.wsUrl, format: "text" });
       expect(obj.text).toBe("");
     });
+
+    it("uses the default text budget for non-finite maxChars", async () => {
+      const server = await startMockWsServer((msg, socket) => {
+        if (msg.method === "Runtime.enable") {
+          socket.send(JSON.stringify({ id: msg.id, result: {} }));
+          return;
+        }
+        if (msg.method === "Runtime.evaluate") {
+          const expression =
+            typeof msg.params?.expression === "string" ? msg.params.expression : "";
+          expect(expression).toContain("const max = 200000;");
+          socket.send(JSON.stringify({ id: msg.id, result: { result: { value: "ok" } } }));
+        }
+      });
+      wss = server.wss;
+
+      const res = await getDomText({
+        wsUrl: server.wsUrl,
+        format: "text",
+        maxChars: Number.NaN,
+      });
+
+      expect(res.text).toBe("ok");
+    });
   });
 
   describe("querySelector", () => {
