@@ -381,6 +381,47 @@ async function executeSend(params: {
   return lastRunMessageActionInput();
 }
 
+describe("message tool gateway timeout", () => {
+  it("advertises timeoutMs as a positive integer", () => {
+    const tool = createMessageTool();
+    expect(getToolProperties(tool).timeoutMs).toMatchObject({ type: "integer", minimum: 1 });
+  });
+
+  it.each([-1, 1.5, "fast"])(
+    "rejects invalid timeoutMs value %s before dispatch",
+    async (timeoutMs) => {
+      mockSendResult();
+      const tool = createMessageTool({
+        runMessageAction: mocks.runMessageAction as never,
+      });
+
+      await expect(
+        tool.execute("1", {
+          action: "send",
+          target: "telegram:123",
+          message: "hi",
+          timeoutMs,
+        }),
+      ).rejects.toThrow("timeoutMs must be a positive integer");
+      expect(mocks.runMessageAction).not.toHaveBeenCalled();
+    },
+  );
+
+  it("accepts string timeoutMs values through the shared numeric reader", async () => {
+    mockSendResult();
+
+    const call = await executeSend({
+      action: {
+        target: "telegram:123",
+        message: "hi",
+        timeoutMs: "5000",
+      },
+    });
+
+    expect(call?.gateway?.timeoutMs).toBe(5000);
+  });
+});
+
 describe("message tool secret scoping", () => {
   it("marks message-tool-only source replies in the tool description", () => {
     const scopedTool = createMessageTool({

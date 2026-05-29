@@ -17,17 +17,14 @@ import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { collectEnabledInsecureOrDangerousFlags } from "../../security/dangerous-config-flags.js";
 import { isRecord as isPlainObject } from "../../shared/record-coerce.js";
 import { normalizeOptionalString, readStringValue } from "../../shared/string-coerce.js";
-import {
-  optionalNonNegativeIntegerSchema,
-  optionalPositiveIntegerSchema,
-  stringEnum,
-} from "../schema/typebox.js";
+import { optionalNonNegativeIntegerSchema, stringEnum } from "../schema/typebox.js";
 import {
   type AnyAgentTool,
   jsonResult,
   readNonNegativeIntegerParam,
   readStringParam,
 } from "./common.js";
+import { gatewayCallOptionSchemaProperties } from "./gateway-schema.js";
 import { callGatewayTool, readGatewayCallOptions } from "./gateway.js";
 
 const log = createSubsystemLogger("gateway-tool");
@@ -350,9 +347,7 @@ const GatewayToolSchema = Type.Object({
   reason: Type.Optional(Type.String()),
   continuationMessage: Type.Optional(Type.String()),
   // config.get, config.schema.lookup, config.apply, update.run
-  gatewayUrl: Type.Optional(Type.String()),
-  gatewayToken: Type.Optional(Type.String()),
-  timeoutMs: optionalPositiveIntegerSchema(),
+  ...gatewayCallOptionSchemaProperties(),
   // config.schema.lookup
   path: Type.Optional(Type.String()),
   // config.apply, config.patch

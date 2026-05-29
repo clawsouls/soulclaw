@@ -17,6 +17,7 @@ import {
   readNonNegativeIntegerParam,
   readStringParam,
 } from "./common.js";
+import { gatewayCallOptionSchemaProperties } from "./gateway-schema.js";
 import { callGatewayTool, readGatewayCallOptions, type GatewayCallOptions } from "./gateway.js";
 import { resolveInternalSessionKey, resolveMainSessionAlias } from "./sessions-helpers.js";
 
@@ -294,9 +295,7 @@ const CronPatchObjectSchema = Type.Optional(
 export const CronToolSchema = Type.Object(
   {
     action: stringEnum(CRON_ACTIONS),
-    gatewayUrl: Type.Optional(Type.String()),
-    gatewayToken: Type.Optional(Type.String()),
-    timeoutMs: Type.Optional(Type.Number()),
+    ...gatewayCallOptionSchemaProperties(),
     includeDisabled: Type.Optional(Type.Boolean()),
     job: CronJobObjectSchema,
     jobId: Type.Optional(Type.String()),
