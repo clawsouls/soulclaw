@@ -1173,6 +1173,10 @@
       "types": "./dist/plugin-sdk/provider-auth.d.ts",
       "default": "./dist/plugin-sdk/provider-auth.js"
     },
+    "./plugin-sdk/provider-oauth-runtime": {
+      "types": "./dist/plugin-sdk/provider-oauth-runtime.d.ts",
+      "default": "./dist/plugin-sdk/provider-oauth-runtime.js"
+    },
     "./plugin-sdk/provider-auth-runtime": {
       "types": "./dist/plugin-sdk/provider-auth-runtime.d.ts",
       "default": "./dist/plugin-sdk/provider-auth-runtime.js"
