@@ -1311,6 +1311,42 @@ describe("handleFeishuMessage command authorization", () => {
     expect(call.Timestamp).toBeLessThanOrEqual(after);
   });
 
+  it("falls back to Date.now() when create_time is malformed", async () => {
+    mockShouldComputeCommandAuthorized.mockReturnValue(false);
+
+    const cfg: ClawdbotConfig = {
+      channels: {
+        feishu: {
+          dmPolicy: "open",
+        },
+      },
+    } as ClawdbotConfig;
+
+    const event: FeishuMessageEvent = {
+      sender: {
+        sender_id: {
+          open_id: "ou-attacker",
+        },
+      },
+      message: {
+        message_id: "msg-malformed-create-time",
+        chat_id: "oc-dm",
+        chat_type: "p2p",
+        message_type: "text",
+        content: JSON.stringify({ text: "hello" }),
+        create_time: "1700000000000ms",
+      },
+    };
+
+    const before = Date.now();
+    await dispatchMessage({ cfg, event });
+    const after = Date.now();
+
+    const call = mockFinalizeInboundContext.mock.calls.at(0)?.[0] as { Timestamp: number };
+    expect(call.Timestamp).toBeGreaterThanOrEqual(before);
+    expect(call.Timestamp).toBeLessThanOrEqual(after);
+  });
+
   it("replies pairing challenge to DM chat_id instead of user:sender id", async () => {
     const cfg: ClawdbotConfig = {
       channels: {
