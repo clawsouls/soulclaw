@@ -2,8 +2,8 @@ import { intro, note, outro, spinner } from "@clack/prompts";
 import { stylePromptTitle } from "openclaw/plugin-sdk/cli-runtime";
 import { logConfigUpdated, updateConfig } from "openclaw/plugin-sdk/config-mutation";
 import {
-  parseStrictNonNegativeInteger,
-  parseStrictPositiveInteger,
+  nonNegativeSecondsToSafeMilliseconds,
+  positiveSecondsToSafeMilliseconds,
 } from "openclaw/plugin-sdk/number-runtime";
 import {
   applyAuthProfileConfig,
@@ -86,21 +86,12 @@ function parseJsonResponse(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function secondsToSafeMilliseconds(seconds: number): number | undefined {
-  const milliseconds = seconds * 1000;
-  return Number.isSafeInteger(milliseconds) ? milliseconds : undefined;
-}
-
 function parseDeviceCodeResponse(
   value: Record<string, unknown>,
   issuedAt: number,
 ): DeviceCodeResponse {
-  const expiresInSeconds = parseStrictPositiveInteger(value.expires_in);
-  const intervalSeconds = parseStrictNonNegativeInteger(value.interval);
-  const expiresInMs =
-    expiresInSeconds === undefined ? undefined : secondsToSafeMilliseconds(expiresInSeconds);
-  const intervalMs =
-    intervalSeconds === undefined ? undefined : secondsToSafeMilliseconds(intervalSeconds);
+  const expiresInMs = positiveSecondsToSafeMilliseconds(value.expires_in);
+  const intervalMs = nonNegativeSecondsToSafeMilliseconds(value.interval);
   const expiresAt = expiresInMs === undefined ? undefined : issuedAt + expiresInMs;
 
   if (

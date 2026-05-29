@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { parseStrictPositiveInteger } from "../infra/parse-finite-number.js";
+import { resolveExpiresAtMsFromDurationSeconds } from "../infra/parse-finite-number.js";
 import type { OAuthCredentials } from "../llm/oauth.js";
 import { normalizeOptionalString } from "../shared/string-coerce.js";
 
@@ -83,16 +83,11 @@ export function parseOAuthCallbackInput(
 }
 
 function resolveChutesExpiresAt(value: unknown, now: number): number | undefined {
-  const expiresInSeconds = parseStrictPositiveInteger(value);
-  if (expiresInSeconds === undefined) {
-    return undefined;
-  }
-  const lifetimeMs = expiresInSeconds * 1000;
-  const expiresAt = now + lifetimeMs - DEFAULT_EXPIRES_BUFFER_MS;
-  if (!Number.isSafeInteger(lifetimeMs) || !Number.isSafeInteger(expiresAt)) {
-    return undefined;
-  }
-  return Math.max(expiresAt, now + 30_000);
+  return resolveExpiresAtMsFromDurationSeconds(value, {
+    nowMs: now,
+    bufferMs: DEFAULT_EXPIRES_BUFFER_MS,
+    minRemainingMs: 30_000,
+  });
 }
 
 async function fetchChutesUserInfo(params: {

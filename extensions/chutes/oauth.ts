@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { parseStrictPositiveInteger } from "openclaw/plugin-sdk/number-runtime";
+import { resolveExpiresAtMsFromDurationSeconds } from "openclaw/plugin-sdk/number-runtime";
 import { generatePkceVerifierChallenge, toFormUrlEncoded } from "openclaw/plugin-sdk/provider-auth";
 import {
   parseOAuthCallbackInput,
@@ -99,16 +99,11 @@ function buildAuthorizeUrl(params: {
 }
 
 function resolveChutesExpiresAt(value: unknown, now: number): number | undefined {
-  const expiresInSeconds = parseStrictPositiveInteger(value);
-  if (expiresInSeconds === undefined) {
-    return undefined;
-  }
-  const lifetimeMs = expiresInSeconds * 1000;
-  const expiresAt = now + lifetimeMs - 5 * 60 * 1000;
-  if (!Number.isSafeInteger(lifetimeMs) || !Number.isSafeInteger(expiresAt)) {
-    return undefined;
-  }
-  return Math.max(expiresAt, now + 30_000);
+  return resolveExpiresAtMsFromDurationSeconds(value, {
+    nowMs: now,
+    bufferMs: 5 * 60 * 1000,
+    minRemainingMs: 30_000,
+  });
 }
 
 async function fetchChutesUserInfo(params: {

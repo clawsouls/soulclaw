@@ -1,4 +1,4 @@
-import { parseStrictPositiveInteger } from "openclaw/plugin-sdk/number-runtime";
+import { resolveExpiresAtMsFromDurationSeconds } from "openclaw/plugin-sdk/number-runtime";
 import { readProviderJsonResponse } from "openclaw/plugin-sdk/provider-http";
 import { fetchWithSsrFGuard } from "openclaw/plugin-sdk/ssrf-runtime";
 import { createMSTeamsHttpError } from "./http-error.js";
@@ -42,16 +42,7 @@ function createMSTeamsTokenBody(params: {
 }
 
 function resolveMSTeamsTokenExpiresAt(value: unknown): number | undefined {
-  const expiresInSeconds = parseStrictPositiveInteger(value);
-  if (expiresInSeconds === undefined) {
-    return undefined;
-  }
-
-  const lifetimeMs = expiresInSeconds * 1000;
-  const expiresAt = Date.now() + lifetimeMs - EXPIRY_BUFFER_MS;
-  return Number.isSafeInteger(lifetimeMs) && Number.isSafeInteger(expiresAt)
-    ? expiresAt
-    : undefined;
+  return resolveExpiresAtMsFromDurationSeconds(value, { bufferMs: EXPIRY_BUFFER_MS });
 }
 
 function parseMSTeamsTokenResponse(
