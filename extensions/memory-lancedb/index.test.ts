@@ -974,7 +974,18 @@ describe("memory plugin e2e", () => {
 
   test("bounds auto-recall latency during prompt build", async () => {
     vi.useFakeTimers();
-    const post = vi.fn(() => new Promise(() => undefined));
+    const post = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                data: [{ embedding: [0.1, 0.2, 0.3] }],
+              }),
+            30_000,
+          );
+        }),
+    );
     const ensureGlobalUndiciEnvProxyDispatcher = vi.fn();
     const loadLanceDbModule = vi.fn(async () => ({
       connect: vi.fn(async () => ({
@@ -1047,6 +1058,7 @@ describe("memory plugin e2e", () => {
           expect(logger.warn).toHaveBeenCalledWith(
             "memory-lancedb: auto-recall timed out after 15000ms; skipping memory injection to avoid stalling agent startup",
           );
+          await vi.advanceTimersByTimeAsync(15_000);
         },
       });
     } finally {
@@ -2687,14 +2699,16 @@ describe("memory plugin e2e", () => {
         post = vi.fn(async () => ({ data: [{ embedding: [0.1, 0.2, 0.3] }] }));
       },
     }));
-    vi.doMock("@lancedb/lancedb", () => ({
-      connect: vi.fn(async () => ({
-        tableNames: vi.fn(async () => ["memories"]),
-        openTable: vi.fn(async () => ({
-          vectorSearch,
-          countRows: vi.fn(async () => 2),
-          add: vi.fn(async () => undefined),
-          delete: vi.fn(async () => undefined),
+    vi.doMock("./lancedb-runtime.js", () => ({
+      loadLanceDbModule: vi.fn(async () => ({
+        connect: vi.fn(async () => ({
+          tableNames: vi.fn(async () => ["memories"]),
+          openTable: vi.fn(async () => ({
+            vectorSearch,
+            countRows: vi.fn(async () => 2),
+            add: vi.fn(async () => undefined),
+            delete: vi.fn(async () => undefined),
+          })),
         })),
       })),
     }));
@@ -2742,7 +2756,7 @@ describe("memory plugin e2e", () => {
       expect(text).not.toMatch(/\[a1b2c3d4\]/);
     } finally {
       vi.doUnmock("openai");
-      vi.doUnmock("@lancedb/lancedb");
+      vi.doUnmock("./lancedb-runtime.js");
       vi.resetModules();
     }
   });
