@@ -155,7 +155,6 @@ export async function fetchJson(
       controller.abort(error);
       reject(error);
     }, timeoutMs);
-    timeout.unref?.();
   });
 
   let response: Response;
@@ -174,6 +173,7 @@ export async function fetchJson(
       },
       formatTooLargeMessage: bodyTooLargeErrorMessage,
       timeoutPromise,
+      signal: controller.signal,
     });
   } finally {
     if (timeout) {
