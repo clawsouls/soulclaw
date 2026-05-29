@@ -44,6 +44,14 @@ const BROWSER_SNAPSHOT_REFS = ["role", "aria"] as const;
 
 const BROWSER_IMAGE_TYPES = ["png", "jpeg"] as const;
 
+function optionalPositiveInteger() {
+  return Type.Optional(Type.Integer({ minimum: 1 }));
+}
+
+function optionalNonNegativeInteger() {
+  return Type.Optional(Type.Integer({ minimum: 0 }));
+}
+
 // NOTE: Using a flattened object schema instead of Type.Union([Type.Object(...), ...])
 // because Claude API on Vertex AI rejects nested anyOf schemas as invalid JSON Schema.
 // The discriminator (kind) determines which properties are relevant; runtime validates.
@@ -81,7 +89,7 @@ const BrowserActSchema = Type.Object({
   url: Type.Optional(Type.String()),
   loadState: Type.Optional(Type.String()),
   textGone: Type.Optional(Type.String()),
-  timeoutMs: Type.Optional(Type.Number()),
+  timeoutMs: optionalPositiveInteger(),
   // evaluate
   fn: Type.Optional(Type.String()),
 });
@@ -98,14 +106,14 @@ export const BrowserToolSchema = Type.Object({
   url: Type.Optional(Type.String()),
   targetId: Type.Optional(Type.String()),
   label: Type.Optional(Type.String()),
-  limit: Type.Optional(Type.Number()),
-  maxChars: Type.Optional(Type.Number()),
+  limit: optionalPositiveInteger(),
+  maxChars: optionalNonNegativeInteger(),
   mode: optionalStringEnum(BROWSER_SNAPSHOT_MODES),
   snapshotFormat: optionalStringEnum(BROWSER_SNAPSHOT_FORMATS),
   refs: optionalStringEnum(BROWSER_SNAPSHOT_REFS),
   interactive: Type.Optional(Type.Boolean()),
   compact: Type.Optional(Type.Boolean()),
-  depth: Type.Optional(Type.Number()),
+  depth: optionalNonNegativeInteger(),
   selector: Type.Optional(Type.String()),
   frame: Type.Optional(Type.String()),
   labels: Type.Optional(Type.Boolean()),
@@ -117,7 +125,7 @@ export const BrowserToolSchema = Type.Object({
   level: Type.Optional(Type.String()),
   paths: Type.Optional(Type.Array(Type.String())),
   inputRef: Type.Optional(Type.String()),
-  timeoutMs: Type.Optional(Type.Number()),
+  timeoutMs: optionalPositiveInteger(),
   dialogId: Type.Optional(Type.String()),
   accept: Type.Optional(Type.Boolean()),
   promptText: Type.Optional(Type.String()),
