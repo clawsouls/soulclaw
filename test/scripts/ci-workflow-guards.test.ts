@@ -50,6 +50,9 @@ describe("ci workflow guards", () => {
       expect(checkoutStep.run, jobName).toContain(
         'timeout --signal=TERM --kill-after=10s 30s git -C "$GITHUB_WORKSPACE"',
       );
+      expect(checkoutStep.run, jobName).toContain("for attempt in 1 2 3");
+      expect(checkoutStep.run, jobName).toContain("timed out on attempt $attempt; retrying");
+      expect(checkoutStep.run, jobName).not.toContain("if timeout --signal=TERM");
       expect(checkoutStep.run, jobName).toContain("-c protocol.version=2");
       expect(checkoutStep.run, jobName).toContain(
         "fetch --no-tags --prune --no-recurse-submodules --depth=1 origin",
