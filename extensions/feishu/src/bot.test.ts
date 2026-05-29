@@ -4,6 +4,7 @@ import type { ResolvedAgentRoute } from "openclaw/plugin-sdk/routing";
 import { resolveGroupSessionKey } from "openclaw/plugin-sdk/session-store-runtime";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ClawdbotConfig, PluginRuntime } from "../runtime-api.js";
+import { parseMergeForwardContent } from "./bot-content.js";
 import type { FeishuMessageEvent } from "./bot.js";
 import { handleFeishuMessage } from "./bot.js";
 import { createFeishuMessageReceiveHandler } from "./monitor.message-handler.js";
@@ -2459,6 +2460,34 @@ describe("handleFeishuMessage command authorization", () => {
     const context = mockCallArg<{ BodyForAgent?: string }>(mockFinalizeInboundContext, 0, 0);
     expect(context.BodyForAgent).toContain(
       "[Merged and Forwarded Messages]\n- alpha\n- [File: report.pdf]",
+    );
+  });
+
+  it("does not partially parse malformed merge_forward create_time values", () => {
+    const content = JSON.stringify([
+      {
+        message_id: "container",
+        msg_type: "merge_forward",
+        body: { content: JSON.stringify({ text: "Merged and Forwarded Message" }) },
+      },
+      {
+        message_id: "partial",
+        upper_message_id: "container",
+        msg_type: "text",
+        body: { content: JSON.stringify({ text: "partial" }) },
+        create_time: "2000ms",
+      },
+      {
+        message_id: "valid",
+        upper_message_id: "container",
+        msg_type: "text",
+        body: { content: JSON.stringify({ text: "valid" }) },
+        create_time: "1000",
+      },
+    ]);
+
+    expect(parseMergeForwardContent({ content })).toBe(
+      "[Merged and Forwarded Messages]\n- partial\n- valid",
     );
   });
 
