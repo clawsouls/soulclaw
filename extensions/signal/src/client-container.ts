@@ -98,8 +98,11 @@ function readContentLength(res: Response): number | undefined {
   if (!raw) {
     return undefined;
   }
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+  const parsed = parseStrictNonNegativeInteger(raw);
+  if (parsed === undefined) {
+    throw new Error(`invalid content-length header: ${raw}`);
+  }
+  return parsed;
 }
 
 async function readCappedResponseBuffer(res: Response, maxResponseBytes: number): Promise<Buffer> {
