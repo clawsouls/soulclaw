@@ -8,6 +8,7 @@ import {
   positiveSecondsToSafeMilliseconds,
   resolveIntegerOption,
   resolveExpiresAtMsFromDurationSeconds,
+  resolveExpiresAtMsFromDurationOrEpoch,
   resolveExpiresAtMsFromEpochSeconds,
   resolveNonNegativeIntegerOption,
   resolveOptionalIntegerOption,
@@ -98,6 +99,16 @@ describe("number-coercion", () => {
     expect(resolveExpiresAtMsFromDurationSeconds("1e309", { nowMs: 1_000 })).toBeUndefined();
     expect(resolveExpiresAtMsFromEpochSeconds("3600", { bufferMs: 300 })).toBe(3_599_700);
     expect(resolveExpiresAtMsFromEpochSeconds("1e309")).toBeUndefined();
+  });
+
+  test("mixed expiry helper handles relative seconds, epoch seconds, and absolute milliseconds", () => {
+    expect(resolveExpiresAtMsFromDurationOrEpoch(86_400, { nowMs: 1_700_000_000_000 })).toBe(
+      1_700_086_400_000,
+    );
+    expect(resolveExpiresAtMsFromDurationOrEpoch(1_700_000_000)).toBe(1_700_000_000_000);
+    expect(resolveExpiresAtMsFromDurationOrEpoch(1_700_000_000_000)).toBe(1_700_000_000_000);
+    expect(resolveExpiresAtMsFromDurationOrEpoch(Number.POSITIVE_INFINITY)).toBeUndefined();
+    expect(resolveExpiresAtMsFromDurationOrEpoch(Number.MAX_SAFE_INTEGER + 1)).toBeUndefined();
   });
 
   test("integer option helpers floor finite values and fall back for non-finite values", () => {

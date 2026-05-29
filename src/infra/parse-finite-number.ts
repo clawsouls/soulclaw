@@ -7,5 +7,6 @@ export {
   positiveSecondsToSafeMilliseconds,
   nonNegativeSecondsToSafeMilliseconds,
   resolveExpiresAtMsFromDurationSeconds,
+  resolveExpiresAtMsFromDurationOrEpoch,
   resolveExpiresAtMsFromEpochSeconds,
 } from "../shared/number-coercion.js";

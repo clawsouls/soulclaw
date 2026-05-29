@@ -180,3 +180,26 @@ export function resolveExpiresAtMsFromEpochSeconds(
   const expiresAt = epochMs - (opts.bufferMs ?? 0);
   return Number.isSafeInteger(expiresAt) ? expiresAt : undefined;
 }
+
+export function resolveExpiresAtMsFromDurationOrEpoch(
+  value: unknown,
+  opts: {
+    nowMs?: number;
+    relativeSecondsThreshold?: number;
+    absoluteMillisecondsThreshold?: number;
+  } = {},
+): number | undefined {
+  const parsed = parseStrictPositiveInteger(value);
+  if (parsed === undefined) {
+    return undefined;
+  }
+  const relativeSecondsThreshold = opts.relativeSecondsThreshold ?? 1_000_000_000;
+  if (parsed < relativeSecondsThreshold) {
+    return resolveExpiresAtMsFromDurationSeconds(parsed, { nowMs: opts.nowMs });
+  }
+  const absoluteMillisecondsThreshold = opts.absoluteMillisecondsThreshold ?? 1_000_000_000_000;
+  if (parsed < absoluteMillisecondsThreshold) {
+    return positiveSecondsToSafeMilliseconds(parsed);
+  }
+  return parsed;
+}
