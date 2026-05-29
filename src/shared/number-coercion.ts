@@ -93,6 +93,34 @@ export function asPositiveSafeInteger(value: unknown): number | undefined {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : undefined;
 }
 
+export const MAX_TIMER_TIMEOUT_MS = 2_147_000_000;
+export const MAX_TIMER_TIMEOUT_SECONDS = Math.floor(MAX_TIMER_TIMEOUT_MS / 1000);
+
+export function clampTimerTimeoutMs(valueMs: unknown, minMs = 1): number | undefined {
+  const value = asFiniteNumber(valueMs);
+  if (value === undefined) {
+    return undefined;
+  }
+  const min = Math.max(1, Math.floor(minMs));
+  return Math.min(Math.max(Math.floor(value), min), MAX_TIMER_TIMEOUT_MS);
+}
+
+export function finiteSecondsToTimerSafeMilliseconds(
+  value: unknown,
+  opts: { floorSeconds?: boolean } = {},
+): number | undefined {
+  const seconds = asFiniteNumber(value);
+  if (seconds === undefined || seconds <= 0) {
+    return undefined;
+  }
+  const boundedSeconds = opts.floorSeconds ? Math.floor(seconds) : seconds;
+  const milliseconds = Math.floor(boundedSeconds * 1000);
+  if (!Number.isFinite(milliseconds) || milliseconds <= 0) {
+    return undefined;
+  }
+  return Math.min(milliseconds, MAX_TIMER_TIMEOUT_MS);
+}
+
 export function resolveIntegerOption(
   value: unknown,
   fallback: number,

@@ -3,6 +3,10 @@ import {
   asFiniteNumber,
   asFiniteNumberInRange,
   asSafeIntegerInRange,
+  clampTimerTimeoutMs,
+  finiteSecondsToTimerSafeMilliseconds,
+  MAX_TIMER_TIMEOUT_MS,
+  MAX_TIMER_TIMEOUT_SECONDS,
   nonNegativeSecondsToSafeMilliseconds,
   parseFiniteNumber,
   positiveSecondsToSafeMilliseconds,
@@ -72,6 +76,18 @@ describe("number-coercion", () => {
     expect(parseStrictPositiveInteger("0")).toBeUndefined();
     expect(parseStrictNonNegativeInteger("0")).toBe(0);
     expect(parseStrictNonNegativeInteger("-1")).toBeUndefined();
+  });
+
+  test("timer timeout helpers centralize Node-safe bounds", () => {
+    expect(MAX_TIMER_TIMEOUT_SECONDS).toBe(2_147_000);
+    expect(finiteSecondsToTimerSafeMilliseconds(1.5)).toBe(1_500);
+    expect(finiteSecondsToTimerSafeMilliseconds(1.5, { floorSeconds: true })).toBe(1_000);
+    expect(finiteSecondsToTimerSafeMilliseconds(10_000_000)).toBe(MAX_TIMER_TIMEOUT_MS);
+    expect(finiteSecondsToTimerSafeMilliseconds("10")).toBeUndefined();
+    expect(finiteSecondsToTimerSafeMilliseconds(Number.POSITIVE_INFINITY)).toBeUndefined();
+    expect(clampTimerTimeoutMs(0, 10)).toBe(10);
+    expect(clampTimerTimeoutMs(10_000_000_000)).toBe(MAX_TIMER_TIMEOUT_MS);
+    expect(clampTimerTimeoutMs(Number.NaN)).toBeUndefined();
   });
 
   test("seconds helpers reject unsafe millisecond values", () => {
