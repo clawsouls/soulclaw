@@ -35,9 +35,22 @@ type SnapshotUrlEntry = {
   url: string;
 };
 
-function resolveSnapshotTimeoutMs(timeoutMs: number | undefined): number {
+function resolveBoundedTimeoutMs(
+  timeoutMs: number | undefined,
+  fallbackMs: number,
+  minMs: number,
+  maxMs: number,
+): number {
   const parsed = parseFiniteNumber(timeoutMs);
-  return Math.max(500, Math.min(60_000, Math.floor(parsed ?? 5_000)));
+  return Math.max(minMs, Math.min(maxMs, Math.floor(parsed ?? fallbackMs)));
+}
+
+function resolveSnapshotTimeoutMs(timeoutMs: number | undefined): number {
+  return resolveBoundedTimeoutMs(timeoutMs, 5_000, 500, 60_000);
+}
+
+function resolveNavigationTimeoutMs(timeoutMs: number | undefined): number {
+  return resolveBoundedTimeoutMs(timeoutMs, 20_000, 1000, 120_000);
 }
 
 async function collectSnapshotUrls(page: Page): Promise<SnapshotUrlEntry[]> {
@@ -379,7 +392,7 @@ export async function navigateViaPlaywright(opts: {
       browserProxyMode: opts.browserProxyMode,
     }),
   });
-  const timeout = Math.max(1000, Math.min(120_000, opts.timeoutMs ?? 20_000));
+  const timeout = resolveNavigationTimeoutMs(opts.timeoutMs);
   let page = await getPageForTargetId(opts);
   ensurePageState(page);
   const navigate = async () =>
