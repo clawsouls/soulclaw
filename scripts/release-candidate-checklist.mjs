@@ -313,22 +313,27 @@ function dispatchWorkflow(repo, workflowFile, workflowRef, fields) {
   return parseRunIdFromDispatchOutput(runAndEcho("gh", args));
 }
 
-function runInfo(repo, runId) {
-  return JSON.parse(
-    run(
-      "gh",
-      [
-        "run",
-        "view",
-        runId,
-        "--repo",
-        repo,
-        "--json",
-        "databaseId,workflowName,headBranch,headSha,event,status,conclusion,url,jobs",
-      ],
-      { capture: true },
-    ),
-  );
+async function runInfo(repo, runId) {
+  const [runData, jobsData] = await Promise.all([
+    githubApi(`repos/${repo}/actions/runs/${runId}`),
+    githubApi(`repos/${repo}/actions/runs/${runId}/jobs?per_page=100`),
+  ]);
+  return {
+    databaseId: runData.id,
+    workflowName: runData.name,
+    headBranch: runData.head_branch,
+    headSha: runData.head_sha,
+    event: runData.event,
+    status: runData.status,
+    conclusion: runData.conclusion,
+    url: runData.html_url,
+    jobs: (jobsData.jobs ?? []).map((job) => ({
+      name: job.name,
+      status: job.status,
+      conclusion: job.conclusion,
+      url: job.html_url,
+    })),
+  };
 }
 
 async function pendingDeployments(repo, runId) {
@@ -367,7 +372,7 @@ function summarizeFailedRun(info) {
 async function waitForSuccessfulRun(repo, runId, expected) {
   let lastState = "";
   for (;;) {
-    const info = runInfo(repo, runId);
+    const info = await runInfo(repo, runId);
     const state = `${info.status}:${info.conclusion ?? ""}`;
     if (state !== lastState) {
       console.log(
