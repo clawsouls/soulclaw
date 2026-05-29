@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -416,6 +417,55 @@ function collectExtensionSourceFiles(): string[] {
   return extensionSourceFilesCache;
 }
 
+function isGuardedExtensionSourceFile(relativePath: string): boolean {
+  if (!/\.(?:[cm]?ts|[cm]?js|tsx|jsx)$/u.test(relativePath) || relativePath.endsWith(".d.ts")) {
+    return false;
+  }
+  if (relativePath.split("/").some((part) => part === "node_modules" || part === "dist")) {
+    return false;
+  }
+  const entryName = basename(relativePath);
+  return !(
+    classifyBundledExtensionSourcePath(resolve(REPO_ROOT, relativePath)).isTestLike ||
+    entryName === "api.ts" ||
+    entryName === "runtime-api.ts"
+  );
+}
+
+function collectExtensionForbiddenImportMatches(literals: readonly string[]): string[] {
+  const result = spawnSync(
+    "git",
+    [
+      "grep",
+      "-n",
+      "-F",
+      ...literals.flatMap((literal) => ["-e", literal]),
+      "--",
+      BUNDLED_PLUGIN_ROOT_DIR,
+    ],
+    {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+      maxBuffer: 8 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
+    },
+  );
+  if (result.status === 1) {
+    return [];
+  }
+  if (result.status !== 0) {
+    throw new Error("git grep failed while checking extension import guardrails");
+  }
+  return result.stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => {
+      const file = line.split(":", 1)[0];
+      return file ? isGuardedExtensionSourceFile(file) : false;
+    })
+    .toSorted();
+}
+
 function collectCoreSourceFiles(): string[] {
   const srcDir = resolve(ROOT_DIR, "..", "src");
   const normalizedPluginSdkDir = normalizePath(resolve(ROOT_DIR, "plugin-sdk"));
@@ -626,15 +676,14 @@ describe("channel import guardrails", () => {
   });
 
   it("keeps bundled extension source files off root and compat plugin-sdk imports", () => {
-    for (const file of collectExtensionSourceFiles()) {
-      const text = readSource(file);
-      expect(text, `${file} should not import openclaw/plugin-sdk root`).not.toMatch(
-        /["']openclaw\/plugin-sdk["']/,
-      );
-      expect(text, `${file} should not import openclaw/plugin-sdk/compat`).not.toMatch(
-        /["']openclaw\/plugin-sdk\/compat["']/,
-      );
-    }
+    expect(
+      collectExtensionForbiddenImportMatches([
+        `"openclaw/plugin-sdk"`,
+        `'openclaw/plugin-sdk'`,
+        `"openclaw/plugin-sdk/compat"`,
+        `'openclaw/plugin-sdk/compat'`,
+      ]),
+    ).toEqual([]);
   });
 
   it("keeps bundled extension source files off legacy core send-deps src imports", () => {
