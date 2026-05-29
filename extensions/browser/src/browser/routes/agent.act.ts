@@ -1,4 +1,3 @@
-import { parseStrictPositiveInteger } from "openclaw/plugin-sdk/number-runtime";
 import { formatErrorMessage } from "../../infra/errors.js";
 import {
   clickChromeMcpElement,
@@ -41,6 +40,7 @@ import {
 } from "./agent.shared.js";
 import { resolveTargetIdAfterNavigate } from "./agent.snapshot-target.js";
 import { EXISTING_SESSION_LIMITS } from "./existing-session-limits.js";
+import { readRoutePositiveInteger } from "./route-numeric.js";
 import type { BrowserRouteRegistrar } from "./types.js";
 import { asyncBrowserRoute, jsonError, toStringOrEmpty } from "./utils.js";
 
@@ -346,14 +346,6 @@ function getExistingSessionUnsupportedMessage(action: BrowserActRequest): string
       return null;
   }
   throw new Error("Unsupported browser act kind");
-}
-
-function readRoutePositiveInteger(value: unknown, fieldName: string): number | undefined {
-  const parsed = parseStrictPositiveInteger(value);
-  if (parsed === undefined && value != null) {
-    throw new Error(`${fieldName} must be a positive integer.`);
-  }
-  return parsed;
 }
 
 export function registerBrowserAgentActRoutes(
