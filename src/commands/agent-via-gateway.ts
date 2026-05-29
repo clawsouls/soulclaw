@@ -29,7 +29,6 @@ import {
 import { type RuntimeEnv, writeRuntimeJson } from "../runtime.js";
 import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { normalizeMessageChannel } from "../utils/message-channel.js";
-import { agentCommand } from "./agent.js";
 import { buildExplicitSessionIdSessionKey, resolveSessionKeyForRequest } from "./agent/session.js";
 
 type AgentGatewayResult = {
@@ -93,6 +92,7 @@ type AgentGatewayCallIdentity = Pick<
   Parameters<typeof callGateway>[0],
   "clientName" | "mode" | "scopes"
 >;
+type EmbeddedAgentCommandModule = typeof import("./agent.js");
 
 const AGENT_CLI_SIGNALS: readonly AgentCliSignal[] = ["SIGINT", "SIGTERM"];
 const GATEWAY_ABORT_RETRY_DELAYS_MS = [50, 150, 300, 600] as const;
@@ -101,6 +101,13 @@ const AGENT_CLI_SIGNAL_EXIT_CODES: Record<AgentCliSignal, number> = {
   SIGINT: 130,
   SIGTERM: 143,
 };
+
+let embeddedAgentCommandPromise: Promise<EmbeddedAgentCommandModule["agentCommand"]> | undefined;
+
+function loadEmbeddedAgentCommand(): Promise<EmbeddedAgentCommandModule["agentCommand"]> {
+  embeddedAgentCommandPromise ??= import("./agent.js").then((module) => module.agentCommand);
+  return embeddedAgentCommandPromise;
+}
 
 function protectJsonStdout(opts: Pick<AgentCliOpts, "json">): void {
   if (opts.json === true) {
@@ -720,6 +727,7 @@ export async function agentCliCommand(
   };
   try {
     if (dispatchOpts.local === true) {
+      const agentCommand = await loadEmbeddedAgentCommand();
       const result = await agentCommand(localOpts, runtime, deps);
       return returnAfterSignalExit(result, signalBridge.getReceivedSignal(), runtime);
     }
@@ -747,6 +755,7 @@ export async function agentCliCommand(
         runtime.error?.(
           `EMBEDDED FALLBACK: Gateway agent timed out; running embedded agent with fresh session ${fallbackSession.sessionId}: ${String(err)}`,
         );
+        const agentCommand = await loadEmbeddedAgentCommand();
         const result = await agentCommand(
           {
             ...localOpts,
@@ -773,6 +782,7 @@ export async function agentCliCommand(
       runtime.error?.(
         `EMBEDDED FALLBACK: Gateway agent failed; running embedded agent: ${String(err)}`,
       );
+      const agentCommand = await loadEmbeddedAgentCommand();
       const result = await agentCommand(
         {
           ...localOpts,
