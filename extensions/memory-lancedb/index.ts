@@ -9,10 +9,13 @@
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import type * as LanceDB from "@lancedb/lancedb";
-import { optionalPositiveIntegerSchema } from "openclaw/plugin-sdk/channel-actions";
+import {
+  optionalFiniteNumberSchema,
+  optionalPositiveIntegerSchema,
+} from "openclaw/plugin-sdk/channel-actions";
 import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
 import type { MemoryEmbeddingProvider } from "openclaw/plugin-sdk/memory-core-host-engine-embeddings";
-import { readPositiveIntegerParam } from "openclaw/plugin-sdk/param-readers";
+import { readFiniteNumberParam, readPositiveIntegerParam } from "openclaw/plugin-sdk/param-readers";
 import { resolveLivePluginConfigObject } from "openclaw/plugin-sdk/plugin-config-runtime";
 import { ensureGlobalUndiciEnvProxyDispatcher } from "openclaw/plugin-sdk/runtime-env";
 import {
@@ -767,7 +770,11 @@ export default definePluginEntry({
           "Save important information in long-term memory. Use for preferences, facts, decisions.",
         parameters: Type.Object({
           text: Type.String({ description: "Information to remember" }),
-          importance: Type.Optional(Type.Number({ description: "Importance 0-1 (default: 0.7)" })),
+          importance: optionalFiniteNumberSchema({
+            description: "Importance 0-1 (default: 0.7)",
+            minimum: 0,
+            maximum: 1,
+          }),
           category: Type.Optional(
             Type.Unsafe<MemoryCategory>({
               type: "string",
@@ -776,15 +783,15 @@ export default definePluginEntry({
           ),
         }),
         async execute(_toolCallId, params) {
-          const {
-            text,
-            importance = 0.7,
-            category = "other",
-          } = params as {
+          const { text, category = "other" } = params as {
             text: string;
-            importance?: number;
             category?: MemoryEntry["category"];
           };
+          const importance =
+            readFiniteNumberParam(params as Record<string, unknown>, "importance", {
+              min: 0,
+              max: 1,
+            }) ?? 0.7;
 
           if (looksLikePromptInjection(text)) {
             return {

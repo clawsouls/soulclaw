@@ -2542,9 +2542,19 @@ describe("memory plugin e2e", () => {
         expect(loadLanceDbModule).not.toHaveBeenCalled();
         expect(add).not.toHaveBeenCalled();
 
+        await expect(
+          storeTool.execute("test-call-bad-importance", {
+            text: "The user prefers concise replies",
+            importance: "1.5",
+          }),
+        ).rejects.toThrow("importance must be a finite number");
+        expect(embeddingsCreate).not.toHaveBeenCalled();
+        expect(loadLanceDbModule).not.toHaveBeenCalled();
+        expect(add).not.toHaveBeenCalled();
+
         const stored = await storeTool.execute("test-call-store", {
           text: "The user prefers concise replies",
-          importance: 0.8,
+          importance: "0.8",
           category: "preference",
         });
 
@@ -2556,6 +2566,7 @@ describe("memory plugin e2e", () => {
         });
         expect(add).toHaveBeenCalledTimes(1);
         expect(firstAddedMemory(add).text).toBe("The user prefers concise replies");
+        expect(firstAddedMemory(add).importance).toBe(0.8);
       },
     });
   });
