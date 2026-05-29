@@ -1,13 +1,18 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type WebSocket from "ws";
 import { WebSocketServer } from "ws";
 import { createRealtimeTranscriptionWebSocketSession } from "./websocket-session.js";
 
 let cleanup: (() => Promise<void>) | undefined;
 
+beforeEach(() => {
+  vi.useRealTimers();
+});
+
 afterEach(async () => {
+  vi.useRealTimers();
   await cleanup?.();
   cleanup = undefined;
 });
