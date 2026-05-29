@@ -1016,6 +1016,7 @@ $0 \\"$1\\"" touch {marker}`,
       return;
     }
     const dir = makeTempDir();
+    makeExecutable(dir, "echo");
     makeExecutable(dir, "id");
     const env = makePathEnv(dir);
     const safeBins = resolveSafeBins(undefined);
