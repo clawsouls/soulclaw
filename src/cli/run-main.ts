@@ -68,6 +68,9 @@ const CLI_PROXY_ENV_KEYS = [
   "all_proxy",
 ] as const;
 
+const loadRootHelpLiveConfigModule = async () => await import("./root-help-live-config.js");
+const loadRootHelpMetadataModule = async () => await import("./root-help-metadata.js");
+
 function createGatewayCliMainStartupTrace(argv: string[]) {
   const enabled =
     isTruthyEnvValue(process.env.OPENCLAW_GATEWAY_STARTUP_TRACE) &&
@@ -565,12 +568,12 @@ export async function runCli(argv: string[] = process.argv) {
   try {
     if (shouldUseRootHelpFastPath(normalizedArgv)) {
       const { loadRootHelpRenderOptionsForConfigSensitivePlugins } =
-        await import("./root-help-live-config.js");
+        await loadRootHelpLiveConfigModule();
       const liveRootHelpOptions = await loadRootHelpRenderOptionsForConfigSensitivePlugins(
         process.env,
       );
       if (!liveRootHelpOptions) {
-        const { outputPrecomputedRootHelpText } = await import("./root-help-metadata.js");
+        const { outputPrecomputedRootHelpText } = await loadRootHelpMetadataModule();
         if (outputPrecomputedRootHelpText()) {
           return;
         }
@@ -581,7 +584,7 @@ export async function runCli(argv: string[] = process.argv) {
     }
 
     if (shouldUseBrowserHelpFastPath(normalizedArgv)) {
-      const { outputPrecomputedBrowserHelpText } = await import("./root-help-metadata.js");
+      const { outputPrecomputedBrowserHelpText } = await loadRootHelpMetadataModule();
       if (outputPrecomputedBrowserHelpText()) {
         return;
       }
@@ -596,7 +599,7 @@ export async function runCli(argv: string[] = process.argv) {
     }
 
     if (shouldUseSecretsHelpFastPath(normalizedArgv)) {
-      const { outputPrecomputedSecretsHelpText } = await import("./root-help-metadata.js");
+      const { outputPrecomputedSecretsHelpText } = await loadRootHelpMetadataModule();
       if (outputPrecomputedSecretsHelpText()) {
         return;
       }
@@ -604,7 +607,7 @@ export async function runCli(argv: string[] = process.argv) {
 
     const precomputedSubcommandHelp = resolvePrecomputedSubcommandHelpFastPath(normalizedArgv);
     if (precomputedSubcommandHelp) {
-      const { outputPrecomputedSubcommandHelpText } = await import("./root-help-metadata.js");
+      const { outputPrecomputedSubcommandHelpText } = await loadRootHelpMetadataModule();
       if (outputPrecomputedSubcommandHelpText(precomputedSubcommandHelp)) {
         return;
       }
@@ -612,12 +615,12 @@ export async function runCli(argv: string[] = process.argv) {
 
     if (shouldUseNodesHelpFastPath(normalizedArgv)) {
       const { loadRootHelpRenderOptionsForConfigSensitivePlugins } =
-        await import("./root-help-live-config.js");
+        await loadRootHelpLiveConfigModule();
       const liveRootHelpOptions = await loadRootHelpRenderOptionsForConfigSensitivePlugins(
         process.env,
       );
       if (!liveRootHelpOptions) {
-        const { outputPrecomputedNodesHelpText } = await import("./root-help-metadata.js");
+        const { outputPrecomputedNodesHelpText } = await loadRootHelpMetadataModule();
         if (outputPrecomputedNodesHelpText()) {
           return;
         }
