@@ -214,6 +214,19 @@ describe("updateSessionStoreAfterAgentRun", () => {
           maxEntries: 42,
         },
       });
+      expect(typeof updateOptions?.resolveSingleEntryPersistence).toBe("function");
+      expect(
+        updateOptions?.resolveSingleEntryPersistence?.({
+          sessionId,
+          updatedAt: 2,
+        } as SessionEntry),
+      ).toEqual({
+        sessionKey,
+        entry: {
+          sessionId,
+          updatedAt: 2,
+        },
+      });
     });
   });
 

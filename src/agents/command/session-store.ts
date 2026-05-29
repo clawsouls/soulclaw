@@ -280,7 +280,11 @@ export async function updateSessionStoreAfterAgentRun(params: {
       store[sessionKey] = merged;
       return merged;
     },
-    { takeCacheOwnership: true, maintenanceConfig },
+    {
+      takeCacheOwnership: true,
+      maintenanceConfig,
+      resolveSingleEntryPersistence: (entry) => (entry ? { sessionKey, entry } : undefined),
+    },
   );
   if (persisted) {
     sessionStore[sessionKey] = persisted;
