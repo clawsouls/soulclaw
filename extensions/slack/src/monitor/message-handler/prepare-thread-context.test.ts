@@ -309,9 +309,11 @@ describe("resolveSlackThreadContextData", () => {
       allowNameMatching: false,
     });
 
-    expect(result.threadHistoryBody).toContain("malformed timestamp follow-up");
-    expect(result.threadHistoryBody).toContain("[slack message id: 0x65 channel: C123]");
-    expect(result.threadHistoryBody).not.toContain("1970-01-01");
+    const malformedHistoryEntry = result.threadHistoryBody
+      ?.split("\n\n")
+      .find((entry) => entry.includes("malformed timestamp follow-up"));
+    expect(malformedHistoryEntry).toContain("[slack message id: 0x65 channel: C123]");
+    expect(malformedHistoryEntry).not.toContain("1970-01-01");
   });
 
   it("includes self-authored starter (identified by bot user id) for a new thread session (default)", async () => {

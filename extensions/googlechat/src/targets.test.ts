@@ -102,7 +102,10 @@ function stubSuccessfulSend(name: string) {
   return fetchMock;
 }
 
-async function expectDownloadToRejectForResponse(response: Response, expected = /max bytes/i) {
+async function expectDownloadToRejectForResponse(
+  response: Response,
+  expected: string | RegExp = /max bytes/i,
+) {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
   await expect(
     downloadGoogleChatMedia({ account, resourceName: "media/123", maxBytes: 10 }),
@@ -196,7 +199,7 @@ describe("downloadGoogleChatMedia", () => {
         "content-type": "application/octet-stream",
       }),
       arrayBuffer,
-    } as Response;
+    } as unknown as Response;
 
     await expectDownloadToRejectForResponse(response, "invalid content-length header: 0x3");
     expect(arrayBuffer).not.toHaveBeenCalled();
