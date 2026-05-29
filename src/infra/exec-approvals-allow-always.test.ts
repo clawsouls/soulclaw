@@ -1016,16 +1016,28 @@ $0 \\"$1\\"" touch {marker}`,
       return;
     }
     const dir = makeTempDir();
-    const echo = makeExecutable(dir, "echo");
+    makeExecutable(dir, "echo");
     makeExecutable(dir, "id");
     const env = makePathEnv(dir);
-    expectAllowAlwaysBypassBlocked({
+    const safeBins = resolveSafeBins(undefined);
+
+    const { persisted } = resolvePersistedPatterns({
+      command: "/usr/bin/script -q /dev/null /bin/sh -c 'echo warmup-ok'",
       dir,
-      firstCommand: "/usr/bin/script -q /dev/null /bin/sh -c 'echo warmup-ok'",
-      secondCommand: "/usr/bin/script -q /dev/null /bin/sh -c 'id > marker'",
       env,
-      persistedPattern: echo,
+      safeBins,
     });
+    expect(persisted).toStrictEqual([]);
+
+    const second = evaluateShellAllowlist({
+      command: "/usr/bin/script -q /dev/null /bin/sh -c 'id > marker'",
+      allowlist: persisted.map((pattern) => ({ pattern })),
+      safeBins,
+      cwd: dir,
+      env,
+      platform: process.platform,
+    });
+    expect(second.allowlistSatisfied).toBe(false);
   });
 
   it("does not persist comment-tailed payload paths that never execute", () => {
