@@ -65,6 +65,14 @@ type ApplyMemoryWikiMutationResult = {
 
 function normalizeMutationConfidence(
   params: Record<string, unknown>,
+  options: { allowNull: false },
+): number | undefined;
+function normalizeMutationConfidence(
+  params: Record<string, unknown>,
+  options: { allowNull: true },
+): number | null | undefined;
+function normalizeMutationConfidence(
+  params: Record<string, unknown>,
   options: { allowNull: boolean },
 ): number | null | undefined {
   if (options.allowNull && params.confidence === null) {
