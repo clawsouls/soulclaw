@@ -13,7 +13,7 @@ import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
 } from "../../shared/string-coerce.js";
-import { readStringParam } from "./common.js";
+import { readPositiveIntegerParam, readStringParam } from "./common.js";
 
 export const DEFAULT_GATEWAY_URL = "ws://127.0.0.1:18789";
 
@@ -29,7 +29,7 @@ export function readGatewayCallOptions(params: Record<string, unknown>): Gateway
   return {
     gatewayUrl: readStringParam(params, "gatewayUrl", { trim: false }),
     gatewayToken: readStringParam(params, "gatewayToken", { trim: false }),
-    timeoutMs: typeof params.timeoutMs === "number" ? params.timeoutMs : undefined,
+    timeoutMs: readPositiveIntegerParam(params, "timeoutMs"),
   };
 }
 

@@ -84,7 +84,7 @@ const NodesToolSchema = Type.Object({
   action: stringEnum(NODES_TOOL_ACTIONS),
   gatewayUrl: Type.Optional(Type.String()),
   gatewayToken: Type.Optional(Type.String()),
-  timeoutMs: Type.Optional(Type.Number()),
+  timeoutMs: optionalPositiveIntegerSchema(),
   node: Type.Optional(Type.String()),
   requestId: Type.Optional(Type.String()),
   // notify
