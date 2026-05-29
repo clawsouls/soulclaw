@@ -177,7 +177,11 @@ export function resolveBuildAllSteps(profile = "full") {
   const envOverrides = BUILD_ALL_PROFILE_STEP_ENV[profile] ?? {};
   return selected.map((step) => {
     const env = envOverrides[step.label];
-    return env ? { ...step, env: { ...(step.env ?? {}), ...env } } : step;
+    if (!env) {
+      return step;
+    }
+    const mergedEnv = Object.assign({}, step.env, env);
+    return Object.assign({}, step, { env: mergedEnv });
   });
 }
 
