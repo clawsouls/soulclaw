@@ -293,6 +293,27 @@ describe("resolveSlackThreadContextData", () => {
     expect(result.threadHistoryBody).not.toContain("Unknown (user)");
   });
 
+  it("does not coerce malformed thread history timestamps into event times", async () => {
+    const { result } = await resolveAllowlistedThreadContext({
+      repliesMessages: [
+        { text: "starter from Alice", user: "U1", ts: "100.000" },
+        { text: "malformed timestamp follow-up", user: "U1", ts: "0x65" },
+        { text: "current message", user: "U1", ts: "101.000" },
+      ],
+      threadStarter: {
+        text: "starter from Alice",
+        userId: "U1",
+        ts: "100.000",
+      },
+      allowFromLower: ["u1"],
+      allowNameMatching: false,
+    });
+
+    expect(result.threadHistoryBody).toContain("malformed timestamp follow-up");
+    expect(result.threadHistoryBody).toContain("[slack message id: 0x65 channel: C123]");
+    expect(result.threadHistoryBody).not.toContain("1970-01-01");
+  });
+
   it("includes self-authored starter (identified by bot user id) for a new thread session (default)", async () => {
     const { result } = await resolveAllowlistedThreadContext({
       repliesMessages: [
