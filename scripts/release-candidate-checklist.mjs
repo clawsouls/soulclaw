@@ -180,6 +180,21 @@ function readJson(path, label) {
   }
 }
 
+async function githubApi(path) {
+  const token = run("gh", ["auth", "token"], { capture: true }).trim();
+  const response = await fetch(`https://api.github.com/${path}`, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${token}`,
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`GitHub API ${path} failed with ${response.status}: ${await response.text()}`);
+  }
+  return response.json();
+}
+
 function currentBranch() {
   return run("git", ["branch", "--show-current"], { capture: true }).trim();
 }
@@ -188,34 +203,24 @@ function gitRevParse(ref) {
   return run("git", ["rev-parse", ref], { capture: true }).trim();
 }
 
-function workflowRuns(repo, workflowFile) {
-  return JSON.parse(
-    run(
-      "gh",
-      [
-        "api",
-        `repos/${repo}/actions/workflows/${workflowFile}/runs?event=workflow_dispatch&per_page=100`,
-        "--jq",
-        ".workflow_runs | map({databaseId:.id, workflowName:.name, event:.event, createdAt:.created_at})",
-      ],
-      { capture: true },
-    ),
+async function workflowRuns(repo, workflowFile) {
+  const data = await githubApi(
+    `repos/${repo}/actions/workflows/${workflowFile}/runs?event=workflow_dispatch&per_page=100`,
   );
+  return (data.workflow_runs ?? []).map((run) => ({
+    databaseId: run.id,
+    workflowName: run.name,
+    event: run.event,
+    createdAt: run.created_at,
+  }));
 }
 
-function runArtifacts(repo, runId) {
-  return JSON.parse(
-    run(
-      "gh",
-      [
-        "api",
-        `repos/${repo}/actions/runs/${runId}/artifacts?per_page=100`,
-        "--jq",
-        ".artifacts | map({name:.name, expired:.expired})",
-      ],
-      { capture: true },
-    ),
-  );
+async function runArtifacts(repo, runId) {
+  const data = await githubApi(`repos/${repo}/actions/runs/${runId}/artifacts?per_page=100`);
+  return (data.artifacts ?? []).map((artifact) => ({
+    name: artifact.name,
+    expired: artifact.expired,
+  }));
 }
 
 export function resolveArtifactName(artifacts, preferredName, prefix) {
@@ -237,12 +242,12 @@ export function resolveArtifactName(artifacts, preferredName, prefix) {
   );
 }
 
-function resolveRunArtifactName(repo, runId, preferredName, prefix) {
-  return resolveArtifactName(runArtifacts(repo, runId), preferredName, prefix);
+async function resolveRunArtifactName(repo, runId, preferredName, prefix) {
+  return resolveArtifactName(await runArtifacts(repo, runId), preferredName, prefix);
 }
 
-function beforeRunIds(repo, workflowFile) {
-  return new Set(workflowRuns(repo, workflowFile).map((run) => String(run.databaseId)));
+async function beforeRunIds(repo, workflowFile) {
+  return new Set((await workflowRuns(repo, workflowFile)).map((run) => String(run.databaseId)));
 }
 
 function runAndEcho(command, args) {
@@ -284,7 +289,7 @@ async function wait(ms) {
 
 async function findNewRunId(repo, workflowFile, workflowName, beforeIds) {
   for (let attempt = 0; attempt < 60; attempt += 1) {
-    const match = workflowRuns(repo, workflowFile)
+    const match = (await workflowRuns(repo, workflowFile))
       .filter(
         (run) =>
           run.workflowName === workflowName &&
@@ -326,13 +331,9 @@ function runInfo(repo, runId) {
   );
 }
 
-function pendingDeployments(repo, runId) {
+async function pendingDeployments(repo, runId) {
   try {
-    return JSON.parse(
-      run("gh", ["api", "-X", "GET", `repos/${repo}/actions/runs/${runId}/pending_deployments`], {
-        capture: true,
-      }),
-    );
+    return await githubApi(`repos/${repo}/actions/runs/${runId}/pending_deployments`);
   } catch {
     return [];
   }
@@ -372,7 +373,11 @@ async function waitForSuccessfulRun(repo, runId, expected) {
       console.log(
         `${info.workflowName} ${runId}: ${info.status}${info.conclusion ? `/${info.conclusion}` : ""} ${info.url}`,
       );
-      const pending = summarizePendingDeployments(repo, runId, pendingDeployments(repo, runId));
+      const pending = summarizePendingDeployments(
+        repo,
+        runId,
+        await pendingDeployments(repo, runId),
+      );
       if (pending) {
         console.log(pending);
       }
@@ -404,8 +409,8 @@ function downloadArtifact(repo, runId, name, dir) {
   run("gh", ["run", "download", runId, "--repo", repo, "--name", name, "--dir", dir]);
 }
 
-function downloadResolvedArtifact(repo, runId, preferredName, prefix, dir) {
-  const name = resolveRunArtifactName(repo, runId, preferredName, prefix);
+async function downloadResolvedArtifact(repo, runId, preferredName, prefix, dir) {
+  const name = await resolveRunArtifactName(repo, runId, preferredName, prefix);
   downloadArtifact(repo, runId, name, dir);
   return name;
 }
@@ -550,7 +555,7 @@ async function runTelegramIfNeeded(options, artifactName) {
     return { status: "skipped" };
   }
   const workflowFile = "npm-telegram-beta-e2e.yml";
-  const before = beforeRunIds(options.repo, workflowFile);
+  const before = await beforeRunIds(options.repo, workflowFile);
   const dispatchedRunId = dispatchWorkflow(options.repo, workflowFile, options.workflowRef, {
     package_spec: `openclaw@${options.tag.replace(/^v/u, "")}`,
     package_label: options.tag,
@@ -584,7 +589,7 @@ async function main() {
 
   if (!options.fullReleaseRunId && !options.skipDispatch) {
     const workflowFile = "full-release-validation.yml";
-    const before = beforeRunIds(options.repo, workflowFile);
+    const before = await beforeRunIds(options.repo, workflowFile);
     const dispatchedRunId = dispatchWorkflow(options.repo, workflowFile, options.workflowRef, {
       ref: options.tag,
       provider: options.provider,
@@ -600,7 +605,7 @@ async function main() {
 
   if (!options.npmPreflightRunId && !options.skipDispatch) {
     const workflowFile = "openclaw-npm-release.yml";
-    const before = beforeRunIds(options.repo, workflowFile);
+    const before = await beforeRunIds(options.repo, workflowFile);
     const dispatchedRunId = dispatchWorkflow(options.repo, workflowFile, options.workflowRef, {
       tag: options.tag,
       preflight_only: "true",
@@ -627,14 +632,14 @@ async function main() {
 
   const npmDir = join(options.outputDir, "npm-preflight");
   const fullDir = join(options.outputDir, "full-release-validation");
-  const npmArtifactName = downloadResolvedArtifact(
+  const npmArtifactName = await downloadResolvedArtifact(
     options.repo,
     options.npmPreflightRunId,
     `openclaw-npm-preflight-${options.tag}`,
     "openclaw-npm-preflight-",
     npmDir,
   );
-  const fullArtifactName = downloadResolvedArtifact(
+  const fullArtifactName = await downloadResolvedArtifact(
     options.repo,
     options.fullReleaseRunId,
     `full-release-validation-${options.fullReleaseRunId}`,
