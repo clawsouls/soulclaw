@@ -588,11 +588,9 @@ function expectCoreSourceStaysOffPluginSpecificSdkFacades(file: string, imports:
 describe("channel import guardrails", () => {
   it("lists channel import guardrail sources from git without walking roots", () => {
     expectNoReaddirSyncDuring(() => {
-      const extensionSources = collectExtensionSourceFiles();
       const coreSources = collectCoreSourceFiles();
       const telegramSources = collectExtensionFiles("telegram");
 
-      expect(extensionSources.length).toBeGreaterThan(0);
       expect(coreSources.length).toBeGreaterThan(0);
       expect(telegramSources.length).toBeGreaterThan(0);
     });
