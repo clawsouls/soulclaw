@@ -128,7 +128,7 @@ describe("doctor command", () => {
       },
     });
 
-    ensureAuthProfileStore.mockReturnValueOnce({
+    ensureAuthProfileStore.mockReturnValue({
       version: 1,
       profiles: {
         "anthropic:me@example.com": {
@@ -166,10 +166,11 @@ describe("doctor command", () => {
 
     const written = writeConfigFile.mock.calls
       .map((call) => call[0] as Record<string, unknown>)
-      .find((candidate) => {
+      .filter((candidate) => {
         const auth = candidate.auth as { profiles?: unknown } | undefined;
         return Boolean(auth?.profiles);
-      });
+      })
+      .at(-1);
     if (!written) {
       throw new Error("Expected doctor to write migrated auth profiles");
     }
