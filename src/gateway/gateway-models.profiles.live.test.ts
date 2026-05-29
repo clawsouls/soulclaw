@@ -276,6 +276,12 @@ function resolveGatewayLiveAgentWaitTimeoutMs(
   return Math.max(1_000, Math.min(modelTimeoutMs, Math.floor(agentRunTimeoutMs + waitGraceMs)));
 }
 
+function resolveGatewayLiveProviderTimeoutSeconds(
+  modelTimeoutMs = GATEWAY_LIVE_MODEL_TIMEOUT_MS,
+): number {
+  return Math.max(1, Math.ceil(modelTimeoutMs / 1_000));
+}
+
 function isGatewayLiveProbeTimeout(error: string): boolean {
   return /probe timeout after \d+ms/i.test(error);
 }
@@ -752,6 +758,12 @@ describe("resolveGatewayLiveAgentWaitTimeoutMs", () => {
   });
 });
 
+describe("resolveGatewayLiveProviderTimeoutSeconds", () => {
+  it("matches provider timeout config to the harness model budget", () => {
+    expect(resolveGatewayLiveProviderTimeoutSeconds(180_001)).toBe(181);
+  });
+});
+
 describe("formatGatewayLiveAgentWaitFailure", () => {
   it("includes terminal attribution fields without requiring transcript text", () => {
     expect(
@@ -1160,6 +1172,28 @@ describe("buildLiveGatewayConfig", () => {
     });
 
     expect(cfg.models?.providers?.google?.models?.[0]?.contextWindow).toBe(128_000);
+  });
+
+  it("keeps live provider request timeout aligned with the harness model budget", () => {
+    const cfg = buildLiveGatewayConfig({
+      cfg: {
+        models: {
+          providers: {
+            google: {
+              api: "google-generative-ai",
+              baseUrl: "https://generativelanguage.googleapis.com",
+              models: [],
+              timeoutSeconds: 30,
+            },
+          },
+        },
+      },
+      candidates: [createGatewayLiveTestModel("google", "gemini-3.1-pro-preview")],
+    });
+
+    expect(cfg.models?.providers?.google?.timeoutSeconds).toBeGreaterThanOrEqual(
+      Math.ceil(GATEWAY_LIVE_MODEL_TIMEOUT_MS / 1_000),
+    );
   });
 });
 
@@ -2104,6 +2138,10 @@ function mergeLiveProviderConfig(params: {
     ...params.base,
     api: params.base?.api ?? params.discovered.api,
     baseUrl: params.base?.baseUrl ?? params.discovered.baseUrl,
+    timeoutSeconds: Math.max(
+      params.base?.timeoutSeconds ?? 0,
+      params.discovered.timeoutSeconds ?? 0,
+    ),
     models: [...mergedModels.values()],
   };
 }
@@ -2120,6 +2158,7 @@ function buildLiveProviderConfigs(candidates: Array<Model>): Record<string, Mode
     providers[model.provider] = {
       api: model.api as ModelProviderConfig["api"],
       baseUrl: model.baseUrl,
+      timeoutSeconds: resolveGatewayLiveProviderTimeoutSeconds(),
       models: [toLiveModelConfig(model)],
     };
   }
