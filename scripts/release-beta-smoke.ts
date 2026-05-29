@@ -221,11 +221,8 @@ function ghJson(repo: string, pathSuffix: string): unknown {
       [
         "set -euo pipefail",
         'token="$(gh auth token)"',
-        'curl -fsS -H "Authorization: Bearer ${token}"',
-        '-H "Accept: application/vnd.github+json"',
-        '-H "X-GitHub-Api-Version: 2022-11-28"',
-        '"${OPENCLAW_GITHUB_REST_URL}"',
-      ].join(" && "),
+        'curl -fsS -H "Authorization: Bearer ${token}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "${OPENCLAW_GITHUB_REST_URL}"',
+      ].join("\n"),
     ],
     {
       encoding: "utf8",
