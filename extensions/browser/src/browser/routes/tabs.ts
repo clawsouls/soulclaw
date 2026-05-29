@@ -1,5 +1,4 @@
 import { parseStrictNonNegativeInteger } from "openclaw/plugin-sdk/number-runtime";
-import { resolveBrowserNavigationProxyMode } from "../browser-proxy-mode.js";
 import {
   BrowserProfileUnavailableError,
   BrowserTabNotFoundError,
@@ -12,30 +11,9 @@ import {
 } from "../navigation-guard.js";
 import type { BrowserRouteContext, ProfileContext } from "../server-context.js";
 import { resolveTargetIdFromTabs } from "../target-id.js";
+import { browserNavigationPolicyForProfile, resolveProfileContext } from "./agent.shared.js";
 import type { BrowserRequest, BrowserResponse, BrowserRouteRegistrar } from "./types.js";
-import { asyncBrowserRoute, getProfileContext, jsonError, toStringOrEmpty } from "./utils.js";
-
-function resolveTabsProfileContext(
-  req: BrowserRequest,
-  res: BrowserResponse,
-  ctx: BrowserRouteContext,
-) {
-  const profileCtx = getProfileContext(req, ctx);
-  if ("error" in profileCtx) {
-    jsonError(res, profileCtx.status, profileCtx.error);
-    return null;
-  }
-  return profileCtx;
-}
-
-function browserNavigationPolicyForProfile(ctx: BrowserRouteContext, profileCtx: ProfileContext) {
-  return withBrowserNavigationPolicy(ctx.state().resolved.ssrfPolicy, {
-    browserProxyMode: resolveBrowserNavigationProxyMode({
-      resolved: ctx.state().resolved,
-      profile: profileCtx.profile,
-    }),
-  });
-}
+import { asyncBrowserRoute, jsonError, toStringOrEmpty } from "./utils.js";
 
 function handleTabsRouteError(
   ctx: BrowserRouteContext,
@@ -59,7 +37,7 @@ async function withTabsProfileRoute(params: {
   mapTabError?: boolean;
   run: (profileCtx: ProfileContext) => Promise<void>;
 }) {
-  const profileCtx = resolveTabsProfileContext(params.req, params.res, params.ctx);
+  const profileCtx = resolveProfileContext(params.req, params.res, params.ctx);
   if (!profileCtx) {
     return;
   }
