@@ -48,6 +48,7 @@ import type { ModelsConfig, ModelProviderConfig, OpenClawConfig } from "../confi
 import { isTruthyEnvValue } from "../infra/env.js";
 import { normalizeGoogleModelId } from "../plugin-sdk/google-model-id.js";
 import { resolveProviderThinkingProfile } from "../plugins/provider-runtime.js";
+import type { ProviderThinkingModelCompat } from "../plugins/provider-thinking.types.js";
 import { DEFAULT_AGENT_ID } from "../routing/session-key.js";
 import { stripAssistantInternalScaffolding } from "../shared/text/assistant-visible-text.js";
 import { containsFinalTag, stripFinalTags } from "../shared/text/final-tags.js";
@@ -1125,13 +1126,17 @@ describe("buildLiveGatewayConfig", () => {
         models: {
           providers: {
             google: {
-              api: "google-ai",
+              api: "google-generative-ai",
               baseUrl: "https://generativelanguage.googleapis.com",
               models: [
                 {
                   id: "gemini-3-flash-preview",
+                  name: "gemini-3-flash-preview",
                   input: ["text"],
+                  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
                   contextWindow: 1_000,
+                  maxTokens: 100,
+                  reasoning: false,
                 },
               ],
             },
@@ -2184,7 +2189,7 @@ function resolveGatewayLiveModelThinkingLevel(params: {
       provider: model.provider,
       modelId: model.id,
       reasoning: model.reasoning,
-      compat: model.compat,
+      compat: getProviderThinkingModelCompat(model),
     },
   });
   if (profile) {
@@ -2203,6 +2208,17 @@ function resolveGatewayLiveModelThinkingLevel(params: {
     }
   }
   return clampThinkingLevel(model, normalized);
+}
+
+function getProviderThinkingModelCompat(model: Model): ProviderThinkingModelCompat | undefined {
+  const compat = model.compat;
+  if (!compat || typeof compat !== "object") {
+    return undefined;
+  }
+  if ("thinkingFormat" in compat || "supportedReasoningEfforts" in compat) {
+    return compat as ProviderThinkingModelCompat;
+  }
+  return undefined;
 }
 
 function resolveGatewayLiveThinkingLevel(params: { raw?: string; smoke: boolean }): string {
