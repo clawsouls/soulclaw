@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../config/config.js";
 import { loggingState } from "../logging/state.js";
 import type { RuntimeEnv } from "../runtime.js";
-import { agentCliCommand } from "./agent-via-gateway.js";
+import { __testing as agentViaGatewayTesting, agentCliCommand } from "./agent-via-gateway.js";
 import type { agentCommand as AgentCommand } from "./agent.js";
 
 const loadConfig = vi.hoisted(() => vi.fn());
@@ -21,6 +21,7 @@ const isGatewayTransportError = vi.hoisted(() =>
 );
 const agentCommand = vi.hoisted(() => vi.fn());
 const agentModuleLoadCount = vi.hoisted(() => vi.fn());
+const loadAgentSessionModuleMock = vi.hoisted(() => vi.fn());
 
 const runtime: RuntimeEnv = {
   log: vi.fn(),
@@ -147,6 +148,17 @@ async function waitForAgentCommandCall(expectedCalls = 1) {
   expect(agentCommand).toHaveBeenCalledTimes(expectedCalls);
 }
 
+async function waitForGatewayCall(expectedCalls = 1) {
+  for (
+    let attempt = 0;
+    attempt < 50 && callGateway.mock.calls.length < expectedCalls;
+    attempt += 1
+  ) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
+  expect(callGateway).toHaveBeenCalledTimes(expectedCalls);
+}
+
 function mockMessages(mock: unknown): string[] {
   const calls = (mock as { mock?: { calls?: unknown[][] } }).mock?.calls ?? [];
   return calls.map(([message]) => String(message));
@@ -209,6 +221,9 @@ let originalForceConsoleToStderr = false;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  agentViaGatewayTesting.resetLazyImportsForTests();
+  loadAgentSessionModuleMock.mockImplementation(async () => await import("./agent/session.js"));
+  agentViaGatewayTesting.setAgentSessionModuleLoaderForTests(loadAgentSessionModuleMock);
   originalForceConsoleToStderr = loggingState.forceConsoleToStderr;
   loggingState.forceConsoleToStderr = false;
 });
@@ -270,6 +285,7 @@ describe("agentCliCommand", () => {
       expect(params.sessionId).toBeUndefined();
       expect(params.to).toBeUndefined();
       expect(agentCommand).not.toHaveBeenCalled();
+      expect(loadAgentSessionModuleMock).not.toHaveBeenCalled();
     });
   });
 
@@ -529,7 +545,7 @@ describe("agentCliCommand", () => {
         const run = agentCliCommand({ message: "hi", to: "+1555" }, runtime, {
           process: signals.processLike,
         });
-        await Promise.resolve();
+        await waitForGatewayCall();
         signals.emit(signalName);
         expect(signals.listenerCount("SIGTERM")).toBe(0);
         expect(signals.listenerCount("SIGINT")).toBe(0);
@@ -596,7 +612,7 @@ describe("agentCliCommand", () => {
           process: signals.processLike,
         },
       );
-      await Promise.resolve();
+      await waitForGatewayCall();
       signals.emit("SIGTERM");
 
       await run;
@@ -638,7 +654,7 @@ describe("agentCliCommand", () => {
       const run = agentCliCommand({ message: "hi", to: "+1555" }, runtime, {
         process: signals.processLike,
       });
-      await Promise.resolve();
+      await waitForGatewayCall();
       signals.emit("SIGTERM");
 
       await run;
@@ -702,7 +718,7 @@ describe("agentCliCommand", () => {
           process: signals.processLike,
         },
       );
-      await Promise.resolve();
+      await waitForGatewayCall();
       signals.emit("SIGTERM");
 
       await run;
@@ -778,7 +794,7 @@ describe("agentCliCommand", () => {
           process: signals.processLike,
         },
       );
-      await Promise.resolve();
+      await waitForGatewayCall();
       signals.emit("SIGTERM");
 
       await run;
@@ -856,7 +872,7 @@ describe("agentCliCommand", () => {
           process: signals.processLike,
         },
       );
-      await Promise.resolve();
+      await waitForGatewayCall();
       signals.emit("SIGTERM");
 
       await run;
@@ -932,7 +948,7 @@ describe("agentCliCommand", () => {
           process: signals.processLike,
         },
       );
-      await Promise.resolve();
+      await waitForGatewayCall();
       signals.emit("SIGTERM");
 
       await run;
