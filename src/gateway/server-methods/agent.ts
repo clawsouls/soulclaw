@@ -144,6 +144,7 @@ import {
   loadGatewaySessionRow,
   loadSessionEntry,
   migrateAndPruneGatewaySessionStoreKey,
+  resolveGatewaySessionStoreTarget,
   resolveGatewayModelSupportsImages,
   resolveSessionModelRef,
 } from "../session-utils.js";
@@ -1569,14 +1570,34 @@ export const agentHandlers: GatewayRequestHandlers = {
         if (storePath && !suppressVisibleSessionEffects) {
           const requestedStoreKey = requestedSessionKey;
           let deniedBySendPolicy = false;
+          let singleEntryPersistence:
+            | {
+                sessionKey: string;
+                entry: SessionEntry;
+              }
+            | undefined;
           const persisted = await updateSessionStore(
             storePath,
             (store) => {
-              const { primaryKey } = migrateAndPruneGatewaySessionStoreKey({
+              const storeKeysBeforeMigration = new Set(Object.keys(store));
+              const preMigrationTarget = resolveGatewaySessionStoreTarget({
                 cfg,
                 key: requestedStoreKey,
                 store,
               });
+              const hadLegacyStoreKey = preMigrationTarget.storeKeys.some(
+                (storeKey) =>
+                  storeKey !== preMigrationTarget.canonicalKey &&
+                  Object.prototype.hasOwnProperty.call(store, storeKey),
+              );
+              const { target, primaryKey } = migrateAndPruneGatewaySessionStoreKey({
+                cfg,
+                key: requestedStoreKey,
+                store,
+              });
+              const prunedStoreKey = [...storeKeysBeforeMigration].some(
+                (storeKey) => !Object.prototype.hasOwnProperty.call(store, storeKey),
+              );
               const freshEntry = store[primaryKey];
               patchBuild = buildSessionPatch(freshEntry);
               const effectivePatch =
@@ -1601,9 +1622,21 @@ export const agentHandlers: GatewayRequestHandlers = {
                 return merged;
               }
               store[primaryKey] = merged;
+              const canonicalKeyChanged = target.canonicalKey !== preMigrationTarget.canonicalKey;
+              singleEntryPersistence =
+                freshEntry && !hadLegacyStoreKey && !canonicalKeyChanged && !prunedStoreKey
+                  ? {
+                      sessionKey: primaryKey,
+                      entry: merged,
+                    }
+                  : undefined;
               return merged;
             },
-            { takeCacheOwnership: true, maintenanceConfig: sessionMaintenanceConfig },
+            {
+              takeCacheOwnership: true,
+              maintenanceConfig: sessionMaintenanceConfig,
+              resolveSingleEntryPersistence: () => singleEntryPersistence,
+            },
           );
           if (persisted) {
             sessionEntry = persisted;
