@@ -12,7 +12,7 @@ import {
 } from "./agent.shared.js";
 import { readRouteFiniteNumber } from "./route-numeric.js";
 import type { BrowserRequest, BrowserResponse, BrowserRouteRegistrar } from "./types.js";
-import { asyncBrowserRoute, jsonError, toBoolean, toNumber, toStringOrEmpty } from "./utils.js";
+import { asyncBrowserRoute, jsonError, toBoolean, toStringOrEmpty } from "./utils.js";
 
 type StorageKind = "local" | "session";
 
@@ -22,6 +22,18 @@ type GeolocationOptions = {
   longitude?: number;
   accuracy?: number;
   origin?: string;
+};
+
+type CookieSetOptions = {
+  name: string;
+  value: string;
+  url?: string;
+  domain?: string;
+  path?: string;
+  expires?: number;
+  httpOnly?: boolean;
+  secure?: boolean;
+  sameSite?: "Lax" | "None" | "Strict";
 };
 
 export function parseStorageKind(raw: string): StorageKind | null {
@@ -92,6 +104,30 @@ function assertRange(
   return value;
 }
 
+function readOptionalRouteFiniteNumber(value: unknown, fieldName: string): number | undefined {
+  if (typeof value === "string" && value.trim() === "") {
+    return undefined;
+  }
+  return readRouteFiniteNumber(value, fieldName);
+}
+
+export function parseCookieSetOptions(cookie: Record<string, unknown>): CookieSetOptions {
+  return {
+    name: toStringOrEmpty(cookie.name),
+    value: toStringOrEmpty(cookie.value),
+    url: toStringOrEmpty(cookie.url) || undefined,
+    domain: toStringOrEmpty(cookie.domain) || undefined,
+    path: toStringOrEmpty(cookie.path) || undefined,
+    expires: readOptionalRouteFiniteNumber(cookie.expires, "cookie.expires"),
+    httpOnly: toBoolean(cookie.httpOnly) ?? undefined,
+    secure: toBoolean(cookie.secure) ?? undefined,
+    sameSite:
+      cookie.sameSite === "Lax" || cookie.sameSite === "None" || cookie.sameSite === "Strict"
+        ? cookie.sameSite
+        : undefined,
+  };
+}
+
 export function parseGeolocationOptions(body: Record<string, unknown>): GeolocationOptions {
   const clear = toBoolean(body.clear) ?? false;
   const origin = toStringOrEmpty(body.origin) || undefined;
@@ -158,6 +194,12 @@ export function registerBrowserAgentStorageRoutes(
       if (!cookie) {
         return jsonError(res, 400, "cookie is required");
       }
+      let parsedCookie: CookieSetOptions;
+      try {
+        parsedCookie = parseCookieSetOptions(cookie);
+      } catch (err) {
+        return jsonError(res, 400, formatErrorMessage(err));
+      }
 
       // Intentional: mutation routes are outside the tab-scoped read/export guard scope.
       await withPlaywrightRouteContext({
@@ -170,22 +212,7 @@ export function registerBrowserAgentStorageRoutes(
           await pw.cookiesSetViaPlaywright({
             cdpUrl,
             targetId: tab.targetId,
-            cookie: {
-              name: toStringOrEmpty(cookie.name),
-              value: toStringOrEmpty(cookie.value),
-              url: toStringOrEmpty(cookie.url) || undefined,
-              domain: toStringOrEmpty(cookie.domain) || undefined,
-              path: toStringOrEmpty(cookie.path) || undefined,
-              expires: toNumber(cookie.expires) ?? undefined,
-              httpOnly: toBoolean(cookie.httpOnly) ?? undefined,
-              secure: toBoolean(cookie.secure) ?? undefined,
-              sameSite:
-                cookie.sameSite === "Lax" ||
-                cookie.sameSite === "None" ||
-                cookie.sameSite === "Strict"
-                  ? cookie.sameSite
-                  : undefined,
-            },
+            cookie: parsedCookie,
           });
           res.json({ ok: true, targetId: tab.targetId });
         },

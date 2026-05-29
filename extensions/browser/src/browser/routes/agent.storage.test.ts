@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  parseCookieSetOptions,
   parseGeolocationOptions,
   parseRequiredStorageMutationRequest,
   parseStorageKind,
@@ -16,6 +17,47 @@ describe("browser storage route parsing", () => {
     it("rejects unsupported values", () => {
       expect(parseStorageKind("cookie")).toBeNull();
       expect(parseStorageKind("")).toBeNull();
+    });
+  });
+
+  describe("parseCookieSetOptions", () => {
+    it("parses valid cookie expiry numbers and decimal strings", () => {
+      expect(
+        parseCookieSetOptions({
+          name: "session",
+          value: "abc",
+          url: "https://example.com",
+          expires: "1893456000.5",
+          httpOnly: true,
+          sameSite: "Lax",
+        }),
+      ).toEqual({
+        name: "session",
+        value: "abc",
+        url: "https://example.com",
+        domain: undefined,
+        path: undefined,
+        expires: 1893456000.5,
+        httpOnly: true,
+        secure: undefined,
+        sameSite: "Lax",
+      });
+    });
+
+    it("omits blank optional cookie expiry values", () => {
+      expect(parseCookieSetOptions({ name: "session", value: "abc", expires: "  " })).toMatchObject(
+        {
+          name: "session",
+          value: "abc",
+          expires: undefined,
+        },
+      );
+    });
+
+    it("rejects loose cookie expiry tokens", () => {
+      expect(() =>
+        parseCookieSetOptions({ name: "session", value: "abc", expires: "0x10" }),
+      ).toThrow("cookie.expires must be a finite number.");
     });
   });
 
