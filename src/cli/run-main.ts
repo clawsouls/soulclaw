@@ -70,6 +70,10 @@ const CLI_PROXY_ENV_KEYS = [
 
 const loadRootHelpLiveConfigModule = async () => await import("./root-help-live-config.js");
 const loadRootHelpMetadataModule = async () => await import("./root-help-metadata.js");
+const loadLoggingModule = async () => await import("../logging.js");
+const loadCliRegistryLoaderModule = async () => await import("../plugins/cli-registry-loader.js");
+const loadManifestCommandAliasesRuntimeModule = async () =>
+  await import("../plugins/manifest-command-aliases.runtime.js");
 const loadProxyLifecycleModule = async () => await import("../infra/net/proxy/proxy-lifecycle.js");
 const loadCrestodianModule = async () => await import("../crestodian/crestodian.js");
 const loadProgressModule = async () => await import("./progress.js");
@@ -170,7 +174,7 @@ async function tryRunGatewayRunFastPath(
       import("../version.js"),
       import("./banner.js"),
       import("./command-startup-policy.js"),
-      import("../logging.js"),
+      loadLoggingModule(),
     ]),
   );
   const invocation = resolveCliArgvInvocation(argv);
@@ -344,7 +348,7 @@ async function isPluginCliRoot(params: {
   config: OpenClawConfig;
 }): Promise<boolean | null> {
   try {
-    const { resolvePluginCliRootOwnerIds } = await import("../plugins/cli-registry-loader.js");
+    const { resolvePluginCliRootOwnerIds } = await loadCliRegistryLoaderModule();
     const ownerIds = await resolvePluginCliRootOwnerIds({
       cfg: params.config,
       env: process.env,
@@ -373,8 +377,7 @@ async function resolveCliCommandSurfaceOwner(params: {
   primary: string;
   config: OpenClawConfig;
 }): Promise<string | undefined> {
-  const { resolveManifestCliCommandSurfaceOwner } =
-    await import("../plugins/manifest-command-aliases.runtime.js");
+  const { resolveManifestCliCommandSurfaceOwner } = await loadManifestCommandAliasesRuntimeModule();
   const manifestOwner = resolveManifestCliCommandSurfaceOwner({
     command: params.primary,
     config: params.config,
@@ -384,7 +387,7 @@ async function resolveCliCommandSurfaceOwner(params: {
     return manifestOwner;
   }
   try {
-    const { resolvePluginCliRootOwnerIds } = await import("../plugins/cli-registry-loader.js");
+    const { resolvePluginCliRootOwnerIds } = await loadCliRegistryLoaderModule();
     return (
       await resolvePluginCliRootOwnerIds({
         cfg: createAllowlistAgnosticCliLookupConfig(params.config),
@@ -431,7 +434,7 @@ async function resolveUnownedCliPrimaryMessage(params: {
   config: OpenClawConfig;
 }): Promise<string> {
   const { resolveManifestCommandAliasOwner, resolveManifestToolOwner } =
-    await import("../plugins/manifest-command-aliases.runtime.js");
+    await loadManifestCommandAliasesRuntimeModule();
   const cliCommandSurfaceOwner = await resolveCliCommandSurfaceOwner(params);
   return (
     resolveMissingPluginCommandMessageFromPolicy(params.primary, params.config, {
@@ -756,7 +759,7 @@ export async function runCli(argv: string[] = process.argv) {
 
     try {
       // Capture all console output into structured logs while keeping stdout/stderr behavior.
-      const { enableConsoleCapture } = await import("../logging.js");
+      const { enableConsoleCapture } = await loadLoggingModule();
       enableConsoleCapture();
 
       const [
@@ -858,7 +861,7 @@ export async function runCli(argv: string[] = process.argv) {
             )
           ) {
             const { resolveManifestCommandAliasOwner, resolveManifestToolOwner } =
-              await import("../plugins/manifest-command-aliases.runtime.js");
+              await loadManifestCommandAliasesRuntimeModule();
             const cliCommandSurfaceOwner = await resolveCliCommandSurfaceOwner({
               primary,
               config,
