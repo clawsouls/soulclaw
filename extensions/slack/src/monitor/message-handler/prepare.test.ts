@@ -707,6 +707,18 @@ describe("slack prepareSlackMessage inbound contract", () => {
     expect(prepared?.ackReactionPromise).toBeNull();
   });
 
+  it("does not coerce malformed Slack timestamps into inbound event times", async () => {
+    const prepared = await prepareWithDefaultCtx(
+      createSlackMessage({
+        ts: "0x10",
+      }),
+    );
+
+    assertPrepared(prepared);
+    expect(prepared.ctxPayload.Timestamp).toBeUndefined();
+    expect(prepared.ctxPayload.MessageSid).toBe("0x10");
+  });
+
   it("primes Slack status reactions when channel replies are message-tool-only", async () => {
     const slackCtx = createInboundSlackCtx({
       cfg: {
