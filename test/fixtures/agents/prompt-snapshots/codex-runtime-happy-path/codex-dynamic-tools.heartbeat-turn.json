@@ -164,7 +164,7 @@
         "contextMessages": {
           "maximum": 10,
           "minimum": 0,
-          "type": "number"
+          "type": "integer"
         },
         "gatewayToken": {
           "type": "string"
@@ -853,7 +853,8 @@
           "type": "string"
         },
         "delayMs": {
-          "type": "number"
+          "minimum": 0,
+          "type": "integer"
         },
         "gatewayToken": {
           "type": "string"
@@ -874,7 +875,8 @@
           "type": "string"
         },
         "restartDelayMs": {
-          "type": "number"
+          "minimum": 0,
+          "type": "integer"
         },
         "sessionKey": {
           "type": "string"
@@ -906,7 +908,7 @@
       "properties": {
         "activeMinutes": {
           "minimum": 1,
-          "type": "number"
+          "type": "integer"
         },
         "agentId": {
           "maxLength": 64,
@@ -931,11 +933,11 @@
         },
         "limit": {
           "minimum": 1,
-          "type": "number"
+          "type": "integer"
         },
         "messageLimit": {
           "minimum": 0,
-          "type": "number"
+          "type": "integer"
         },
         "search": {
           "minLength": 1,
@@ -957,7 +959,7 @@
         },
         "limit": {
           "minimum": 1,
-          "type": "number"
+          "type": "integer"
         },
         "sessionKey": {
           "type": "string"
@@ -992,7 +994,7 @@
         },
         "timeoutSeconds": {
           "minimum": 0,
-          "type": "number"
+          "type": "integer"
         }
       },
       "required": ["message"],
@@ -1072,7 +1074,7 @@
         },
         "runTimeoutSeconds": {
           "minimum": 0,
-          "type": "number"
+          "type": "integer"
         },
         "sandbox": {
           "enum": ["inherit", "require"],
@@ -1090,7 +1092,7 @@
         },
         "timeoutSeconds": {
           "minimum": 0,
-          "type": "number"
+          "type": "integer"
         }
       },
       "required": ["task"],
@@ -1122,7 +1124,7 @@
         },
         "recentMinutes": {
           "minimum": 1,
-          "type": "number"
+          "type": "integer"
         }
       },
       "type": "object"
