@@ -1,5 +1,6 @@
 import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { coerceFiniteScheduleNumber } from "./schedule-number.js";
+import { normalizeCronStaggerMs } from "./stagger.js";
 
 function readString(record: Record<string, unknown>, key: string): string | undefined {
   return normalizeOptionalString(record[key]);
@@ -7,6 +8,10 @@ function readString(record: Record<string, unknown>, key: string): string | unde
 
 function readNumber(record: Record<string, unknown>, key: string): number | undefined {
   return coerceFiniteScheduleNumber(record[key]);
+}
+
+function readStaggerMs(record: Record<string, unknown>): number | undefined {
+  return normalizeCronStaggerMs(record.staggerMs);
 }
 
 function schedulePayloadFromRecord(
@@ -23,7 +28,7 @@ function schedulePayloadFromRecord(
   const everyMs = readNumber(schedule, "everyMs");
   const anchorMs = readNumber(schedule, "anchorMs");
   const tz = readString(schedule, "tz");
-  const staggerMs = readNumber(schedule, "staggerMs");
+  const staggerMs = readStaggerMs(schedule);
   const kind =
     rawKind === "at" || rawKind === "every" || rawKind === "cron"
       ? rawKind

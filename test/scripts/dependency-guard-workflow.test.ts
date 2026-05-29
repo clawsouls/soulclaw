@@ -146,9 +146,7 @@ describe("dependency guard workflow", () => {
     expect(codeowners).toContain(
       "/test/scripts/dependency-guard-workflow.test.ts @openclaw/openclaw-secops",
     );
-    expect(codeowners).toContain(
-      "/scripts/github/dependency-guard.mjs @openclaw/openclaw-secops",
-    );
+    expect(codeowners).toContain("/scripts/github/dependency-guard.mjs @openclaw/openclaw-secops");
     expect(codeowners).toContain("/package-lock.json @openclaw/openclaw-secops");
     expect(codeowners).toContain("/npm-shrinkwrap.json @openclaw/openclaw-secops");
     expect(codeowners).toContain("/extensions/*/package-lock.json @openclaw/openclaw-secops");
