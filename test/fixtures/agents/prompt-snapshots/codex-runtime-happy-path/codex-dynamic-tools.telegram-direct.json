@@ -135,7 +135,8 @@
           "type": "string"
         },
         "timeoutMs": {
-          "type": "number"
+          "minimum": 1,
+          "type": "integer"
         },
         "title": {
           "type": "string"
@@ -616,7 +617,8 @@
           "type": "string"
         },
         "timeoutMs": {
-          "type": "number"
+          "minimum": 1,
+          "type": "integer"
         }
       },
       "required": ["action"],
@@ -761,7 +763,8 @@
           "type": "string"
         },
         "timeoutMs": {
-          "type": "number"
+          "minimum": 1,
+          "type": "integer"
         }
       },
       "required": ["action"],
@@ -846,7 +849,8 @@
           "type": "string"
         },
         "timeoutMs": {
-          "type": "number"
+          "minimum": 1,
+          "type": "integer"
         }
       },
       "required": ["action"],
