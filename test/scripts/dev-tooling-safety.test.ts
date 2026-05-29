@@ -161,12 +161,11 @@ describe("script-specific dev tooling hardening", () => {
   });
 
   it("times out stalled OpenAI realtime smoke response body reads", async () => {
-    const response = {
-      ok: true,
-      status: 200,
-      statusText: "OK",
-      json: () => new Promise(() => {}),
-    } as Response;
+    const response = new Response(
+      new ReadableStream({
+        start() {},
+      }),
+    );
     const request = realtimeSmokeTesting.createOpenAIClientSecret("test-key", {
       timeoutMs: 5,
       fetchImpl: (() => Promise.resolve(response)) as typeof fetch,
@@ -182,6 +181,33 @@ describe("script-specific dev tooling hardening", () => {
     expect(() => realtimeSmokeTesting.resolveOpenAIHttpTimeoutMs("2s")).toThrow(
       /OPENCLAW_REALTIME_OPENAI_HTTP_TIMEOUT_MS must be an integer/u,
     );
+  });
+
+  it("bounds OpenAI realtime smoke response body reads by content-length", async () => {
+    const maxBytes = realtimeSmokeTesting.OPENAI_HTTP_RESPONSE_MAX_BYTES;
+    const response = new Response("{}", {
+      headers: { "content-length": String(maxBytes + 1) },
+    });
+
+    await expect(
+      realtimeSmokeTesting.readBoundedText(response, "OpenAI Realtime test", maxBytes),
+    ).rejects.toThrow(`OpenAI Realtime test response body exceeded ${maxBytes} bytes`);
+  });
+
+  it("bounds OpenAI realtime smoke response body reads by streamed bytes", async () => {
+    const maxBytes = realtimeSmokeTesting.OPENAI_HTTP_RESPONSE_MAX_BYTES;
+    const response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array(maxBytes + 1));
+          controller.close();
+        },
+      }),
+    );
+
+    await expect(
+      realtimeSmokeTesting.readBoundedText(response, "OpenAI Realtime test", maxBytes),
+    ).rejects.toThrow(`OpenAI Realtime test response body exceeded ${maxBytes} bytes`);
   });
 
   it("rejects absolute-form URLs in the Anthropic capture proxy", () => {
