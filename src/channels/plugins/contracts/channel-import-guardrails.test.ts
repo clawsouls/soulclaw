@@ -687,13 +687,7 @@ describe("channel import guardrails", () => {
   });
 
   it("keeps bundled extension source files off legacy core send-deps src imports", () => {
-    const legacyCoreSendDepsImport = /["'][^"']*src\/infra\/outbound\/send-deps\.[cm]?[jt]s["']/;
-    for (const file of collectExtensionSourceFiles()) {
-      const text = readSource(file);
-      expect(text, `${file} should not import src/infra/outbound/send-deps.*`).not.toMatch(
-        legacyCoreSendDepsImport,
-      );
-    }
+    expect(collectExtensionForbiddenImportMatches(["src/infra/outbound/send-deps"])).toEqual([]);
   });
 
   it("keeps core production files off plugin-private src imports", () => {
@@ -705,9 +699,18 @@ describe("channel import guardrails", () => {
     }
   });
 
-  it("keeps extension production files off other extensions' private src imports", () => {
-    for (const file of collectExtensionSourceFiles()) {
-      expectNoSiblingExtensionPrivateSrcImports(file, getSourceAnalysis(file).importSpecifiers);
+  describe("extension private src import guardrails", () => {
+    for (const extensionId of BUNDLED_EXTENSION_IDS.toSorted((left, right) =>
+      left.localeCompare(right),
+    )) {
+      it(`${extensionId} stays off other extensions' private src imports`, () => {
+        for (const file of collectExtensionFiles(extensionId)) {
+          if (basename(file) === "api.ts") {
+            continue;
+          }
+          expectNoSiblingExtensionPrivateSrcImports(file, getSourceAnalysis(file).importSpecifiers);
+        }
+      });
     }
   });
 
