@@ -42,6 +42,7 @@ const DEFAULT_SOURCE = "openclaw";
 const DEFAULT_REMOTE_WORKSPACE_DIR = "/sandbox";
 const DEFAULT_REMOTE_AGENT_WORKSPACE_DIR = "/agent";
 const DEFAULT_TIMEOUT_MS = 120_000;
+const MAX_OPEN_SHELL_TIMEOUT_SECONDS = 2_147_000;
 const OPEN_SHELL_MANAGED_REMOTE_ROOTS = [
   DEFAULT_REMOTE_WORKSPACE_DIR,
   DEFAULT_REMOTE_AGENT_WORKSPACE_DIR,
@@ -90,8 +91,13 @@ const OpenShellPluginConfigSchema = z.strictObject({
     "remoteAgentWorkspaceDir must be a non-empty string",
   ).optional(),
   timeoutSeconds: z
-    .number({ error: "timeoutSeconds must be a number >= 1" })
+    .number({
+      error: `timeoutSeconds must be a number between 1 and ${MAX_OPEN_SHELL_TIMEOUT_SECONDS}`,
+    })
     .min(1, { error: "timeoutSeconds must be a number >= 1" })
+    .max(MAX_OPEN_SHELL_TIMEOUT_SECONDS, {
+      error: `timeoutSeconds must be a number <= ${MAX_OPEN_SHELL_TIMEOUT_SECONDS}`,
+    })
     .optional(),
 });
 
