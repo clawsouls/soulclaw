@@ -36,7 +36,6 @@ const DEFAULT_UPDATE_TIMEOUT_MS = 20 * 60_000;
 // must fail closed and allow only a narrow set of agent-tunable paths.
 const ALLOWED_GATEWAY_CONFIG_PATHS = [
   // Agent prompt/model tuning.
-  "agents.defaults.systemPromptOverride",
   "agents.defaults.promptOverlays",
   "agents.defaults.model",
   "agents.defaults.thinkingDefault",
@@ -44,7 +43,6 @@ const ALLOWED_GATEWAY_CONFIG_PATHS = [
   "agents.defaults.reasoningDefault",
   "agents.defaults.fastModeDefault",
   "agents.list[].id",
-  "agents.list[].systemPromptOverride",
   "agents.list[].model",
   "agents.list[].thinkingDefault",
   "agents.list[].subagents.thinking",

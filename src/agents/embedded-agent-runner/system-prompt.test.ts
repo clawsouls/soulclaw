@@ -1,11 +1,7 @@
 import type { AgentSession } from "openclaw/plugin-sdk/agent-sessions";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearMemoryPluginState, registerMemoryPromptSection } from "../../plugins/memory-state.js";
-import {
-  applySystemPromptOverrideToSession,
-  buildEmbeddedSystemPrompt,
-  createSystemPromptOverride,
-} from "./system-prompt.js";
+import { applySystemPromptToSession, buildEmbeddedSystemPrompt } from "./system-prompt.js";
 
 vi.mock("../../tts/tts.js", () => ({
   buildTtsSystemPromptHint: vi.fn(() => undefined),
@@ -33,18 +29,16 @@ function createMockSession(): {
   return { session };
 }
 
-function applyAndGetMutableSession(
-  prompt: Parameters<typeof applySystemPromptOverrideToSession>[1],
-) {
+function applyAndGetMutableSession(prompt: Parameters<typeof applySystemPromptToSession>[1]) {
   const { session } = createMockSession();
-  applySystemPromptOverrideToSession(session as unknown as AgentSession, prompt);
+  applySystemPromptToSession(session as unknown as AgentSession, prompt);
   return {
     mutable: session,
   };
 }
 
-describe("applySystemPromptOverrideToSession", () => {
-  it("applies a string override to the session system prompt", () => {
+describe("applySystemPromptToSession", () => {
+  it("applies the string to the session system prompt", () => {
     const prompt = "You are a helpful assistant with custom context.";
     const { mutable } = applyAndGetMutableSession(prompt);
 
@@ -52,20 +46,13 @@ describe("applySystemPromptOverrideToSession", () => {
     expect(mutable["_baseSystemPrompt"]).toBe(prompt);
   });
 
-  it("trims whitespace from string overrides", () => {
+  it("trims whitespace", () => {
     const { mutable } = applyAndGetMutableSession("  padded prompt  ");
 
     expect(mutable.agent.state.systemPrompt).toBe("padded prompt");
   });
 
-  it("applies a function override to the session system prompt", () => {
-    const override = createSystemPromptOverride("function-based prompt");
-    const { mutable } = applyAndGetMutableSession(override);
-
-    expect(mutable.agent.state.systemPrompt).toBe("function-based prompt");
-  });
-
-  it("sets _rebuildSystemPrompt that returns the override", () => {
+  it("sets _rebuildSystemPrompt that returns the prompt", () => {
     const { mutable } = applyAndGetMutableSession("rebuild test");
     expect(mutable["_rebuildSystemPrompt"]?.(["tool1"])).toBe("rebuild test");
   });

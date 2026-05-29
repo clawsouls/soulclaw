@@ -854,9 +854,8 @@ export async function loadCompactHooksHarness(): Promise<{
   }));
 
   vi.doMock("./system-prompt.js", () => ({
-    applySystemPromptOverrideToSession: vi.fn(),
+    applySystemPromptToSession: vi.fn(),
     buildEmbeddedSystemPrompt: buildEmbeddedSystemPromptMock,
-    createSystemPromptOverride: vi.fn(() => () => ""),
   }));
 
   vi.doMock("./utils.js", async () => {

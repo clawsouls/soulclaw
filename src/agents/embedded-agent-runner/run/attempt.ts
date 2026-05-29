@@ -170,7 +170,6 @@ import {
   isSubagentEnvelopeSession,
   resolveSubagentCapabilityStore,
 } from "../../subagent-capabilities.js";
-import { resolveSystemPromptOverride } from "../../system-prompt-override.js";
 import { buildSystemPromptParams } from "../../system-prompt-params.js";
 import { buildSystemPromptReport } from "../../system-prompt-report.js";
 import { appendModelIdentitySystemPrompt } from "../../system-prompt.js";
@@ -246,7 +245,7 @@ import {
   resolveEmbeddedAgentBaseStreamFn,
   resolveEmbeddedAgentStreamFn,
 } from "../stream-resolution.js";
-import { applySystemPromptOverrideToSession } from "../system-prompt.js";
+import { applySystemPromptToSession } from "../system-prompt.js";
 import {
   dropReasoningFromHistory,
   dropThinkingBlocks,
@@ -1674,13 +1673,8 @@ export async function runEmbeddedAttempt(
     const bootstrapTruncationNotice = buildBootstrapPromptWarningNotice(
       bootstrapPromptWarning.lines,
     );
-    const systemPromptOverrideText = resolveSystemPromptOverride({
-      config: params.config,
-      agentId: sessionAgentId,
-    });
     const attemptSystemPrompt = buildAttemptSystemPrompt({
       isRawModelRun,
-      systemPromptOverrideText,
       transformProviderSystemPrompt,
       embeddedSystemPrompt: {
         config: params.config,
@@ -1767,8 +1761,7 @@ export async function runEmbeddedAttempt(
       skillsPrompt,
       tools: effectiveTools,
     });
-    const systemPromptOverride = attemptSystemPrompt.systemPromptOverride;
-    let systemPromptText = systemPromptOverride();
+    let systemPromptText = attemptSystemPrompt.systemPrompt;
     prepStages.mark("system-prompt");
 
     const compactionTimeoutMs = resolveCompactionTimeoutMs(params.config);
@@ -2103,7 +2096,7 @@ export async function runEmbeddedAttempt(
         },
       });
       session = createdSession.session;
-      applySystemPromptOverrideToSession(session, systemPromptText);
+      applySystemPromptToSession(session, systemPromptText);
       if (!session) {
         throw new Error("Embedded agent session missing");
       }
@@ -2117,10 +2110,10 @@ export async function runEmbeddedAttempt(
       if (isRawModelRun) {
         // Raw model probes should measure exactly the requested prompt against
         // the selected provider/model. Reset clears restored transcript state
-        // and queues; the empty system override prevents the runtime from rebuilding the
+        // and queues; the empty system prompt prevents the runtime from rebuilding the
         // normal OpenClaw agent/tool prompt when `session.prompt()` starts.
         activeSession.agent.reset();
-        applySystemPromptOverrideToSession(activeSession, "");
+        applySystemPromptToSession(activeSession, "");
         systemPromptText = "";
       }
       if (typeof activeSession.agent.convertToLlm === "function") {
@@ -2668,7 +2661,7 @@ export async function runEmbeddedAttempt(
       try {
         if (isRawModelRun) {
           activeSession.agent.reset();
-          applySystemPromptOverrideToSession(activeSession, "");
+          applySystemPromptToSession(activeSession, "");
           systemPromptText = "";
           cacheTrace?.recordStage("session:raw-model-run", {
             messages: activeSession.messages,
@@ -2750,7 +2743,7 @@ export async function runEmbeddedAttempt(
                 systemPrompt: systemPromptText,
                 systemPromptAddition: activeSubagentPromptAddition,
               });
-              applySystemPromptOverrideToSession(activeSession, systemPromptText);
+              applySystemPromptToSession(activeSession, systemPromptText);
             }
           }
 
@@ -2816,7 +2809,7 @@ export async function runEmbeddedAttempt(
                 systemPrompt: systemPromptText,
                 systemPromptAddition: assembled.systemPromptAddition,
               });
-              applySystemPromptOverrideToSession(activeSession, systemPromptText);
+              applySystemPromptToSession(activeSession, systemPromptText);
               log.debug(
                 `context engine: prepended system prompt addition (${assembled.systemPromptAddition.length} chars)`,
               );
@@ -3284,9 +3277,9 @@ export async function runEmbeddedAttempt(
           }
           const legacySystemPrompt = normalizeOptionalString(hookResult?.systemPrompt) ?? "";
           if (legacySystemPrompt) {
-            applySystemPromptOverrideToSession(activeSession, legacySystemPrompt);
+            applySystemPromptToSession(activeSession, legacySystemPrompt);
             systemPromptText = legacySystemPrompt;
-            log.debug(`hooks: applied systemPrompt override (${legacySystemPrompt.length} chars)`);
+            log.debug(`hooks: applied systemPrompt (${legacySystemPrompt.length} chars)`);
           }
           const prependedOrAppendedSystemPrompt = composeSystemPromptWithHookContext({
             baseSystemPrompt: systemPromptText,
@@ -3300,7 +3293,7 @@ export async function runEmbeddedAttempt(
           if (prependedOrAppendedSystemPrompt) {
             const prependSystemLen = hookResult?.prependSystemContext?.trim().length ?? 0;
             const appendSystemLen = hookResult?.appendSystemContext?.trim().length ?? 0;
-            applySystemPromptOverrideToSession(activeSession, prependedOrAppendedSystemPrompt);
+            applySystemPromptToSession(activeSession, prependedOrAppendedSystemPrompt);
             systemPromptText = prependedOrAppendedSystemPrompt;
             log.debug(
               `hooks: applied prependSystemContext/appendSystemContext (${prependSystemLen}+${appendSystemLen} chars)`,
@@ -3312,7 +3305,7 @@ export async function runEmbeddedAttempt(
           model: runtimeInfo.model,
         });
         if (modelAwareSystemPrompt !== systemPromptText) {
-          applySystemPromptOverrideToSession(activeSession, modelAwareSystemPrompt);
+          applySystemPromptToSession(activeSession, modelAwareSystemPrompt);
           systemPromptText = modelAwareSystemPrompt;
         }
 
@@ -3488,7 +3481,7 @@ export async function runEmbeddedAttempt(
               appendSystemContext: runtimeSystemContext,
             });
             if (runtimeSystemPrompt) {
-              applySystemPromptOverrideToSession(activeSession, runtimeSystemPrompt);
+              applySystemPromptToSession(activeSession, runtimeSystemPrompt);
               systemPromptText = runtimeSystemPrompt;
             }
           }

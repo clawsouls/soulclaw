@@ -90,7 +90,8 @@ type AttemptSpawnWorkspaceHoisted = {
   >;
   limitHistoryTurnsMock: Mock<<T>(messages: T, limit: number | undefined) => T>;
   preemptiveCompactionCalls: Parameters<ShouldPreemptivelyCompactBeforePromptFn>[0][];
-  systemPromptOverrideTexts: string[];
+  systemPromptTexts: string[];
+  embeddedSystemPromptInputs: unknown[];
   sessionManager: SessionManagerMocks;
 };
 
@@ -187,7 +188,8 @@ const hoisted = vi.hoisted((): AttemptSpawnWorkspaceHoisted => {
     (messages) => messages,
   );
   const preemptiveCompactionCalls: Parameters<ShouldPreemptivelyCompactBeforePromptFn>[0][] = [];
-  const systemPromptOverrideTexts: string[] = [];
+  const systemPromptTexts: string[] = [];
+  const embeddedSystemPromptInputs: unknown[] = [];
   const sessionManager = {
     getLeafEntry: vi.fn(() => null),
     branch: vi.fn(),
@@ -228,7 +230,8 @@ const hoisted = vi.hoisted((): AttemptSpawnWorkspaceHoisted => {
     getHistoryLimitFromSessionKeyMock,
     limitHistoryTurnsMock,
     preemptiveCompactionCalls,
-    systemPromptOverrideTexts,
+    systemPromptTexts,
+    embeddedSystemPromptInputs,
     sessionManager,
   };
 });
@@ -519,13 +522,13 @@ vi.mock("../system-prompt.js", async () => {
   const actual = await vi.importActual<typeof import("../system-prompt.js")>("../system-prompt.js");
   return {
     ...actual,
-    applySystemPromptOverrideToSession: (session: MutableSession, systemPrompt: string) => {
+    applySystemPromptToSession: (session: MutableSession, systemPrompt: string) => {
+      hoisted.systemPromptTexts.push(systemPrompt);
       session.agent.state.systemPrompt = systemPrompt;
     },
-    buildEmbeddedSystemPrompt: () => "system prompt",
-    createSystemPromptOverride: (prompt: string) => {
-      hoisted.systemPromptOverrideTexts.push(prompt);
-      return () => prompt;
+    buildEmbeddedSystemPrompt: (params: unknown) => {
+      hoisted.embeddedSystemPromptInputs.push(params);
+      return "system prompt";
     },
   };
 });
@@ -985,7 +988,8 @@ export function resetEmbeddedAttemptHarness(
   hoisted.getHistoryLimitFromSessionKeyMock.mockReset().mockReturnValue(undefined);
   hoisted.limitHistoryTurnsMock.mockReset().mockImplementation((messages) => messages);
   hoisted.preemptiveCompactionCalls.length = 0;
-  hoisted.systemPromptOverrideTexts.length = 0;
+  hoisted.systemPromptTexts.length = 0;
+  hoisted.embeddedSystemPromptInputs.length = 0;
   hoisted.sessionManager.getLeafEntry.mockReset().mockReturnValue(null);
   hoisted.sessionManager.branch.mockReset();
   hoisted.sessionManager.resetLeaf.mockReset();
