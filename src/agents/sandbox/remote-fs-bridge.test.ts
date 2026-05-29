@@ -182,7 +182,7 @@ describe("remote sandbox fs bridge", () => {
     },
   );
 
-  it("does not return NaN or partial values for malformed stat output", async () => {
+  it("saturates unsafe stat size output without returning NaN", async () => {
     await withTempDir("openclaw-remote-fs-bridge-stat-", async (stateDir) => {
       const workspaceDir = path.join(stateDir, "workspace");
       await fs.mkdir(workspaceDir, { recursive: true });
@@ -209,7 +209,7 @@ describe("remote sandbox fs bridge", () => {
           }
           if (command.script.includes('stat -c "%F|%s|%y"')) {
             return {
-              stdout: Buffer.from("regular file|12oops|not-a-date\n"),
+              stdout: Buffer.from("regular file|9007199254740992|not-a-date\n"),
               stderr: Buffer.alloc(0),
               code: 0,
             };
@@ -227,7 +227,7 @@ describe("remote sandbox fs bridge", () => {
 
       await expect(bridge.stat({ filePath: "note.txt" })).resolves.toEqual({
         type: "file",
-        size: 0,
+        size: Number.MAX_SAFE_INTEGER,
         mtimeMs: 0,
       });
     });
