@@ -110,6 +110,13 @@ export function timestampMsToIsoString(value: unknown): string | undefined {
   return timestampMs === undefined ? undefined : new Date(timestampMs).toISOString();
 }
 
+export function resolveDateTimestampMs(
+  value: unknown,
+  fallbackValue: unknown = Date.now(),
+): number {
+  return asDateTimestampMs(value) ?? asDateTimestampMs(fallbackValue) ?? 0;
+}
+
 export function resolveTimestampMsToIsoString(
   value: unknown,
   fallbackValue: unknown = Date.now(),

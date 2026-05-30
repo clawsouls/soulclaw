@@ -20,6 +20,7 @@ import {
   resolveNonNegativeIntegerOption,
   resolveOptionalIntegerOption,
   resolvePositiveTimerTimeoutMs,
+  resolveDateTimestampMs,
   parseStrictFiniteNumber,
   parseStrictInteger,
   parseStrictNonNegativeInteger,
@@ -135,6 +136,9 @@ describe("number-coercion", () => {
   });
 
   test("timestamp fallback helpers resolve Date-invalid timestamps", () => {
+    expect(resolveDateTimestampMs(1_000)).toBe(1_000);
+    expect(resolveDateTimestampMs(Number.POSITIVE_INFINITY, 1_000)).toBe(1_000);
+    expect(resolveDateTimestampMs(Number.POSITIVE_INFINITY, Number.NaN)).toBe(0);
     expect(resolveTimestampMsToIsoString(0)).toBe("1970-01-01T00:00:00.000Z");
     expect(resolveTimestampMsToIsoString(Number.POSITIVE_INFINITY, 1_000)).toBe(
       "1970-01-01T00:00:01.000Z",
