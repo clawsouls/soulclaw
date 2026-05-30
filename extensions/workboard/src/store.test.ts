@@ -1,3 +1,4 @@
+import { MAX_DATE_TIMESTAMP_MS } from "openclaw/plugin-sdk/number-runtime";
 import { describe, expect, it, vi } from "vitest";
 import {
   WorkboardStore,
@@ -499,7 +500,7 @@ describe("WorkboardStore", () => {
     expect(released.metadata?.claim).toBeUndefined();
   });
 
-  it("caps oversized claim TTL seconds before storing expiry", async () => {
+  it("caps oversized claim TTL seconds to a valid Date timestamp", async () => {
     vi.useFakeTimers();
     try {
       vi.setSystemTime(1_000);
@@ -511,7 +512,7 @@ describe("WorkboardStore", () => {
         ttlSeconds: Number.MAX_SAFE_INTEGER,
       });
 
-      expect(claimed.card.metadata?.claim?.expiresAt).toBe(Number.MAX_SAFE_INTEGER);
+      expect(claimed.card.metadata?.claim?.expiresAt).toBe(MAX_DATE_TIMESTAMP_MS);
     } finally {
       vi.useRealTimers();
     }
@@ -1174,6 +1175,23 @@ describe("WorkboardStore", () => {
         lastHeartbeatAt: 61_000,
         expiresAt: 121_000,
       });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("caps heartbeat claim renewal to a valid Date timestamp", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(MAX_DATE_TIMESTAMP_MS - 30_000);
+      const store = new WorkboardStore(createMemoryStore());
+      const card = await store.create({ title: "Near date limit" });
+      await store.claim(card.id, { ownerId: "main", ttlSeconds: 60 });
+
+      vi.setSystemTime(MAX_DATE_TIMESTAMP_MS - 10_000);
+      const heartbeat = await store.heartbeat(card.id, { ownerId: "main" });
+
+      expect(heartbeat.metadata?.claim?.expiresAt).toBe(MAX_DATE_TIMESTAMP_MS);
     } finally {
       vi.useRealTimers();
     }

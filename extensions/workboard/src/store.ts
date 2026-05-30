@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
 import {
+  MAX_DATE_TIMESTAMP_MS,
+  resolveExpiresAtMsFromDurationMs,
+} from "openclaw/plugin-sdk/number-runtime";
+import {
   WORKBOARD_DIAGNOSTIC_KINDS,
   WORKBOARD_DIAGNOSTIC_SEVERITIES,
   WORKBOARD_EXECUTION_ENGINES,
@@ -61,20 +65,16 @@ const READY_STRANDED_MS = 60 * 60 * 1000;
 const RUNNING_HEARTBEAT_STALE_MS = 20 * 60 * 1000;
 const BLOCKED_TOO_LONG_MS = 24 * 60 * 60 * 1000;
 const CLAIM_RECLAIM_MS = 5 * 60 * 1000;
-const MAX_SAFE_WORKBOARD_DURATION_MS = Number.MAX_SAFE_INTEGER;
 
 function secondsToDurationMs(seconds: number): number {
   const ms = Math.trunc(seconds) * 1000;
   return Number.isFinite(ms)
-    ? Math.min(MAX_SAFE_WORKBOARD_DURATION_MS, Math.max(1, ms))
-    : MAX_SAFE_WORKBOARD_DURATION_MS;
+    ? Math.min(MAX_DATE_TIMESTAMP_MS, Math.max(1, ms))
+    : MAX_DATE_TIMESTAMP_MS;
 }
 
 function addWorkboardDurationMs(now: number, durationMs: number): number {
-  const expiresAt = now + durationMs;
-  return Number.isFinite(expiresAt)
-    ? Math.min(MAX_SAFE_WORKBOARD_DURATION_MS, expiresAt)
-    : MAX_SAFE_WORKBOARD_DURATION_MS;
+  return resolveExpiresAtMsFromDurationMs(durationMs, { nowMs: now }) ?? MAX_DATE_TIMESTAMP_MS;
 }
 
 export type PersistedWorkboardCard = {
@@ -2782,12 +2782,14 @@ export class WorkboardStore {
         ...claim,
         lastHeartbeatAt: now,
         expiresAt: claim.expiresAt
-          ? now +
-            Math.max(
-              1,
-              claim.expiresAt > claim.claimedAt
-                ? claim.expiresAt - claim.lastHeartbeatAt
-                : DEFAULT_CLAIM_TTL_MS,
+          ? addWorkboardDurationMs(
+              now,
+              Math.max(
+                1,
+                claim.expiresAt > claim.claimedAt
+                  ? claim.expiresAt - claim.lastHeartbeatAt
+                  : DEFAULT_CLAIM_TTL_MS,
+              ),
             )
           : undefined,
       };
