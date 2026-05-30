@@ -349,6 +349,13 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps env wrapper edits on env wrapper tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/run-with-env.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/run-with-env.test.ts"],
+    });
+  });
+
   it("routes explicit tooling implementation files to owner tests", () => {
     expect(
       findUnmatchedExplicitTestTargets([
