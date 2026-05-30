@@ -401,6 +401,35 @@ describe("scripts/test-projects changed-target routing", () => {
     ]);
   });
 
+  it("routes many explicit source files through one import-graph-backed owner set", () => {
+    let plans: ReturnType<typeof buildVitestRunPlans> = [];
+    const files: Record<string, string> = {};
+    const imports: string[] = [];
+    const refs: string[] = [];
+    for (let index = 0; index < 13; index += 1) {
+      files[`src/runtime-${index}.ts`] = `export const value${index} = ${index};\n`;
+      imports.push(`import { value${index} } from './runtime-${index}.js';`);
+      refs.push(`value${index}`);
+    }
+    files["src/runtime.consumer.test.ts"] = `${imports.join("\n")}\nvoid [${refs.join(", ")}];\n`;
+
+    withTinyGitRepo(files, (cwd) => {
+      plans = buildVitestRunPlans(
+        Array.from({ length: 13 }, (_, index) => `src/runtime-${index}.ts`),
+        cwd,
+      );
+    });
+
+    expect(plans).toEqual([
+      {
+        config: "test/vitest/vitest.unit.config.ts",
+        forwardedArgs: ["src/runtime.consumer.test.ts"],
+        includePatterns: null,
+        watchMode: false,
+      },
+    ]);
+  });
+
   it("does not route live tests through the normal changed-test lane", () => {
     expect(
       resolveChangedTestTargetPlan(["src/gateway/gateway-codex-harness.live.test.ts"]),

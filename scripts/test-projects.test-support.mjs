@@ -633,6 +633,7 @@ const VITEST_NO_OUTPUT_RETRY_ENV_KEY = "OPENCLAW_VITEST_NO_OUTPUT_RETRY";
 export const DEFAULT_TEST_PROJECTS_VITEST_NO_OUTPUT_TIMEOUT_MS = String(
   DEFAULT_VITEST_NO_OUTPUT_TIMEOUT_MS,
 );
+const EXPLICIT_SOURCE_FULL_IMPORT_GRAPH_THRESHOLD = 12;
 const GATEWAY_SERVER_FULL_SUITE_TARGET_CHUNK_COUNT = 4;
 const GATEWAY_SERVER_BACKED_HTTP_TEST_TARGETS = new Set([
   "src/gateway/embeddings-http.test.ts",
@@ -878,7 +879,7 @@ function includePatternMatchesAnyFile(pattern, files) {
   return files.some((file) => file === pattern || path.matchesGlob(file, pattern));
 }
 
-function resolveExplicitSourceTestTargets(targetArg, cwd) {
+function resolveExplicitSourceTestTargets(targetArg, cwd, options = {}) {
   const relative = toRepoRelativeTarget(targetArg, cwd);
   const kind = classifyTarget(targetArg, cwd);
   if (shouldUseWholeConfigTarget(kind, targetArg, cwd)) {
@@ -890,21 +891,35 @@ function resolveExplicitSourceTestTargets(targetArg, cwd) {
   if (isTestFileTarget(relative)) {
     return null;
   }
-  const preciseTargets = resolvePreciseChangedTestTargets(relative, { cwd });
+  const preciseTargets = resolvePreciseChangedTestTargets(relative, {
+    cwd,
+    forceFullImportGraph: options.forceFullImportGraph === true,
+  });
   if (preciseTargets && preciseTargets.length > 0) {
     return [...new Set(preciseTargets)].toSorted((left, right) => left.localeCompare(right));
   }
   if (!isTestSupportFileTarget(relative)) {
     return null;
   }
-  return [...new Set(resolveAffectedTestsFromImportGraph(relative, cwd))].toSorted((left, right) =>
-    left.localeCompare(right),
-  );
+  return [
+    ...new Set(
+      resolveAffectedTestsFromImportGraph(relative, cwd, {
+        forceFull: options.forceFullImportGraph === true,
+      }),
+    ),
+  ].toSorted((left, right) => left.localeCompare(right));
 }
 
 function expandExplicitSourceTestTargets(targetArgs, cwd) {
+  const sourceTargetCount = targetArgs.filter((targetArg) => {
+    const relative = toRepoRelativeTarget(targetArg, cwd);
+    return isExistingFileTarget(targetArg, cwd) && !isTestFileTarget(relative);
+  }).length;
+  const forceFullImportGraph = sourceTargetCount > EXPLICIT_SOURCE_FULL_IMPORT_GRAPH_THRESHOLD;
   return targetArgs.flatMap((targetArg) => {
-    const targets = resolveExplicitSourceTestTargets(targetArg, cwd);
+    const targets = resolveExplicitSourceTestTargets(targetArg, cwd, {
+      forceFullImportGraph,
+    });
     return targets && targets.length > 0 ? targets : [targetArg];
   });
 }
@@ -1252,11 +1267,13 @@ function getImportGraph(cwd) {
   return cachedImportGraph;
 }
 
-function resolveAffectedTestsFromImportGraph(changedPath, cwd) {
+function resolveAffectedTestsFromImportGraph(changedPath, cwd, options = {}) {
   const normalized = normalizePathPattern(changedPath);
-  const targetedTargets = resolveAffectedTestsFromTargetedImportScan(normalized, cwd);
-  if (targetedTargets !== null) {
-    return targetedTargets;
+  if (options.forceFull !== true) {
+    const targetedTargets = resolveAffectedTestsFromTargetedImportScan(normalized, cwd);
+    if (targetedTargets !== null) {
+      return targetedTargets;
+    }
   }
 
   const { reverseImports, testFiles } = getImportGraph(cwd);
@@ -1461,7 +1478,9 @@ function resolvePreciseChangedTestTargets(changedPath, options) {
     return changedPath.startsWith("ui/src/") ? [changedPath] : null;
   }
   if (/^(?:src|test\/helpers|extensions|packages|ui\/src|ui\/config)\//u.test(changedPath)) {
-    const affectedTests = resolveAffectedTestsFromImportGraph(changedPath, cwd);
+    const affectedTests = resolveAffectedTestsFromImportGraph(changedPath, cwd, {
+      forceFull: options.forceFullImportGraph === true,
+    });
     if (affectedTests.length > 0) {
       return affectedTests;
     }
