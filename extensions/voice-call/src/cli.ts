@@ -6,6 +6,7 @@ import type { Command } from "commander";
 import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
 import { callGatewayFromCli } from "openclaw/plugin-sdk/gateway-runtime";
 import {
+  addTimerTimeoutGraceMs,
   clampTimerTimeoutMs,
   MAX_TIMER_TIMEOUT_MS,
   MAX_TCP_PORT,
@@ -138,7 +139,7 @@ async function callVoiceCallGateway(
 function resolveGatewayOperationTimeoutMs(config: VoiceCallConfig): number {
   return Math.max(
     VOICE_CALL_GATEWAY_OPERATION_TIMEOUT_MS,
-    clampTimerTimeoutMs(config.ringTimeoutMs + 5000) ?? 1,
+    addTimerTimeoutGraceMs(config.ringTimeoutMs) ?? 1,
   );
 }
 

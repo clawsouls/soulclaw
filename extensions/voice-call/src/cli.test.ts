@@ -48,6 +48,9 @@ describe("voice-call CLI timeout helpers", () => {
     expect(
       testing.resolveGatewayOperationTimeoutMs({ ringTimeoutMs: Number.MAX_SAFE_INTEGER } as never),
     ).toBe(MAX_TIMER_TIMEOUT_MS);
+    expect(
+      testing.resolveGatewayOperationTimeoutMs({ ringTimeoutMs: Number.MAX_VALUE } as never),
+    ).toBe(MAX_TIMER_TIMEOUT_MS);
   });
 
   it("caps gateway continue timeout totals", () => {
