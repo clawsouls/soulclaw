@@ -321,6 +321,13 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps live-test runner edits on live-test runner tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/test-live.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/test-live.test.ts"],
+    });
+  });
+
   it("keeps tsdown build runner edits on tsdown build tests", () => {
     expect(resolveChangedTestTargetPlan(["scripts/tsdown-build.mjs"])).toEqual({
       mode: "targets",
