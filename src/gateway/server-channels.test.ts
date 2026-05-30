@@ -17,7 +17,7 @@ import { createRuntimeChannel } from "../plugins/runtime/runtime-channel.js";
 import type { PluginRuntime } from "../plugins/runtime/types.js";
 import { DEFAULT_ACCOUNT_ID } from "../routing/session-key.js";
 import type { RuntimeEnv } from "../runtime.js";
-import { createChannelManager } from "./server-channels.js";
+import { createChannelManager, type ChannelManager } from "./server-channels.js";
 
 const hoisted = vi.hoisted(() => {
   const computeBackoff = vi.fn(() => 10);
@@ -46,6 +46,8 @@ type TestAccount = {
   enabled?: boolean;
   configured?: boolean;
 };
+
+const createdManagers: Array<{ manager: ChannelManager; channelIds: ChannelId[] }> = [];
 
 function createTestPlugin(params?: {
   id?: ChannelId;
@@ -172,7 +174,7 @@ function createManager(options?: {
       channelRuntimeEnvs[channelId] ??= runtime;
     }
   }
-  return createChannelManager({
+  const manager = createChannelManager({
     getRuntimeConfig: () => options?.getRuntimeConfig?.() ?? {},
     channelLogs,
     channelRuntimeEnvs,
@@ -185,6 +187,8 @@ function createManager(options?: {
       : {}),
     ...(options?.startupTrace ? { startupTrace: options.startupTrace } : {}),
   });
+  createdManagers.push({ channelIds, manager });
+  return manager;
 }
 
 describe("server-channels auto restart", () => {
@@ -197,7 +201,15 @@ describe("server-channels auto restart", () => {
     hoisted.sleepWithAbort.mockClear();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    const stops = createdManagers
+      .splice(0)
+      .flatMap(({ channelIds, manager }) =>
+        channelIds.map((channelId) => manager.stopChannel(channelId).catch(() => {})),
+      );
+    await vi.advanceTimersByTimeAsync(6_000);
+    await Promise.allSettled(stops);
+    await flushMicrotasks();
     vi.clearAllTimers();
     vi.useRealTimers();
     setActivePluginRegistry(previousRegistry ?? createEmptyPluginRegistry());
