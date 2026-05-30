@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_DATE_TIMESTAMP_MS } from "../shared/number-coercion.js";
 import {
   consumeExecApprovalFollowupRuntimeHandoff,
+  registerExecApprovalFollowupRuntimeHandoff,
   resetExecApprovalFollowupRuntimeHandoffsForTests,
 } from "./bash-tools.exec-approval-followup-state.js";
 import {
@@ -238,6 +239,21 @@ describe("sendExecApprovalFollowupResult", () => {
       idempotencyKey: call.idempotencyKey,
       bashElevated,
     });
+  });
+
+  it("does not register elevated runtime handoffs when the process clock is invalid", () => {
+    const registration = registerExecApprovalFollowupRuntimeHandoff({
+      approvalId: "approval-elevated-invalid-clock",
+      sessionKey: "agent:main:telegram:direct:123",
+      bashElevated: {
+        enabled: true,
+        allowed: true,
+        defaultLevel: "on",
+      },
+      nowMs: Number.NaN,
+    });
+
+    expect(registration).toBeUndefined();
   });
 
   it("does not register elevated runtime handoffs for denied followups", async () => {
