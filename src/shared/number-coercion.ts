@@ -308,6 +308,9 @@ export function resolveExpiresAtMsFromEpochSeconds(
   if (!Number.isSafeInteger(expiresAt)) {
     return undefined;
   }
+  if (timestampMsToIsoString(expiresAt) === undefined) {
+    return undefined;
+  }
   const maxMs = opts.maxMs;
   return maxMs === undefined || expiresAt <= maxMs ? expiresAt : undefined;
 }
@@ -330,7 +333,7 @@ export function resolveExpiresAtMsFromDurationOrEpoch(
   }
   const absoluteMillisecondsThreshold = opts.absoluteMillisecondsThreshold ?? 1_000_000_000_000;
   if (parsed < absoluteMillisecondsThreshold) {
-    return positiveSecondsToSafeMilliseconds(parsed);
+    return resolveExpiresAtMsFromEpochSeconds(parsed);
   }
-  return parsed;
+  return asDateTimestampMs(parsed);
 }
