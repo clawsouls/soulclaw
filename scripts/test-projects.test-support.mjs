@@ -380,8 +380,21 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/changed-lanes.mjs", ["test/scripts/changed-lanes.test.ts"]],
   ["scripts/check.mjs", ["test/scripts/check.test.ts"]],
   ["scripts/check-changed.mjs", ["test/scripts/changed-lanes.test.ts"]],
+  [
+    "scripts/check-composite-action-input-interpolation.py",
+    ["test/scripts/check-composite-action-input-interpolation.test.ts"],
+  ],
   ["scripts/check-deadcode-unused-files.mjs", ["test/scripts/check-deadcode-unused-files.test.ts"]],
   ["scripts/check-dynamic-import-warts.mjs", ["test/scripts/check-dynamic-import-warts.test.ts"]],
+  ["scripts/check-no-conflict-markers.mjs", ["test/scripts/check-no-conflict-markers.test.ts"]],
+  [
+    "scripts/check-workflows.mjs",
+    [
+      "test/scripts/check-composite-action-input-interpolation.test.ts",
+      "test/scripts/check-no-conflict-markers.test.ts",
+      "test/scripts/ci-workflow-guards.test.ts",
+    ],
+  ],
   ["scripts/ci-docker-pull-retry.sh", ["test/scripts/ci-docker-pull-retry.test.ts"]],
   ["scripts/control-ui-i18n.ts", ["test/scripts/control-ui-i18n.test.ts"]],
   [

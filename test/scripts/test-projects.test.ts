@@ -385,6 +385,31 @@ describe("scripts/test-projects changed-target routing", () => {
     }
   });
 
+  it("keeps workflow sanity script edits on workflow guard tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/check-workflows.mjs"])).toEqual({
+      mode: "targets",
+      targets: [
+        "test/scripts/check-composite-action-input-interpolation.test.ts",
+        "test/scripts/check-no-conflict-markers.test.ts",
+        "test/scripts/ci-workflow-guards.test.ts",
+      ],
+    });
+  });
+
+  it("keeps workflow helper guard edits on their regression tests", () => {
+    expect(
+      resolveChangedTestTargetPlan(["scripts/check-composite-action-input-interpolation.py"]),
+    ).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/check-composite-action-input-interpolation.test.ts"],
+    });
+
+    expect(resolveChangedTestTargetPlan(["scripts/check-no-conflict-markers.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/check-no-conflict-markers.test.ts"],
+    });
+  });
+
   it("routes explicit tooling implementation files to owner tests", () => {
     expect(
       findUnmatchedExplicitTestTargets([
