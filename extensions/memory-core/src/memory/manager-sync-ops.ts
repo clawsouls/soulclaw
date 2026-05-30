@@ -33,6 +33,7 @@ import {
   type MemorySource,
   type MemorySyncProgressUpdate,
 } from "openclaw/plugin-sdk/memory-core-host-engine-storage";
+import { resolveTimerTimeoutMs } from "openclaw/plugin-sdk/number-runtime";
 import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/string-coerce-runtime";
 import {
   createEmbeddingProvider,
@@ -1061,7 +1062,10 @@ export abstract class MemoryManagerSyncOps {
     if (!minutes || minutes <= 0 || this.intervalTimer) {
       return;
     }
-    const ms = minutes * 60 * 1000;
+    const ms = resolveTimerTimeoutMs(minutes * 60 * 1000, 0, 0);
+    if (ms <= 0) {
+      return;
+    }
     this.intervalTimer = setInterval(() => {
       runDetachedMemorySync(() => this.sync({ reason: "interval" }), "interval");
     }, ms);
