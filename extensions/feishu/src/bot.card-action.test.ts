@@ -531,6 +531,20 @@ describe("Feishu Card Action Handler", () => {
     expect(handleFeishuMessage).toHaveBeenCalledTimes(1);
   });
 
+  it("does not cache callback tokens when token ttl expiry overflows", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(8_640_000_000_000_000));
+    const event = createCardActionEvent({
+      token: "tok10-boundary",
+      actionValue: { text: "/help" },
+    });
+
+    await handleFeishuCardAction({ cfg, event, runtime });
+    await handleFeishuCardAction({ cfg, event, runtime });
+
+    expect(handleFeishuMessage).toHaveBeenCalledTimes(2);
+  });
+
   it("rejects empty callback tokens before dispatch", async () => {
     const log = vi.fn();
     const event = createStructuredQuickActionEvent({
