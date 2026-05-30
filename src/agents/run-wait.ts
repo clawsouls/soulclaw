@@ -3,7 +3,7 @@ import { formatErrorMessage } from "../infra/errors.js";
 import { normalizeBlockedLivenessWaitStatus } from "../shared/agent-liveness.js";
 import { clampTimerTimeoutMs, parseFiniteNumber } from "../shared/number-coercion.js";
 import {
-  buildAgentRunTerminalOutcome,
+  buildAgentRunTerminalOutcomeFromWaitResult,
   type AgentRunTerminalOutcome,
 } from "./agent-run-terminal-outcome.js";
 import {
@@ -69,19 +69,7 @@ function normalizeAgentWaitResult(
   wait?: RawAgentWaitResponse,
 ): AgentWaitResult {
   const stopReason = typeof wait?.stopReason === "string" ? wait.stopReason : undefined;
-  const terminalOutcome =
-    status === "pending"
-      ? undefined
-      : buildAgentRunTerminalOutcome({
-          status,
-          error: wait?.error,
-          stopReason,
-          livenessState: wait?.livenessState,
-          timeoutPhase: wait?.timeoutPhase,
-          providerStarted: wait?.providerStarted,
-          startedAt: wait?.startedAt,
-          endedAt: wait?.endedAt,
-        });
+  const terminalOutcome = buildAgentRunTerminalOutcomeFromWaitResult({ ...wait, status });
   const normalized = normalizeTerminalOutcomeForWait(terminalOutcome, status, wait?.livenessState);
   return {
     status: normalized.status,
