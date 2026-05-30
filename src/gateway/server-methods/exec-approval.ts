@@ -37,6 +37,7 @@ import {
   handleApprovalResolve,
   isApprovalDecision,
   isApprovalRecordVisibleToClient,
+  listVisiblePendingApprovalRequests,
   respondPendingApprovalLookupError,
   resolvePendingApprovalRecord,
 } from "./approval-shared.js";
@@ -136,19 +137,7 @@ export function createExecApprovalHandlers(
       );
     },
     "exec.approval.list": async ({ respond, client }) => {
-      respond(
-        true,
-        manager
-          .listPendingRecords()
-          .filter((record) => isApprovalRecordVisibleToClient({ record, client }))
-          .map((record) => ({
-            id: record.id,
-            request: record.request,
-            createdAtMs: record.createdAtMs,
-            expiresAtMs: record.expiresAtMs,
-          })),
-        undefined,
-      );
+      respond(true, listVisiblePendingApprovalRequests({ manager, client }), undefined);
     },
     "exec.approval.request": async ({ params, respond, context, client }) => {
       if (!validateExecApprovalRequestParams(params)) {

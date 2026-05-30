@@ -21,7 +21,7 @@ import {
   handleApprovalWaitDecision,
   handlePendingApprovalRequest,
   isApprovalDecision,
-  isApprovalRecordVisibleToClient,
+  listVisiblePendingApprovalRequests,
 } from "./approval-shared.js";
 import type { GatewayRequestHandlers } from "./types.js";
 
@@ -31,19 +31,7 @@ export function createPluginApprovalHandlers(
 ): GatewayRequestHandlers {
   return {
     "plugin.approval.list": async ({ respond, client }) => {
-      respond(
-        true,
-        manager
-          .listPendingRecords()
-          .filter((record) => isApprovalRecordVisibleToClient({ record, client }))
-          .map((record) => ({
-            id: record.id,
-            request: record.request,
-            createdAtMs: record.createdAtMs,
-            expiresAtMs: record.expiresAtMs,
-          })),
-        undefined,
-      );
+      respond(true, listVisiblePendingApprovalRequests({ manager, client }), undefined);
     },
     "plugin.approval.request": async ({ params, client, respond, context }) => {
       if (!validatePluginApprovalRequestParams(params)) {

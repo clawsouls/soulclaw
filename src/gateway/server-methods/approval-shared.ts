@@ -44,6 +44,13 @@ type RequestedApprovalEvent<TPayload extends ApprovalTurnSourceFields> = {
   expiresAtMs: number;
 };
 
+type PendingApprovalListEntry<TPayload> = {
+  id: string;
+  request: TPayload;
+  createdAtMs: number;
+  expiresAtMs: number;
+};
+
 function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
   return typeof value === "object" && value !== null && "then" in value;
 }
@@ -112,6 +119,26 @@ export function isApprovalRecordVisibleToClient<TPayload>(params: {
   }
 
   return true;
+}
+
+export function listVisiblePendingApprovalRequests<TPayload>(params: {
+  manager: ExecApprovalManager<TPayload>;
+  client?: GatewayClient | null;
+}): PendingApprovalListEntry<TPayload>[] {
+  return params.manager
+    .listPendingRecords()
+    .filter((record) =>
+      isApprovalRecordVisibleToClient({
+        record,
+        client: params.client ?? null,
+      }),
+    )
+    .map((record) => ({
+      id: record.id,
+      request: record.request,
+      createdAtMs: record.createdAtMs,
+      expiresAtMs: record.expiresAtMs,
+    }));
 }
 
 export function resolveApprovalRequestRecipientConnIds<TPayload>(params: {
