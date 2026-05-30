@@ -314,6 +314,13 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps verify runner edits on verify runner tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/verify.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/verify.test.ts"],
+    });
+  });
+
   it("keeps sharded oxlint runner edits on oxlint runner tests", () => {
     expect(resolveChangedTestTargetPlan(["scripts/run-oxlint-shards.mjs"])).toEqual({
       mode: "targets",
@@ -329,6 +336,7 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/run-oxlint-shards.mjs",
         "scripts/test-force.ts",
         "scripts/tsdown-build.mjs",
+        "scripts/verify.mjs",
       ]),
     ).toEqual([]);
 
@@ -339,12 +347,17 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/run-oxlint-shards.mjs",
         "scripts/test-force.ts",
         "scripts/tsdown-build.mjs",
+        "scripts/verify.mjs",
       ]),
     ).toEqual([
       {
         config: "test/vitest/vitest.unit-fast.config.ts",
         forwardedArgs: [],
-        includePatterns: ["test/scripts/check.test.ts", "test/scripts/test-force.test.ts"],
+        includePatterns: [
+          "test/scripts/check.test.ts",
+          "test/scripts/test-force.test.ts",
+          "test/scripts/verify.test.ts",
+        ],
         watchMode: false,
       },
       {

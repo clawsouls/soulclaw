@@ -410,6 +410,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/kova-ci-summary.mjs", ["test/scripts/kova-ci-summary.test.ts"]],
   ["scripts/test-extension-batch.mjs", ["test/scripts/test-extension.test.ts"]],
   ["scripts/test-force.ts", ["test/scripts/test-force.test.ts"]],
+  ["scripts/verify.mjs", ["test/scripts/verify.test.ts"]],
   ["scripts/zai-fallback-repro.ts", ["test/scripts/zai-fallback-repro.test.ts"]],
   ["scripts/lib/extension-test-plan.mjs", ["test/scripts/test-extension.test.ts"]],
   ["scripts/lib/vitest-batch-runner.mjs", ["test/scripts/test-extension.test.ts"]],
