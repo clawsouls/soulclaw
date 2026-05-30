@@ -1117,7 +1117,7 @@ function shouldCompareProviderRuntimeResolvedModel(params: {
 
 function resolveConfiguredFallbackReasoning(params: {
   provider: string;
-  compat?: { thinkingFormat?: string } | null;
+  compat?: unknown;
   reasoning?: boolean;
 }): boolean {
   return resolveConfiguredModelReasoning(params) ?? false;
@@ -1125,7 +1125,7 @@ function resolveConfiguredFallbackReasoning(params: {
 
 function resolveConfiguredModelReasoning(params: {
   provider: string;
-  compat?: { thinkingFormat?: string } | null;
+  compat?: unknown;
   reasoning?: boolean;
 }): boolean | undefined {
   if (params.reasoning !== undefined) {
@@ -1136,8 +1136,8 @@ function resolveConfiguredModelReasoning(params: {
 
 function resolveMergedConfiguredModelReasoning(params: {
   provider: string;
-  configuredCompat?: { thinkingFormat?: string } | null;
-  resolvedCompat?: { thinkingFormat?: string } | null;
+  configuredCompat?: unknown;
+  resolvedCompat?: unknown;
   configuredReasoning?: boolean;
   discoveredReasoning?: boolean;
 }): boolean {
@@ -1158,13 +1158,21 @@ function resolveMergedConfiguredModelReasoning(params: {
 
 function isVllmQwenThinkingCompat(params: {
   provider: string;
-  compat?: { thinkingFormat?: string } | null;
+  compat?: unknown;
 }): boolean {
-  const thinkingFormat = params.compat?.thinkingFormat;
+  const thinkingFormat = readCompatThinkingFormat(params.compat);
   return (
     normalizeProviderId(params.provider) === "vllm" &&
     (thinkingFormat === "qwen" || thinkingFormat === "qwen-chat-template")
   );
+}
+
+function readCompatThinkingFormat(compat: unknown): string | undefined {
+  if (!compat || typeof compat !== "object" || Array.isArray(compat)) {
+    return undefined;
+  }
+  const thinkingFormat = (compat as { thinkingFormat?: unknown }).thinkingFormat;
+  return typeof thinkingFormat === "string" ? thinkingFormat : undefined;
 }
 
 function mergeModelCompat(
