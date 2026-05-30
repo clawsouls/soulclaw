@@ -569,6 +569,17 @@ describe("scripts/test-projects changed-target routing", () => {
     ]);
   });
 
+  it("prints wrapper help without starting a broad local suite", () => {
+    const result = spawnSync(process.execPath, ["scripts/test-projects.mjs", "--help"], {
+      encoding: "utf8",
+      timeout: 5_000,
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Usage: node scripts/test-projects.mjs");
+    expect(result.stderr).not.toContain("[test] starting");
+  });
+
   it("allows explicit split Vitest config targets without treating them as unmatched tests", () => {
     expect(
       findUnmatchedExplicitTestTargets(
