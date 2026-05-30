@@ -381,9 +381,14 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/check.mjs", ["test/scripts/check.test.ts"]],
   ["scripts/check-changed.mjs", ["test/scripts/changed-lanes.test.ts"]],
   [
+    "scripts/check-changelog-attributions.mjs",
+    ["test/scripts/check-changelog-attributions.test.ts"],
+  ],
+  [
     "scripts/check-composite-action-input-interpolation.py",
     ["test/scripts/check-composite-action-input-interpolation.test.ts"],
   ],
+  ["scripts/check-dependency-pins.mjs", ["test/scripts/check-dependency-pins.test.ts"]],
   ["scripts/check-deadcode-unused-files.mjs", ["test/scripts/check-deadcode-unused-files.test.ts"]],
   ["scripts/check-dynamic-import-warts.mjs", ["test/scripts/check-dynamic-import-warts.test.ts"]],
   ["scripts/check-no-conflict-markers.mjs", ["test/scripts/check-no-conflict-markers.test.ts"]],
@@ -395,12 +400,23 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
       "test/scripts/ci-workflow-guards.test.ts",
     ],
   ],
+  ["scripts/ci-changed-scope.mjs", ["src/scripts/ci-changed-scope.test.ts"]],
   ["scripts/ci-docker-pull-retry.sh", ["test/scripts/ci-docker-pull-retry.test.ts"]],
   ["scripts/control-ui-i18n.ts", ["test/scripts/control-ui-i18n.test.ts"]],
+  ["scripts/dependency-changes-report.mjs", ["test/scripts/dependency-changes-report.test.ts"]],
+  [
+    "scripts/dependency-ownership-surface-report.mjs",
+    ["test/scripts/dependency-ownership-surface-report.test.ts"],
+  ],
+  [
+    "scripts/dependency-vulnerability-gate.mjs",
+    ["test/scripts/dependency-vulnerability-gate.test.ts"],
+  ],
   [
     "scripts/deadcode-unused-files.allowlist.mjs",
     ["test/scripts/check-deadcode-unused-files.test.ts"],
   ],
+  ["scripts/docs-link-audit.mjs", ["src/scripts/docs-link-audit.test.ts"]],
   ["scripts/lib/docker-e2e-container.sh", ["test/scripts/docker-build-helper.test.ts"]],
   ["scripts/lib/docker-e2e-package.sh", ["test/scripts/docker-build-helper.test.ts"]],
   ["scripts/lib/live-docker-stage.sh", ["test/scripts/live-docker-stage.test.ts"]],

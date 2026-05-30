@@ -410,6 +410,45 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps CI, dependency, and docs tooling edits on owner tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/ci-changed-scope.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["src/scripts/ci-changed-scope.test.ts"],
+    });
+
+    expect(resolveChangedTestTargetPlan(["scripts/check-dependency-pins.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/check-dependency-pins.test.ts"],
+    });
+
+    expect(resolveChangedTestTargetPlan(["scripts/dependency-vulnerability-gate.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/dependency-vulnerability-gate.test.ts"],
+    });
+
+    expect(resolveChangedTestTargetPlan(["scripts/dependency-changes-report.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/dependency-changes-report.test.ts"],
+    });
+
+    expect(
+      resolveChangedTestTargetPlan(["scripts/dependency-ownership-surface-report.mjs"]),
+    ).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/dependency-ownership-surface-report.test.ts"],
+    });
+
+    expect(resolveChangedTestTargetPlan(["scripts/docs-link-audit.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["src/scripts/docs-link-audit.test.ts"],
+    });
+
+    expect(resolveChangedTestTargetPlan(["scripts/check-changelog-attributions.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/check-changelog-attributions.test.ts"],
+    });
+  });
+
   it("routes explicit tooling implementation files to owner tests", () => {
     expect(
       findUnmatchedExplicitTestTargets([
