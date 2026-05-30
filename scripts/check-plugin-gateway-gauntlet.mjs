@@ -229,7 +229,7 @@ function readOptionalNonNegativeIntEnv(name) {
 export function createGauntletPrebuildCommand(repoRoot) {
   return {
     command: process.execPath,
-    args: [path.join(repoRoot, "scripts", "build-all.mjs"), "cliStartup"],
+    args: [path.join(repoRoot, "scripts", "build-all.mjs"), "qaRuntime"],
   };
 }
 

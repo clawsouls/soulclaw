@@ -379,10 +379,10 @@ describe("plugin gateway gauntlet helpers", () => {
     });
   });
 
-  it("prebuilds only the CLI startup runtime needed by the gauntlet", () => {
+  it("prebuilds only the QA runtime needed by the gauntlet", () => {
     expect(createGauntletPrebuildCommand(repoRoot)).toEqual({
       command: process.execPath,
-      args: [path.join(repoRoot, "scripts", "build-all.mjs"), "cliStartup"],
+      args: [path.join(repoRoot, "scripts", "build-all.mjs"), "qaRuntime"],
     });
   });
 
