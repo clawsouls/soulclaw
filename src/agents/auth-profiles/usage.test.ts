@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MAX_DATE_TIMESTAMP_MS } from "../../shared/number-coercion.js";
 import type { AuthProfileStore, ProfileUsageStats } from "./types.js";
 import {
   testing as authProfileUsageTesting,
@@ -71,6 +72,7 @@ describe("resolveProfileUnusableUntil", () => {
   it("returns null when all values are missing or invalid", () => {
     expect(resolveProfileUnusableUntil({})).toBeNull();
     expect(resolveProfileUnusableUntil({ cooldownUntil: 0, disabledUntil: Number.NaN })).toBeNull();
+    expect(resolveProfileUnusableUntil({ blockedUntil: MAX_DATE_TIMESTAMP_MS + 1 })).toBeNull();
   });
 
   it("returns the latest active timestamp", () => {
@@ -134,6 +136,13 @@ describe("isProfileInCooldown", () => {
   it("returns false when cooldownUntil has passed", () => {
     const store = makeStore({
       "anthropic:default": { cooldownUntil: Date.now() - 1_000 },
+    });
+    expect(isProfileInCooldown(store, "anthropic:default")).toBe(false);
+  });
+
+  it("returns false when cooldownUntil is out of range", () => {
+    const store = makeStore({
+      "anthropic:default": { cooldownUntil: MAX_DATE_TIMESTAMP_MS + 1 },
     });
     expect(isProfileInCooldown(store, "anthropic:default")).toBe(false);
   });
