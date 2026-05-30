@@ -300,6 +300,42 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps sharded oxlint runner edits on oxlint runner tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/run-oxlint-shards.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/run-oxlint.test.ts"],
+    });
+  });
+
+  it("routes explicit tooling implementation files to owner tests", () => {
+    expect(
+      findUnmatchedExplicitTestTargets([
+        "scripts/check-dynamic-import-warts.mjs",
+        "scripts/run-oxlint-shards.mjs",
+        "scripts/tsdown-build.mjs",
+      ]),
+    ).toEqual([]);
+
+    expect(
+      buildVitestRunPlans([
+        "scripts/check-dynamic-import-warts.mjs",
+        "scripts/run-oxlint-shards.mjs",
+        "scripts/tsdown-build.mjs",
+      ]),
+    ).toEqual([
+      {
+        config: "test/vitest/vitest.tooling.config.ts",
+        forwardedArgs: [],
+        includePatterns: [
+          "test/scripts/check-dynamic-import-warts.test.ts",
+          "test/scripts/run-oxlint.test.ts",
+          "test/scripts/tsdown-build.test.ts",
+        ],
+        watchMode: false,
+      },
+    ]);
+  });
+
   it("does not route live tests through the normal changed-test lane", () => {
     expect(
       resolveChangedTestTargetPlan(["src/gateway/gateway-codex-harness.live.test.ts"]),

@@ -365,6 +365,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/changed-lanes.mjs", ["test/scripts/changed-lanes.test.ts"]],
   ["scripts/check-changed.mjs", ["test/scripts/changed-lanes.test.ts"]],
   ["scripts/check-deadcode-unused-files.mjs", ["test/scripts/check-deadcode-unused-files.test.ts"]],
+  ["scripts/check-dynamic-import-warts.mjs", ["test/scripts/check-dynamic-import-warts.test.ts"]],
   ["scripts/ci-docker-pull-retry.sh", ["test/scripts/ci-docker-pull-retry.test.ts"]],
   ["scripts/control-ui-i18n.ts", ["test/scripts/control-ui-i18n.test.ts"]],
   [
@@ -395,6 +396,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ],
   ],
   ["scripts/run-oxlint.mjs", ["test/scripts/run-oxlint.test.ts"]],
+  ["scripts/run-oxlint-shards.mjs", ["test/scripts/run-oxlint.test.ts"]],
   ["scripts/run-node.mjs", ["src/infra/run-node.test.ts"]],
   ["scripts/ci-run-timings.mjs", ["test/scripts/ci-run-timings.test.ts"]],
   ["scripts/docker-e2e.mjs", ["test/scripts/docker-e2e-helper-cli.test.ts"]],
@@ -426,6 +428,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/test-projects.mjs", ["test/scripts/test-projects.test.ts"]],
   ["scripts/test-projects.test-support.d.mts", ["test/scripts/test-projects.test.ts"]],
   ["scripts/test-projects.test-support.mjs", ["test/scripts/test-projects.test.ts"]],
+  ["scripts/tsdown-build.mjs", ["test/scripts/tsdown-build.test.ts"]],
   ["scripts/bundled-plugin-assets.mjs", ["test/scripts/bundled-plugin-assets.test.ts"]],
   ["scripts/bundle-a2ui.mjs", ["test/scripts/bundled-plugin-assets.test.ts"]],
   ["scripts/build-diffs-viewer-runtime.mjs", ["test/scripts/build-diffs-viewer-runtime.test.ts"]],
@@ -877,12 +880,18 @@ function resolveExplicitTestSupportTargets(targetArg, cwd) {
   if (shouldUseWholeConfigTarget(kind, targetArg, cwd)) {
     return null;
   }
-  if (!isExistingFileTarget(targetArg, cwd) || !isTestSupportFileTarget(relative)) {
+  if (!isExistingFileTarget(targetArg, cwd)) {
     return null;
   }
   const mappedTargets = resolveToolingTestTargets(relative) ?? SOURCE_TEST_TARGETS.get(relative);
-  return [...new Set(mappedTargets ?? resolveAffectedTestsFromImportGraph(relative, cwd))].toSorted(
-    (left, right) => left.localeCompare(right),
+  if (mappedTargets) {
+    return [...new Set(mappedTargets)].toSorted((left, right) => left.localeCompare(right));
+  }
+  if (!isTestSupportFileTarget(relative)) {
+    return null;
+  }
+  return [...new Set(resolveAffectedTestsFromImportGraph(relative, cwd))].toSorted((left, right) =>
+    left.localeCompare(right),
   );
 }
 

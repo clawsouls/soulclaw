@@ -10,6 +10,8 @@ import {
 
 const DEFAULT_WINDOWS_EXTENSION_CHUNK_SIZE = 8;
 const DEFAULT_SHARD_HEARTBEAT_MS = 30_000;
+const DEFAULT_SHARD_TIMEOUT_MS = 15 * 60_000;
+const DEFAULT_SHARD_KILL_GRACE_MS = 5_000;
 const FAST_LOCAL_CHECK_MIN_CPUS = 12;
 const FAST_LOCAL_CHECK_MIN_MEMORY_BYTES = 48 * 1024 ** 3;
 const EXTENSION_TS_CONFIG = "config/tsconfig/oxlint.extensions.json";
@@ -323,12 +325,16 @@ async function runShardsSerial({ entries, env, extraArgs, runner }) {
   return results;
 }
 
-async function runShard({ env, extraArgs, runner, shard }) {
+export async function runShard({ env, extraArgs, runner, shard }) {
   console.error(`[oxlint:${shard.name}] starting`);
   const startedAt = Date.now();
   const heartbeatMs = resolveShardHeartbeatMs(env);
+  const timeoutMs = resolveShardTimeoutMs(env);
+  const killGraceMs = resolveShardKillGraceMs(env);
+  const useProcessGroup = process.platform !== "win32";
   const child = spawn(process.execPath, [runner, ...shard.args, ...extraArgs], {
     stdio: "inherit",
+    detached: useProcessGroup,
     env: {
       ...env,
       OPENCLAW_OXLINT_SKIP_LOCK: "1",
@@ -337,6 +343,9 @@ async function runShard({ env, extraArgs, runner, shard }) {
   });
 
   return await new Promise((resolve) => {
+    let finished = false;
+    let timedOut = false;
+    let forceKill = null;
     const heartbeat =
       heartbeatMs > 0
         ? setInterval(() => {
@@ -345,9 +354,40 @@ async function runShard({ env, extraArgs, runner, shard }) {
           }, heartbeatMs)
         : null;
     heartbeat?.unref();
+    const timeout =
+      timeoutMs > 0
+        ? setTimeout(() => {
+            timedOut = true;
+            const elapsedSeconds = Math.round((Date.now() - startedAt) / 1000);
+            console.error(
+              `[oxlint:${shard.name}] timed out after ${elapsedSeconds}s; terminating shard`,
+            );
+            signalChildProcess({ child, signal: "SIGTERM", useProcessGroup });
+            if (killGraceMs > 0) {
+              forceKill = setTimeout(() => {
+                console.error(`[oxlint:${shard.name}] did not exit cleanly; killing shard`);
+                signalChildProcess({ child, signal: "SIGKILL", useProcessGroup });
+              }, killGraceMs);
+              forceKill.unref();
+            } else {
+              signalChildProcess({ child, signal: "SIGKILL", useProcessGroup });
+            }
+          }, timeoutMs)
+        : null;
+    timeout?.unref();
     const finish = (status) => {
+      if (finished) {
+        return;
+      }
+      finished = true;
       if (heartbeat) {
         clearInterval(heartbeat);
+      }
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      if (forceKill) {
+        clearTimeout(forceKill);
       }
       console.error(`[oxlint:${shard.name}] finished`);
       resolve(status);
@@ -357,19 +397,59 @@ async function runShard({ env, extraArgs, runner, shard }) {
       finish(1);
     });
     child.once("close", (status) => {
-      finish(status ?? 1);
+      finish(timedOut ? 124 : (status ?? 1));
     });
   });
 }
 
 export function resolveShardHeartbeatMs(env) {
-  const rawValue = env.OPENCLAW_OXLINT_SHARD_HEARTBEAT_MS;
+  return resolveNonNegativeEnvInt(
+    env,
+    "OPENCLAW_OXLINT_SHARD_HEARTBEAT_MS",
+    DEFAULT_SHARD_HEARTBEAT_MS,
+  );
+}
+
+export function resolveShardTimeoutMs(env) {
+  return resolveNonNegativeEnvInt(
+    env,
+    "OPENCLAW_OXLINT_SHARD_TIMEOUT_MS",
+    DEFAULT_SHARD_TIMEOUT_MS,
+  );
+}
+
+export function resolveShardKillGraceMs(env) {
+  return resolveNonNegativeEnvInt(
+    env,
+    "OPENCLAW_OXLINT_SHARD_KILL_GRACE_MS",
+    DEFAULT_SHARD_KILL_GRACE_MS,
+  );
+}
+
+function resolveNonNegativeEnvInt(env, key, defaultValue) {
+  const rawValue = env[key];
   if (rawValue === undefined) {
-    return DEFAULT_SHARD_HEARTBEAT_MS;
+    return defaultValue;
   }
 
   const parsedValue = Number.parseInt(rawValue, 10);
-  return Number.isFinite(parsedValue) && parsedValue >= 0
-    ? parsedValue
-    : DEFAULT_SHARD_HEARTBEAT_MS;
+  return Number.isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : defaultValue;
+}
+
+function signalChildProcess({ child, signal, useProcessGroup }) {
+  if (!child.pid) {
+    return;
+  }
+
+  try {
+    if (useProcessGroup) {
+      process.kill(-child.pid, signal);
+    } else {
+      child.kill(signal);
+    }
+  } catch (error) {
+    if (error?.code !== "ESRCH") {
+      console.error(error);
+    }
+  }
 }

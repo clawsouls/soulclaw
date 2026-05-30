@@ -1,12 +1,17 @@
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   createOxlintShards,
   filterOxlintShards,
   parseShardRunnerArgs,
   createWindowsExtensionShards,
+  resolveShardKillGraceMs,
   resolveShardHeartbeatMs,
+  resolveShardTimeoutMs,
   resolveWindowsExtensionChunkSize,
+  runShard,
   shouldRunOxlintShardsSerial,
 } from "../../scripts/run-oxlint-shards.mjs";
 import {
@@ -141,6 +146,39 @@ describe("run-oxlint", () => {
     expect(resolveShardHeartbeatMs({ OPENCLAW_OXLINT_SHARD_HEARTBEAT_MS: "0" })).toBe(0);
     expect(resolveShardHeartbeatMs({ OPENCLAW_OXLINT_SHARD_HEARTBEAT_MS: "5000" })).toBe(5000);
     expect(resolveShardHeartbeatMs({ OPENCLAW_OXLINT_SHARD_HEARTBEAT_MS: "bad" })).toBe(30_000);
+  });
+
+  it("uses a bounded oxlint shard timeout by default", () => {
+    expect(resolveShardTimeoutMs({})).toBe(900_000);
+    expect(resolveShardTimeoutMs({ OPENCLAW_OXLINT_SHARD_TIMEOUT_MS: "0" })).toBe(0);
+    expect(resolveShardTimeoutMs({ OPENCLAW_OXLINT_SHARD_TIMEOUT_MS: "5000" })).toBe(5000);
+    expect(resolveShardTimeoutMs({ OPENCLAW_OXLINT_SHARD_TIMEOUT_MS: "bad" })).toBe(900_000);
+    expect(resolveShardKillGraceMs({})).toBe(5_000);
+    expect(resolveShardKillGraceMs({ OPENCLAW_OXLINT_SHARD_KILL_GRACE_MS: "0" })).toBe(0);
+  });
+
+  it("fails a stuck oxlint shard instead of waiting forever", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "openclaw-oxlint-shard-"));
+    const runner = join(tempDir, "hang-runner.mjs");
+    try {
+      writeFileSync(runner, "setInterval(() => {}, 1000);\n", "utf8");
+
+      const status = await runShard({
+        env: {
+          ...process.env,
+          OPENCLAW_OXLINT_SHARD_HEARTBEAT_MS: "0",
+          OPENCLAW_OXLINT_SHARD_TIMEOUT_MS: "25",
+          OPENCLAW_OXLINT_SHARD_KILL_GRACE_MS: "25",
+        },
+        extraArgs: [],
+        runner,
+        shard: { name: "timeout-test", args: [] },
+      });
+
+      expect(status).toBe(124);
+    } finally {
+      rmSync(tempDir, { force: true, recursive: true });
+    }
   });
 
   it("chunks extension oxlint shards on Windows", () => {
