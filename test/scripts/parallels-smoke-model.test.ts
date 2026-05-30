@@ -17,6 +17,10 @@ import {
 } from "../../scripts/e2e/parallels/common.ts";
 import { resolveHostCommandInvocation } from "../../scripts/e2e/parallels/host-command.ts";
 import { testing as hostServerTesting } from "../../scripts/e2e/parallels/host-server.ts";
+import { parseArgs as parseLinuxSmokeArgs } from "../../scripts/e2e/parallels/linux-smoke.ts";
+import { parseArgs as parseMacosSmokeArgs } from "../../scripts/e2e/parallels/macos-smoke.ts";
+import { parseArgs as parseNpmUpdateSmokeArgs } from "../../scripts/e2e/parallels/npm-update-smoke.ts";
+import { parseArgs as parseWindowsSmokeArgs } from "../../scripts/e2e/parallels/windows-smoke.ts";
 import { spawnNodeEvalSync } from "../../src/test-utils/node-process.js";
 
 const WRAPPERS = {
@@ -125,6 +129,27 @@ describe("Parallels smoke model selection", () => {
       }
       expect(countNonEmptyLines(wrapper)).toBeLessThanOrEqual(5);
     }
+  });
+
+  it("stops parsing smoke options after the argument terminator", () => {
+    expect(parseLinuxSmokeArgs(["--mode", "fresh", "--", "--mode", "upgrade"]).mode).toBe(
+      "fresh",
+    );
+    expect(parseMacosSmokeArgs(["--mode", "fresh", "--", "--mode", "upgrade"]).mode).toBe(
+      "fresh",
+    );
+    expect(
+      parseNpmUpdateSmokeArgs([
+        "--package-spec",
+        "openclaw@2026.5.1",
+        "--",
+        "--package-spec",
+        "openclaw@latest",
+      ]).packageSpec,
+    ).toBe("openclaw@2026.5.1");
+    expect(parseWindowsSmokeArgs(["--", "--upgrade-from-packed-main"]).upgradeFromPackedMain).toBe(
+      false,
+    );
   });
 
   it("keeps provider auth and model defaults in the shared TypeScript helper", () => {

@@ -1,6 +1,7 @@
 #!/usr/bin/env -S pnpm tsx
 import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { posixAgentWorkspaceScript } from "./agent-workspace.ts";
 import {
   die,
@@ -153,13 +154,13 @@ Options:
 `;
 }
 
-function parseArgs(argv: string[]): MacosOptions {
+export function parseArgs(argv: string[]): MacosOptions {
   const options = defaultOptions();
-  for (let i = 0; i < argv.length; i++) {
+  parseArgv: for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     switch (arg) {
       case "--":
-        break;
+        break parseArgv;
       case "--vm":
         options.vmName = ensureValue(argv, i, arg);
         i++;
@@ -1189,6 +1190,8 @@ fi`,
   }
 }
 
-await new MacosSmoke(parseArgs(process.argv.slice(2))).run().catch((error: unknown) => {
-  die(error instanceof Error ? error.message : String(error));
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  await new MacosSmoke(parseArgs(process.argv.slice(2))).run().catch((error: unknown) => {
+    die(error instanceof Error ? error.message : String(error));
+  });
+}

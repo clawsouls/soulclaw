@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createGauntletPrebuildCommand,
   hasGauntletWorkRows,
+  parseArgs,
   parseTimedMetrics,
   runMeasuredCommand,
   runMeasuredCommandLive,
@@ -39,6 +40,12 @@ describe("plugin gateway gauntlet helpers", () => {
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(path.join(dir, fileName), source, "utf8");
   }
+
+  it("stops parsing options after the argument terminator", () => {
+    expect(parseArgs(["--plugin", "telegram", "--", "--plugin", "discord"])).toMatchObject({
+      pluginIds: ["telegram"],
+    });
+  });
 
   it("discovers bundled plugin manifests into lifecycle matrix rows", async () => {
     await writeManifest(

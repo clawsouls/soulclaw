@@ -1,6 +1,7 @@
 #!/usr/bin/env -S pnpm tsx
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { posixAgentWorkspaceScript } from "./agent-workspace.ts";
 import {
   die,
@@ -150,13 +151,13 @@ Options:
 `;
 }
 
-function parseArgs(argv: string[]): LinuxOptions {
+export function parseArgs(argv: string[]): LinuxOptions {
   const options = defaultOptions();
-  for (let i = 0; i < argv.length; i++) {
+  parseArgv: for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     switch (arg) {
       case "--":
-        break;
+        break parseArgv;
       case "--vm":
         options.vmName = ensureValue(argv, i, arg);
         options.vmNameExplicit = true;
@@ -811,6 +812,8 @@ fi`,
   }
 }
 
-const options = parseArgs(process.argv.slice(2));
-await mkdir(repoRoot, { recursive: true });
-await new LinuxSmoke(options).run();
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  const options = parseArgs(process.argv.slice(2));
+  await mkdir(repoRoot, { recursive: true });
+  await new LinuxSmoke(options).run();
+}

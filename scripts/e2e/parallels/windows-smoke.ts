@@ -1,5 +1,6 @@
 #!/usr/bin/env -S pnpm tsx
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { windowsAgentWorkspaceScript } from "./agent-workspace.ts";
 import {
   die,
@@ -135,7 +136,7 @@ Options:
 `;
 }
 
-function parseArgs(argv: string[]): WindowsOptions {
+export function parseArgs(argv: string[]): WindowsOptions {
   const options = defaultOptions();
   const valueHandlers: Record<string, (value: string) => void> = {
     "--api-key-env": (value) => {
@@ -195,6 +196,9 @@ function parseArgs(argv: string[]): WindowsOptions {
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
+    if (arg === "--") {
+      break;
+    }
     const valueHandler = valueHandlers[arg];
     if (valueHandler) {
       valueHandler(ensureValue(argv, i, arg));
@@ -210,9 +214,7 @@ function parseArgs(argv: string[]): WindowsOptions {
       process.stdout.write(usage());
       process.exit(0);
     }
-    if (arg !== "--") {
-      die(`unknown arg: ${arg}`);
-    }
+    die(`unknown arg: ${arg}`);
   }
   return options;
 }
@@ -807,6 +809,8 @@ if (-not $agentOk) { throw 'openclaw agent finished without OK response' }`,
   }
 }
 
-await new WindowsSmoke(parseArgs(process.argv.slice(2))).run().catch((error: unknown) => {
-  die(error instanceof Error ? error.message : String(error));
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  await new WindowsSmoke(parseArgs(process.argv.slice(2))).run().catch((error: unknown) => {
+    die(error instanceof Error ? error.message : String(error));
+  });
+}
