@@ -2019,7 +2019,16 @@ async function requestGatewayAgentText(params: {
   );
   const first = await Promise.race([transcriptPromise, agentWaitPromise]);
   if (first.kind === "transcript") {
-    void agentWaitPromise.catch(() => undefined);
+    // Do not start the next live probe while this run is still cleaning up.
+    // The transcript can be visible before the embedded attempt reacquires and
+    // releases its session lock, and back-to-back probes on the same session
+    // can otherwise trip the takeover fence.
+    const waitResult = await agentWaitPromise;
+    if (waitResult.kind === "agent-error") {
+      throw waitResult.error instanceof Error
+        ? waitResult.error
+        : new Error(String(waitResult.error));
+    }
     return first.text;
   }
   void transcriptPromise.catch(() => undefined);
