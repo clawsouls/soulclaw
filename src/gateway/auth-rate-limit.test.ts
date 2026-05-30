@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { MAX_TIMER_TIMEOUT_MS } from "../shared/number-coercion.js";
 import {
   AUTH_RATE_LIMIT_SCOPE_DEVICE_TOKEN,
   AUTH_RATE_LIMIT_SCOPE_HOOK_AUTH,
@@ -233,6 +234,19 @@ describe("auth rate limiter", () => {
       vi.advanceTimersByTime(6_000);
       limiter.prune();
       expect(limiter.size()).toBe(1); // Still locked-out, not pruned.
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("clamps oversized positive auto-prune intervals", () => {
+    vi.useFakeTimers();
+    try {
+      const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
+
+      limiter = createAuthRateLimiter({ pruneIntervalMs: Number.MAX_SAFE_INTEGER });
+
+      expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), MAX_TIMER_TIMEOUT_MS);
     } finally {
       vi.useRealTimers();
     }
