@@ -210,7 +210,37 @@ describe("scripts/test-projects changed-target routing", () => {
   it("routes control UI i18n script changes through its regression test", () => {
     expect(resolveChangedTestTargetPlan(["scripts/control-ui-i18n.ts"])).toEqual({
       mode: "targets",
-      targets: ["test/scripts/control-ui-i18n.test.ts"],
+      targets: ["test/scripts/control-ui-i18n.test.ts", "src/scripts/control-ui-i18n.test.ts"],
+    });
+  });
+
+  it("routes top-level scripts through conventional owner tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/bench-test-changed.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/bench-test-changed.test.ts"],
+    });
+    expect(resolveChangedTestTargetPlan(["scripts/control-ui-i18n-report.ts"])).toEqual({
+      mode: "targets",
+      targets: ["src/scripts/control-ui-i18n-report.test.ts"],
+    });
+    expect(resolveChangedTestTargetPlan(["scripts/check-file-utils.ts"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/check-file-utils.test.ts"],
+    });
+  });
+
+  it("routes nested scripts through conventional owner tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/e2e/openwebui-probe.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/openwebui-probe.test.ts"],
+    });
+    expect(resolveChangedTestTargetPlan(["scripts/lib/docker-e2e-plan.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/docker-e2e-plan.test.ts"],
+    });
+    expect(resolveChangedTestTargetPlan(["scripts/github/real-behavior-proof-check.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/real-behavior-proof-check.test.ts"],
     });
   });
 

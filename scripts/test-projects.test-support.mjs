@@ -1513,10 +1513,10 @@ function shouldKeepBroadChangedRun(changedPaths) {
   );
 }
 
-function resolveToolingChangedTestTargets(changedPaths) {
+function resolveToolingChangedTestTargets(changedPaths, cwd = process.cwd()) {
   const targets = [];
   for (const changedPath of changedPaths) {
-    const testTargets = resolveToolingTestTargets(changedPath);
+    const testTargets = resolveToolingTestTargets(changedPath, cwd);
     if (!testTargets) {
       return null;
     }
@@ -1525,8 +1525,34 @@ function resolveToolingChangedTestTargets(changedPaths) {
   return [...new Set(targets)];
 }
 
-function resolveToolingTestTargets(changedPath) {
-  return TOOLING_SOURCE_TEST_TARGETS.get(changedPath) ?? TOOLING_TEST_TARGETS.get(changedPath);
+function resolveConventionalToolingTestTargets(changedPath, cwd = process.cwd()) {
+  const match = /^scripts\/(.+)\.(?:mjs|ts|js|sh|py)$/u.exec(changedPath);
+  if (!match) {
+    return null;
+  }
+  const stem = match[1];
+  const basename = path.posix.basename(stem);
+  const dashedStem = stem.replaceAll("/", "-");
+  const candidates = [
+    `test/scripts/${stem}.test.ts`,
+    `test/scripts/${dashedStem}.test.ts`,
+    `test/scripts/${basename}.test.ts`,
+    `src/scripts/${stem}.test.ts`,
+    `src/scripts/${dashedStem}.test.ts`,
+    `src/scripts/${basename}.test.ts`,
+  ];
+  const targets = candidates.filter((candidate) => fs.existsSync(path.join(cwd, candidate)));
+  return targets.length > 0 ? targets : null;
+}
+
+function resolveToolingTestTargets(changedPath, cwd = process.cwd()) {
+  const explicitTargets =
+    TOOLING_SOURCE_TEST_TARGETS.get(changedPath) ?? TOOLING_TEST_TARGETS.get(changedPath);
+  const conventionalTargets = resolveConventionalToolingTestTargets(changedPath, cwd);
+  if (explicitTargets && conventionalTargets) {
+    return uniqueOrdered([...explicitTargets, ...conventionalTargets]);
+  }
+  return explicitTargets ?? conventionalTargets;
 }
 
 function shouldUseBroadChangedTargets(env = process.env) {
@@ -1598,7 +1624,8 @@ export function resolveChangedTestTargetPlan(changedPaths, options = {}) {
   if (changedPaths.length === 0) {
     return { mode: "none", targets: [] };
   }
-  const toolingTargets = resolveToolingChangedTestTargets(changedPaths);
+  const cwd = options.cwd ?? process.cwd();
+  const toolingTargets = resolveToolingChangedTestTargets(changedPaths, cwd);
   if (toolingTargets) {
     return { mode: "targets", targets: toolingTargets };
   }
