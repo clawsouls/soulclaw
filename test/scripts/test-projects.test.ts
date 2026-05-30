@@ -300,6 +300,13 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps force-test runner edits on its safe CLI tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/test-force.ts"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/test-force.test.ts"],
+    });
+  });
+
   it("keeps sharded oxlint runner edits on oxlint runner tests", () => {
     expect(resolveChangedTestTargetPlan(["scripts/run-oxlint-shards.mjs"])).toEqual({
       mode: "targets",
@@ -312,6 +319,7 @@ describe("scripts/test-projects changed-target routing", () => {
       findUnmatchedExplicitTestTargets([
         "scripts/check-dynamic-import-warts.mjs",
         "scripts/run-oxlint-shards.mjs",
+        "scripts/test-force.ts",
         "scripts/tsdown-build.mjs",
       ]),
     ).toEqual([]);
@@ -320,9 +328,16 @@ describe("scripts/test-projects changed-target routing", () => {
       buildVitestRunPlans([
         "scripts/check-dynamic-import-warts.mjs",
         "scripts/run-oxlint-shards.mjs",
+        "scripts/test-force.ts",
         "scripts/tsdown-build.mjs",
       ]),
     ).toEqual([
+      {
+        config: "test/vitest/vitest.unit-fast.config.ts",
+        forwardedArgs: [],
+        includePatterns: ["test/scripts/test-force.test.ts"],
+        watchMode: false,
+      },
       {
         config: "test/vitest/vitest.tooling.config.ts",
         forwardedArgs: [],
