@@ -57,6 +57,7 @@ Docs: https://docs.openclaw.ai
 - CI/tooling: route script edits through conventional owner tests when matching `test/scripts` or `src/scripts` coverage already exists.
 - CI/tooling: honor option terminators in the memory FD repro script so follow-on arguments are not reparsed.
 - Release/CI/E2E: honor option terminators across release, Parallels smoke, plugin gauntlet, and extension-memory scripts.
+- Release/CI/E2E: fail plugin gateway gauntlet QA chunks when the requested suite summary is missing or invalid.
 - Performance: prebuild QA runtime probes with generated plugin assets but without CLI startup metadata.
 - Performance: skip declaration bundling for runtime-only CLI startup and gateway watch build profiles.
 - Performance: reuse prepared provider handles, strict tool schemas, gateway runtime metadata, session maintenance config, plugin metadata, bundled skill allowlists, package-local plugin artifacts, single-entry store writes, and validated/serialized session prompt blobs.
