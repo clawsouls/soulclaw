@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { MAX_DATE_TIMESTAMP_MS } from "../../shared/number-coercion.js";
 import type { AuthProfileStore, ProfileUsageStats } from "./types.js";
 import {
@@ -657,6 +658,7 @@ describe("markAuthProfileFailure — active windows do not extend on retry", () 
     store: ReturnType<typeof makeStore>;
     now: number;
     reason: "rate_limit" | "billing" | "auth_permanent";
+    cfg?: OpenClawConfig;
   }): Promise<void> {
     vi.useFakeTimers();
     vi.setSystemTime(params.now);
@@ -665,6 +667,7 @@ describe("markAuthProfileFailure — active windows do not extend on retry", () 
         store: params.store,
         profileId: "anthropic:default",
         reason: params.reason,
+        cfg: params.cfg,
       });
     } finally {
       vi.useRealTimers();
@@ -792,6 +795,50 @@ describe("markAuthProfileFailure — active windows do not extend on retry", () 
       expect(testCase.readUntil(stats)).toBe(testCase.expectedUntil(now));
     });
   }
+
+  it.each([
+    {
+      label: "cooldownUntil",
+      reason: "rate_limit" as const,
+      readUntil: (stats: WindowStats | undefined) => stats?.cooldownUntil,
+    },
+    {
+      label: "disabledUntil",
+      reason: "billing" as const,
+      readUntil: (stats: WindowStats | undefined) => stats?.disabledUntil,
+    },
+  ])("keeps recomputed $label inside the valid Date range", async (testCase) => {
+    const store = makeStore({});
+
+    await markFailureAt({
+      store,
+      now: MAX_DATE_TIMESTAMP_MS,
+      reason: testCase.reason,
+    });
+
+    const stats = store.usageStats?.["anthropic:default"];
+    expect(testCase.readUntil(stats)).toBe(MAX_DATE_TIMESTAMP_MS);
+  });
+
+  it("preserves fractional disabled cooldown config durations", async () => {
+    const now = 1_000_000;
+    const store = makeStore({});
+
+    await markFailureAt({
+      store,
+      now,
+      reason: "billing",
+      cfg: {
+        auth: {
+          cooldowns: {
+            billingBackoffHours: 0.0166667,
+          },
+        },
+      } as OpenClawConfig,
+    });
+
+    expect(store.usageStats?.["anthropic:default"]?.disabledUntil).toBe(now + 60_000);
+  });
 });
 
 describe("markAuthProfileBlockedUntil", () => {
@@ -1021,6 +1068,15 @@ describe("markAuthProfileFailure — WHAM-aware Codex cooldowns", () => {
     await markCodexFailureAt({ store, now, reason: "unknown" });
 
     expect(store.usageStats?.["openai:default"]?.cooldownUntil).toBe(now + 30_000);
+  });
+
+  it("keeps fallback WHAM cooldowns inside the valid Date range", async () => {
+    const store = makeStore({});
+    fetchMock.mockRejectedValueOnce(new Error("network unavailable"));
+
+    await markCodexFailureAt({ store, now: MAX_DATE_TIMESTAMP_MS, reason: "unknown" });
+
+    expect(store.usageStats?.["openai-codex:default"]?.cooldownUntil).toBe(MAX_DATE_TIMESTAMP_MS);
   });
 
   it.each([
