@@ -81,6 +81,7 @@ const VITEST_DOTTED_OPTIONS_WITH_VALUE_PREFIXES = [
 ];
 const require = createRequire(import.meta.url);
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const testProjectsRunnerPath = path.join(repoRoot, "scripts", "test-projects.mjs");
 
 function isTruthyEnvValue(value) {
   return TRUTHY_ENV_VALUES.has(value?.trim().toLowerCase() ?? "");
@@ -348,6 +349,93 @@ function hasAlternateVitestRootArg(argv) {
   );
 }
 
+function hasExplicitVitestProjectArg(argv) {
+  return argv.some((arg) => arg === "--project" || arg.startsWith("--project="));
+}
+
+function hasExplicitDisabledRunFlag(argv) {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--") {
+      break;
+    }
+    const runFlag = resolveBooleanModeFlag(argv, index, "run");
+    if (!runFlag) {
+      if (optionConsumesNextArg(arg)) {
+        index += 1;
+      }
+      continue;
+    }
+    if (runFlag.consumedNext) {
+      index += 1;
+    }
+    if (!runFlag.value) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function hasSeparateVitestOptionValueArg(argv) {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--") {
+      return false;
+    }
+    if (optionConsumesNextArg(arg)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function stripRunSubcommand(argv) {
+  const stripped = [];
+  let canRemoveRunSubcommand = true;
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--") {
+      stripped.push(arg);
+      canRemoveRunSubcommand = false;
+      continue;
+    }
+    if (canRemoveRunSubcommand && optionConsumesNextArg(arg)) {
+      stripped.push(arg);
+      if (index + 1 < argv.length) {
+        index += 1;
+        stripped.push(argv[index]);
+      }
+      continue;
+    }
+    if (canRemoveRunSubcommand && arg.startsWith("-")) {
+      stripped.push(arg);
+      continue;
+    }
+    if (canRemoveRunSubcommand && arg === "run") {
+      canRemoveRunSubcommand = false;
+      continue;
+    }
+    canRemoveRunSubcommand = false;
+    stripped.push(arg);
+  }
+  return stripped;
+}
+
+export function resolveTestProjectsDelegationArgs(argv) {
+  if (
+    hasExplicitVitestConfigArg(argv) ||
+    hasAlternateVitestRootArg(argv) ||
+    hasExplicitVitestProjectArg(argv) ||
+    resolveExplicitVitestMode(argv) === "watch" ||
+    hasExplicitDisabledRunFlag(argv) ||
+    hasSeparateVitestOptionValueArg(argv) ||
+    collectExplicitTestFileArgs(argv).length === 0
+  ) {
+    return null;
+  }
+  return stripRunSubcommand(argv);
+}
+
 export function resolveMissingExplicitTestFiles(argv, cwd = process.cwd(), fsImpl = fs) {
   if (hasExplicitVitestConfigArg(argv) || hasAlternateVitestRootArg(argv)) {
     return [];
@@ -573,6 +661,17 @@ export function spawnWatchedVitestProcess({
   };
 }
 
+export function resolveTestProjectsRunnerEnv(env) {
+  return resolveVitestSpawnEnv(env);
+}
+
+function spawnTestProjectsRunner(argv, env) {
+  return spawn(process.execPath, [testProjectsRunnerPath, ...argv], {
+    env: resolveTestProjectsRunnerEnv(env),
+    stdio: "inherit",
+  });
+}
+
 function main(argv = process.argv.slice(2), env = process.env) {
   if (argv.length === 0) {
     console.error("usage: node scripts/run-vitest.mjs <vitest args...>");
@@ -588,6 +687,23 @@ function main(argv = process.argv.slice(2), env = process.env) {
       ].join("\n"),
     );
     process.exit(1);
+  }
+
+  const delegatedArgs = resolveTestProjectsDelegationArgs(argv);
+  if (delegatedArgs) {
+    const child = spawnTestProjectsRunner(delegatedArgs, env);
+    child.on("exit", (code, signal) => {
+      if (signal) {
+        process.kill(process.pid, signal);
+        return;
+      }
+      process.exit(code ?? 1);
+    });
+    child.on("error", (error) => {
+      console.error(error);
+      process.exit(1);
+    });
+    return;
   }
 
   const vitestArgs = resolveImplicitVitestArgs(argv);
