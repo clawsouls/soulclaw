@@ -785,6 +785,14 @@ function isTestFileTarget(arg) {
   return /\.(?:test|spec)\.[cm]?[jt]sx?$/u.test(arg);
 }
 
+function isTestSupportFileTarget(arg) {
+  if (/(?:^|\/)(?:test-helpers|test-support)(?:\/|$)/u.test(arg)) {
+    return true;
+  }
+  const basename = path.posix.basename(arg).replace(/\.[cm]?[jt]sx?$/u, "");
+  return /(?:^|[._-])test-(?:helpers|support)(?:[._-]|$)/u.test(basename);
+}
+
 function isLikelyFileTarget(arg) {
   return /(?:^|\/)[^/]+\.[A-Za-z0-9]+$/u.test(arg);
 }
@@ -863,6 +871,28 @@ function includePatternMatchesAnyFile(pattern, files) {
   return files.some((file) => file === pattern || path.matchesGlob(file, pattern));
 }
 
+function resolveExplicitTestSupportTargets(targetArg, cwd) {
+  const relative = toRepoRelativeTarget(targetArg, cwd);
+  const kind = classifyTarget(targetArg, cwd);
+  if (shouldUseWholeConfigTarget(kind, targetArg, cwd)) {
+    return null;
+  }
+  if (!isExistingFileTarget(targetArg, cwd) || !isTestSupportFileTarget(relative)) {
+    return null;
+  }
+  const mappedTargets = resolveToolingTestTargets(relative) ?? SOURCE_TEST_TARGETS.get(relative);
+  return [...new Set(mappedTargets ?? resolveAffectedTestsFromImportGraph(relative, cwd))].toSorted(
+    (left, right) => left.localeCompare(right),
+  );
+}
+
+function expandExplicitTestSupportTargets(targetArgs, cwd) {
+  return targetArgs.flatMap((targetArg) => {
+    const targets = resolveExplicitTestSupportTargets(targetArg, cwd);
+    return targets && targets.length > 0 ? targets : [targetArg];
+  });
+}
+
 export function findUnmatchedExplicitTestTargets(args, cwd = process.cwd()) {
   const { targetArgs } = parseTestProjectsArgs(args, cwd);
   if (targetArgs.length === 0) {
@@ -904,6 +934,17 @@ export function findUnmatchedExplicitTestTargets(args, cwd = process.cwd()) {
     }
 
     if (isTestFileTarget(relative)) {
+      continue;
+    }
+
+    const explicitSupportTargets = resolveExplicitTestSupportTargets(targetArg, cwd);
+    if (explicitSupportTargets) {
+      if (explicitSupportTargets.length === 0) {
+        unmatched.push({
+          target: targetArg,
+          reason: "target-matched-no-test-files",
+        });
+      }
       continue;
     }
 
@@ -1778,7 +1819,8 @@ export function buildVitestRunPlans(
   const { forwardedArgs, targetArgs, watchMode } = parseTestProjectsArgs(args, cwd);
   const changedTargetArgs =
     targetArgs.length === 0 ? resolveChangedTargetArgs(args, cwd, listChangedPaths, options) : null;
-  const activeTargetArgs = changedTargetArgs ?? targetArgs;
+  const requestedTargetArgs = changedTargetArgs ?? targetArgs;
+  const activeTargetArgs = expandExplicitTestSupportTargets(requestedTargetArgs, cwd);
   const activeForwardedArgs =
     changedTargetArgs !== null ? stripChangedArgs(forwardedArgs) : forwardedArgs;
   if (changedTargetArgs !== null && activeTargetArgs.length === 0) {
@@ -1824,7 +1866,7 @@ export function buildVitestRunPlans(
     );
   }
 
-  const nonTargetArgs = activeForwardedArgs.filter((arg) => !activeTargetArgs.includes(arg));
+  const nonTargetArgs = activeForwardedArgs.filter((arg) => !requestedTargetArgs.includes(arg));
   const orderedKinds = [
     "unitFast",
     "unitFastFakeTimers",

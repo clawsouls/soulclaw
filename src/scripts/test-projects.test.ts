@@ -1077,6 +1077,43 @@ describe("test-projects args", () => {
     }
   });
 
+  it("routes explicit test-support helper files to affected tests", () => {
+    expect(
+      findUnmatchedExplicitTestTargets(["src/commands/onboard-non-interactive.test-helpers.ts"]),
+    ).toEqual([]);
+
+    expect(buildVitestRunPlans(["src/commands/onboard-non-interactive.test-helpers.ts"])).toEqual([
+      {
+        config: "test/vitest/vitest.commands.config.ts",
+        forwardedArgs: [],
+        includePatterns: ["src/commands/onboard-non-interactive.gateway.test.ts"],
+        watchMode: false,
+      },
+    ]);
+  });
+
+  it("rejects explicit test-support helper files with no importing tests", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-test-targets-"));
+    try {
+      fs.mkdirSync(path.join(tempDir, "src", "lonely"), { recursive: true });
+      fs.writeFileSync(
+        path.join(tempDir, "src", "lonely", "runtime.test-helpers.ts"),
+        "export {};\n",
+      );
+
+      expect(
+        findUnmatchedExplicitTestTargets(["src/lonely/runtime.test-helpers.ts"], tempDir),
+      ).toEqual([
+        {
+          target: "src/lonely/runtime.test-helpers.ts",
+          reason: "target-matched-no-test-files",
+        },
+      ]);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("accepts explicit Vitest config targets routed as whole config runs", () => {
     expect(
       findUnmatchedExplicitTestTargets(["test/vitest/vitest.contracts-channel-surface.config.ts"]),
