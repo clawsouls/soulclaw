@@ -41,7 +41,16 @@ function isTypeOnlyImportDeclaration(node) {
 }
 
 function isTypeOnlyExportDeclaration(node) {
-  return node.isTypeOnly === true;
+  if (node.isTypeOnly === true) {
+    return true;
+  }
+  const clause = node.exportClause;
+  return (
+    Boolean(clause) &&
+    ts.isNamedExports(clause) &&
+    clause.elements.length > 0 &&
+    clause.elements.every((element) => element.isTypeOnly)
+  );
 }
 
 function readDeclarationName(node) {

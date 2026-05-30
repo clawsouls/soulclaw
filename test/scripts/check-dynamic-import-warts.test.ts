@@ -54,6 +54,33 @@ describe("check-dynamic-import-warts", () => {
     expect(findDynamicImportAdvisories(source)).toStrictEqual([]);
   });
 
+  it("ignores inline type-only static re-exports", () => {
+    const source = `
+      export { type Runtime, type RuntimeOptions } from "./runtime.js";
+      export async function start() {
+        return (await import("./runtime.js")).createRuntime();
+      }
+    `;
+    expect(findDynamicImportAdvisories(source)).toStrictEqual([]);
+  });
+
+  it("flags mixed runtime and inline type-only static re-exports", () => {
+    const source = `
+      let runtimePromise: Promise<typeof import("./runtime.js")> | undefined;
+      function loadRuntime() {
+        runtimePromise ??= import("./runtime.js");
+        return runtimePromise;
+      }
+      export { type Runtime, createRuntime } from "./runtime.js";
+    `;
+    expect(findDynamicImportAdvisories(source)).toEqual([
+      {
+        line: 4,
+        reason: 'runtime static + dynamic import of "./runtime.js" (static line 7)',
+      },
+    ]);
+  });
+
   it("ignores local export declarations without module specifiers", () => {
     const source = `
       const run = true;
