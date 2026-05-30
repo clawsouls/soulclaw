@@ -19,6 +19,7 @@ import { deriveSessionMetaPatch } from "./metadata.js";
 import { resolveStorePath } from "./paths.js";
 import {
   ensureSessionStorePromptBlobsForPersistence,
+  isSessionSkillPromptBlobReadable,
   projectSessionStoreForPersistence,
   type SessionSkillPromptBlobProjection,
 } from "./skill-prompt-blobs.js";
@@ -58,6 +59,7 @@ import {
   mergeSessionEntry,
   mergeSessionEntryPreserveActivity,
   type SessionEntry,
+  type SessionSkillPromptRef,
 } from "./types.js";
 
 export {
@@ -89,12 +91,6 @@ const writerStoreFileStats = new WeakMap<
   Record<string, SessionEntry>,
   ReturnType<typeof getFileStatSnapshot> | null
 >();
-let serializedPromptRefKeyCache:
-  | {
-      serialized: string;
-      keys: Set<string>;
-    }
-  | undefined;
 
 function loadSessionArchiveRuntime() {
   sessionArchiveRuntimePromise ??= import("../../gateway/session-archive.runtime.js");
@@ -371,23 +367,20 @@ function buildSingleEntrySerializedStore(params: {
   };
 }
 
-function collectSerializedPromptRefKeys(serialized: string): Set<string> {
-  if (serializedPromptRefKeyCache?.serialized === serialized) {
-    return serializedPromptRefKeyCache.keys;
-  }
-  const keys = new Set<string>();
+function collectSerializedPromptRefs(serialized: string): Map<string, SessionSkillPromptRef> {
+  const refs = new Map<string, SessionSkillPromptRef>();
   try {
     const parsed = JSON.parse(serialized) as Record<string, SessionEntry>;
     for (const [key, entry] of Object.entries(parsed)) {
-      if (entry?.skillsSnapshot?.promptRef) {
-        keys.add(key);
+      const ref = entry?.skillsSnapshot?.promptRef;
+      if (ref) {
+        refs.set(key, ref);
       }
     }
   } catch {
     // Malformed serialized cache cannot prove prompt refs are already durable.
   }
-  serializedPromptRefKeyCache = { serialized, keys };
-  return keys;
+  return refs;
 }
 
 function storeHasUnsafeUntouchedHydratedSkillPrompts(
@@ -396,15 +389,15 @@ function storeHasUnsafeUntouchedHydratedSkillPrompts(
   changedSessionKey: string,
 ): boolean {
   const currentSerialized = getSerializedSessionStore(storePath);
-  const serializedPromptRefKeys = currentSerialized
-    ? collectSerializedPromptRefKeys(currentSerialized)
+  const serializedPromptRefs = currentSerialized
+    ? collectSerializedPromptRefs(currentSerialized)
     : undefined;
   for (const [key, entry] of Object.entries(store)) {
-    if (
-      key !== changedSessionKey &&
-      typeof entry.skillsSnapshot?.prompt === "string" &&
-      !serializedPromptRefKeys?.has(key)
-    ) {
+    if (key === changedSessionKey || typeof entry.skillsSnapshot?.prompt !== "string") {
+      continue;
+    }
+    const ref = serializedPromptRefs?.get(key);
+    if (!ref || !isSessionSkillPromptBlobReadable(storePath, ref)) {
       return true;
     }
   }
