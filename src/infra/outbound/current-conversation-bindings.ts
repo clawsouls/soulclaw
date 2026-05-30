@@ -8,6 +8,7 @@ import { saveJsonFile } from "../../plugin-sdk/json-store.js";
 import { getActivePluginChannelRegistryFromState } from "../../plugins/runtime-channel-state.js";
 import {
   asDateTimestampMs,
+  isFutureDateTimestampMs,
   resolveExpiresAtMsFromDurationMs,
 } from "../../shared/number-coercion.js";
 import { normalizeOptionalLowercaseString } from "../../shared/string-coerce.js";
@@ -58,7 +59,7 @@ function isBindingExpired(record: SessionBindingRecord, now = Date.now()): boole
     return true;
   }
   const nowMs = asDateTimestampMs(now);
-  return nowMs !== undefined && expiresAt <= nowMs;
+  return nowMs !== undefined && !isFutureDateTimestampMs(expiresAt, { nowMs });
 }
 
 function toPersistedFile(): PersistedCurrentConversationBindingsFile {
