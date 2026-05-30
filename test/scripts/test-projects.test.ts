@@ -363,6 +363,28 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps Crabbox runner script edits on their regression tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/crabbox-wrapper.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/crabbox-wrapper.test.ts"],
+    });
+  });
+
+  it("keeps Crabbox and Testbox workflow edits on workflow regression tests", () => {
+    for (const workflowPath of [
+      ".github/workflows/ci-check-testbox.yml",
+      ".github/workflows/crabbox-hydrate.yml",
+    ]) {
+      expect(resolveChangedTestTargetPlan([workflowPath])).toEqual({
+        mode: "targets",
+        targets: [
+          "test/scripts/ci-workflow-guards.test.ts",
+          "test/scripts/package-acceptance-workflow.test.ts",
+        ],
+      });
+    }
+  });
+
   it("routes explicit tooling implementation files to owner tests", () => {
     expect(
       findUnmatchedExplicitTestTargets([
