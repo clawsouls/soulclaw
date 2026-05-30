@@ -87,6 +87,25 @@ describe("scripts/run-vitest", () => {
     expect(resolveImplicitVitestArgs(argv)).toBe(argv);
   });
 
+  it("routes explicit tooling tests through the tooling config", () => {
+    expect(resolveImplicitVitestArgs(["run", "test/scripts/run-vitest.test.ts"])).toEqual([
+      "run",
+      "--config",
+      "test/vitest/vitest.tooling.config.ts",
+      "test/scripts/run-vitest.test.ts",
+    ]);
+  });
+
+  it("keeps tooling-excluded explicit tests on existing routing", () => {
+    const argv = ["run", "test/scripts/openclaw-e2e-instance.test.ts"];
+    expect(resolveImplicitVitestArgs(argv)).toBe(argv);
+  });
+
+  it("keeps boundary tests on existing routing", () => {
+    const argv = ["run", "test/web-provider-boundary.test.ts"];
+    expect(resolveImplicitVitestArgs(argv)).toBe(argv);
+  });
+
   it("fails explicit test-file runs when scoped configs would otherwise pass with no tests", () => {
     expect(
       resolveExplicitTestFileNoPassArgs([

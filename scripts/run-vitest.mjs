@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isUiTestTarget, isUnitUiTestTarget } from "../test/vitest/vitest.ui-paths.mjs";
+import { boundaryTestFiles } from "../test/vitest/vitest.unit-paths.mjs";
 import { resolveLocalVitestEnv } from "./lib/vitest-local-scheduling.mjs";
 import { spawnPnpmRunner } from "./pnpm-runner.mjs";
 import {
@@ -19,6 +20,11 @@ const SUPPRESSED_VITEST_STDERR_PATTERNS = ["[PLUGIN_TIMINGS]"];
 export const DEFAULT_VITEST_NO_OUTPUT_TIMEOUT_MS = 300_000;
 const UI_VITEST_CONFIG = "test/vitest/vitest.ui.config.ts";
 const UNIT_UI_VITEST_CONFIG = "test/vitest/vitest.unit-ui.config.ts";
+const TOOLING_VITEST_CONFIG = "test/vitest/vitest.tooling.config.ts";
+const TOOLING_EXCLUDED_TESTS = new Set([
+  ...boundaryTestFiles,
+  "test/scripts/openclaw-e2e-instance.test.ts",
+]);
 const EXPLICIT_TEST_FILE_RE = /\.(?:test|e2e|live)\.(?:[cm]?[jt]sx?)$/u;
 const GLOB_PATTERN_CHARS_RE = /[*?[\]{}]/u;
 const VITEST_OPTIONS_WITH_VALUE = new Set([
@@ -366,6 +372,12 @@ function withImplicitVitestConfig(argv, config) {
   return ["--config", config, ...argv];
 }
 
+function isToolingTestTarget(target) {
+  return (
+    target.startsWith("test/") && target.endsWith(".test.ts") && !TOOLING_EXCLUDED_TESTS.has(target)
+  );
+}
+
 export function resolveImplicitVitestArgs(argv, cwd = process.cwd()) {
   if (hasExplicitVitestConfigArg(argv)) {
     return argv;
@@ -373,6 +385,9 @@ export function resolveImplicitVitestArgs(argv, cwd = process.cwd()) {
   const testTargets = argv
     .filter((arg) => !arg.startsWith("-") && arg.endsWith(".test.ts"))
     .map((arg) => toRepoRelativeArg(arg, cwd));
+  if (testTargets.length > 0 && testTargets.every(isToolingTestTarget)) {
+    return withImplicitVitestConfig(argv, TOOLING_VITEST_CONFIG);
+  }
   if (testTargets.length === 0 || !testTargets.every(isUnitUiTestTarget)) {
     if (
       testTargets.length > 0 &&
@@ -590,13 +605,7 @@ function main(argv = process.argv.slice(2), env = process.env) {
   }
 
   const { child, teardown } = spawnWatchedVitestProcess({
-    pnpmArgs: [
-      "exec",
-      "node",
-      ...resolveVitestNodeArgs(env),
-      vitestCliEntry,
-      ...guardedVitestArgs,
-    ],
+    pnpmArgs: ["exec", "node", ...resolveVitestNodeArgs(env), vitestCliEntry, ...guardedVitestArgs],
     spawnParams: resolveVitestSpawnParams(spawnEnv),
     env: spawnEnv,
     label: guardedVitestArgs.join(" "),
