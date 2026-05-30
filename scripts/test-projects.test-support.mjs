@@ -1580,6 +1580,9 @@ function resolvePreciseChangedTestTargets(changedPath, options) {
   if (shouldRouteChangedTargetWithoutImportGraph(changedPath)) {
     return changedPath.startsWith("ui/src/") ? [changedPath] : null;
   }
+  if (options.skipImportGraph === true) {
+    return null;
+  }
   if (/^(?:src|test\/helpers|extensions|packages|ui\/src|ui\/config)\//u.test(changedPath)) {
     const affectedTests = resolveAffectedTestsFromImportGraph(changedPath, cwd, {
       forceFull: options.forceFullImportGraph === true,
@@ -1602,9 +1605,13 @@ export function resolveChangedTestTargetPlan(changedPaths, options = {}) {
   const changedLanes = detectChangedLanes(changedPaths);
   const env = options.env ?? {};
   const useBroadFallback = options.broad ?? shouldUseBroadChangedTargets(env);
+  const skipImportGraph = changedLanes.lanes.all && !useBroadFallback;
   const targets = [];
   for (const changedPath of changedPaths) {
-    const preciseTargets = resolvePreciseChangedTestTargets(changedPath, options);
+    const preciseTargets = resolvePreciseChangedTestTargets(changedPath, {
+      ...options,
+      skipImportGraph,
+    });
     if (preciseTargets) {
       targets.push(...preciseTargets);
       continue;

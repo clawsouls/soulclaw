@@ -1535,6 +1535,26 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("skips import-graph scans once a diff already needs broad fallback", () => {
+    const readFileSync = vi.spyOn(fs, "readFileSync");
+    const before = readFileSync.mock.calls.length;
+    const plan = resolveChangedTestTargetPlan([
+      ".crabbox.yaml",
+      "scripts/check.mjs",
+      "src/gateway/server.impl.ts",
+    ]);
+    const repoSourceReads = readFileSync.mock.calls
+      .slice(before)
+      .filter(([file]) => typeof file === "string" && normalizeRepoPath(file).includes("/src/"));
+    readFileSync.mockRestore();
+
+    expect(plan).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/package-acceptance-workflow.test.ts", "test/scripts/check.test.ts"],
+    });
+    expect(repoSourceReads).toEqual([]);
+  });
+
   it("keeps broad changed fallback available through explicit env", () => {
     expect(
       resolveChangedTestTargetPlan(["package.json", "src/commands/channels.add.ts"], {
