@@ -1,6 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   createOxlintShards,
@@ -180,6 +182,156 @@ describe("run-oxlint", () => {
       rmSync(tempDir, { force: true, recursive: true });
     }
   });
+
+  it.runIf(process.platform !== "win32")(
+    "forwards parent termination to detached oxlint shard processes",
+    () => {
+      const tempDir = mkdtempSync(join(tmpdir(), "openclaw-oxlint-signal-"));
+      const runner = join(tempDir, "signal-runner.mjs");
+      const harness = join(tempDir, "signal-harness.mjs");
+      const readyFile = join(tempDir, "ready");
+      const signaledFile = join(tempDir, "signaled");
+      try {
+        writeFileSync(
+          runner,
+          [
+            "import { writeFileSync } from 'node:fs';",
+            "writeFileSync(process.env.READY_FILE, String(process.pid));",
+            "process.on('SIGTERM', () => {",
+            "  writeFileSync(process.env.SIGNALED_FILE, 'SIGTERM');",
+            "  process.exit(0);",
+            "});",
+            "setInterval(() => {}, 1000);",
+            "",
+          ].join("\n"),
+          "utf8",
+        );
+        writeFileSync(
+          harness,
+          [
+            "import { existsSync } from 'node:fs';",
+            `import { runShard } from ${JSON.stringify(pathToFileURL(join(process.cwd(), "scripts/run-oxlint-shards.mjs")).href)};`,
+            "const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));",
+            "const promise = runShard({",
+            "  env: {",
+            "    ...process.env,",
+            "    OPENCLAW_OXLINT_SHARD_HEARTBEAT_MS: '0',",
+            "    OPENCLAW_OXLINT_SHARD_TIMEOUT_MS: '0',",
+            "  },",
+            "  extraArgs: [],",
+            "  runner: process.env.RUNNER_FILE,",
+            "  shard: { name: 'signal-test', args: [] },",
+            "});",
+            "for (let attempt = 0; attempt < 100 && !existsSync(process.env.READY_FILE); attempt += 1) {",
+            "  await sleep(10);",
+            "}",
+            "if (!existsSync(process.env.READY_FILE)) {",
+            "  process.exit(2);",
+            "}",
+            "process.kill(process.pid, 'SIGTERM');",
+            "const status = await promise;",
+            "if (!existsSync(process.env.SIGNALED_FILE)) {",
+            "  process.exit(3);",
+            "}",
+            "process.exit(status === 143 ? 0 : 4);",
+            "",
+          ].join("\n"),
+          "utf8",
+        );
+
+        const result = spawnSync(process.execPath, [harness], {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            READY_FILE: readyFile,
+            RUNNER_FILE: runner,
+            SIGNALED_FILE: signaledFile,
+          },
+          timeout: 5_000,
+        });
+
+        expect(result.status).toBe(0);
+        expect(result.signal).toBeNull();
+      } finally {
+        rmSync(tempDir, { force: true, recursive: true });
+      }
+    },
+  );
+
+  it.runIf(process.platform !== "win32")(
+    "force kills detached shard processes that ignore parent termination",
+    () => {
+      const tempDir = mkdtempSync(join(tmpdir(), "openclaw-oxlint-signal-"));
+      const runner = join(tempDir, "signal-runner.mjs");
+      const harness = join(tempDir, "signal-harness.mjs");
+      const readyFile = join(tempDir, "ready");
+      const ignoredFile = join(tempDir, "ignored");
+      try {
+        writeFileSync(
+          runner,
+          [
+            "import { writeFileSync } from 'node:fs';",
+            "writeFileSync(process.env.READY_FILE, String(process.pid));",
+            "process.on('SIGTERM', () => {",
+            "  writeFileSync(process.env.IGNORED_FILE, 'SIGTERM');",
+            "});",
+            "setInterval(() => {}, 1000);",
+            "",
+          ].join("\n"),
+          "utf8",
+        );
+        writeFileSync(
+          harness,
+          [
+            "import { existsSync } from 'node:fs';",
+            `import { runShard } from ${JSON.stringify(pathToFileURL(join(process.cwd(), "scripts/run-oxlint-shards.mjs")).href)};`,
+            "const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));",
+            "const promise = runShard({",
+            "  env: {",
+            "    ...process.env,",
+            "    OPENCLAW_OXLINT_SHARD_HEARTBEAT_MS: '0',",
+            "    OPENCLAW_OXLINT_SHARD_TIMEOUT_MS: '0',",
+            "    OPENCLAW_OXLINT_SHARD_KILL_GRACE_MS: '25',",
+            "  },",
+            "  extraArgs: [],",
+            "  runner: process.env.RUNNER_FILE,",
+            "  shard: { name: 'signal-test', args: [] },",
+            "});",
+            "for (let attempt = 0; attempt < 100 && !existsSync(process.env.READY_FILE); attempt += 1) {",
+            "  await sleep(10);",
+            "}",
+            "if (!existsSync(process.env.READY_FILE)) {",
+            "  process.exit(2);",
+            "}",
+            "process.kill(process.pid, 'SIGTERM');",
+            "const status = await promise;",
+            "if (!existsSync(process.env.IGNORED_FILE)) {",
+            "  process.exit(3);",
+            "}",
+            "process.exit(status === 143 ? 0 : 4);",
+            "",
+          ].join("\n"),
+          "utf8",
+        );
+
+        const result = spawnSync(process.execPath, [harness], {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            IGNORED_FILE: ignoredFile,
+            READY_FILE: readyFile,
+            RUNNER_FILE: runner,
+          },
+          timeout: 5_000,
+        });
+
+        expect(result.status).toBe(0);
+        expect(result.signal).toBeNull();
+      } finally {
+        rmSync(tempDir, { force: true, recursive: true });
+      }
+    },
+  );
 
   it("chunks extension oxlint shards on Windows", () => {
     const shards = createOxlintShards({

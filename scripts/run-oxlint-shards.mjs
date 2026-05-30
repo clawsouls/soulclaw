@@ -17,6 +17,11 @@ const FAST_LOCAL_CHECK_MIN_MEMORY_BYTES = 48 * 1024 ** 3;
 const EXTENSION_TS_CONFIG = "config/tsconfig/oxlint.extensions.json";
 const EXTENSIONS_DIR = "extensions";
 const OXLINT_SOURCE_FILE_PATTERN = /\.[cm]?[jt]sx?$/;
+const PARENT_TERMINATION_SIGNALS = ["SIGINT", "SIGTERM"];
+const ACTIVE_SHARD_CHILDREN = new Set();
+let parentTerminationSignal = null;
+let parentTerminationForceKill = null;
+let parentSignalForwardingInstalled = false;
 
 const CORE_SHARD = {
   name: "core",
@@ -321,6 +326,9 @@ async function runShardsSerial({ entries, env, extraArgs, runner }) {
   const results = [];
   for (const shard of entries) {
     results.push(await runShard({ env, extraArgs, runner, shard }));
+    if (isParentTerminationRequested()) {
+      break;
+    }
   }
   return results;
 }
@@ -341,6 +349,7 @@ export async function runShard({ env, extraArgs, runner, shard }) {
       OPENCLAW_OXLINT_SKIP_PREPARE: "1",
     },
   });
+  const unregisterShardChild = registerShardChild({ child, killGraceMs, useProcessGroup });
 
   return await new Promise((resolve) => {
     let finished = false;
@@ -389,6 +398,7 @@ export async function runShard({ env, extraArgs, runner, shard }) {
       if (forceKill) {
         clearTimeout(forceKill);
       }
+      unregisterShardChild();
       console.error(`[oxlint:${shard.name}] finished`);
       resolve(status);
     };
@@ -397,7 +407,13 @@ export async function runShard({ env, extraArgs, runner, shard }) {
       finish(1);
     });
     child.once("close", (status) => {
-      finish(timedOut ? 124 : (status ?? 1));
+      finish(
+        parentTerminationSignal
+          ? getSignalExitCode(parentTerminationSignal)
+          : timedOut
+            ? 124
+            : (status ?? 1),
+      );
     });
   });
 }
@@ -452,4 +468,70 @@ function signalChildProcess({ child, signal, useProcessGroup }) {
       console.error(error);
     }
   }
+}
+
+function registerShardChild(entry) {
+  installParentSignalForwarding();
+  ACTIVE_SHARD_CHILDREN.add(entry);
+  return () => {
+    ACTIVE_SHARD_CHILDREN.delete(entry);
+    if (ACTIVE_SHARD_CHILDREN.size === 0 && parentTerminationForceKill) {
+      clearTimeout(parentTerminationForceKill);
+      parentTerminationForceKill = null;
+    }
+  };
+}
+
+function installParentSignalForwarding() {
+  if (parentSignalForwardingInstalled) {
+    return;
+  }
+  parentSignalForwardingInstalled = true;
+  for (const signal of PARENT_TERMINATION_SIGNALS) {
+    process.on(signal, () => {
+      parentTerminationSignal = signal;
+      process.exitCode = getSignalExitCode(signal);
+      if (ACTIVE_SHARD_CHILDREN.size === 0) {
+        process.exit(process.exitCode);
+      }
+      signalActiveShardChildren(signal);
+      scheduleParentTerminationForceKill();
+    });
+  }
+  process.once("exit", () => {
+    signalActiveShardChildren("SIGTERM");
+  });
+}
+
+function isParentTerminationRequested() {
+  return parentTerminationSignal !== null;
+}
+
+function signalActiveShardChildren(signal) {
+  for (const entry of ACTIVE_SHARD_CHILDREN) {
+    signalChildProcess({ ...entry, signal });
+  }
+}
+
+function scheduleParentTerminationForceKill() {
+  if (parentTerminationForceKill) {
+    return;
+  }
+  const killGraceMs = Math.max(
+    0,
+    ...Array.from(ACTIVE_SHARD_CHILDREN, (entry) => entry.killGraceMs),
+  );
+  if (killGraceMs === 0) {
+    signalActiveShardChildren("SIGKILL");
+    return;
+  }
+  parentTerminationForceKill = setTimeout(() => {
+    parentTerminationForceKill = null;
+    signalActiveShardChildren("SIGKILL");
+  }, killGraceMs);
+  parentTerminationForceKill.unref();
+}
+
+function getSignalExitCode(signal) {
+  return signal === "SIGINT" ? 130 : 143;
 }
