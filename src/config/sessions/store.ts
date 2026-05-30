@@ -89,6 +89,12 @@ const writerStoreFileStats = new WeakMap<
   Record<string, SessionEntry>,
   ReturnType<typeof getFileStatSnapshot> | null
 >();
+let serializedPromptRefKeyCache:
+  | {
+      serialized: string;
+      keys: Set<string>;
+    }
+  | undefined;
 
 function loadSessionArchiveRuntime() {
   sessionArchiveRuntimePromise ??= import("../../gateway/session-archive.runtime.js");
@@ -365,12 +371,40 @@ function buildSingleEntrySerializedStore(params: {
   };
 }
 
-function storeHasUntouchedHydratedSkillPrompts(
+function collectSerializedPromptRefKeys(serialized: string): Set<string> {
+  if (serializedPromptRefKeyCache?.serialized === serialized) {
+    return serializedPromptRefKeyCache.keys;
+  }
+  const keys = new Set<string>();
+  try {
+    const parsed = JSON.parse(serialized) as Record<string, SessionEntry>;
+    for (const [key, entry] of Object.entries(parsed)) {
+      if (entry?.skillsSnapshot?.promptRef) {
+        keys.add(key);
+      }
+    }
+  } catch {
+    // Malformed serialized cache cannot prove prompt refs are already durable.
+  }
+  serializedPromptRefKeyCache = { serialized, keys };
+  return keys;
+}
+
+function storeHasUnsafeUntouchedHydratedSkillPrompts(
+  storePath: string,
   store: Record<string, SessionEntry>,
   changedSessionKey: string,
 ): boolean {
+  const currentSerialized = getSerializedSessionStore(storePath);
+  const serializedPromptRefKeys = currentSerialized
+    ? collectSerializedPromptRefKeys(currentSerialized)
+    : undefined;
   for (const [key, entry] of Object.entries(store)) {
-    if (key !== changedSessionKey && typeof entry.skillsSnapshot?.prompt === "string") {
+    if (
+      key !== changedSessionKey &&
+      typeof entry.skillsSnapshot?.prompt === "string" &&
+      !serializedPromptRefKeys?.has(key)
+    ) {
       return true;
     }
   }
@@ -620,7 +654,11 @@ async function saveSessionStoreUnlocked(
   if (
     opts?.singleEntryPersistence &&
     !maintenanceChangedStore &&
-    !storeHasUntouchedHydratedSkillPrompts(store, opts.singleEntryPersistence.sessionKey)
+    !storeHasUnsafeUntouchedHydratedSkillPrompts(
+      storePath,
+      store,
+      opts.singleEntryPersistence.sessionKey,
+    )
   ) {
     const normalizedEntry = store[opts.singleEntryPersistence.sessionKey];
     const singleEntrySerialized = buildSingleEntrySerializedStore({
