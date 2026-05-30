@@ -15,6 +15,7 @@ import type {
   ModelCatalogModel,
   ModelCatalogTieredCost,
 } from "../model-catalog/types.js";
+import { asDateTimestampMs, resolveExpiresAtMsFromDurationMs } from "../shared/number-coercion.js";
 import type { ModelProviderConfig } from "./provider-model-shared.js";
 
 export type { ProviderCatalogContext, ProviderCatalogResult } from "../plugins/types.js";
@@ -51,18 +52,26 @@ export async function getCachedLiveCatalogValue<T>(params: {
   ttlMs?: number;
   now?: () => number;
 }): Promise<T> {
-  const now = params.now?.() ?? Date.now();
+  const rawNow = params.now?.() ?? Date.now();
+  const now = asDateTimestampMs(rawNow);
   const ttlMs = params.ttlMs ?? 30_000;
   const key = buildLiveCatalogCacheKey(params.keyParts);
   const existing = liveCatalogCache.get(key) as LiveCatalogCacheEntry<T> | undefined;
-  if (existing && existing.expiresAt > now) {
-    return await existing.value;
+  if (existing) {
+    const expiresAt = asDateTimestampMs(existing.expiresAt);
+    if (now !== undefined && expiresAt !== undefined && expiresAt > now) {
+      return await existing.value;
+    }
+    liveCatalogCache.delete(key);
   }
   const value = params.load();
-  liveCatalogCache.set(key, {
-    expiresAt: now + ttlMs,
-    value,
-  });
+  const expiresAt = resolveExpiresAtMsFromDurationMs(ttlMs, { nowMs: rawNow });
+  if (expiresAt !== undefined) {
+    liveCatalogCache.set(key, {
+      expiresAt,
+      value,
+    });
+  }
   try {
     return await value;
   } catch (err) {
