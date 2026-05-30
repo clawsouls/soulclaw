@@ -300,6 +300,13 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps check runner edits on check runner tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/check.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/check.test.ts"],
+    });
+  });
+
   it("keeps force-test runner edits on its safe CLI tests", () => {
     expect(resolveChangedTestTargetPlan(["scripts/test-force.ts"])).toEqual({
       mode: "targets",
@@ -317,6 +324,7 @@ describe("scripts/test-projects changed-target routing", () => {
   it("routes explicit tooling implementation files to owner tests", () => {
     expect(
       findUnmatchedExplicitTestTargets([
+        "scripts/check.mjs",
         "scripts/check-dynamic-import-warts.mjs",
         "scripts/run-oxlint-shards.mjs",
         "scripts/test-force.ts",
@@ -326,6 +334,7 @@ describe("scripts/test-projects changed-target routing", () => {
 
     expect(
       buildVitestRunPlans([
+        "scripts/check.mjs",
         "scripts/check-dynamic-import-warts.mjs",
         "scripts/run-oxlint-shards.mjs",
         "scripts/test-force.ts",
@@ -335,7 +344,7 @@ describe("scripts/test-projects changed-target routing", () => {
       {
         config: "test/vitest/vitest.unit-fast.config.ts",
         forwardedArgs: [],
-        includePatterns: ["test/scripts/test-force.test.ts"],
+        includePatterns: ["test/scripts/check.test.ts", "test/scripts/test-force.test.ts"],
         watchMode: false,
       },
       {
