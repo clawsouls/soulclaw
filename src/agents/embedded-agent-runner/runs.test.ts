@@ -13,6 +13,7 @@ import {
   resetDiagnosticSessionStateForTest,
 } from "../../logging/diagnostic-session-state.js";
 import { diagnosticLogger } from "../../logging/diagnostic.js";
+import { MAX_TIMER_TIMEOUT_MS } from "../../shared/number-coercion.js";
 import {
   testing,
   abortAndDrainEmbeddedAgentRun,
@@ -35,6 +36,7 @@ import {
   updateActiveEmbeddedRunSnapshot,
   updateActiveEmbeddedRunSessionFile,
   waitForActiveEmbeddedRuns,
+  waitForEmbeddedAgentRunEnd,
 } from "./runs.js";
 
 type RunHandle = Parameters<typeof setActiveEmbeddedRun>[1];
@@ -332,6 +334,24 @@ describe("embedded-agent runner run registry", () => {
       expect(abortRun).toHaveBeenCalledTimes(1);
       expect(isEmbeddedAgentRunHandleActive("session-stuck")).toBe(false);
       expect(resolveActiveEmbeddedRunHandleSessionId("agent:main")).toBeUndefined();
+    } finally {
+      await vi.runOnlyPendingTimersAsync();
+      vi.useRealTimers();
+    }
+  });
+
+  it("clamps oversized embedded run wait timers", async () => {
+    vi.useFakeTimers();
+    try {
+      const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+      const handle = createRunHandle();
+      setActiveEmbeddedRun("session-running", handle);
+
+      const waitPromise = waitForEmbeddedAgentRunEnd("session-running", MAX_TIMER_TIMEOUT_MS + 1);
+
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), MAX_TIMER_TIMEOUT_MS);
+      clearActiveEmbeddedRun("session-running", handle);
+      await expect(waitPromise).resolves.toBe(true);
     } finally {
       await vi.runOnlyPendingTimersAsync();
       vi.useRealTimers();
