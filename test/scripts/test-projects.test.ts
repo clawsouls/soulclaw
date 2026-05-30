@@ -307,6 +307,13 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps build runner edits on build runner tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/build-all.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/build-all.test.ts"],
+    });
+  });
+
   it("keeps force-test runner edits on its safe CLI tests", () => {
     expect(resolveChangedTestTargetPlan(["scripts/test-force.ts"])).toEqual({
       mode: "targets",
@@ -331,6 +338,7 @@ describe("scripts/test-projects changed-target routing", () => {
   it("routes explicit tooling implementation files to owner tests", () => {
     expect(
       findUnmatchedExplicitTestTargets([
+        "scripts/build-all.mjs",
         "scripts/check.mjs",
         "scripts/check-dynamic-import-warts.mjs",
         "scripts/run-oxlint-shards.mjs",
@@ -342,6 +350,7 @@ describe("scripts/test-projects changed-target routing", () => {
 
     expect(
       buildVitestRunPlans([
+        "scripts/build-all.mjs",
         "scripts/check.mjs",
         "scripts/check-dynamic-import-warts.mjs",
         "scripts/run-oxlint-shards.mjs",
@@ -364,6 +373,7 @@ describe("scripts/test-projects changed-target routing", () => {
         config: "test/vitest/vitest.tooling.config.ts",
         forwardedArgs: [],
         includePatterns: [
+          "test/scripts/build-all.test.ts",
           "test/scripts/check-dynamic-import-warts.test.ts",
           "test/scripts/run-oxlint.test.ts",
           "test/scripts/tsdown-build.test.ts",
