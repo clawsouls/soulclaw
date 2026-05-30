@@ -311,6 +311,30 @@ describe("dispatchOutbound", () => {
     expect(sendMediaMock).not.toHaveBeenCalled();
   });
 
+  it("delivers text-only tool progress for legacy C2C stream API accounts", async () => {
+    const runtime = makeRuntime({
+      onDeliver: async (deliver) => {
+        await deliver({ text: "Working: checking logs" }, { kind: "tool" });
+        await deliver({ text: "final answer" }, { kind: "block" });
+      },
+    });
+
+    await dispatchOutbound(makeInbound(), {
+      runtime,
+      cfg: {},
+      account: {
+        ...account,
+        config: { streaming: { mode: "off", c2cStreamApi: true } },
+      },
+    });
+
+    expect(sendTextMock.mock.calls.map((call) => call[1])).toEqual([
+      "Working: checking logs",
+      "final answer",
+    ]);
+    expect(sendMediaMock).not.toHaveBeenCalled();
+  });
+
   it("keeps immediate tool progress media-like text inert with markdown support enabled", async () => {
     const progress = "progress ![x](http://internal.example/progress.png)";
     const runtime = makeRuntime({

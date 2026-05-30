@@ -72,7 +72,13 @@ type ReplyDeliverPayload = {
   isError?: boolean;
 };
 
-function shouldDeliverToolProgressImmediately(account: GatewayAccount): boolean {
+function shouldDeliverToolProgressImmediately(
+  account: GatewayAccount,
+  useOfficialC2cStream: boolean,
+): boolean {
+  if (useOfficialC2cStream) {
+    return true;
+  }
   const streaming = account.config?.streaming;
   if (streaming === true) {
     return true;
@@ -254,7 +260,10 @@ export async function dispatchOutbound(
         ? ("group" as const)
         : ("channel" as const);
   const useOfficialC2cStream = shouldUseOfficialC2cStream(account, targetType);
-  const deliverToolProgressImmediately = shouldDeliverToolProgressImmediately(account);
+  const deliverToolProgressImmediately = shouldDeliverToolProgressImmediately(
+    account,
+    useOfficialC2cStream,
+  );
   let streamingController: StreamingController | null = null;
   if (useOfficialC2cStream) {
     streamingController = new StreamingController({
