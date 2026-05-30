@@ -213,6 +213,15 @@ const loadGatewayModelCatalog: LoadGatewayModelCatalog = async (...args) => {
   return mod.loadGatewayModelCatalog(...args);
 };
 
+let gatewayPluginBootstrapModulePromise: Promise<
+  typeof import("./server-plugin-bootstrap.js")
+> | null = null;
+
+const loadGatewayPluginBootstrapModule = async () => {
+  gatewayPluginBootstrapModulePromise ??= import("./server-plugin-bootstrap.js");
+  return await gatewayPluginBootstrapModulePromise;
+};
+
 const logHealth = log.child("health");
 const logCron = log.child("cron");
 const logReload = log.child("reload");
@@ -1278,7 +1287,7 @@ export async function startGatewayServer(
       const [{ loadPluginLookUpTable }, { prepareGatewayPluginLoad }, { startPluginServices }] =
         await Promise.all([
           import("../plugins/plugin-lookup-table.js"),
-          import("./server-plugin-bootstrap.js"),
+          loadGatewayPluginBootstrapModule(),
           import("../plugins/services.js"),
         ]);
       const nextPluginLookUpTable = loadPluginLookUpTable({
@@ -1457,7 +1466,7 @@ export async function startGatewayServer(
 
     if (!minimalTestGateway) {
       if (runtimePluginsLoaded && deferredConfiguredChannelPluginIds.length > 0) {
-        const { reloadDeferredGatewayPlugins } = await import("./server-plugin-bootstrap.js");
+        const { reloadDeferredGatewayPlugins } = await loadGatewayPluginBootstrapModule();
         const loaded = await startupTrace.measure("gateway.deferred-plugins", () =>
           reloadDeferredGatewayPlugins({
             cfg: gatewayPluginConfigAtStart,
