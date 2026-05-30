@@ -54,6 +54,7 @@ function createTestPlugin(params?: {
   order?: number;
   account?: TestAccount;
   startAccount?: NonNullable<ChannelPlugin<TestAccount>["gateway"]>["startAccount"];
+  stopAccount?: NonNullable<ChannelPlugin<TestAccount>["gateway"]>["stopAccount"];
   listAccountIds?: ChannelPlugin<TestAccount>["config"]["listAccountIds"];
   includeDescribeAccount?: boolean;
   describeAccount?: ChannelPlugin<TestAccount>["config"]["describeAccount"];
@@ -81,6 +82,9 @@ function createTestPlugin(params?: {
   const gateway: NonNullable<ChannelPlugin<TestAccount>["gateway"]> = {};
   if (params?.startAccount) {
     gateway.startAccount = params.startAccount;
+  }
+  if (params?.stopAccount) {
+    gateway.stopAccount = params.stopAccount;
   }
   return {
     id,
@@ -271,6 +275,20 @@ describe("server-channels auto restart", () => {
     const account = snapshot.channelAccounts.discord?.[DEFAULT_ACCOUNT_ID];
     expect(account?.running).toBe(false);
     expect(account?.lastError).toBeNull();
+  });
+
+  it("does not enumerate configured accounts when stopping a never-started channel", async () => {
+    const listAccountIds = vi.fn(() => [DEFAULT_ACCOUNT_ID]);
+    const resolveAccount = vi.fn(() => ({ enabled: true, configured: true }));
+    const stopAccount = vi.fn(async () => undefined);
+    installTestRegistry(createTestPlugin({ listAccountIds, resolveAccount, stopAccount }));
+    const manager = createManager();
+
+    await manager.stopChannel("discord");
+
+    expect(listAccountIds).not.toHaveBeenCalled();
+    expect(resolveAccount).not.toHaveBeenCalled();
+    expect(stopAccount).not.toHaveBeenCalled();
   });
 
   it("does not auto-restart after manual stop during backoff", async () => {

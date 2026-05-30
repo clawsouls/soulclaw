@@ -744,15 +744,21 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
     const manual = opts.manual ?? true;
     const plugin = getChannelPlugin(channelId);
     const store = getStore(channelId);
+    const lifecycleIds = new Set<string>([
+      ...store.aborts.keys(),
+      ...store.starting.keys(),
+      ...store.tasks.keys(),
+    ]);
+    if (!accountId && lifecycleIds.size === 0) {
+      return;
+    }
     // Fast path: nothing running and no explicit plugin shutdown hook to run.
-    if (!plugin?.gateway?.stopAccount && store.aborts.size === 0 && store.tasks.size === 0) {
+    if (!plugin?.gateway?.stopAccount && lifecycleIds.size === 0) {
       return;
     }
     const cfg = getRuntimeConfig();
     const knownIds = new Set<string>([
-      ...store.aborts.keys(),
-      ...store.starting.keys(),
-      ...store.tasks.keys(),
+      ...lifecycleIds,
       ...(plugin ? plugin.config.listAccountIds(cfg) : []),
     ]);
     if (accountId) {
