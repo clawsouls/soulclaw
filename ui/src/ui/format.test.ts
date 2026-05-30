@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatDateTimeMs,
   formatDateMs,
   formatMs,
   formatRelativeTimestamp,
@@ -54,6 +55,7 @@ describe("formatMs", () => {
 describe("date/time millisecond formatters", () => {
   it("return fallback text for Date-invalid timestamps", () => {
     expect(formatDateMs(8_640_000_000_000_001, undefined, "")).toBe("");
+    expect(formatDateTimeMs(Number.NEGATIVE_INFINITY, undefined, "")).toBe("");
     expect(formatTimeMs(Number.POSITIVE_INFINITY, undefined, "")).toBe("");
   });
 });

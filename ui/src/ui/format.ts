@@ -67,6 +67,15 @@ export function formatTimeMs(
     : new Date(timestampMs).toLocaleTimeString([], options);
 }
 
+export function formatDateTimeMs(
+  ms?: number | null,
+  options?: Intl.DateTimeFormatOptions,
+  fallback = t("common.na"),
+): string {
+  const timestampMs = asDateTimestampMs(ms);
+  return timestampMs === undefined ? fallback : new Date(timestampMs).toLocaleString([], options);
+}
+
 export function formatList(values?: Array<string | null | undefined>): string {
   if (!values || values.length === 0) {
     return "none";
