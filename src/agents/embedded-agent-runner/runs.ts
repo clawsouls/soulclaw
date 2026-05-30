@@ -617,7 +617,7 @@ export async function waitForActiveEmbeddedRuns(
   opts?: { pollMs?: number },
 ): Promise<{ drained: boolean }> {
   const pollMsRaw = opts?.pollMs ?? 250;
-  const pollMs = Math.max(10, Math.floor(pollMsRaw));
+  const pollMs = resolveTimerTimeoutMs(pollMsRaw, 250, 10);
   if (timeoutMs !== undefined && timeoutMs <= 0) {
     return { drained: getActiveEmbeddedRunCount() === 0 };
   }

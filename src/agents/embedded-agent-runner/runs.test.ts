@@ -393,6 +393,28 @@ describe("embedded-agent runner run registry", () => {
     }
   });
 
+  it("clamps oversized active-run drain poll intervals", async () => {
+    vi.useFakeTimers();
+    try {
+      const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+      const handle = createRunHandle();
+      setActiveEmbeddedRun("session-a", handle);
+
+      const waitPromise = waitForActiveEmbeddedRuns(undefined, {
+        pollMs: Number.MAX_SAFE_INTEGER,
+      });
+      await Promise.resolve();
+
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), MAX_TIMER_TIMEOUT_MS);
+      clearActiveEmbeddedRun("session-a", handle);
+      await vi.advanceTimersByTimeAsync(MAX_TIMER_TIMEOUT_MS);
+      await expect(waitPromise).resolves.toEqual({ drained: true });
+    } finally {
+      await vi.runOnlyPendingTimersAsync();
+      vi.useRealTimers();
+    }
+  });
+
   it("shares active run state across distinct module instances", async () => {
     const runsA = await importFreshModule<typeof import("./runs.js")>(
       import.meta.url,
