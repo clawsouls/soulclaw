@@ -34,6 +34,7 @@ Docs: https://docs.openclaw.ai
 - Security/config parsing: reject unsafe OAuth/token lifetimes, retry-after delays, inbound timestamps, response body sizes, command timeout config, sandbox observer token TTLs, and gateway WebSocket calls after close.
 - Providers/media: cap local service, model, usage, queue, generated media, TTS, music, workflow polling, and provider OAuth request timers across hosted and local providers.
 - Release/CI/E2E: bound release candidate reads, beta smoke REST calls, changelog restore, kitchen-sink and bundled plugin readiness probes, secret-provider probes, Vitest routing, and mainline test flakes. (#88127, #88137, #88155, #88160)
+- CI/Crabbox: keep default runner capacity spot-only and provider-neutral so OpenClaw remote validation does not silently fall back to on-demand leases or stale AWS region hints.
 - Performance: reuse prepared provider handles, strict tool schemas, gateway runtime metadata, session maintenance config, plugin metadata, bundled skill allowlists, package-local plugin artifacts, and single-entry store writes.
 
 ## 2026.5.28

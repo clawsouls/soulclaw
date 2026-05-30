@@ -365,6 +365,7 @@ const PRECISE_SOURCE_TEST_TARGETS = new Map([
 ]);
 const BROAD_ONLY_TEST_HELPERS = new Set(["test/helpers/poll.ts"]);
 const TOOLING_SOURCE_TEST_TARGETS = new Map([
+  [".crabbox.yaml", ["test/scripts/package-acceptance-workflow.test.ts"]],
   ["scripts/build-all.mjs", ["test/scripts/build-all.test.ts"]],
   ["scripts/github/barnacle-auto-response.mjs", ["test/scripts/barnacle-auto-response.test.ts"]],
   ["scripts/changed-lanes.mjs", ["test/scripts/changed-lanes.test.ts"]],

@@ -356,6 +356,13 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps Crabbox config edits on package acceptance tests", () => {
+    expect(resolveChangedTestTargetPlan([".crabbox.yaml"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/package-acceptance-workflow.test.ts"],
+    });
+  });
+
   it("routes explicit tooling implementation files to owner tests", () => {
     expect(
       findUnmatchedExplicitTestTargets([
