@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DiscordRealtimeVoiceSession } from "./realtime.js";
 
-type SessionWithPrivates = DiscordRealtimeVoiceSession & {
+type WakeNameFollowupTestSession = {
   armWakeNameFollowup: () => void;
   consumePendingWakeNameFollowup: () => unknown;
   pendingWakeNameFollowup?: unknown;
@@ -11,7 +11,7 @@ type SessionWithPrivates = DiscordRealtimeVoiceSession & {
   };
 };
 
-function createSession(): SessionWithPrivates {
+function createSession(): WakeNameFollowupTestSession {
   return new DiscordRealtimeVoiceSession({
     cfg: {},
     discordConfig: { voice: { realtime: {} } },
@@ -21,7 +21,7 @@ function createSession(): SessionWithPrivates {
     },
     mode: "agent-proxy",
     runAgentTurn: vi.fn(),
-  } as never) as SessionWithPrivates;
+  } as never) as unknown as WakeNameFollowupTestSession;
 }
 
 describe("DiscordRealtimeVoiceSession wake-name follow-up cache", () => {
