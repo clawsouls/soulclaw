@@ -9,6 +9,7 @@ import {
   toAgentRequestSessionKey,
 } from "../routing/session-key.js";
 import { resolvePreferredSessionKeyForSessionIdMatches } from "../sessions/session-id-resolution.js";
+import { asDateTimestampMs, resolveExpiresAtMsFromDurationMs } from "../shared/number-coercion.js";
 import { resolveSessionStoreAgentId, resolveSessionStoreKey } from "./session-store-key.js";
 import { loadCombinedSessionStoreForGateway } from "./session-utils.js";
 
@@ -44,9 +45,14 @@ function setResolvedSessionKeyCache(
       resolvedSessionKeyByRunId.delete(oldest);
     }
   }
+  const expiresAt =
+    sessionKey === null ? resolveExpiresAtMsFromDurationMs(RUN_LOOKUP_MISS_TTL_MS) : null;
+  if (sessionKey === null && expiresAt === undefined) {
+    return;
+  }
   resolvedSessionKeyByRunId.set(cacheKey, {
     sessionKey,
-    expiresAt: sessionKey === null ? Date.now() + RUN_LOOKUP_MISS_TTL_MS : null,
+    expiresAt,
   });
 }
 
@@ -90,7 +96,9 @@ export function resolveSessionKeyForRun(runId: string, opts: { agentId?: string 
     if (cachedLookup.sessionKey !== null) {
       return cachedLookup.sessionKey;
     }
-    if ((cachedLookup.expiresAt ?? 0) > Date.now()) {
+    const expiresAt = asDateTimestampMs(cachedLookup.expiresAt);
+    const now = asDateTimestampMs(Date.now());
+    if (expiresAt !== undefined && now !== undefined && expiresAt > now) {
       return undefined;
     }
     resolvedSessionKeyByRunId.delete(cacheKey);
