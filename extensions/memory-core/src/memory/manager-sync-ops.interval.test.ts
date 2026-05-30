@@ -35,10 +35,16 @@ class IntervalSyncHarness extends MemoryManagerSyncOps {
   protected providerLifecycle = { mode: "active" as const, providerId: "test" };
   protected db = {} as DatabaseSync;
 
-  constructor(intervalMinutes: number) {
+  constructor(params: { intervalMinutes?: number; batchTimeoutMinutes?: number }) {
     super();
     this.settings = {
-      sync: { intervalMinutes },
+      sync: { intervalMinutes: params.intervalMinutes ?? 0 },
+      remote: {
+        batch: {
+          enabled: true,
+          timeoutMinutes: params.batchTimeoutMinutes,
+        },
+      },
     } as ResolvedMemorySearchConfig;
   }
 
@@ -51,6 +57,10 @@ class IntervalSyncHarness extends MemoryManagerSyncOps {
       clearInterval(this.intervalTimer);
       this.intervalTimer = null;
     }
+  }
+
+  batchConfig(): ReturnType<MemoryManagerSyncOps["resolveBatchConfig"]> {
+    return this.resolveBatchConfig();
   }
 
   protected computeProviderKey(): string {
@@ -85,11 +95,19 @@ describe("MemoryManagerSyncOps interval sync", () => {
   it("clamps oversized interval sync timers", () => {
     vi.useFakeTimers();
     const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
-    const harness = new IntervalSyncHarness(Number.MAX_SAFE_INTEGER);
+    const harness = new IntervalSyncHarness({ intervalMinutes: Number.MAX_SAFE_INTEGER });
 
     harness.arm();
 
     expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), MAX_TIMER_TIMEOUT_MS);
     harness.stop();
+  });
+
+  it("clamps oversized batch timeout minutes", () => {
+    const harness = new IntervalSyncHarness({
+      batchTimeoutMinutes: Number.MAX_SAFE_INTEGER,
+    });
+
+    expect(harness.batchConfig().timeoutMs).toBe(MAX_TIMER_TIMEOUT_MS);
   });
 });
