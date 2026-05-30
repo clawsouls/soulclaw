@@ -449,6 +449,41 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps package, release, and install tooling edits on owner tests", () => {
+    const expectedTargets = new Map([
+      ["scripts/generate-npm-shrinkwrap.mjs", ["test/scripts/generate-npm-shrinkwrap.test.ts"]],
+      [
+        "scripts/package-openclaw-for-docker.mjs",
+        ["test/scripts/package-openclaw-for-docker.test.ts"],
+      ],
+      ["scripts/package-mac-app.sh", ["test/scripts/package-mac-app.test.ts"]],
+      ["scripts/package-mac-dist.sh", ["test/scripts/package-mac-dist.test.ts"]],
+      ["scripts/package-changelog.mjs", ["test/scripts/package-changelog.test.ts"]],
+      ["scripts/openclaw-prepack.ts", ["test/openclaw-prepack.test.ts"]],
+      ["scripts/openclaw-npm-release-check.ts", ["test/openclaw-npm-release-check.test.ts"]],
+      [
+        "scripts/openclaw-npm-postpublish-verify.ts",
+        ["test/openclaw-npm-postpublish-verify.test.ts"],
+      ],
+      [
+        "scripts/postinstall-bundled-plugins.mjs",
+        ["test/scripts/postinstall-bundled-plugins.test.ts"],
+      ],
+      ["scripts/prepare-git-hooks.mjs", ["test/scripts/prepare-git-hooks.test.ts"]],
+      [
+        "scripts/preinstall-package-manager-warning.mjs",
+        ["test/scripts/preinstall-package-manager-warning.test.ts"],
+      ],
+    ]);
+
+    for (const [source, targets] of expectedTargets) {
+      expect(resolveChangedTestTargetPlan([source]), source).toEqual({
+        mode: "targets",
+        targets,
+      });
+    }
+  });
+
   it("routes explicit tooling implementation files to owner tests", () => {
     expect(
       findUnmatchedExplicitTestTargets([
