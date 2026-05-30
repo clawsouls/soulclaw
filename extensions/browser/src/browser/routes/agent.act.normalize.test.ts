@@ -1,3 +1,4 @@
+import { MAX_TIMER_TIMEOUT_MS } from "openclaw/plugin-sdk/number-runtime";
 import { describe, expect, it } from "vitest";
 import { normalizeActRequest } from "./agent.act.normalize.js";
 
@@ -29,6 +30,20 @@ describe("normalizeActRequest numeric fields", () => {
       kind: "wait",
       timeMs: 25,
       timeoutMs: 5000,
+    });
+  });
+
+  it("caps oversized action timeouts", () => {
+    expect(
+      normalizeActRequest({
+        kind: "wait",
+        text: "ready",
+        timeoutMs: String(Number.MAX_SAFE_INTEGER),
+      }),
+    ).toMatchObject({
+      kind: "wait",
+      text: "ready",
+      timeoutMs: MAX_TIMER_TIMEOUT_MS,
     });
   });
 

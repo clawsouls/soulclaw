@@ -1,3 +1,4 @@
+import { resolveTimerTimeoutMs } from "openclaw/plugin-sdk/number-runtime";
 import {
   ACT_MAX_BATCH_ACTIONS,
   ACT_MAX_CLICK_DELAY_MS,
@@ -88,7 +89,8 @@ function readActionNonNegativeInteger(
 }
 
 function readActionTimeoutMs(body: Record<string, unknown>): number | undefined {
-  return readActionPositiveInteger(body, "timeoutMs");
+  const timeoutMs = readActionPositiveInteger(body, "timeoutMs");
+  return timeoutMs === undefined ? undefined : resolveTimerTimeoutMs(timeoutMs, 1);
 }
 
 function readBoundedActionDurationMs(
