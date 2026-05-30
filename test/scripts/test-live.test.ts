@@ -33,6 +33,23 @@ describe("scripts/test-live", () => {
     ]);
   });
 
+  it("preserves vitest flags after the passthrough separator", () => {
+    const args = parseTestLiveArgs([
+      "--quiet",
+      "--",
+      "--help",
+      "--no-quiet",
+      "--codex-harness",
+    ]);
+
+    expect(args).toEqual({
+      forceCodexHarness: false,
+      forwardedArgs: ["--help", "--no-quiet", "--codex-harness"],
+      help: false,
+      quietOverride: "1",
+    });
+  });
+
   it("builds live env without mutating caller env", () => {
     const env = buildTestLiveEnv(
       { forceCodexHarness: true, forwardedArgs: [], help: false, quietOverride: undefined },

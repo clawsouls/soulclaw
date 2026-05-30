@@ -20,9 +20,15 @@ export function parseTestLiveArgs(argv) {
   let quietOverride;
   let forceCodexHarness = false;
   let help = false;
+  let passthrough = false;
 
   for (const arg of argv) {
+    if (passthrough) {
+      forwardedArgs.push(arg);
+      continue;
+    }
     if (arg === "--") {
+      passthrough = true;
       continue;
     }
     if (arg === "--help" || arg === "-h") {
