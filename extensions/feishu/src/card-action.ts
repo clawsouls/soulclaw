@@ -217,6 +217,13 @@ function sanitizeLogValue(v: string): string {
   return v.replace(/[\r\n]/g, " ").slice(0, 500);
 }
 
+function resolveFeishuApprovalCardExpiresAt(nowRaw = Date.now()): number | undefined {
+  const now = asDateTimestampMs(nowRaw);
+  return now === undefined
+    ? undefined
+    : resolveExpiresAtMsFromDurationMs(FEISHU_APPROVAL_CARD_TTL_MS, { nowMs: now });
+}
+
 function cacheResolvedCardActionChatType(
   cacheKey: string,
   value: "p2p" | "group",
@@ -373,6 +380,17 @@ export async function handleFeishuCardAction(params: {
           typeof envelope.m?.prompt === "string" && envelope.m.prompt.trim()
             ? envelope.m.prompt
             : `Run \`${command}\` in this Feishu conversation?`;
+        const expiresAt = resolveFeishuApprovalCardExpiresAt();
+        if (expiresAt === undefined) {
+          await sendInvalidInteractionNotice({
+            cfg,
+            event,
+            reason: "malformed",
+            accountId,
+          });
+          completeFeishuCardActionToken({ token: event.token, accountId: account.accountId });
+          return;
+        }
         await sendCardFeishu({
           cfg,
           to: resolveCallbackTarget(event),
@@ -382,7 +400,7 @@ export async function handleFeishuCardAction(params: {
             command,
             prompt,
             sessionKey: envelope.c?.s,
-            expiresAt: Date.now() + FEISHU_APPROVAL_CARD_TTL_MS,
+            expiresAt,
             chatType: await resolveCardActionChatType({
               event,
               account,

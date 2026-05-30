@@ -270,6 +270,45 @@ describe("Feishu Card Action Handler", () => {
     expect(handleFeishuMessage).not.toHaveBeenCalled();
   });
 
+  it("does not open approval cards when the expiry would exceed a valid Date", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(8_640_000_000_000_000));
+    try {
+      const event: FeishuCardActionEvent = {
+        operator: { open_id: "u123", user_id: "uid1", union_id: "un1" },
+        token: "tok4-boundary",
+        action: {
+          value: createFeishuCardInteractionEnvelope({
+            k: "meta",
+            a: FEISHU_APPROVAL_REQUEST_ACTION,
+            m: {
+              command: "/new",
+              prompt: "Start a fresh session?",
+            },
+            c: {
+              u: "u123",
+              h: "chat1",
+              t: "group",
+              s: "agent:codex:feishu:chat:chat1",
+              e: 8_640_000_000_000_000,
+            },
+          }),
+          tag: "button",
+        },
+        context: { open_id: "u123", user_id: "uid1", chat_id: "chat1" },
+      };
+
+      await handleFeishuCardAction({ cfg, event, runtime, accountId: "main" });
+
+      expect(sendCardFeishuMock).not.toHaveBeenCalled();
+      const sendMessage = sendMessageCall();
+      expect(sendMessage.to).toBe("chat:chat1");
+      expect(String(sendMessage.text)).toContain("payload is invalid");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("runs approval confirmation through the normal message path", async () => {
     const event = createStructuredQuickActionEvent({
       token: "tok5",
