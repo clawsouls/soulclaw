@@ -652,25 +652,34 @@ describe("test-projects args", () => {
     ]);
   });
 
-  it("widens non-test helper file targets to sibling tests inside the routed suite", () => {
+  it("routes non-test helper file targets to importing tests inside the routed suites", () => {
     expect(buildVitestRunPlans(["src/gateway/gateway-connection.test-mocks.ts"])).toEqual([
       {
         config: "test/vitest/vitest.gateway.config.ts",
         forwardedArgs: [],
-        includePatterns: ["src/gateway/**/*.test.ts"],
+        includePatterns: ["src/gateway/call.test.ts"],
+        watchMode: false,
+      },
+      {
+        config: "test/vitest/vitest.tui.config.ts",
+        forwardedArgs: [],
+        includePatterns: ["src/tui/gateway-chat.test.ts"],
         watchMode: false,
       },
     ]);
   });
 
-  it("widens extension helper targets to sibling extension tests", () => {
+  it("routes extension helper targets to importing extension tests", () => {
     expect(
       buildVitestRunPlans(["extensions/memory-core/src/memory/test-runtime-mocks.ts"]),
     ).toEqual([
       {
         config: "test/vitest/vitest.extension-memory.config.ts",
         forwardedArgs: [],
-        includePatterns: ["extensions/memory-core/src/memory/**/*.test.ts"],
+        includePatterns: [
+          "extensions/memory-core/src/memory/index.test.ts",
+          "extensions/memory-core/src/memory/manager.fts-only-reindex.test.ts",
+        ],
         watchMode: false,
       },
     ]);
@@ -819,12 +828,44 @@ describe("test-projects args", () => {
     ]);
   });
 
-  it("widens top-level test helpers to sibling repo tests under contracts", () => {
+  it("routes top-level test helpers to importing repo tests", () => {
     expect(buildVitestRunPlans(["test/helpers/temp-dir.ts"])).toEqual([
+      {
+        config: "test/vitest/vitest.unit-fast.config.ts",
+        forwardedArgs: [],
+        includePatterns: ["src/install-sh-version.test.ts"],
+        watchMode: false,
+      },
+      {
+        config: "test/vitest/vitest.unit-fast-fake-timers.config.ts",
+        forwardedArgs: [],
+        includePatterns: ["src/entry.compile-cache.test.ts"],
+        watchMode: false,
+      },
       {
         config: "test/vitest/vitest.tooling.config.ts",
         forwardedArgs: [],
-        includePatterns: ["test/helpers/**/*.test.ts"],
+        includePatterns: [
+          "src/scripts/docs-link-audit.test.ts",
+          "src/scripts/sync-plugin-versions.test.ts",
+          "test/scripts/ios-pin-version.test.ts",
+          "test/scripts/ios-team-id.test.ts",
+          "test/scripts/ios-version.test.ts",
+          "test/test-env.test.ts",
+          "test/vitest-scoped-config.test.ts",
+        ],
+        watchMode: false,
+      },
+      {
+        config: "test/vitest/vitest.agents.config.ts",
+        forwardedArgs: [],
+        includePatterns: ["src/agents/models-config.file-mode.test.ts"],
+        watchMode: false,
+      },
+      {
+        config: "test/vitest/vitest.e2e.config.ts",
+        forwardedArgs: ["test/openclaw-launcher.e2e.test.ts"],
+        includePatterns: null,
         watchMode: false,
       },
     ]);

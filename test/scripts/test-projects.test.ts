@@ -336,6 +336,71 @@ describe("scripts/test-projects changed-target routing", () => {
     ]);
   });
 
+  it("routes explicit source files through precise owner tests before broad globs", () => {
+    expect(buildVitestRunPlans(["src/gateway/server-startup-early.ts"])).toEqual([
+      {
+        config: "test/vitest/vitest.gateway.config.ts",
+        forwardedArgs: [],
+        includePatterns: ["src/gateway/server-startup-early.test.ts"],
+        watchMode: false,
+      },
+    ]);
+    expect(buildVitestRunPlans(["src/commands/onboarding-plugin-install.ts"])).toEqual([
+      {
+        config: "test/vitest/vitest.commands.config.ts",
+        forwardedArgs: [],
+        includePatterns: ["src/commands/onboarding-plugin-install.test.ts"],
+        watchMode: false,
+      },
+    ]);
+  });
+
+  it("routes explicit imported source files through import-graph tests", () => {
+    let plans: ReturnType<typeof buildVitestRunPlans> = [];
+    withTinyGitRepo(
+      {
+        "src/runtime.ts": "export const value = 'x';\n",
+        "src/runtime.consumer.test.ts": "import { value } from './runtime.js';\nvoid value;\n",
+      },
+      (cwd) => {
+        plans = buildVitestRunPlans(["src/runtime.ts"], cwd);
+      },
+    );
+
+    expect(plans).toEqual([
+      {
+        config: "test/vitest/vitest.unit.config.ts",
+        forwardedArgs: ["src/runtime.consumer.test.ts"],
+        includePatterns: null,
+        watchMode: false,
+      },
+    ]);
+  });
+
+  it("deduplicates explicit source tests that share import-graph owners", () => {
+    let plans: ReturnType<typeof buildVitestRunPlans> = [];
+    withTinyGitRepo(
+      {
+        "src/runtime-a.ts": "export const a = 'a';\n",
+        "src/runtime-b.ts": "export const b = 'b';\n",
+        "src/runtime.consumer.test.ts":
+          "import { a } from './runtime-a.js';\nimport { b } from './runtime-b.js';\nvoid [a, b];\n",
+      },
+      (cwd) => {
+        plans = buildVitestRunPlans(["src/runtime-a.ts", "src/runtime-b.ts"], cwd);
+      },
+    );
+
+    expect(plans).toEqual([
+      {
+        config: "test/vitest/vitest.unit.config.ts",
+        forwardedArgs: ["src/runtime.consumer.test.ts"],
+        includePatterns: null,
+        watchMode: false,
+      },
+    ]);
+  });
+
   it("does not route live tests through the normal changed-test lane", () => {
     expect(
       resolveChangedTestTargetPlan(["src/gateway/gateway-codex-harness.live.test.ts"]),

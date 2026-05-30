@@ -222,6 +222,10 @@ function interleaveSlowAndFastSpecs(sortedSpecs) {
   return ordered;
 }
 
+function uniqueOrdered(values) {
+  return [...new Set(values)];
+}
+
 export function orderFullSuiteSpecsForParallelRun(specs, shardTimings = new Map()) {
   const sortedSpecs = specs.toSorted((a, b) => {
     const weightDelta =
@@ -874,7 +878,7 @@ function includePatternMatchesAnyFile(pattern, files) {
   return files.some((file) => file === pattern || path.matchesGlob(file, pattern));
 }
 
-function resolveExplicitTestSupportTargets(targetArg, cwd) {
+function resolveExplicitSourceTestTargets(targetArg, cwd) {
   const relative = toRepoRelativeTarget(targetArg, cwd);
   const kind = classifyTarget(targetArg, cwd);
   if (shouldUseWholeConfigTarget(kind, targetArg, cwd)) {
@@ -883,9 +887,12 @@ function resolveExplicitTestSupportTargets(targetArg, cwd) {
   if (!isExistingFileTarget(targetArg, cwd)) {
     return null;
   }
-  const mappedTargets = resolveToolingTestTargets(relative) ?? SOURCE_TEST_TARGETS.get(relative);
-  if (mappedTargets) {
-    return [...new Set(mappedTargets)].toSorted((left, right) => left.localeCompare(right));
+  if (isTestFileTarget(relative)) {
+    return null;
+  }
+  const preciseTargets = resolvePreciseChangedTestTargets(relative, { cwd });
+  if (preciseTargets && preciseTargets.length > 0) {
+    return [...new Set(preciseTargets)].toSorted((left, right) => left.localeCompare(right));
   }
   if (!isTestSupportFileTarget(relative)) {
     return null;
@@ -895,9 +902,9 @@ function resolveExplicitTestSupportTargets(targetArg, cwd) {
   );
 }
 
-function expandExplicitTestSupportTargets(targetArgs, cwd) {
+function expandExplicitSourceTestTargets(targetArgs, cwd) {
   return targetArgs.flatMap((targetArg) => {
-    const targets = resolveExplicitTestSupportTargets(targetArg, cwd);
+    const targets = resolveExplicitSourceTestTargets(targetArg, cwd);
     return targets && targets.length > 0 ? targets : [targetArg];
   });
 }
@@ -946,7 +953,7 @@ export function findUnmatchedExplicitTestTargets(args, cwd = process.cwd()) {
       continue;
     }
 
-    const explicitSupportTargets = resolveExplicitTestSupportTargets(targetArg, cwd);
+    const explicitSupportTargets = resolveExplicitSourceTestTargets(targetArg, cwd);
     if (explicitSupportTargets) {
       if (explicitSupportTargets.length === 0) {
         unmatched.push({
@@ -1829,7 +1836,7 @@ export function buildVitestRunPlans(
   const changedTargetArgs =
     targetArgs.length === 0 ? resolveChangedTargetArgs(args, cwd, listChangedPaths, options) : null;
   const requestedTargetArgs = changedTargetArgs ?? targetArgs;
-  const activeTargetArgs = expandExplicitTestSupportTargets(requestedTargetArgs, cwd);
+  const activeTargetArgs = expandExplicitSourceTestTargets(requestedTargetArgs, cwd);
   const activeForwardedArgs =
     changedTargetArgs !== null ? stripChangedArgs(forwardedArgs) : forwardedArgs;
   if (changedTargetArgs !== null && activeTargetArgs.length === 0) {
@@ -1999,11 +2006,13 @@ export function buildVitestRunPlans(
       ? null
       : useWholeConfigTarget
         ? null
-        : grouped.flatMap((targetArg) => {
-            const lightLanePatterns = resolveLightLaneIncludePatterns(kind, targetArg, cwd);
-            return lightLanePatterns ?? [toScopedIncludePattern(targetArg, cwd)];
-          });
-    const scopedTargetArgs = useCliTargetArgs ? grouped : [];
+        : uniqueOrdered(
+            grouped.flatMap((targetArg) => {
+              const lightLanePatterns = resolveLightLaneIncludePatterns(kind, targetArg, cwd);
+              return lightLanePatterns ?? [toScopedIncludePattern(targetArg, cwd)];
+            }),
+          );
+    const scopedTargetArgs = useCliTargetArgs ? uniqueOrdered(grouped) : [];
     plans.push({
       config,
       forwardedArgs: [...nonTargetArgs, ...scopedTargetArgs],
