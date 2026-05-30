@@ -484,6 +484,38 @@ describe("scripts/test-projects changed-target routing", () => {
     }
   });
 
+  it("keeps shared script library edits on owner tests", () => {
+    const expectedTargets = new Map([
+      [
+        "scripts/lib/local-heavy-check-runtime.mjs",
+        ["test/scripts/local-heavy-check-runtime.test.ts"],
+      ],
+      ["scripts/lib/managed-child-process.mjs", ["test/scripts/managed-child-process.test.ts"]],
+      ["scripts/lib/source-file-scan-cache.mjs", ["test/scripts/source-file-scan-cache.test.ts"]],
+      ["scripts/lib/dev-tooling-safety.ts", ["test/scripts/dev-tooling-safety.test.ts"]],
+      ["scripts/lib/npm-verify-exec.ts", ["test/scripts/npm-verify-exec.test.ts"]],
+      ["scripts/lib/arg-utils.mjs", ["test/scripts/arg-utils.test.ts"]],
+      ["scripts/lib/test-group-report.mjs", ["test/scripts/test-group-report.test.ts"]],
+      ["scripts/lib/ts-guard-utils.mjs", ["test/scripts/ts-guard-utils.test.ts"]],
+      ["scripts/lib/format-generated-module.mjs", ["test/scripts/format-generated-module.test.ts"]],
+      [
+        "scripts/lib/bundled-plugin-source-utils.mjs",
+        ["test/scripts/bundled-plugin-source-utils.test.ts"],
+      ],
+      [
+        "scripts/lib/bundled-plugin-build-entries.mjs",
+        ["test/scripts/bundled-plugin-build-entries.test.ts"],
+      ],
+    ]);
+
+    for (const [source, targets] of expectedTargets) {
+      expect(resolveChangedTestTargetPlan([source]), source).toEqual({
+        mode: "targets",
+        targets,
+      });
+    }
+  });
+
   it("routes explicit tooling implementation files to owner tests", () => {
     expect(
       findUnmatchedExplicitTestTargets([

@@ -39,6 +39,7 @@ Docs: https://docs.openclaw.ai
 - CI/workflows: route workflow sanity helper edits to their guard tests and cover composite-action input interpolation checks.
 - CI/tooling: route CI scope, dependency, changelog, and docs helper edits to their owner tests instead of silently skipping changed-test coverage.
 - CI/tooling: route package, release, and install helper edits to their owner tests so changed-test gates cover publish and installer script changes.
+- CI/tooling: route shared script library edits through their owner tests so lock, process, safety, and scan helpers do not skip changed-test coverage.
 - Performance: reuse prepared provider handles, strict tool schemas, gateway runtime metadata, session maintenance config, plugin metadata, bundled skill allowlists, package-local plugin artifacts, and single-entry store writes.
 
 ## 2026.5.28
