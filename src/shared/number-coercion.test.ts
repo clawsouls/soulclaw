@@ -134,6 +134,7 @@ describe("number-coercion", () => {
     expect(resolveExpiresAtMsFromDurationSeconds("1e309", { nowMs: 1_000 })).toBeUndefined();
     expect(resolveExpiresAtMsFromEpochSeconds(1234.9)).toBe(1_234_000);
     expect(resolveExpiresAtMsFromEpochSeconds("3600", { bufferMs: 300 })).toBe(3_599_700);
+    expect(resolveExpiresAtMsFromEpochSeconds("100", { maxMs: 99_999 })).toBeUndefined();
     expect(resolveExpiresAtMsFromEpochSeconds(Number.MAX_SAFE_INTEGER)).toBeUndefined();
     expect(resolveExpiresAtMsFromEpochSeconds("1e309")).toBeUndefined();
   });

@@ -95,6 +95,7 @@ export function asPositiveSafeInteger(value: unknown): number | undefined {
 
 export const MAX_TIMER_TIMEOUT_MS = 2_147_000_000;
 export const MAX_TIMER_TIMEOUT_SECONDS = Math.floor(MAX_TIMER_TIMEOUT_MS / 1000);
+export const MAX_DATE_TIMESTAMP_MS = 8_640_000_000_000_000;
 
 export function clampTimerTimeoutMs(valueMs: unknown, minMs = 1): number | undefined {
   const value = asFiniteNumber(valueMs);
@@ -230,7 +231,7 @@ export function resolveExpiresAtMsFromDurationSeconds(
 
 export function resolveExpiresAtMsFromEpochSeconds(
   value: unknown,
-  opts: { bufferMs?: number } = {},
+  opts: { bufferMs?: number; maxMs?: number } = {},
 ): number | undefined {
   const epochMs =
     typeof value === "number" && Number.isFinite(value) && value > 0
@@ -240,7 +241,11 @@ export function resolveExpiresAtMsFromEpochSeconds(
     return undefined;
   }
   const expiresAt = epochMs - (opts.bufferMs ?? 0);
-  return Number.isSafeInteger(expiresAt) ? expiresAt : undefined;
+  if (!Number.isSafeInteger(expiresAt)) {
+    return undefined;
+  }
+  const maxMs = opts.maxMs;
+  return maxMs === undefined || expiresAt <= maxMs ? expiresAt : undefined;
 }
 
 export function resolveExpiresAtMsFromDurationOrEpoch(
