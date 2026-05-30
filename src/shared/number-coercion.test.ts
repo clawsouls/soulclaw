@@ -24,6 +24,7 @@ import {
   parseStrictNonNegativeInteger,
   parseStrictPositiveInteger,
   resolveTimerTimeoutMs,
+  timestampMsToIsoString,
 } from "./number-coercion.js";
 
 describe("number-coercion", () => {
@@ -115,6 +116,14 @@ describe("number-coercion", () => {
     expect(positiveSecondsToSafeMilliseconds("1e309")).toBeUndefined();
     expect(nonNegativeSecondsToSafeMilliseconds("0")).toBe(0);
     expect(nonNegativeSecondsToSafeMilliseconds("-1")).toBeUndefined();
+  });
+
+  test("timestamp ISO helper rejects Date-invalid timestamps", () => {
+    expect(timestampMsToIsoString(0)).toBe("1970-01-01T00:00:00.000Z");
+    expect(timestampMsToIsoString(8_640_000_000_000_000)).toBe("+275760-09-13T00:00:00.000Z");
+    expect(timestampMsToIsoString(8_640_000_000_000_001)).toBeUndefined();
+    expect(timestampMsToIsoString(Number.POSITIVE_INFINITY)).toBeUndefined();
+    expect(timestampMsToIsoString("0")).toBeUndefined();
   });
 
   test("expiry helpers resolve safe absolute timestamps", () => {
