@@ -23,6 +23,7 @@ import { privateFileStoreSync } from "../../infra/private-file-store.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { hasGlobalHooks } from "../../plugins/hook-runner-global.js";
 import { PluginApprovalResolutions } from "../../plugins/types.js";
+import { resolveExpiresAtMsFromDurationMs } from "../../shared/number-coercion.js";
 import {
   cancelDeferredPluginToolApproval,
   hasBeforeToolCallPolicy,
@@ -206,6 +207,10 @@ const NATIVE_HOOK_RELAY_BRIDGE_STALE_REGISTRATION_ERROR =
   "native hook relay bridge stale registration";
 const ANSI_ESCAPE_PATTERN = new RegExp(`${String.fromCharCode(27)}\\[[0-?]*[ -/]*[@-~]`, "g");
 const log = createSubsystemLogger("agents/harness/native-hook-relay");
+
+function resolveNativeHookRelayExpiresAtMs(ttlMs: number | undefined): number | undefined {
+  return resolveExpiresAtMsFromDurationMs(normalizePositiveInteger(ttlMs, DEFAULT_RELAY_TTL_MS));
+}
 
 type NativeHookRelayPermissionDecision = "allow" | "deny";
 
@@ -397,6 +402,10 @@ export function registerNativeHookRelay(
   const generation = normalizeRelayGeneration(params.generation) ?? randomUUID();
   const generationMismatchGraceMs = normalizePositiveInteger(params.generationMismatchGraceMs, 0);
   const now = Date.now();
+  const expiresAtMs = resolveNativeHookRelayExpiresAtMs(params.ttlMs);
+  if (expiresAtMs === undefined) {
+    throw new Error("Native hook relay expiry is outside the supported Date range");
+  }
   const allowedEvents = normalizeAllowedEvents(params.allowedEvents);
   unregisterNativeHookRelay(relayId);
   const registration: ActiveNativeHookRelayRegistration = {
@@ -413,7 +422,7 @@ export function registerNativeHookRelay(
     runId: params.runId,
     ...(params.channelId ? { channelId: params.channelId } : {}),
     allowedEvents,
-    expiresAtMs: now + normalizePositiveInteger(params.ttlMs, DEFAULT_RELAY_TTL_MS),
+    expiresAtMs,
     ...(params.signal ? { signal: params.signal } : {}),
   };
   relays.set(relayId, registration);
@@ -437,9 +446,12 @@ export function registerNativeHookRelay(
       if (current !== registration) {
         return;
       }
-      const expiresAtMs = Date.now() + normalizePositiveInteger(ttlMs, DEFAULT_RELAY_TTL_MS);
-      current.expiresAtMs = expiresAtMs;
-      handle.expiresAtMs = expiresAtMs;
+      const renewedExpiresAtMs = resolveNativeHookRelayExpiresAtMs(ttlMs);
+      if (renewedExpiresAtMs === undefined) {
+        return;
+      }
+      current.expiresAtMs = renewedExpiresAtMs;
+      handle.expiresAtMs = renewedExpiresAtMs;
       const bridge = relayBridges.get(relayId);
       if (bridge) {
         writeNativeHookRelayBridgeRecordForRegistration(current, bridge);

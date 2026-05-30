@@ -244,6 +244,20 @@ describe("native hook relay registry", () => {
     );
   });
 
+  it("rejects relay registrations when expiry would exceed Date range", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(8_640_000_000_000_000));
+
+    expect(() =>
+      registerNativeHookRelay({
+        provider: "codex",
+        sessionId: "session-1",
+        runId: "run-1",
+        allowedEvents: ["pre_tool_use"],
+      }),
+    ).toThrow("Native hook relay expiry is outside the supported Date range");
+  });
+
   it("stores relay registrations, bridges, and invocations in process-global state", async () => {
     const relay = registerNativeHookRelay({
       provider: "codex",
