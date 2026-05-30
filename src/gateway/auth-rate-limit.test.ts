@@ -108,6 +108,23 @@ describe("auth rate limiter", () => {
     }
   });
 
+  it("clamps oversized lockout durations", () => {
+    vi.useFakeTimers();
+    try {
+      limiter = createAuthRateLimiter({
+        maxAttempts: 1,
+        windowMs: 60_000,
+        lockoutMs: Number.MAX_SAFE_INTEGER,
+      });
+
+      limiter.recordFailure("10.0.0.34");
+
+      expect(limiter.check("10.0.0.34").retryAfterMs).toBe(MAX_TIMER_TIMEOUT_MS);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // ---------- sliding window expiry ----------
 
   it("expires old failures outside the window", () => {

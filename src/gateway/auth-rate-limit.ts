@@ -109,8 +109,8 @@ function resolvePruneIntervalMs(value: number | undefined): number {
 
 export function createAuthRateLimiter(config?: RateLimitConfig): AuthRateLimiter {
   const maxAttempts = config?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
-  const windowMs = config?.windowMs ?? DEFAULT_WINDOW_MS;
-  const lockoutMs = config?.lockoutMs ?? DEFAULT_LOCKOUT_MS;
+  const windowMs = resolveTimerTimeoutMs(config?.windowMs, DEFAULT_WINDOW_MS, 0);
+  const lockoutMs = resolveTimerTimeoutMs(config?.lockoutMs, DEFAULT_LOCKOUT_MS, 0);
   const exemptLoopback = config?.exemptLoopback ?? true;
   const pruneIntervalMs = resolvePruneIntervalMs(config?.pruneIntervalMs);
 
