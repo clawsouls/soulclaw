@@ -372,6 +372,11 @@ jobs:
       actions: read
       contents: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
       - name: Require trusted workflow ref for publish
         env:
           RELEASE_TAG: ${{ inputs.tag }}

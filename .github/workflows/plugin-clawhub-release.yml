@@ -207,6 +207,11 @@ jobs:
       actions: read
       contents: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
       - name: Validate release publish approval run
         env:
           GH_TOKEN: ${{ github.token }}
