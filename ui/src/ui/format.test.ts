@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatMs,
   formatRelativeTimestamp,
   formatUnknownText,
   parseSessionKeyParts,
@@ -34,6 +35,17 @@ describe("formatAgo", () => {
   it("returns 'n/a' for null/undefined", () => {
     expect(formatRelativeTimestamp(null)).toBe("n/a");
     expect(formatRelativeTimestamp(undefined)).toBe("n/a");
+  });
+});
+
+describe("formatMs", () => {
+  it("formats epoch timestamps", () => {
+    expect(formatMs(0)).not.toBe("n/a");
+  });
+
+  it("returns n/a for Date-invalid timestamps", () => {
+    expect(formatMs(8_640_000_000_000_001)).toBe("n/a");
+    expect(formatMs(Number.POSITIVE_INFINITY)).toBe("n/a");
   });
 });
 

@@ -1,5 +1,6 @@
 import { formatDurationHuman } from "../../../src/infra/format-time/format-duration.ts";
 import { formatRelativeTimestamp } from "../../../src/infra/format-time/format-relative.ts";
+import { asDateTimestampMs } from "../../../src/shared/number-coercion.js";
 import { t } from "../i18n/index.ts";
 
 export { formatRelativeTimestamp, formatDurationHuman };
@@ -37,10 +38,11 @@ export function formatUnknownText(
 }
 
 export function formatMs(ms?: number | null): string {
-  if (!ms && ms !== 0) {
+  const timestampMs = asDateTimestampMs(ms);
+  if (timestampMs === undefined) {
     return t("common.na");
   }
-  return new Date(ms).toLocaleString();
+  return new Date(timestampMs).toLocaleString();
 }
 
 export function formatList(values?: Array<string | null | undefined>): string {
