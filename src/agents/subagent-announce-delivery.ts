@@ -1236,6 +1236,7 @@ async function sendSubagentAnnounceDirectly(params: {
       isDirectMessageDeliveryTarget(deliveryTarget, canonicalRequesterSessionKey);
     const requiresMessageToolDelivery =
       completionRouteRequiresMessageToolDelivery ||
+      (agentMediatedCompletion && expectedMediaUrls.length > 0) ||
       subagentDirectMessageCompletionRequiresMessageTool;
     const requesterActivity = resolveRequesterSessionActivity(canonicalRequesterSessionKey);
     if (
