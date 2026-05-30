@@ -469,6 +469,34 @@ describe("scripts/test-projects changed-target routing", () => {
     ]);
   });
 
+  it("routes Docker E2E script targets to their owner tooling tests", () => {
+    const targets = [
+      "scripts/e2e/kitchen-sink-plugin-docker.sh",
+      "scripts/e2e/kitchen-sink-rpc-docker.sh",
+      "scripts/e2e/kitchen-sink-rpc-walk.mjs",
+      "scripts/e2e/onboard-docker.sh",
+      "scripts/e2e/plugin-lifecycle-matrix-docker.sh",
+      "scripts/e2e/release-media-memory-docker.sh",
+    ];
+
+    expect(findUnmatchedExplicitTestTargets(targets)).toEqual([]);
+    expect(buildVitestRunPlans(targets, process.cwd())).toEqual([
+      {
+        config: "test/vitest/vitest.tooling.config.ts",
+        forwardedArgs: [],
+        includePatterns: [
+          "test/scripts/docker-build-helper.test.ts",
+          "test/scripts/plugin-prerelease-test-plan.test.ts",
+          "test/scripts/kitchen-sink-rpc-walk.test.ts",
+          "test/scripts/openclaw-test-state.test.ts",
+          "test/scripts/docker-e2e-plan.test.ts",
+          "test/scripts/release-media-memory-scenario.test.ts",
+        ],
+        watchMode: false,
+      },
+    ]);
+  });
+
   it("includes the isolated tooling shard for broad shell helper targets", () => {
     expect(buildVitestRunPlans(["test/scripts"], process.cwd())).toEqual([
       {

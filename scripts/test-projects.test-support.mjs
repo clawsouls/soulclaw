@@ -422,7 +422,33 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ],
   [
     "scripts/e2e/kitchen-sink-plugin-docker.sh",
-    ["test/scripts/plugin-prerelease-test-plan.test.ts"],
+    [
+      "test/scripts/docker-build-helper.test.ts",
+      "test/scripts/plugin-prerelease-test-plan.test.ts",
+    ],
+  ],
+  [
+    "scripts/e2e/kitchen-sink-rpc-docker.sh",
+    [
+      "test/scripts/docker-build-helper.test.ts",
+      "test/scripts/plugin-prerelease-test-plan.test.ts",
+    ],
+  ],
+  [
+    "scripts/e2e/kitchen-sink-rpc-walk.mjs",
+    [
+      "test/scripts/kitchen-sink-rpc-walk.test.ts",
+      "test/scripts/plugin-prerelease-test-plan.test.ts",
+    ],
+  ],
+  [
+    "scripts/e2e/onboard-docker.sh",
+    ["test/scripts/docker-build-helper.test.ts", "test/scripts/openclaw-test-state.test.ts"],
+  ],
+  ["scripts/e2e/plugin-lifecycle-matrix-docker.sh", ["test/scripts/docker-build-helper.test.ts"]],
+  [
+    "scripts/e2e/release-media-memory-docker.sh",
+    ["test/scripts/docker-e2e-plan.test.ts", "test/scripts/release-media-memory-scenario.test.ts"],
   ],
   ["scripts/lib/vitest-shard-timings.mjs", ["test/scripts/vitest-shard-timings.test.ts"]],
   [
