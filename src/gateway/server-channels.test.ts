@@ -198,6 +198,7 @@ describe("server-channels auto restart", () => {
   });
 
   afterEach(() => {
+    vi.clearAllTimers();
     vi.useRealTimers();
     setActivePluginRegistry(previousRegistry ?? createEmptyPluginRegistry());
   });
