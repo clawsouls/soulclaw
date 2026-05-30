@@ -1,7 +1,7 @@
 import { callGateway } from "../gateway/call.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { normalizeBlockedLivenessWaitStatus } from "../shared/agent-liveness.js";
-import { parseFiniteNumber } from "../shared/number-coercion.js";
+import { clampTimerTimeoutMs, parseFiniteNumber } from "../shared/number-coercion.js";
 import {
   buildAgentRunTerminalOutcome,
   type AgentRunTerminalOutcome,
@@ -24,7 +24,7 @@ let runWaitDeps: {
 } = defaultRunWaitDeps;
 
 function resolveRunWaitTimeoutMs(value: number | undefined): number {
-  return Math.max(1, Math.floor(parseFiniteNumber(value) ?? 1));
+  return clampTimerTimeoutMs(parseFiniteNumber(value) ?? 1) ?? 1;
 }
 
 export type AssistantReplySnapshot = {
@@ -213,7 +213,7 @@ export async function waitForAgentRun(params: {
         runId: params.runId,
         timeoutMs,
       },
-      timeoutMs: timeoutMs + 2000,
+      timeoutMs: clampTimerTimeoutMs(timeoutMs + 2000),
     });
     if (wait?.status === "timeout") {
       return normalizeAgentWaitResult("timeout", wait);
