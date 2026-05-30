@@ -23,7 +23,10 @@ import { privateFileStoreSync } from "../../infra/private-file-store.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { hasGlobalHooks } from "../../plugins/hook-runner-global.js";
 import { PluginApprovalResolutions } from "../../plugins/types.js";
-import { resolveExpiresAtMsFromDurationMs } from "../../shared/number-coercion.js";
+import {
+  asDateTimestampMs,
+  resolveExpiresAtMsFromDurationMs,
+} from "../../shared/number-coercion.js";
 import {
   cancelDeferredPluginToolApproval,
   hasBeforeToolCallPolicy,
@@ -1687,11 +1690,16 @@ function consumeNativeHookRelayPermissionBudget(relayId: string, now = Date.now(
 }
 
 function hasNativeHookRelayPermissionAllowAlways(key: string, now = Date.now()): boolean {
+  const validNow = asDateTimestampMs(now);
+  if (validNow === undefined) {
+    return false;
+  }
   const entry = permissionAllowAlwaysApprovals.get(key);
   if (!entry) {
     return false;
   }
-  if (entry.expiresAtMs <= now) {
+  const expiresAtMs = asDateTimestampMs(entry.expiresAtMs);
+  if (expiresAtMs === undefined || expiresAtMs <= validNow) {
     permissionAllowAlwaysApprovals.delete(key);
     return false;
   }
@@ -1700,8 +1708,14 @@ function hasNativeHookRelayPermissionAllowAlways(key: string, now = Date.now()):
 
 function rememberNativeHookRelayPermissionAllowAlways(key: string, now = Date.now()): void {
   pruneNativeHookRelayPermissionAllowAlways(now);
+  const expiresAtMs = resolveExpiresAtMsFromDurationMs(PERMISSION_ALLOW_ALWAYS_TTL_MS, {
+    nowMs: now,
+  });
+  if (expiresAtMs === undefined) {
+    return;
+  }
   permissionAllowAlwaysApprovals.set(key, {
-    expiresAtMs: now + PERMISSION_ALLOW_ALWAYS_TTL_MS,
+    expiresAtMs,
   });
   while (permissionAllowAlwaysApprovals.size > MAX_PERMISSION_ALLOW_ALWAYS_ENTRIES) {
     const oldestKey = permissionAllowAlwaysApprovals.keys().next().value;
@@ -1713,8 +1727,13 @@ function rememberNativeHookRelayPermissionAllowAlways(key: string, now = Date.no
 }
 
 function pruneNativeHookRelayPermissionAllowAlways(now = Date.now()): void {
+  const validNow = asDateTimestampMs(now);
+  if (validNow === undefined) {
+    return;
+  }
   for (const [key, entry] of permissionAllowAlwaysApprovals) {
-    if (entry.expiresAtMs <= now) {
+    const expiresAtMs = asDateTimestampMs(entry.expiresAtMs);
+    if (expiresAtMs === undefined || expiresAtMs <= validNow) {
       permissionAllowAlwaysApprovals.delete(key);
     }
   }
