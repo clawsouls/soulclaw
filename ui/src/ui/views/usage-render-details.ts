@@ -1,6 +1,7 @@
 import { html, svg, nothing } from "lit";
 import { formatDurationCompact } from "../../../../src/infra/format-time/format-duration.ts";
 import { t } from "../../i18n/index.ts";
+import { formatMs } from "../format.ts";
 import { normalizeLowercaseStringOrEmpty } from "../string-coerce.ts";
 import { parseToolSummary } from "../usage-helpers.ts";
 import { charsToTokens, formatCost, formatTokens } from "./usage-metrics.ts";
@@ -59,8 +60,7 @@ function renderSessionSummary(
     return html` <div class="usage-empty-block">${t("usage.details.noUsageData")}</div> `;
   }
 
-  const formatTs = (ts?: number): string =>
-    ts ? new Date(ts).toLocaleString() : t("usage.common.emptyValue");
+  const formatTs = (ts?: number): string => (ts ? formatMs(ts) : t("usage.common.emptyValue"));
 
   const badges: string[] = [];
   if (session.channel) {
@@ -1186,7 +1186,7 @@ function renderSessionLogsCompact(
             <div class="session-log-entry ${roleClass}">
               <div class="session-log-meta">
                 <span class="session-log-role">${roleLabel}</span>
-                <span>${new Date(log.timestamp).toLocaleString()}</span>
+                <span>${formatMs(log.timestamp)}</span>
                 ${log.tokens ? html`<span>${formatTokens(log.tokens)}</span>` : nothing}
               </div>
               <div class="session-log-content">${cleanContent}</div>

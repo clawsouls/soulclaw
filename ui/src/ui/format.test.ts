@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatDateMs,
   formatMs,
   formatRelativeTimestamp,
+  formatTimeMs,
   formatUnknownText,
   parseSessionKeyParts,
   stripThinkingTags,
@@ -46,6 +48,13 @@ describe("formatMs", () => {
   it("returns n/a for Date-invalid timestamps", () => {
     expect(formatMs(8_640_000_000_000_001)).toBe("n/a");
     expect(formatMs(Number.POSITIVE_INFINITY)).toBe("n/a");
+  });
+});
+
+describe("date/time millisecond formatters", () => {
+  it("return fallback text for Date-invalid timestamps", () => {
+    expect(formatDateMs(8_640_000_000_000_001, undefined, "")).toBe("");
+    expect(formatTimeMs(Number.POSITIVE_INFINITY, undefined, "")).toBe("");
   });
 });
 
