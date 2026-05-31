@@ -281,6 +281,26 @@ function isGatewayServerTestFile(file) {
   );
 }
 
+function resolveGatewayStartupShardName(file) {
+  const name = relative("src/gateway", file).replaceAll("\\", "/");
+  if (name.startsWith("server-startup-config") || name.startsWith("server-startup-early")) {
+    return "agentic-control-plane-startup-config";
+  }
+  if (
+    name.startsWith("server-runtime") ||
+    name.startsWith("server.health") ||
+    name.startsWith("server.lazy") ||
+    name.startsWith("server/health-state") ||
+    name.startsWith("server/readiness")
+  ) {
+    return "agentic-control-plane-startup-health-runtime";
+  }
+  if (name.startsWith("server-restart") || name === "server-close.test.ts") {
+    return "agentic-control-plane-startup-restart-close";
+  }
+  return "agentic-control-plane-startup-core";
+}
+
 function resolveGatewayServerShardName(file) {
   const name = relative("src/gateway", file).replaceAll("\\", "/");
   if (
@@ -318,7 +338,7 @@ function resolveGatewayServerShardName(file) {
     name.startsWith("server/readiness") ||
     name === "server-close.test.ts"
   ) {
-    return "agentic-control-plane-startup-runtime";
+    return resolveGatewayStartupShardName(file);
   }
   if (name.includes("cron")) {
     return "agentic-control-plane-runtime-cron";
@@ -380,7 +400,10 @@ function createGatewayServerSplitShards() {
     "agentic-control-plane-runtime-shared-token",
     "agentic-control-plane-runtime-state",
     "agentic-control-plane-runtime-ui-tools",
-    "agentic-control-plane-startup-runtime",
+    "agentic-control-plane-startup-config",
+    "agentic-control-plane-startup-core",
+    "agentic-control-plane-startup-health-runtime",
+    "agentic-control-plane-startup-restart-close",
   ]
     .map((shardName) => ({
       configs: ["test/vitest/vitest.gateway-server.config.ts"],

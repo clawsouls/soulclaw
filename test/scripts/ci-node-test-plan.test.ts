@@ -513,7 +513,10 @@ describe("scripts/lib/ci-node-test-plan.mjs", () => {
       "agentic-control-plane-runtime-shared-token",
       "agentic-control-plane-runtime-state",
       "agentic-control-plane-runtime-ui-tools",
-      "agentic-control-plane-startup-runtime",
+      "agentic-control-plane-startup-config",
+      "agentic-control-plane-startup-core",
+      "agentic-control-plane-startup-health-runtime",
+      "agentic-control-plane-startup-restart-close",
     ]);
     expect(controlPlaneShards).toEqual(
       controlPlaneShards.map((shard) => ({
