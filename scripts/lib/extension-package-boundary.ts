@@ -270,9 +270,8 @@ type ExtensionPackageBoundaryPackageJson = {
   devDependencies?: Record<string, string>;
 };
 
-// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Boundary helper lets callers ascribe JSON file shape.
-function readJsonFile<T>(filePath: string): T {
-  return JSON.parse(readFileSync(filePath, "utf8")) as T;
+function readJsonFile(filePath: string): unknown {
+  return JSON.parse(readFileSync(filePath, "utf8"));
 }
 
 function collectBundledExtensionIds(rootDir = resolve(".")): string[] {
@@ -294,18 +293,18 @@ export function readExtensionPackageBoundaryTsconfig(
   extensionId: string,
   rootDir = resolve("."),
 ): ExtensionPackageBoundaryTsConfigJson {
-  return readJsonFile<ExtensionPackageBoundaryTsConfigJson>(
+  return readJsonFile(
     resolveExtensionTsconfigPath(extensionId, rootDir),
-  );
+  ) as ExtensionPackageBoundaryTsConfigJson;
 }
 
 export function readExtensionPackageBoundaryPackageJson(
   extensionId: string,
   rootDir = resolve("."),
 ): ExtensionPackageBoundaryPackageJson {
-  return readJsonFile<ExtensionPackageBoundaryPackageJson>(
+  return readJsonFile(
     resolveExtensionPackageJsonPath(extensionId, rootDir),
-  );
+  ) as ExtensionPackageBoundaryPackageJson;
 }
 
 export function isOptInExtensionPackageBoundaryTsconfig(
