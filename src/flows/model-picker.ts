@@ -421,15 +421,16 @@ function createPreferredProviderMatcher(params: {
     if (cached !== undefined) {
       return cached;
     }
+    const preferredOwners = preferredOwnerPluginIdSet;
     const value =
-      Boolean(preferredOwnerPluginIdSet) &&
+      preferredOwners !== undefined &&
       Boolean(
         resolveOwningPluginIdsForProviderRef({
           provider: normalizedEntryProvider,
           config: params.cfg,
           workspaceDir: params.workspaceDir,
           env: params.env,
-        })?.some((pluginId) => preferredOwnerPluginIdSet.has(pluginId)),
+        })?.some((pluginId) => preferredOwners.has(pluginId)),
       );
     entryProviderCache.set(normalizedEntryProvider, value);
     return value;

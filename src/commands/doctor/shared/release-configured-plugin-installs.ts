@@ -105,7 +105,7 @@ function collectSlotPluginIds(cfg: OpenClawConfig): string[] {
   return ["memory", "contextEngine"]
     .map((key) => normalizeId(slots?.[key]))
     .filter(
-      (pluginId): pluginId is string => Boolean(pluginId) && pluginId.toLowerCase() !== "none",
+      (pluginId): pluginId is string => pluginId !== null && pluginId.toLowerCase() !== "none",
     );
 }
 

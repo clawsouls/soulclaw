@@ -23,7 +23,7 @@ const hasPotentialConfiguredChannels = vi.hoisted(() => vi.fn());
 const hasMeaningfulChannelConfig = vi.hoisted(() =>
   vi.fn((value: unknown) => {
     return (
-      Boolean(value) &&
+      value !== null &&
       typeof value === "object" &&
       !Array.isArray(value) &&
       Object.keys(value).some((key) => key !== "enabled")

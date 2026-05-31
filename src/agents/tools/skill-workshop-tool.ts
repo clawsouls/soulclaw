@@ -375,6 +375,7 @@ function listProposalEntries(params: {
       if (!query) {
         return true;
       }
+      const normalizedSearch = normalizedQuery;
       return [
         proposal.id,
         proposal.title,
@@ -385,7 +386,7 @@ function listProposalEntries(params: {
         const lower = value.toLowerCase();
         return (
           lower.includes(query) ||
-          (Boolean(normalizedQuery) && normalizeProposalSearchText(lower).includes(normalizedQuery))
+          (normalizedSearch ? normalizeProposalSearchText(lower).includes(normalizedSearch) : false)
         );
       });
     })
