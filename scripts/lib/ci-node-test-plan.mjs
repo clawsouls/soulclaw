@@ -172,6 +172,92 @@ function createAgenticCommandSplitShards() {
     .filter((shard) => shard.includePatterns.length > 0);
 }
 
+function resolveAgentCoreShardName(file) {
+  const name = relative("src/agents", file).replaceAll("\\", "/");
+  if (
+    name.startsWith("auth") ||
+    name.includes("auth") ||
+    name.includes("oauth") ||
+    name.includes("credential") ||
+    name.includes("api-key") ||
+    name.includes("token")
+  ) {
+    return "agentic-agents-core-auth";
+  }
+  if (
+    name.startsWith("model") ||
+    name.includes("provider") ||
+    name.includes("openai") ||
+    name.includes("anthropic") ||
+    name.includes("gemini") ||
+    name.includes("moonshot") ||
+    name.includes("minimax") ||
+    name.includes("xai") ||
+    name.includes("zai") ||
+    name.includes("chutes") ||
+    name.includes("catalog")
+  ) {
+    return "agentic-agents-core-models";
+  }
+  if (
+    name.startsWith("agent-tools") ||
+    name.startsWith("openclaw-tools") ||
+    name.startsWith("bash-tools") ||
+    name.startsWith("tool") ||
+    name.startsWith("apply-patch") ||
+    name.startsWith("exec") ||
+    name.startsWith("sandbox")
+  ) {
+    return "agentic-agents-core-tools";
+  }
+  if (
+    name.startsWith("subagent") ||
+    name.startsWith("spawn") ||
+    name.startsWith("embedded-agent-subscribe")
+  ) {
+    return "agentic-agents-core-subagents";
+  }
+  if (
+    name.startsWith("embedded-agent-runner") ||
+    name.startsWith("cli-runner") ||
+    name.startsWith("agent-command") ||
+    name.startsWith("command") ||
+    name.includes("compaction") ||
+    name.includes("session")
+  ) {
+    return "agentic-agents-core-runner";
+  }
+  return "agentic-agents-core-runtime";
+}
+
+function createAgentCoreSplitShards() {
+  const groups = new Map();
+  for (const file of listTestFiles("src/agents")) {
+    const name = relative("src/agents", file).replaceAll("\\", "/");
+    if (name.includes("/")) {
+      continue;
+    }
+    const shardName = resolveAgentCoreShardName(file);
+    groups.set(shardName, [...(groups.get(shardName) ?? []), file]);
+  }
+
+  return [
+    "agentic-agents-core-auth",
+    "agentic-agents-core-models",
+    "agentic-agents-core-tools",
+    "agentic-agents-core-subagents",
+    "agentic-agents-core-runner",
+    "agentic-agents-core-runtime",
+  ]
+    .map((shardName) => ({
+      configs: ["test/vitest/vitest.agents-core.config.ts"],
+      includePatterns: groups.get(shardName) ?? [],
+      requiresDist: false,
+      shardName,
+    }))
+    .filter((shard) => shard.includePatterns.length > 0);
+}
+
 const GATEWAY_SERVER_BACKED_HTTP_TESTS = new Set([
   "src/gateway/embeddings-http.test.ts",
   "src/gateway/models-http.test.ts",
@@ -699,11 +785,7 @@ const SPLIT_NODE_SHARDS = new Map([
         requiresDist: false,
       },
       ...createAgenticCommandSplitShards(),
-      {
-        shardName: "agentic-agents-core",
-        configs: ["test/vitest/vitest.agents-core.config.ts"],
-        requiresDist: false,
-      },
+      ...createAgentCoreSplitShards(),
       {
         shardName: "agentic-agents-embedded",
         configs: ["test/vitest/vitest.agents-embedded-agent.config.ts"],
