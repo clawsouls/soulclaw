@@ -7,15 +7,15 @@ import path from "node:path";
 import { resolveStateDir } from "../config/paths.js";
 import { killProcessTree } from "../process/kill-tree.js";
 
-export const EXEC_SHELL_SNAPSHOT_ENV = "OPENCLAW_EXEC_SHELL_SNAPSHOT";
-
 const SNAPSHOT_VERSION = 1;
 const SNAPSHOT_REFRESH_MS = 5 * 60 * 1000;
 const SNAPSHOT_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 const CAPTURE_MARKER = "__OPENCLAW_SHELL_SNAPSHOT_CAPTURE__";
 const ENV_MARKER = "__OPENCLAW_SHELL_SNAPSHOT_ENV__";
+const EXEC_SHELL_SNAPSHOT_ENV = "OPENCLAW_EXEC_SHELL_SNAPSHOT";
 const VALID_ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const SNAPSHOT_SHELLS = new Set(["bash", "zsh"]);
+const SNAPSHOT_DISABLE_VALUES = new Set(["0", "false", "no", "off"]);
 const SAFE_ENV_NAMES = new Set([
   "ASDF_DIR",
   "BUN_INSTALL",
@@ -64,7 +64,6 @@ export type ShellSnapshotWrapOptions = {
   shellArgs: string[];
   cwd: string;
   env: Record<string, string | undefined>;
-  enabled?: boolean;
 };
 
 const snapshotCache = new Map<
@@ -73,24 +72,26 @@ const snapshotCache = new Map<
 >();
 let cleanupPromise: Promise<void> | null = null;
 
-export function shouldEnableExecShellSnapshot(env: Record<string, string | undefined>): boolean {
-  const value = env[EXEC_SHELL_SNAPSHOT_ENV]?.trim().toLowerCase();
-  return value === "1" || value === "true" || value === "yes" || value === "on";
-}
-
 export async function maybeWrapCommandWithShellSnapshot(
   opts: ShellSnapshotWrapOptions,
 ): Promise<string> {
-  if (!opts.enabled || !shouldEnableExecShellSnapshot(process.env)) {
-    return opts.command;
-  }
-  if (process.platform === "win32" || !isSupportedSnapshotShell(opts.shell, opts.shellArgs)) {
+  if (
+    process.platform === "win32" ||
+    isExecShellSnapshotDisabled(process.env) ||
+    !isSupportedSnapshotShell(opts.shell, opts.shellArgs)
+  ) {
     return opts.command;
   }
 
   try {
     const snapshot = await getOrCreateShellSnapshot(opts);
-    return snapshot ? buildSnapshotWrappedCommand(opts.command, snapshot.path) : opts.command;
+    return snapshot
+      ? buildSnapshotWrappedCommand(
+          opts.command,
+          snapshot.path,
+          buildRuntimeEnvRestoreScript(opts.env),
+        )
+      : opts.command;
   } catch {
     return opts.command;
   }
@@ -111,6 +112,11 @@ function isSupportedSnapshotShell(shell: string, shellArgs: string[]): boolean {
   return shellArgs.includes("-c") && SNAPSHOT_SHELLS.has(path.basename(shell));
 }
 
+function isExecShellSnapshotDisabled(env: Record<string, string | undefined>): boolean {
+  const value = env[EXEC_SHELL_SNAPSHOT_ENV]?.trim().toLowerCase();
+  return Boolean(value && SNAPSHOT_DISABLE_VALUES.has(value));
+}
+
 async function getOrCreateShellSnapshot(
   opts: ShellSnapshotWrapOptions,
 ): Promise<ShellSnapshot | null> {
@@ -126,6 +132,8 @@ async function getOrCreateShellSnapshot(
 }
 
 function buildSnapshotKey(opts: ShellSnapshotWrapOptions): string {
+  // Snapshot capture executes shell startup files before the approved command.
+  // Use process-owned roots/env only; per-call exec.env is model-controlled.
   return createHash("sha256")
     .update(
       JSON.stringify({
@@ -133,10 +141,10 @@ function buildSnapshotKey(opts: ShellSnapshotWrapOptions): string {
         shell: opts.shell,
         shellArgs: opts.shellArgs,
         cwd: path.resolve(opts.cwd),
-        home: opts.env.HOME ?? opts.env.USERPROFILE ?? os.homedir(),
+        home: getTrustedShellHome(),
         stateDir: resolveStateDir(process.env),
-        env: buildSafeEnvSignature(opts.env),
-        startup: buildStartupSignature(opts),
+        env: buildSafeEnvSignature(process.env),
+        startup: buildStartupSignature(opts.shell),
       }),
     )
     .digest("hex");
@@ -150,20 +158,16 @@ function buildSafeEnvSignature(
     .map((key): [string, string | null] => [key, env[key] ?? null]);
 }
 
-function buildStartupSignature(
-  opts: ShellSnapshotWrapOptions,
-): Array<[string, number, number] | [string, null]> {
-  const shellName = path.basename(opts.shell);
-  const home = opts.env.HOME ?? opts.env.USERPROFILE ?? os.homedir();
-  const zdotdir = opts.env.ZDOTDIR?.trim() || home;
+function buildStartupSignature(shell: string): Array<[string, number, number] | [string, null]> {
+  const shellName = path.basename(shell);
+  const home = getTrustedShellHome();
+  const zdotdir = process.env.ZDOTDIR?.trim() || home;
   const candidates =
     shellName === "zsh"
       ? [path.join(zdotdir, ".zshrc")]
       : shellName === "bash"
         ? [path.join(home, ".bashrc")]
-        : opts.env.ENV
-          ? [opts.env.ENV]
-          : [];
+        : [];
   return candidates.map((candidate) => {
     try {
       const stat = statSync(candidate);
@@ -172,6 +176,10 @@ function buildStartupSignature(
       return [candidate, null];
     }
   });
+}
+
+function getTrustedShellHome(): string {
+  return process.env.HOME ?? process.env.USERPROFILE ?? os.homedir();
 }
 
 async function createShellSnapshot(
@@ -264,7 +272,7 @@ async function captureShellSnapshot(opts: ShellSnapshotWrapOptions): Promise<str
       shell: opts.shell,
       shellArgs: buildCaptureShellArgs(shellName, opts.shellArgs),
       cwd: opts.cwd,
-      env: buildSnapshotCaptureEnv(opts.env),
+      env: buildTrustedSnapshotCaptureEnv(opts.env),
       command: captureCommand,
       timeoutMs: 5_000,
     });
@@ -296,6 +304,18 @@ function buildSnapshotCaptureEnv(
       ([key]) => CAPTURE_ENV_NAMES.has(key) && !SECRET_ENV_PATTERN.test(key),
     ),
   );
+}
+
+function buildTrustedSnapshotCaptureEnv(
+  runtimeEnv: Record<string, string | undefined>,
+): Record<string, string | undefined> {
+  const env = buildSnapshotCaptureEnv(process.env);
+  // OPENCLAW_SHELL is injected by the exec runtime, so startup files can keep
+  // their documented exec-specific branches without trusting model input.
+  if (runtimeEnv.OPENCLAW_SHELL === "exec") {
+    env.OPENCLAW_SHELL = "exec";
+  }
+  return env;
 }
 
 function buildStartupSourceScript(shellName: string): string {
@@ -380,13 +400,30 @@ function parseSafeEnvExports(envJson: string): string {
     .join("\n");
 }
 
-function buildSnapshotWrappedCommand(command: string, snapshotPath: string): string {
+function buildRuntimeEnvRestoreScript(env: Record<string, string | undefined>): string {
+  return [...SAFE_ENV_NAMES]
+    .toSorted()
+    .filter((key) => env[key] !== process.env[key] && !SECRET_ENV_PATTERN.test(key))
+    .map((key) =>
+      typeof env[key] === "string" ? `export ${key}=${shQuote(env[key])}` : `unset ${key}`,
+    )
+    .join("\n");
+}
+
+function buildSnapshotWrappedCommand(
+  command: string,
+  snapshotPath: string,
+  runtimeEnvRestoreScript: string,
+): string {
   return [
     `if [ -r ${shQuote(snapshotPath)} ]; then . ${shQuote(snapshotPath)}; fi`,
+    runtimeEnvRestoreScript,
     // Alias expansion happens while shells parse a command. Re-parse the user command
     // after sourcing the snapshot so zsh/bash aliases captured from startup files work.
     `eval ${shQuote(command)}`,
-  ].join("\n");
+  ]
+    .filter((part) => part.trim().length > 0)
+    .join("\n");
 }
 
 function shQuote(value: string): string {

@@ -829,7 +829,6 @@ export async function runExecProcess(opts: {
       shellArgs,
       cwd: opts.workdir,
       env: shellRuntimeEnv,
-      enabled: true,
     });
 
     const childArgv = [shell, ...shellArgs, commandWithShellSnapshot];
