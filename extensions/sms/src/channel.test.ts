@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ResolvedSmsAccount } from "./types.js";
 
 type ChannelModule = typeof import("./channel.js");
 
@@ -48,13 +49,16 @@ describe("smsPlugin status", () => {
       },
     });
 
-    expect(snapshot).toEqual({
+    expect(snapshot).toMatchObject({
       accountId: "support",
       name: "+15557654321",
       enabled: true,
       configured: true,
       statusState: "configured",
+      running: false,
+      webhookPath: "/webhooks/sms",
     });
+    expect(snapshot).not.toHaveProperty("connected");
   });
 });
 
@@ -145,5 +149,34 @@ describe("smsPlugin outbound", () => {
         to: "",
       }),
     ).toEqual({ ok: true, to: "+15551234567" });
+  });
+
+  it("preserves inspected account status fields", async () => {
+    const cfg = {
+      channels: {
+        sms: {
+          accountSid: "AC123",
+          authToken: "secret",
+          fromNumber: "+15557654321",
+          webhookPath: "/twilio/sms",
+        },
+      },
+    };
+    const account = smsPlugin.config.inspectAccount?.(cfg);
+    expect(account).toBeDefined();
+
+    const snapshot = await smsPlugin.status?.buildAccountSnapshot?.({
+      account: account as ResolvedSmsAccount,
+      cfg,
+    });
+
+    expect(snapshot).toMatchObject({
+      configured: true,
+      enabled: true,
+      statusState: "configured",
+      tokenStatus: "available",
+      webhookPath: "/twilio/sms",
+    });
+    expect(snapshot).not.toHaveProperty("connected");
   });
 });
