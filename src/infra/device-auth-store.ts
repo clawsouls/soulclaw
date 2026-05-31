@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { z } from "zod";
 import { resolveStateDir } from "../config/paths.js";
 import {
   clearDeviceAuthTokenFromStore,
@@ -12,14 +11,27 @@ import type { DeviceAuthStore } from "../shared/device-auth.js";
 import { privateFileStoreSync } from "./private-file-store.js";
 
 const DEVICE_AUTH_FILE = "device-auth.json";
-const DeviceAuthStoreSchema = z.object({
-  version: z.literal(1),
-  deviceId: z.string(),
-  tokens: z.record(z.string(), z.unknown()),
-}) as z.ZodType<DeviceAuthStore>;
 
 type StoreCacheEntry = { store: DeviceAuthStore | null; mtimeMs: number; size: number };
 const storeReadCache = new Map<string, StoreCacheEntry>();
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseDeviceAuthStore(value: unknown): DeviceAuthStore | null {
+  if (!isRecord(value) || value.version !== 1 || typeof value.deviceId !== "string") {
+    return null;
+  }
+  if (!isRecord(value.tokens)) {
+    return null;
+  }
+  return {
+    version: 1,
+    deviceId: value.deviceId,
+    tokens: value.tokens,
+  };
+}
 
 function storeCacheHit(
   cached: StoreCacheEntry | undefined,
@@ -52,8 +64,7 @@ function readStore(filePath: string): DeviceAuthStore | null {
     const parsed = privateFileStoreSync(path.dirname(filePath)).readJsonIfExists(
       path.basename(filePath),
     );
-    const result = DeviceAuthStoreSchema.safeParse(parsed);
-    const store = result.success ? result.data : null;
+    const store = parseDeviceAuthStore(parsed);
     storeReadCache.set(filePath, { store, mtimeMs: stat.mtimeMs, size: stat.size });
     return store;
   } catch {
