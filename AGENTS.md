@@ -231,7 +231,7 @@ Skills own workflows; root owns hard policy and routing.
 - User says `commit`: your changes only. `commit all`: all changes in grouped chunks. `push`: may `git pull --rebase` first.
 - User says `ship it`: commit intended changes, pull --rebase, push.
 - Do not delete/rename unexpected files; ask if blocking, else ignore.
-- Bulk PR close/reopen >5: ask with count/scope.
+- Bulk PR close/reopen >20: ask with count/scope.
 
 ## Security / Release
 
