@@ -2883,6 +2883,11 @@ describe("gateway agent handler", () => {
         expect(task.runtime).not.toBe("cli");
       });
 
+      await waitForAssertion(() => {
+        expectRecordFields(getSubagentRunByChildSessionKey(childSessionKey), {
+          cleanupCompletedAt: expect.any(Number),
+        });
+      });
       const run = requireValue(
         getSubagentRunByChildSessionKey(childSessionKey),
         "expected subagent registry run",

@@ -803,28 +803,37 @@ export function createSubagentRegistryLifecycleController(params: {
       return;
     }
     if (didAnnounce) {
-      if (!options?.skipAnnounce) {
-        const delivery = ensureDeliveryState(entry);
-        const deliveredAt = delivery.deliveredAt ?? Date.now();
+      const delivery = ensureDeliveryState(entry);
+      const shouldCreditDelivery =
+        !options?.skipAnnounce ||
+        delivery.status === "delivered" ||
+        typeof delivery.announcedAt === "number";
+      if (shouldCreditDelivery) {
+        const deliveredAt = delivery.deliveredAt ?? delivery.announcedAt ?? Date.now();
         delivery.status = "delivered";
         delivery.deliveredAt = deliveredAt;
-        delivery.announcedAt = deliveredAt;
-        params.persist();
+        delivery.announcedAt = delivery.announcedAt ?? deliveredAt;
+        if (!options?.skipAnnounce) {
+          delivery.announcedAt = deliveredAt;
+          params.persist();
+        }
       }
       clearPendingFinalDelivery(entry);
-      const delivery = ensureDeliveryState(entry);
-      delivery.status = "delivered";
-      delivery.suspendedAt = undefined;
-      delivery.suspendedReason = undefined;
-      if (!options?.skipDeliveryStatus) {
+      const finalDelivery = ensureDeliveryState(entry);
+      if (shouldCreditDelivery) {
+        finalDelivery.status = "delivered";
+        finalDelivery.suspendedAt = undefined;
+        finalDelivery.suspendedReason = undefined;
+      }
+      if (shouldCreditDelivery && !options?.skipDeliveryStatus) {
         safeSetSubagentTaskDeliveryStatus({
           runId,
           childSessionKey: entry.childSessionKey,
           deliveryStatus: "delivered",
         });
       }
-      delivery.lastError = undefined;
-      delivery.lastDropReason = undefined;
+      finalDelivery.lastError = undefined;
+      finalDelivery.lastDropReason = undefined;
       entry.wakeOnDescendantSettle = undefined;
       const completion = ensureCompletionState(entry);
       completion.fallbackResultText = undefined;
