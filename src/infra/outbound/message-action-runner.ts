@@ -42,6 +42,7 @@ import { stripFormattedReasoningMessage } from "../../shared/text/formatted-reas
 import { parseInlineDirectives } from "../../utils/directive-tags.js";
 import {
   INTERNAL_MESSAGE_CHANNEL,
+  normalizeMessageChannel,
   type GatewayClientMode,
   type GatewayClientName,
 } from "../../utils/message-channel.js";
@@ -630,17 +631,39 @@ function hasCurrentSourceReplyContext(input: RunMessageActionParams): boolean {
   );
 }
 
-function shouldUseInternalSourceReplySink(
+async function hasConfiguredCurrentSourceChannel(input: RunMessageActionParams): Promise<boolean> {
+  const provider =
+    normalizeMessageChannel(input.toolContext?.currentChannelProvider) ??
+    normalizeOptionalLowercaseString(input.toolContext?.currentChannelProvider);
+  if (!provider || provider === INTERNAL_MESSAGE_CHANNEL) {
+    return false;
+  }
+  if (!resolveOutboundChannelPlugin({ channel: provider, cfg: input.cfg, allowBootstrap: true })) {
+    return false;
+  }
+  const configuredChannels = await listConfiguredMessageChannels(input.cfg);
+  return configuredChannels.some((channel) => channel === provider);
+}
+
+async function shouldUseInternalSourceReplySink(
   input: RunMessageActionParams,
   params: Record<string, unknown>,
 ) {
-  return (
+  const hasImplicitCurrentSourceRoute =
     input.action === "send" &&
     input.sourceReplyDeliveryMode === "message_tool_only" &&
     hasCurrentSourceReplyContext(input) &&
     Boolean(input.sessionKey?.trim()) &&
-    !hasExplicitRouteParam(params)
-  );
+    !hasExplicitRouteParam(params);
+  if (!hasImplicitCurrentSourceRoute) {
+    return false;
+  }
+  if (!normalizeOptionalString(input.toolContext?.currentChannelId)) {
+    return true;
+  }
+  // Configured current-source channels can infer the target and deliver through
+  // the normal plugin path; the sink is only the private fallback.
+  return !(await hasConfiguredCurrentSourceChannel(input));
 }
 
 async function runGatewayPluginMessageActionOrNull(params: {
@@ -1404,7 +1427,7 @@ export async function runMessageAction(
   if (action === "send" && hasPollCreationParams(params)) {
     throw new Error('Poll fields require action "poll"; use action "poll" instead of "send".');
   }
-  if (shouldUseInternalSourceReplySink(input, params)) {
+  if (await shouldUseInternalSourceReplySink(input, params)) {
     return handleInternalSourceReplySendAction({ ...input, agentId: resolvedAgentId }, params);
   }
   applyImplicitSourceReplySendPolicy(input, params);

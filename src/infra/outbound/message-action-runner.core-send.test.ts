@@ -46,13 +46,20 @@ function registerSlackTextPlugin() {
       {
         pluginId: "slack",
         source: "test",
-        plugin: createOutboundTestPlugin({
-          id: "slack",
-          outbound: {
-            deliveryMode: "direct",
-            sendText,
+        plugin: {
+          ...createOutboundTestPlugin({
+            id: "slack",
+            outbound: {
+              deliveryMode: "direct",
+              sendText,
+            },
+          }),
+          config: {
+            listAccountIds: () => ["default"],
+            resolveAccount: () => ({ enabled: true }),
+            isConfigured: () => true,
           },
-        }),
+        },
       },
     ]),
   );
