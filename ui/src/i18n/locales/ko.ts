@@ -266,7 +266,7 @@ export const ko: TranslationMap = {
       openFilesTab: "Open Files tab",
       primaryModel: "Primary Model",
       runtime: "런타임",
-      thinkingDefault: "Thinking Default",
+      thinkingDefault: "기본 사고 수준",
       identityName: "Identity Name",
       identityAvatar: "Identity Avatar",
       skillsFilter: "Skills Filter",

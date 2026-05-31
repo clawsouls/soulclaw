@@ -267,7 +267,7 @@ export const es: TranslationMap = {
       openFilesTab: "Open Files tab",
       primaryModel: "Primary Model",
       runtime: "Tiempo de ejecución",
-      thinkingDefault: "Thinking Default",
+      thinkingDefault: "Nivel de razonamiento predeterminado",
       identityName: "Identity Name",
       identityAvatar: "Identity Avatar",
       skillsFilter: "Skills Filter",

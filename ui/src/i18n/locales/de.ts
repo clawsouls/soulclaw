@@ -270,7 +270,7 @@ export const de: TranslationMap = {
       openFilesTab: "Open Files tab",
       primaryModel: "Primary Model",
       runtime: "Laufzeit",
-      thinkingDefault: "Thinking Default",
+      thinkingDefault: "Standard-Denkstufe",
       identityName: "Identity Name",
       identityAvatar: "Identity Avatar",
       skillsFilter: "Skills Filter",
