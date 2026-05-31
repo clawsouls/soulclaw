@@ -5,6 +5,7 @@ import {
   recoveryOutcomeClearsQueuedSessionState,
   recoveryOutcomeMutatesSessionState,
   recoveryOutcomeReleasedCount,
+  resolveStuckSessionRecoveryRef,
   type StuckSessionRecoveryOutcome,
   type StuckSessionRecoveryRequest,
 } from "./diagnostic-session-recovery.js";
@@ -61,19 +62,7 @@ function emitSessionRecoveryCompleted(params: {
 }
 
 function recoveryRequestKey(request: StuckSessionRecoveryRequest): string | undefined {
-  const ref = request.sessionKey?.trim() || request.sessionId?.trim();
-  if (!ref) {
-    return undefined;
-  }
-  // In-flight dedup must collapse concurrent recoveries for the same logical
-  // session, so it uses the same granularity as the runtime's recoveryKey
-  // (ref only). Mixing stateGeneration into the key lets a generation bump
-  // during the in-flight window (queued message during abort/drain await) pass
-  // the same session through as a distinct request, emitting a duplicate
-  // session.recovery.requested event while the runtime still skips it as
-  // already_in_flight. Staleness is validated separately via stateGeneration
-  // in applyRecoveryOutcomeToDiagnosticState and the runtime stale check.
-  return ref;
+  return resolveStuckSessionRecoveryRef(request);
 }
 
 function isRecoveryPromiseLike(
