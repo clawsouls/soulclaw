@@ -554,37 +554,43 @@ describe("TwilioProvider", () => {
   });
 
   it("fails stream playback when all audio sends and completion mark are dropped", async () => {
-    const provider = createProvider();
-    provider.registerCallStream("CA-dropped", "MZ-dropped");
+    vi.useFakeTimers();
+    try {
+      const provider = createProvider();
+      provider.registerCallStream("CA-dropped", "MZ-dropped");
 
-    const sendAudio = vi.fn(() => ({ sent: false }));
-    const sendMark = vi.fn(() => ({ sent: false }));
-    const mediaStreamHandler = {
-      queueTts: async (
-        _streamSid: string,
-        playFn: (signal: AbortSignal) => Promise<void>,
-      ): Promise<void> => {
-        await playFn(new AbortController().signal);
-      },
-      sendAudio,
-      sendMark,
-    };
+      const sendAudio = vi.fn(() => ({ sent: false }));
+      const sendMark = vi.fn(() => ({ sent: false }));
+      const mediaStreamHandler = {
+        queueTts: async (
+          _streamSid: string,
+          playFn: (signal: AbortSignal) => Promise<void>,
+        ): Promise<void> => {
+          await playFn(new AbortController().signal);
+        },
+        sendAudio,
+        sendMark,
+      };
 
-    provider.setMediaStreamHandler(mediaStreamHandler as never);
-    provider.setTTSProvider({
-      synthesisTimeoutMs: 5000,
-      synthesizeForTelephony: async () => Buffer.alloc(320),
-    });
+      provider.setMediaStreamHandler(mediaStreamHandler as never);
+      provider.setTTSProvider({
+        synthesisTimeoutMs: 5000,
+        synthesizeForTelephony: async () => Buffer.alloc(320),
+      });
 
-    await expect(
-      provider.playTts({
+      const playback = provider.playTts({
         callId: "call-dropped",
         providerCallId: "CA-dropped",
         text: "Dropped audio",
-      }),
-    ).rejects.toThrow("Telephony stream playback failed");
-    expect(sendAudio).toHaveBeenCalled();
-    expect(sendMark).toHaveBeenCalledTimes(1);
+      });
+      const playExpectation = expect(playback).rejects.toThrow("Telephony stream playback failed");
+      await vi.advanceTimersByTimeAsync(100);
+      await playExpectation;
+      expect(sendAudio).toHaveBeenCalled();
+      expect(sendMark).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("fails stream playback when telephony synthesis returns empty audio", async () => {
