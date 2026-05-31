@@ -101,6 +101,7 @@ function createHarness(params?: {
     params?.setEmptySession ?? (vi.fn().mockResolvedValue(undefined) as SetEmptySessionMock);
   const addUser = vi.fn();
   const addSystem = vi.fn();
+  const clearTools = vi.fn();
   const reserveAssistantSlot = vi.fn();
   const requestRender = vi.fn();
   const noteLocalRunId = vi.fn();
@@ -144,7 +145,7 @@ function createHarness(params?: {
       resetSession,
       runGoalCommand,
     } as never,
-    chatLog: { addUser, addSystem, reserveAssistantSlot } as never,
+    chatLog: { addUser, addSystem, clearTools, reserveAssistantSlot } as never,
     tui: { requestRender } as never,
     opts: params?.opts ?? {},
     state: state as never,
@@ -187,6 +188,7 @@ function createHarness(params?: {
     setEmptySession,
     addUser,
     addSystem,
+    clearTools,
     reserveAssistantSlot,
     requestRender,
     loadHistory,
@@ -730,6 +732,60 @@ describe("tui command handlers", () => {
       agentId: "work",
       fastMode: true,
     });
+  });
+
+  it("hides tools locally for /verbose off without reloading history", async () => {
+    const patchResult = { entry: { verboseLevel: "off" } };
+    const patchSession = vi.fn().mockResolvedValue(patchResult);
+    const applySessionInfoFromPatch = vi.fn();
+    const loadHistory = vi.fn().mockResolvedValue(undefined);
+    const refreshSessionInfo = vi.fn().mockResolvedValue(undefined);
+    const { handleCommand, clearTools } = createHarness({
+      patchSession,
+      applySessionInfoFromPatch,
+      loadHistory,
+      refreshSessionInfo,
+    });
+
+    await handleCommand("/verbose off");
+
+    expect(patchSession).toHaveBeenCalledWith({
+      key: "agent:main:main",
+      verboseLevel: "off",
+    });
+    expect(applySessionInfoFromPatch).toHaveBeenCalledWith(patchResult);
+    expect(clearTools).toHaveBeenCalledTimes(1);
+    expect(refreshSessionInfo).toHaveBeenCalledTimes(1);
+    expect(loadHistory).not.toHaveBeenCalled();
+  });
+
+  it("reloads history for /verbose on so prior tool output becomes visible", async () => {
+    const loadHistory = vi.fn().mockResolvedValue(undefined);
+    const refreshSessionInfo = vi.fn().mockResolvedValue(undefined);
+    const { handleCommand, clearTools } = createHarness({
+      loadHistory,
+      refreshSessionInfo,
+    });
+
+    await handleCommand("/verbose on");
+
+    expect(loadHistory).toHaveBeenCalledTimes(1);
+    expect(refreshSessionInfo).not.toHaveBeenCalled();
+    expect(clearTools).not.toHaveBeenCalled();
+  });
+
+  it("refreshes session info for /trace without reloading history", async () => {
+    const loadHistory = vi.fn().mockResolvedValue(undefined);
+    const refreshSessionInfo = vi.fn().mockResolvedValue(undefined);
+    const { handleCommand } = createHarness({
+      loadHistory,
+      refreshSessionInfo,
+    });
+
+    await handleCommand("/trace on");
+
+    expect(refreshSessionInfo).toHaveBeenCalledTimes(1);
+    expect(loadHistory).not.toHaveBeenCalled();
   });
 
   it("reports send failures and marks activity status as error", async () => {

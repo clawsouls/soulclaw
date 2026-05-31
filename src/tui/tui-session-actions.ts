@@ -69,7 +69,8 @@ export function createSessionActions(context: SessionActionContext) {
     rememberSessionKey,
     emptySessionInfoDefaults,
   } = context;
-  let refreshSessionInfoPromise: Promise<void> = Promise.resolve();
+  let refreshSessionInfoInFlight: Promise<void> | null = null;
+  let refreshSessionInfoQueued = false;
   let lastSessionDefaults: SessionInfoDefaults | null = null;
 
   const applyAgentsResult = (result: TuiAgentsList) => {
@@ -274,12 +275,25 @@ export function createSessionActions(context: SessionActionContext) {
     }
   };
 
+  const drainRefreshSessionInfo = async () => {
+    do {
+      // Many TUI paths ask for the same session snapshot at once; keep one in-flight
+      // lookup and at most one follow-up so bursts do not queue stale backend calls.
+      refreshSessionInfoQueued = false;
+      await runRefreshSessionInfo();
+    } while (refreshSessionInfoQueued);
+  };
+
   const refreshSessionInfo = async () => {
-    refreshSessionInfoPromise = refreshSessionInfoPromise.then(
-      runRefreshSessionInfo,
-      runRefreshSessionInfo,
-    );
-    await refreshSessionInfoPromise;
+    if (refreshSessionInfoInFlight) {
+      refreshSessionInfoQueued = true;
+      await refreshSessionInfoInFlight;
+      return;
+    }
+    refreshSessionInfoInFlight = drainRefreshSessionInfo().finally(() => {
+      refreshSessionInfoInFlight = null;
+    });
+    await refreshSessionInfoInFlight;
   };
 
   const applySessionInfoFromPatch = (

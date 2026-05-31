@@ -507,7 +507,12 @@ export function createCommandHandlers(context: CommandHandlerContext) {
           });
           chatLog.addSystem(`verbose set to ${args}`);
           applySessionInfoFromPatch(result);
-          await loadHistory();
+          if (args === "off") {
+            chatLog.clearTools();
+            await refreshSessionInfo();
+          } else {
+            await loadHistory();
+          }
         } catch (err) {
           chatLog.addSystem(`verbose failed: ${String(err)}`);
         }
@@ -524,7 +529,7 @@ export function createCommandHandlers(context: CommandHandlerContext) {
           });
           chatLog.addSystem(`trace set to ${args}`);
           applySessionInfoFromPatch(result);
-          await loadHistory();
+          await refreshSessionInfo();
         } catch (err) {
           chatLog.addSystem(`trace failed: ${String(err)}`);
         }
