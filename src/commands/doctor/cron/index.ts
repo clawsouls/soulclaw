@@ -1,16 +1,18 @@
 import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { isDeepStrictEqual, promisify } from "node:util";
 import { normalizeOptionalString } from "../../../../packages/normalization-core/src/string-coerce.js";
 import { note } from "../../../../packages/terminal-core/src/note.js";
 import { formatCliCommand } from "../../../cli/command-format.js";
 import { resolveAgentModelPrimaryValue } from "../../../config/model-input.js";
 import type { OpenClawConfig } from "../../../config/types.openclaw.js";
 import { migrateLegacyNotifyFallback } from "../../../cron/migrations/legacy-notify.js";
+import { normalizeCronJobInput } from "../../../cron/normalize.js";
 import {
   loadCronQuarantineFile,
-  loadCronStore,
+  loadCronStoreWithConfigJobs,
   resolveCronQuarantinePath,
   resolveCronStorePath,
+  saveCronQuarantineFile,
   saveCronStore,
 } from "../../../cron/store.js";
 import type { CronJob } from "../../../cron/types.js";
@@ -173,6 +175,52 @@ function mergeLegacyCronJobs(params: {
   return { jobs: merged, importedCount };
 }
 
+function mergeRuntimeEntryIntoConfigJob(params: {
+  job: Record<string, unknown>;
+  runtimeEntry?: { updatedAtMs?: number; state?: Record<string, unknown> };
+}): Record<string, unknown> {
+  return {
+    ...params.job,
+    ...(params.runtimeEntry?.updatedAtMs !== undefined
+      ? { updatedAtMs: params.runtimeEntry.updatedAtMs }
+      : {}),
+    ...(params.runtimeEntry?.state ? { state: structuredClone(params.runtimeEntry.state) } : {}),
+  };
+}
+
+function needsSqliteProjectionBackfill(params: {
+  configJob: Record<string, unknown>;
+  projectedJob?: CronJob;
+}): boolean {
+  if (!params.projectedJob) {
+    return true;
+  }
+  const normalizedConfig = normalizeCronJobInput(params.configJob, { applyDefaults: true });
+  if (!normalizedConfig) {
+    return true;
+  }
+  const projected = params.projectedJob as unknown as Record<string, unknown>;
+  for (const field of [
+    "agentId",
+    "deleteAfterRun",
+    "delivery",
+    "description",
+    "enabled",
+    "failureAlert",
+    "name",
+    "payload",
+    "schedule",
+    "sessionKey",
+    "sessionTarget",
+    "wakeMode",
+  ] as const) {
+    if (!isDeepStrictEqual(normalizedConfig[field], projected[field])) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function formatProviderCounts(counts: Map<string, number>): string {
   return [...counts.entries()]
     .toSorted(([left], [right]) => left.localeCompare(right))
@@ -319,14 +367,34 @@ export async function maybeRepairLegacyCronStore(params: {
 }) {
   const storePath = resolveCronStorePath(params.cfg.cron?.store);
   const quarantinePath = resolveCronQuarantinePath(storePath);
-  let store: Awaited<ReturnType<typeof loadCronStore>>;
+  let store: Awaited<ReturnType<typeof loadCronStoreWithConfigJobs>>["store"];
   let legacyStoreDetected = false;
   let legacyRunLogDetected = false;
   let legacyImportCount = 0;
+  let sqliteProjectionBackfillCount = 0;
   try {
     legacyStoreDetected = await legacyCronStoreFilesExist(storePath);
     legacyRunLogDetected = await legacyCronRunLogFilesExist(storePath);
-    store = await loadCronStore(storePath);
+    const loaded = await loadCronStoreWithConfigJobs(storePath);
+    const currentJobs =
+      loaded.configJobs.length > 0
+        ? loaded.configJobs.map((job, index) =>
+            mergeRuntimeEntryIntoConfigJob({
+              job,
+              runtimeEntry: loaded.configJobRuntimeEntries[index],
+            }),
+          )
+        : (loaded.store.jobs as unknown as Array<Record<string, unknown>>);
+    sqliteProjectionBackfillCount =
+      loaded.configJobs.length > 0
+        ? currentJobs.filter((job, index) =>
+            needsSqliteProjectionBackfill({
+              configJob: job,
+              projectedJob: loaded.store.jobs[index],
+            }),
+          ).length
+        : 0;
+    store = { version: 1, jobs: currentJobs as unknown as CronJob[] };
     if (legacyStoreDetected) {
       const legacyStore = (await loadLegacyCronStoreForMigration(storePath)).store;
       const merged = mergeLegacyCronJobs({
@@ -434,6 +502,11 @@ export async function maybeRepairLegacyCronStore(params: {
   if (legacyRunLogDetected) {
     previewLines.push("- legacy JSON cron run logs will be imported into SQLite");
   }
+  if (sqliteProjectionBackfillCount > 0) {
+    previewLines.push(
+      `- ${pluralize(sqliteProjectionBackfillCount, "SQLite cron row")} will be backfilled from stored config JSON into split columns`,
+    );
+  }
   if (notifyCount > 0) {
     previewLines.push(
       `- ${pluralize(notifyCount, "job")} still uses legacy \`notify: true\` webhook fallback`,
@@ -473,6 +546,7 @@ export async function maybeRepairLegacyCronStore(params: {
   const changed =
     legacyStoreDetected ||
     legacyRunLogDetected ||
+    sqliteProjectionBackfillCount > 0 ||
     normalized.mutated ||
     notifyMigration.changed ||
     dreamingMigration.changed;
@@ -481,6 +555,17 @@ export async function maybeRepairLegacyCronStore(params: {
   }
 
   if (changed) {
+    if (normalized.removedJobs.length > 0) {
+      await saveCronQuarantineFile({
+        storePath,
+        nowMs: Date.now(),
+        entries: normalized.removedJobs.map((entry) => ({
+          sourceIndex: entry.sourceIndex,
+          reason: entry.reason,
+          job: entry.job,
+        })),
+      });
+    }
     await saveCronStore(storePath, {
       version: 1,
       jobs: rawJobs as unknown as CronJob[],

@@ -94,8 +94,193 @@ const REMINDER_CONTEXT_PER_MESSAGE_MAX = 220;
 const REMINDER_CONTEXT_TOTAL_MAX = 700;
 const REMINDER_CONTEXT_MARKER = "\n\nRecent context:\n";
 
+function isCronScheduleKind(value: unknown): value is (typeof CRON_SCHEDULE_KINDS)[number] {
+  return value === "at" || value === "every" || value === "cron";
+}
+
+function isCronPayloadKind(value: unknown): value is (typeof CRON_PAYLOAD_KINDS)[number] {
+  return value === "systemEvent" || value === "agentTurn";
+}
+
 function isMissingOrEmptyObject(value: unknown): boolean {
   return !value || (isRecord(value) && Object.keys(value).length === 0);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isStringArrayOrNull(value: unknown): boolean {
+  return (
+    value === null || (Array.isArray(value) && value.every((entry) => typeof entry === "string"))
+  );
+}
+
+function moveDefinedField(params: {
+  source: Record<string, unknown>;
+  target: Record<string, unknown>;
+  from: string;
+  to?: string;
+}): boolean {
+  if (params.source[params.from] === undefined) {
+    return false;
+  }
+  params.target[params.to ?? params.from] = params.source[params.from];
+  delete params.source[params.from];
+  return true;
+}
+
+function setScheduleAtMs(schedule: Record<string, unknown>, value: unknown): void {
+  const atMs = typeof value === "number" ? value : Number(value);
+  schedule.at = Number.isFinite(atMs) ? new Date(Math.floor(atMs)).toISOString() : value;
+}
+
+function canonicalizeCronToolSchedule(value: Record<string, unknown>): void {
+  const schedule = isRecord(value.schedule) ? { ...value.schedule } : {};
+  let hasSchedule = isRecord(value.schedule);
+
+  if (schedule.atMs !== undefined) {
+    setScheduleAtMs(schedule, schedule.atMs);
+    delete schedule.atMs;
+    if (!isCronScheduleKind(schedule.kind)) {
+      schedule.kind = "at";
+    }
+  }
+  if (schedule.everyMs === undefined && schedule.every !== undefined) {
+    schedule.everyMs = schedule.every;
+    delete schedule.every;
+  }
+  if (schedule.expr === undefined && schedule.cron !== undefined) {
+    schedule.expr = schedule.cron;
+    delete schedule.cron;
+  }
+  if (schedule.staggerMs === undefined && schedule.stagger !== undefined) {
+    schedule.staggerMs = schedule.stagger;
+    delete schedule.stagger;
+  }
+  if (schedule.exact === true && schedule.staggerMs === undefined) {
+    schedule.staggerMs = 0;
+  }
+  delete schedule.exact;
+
+  if (isCronScheduleKind(value.kind) && !isCronScheduleKind(schedule.kind)) {
+    schedule.kind = value.kind;
+    delete value.kind;
+    hasSchedule = true;
+  }
+
+  const movedAt = moveDefinedField({ source: value, target: schedule, from: "at" });
+  if (movedAt && !isCronScheduleKind(schedule.kind)) {
+    schedule.kind = "at";
+  }
+
+  if (value.atMs !== undefined) {
+    setScheduleAtMs(schedule, value.atMs);
+    delete value.atMs;
+    if (!isCronScheduleKind(schedule.kind)) {
+      schedule.kind = "at";
+    }
+    hasSchedule = true;
+  }
+
+  const movedEveryMs =
+    moveDefinedField({ source: value, target: schedule, from: "everyMs" }) ||
+    moveDefinedField({ source: value, target: schedule, from: "every", to: "everyMs" });
+  if (movedEveryMs && !isCronScheduleKind(schedule.kind)) {
+    schedule.kind = "every";
+  }
+
+  const movedCron =
+    moveDefinedField({ source: value, target: schedule, from: "cron", to: "expr" }) ||
+    moveDefinedField({ source: value, target: schedule, from: "expr" });
+  if (movedCron && !isCronScheduleKind(schedule.kind)) {
+    schedule.kind = "cron";
+  }
+
+  for (const key of ["anchorMs", "tz", "staggerMs"] as const) {
+    hasSchedule = moveDefinedField({ source: value, target: schedule, from: key }) || hasSchedule;
+  }
+  hasSchedule =
+    moveDefinedField({ source: value, target: schedule, from: "stagger", to: "staggerMs" }) ||
+    hasSchedule;
+
+  if (value.exact === true && schedule.staggerMs === undefined) {
+    schedule.staggerMs = 0;
+    hasSchedule = true;
+  }
+  delete value.exact;
+
+  if (!isCronScheduleKind(schedule.kind)) {
+    if (schedule.at !== undefined) {
+      schedule.kind = "at";
+    } else if (schedule.everyMs !== undefined) {
+      schedule.kind = "every";
+    } else if (schedule.expr !== undefined) {
+      schedule.kind = "cron";
+    }
+  }
+
+  if (hasSchedule || Object.keys(schedule).length > 0) {
+    value.schedule = schedule;
+  }
+}
+
+function canonicalizeCronToolPayload(value: Record<string, unknown>): void {
+  const payload = isRecord(value.payload) ? { ...value.payload } : {};
+  let hasPayload = isRecord(value.payload);
+
+  for (const key of CRON_FLAT_PAYLOAD_KEYS) {
+    hasPayload = moveDefinedField({ source: value, target: payload, from: key }) || hasPayload;
+  }
+
+  if (isCronPayloadKind(value.kind) && !isCronPayloadKind(payload.kind)) {
+    payload.kind = value.kind;
+    delete value.kind;
+    hasPayload = true;
+  }
+
+  if (!isCronPayloadKind(payload.kind)) {
+    const hasAgentTurnSignal =
+      isNonEmptyString(payload.message) ||
+      isNonEmptyString(payload.model) ||
+      isNonEmptyString(payload.thinking) ||
+      typeof payload.timeoutSeconds === "number" ||
+      typeof payload.lightContext === "boolean" ||
+      typeof payload.allowUnsafeExternalContent === "boolean" ||
+      (payload.fallbacks !== undefined && isStringArrayOrNull(payload.fallbacks)) ||
+      (payload.toolsAllow !== undefined && isStringArrayOrNull(payload.toolsAllow));
+    if (hasAgentTurnSignal) {
+      payload.kind = "agentTurn";
+    } else if (isNonEmptyString(payload.text)) {
+      payload.kind = "systemEvent";
+    }
+  }
+
+  if (hasPayload || Object.keys(payload).length > 0) {
+    value.payload = payload;
+  }
+}
+
+function canonicalizeCronToolObject(value: Record<string, unknown>): Record<string, unknown> {
+  const unwrapped = isRecord(value.data) ? value.data : isRecord(value.job) ? value.job : value;
+  const next = { ...unwrapped };
+  canonicalizeCronToolSchedule(next);
+  canonicalizeCronToolPayload(next);
+  return next;
+}
+
+function isEmptyRecoveredCronPatch(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return true;
+  }
+  const keys = Object.keys(value);
+  return (
+    keys.length === 0 ||
+    (keys.length === 1 &&
+      keys[0] === "payload" &&
+      isRecord(value.payload) &&
+      Object.keys(value.payload).length === 0)
+  );
 }
 
 function recoverCronObjectFromFlatParams(params: Record<string, unknown>): {
@@ -110,19 +295,7 @@ function recoverCronObjectFromFlatParams(params: Record<string, unknown>): {
       found = true;
     }
   }
-  if (value.everyMs === undefined && value.every !== undefined) {
-    value.everyMs = value.every;
-  }
-  if (value.staggerMs === undefined && value.stagger !== undefined) {
-    value.staggerMs = value.stagger;
-  }
-  if (value.exact === true && value.staggerMs === undefined) {
-    value.staggerMs = 0;
-  }
-  delete value.every;
-  delete value.stagger;
-  delete value.exact;
-  return { found, value };
+  return { found, value: canonicalizeCronToolObject(value) };
 }
 
 function hasCronCreateSignal(value: Record<string, unknown>): boolean {
@@ -662,10 +835,11 @@ Use jobId canonical; id accepted compat. contextMessages (0-10) adds previous me
           if (!params.job || typeof params.job !== "object") {
             throw new Error("job required");
           }
+          const canonicalJob = canonicalizeCronToolObject(params.job as Record<string, unknown>);
           const job =
-            normalizeCronJobCreate(params.job, {
+            normalizeCronJobCreate(canonicalJob, {
               sessionContext: { sessionKey: opts?.agentSessionKey },
-            }) ?? params.job;
+            }) ?? canonicalJob;
           const cfg = getRuntimeConfig();
           if (job && typeof job === "object") {
             const { mainKey, alias } = resolveMainSessionAlias(cfg);
@@ -775,13 +949,11 @@ Use jobId canonical; id accepted compat. contextMessages (0-10) adds previous me
           if (!params.patch || typeof params.patch !== "object") {
             throw new Error("patch required");
           }
-          const patch = normalizeCronJobPatch(params.patch) ?? params.patch;
-          if (
-            recoveredFlatPatch &&
-            typeof patch === "object" &&
-            patch !== null &&
-            Object.keys(patch as Record<string, unknown>).length === 0
-          ) {
+          const canonicalPatch = canonicalizeCronToolObject(
+            params.patch as Record<string, unknown>,
+          );
+          const patch = normalizeCronJobPatch(canonicalPatch) ?? canonicalPatch;
+          if (recoveredFlatPatch && isEmptyRecoveredCronPatch(patch)) {
             throw new Error("patch required");
           }
           return jsonResult(
