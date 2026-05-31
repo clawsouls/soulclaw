@@ -68,7 +68,7 @@ class GroupFairQueue {
   }
 
   private takeNext(): QueuedApiRequest<unknown> | undefined {
-    for (const ignoredLaneKey of this.laneOrder) {
+    for (let remaining = this.laneOrder.length; remaining > 0; remaining -= 1) {
       this.nextLaneIndex %= this.laneOrder.length;
       const laneKey = this.laneOrder[this.nextLaneIndex];
       const queue = this.lanes.get(laneKey);
