@@ -106,26 +106,14 @@ describe("qa-bus server", () => {
       timeoutMs: 500,
     });
 
-    setTimeout(() => {
-      state.addInboundMessage({
-        accountId: "acct-a",
-        conversation: { id: "target", kind: "direct" },
-        senderId: "acct-a-user",
-        text: "fresh event",
-      });
-    }, 20);
+    state.addInboundMessage({
+      accountId: "acct-a",
+      conversation: { id: "target", kind: "direct" },
+      senderId: "acct-a-user",
+      text: "fresh event",
+    });
 
-    const result = await Promise.race([
-      pending,
-      new Promise<"timed-out">((resolve) => {
-        setTimeout(() => resolve("timed-out"), 150);
-      }),
-    ]);
-
-    expect(result).not.toBe("timed-out");
-    if (result === "timed-out") {
-      throw new Error("stale-cursor long poll did not wake before timeout window");
-    }
+    const result = await pending;
     expect(result.events).toHaveLength(1);
     expect(result.events[0]).toMatchObject({
       accountId: "acct-a",

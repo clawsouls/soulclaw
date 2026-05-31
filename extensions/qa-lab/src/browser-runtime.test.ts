@@ -175,6 +175,7 @@ describe("browser-runtime", () => {
       profile: "user",
       timeoutMs: 5_000,
       intervalMs: 1,
+      sleepImpl: async () => {},
     });
 
     expect(status).toEqual({ enabled: true, running: true, cdpReady: true });

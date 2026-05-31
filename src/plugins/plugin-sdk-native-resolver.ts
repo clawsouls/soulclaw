@@ -84,6 +84,17 @@ const INTERNAL_CORE_PACKAGE_ALIASES = [
       ["runtime/types", path.join("runtime", "types.ts")],
     ],
   },
+  {
+    packageName: "@openclaw/llm-core",
+    packageDir: "llm-core",
+    subpaths: [
+      ["", "index.ts"],
+      ["diagnostics", path.join("utils", "diagnostics.ts")],
+      ["event-stream", path.join("utils", "event-stream.ts")],
+      ["types", "types.ts"],
+      ["validation", "validation.ts"],
+    ],
+  },
 ] as const;
 const pluginSdkNativeAliases = new Map<string, NativeAliasEntry[]>();
 let installed = false;
