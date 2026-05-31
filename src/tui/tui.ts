@@ -478,7 +478,6 @@ export function resolveTuiCtrlCAction(params: {
 
 function resolveEmptySessionInfoDefaults(config: OpenClawConfig): SessionInfo {
   return {
-    fastMode: config.agents?.defaults?.fastModeDefault,
     verboseLevel: config.agents?.defaults?.verboseDefault,
   };
 }

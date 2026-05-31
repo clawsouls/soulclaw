@@ -508,7 +508,6 @@ describe("tui session actions", () => {
       state,
       rememberSessionKey,
       emptySessionInfoDefaults: {
-        fastMode: true,
         verboseLevel: "on",
       },
     });
@@ -527,7 +526,7 @@ describe("tui session actions", () => {
     expect(state.sessionInfo.modelProvider).toBeUndefined();
     expect(state.sessionInfo.contextTokens).toBeNull();
     expect(state.sessionInfo.thinkingLevel).toBeUndefined();
-    expect(state.sessionInfo.fastMode).toBe(true);
+    expect(state.sessionInfo.fastMode).toBeUndefined();
     expect(state.sessionInfo.verboseLevel).toBe("on");
     expect(state.sessionInfo.inputTokens).toBeNull();
     expect(state.sessionInfo.outputTokens).toBeNull();
