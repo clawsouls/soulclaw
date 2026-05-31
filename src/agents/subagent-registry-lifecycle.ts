@@ -802,6 +802,21 @@ export function createSubagentRegistryLifecycleController(params: {
     if (!entry) {
       return;
     }
+    if (entry.expectsCompletionMessage === false) {
+      clearPendingFinalDelivery(entry);
+      entry.wakeOnDescendantSettle = undefined;
+      const shouldDeleteAttachments = cleanup === "delete" || !entry.retainAttachmentsOnKeep;
+      if (shouldDeleteAttachments) {
+        await safeRemoveAttachmentsDir(entry);
+      }
+      completeCleanupBookkeeping({
+        runId,
+        entry,
+        cleanup,
+        completedAt: Date.now(),
+      });
+      return;
+    }
     if (didAnnounce) {
       const delivery = ensureDeliveryState(entry);
       const shouldCreditDelivery =
