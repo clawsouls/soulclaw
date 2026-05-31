@@ -685,12 +685,12 @@ async function listSessionsFromDir(
  * handles compaction summaries and follows the path from root to current leaf.
  */
 export class SessionManager {
-  private sessionId: string = "";
+  private sessionId = "";
   private sessionFile: string | undefined;
   private sessionDir: string;
   private cwd: string;
   private shouldPersist: boolean;
-  private flushed: boolean = false;
+  private flushed = false;
   private fileEntries: FileEntry[] = [];
   private byId: Map<string, SessionEntry> = new Map();
   private labelsById: Map<string, string> = new Map();
