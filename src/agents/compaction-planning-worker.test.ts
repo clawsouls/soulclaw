@@ -20,6 +20,7 @@ describe("compaction planning worker", () => {
   let packagedSummaryChunks: Awaited<
     ReturnType<typeof compactionPlanningWorkerTesting.runCompactionPlanningWorker>
   >;
+  let oversizedWorkerTimeoutCalls: unknown[][];
 
   beforeAll(async () => {
     packagedSummaryChunks = await compactionPlanningWorkerTesting.runCompactionPlanningWorker({
@@ -30,6 +31,21 @@ describe("compaction planning worker", () => {
       },
       timeoutMs: 10_000,
     });
+
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    try {
+      await compactionPlanningWorkerTesting.runCompactionPlanningWorker({
+        input: {
+          kind: "summaryChunks",
+          messages: [makeMessage(1), makeMessage(2), makeMessage(3)],
+          maxChunkTokens: 1200,
+        },
+        timeoutMs: Number.MAX_SAFE_INTEGER,
+      });
+      oversizedWorkerTimeoutCalls = [...setTimeoutSpy.mock.calls];
+    } finally {
+      setTimeoutSpy.mockRestore();
+    }
   }, 10_000);
 
   it("resolves the packaged worker URL from stable and hashed dist modules", () => {
@@ -83,19 +99,11 @@ describe("compaction planning worker", () => {
     expect(value.chunks.length).toBeGreaterThan(1);
   });
 
-  it("clamps oversized worker timeouts before scheduling", async () => {
-    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
-
-    await compactionPlanningWorkerTesting.runCompactionPlanningWorker({
-      input: {
-        kind: "summaryChunks",
-        messages: [makeMessage(1), makeMessage(2), makeMessage(3)],
-        maxChunkTokens: 1200,
-      },
-      timeoutMs: Number.MAX_SAFE_INTEGER,
-    });
-
-    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), MAX_TIMER_TIMEOUT_MS);
+  it("clamps oversized worker timeouts before scheduling", () => {
+    expect(oversizedWorkerTimeoutCalls).toContainEqual([
+      expect.any(Function),
+      MAX_TIMER_TIMEOUT_MS,
+    ]);
   });
 
   it("classifies missing worker runtime as unavailable", async () => {
