@@ -1,5 +1,5 @@
 import { Agent, createServer, request } from "node:http";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { closeQaHttpServer, handleQaBusRequest, startQaBusServer } from "./bus-server.js";
 import { createQaBusState } from "./bus-state.js";
 import type { QaBusPollResult } from "./runtime-api.js";
@@ -85,6 +85,10 @@ describe("closeQaHttpServer", () => {
 
 describe("qa-bus server", () => {
   const stops: Array<() => Promise<void>> = [];
+
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
 
   afterEach(async () => {
     await Promise.all(stops.splice(0).map((stop) => stop()));
