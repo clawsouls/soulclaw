@@ -291,8 +291,7 @@ function containsDiscoverableSkill(
 ): boolean {
   const discoveryBudget = createSkillDiscoveryBudget(opts.maxCandidateDirs);
   const queue: Array<{ dir: string; depth: number }> = [{ dir, depth: 0 }];
-  for (let index = 0; index < queue.length; index += 1) {
-    const candidate = queue[index];
+  for (const candidate of queue) {
     if (!candidate) {
       continue;
     }
@@ -520,8 +519,7 @@ export function resolveNestedSkillsRoot(
   // child-directory filter as discovery so ignored folders cannot re-root.
   const discoveryBudget = createSkillDiscoveryBudget(scanLimit);
   const queue: Array<{ dir: string; depth: number }> = [{ dir: nested, depth: 0 }];
-  for (let index = 0; index < queue.length; index += 1) {
-    const candidate = queue[index];
+  for (const candidate of queue) {
     if (!candidate) {
       continue;
     }
@@ -999,8 +997,7 @@ function loadSkillEntries(
       }),
     );
 
-    for (let queueIndex = 0; queueIndex < scanQueue.length; queueIndex += 1) {
-      const candidate = scanQueue[queueIndex];
+    for (const candidate of scanQueue) {
       if (!candidate) {
         continue;
       }

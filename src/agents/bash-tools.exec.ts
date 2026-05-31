@@ -422,8 +422,7 @@ function extractScriptTargetFromCommand(
       }
     };
 
-    for (let i = 0; i < value.length; i += 1) {
-      const ch = value[i];
+    for (const ch of value) {
       if (inSingle) {
         if (ch === "'") {
           inSingle = false;
@@ -669,8 +668,7 @@ function hasUnquotedScriptHint(raw: string): boolean {
     return false;
   };
 
-  for (let i = 0; i < raw.length; i += 1) {
-    const ch = raw[i];
+  for (const ch of raw) {
     if (escaped) {
       if (!inSingle && !inDouble) {
         token += ch;

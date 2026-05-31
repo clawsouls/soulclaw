@@ -312,13 +312,11 @@ export async function waitForFile(
           stableCount = 0;
         }
         lastSize = stat.size;
-      } else {
-        if (Date.now() - fileAppearedAt > emptyGiveUpMs) {
-          debugError(
-            `[audio-convert] waitForFile: file still empty after ${emptyGiveUpMs}ms, giving up: ${path.basename(filePath)}`,
-          );
-          return 0;
-        }
+      } else if (Date.now() - fileAppearedAt > emptyGiveUpMs) {
+        debugError(
+          `[audio-convert] waitForFile: file still empty after ${emptyGiveUpMs}ms, giving up: ${path.basename(filePath)}`,
+        );
+        return 0;
       }
     } catch {
       if (!fileExists && Date.now() - start > noFileGiveUpMs) {

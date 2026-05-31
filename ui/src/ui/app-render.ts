@@ -2672,17 +2672,15 @@ export function renderApp(state: AppViewState) {
                   const { basePath, existing } = modelEntry;
                   if (!modelId) {
                     removeConfigFormValue(state, basePath);
+                  } else if (existing && typeof existing === "object" && !Array.isArray(existing)) {
+                    const fallbacks = (existing as { fallbacks?: unknown }).fallbacks;
+                    const next = {
+                      primary: modelId,
+                      ...(Array.isArray(fallbacks) ? { fallbacks } : {}),
+                    };
+                    updateConfigFormValue(state, basePath, next);
                   } else {
-                    if (existing && typeof existing === "object" && !Array.isArray(existing)) {
-                      const fallbacks = (existing as { fallbacks?: unknown }).fallbacks;
-                      const next = {
-                        primary: modelId,
-                        ...(Array.isArray(fallbacks) ? { fallbacks } : {}),
-                      };
-                      updateConfigFormValue(state, basePath, next);
-                    } else {
-                      updateConfigFormValue(state, basePath, modelId);
-                    }
+                    updateConfigFormValue(state, basePath, modelId);
                   }
                   void refreshVisibleToolsEffectiveForCurrentSession(state);
                 },
