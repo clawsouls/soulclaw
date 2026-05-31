@@ -481,8 +481,21 @@ function resolveDefaultAgentId(host: GatewayHost): string {
   return normalizeAgentId(
     host.agentsList?.defaultId?.trim() ||
       snapshot?.sessionDefaults?.defaultAgentId?.trim() ||
-      "main",
+    "main",
   );
+}
+
+function resolveFreshDefaultAgentId(host: GatewayHost): string | undefined {
+  const snapshot = host.hello?.snapshot as
+    | { sessionDefaults?: SessionDefaultsSnapshot }
+    | undefined;
+  const defaults = snapshot?.sessionDefaults;
+  const defaultAgentId = defaults?.defaultAgentId?.trim();
+  if (defaultAgentId) {
+    return normalizeAgentId(defaultAgentId);
+  }
+  const parsedMainSession = parseAgentSessionKey(defaults?.mainSessionKey ?? "");
+  return parsedMainSession ? normalizeAgentId(parsedMainSession.agentId) : undefined;
 }
 
 function resolveSelectedGlobalAgentId(host: GatewayHost): string {
@@ -549,16 +562,16 @@ function chatSideResultAgentScopeMatches(host: GatewayHost, sideResult: ChatSide
   return globalAgentScopeMatches(host, sideResult.sessionKey, sideResult.agentId);
 }
 
-function fallbackUnconfiguredSessionSelection(host: GatewayHost) {
+function fallbackUnconfiguredSessionSelection(host: GatewayHost): boolean {
   const parsed = parseAgentSessionKey(host.sessionKey);
   if (!parsed) {
-    return;
+    return false;
   }
   const configuredAgentIds = new Set(
     (host.agentsList?.agents ?? []).map((entry) => normalizeAgentId(entry.id)),
   );
   if (configuredAgentIds.size === 0 || configuredAgentIds.has(normalizeAgentId(parsed.agentId))) {
-    return;
+    return false;
   }
   const nextSessionKey = resolveMainSessionFallback(host);
   host.sessionKey = nextSessionKey;
@@ -572,14 +585,47 @@ function fallbackUnconfiguredSessionSelection(host: GatewayHost) {
     nextSessionKey,
     true,
   );
+  return true;
+}
+
+function canRefreshActiveTabBeforeAgents(host: GatewayHost): boolean {
+  if (host.tab !== "chat") {
+    return false;
+  }
+  if (isGlobalSessionKey(host.sessionKey)) {
+    return false;
+  }
+  const parsed = parseAgentSessionKey(host.sessionKey);
+  if (!parsed) {
+    return true;
+  }
+  return normalizeAgentId(parsed.agentId) === resolveFreshDefaultAgentId(host);
 }
 
 async function loadAgentsThenRefreshActiveTab(host: GatewayHost) {
+  let initialRefreshError: unknown;
+  const refreshBeforeAgents = canRefreshActiveTabBeforeAgents(host);
+  const initialRefresh = refreshBeforeAgents
+    ? refreshActiveTab(host as unknown as Parameters<typeof refreshActiveTab>[0]).catch((err) => {
+        initialRefreshError = err;
+      })
+    : Promise.resolve();
+  let refreshAfterAgents = !refreshBeforeAgents;
+  let agentsError: unknown;
   try {
     await loadAgents(host as unknown as AgentsState);
-    fallbackUnconfiguredSessionSelection(host);
-  } finally {
+    refreshAfterAgents = fallbackUnconfiguredSessionSelection(host) || refreshAfterAgents;
+  } catch (err) {
+    agentsError = err;
+  }
+  await initialRefresh;
+  if (refreshAfterAgents) {
     await refreshActiveTab(host as unknown as Parameters<typeof refreshActiveTab>[0]);
+  } else if (initialRefreshError) {
+    throw initialRefreshError;
+  }
+  if (agentsError) {
+    throw agentsError;
   }
 }
 
