@@ -154,10 +154,10 @@ describeControlUiE2e("Control UI mocked Gateway E2E", () => {
       await page.goto(`${server.baseUrl}chat`);
 
       await page.getByText("History renders before sessions finish.").waitFor({ timeout: 10_000 });
-      await page
-        .locator(".agent-chat__composer-combobox textarea")
-        .waitFor({ state: "visible", timeout: 10_000 });
+      const composer = page.locator(".agent-chat__composer-combobox textarea");
+      await composer.waitFor({ state: "visible", timeout: 10_000 });
 
+      await page.getByRole("button", { name: "Chat session" }).click();
       const sessionsList = await gateway.waitForRequest("sessions.list");
       expect(requireRecord(sessionsList.params)).toMatchObject({
         includeGlobal: true,
@@ -165,8 +165,12 @@ describeControlUiE2e("Control UI mocked Gateway E2E", () => {
         limit: 50,
       });
 
+      await composer.fill("draft while sessions load");
+      expect(await composer.inputValue()).toBe("draft while sessions load");
+      await composer.fill("");
+
       await gateway.resolveDeferred("sessions.list");
-      await page.getByRole("button", { name: "Chat session" }).waitFor({
+      await page.getByRole("option", { name: /Main/ }).waitFor({
         state: "visible",
         timeout: 10_000,
       });
