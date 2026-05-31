@@ -125,12 +125,13 @@ Skills own workflows; root owns hard policy and routing.
 - Pasted GitHub issue/PR: first `git status -sb`; if dirty, yell; then `git push` + `git pull --ff-only`.
 - PR refs: `gh pr view/diff` or `gh api`, not web search. Prefer `gitcrawl` for maintainer discovery; missing/stale `gitcrawl` falls through to live `gh`, not contributor setup. Verify live with `gh` before mutation.
 - Bare issue/PR URL/number means review/report in chat. Suggest comment/close/merge when appropriate; mutate only when asked.
-- No unsolicited PR comments/reviews/labels/retitles/rebases/fixups/landing. Exception: close/duplicate action that needs a reason comment after explicit close/sweep/landing request.
+- No unsolicited PR labels/retitles/rebases/fixups/landing. Comments/reviews ok only for reviewable findings, pre-merge proof, or close/duplicate reason after explicit close/sweep/landing request.
 - Maintainer decision closes the cluster: if deciding reported behavior/proposed fix is not planned, comment+close all directly associated open issues/PRs unless explicitly told to keep one open. Associated means linked PRs/issues, duplicates, companion workaround PRs, and the canonical issue for the rejected behavior.
 - Do not leave associated issues open for hypothetical future repros. Close with rationale; ask for a new issue or reopen only if concrete new evidence appears. Close comment states: decision, why, supported alternative, and what evidence would change the decision.
 - PR review answer: bug/behavior, URL(s), affected surface, provenance for regressions when traceable, best-fix judgment, evidence from code/tests/CI/current or shipped behavior.
+- PR reviewable findings: post them on the PR, not chat-only, so author sees actionable feedback.
 - Issue/PR final answer: last line is the full GitHub URL.
-- PR verification: before merge, post exact local commands, CI/Testbox run IDs, before/after proof when used, and known proof gaps.
+- PR verification: before merge, post land-ready work done, exact local commands, CI/Testbox run IDs, before/after proof when used, and known proof gaps.
 - Issue fixed on `main` with proof: comment proof + commit/PR, then close.
 - After landing or requested close/sweep: search duplicates; comment proof + canonical commit/PR/release before closing.
 - After landing/ship final: include 2-5 sentence recap of what landed: behavior change, key files/surface, proof run, issue/PR state. Do not answer with only status/links.
