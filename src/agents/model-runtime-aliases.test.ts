@@ -185,4 +185,39 @@ describe("areRuntimeModelRefsEquivalent", () => {
       }),
     ).toBe(true);
   });
+
+  it("resolves one setup runtime alias without loading the full setup registry", () => {
+    cliBackendsTesting.setDepsForTest({
+      resolvePluginSetupCliBackend: ({ backend }) =>
+        backend === "claude-cli"
+          ? {
+              pluginId: "anthropic",
+              backend: {
+                id: "claude-cli",
+                modelProvider: "anthropic",
+                config: { command: "claude" },
+                bundleMcp: false,
+              },
+            }
+          : undefined,
+      resolvePluginSetupRegistry: () => {
+        throw new Error("setup registry should not load for a single runtime alias");
+      },
+      resolveRuntimeCliBackends: () => [],
+    });
+
+    expect(
+      areRuntimeModelRefsEquivalent("anthropic/claude-opus-4-7", "claude-cli/claude-opus-4-7", {
+        config: {
+          agents: {
+            defaults: {
+              cliBackends: {
+                "claude-cli": { command: "claude" },
+              },
+            },
+          },
+        },
+      }),
+    ).toBe(true);
+  });
 });

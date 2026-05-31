@@ -5,6 +5,7 @@ import {
   isCliRuntimeModelBackendForProvider,
   listCliRuntimeModelBackendBindings,
   listCliRuntimeProviderIds,
+  resolveCliRuntimeCanonicalProvider,
   resolveCliRuntimeModelBackendBinding,
 } from "./cli-backends.js";
 import { resolveModelRuntimePolicy } from "./model-runtime-policy.js";
@@ -53,14 +54,14 @@ function canonicalizeRuntimeAliasProvider(
   provider: string,
   options: RuntimeAliasComparisonOptions = {},
 ): string {
-  const normalized = normalizeProviderId(provider);
   return (
-    listCliRuntimeModelBackendBindings({
+    resolveCliRuntimeCanonicalProvider({
+      runtime: provider,
       config: options.config,
       env: options.env,
       includeSetupRegistry:
         options.includeSetupRegistry ?? (options.config !== undefined || options.env !== undefined),
-    }).find((binding) => binding.runtime === normalized)?.provider ?? provider
+    }) ?? provider
   );
 }
 
