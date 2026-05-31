@@ -610,8 +610,11 @@ vi.mock("./model-visibility-policy.js", () => ({
         const fallback = allowedCatalog[0];
         return fallback ? { provider: fallback.provider, model: fallback.id } : null;
       },
-      visibleCatalog: ({ catalog }: { catalog: Array<{ provider: string; id: string }> }) =>
-        catalog,
+      visibleCatalog: ({
+        catalog: catalogLocal,
+      }: {
+        catalog: Array<{ provider: string; id: string }>;
+      }) => catalogLocal,
     };
   },
 }));

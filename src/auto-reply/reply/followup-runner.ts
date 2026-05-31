@@ -760,9 +760,9 @@ export function createFollowupRunner(params: {
                   },
                   transformResult:
                     queued.currentInboundEventKind === "room_event"
-                      ? (result) =>
+                      ? (resultLocal) =>
                           keepCliSessionBindingOnlyWhenReused({
-                            result,
+                            result: resultLocal,
                             existingSessionId: cliSessionBinding?.sessionId,
                             onDroppedReplacement: () => {
                               droppedCliSessionReplacement = true;

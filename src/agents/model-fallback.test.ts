@@ -1252,11 +1252,11 @@ describe("runWithModelFallback", () => {
       provider: "zai",
       model: "glm-5.1",
       run,
-      classifyResult: ({ provider, model, result }) =>
+      classifyResult: ({ provider, model, result: resultLocal }) =>
         classifyEmbeddedAgentRunResultForModelFallback({
           provider,
           model,
-          result,
+          result: resultLocal,
         }),
     });
 

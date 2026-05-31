@@ -536,8 +536,8 @@ function normalizeStore(raw: unknown, nowIso: string): ShortTermRecallStore {
         : [];
       const recallDays = Array.isArray(entry.recallDays)
         ? entry.recallDays
-            .map((value) => normalizeIsoDay(String(value)))
-            .filter((value): value is string => value !== null)
+            .map((valueValue) => normalizeIsoDay(String(valueValue)))
+            .filter((valueLocal): valueLocal is string => valueLocal !== null)
         : [];
       const conceptTags = Array.isArray(entry.conceptTags)
         ? normalizeDistinctStrings(
