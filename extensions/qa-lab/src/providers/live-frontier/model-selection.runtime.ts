@@ -17,11 +17,11 @@ export function resolveQaLiveFrontierPreferredModel() {
       externalCliProviderIds: ["openai"],
     });
     const openAiProfileIds = listProfilesForProvider(store, "openai");
-    const openAiProfileModes = openAiProfileIds.map((profileId) => store.profiles[profileId]?.mode);
-    if (openAiProfileModes.some((mode) => mode === "api_key" || mode === "aws-sdk")) {
+    const openAiProfileTypes = openAiProfileIds.map((profileId) => store.profiles[profileId]?.type);
+    if (openAiProfileTypes.some((type) => type === "api_key")) {
       return undefined;
     }
-    return openAiProfileModes.some((mode) => mode === "oauth" || mode === "token")
+    return openAiProfileTypes.some((type) => type === "oauth" || type === "token")
       ? QA_CODEX_OAUTH_LIVE_MODEL
       : undefined;
   } catch {

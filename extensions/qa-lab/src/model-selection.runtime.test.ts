@@ -45,7 +45,7 @@ describe("qa model selection runtime", () => {
       profiles: {
         "openai:user@example.com": {
           provider: "openai",
-          mode: "oauth",
+          type: "oauth",
         },
       },
     });
@@ -64,7 +64,7 @@ describe("qa model selection runtime", () => {
       profiles: {
         "openai:api-key": {
           provider: "openai",
-          mode: "api_key",
+          type: "api_key",
         },
       },
     });
