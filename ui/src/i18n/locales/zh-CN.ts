@@ -265,6 +265,7 @@ export const zh_CN: TranslationMap = {
       openFilesTab: "打开文件标签",
       primaryModel: "主模型",
       runtime: "运行时",
+      thinkingDefault: "Thinking Default",
       identityName: "身份名称",
       identityAvatar: "身份头像",
       skillsFilter: "技能筛选器",

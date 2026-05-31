@@ -269,6 +269,7 @@ export const tr: TranslationMap = {
       openFilesTab: "Open Files tab",
       primaryModel: "Primary Model",
       runtime: "Çalışma zamanı",
+      thinkingDefault: "Thinking Default",
       identityName: "Identity Name",
       identityAvatar: "Identity Avatar",
       skillsFilter: "Skills Filter",
