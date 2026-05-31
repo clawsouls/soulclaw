@@ -143,9 +143,7 @@ vi.mock("../session-utils.js", async () => {
         ...mockState.sessionEntry,
       };
       return {
-        ...(typeof mockState.sessionEntry.canonicalKey === "string"
-          ? { canonicalKey: mockState.sessionEntry.canonicalKey }
-          : {}),
+        ...(typeof mockState.sessionEntry.canonicalKey === "string" ? { canonicalKey } : {}),
         cfg: {
           ...mockState.config,
           session: {
