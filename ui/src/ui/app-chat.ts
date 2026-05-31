@@ -64,6 +64,7 @@ export type ChatHost = ChatInputHistoryState & {
   chatRunId: string | null;
   chatSending: boolean;
   lastError?: string | null;
+  chatError?: string | null;
   basePath: string;
   settings?: { token?: string | null };
   password?: string | null;
@@ -91,6 +92,11 @@ export type ChatHost = ChatInputHistoryState & {
   /** Callback for slash-command side effects that need app-level access. */
   onSlashAction?: (action: string) => void | Promise<void>;
 };
+
+function setChatError(host: ChatHost, error: string | null) {
+  host.lastError = error;
+  host.chatError = error;
+}
 
 export type ChatSendOptions = {
   confirmReset?: boolean;
@@ -586,7 +592,7 @@ async function sendQueuedChatMessage(
   host.chatSending = true;
   const isVisibleSession = () => visibleSessionMatches(host, sessionKey, prepared.agentId);
   if (isVisibleSession()) {
-    host.lastError = null;
+    setChatError(host, null);
     reconcileChatRunLifecycle(host as unknown as Parameters<typeof reconcileChatRunLifecycle>[0], {
       clearRunStatus: true,
     });
@@ -655,7 +661,7 @@ async function sendQueuedChatMessage(
         sendState: "waiting-reconnect",
       }));
       if (isVisibleSession()) {
-        host.lastError = "Message will send when the Gateway reconnects.";
+        setChatError(host, "Message will send when the Gateway reconnects.");
       }
       return "pending";
     }
@@ -665,7 +671,7 @@ async function sendQueuedChatMessage(
       sendState: "failed",
     }));
     if (isVisibleSession()) {
-      host.lastError = error;
+      setChatError(host, error);
       restoreComposerAfterFailedSend(host, opts ?? {});
     }
     return "failed";
@@ -948,7 +954,7 @@ async function flushChatQueue(host: ChatHost) {
       });
     }
   } catch (err) {
-    host.lastError = String(err);
+    setChatError(host, String(err));
   }
   if (!ok && next.localCommandName) {
     host.chatQueue = [next, ...host.chatQueue];
@@ -1248,7 +1254,7 @@ async function dispatchSlashCommand(
       return;
     case "new":
       if (!host.onSlashAction) {
-        host.lastError = "New Chat is unavailable.";
+        setChatError(host, "New Chat is unavailable.");
         return;
       }
       await host.onSlashAction("new-session");
@@ -1272,7 +1278,7 @@ async function dispatchSlashCommand(
   }
 
   if (!host.client || !host.connected) {
-    host.lastError = "Gateway not connected";
+    setChatError(host, "Gateway not connected");
     injectCommandResult(
       host,
       `Cannot run \`/${name}\`: Control UI is not connected to the Gateway.`,
@@ -1290,7 +1296,7 @@ async function dispatchSlashCommand(
       agentId: scopedAgentIdForSession(host, targetSessionKey),
     });
   } catch (err) {
-    host.lastError = String(err);
+    setChatError(host, String(err));
     injectCommandResult(host, `Command \`/${name}\` failed unexpectedly.`);
     scheduleChatScroll(host as unknown as Parameters<typeof scheduleChatScroll>[0]);
     return;
@@ -1350,7 +1356,7 @@ async function clearChatHistory(host: ChatHost) {
     });
     await loadChatHistory(host as unknown as ChatState);
   } catch (err) {
-    host.lastError = String(err);
+    setChatError(host, String(err));
   }
   scheduleChatScroll(host as unknown as Parameters<typeof scheduleChatScroll>[0]);
 }
