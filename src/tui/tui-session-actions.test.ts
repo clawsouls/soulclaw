@@ -190,6 +190,50 @@ describe("tui session actions", () => {
     expect(listSessions).toHaveBeenCalledTimes(2);
   });
 
+  it("skips UI work when session refresh metadata is unchanged", async () => {
+    const listSessions = vi.fn().mockResolvedValue({
+      ts: Date.now(),
+      path: "/tmp/sessions.json",
+      count: 1,
+      defaults: {},
+      sessions: [
+        {
+          key: "agent:main:main",
+          model: "sonnet-4.6",
+          modelProvider: "anthropic",
+          totalTokens: 42,
+          updatedAt: 200,
+        },
+      ],
+    });
+    const state = createBaseState({
+      sessionInfo: {
+        model: "sonnet-4.6",
+        modelProvider: "anthropic",
+        totalTokens: 42,
+        updatedAt: 100,
+      },
+    });
+    const updateFooter = vi.fn();
+    const updateAutocompleteProvider = vi.fn();
+    const requestRender = vi.fn();
+
+    const { refreshSessionInfo } = createTestSessionActions({
+      client: { listSessions } as unknown as TuiBackend,
+      state,
+      updateFooter,
+      updateAutocompleteProvider,
+      tui: { requestRender } as unknown as import("@earendil-works/pi-tui").TUI,
+    });
+
+    await refreshSessionInfo();
+
+    expect(state.sessionInfo.updatedAt).toBe(200);
+    expect(updateAutocompleteProvider).not.toHaveBeenCalled();
+    expect(updateFooter).not.toHaveBeenCalled();
+    expect(requestRender).not.toHaveBeenCalled();
+  });
+
   it("keeps patched model selection when a refresh returns an older snapshot", async () => {
     const listSessions = vi.fn().mockResolvedValue({
       ts: Date.now(),
