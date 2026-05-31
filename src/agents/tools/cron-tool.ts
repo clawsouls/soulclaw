@@ -1,3 +1,4 @@
+import { timestampMsToIsoString } from "@openclaw/normalization-core/number-coercion";
 import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
 import { Type, type TSchema } from "typebox";
 import { getRuntimeConfig } from "../../config/config.js";
@@ -132,7 +133,7 @@ function moveDefinedField(params: {
 
 function setScheduleAtMs(schedule: Record<string, unknown>, value: unknown): void {
   const atMs = typeof value === "number" ? value : Number(value);
-  schedule.at = Number.isFinite(atMs) ? new Date(Math.floor(atMs)).toISOString() : value;
+  schedule.at = Number.isFinite(atMs) ? (timestampMsToIsoString(Math.floor(atMs)) ?? value) : value;
 }
 
 function canonicalizeCronToolSchedule(value: Record<string, unknown>): void {
