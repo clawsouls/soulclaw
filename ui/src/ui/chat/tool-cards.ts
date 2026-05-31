@@ -571,6 +571,29 @@ export function resolveCollapsedToolDetail(card: ToolCard, displayDetail: string
   return formatCollapsedToolPreviewText(inputText);
 }
 
+function resolveCollapsedToolSummaryParts(params: {
+  card: ToolCard;
+  displayLabel: string;
+  displayDetail: string | undefined;
+  isError: boolean;
+}): { label: string; name?: string } {
+  if (params.isError) {
+    return { label: "Tool error", name: params.displayLabel };
+  }
+
+  const displayDetail = params.displayDetail?.trim();
+  if (displayDetail) {
+    return { label: params.displayLabel, name: displayDetail };
+  }
+
+  return {
+    label:
+      typeof params.card.args === "string"
+        ? (resolveCollapsedToolDetail(params.card, undefined) ?? params.displayLabel)
+        : params.displayLabel,
+  };
+}
+
 export function renderToolCard(
   card: ToolCard,
   opts: {
@@ -584,12 +607,14 @@ export function renderToolCard(
     allowExternalEmbedUrls?: boolean;
   },
 ) {
-  const hasOutput = Boolean(card.outputText?.trim());
   const display = resolveToolDisplay({ name: card.name, args: card.args, detailMode: "explain" });
   const isError = isToolCardError(card);
-  const collapsedDetail = isError ? undefined : resolveCollapsedToolDetail(card, display.detail);
-  const previewLabel = isError ? "Tool error" : (collapsedDetail ?? display.label);
-  const previewName = isError ? display.label : collapsedDetail && hasOutput ? "output" : undefined;
+  const summary = resolveCollapsedToolSummaryParts({
+    card,
+    displayLabel: display.label,
+    displayDetail: display.detail,
+    isError,
+  });
 
   return html`
     <div
@@ -598,9 +623,9 @@ export function renderToolCard(
         : ""}"
     >
       ${renderCollapsedToolSummary({
-        label: previewLabel,
+        label: summary.label,
         icon: icons[display.icon],
-        name: previewName,
+        name: summary.name,
         expanded: opts.expanded,
         isError,
         onToggleExpanded: () => opts.onToggleExpanded(card.id),
