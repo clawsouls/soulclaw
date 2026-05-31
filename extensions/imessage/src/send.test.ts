@@ -41,6 +41,16 @@ function createRejectingClient(error: Error): IMessageRpcClient {
   } as unknown as IMessageRpcClient;
 }
 
+function getClientMocks(client: IMessageRpcClient): {
+  request: ReturnType<typeof vi.fn>;
+  stop: ReturnType<typeof vi.fn>;
+} {
+  return client as unknown as {
+    request: ReturnType<typeof vi.fn>;
+    stop: ReturnType<typeof vi.fn>;
+  };
+}
+
 function createApprovalText(id = "approval-123"): string {
   return [
     "Exec approval required",
@@ -294,7 +304,7 @@ describe("sendMessageIMessage receipts", () => {
         isFromMe: true,
       }),
     );
-    expect(client.request).not.toHaveBeenCalled();
+    expect(getClientMocks(client).request).not.toHaveBeenCalled();
   });
 
   it("preserves explicit SMS service for bare-handle media sends", async () => {
@@ -319,7 +329,7 @@ describe("sendMessageIMessage receipts", () => {
       "--transport",
       "auto",
     ]);
-    expect(client.request).not.toHaveBeenCalled();
+    expect(getClientMocks(client).request).not.toHaveBeenCalled();
   });
 
   it("preserves configured iMessage service for bare-handle media sends", async () => {
@@ -353,7 +363,7 @@ describe("sendMessageIMessage receipts", () => {
       "--transport",
       "auto",
     ]);
-    expect(client.request).not.toHaveBeenCalled();
+    expect(getClientMocks(client).request).not.toHaveBeenCalled();
   });
 
   it("keeps national-format phone media sends on the region-aware RPC path", async () => {
@@ -370,7 +380,7 @@ describe("sendMessageIMessage receipts", () => {
     });
 
     expect(runCliJson).not.toHaveBeenCalled();
-    expect(client.request).toHaveBeenCalledWith(
+    expect(getClientMocks(client).request).toHaveBeenCalledWith(
       "send",
       expect.objectContaining({
         file: "/tmp/image.png",
@@ -428,7 +438,7 @@ describe("sendMessageIMessage receipts", () => {
       "--transport",
       "auto",
     ]);
-    expect(client.request).toHaveBeenCalledWith(
+    expect(getClientMocks(client).request).toHaveBeenCalledWith(
       "send",
       expect.objectContaining({
         to: "+15550004567",
@@ -495,7 +505,7 @@ describe("sendMessageIMessage receipts", () => {
     expect(runCliJson.mock.calls).toEqual([
       [["send-attachment", "--chat", "chat-1", "--file", "/tmp/image.png", "--transport", "auto"]],
     ]);
-    expect(client.request).toHaveBeenCalledWith(
+    expect(getClientMocks(client).request).toHaveBeenCalledWith(
       "send",
       expect.objectContaining({
         chat_guid: "chat-1",
@@ -522,7 +532,7 @@ describe("sendMessageIMessage receipts", () => {
     });
 
     expect(createClientImpl).toHaveBeenCalledTimes(1);
-    expect(createdClient.request).toHaveBeenCalledWith(
+    expect(getClientMocks(createdClient).request).toHaveBeenCalledWith(
       "send",
       expect.objectContaining({
         to: "+15550004567",
@@ -530,7 +540,7 @@ describe("sendMessageIMessage receipts", () => {
       }),
       expect.any(Object),
     );
-    expect(createdClient.stop).toHaveBeenCalledOnce();
+    expect(getClientMocks(createdClient).stop).toHaveBeenCalledOnce();
     expect(result.receipt.platformMessageIds).toEqual(["p:0/dm-media-guid", "p:0/caption-guid"]);
     expect(result.receipt.parts.map((part) => part.kind)).toEqual(["media", "text"]);
   });
