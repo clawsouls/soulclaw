@@ -150,7 +150,11 @@ import { isTimeoutError } from "../../failover-error.js";
 import { runAgentEndSideEffects } from "../../harness/agent-end-side-effects.js";
 import { resolveHeartbeatPromptForSystemPrompt } from "../../heartbeat-system-prompt.js";
 import { resolveImageSanitizationLimits } from "../../image-sanitization.js";
-import { filterLocalModelLeanTools, isLocalModelLeanEnabled } from "../../local-model-lean.js";
+import {
+  filterLocalModelLeanTools,
+  isLocalModelLeanEnabled,
+  resolveLocalModelLeanPreserveToolNames,
+} from "../../local-model-lean.js";
 import { resolveModelAuthMode } from "../../model-auth.js";
 import { resolveDefaultModelForAgent } from "../../model-selection.js";
 import { supportsModelTools } from "../../model-tool-support.js";
@@ -1123,6 +1127,11 @@ export async function runEmbeddedAttempt(
             ]),
           ]
         : toolsAllowWithForcedRuntimeTools;
+    const localModelLeanPreserveToolNames = resolveLocalModelLeanPreserveToolNames({
+      toolNames: effectiveToolsAllow,
+      forceMessageTool: params.forceMessageTool,
+      sourceReplyDeliveryMode: params.sourceReplyDeliveryMode,
+    });
     const shouldConstructTools =
       toolConstructionPlan.constructTools ||
       toolSearchControlsEnabledForRun ||
@@ -1216,6 +1225,7 @@ export async function runEmbeddedAttempt(
             forceMessageTool: params.forceMessageTool,
             enableHeartbeatTool: params.enableHeartbeatTool,
             forceHeartbeatTool: params.forceHeartbeatTool,
+            runtimeToolAllowlist: effectiveToolsAllow,
             authProfileStore: params.authProfileStore,
             recordToolPrepStage: (name) => corePluginToolStages.mark(name),
             onToolOutcome: params.onToolOutcome,
@@ -1483,6 +1493,7 @@ export async function runEmbeddedAttempt(
       tools: [...tools, ...normalizedBundledTools],
       config: params.config,
       agentId: sessionAgentId,
+      preserveToolNames: localModelLeanPreserveToolNames,
     });
     const uncompactedToolSchemaProjection = filterRuntimeCompatibleTools(
       projectedUncompactedEffectiveTools,
@@ -1554,6 +1565,7 @@ export async function runEmbeddedAttempt(
       tools: toolSearch.tools,
       config: params.config,
       agentId: sessionAgentId,
+      preserveToolNames: localModelLeanPreserveToolNames,
     });
     const toolSearchSchemaProjection = filterRuntimeCompatibleTools(projectedToolSearchTools);
     logRuntimeToolSchemaQuarantine({
