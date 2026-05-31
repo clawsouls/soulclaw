@@ -23,7 +23,7 @@ const defaultShell = isWin
   : process.env.OPENCLAW_TEST_SHELL || resolveShellFromPath("bash") || process.env.SHELL || "sh";
 
 describe("exec foreground failures", () => {
-  let envSnapshot: ReturnType<typeof captureEnv>;
+  let envSnapshot: ReturnType<typeof captureEnv> | undefined;
 
   beforeEach(() => {
     vi.useRealTimers();
@@ -41,7 +41,8 @@ describe("exec foreground failures", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    envSnapshot.restore();
+    envSnapshot?.restore();
+    envSnapshot = undefined;
   });
 
   it("returns a failed text result when the default timeout is exceeded", async () => {
@@ -82,16 +83,16 @@ describe("exec foreground failures", () => {
     expect(supervisorMock.spawn).toHaveBeenCalledOnce();
     expect((supervisorMock.spawn.mock.calls[0]?.[0] as SpawnInput | undefined)?.timeoutMs).toBe(50);
     expect(result.content[0]?.type).toBe("text");
-    expect((result.content[0] as { text?: string }).text).toMatch(/timed out/i);
-    expect((result.content[0] as { text?: string }).text).toMatch(/re-run with a higher timeout/i);
     const details = result.details as {
       status?: string;
       exitCode?: number | null;
       aggregated?: string;
       durationMs?: number;
+      timedOut?: boolean;
     };
     expect(details.status).toBe("failed");
     expect(details.exitCode).toBeNull();
+    expect(details.timedOut).toBe(true);
     expect(details.aggregated).toBe("");
     expect(details.durationMs).toBeTypeOf("number");
     expect(details.durationMs).toBeGreaterThanOrEqual(0);
