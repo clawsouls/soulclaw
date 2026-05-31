@@ -21,7 +21,6 @@ import {
   COMMAND_LIST_MAX_ITEMS,
   COMMAND_NAME_MAX_LENGTH,
 } from "../../../packages/gateway-protocol/src/schema.js";
-import { listAgentIds, resolveDefaultAgentId } from "../../agents/agent-scope.js";
 import { listChatCommandsForConfig } from "../../auto-reply/commands-registry.js";
 import type {
   ChatCommandDefinition,
@@ -33,7 +32,8 @@ import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { getPluginCommandSpecs } from "../../plugins/command-specs.js";
 import { listPluginCommands } from "../../plugins/commands.js";
 import { listSkillCommandsForAgents } from "../../skills/discovery/chat-commands.js";
-import type { GatewayRequestHandlers, RespondFn } from "./types.js";
+import { resolveAgentIdOrRespondError } from "./agent-id-shared.js";
+import type { GatewayRequestHandlers } from "./types.js";
 
 type SerializedArg = NonNullable<CommandEntry["args"]>[number];
 type CommandNameSurface = "text" | "native";
@@ -52,25 +52,6 @@ function trimClampNonEmpty(value: string, maxLength: number): string | null {
 
 function clampDescription(value: string | undefined): string {
   return clampString(value ?? "", COMMAND_DESCRIPTION_MAX_LENGTH);
-}
-
-function resolveAgentIdOrRespondError(
-  rawAgentId: unknown,
-  respond: RespondFn,
-  cfg: OpenClawConfig,
-) {
-  const knownAgents = listAgentIds(cfg);
-  const requestedAgentId = typeof rawAgentId === "string" ? rawAgentId.trim() : "";
-  const agentId = requestedAgentId || resolveDefaultAgentId(cfg);
-  if (requestedAgentId && !knownAgents.includes(agentId)) {
-    respond(
-      false,
-      undefined,
-      errorShape(ErrorCodes.INVALID_REQUEST, `unknown agent id "${requestedAgentId}"`),
-    );
-    return null;
-  }
-  return { cfg, agentId };
 }
 
 function resolveNativeName(cmd: ChatCommandDefinition, provider?: string): string {
@@ -262,11 +243,12 @@ export const commandsHandlers: GatewayRequestHandlers = {
       );
       return;
     }
-    const resolved = resolveAgentIdOrRespondError(
-      params.agentId,
+    const resolved = resolveAgentIdOrRespondError({
+      rawAgentId: params.agentId,
       respond,
-      context.getRuntimeConfig(),
-    );
+      cfg: context.getRuntimeConfig(),
+      normalize: (rawAgentId) => (typeof rawAgentId === "string" ? rawAgentId.trim() : undefined),
+    });
     if (!resolved) {
       return;
     }
