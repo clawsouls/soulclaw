@@ -476,9 +476,17 @@ export function resolveTuiCtrlCAction(params: {
   return resolveCtrlCAction(params);
 }
 
+function resolveEmptySessionInfoDefaults(config: OpenClawConfig): SessionInfo {
+  return {
+    fastMode: config.agents?.defaults?.fastModeDefault,
+    verboseLevel: config.agents?.defaults?.verboseDefault,
+  };
+}
+
 export async function runTui(opts: RunTuiOptions): Promise<TuiResult> {
   const isLocalMode = opts.local === true || opts.backend !== undefined;
   const config = opts.config ?? getRuntimeConfig({ skipPluginValidation: !isLocalMode });
+  const emptySessionInfoDefaults = resolveEmptySessionInfoDefaults(config);
   const initialSessionInput = (opts.session ?? "").trim();
   let sessionScope: SessionScope = (config.session?.scope ?? "per-sender") as SessionScope;
   let sessionMainKey = normalizeMainKey(config.session?.mainKey);
@@ -510,7 +518,7 @@ export async function runTui(opts: RunTuiOptions): Promise<TuiResult> {
   const deliverDefault = opts.deliver ?? false;
   const autoMessage = opts.message?.trim();
   let autoMessageSent = false;
-  let sessionInfo: SessionInfo = {};
+  let sessionInfo: SessionInfo = { ...emptySessionInfoDefaults };
   let dynamicSlashCommands: CommandEntry[] = [];
   let dynamicSlashCommandsKey: string | null = null;
   let dynamicSlashCommandsInFlightKey: string | null = null;
@@ -1209,13 +1217,16 @@ export async function runTui(opts: RunTuiOptions): Promise<TuiResult> {
     setActivityStatus,
     clearLocalRunIds,
     rememberSessionKey: rememberCurrentSessionKey,
+    emptySessionInfoDefaults,
   });
   const {
     refreshAgents,
     refreshSessionInfo,
     applySessionInfoFromPatch,
+    applySessionMutationResult,
     loadHistory,
     setSession,
+    setEmptySession,
     abortActive,
   } = sessionActions;
 
@@ -1306,8 +1317,10 @@ export async function runTui(opts: RunTuiOptions): Promise<TuiResult> {
       closeOverlay,
       refreshSessionInfo,
       applySessionInfoFromPatch,
+      applySessionMutationResult,
       loadHistory,
       setSession,
+      setEmptySession,
       refreshAgents,
       abortActive,
       setActivityStatus,

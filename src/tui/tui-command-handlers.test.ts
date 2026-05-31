@@ -15,6 +15,7 @@ type SelectableOverlay = {
 };
 type SetActivityStatusMock = ReturnType<typeof vi.fn> & ((text: string) => void);
 type SetSessionMock = ReturnType<typeof vi.fn> & ((key: string) => Promise<void>);
+type SetEmptySessionMock = ReturnType<typeof vi.fn> & ((key: string) => Promise<void>);
 type ConsumeCompletedRunMock = ReturnType<typeof vi.fn> & ((runId: string) => boolean);
 type FlushPendingHistoryRefreshMock = ReturnType<typeof vi.fn> & (() => void);
 
@@ -69,9 +70,11 @@ function createHarness(params?: {
   runGoalCommand?: ReturnType<typeof vi.fn>;
   runAuthFlow?: RunAuthFlow;
   setSession?: SetSessionMock;
+  setEmptySession?: SetEmptySessionMock;
   loadHistory?: LoadHistoryMock;
   refreshSessionInfo?: ReturnType<typeof vi.fn>;
   applySessionInfoFromPatch?: ReturnType<typeof vi.fn>;
+  applySessionMutationResult?: ReturnType<typeof vi.fn>;
   setActivityStatus?: SetActivityStatusMock;
   isConnected?: boolean;
   activeChatRunId?: string | null;
@@ -94,6 +97,8 @@ function createHarness(params?: {
   const resetSession = params?.resetSession ?? vi.fn().mockResolvedValue({ ok: true });
   const runGoalCommand = params?.runGoalCommand ?? vi.fn().mockResolvedValue({ text: "Goal" });
   const setSession = params?.setSession ?? (vi.fn().mockResolvedValue(undefined) as SetSessionMock);
+  const setEmptySession =
+    params?.setEmptySession ?? (vi.fn().mockResolvedValue(undefined) as SetEmptySessionMock);
   const addUser = vi.fn();
   const addSystem = vi.fn();
   const reserveAssistantSlot = vi.fn();
@@ -104,6 +109,7 @@ function createHarness(params?: {
     params?.loadHistory ?? (vi.fn().mockResolvedValue(undefined) as LoadHistoryMock);
   const refreshSessionInfo = params?.refreshSessionInfo ?? vi.fn().mockResolvedValue(undefined);
   const applySessionInfoFromPatch = params?.applySessionInfoFromPatch ?? vi.fn();
+  const applySessionMutationResult = params?.applySessionMutationResult ?? vi.fn();
   const setActivityStatus = params?.setActivityStatus ?? (vi.fn() as SetActivityStatusMock);
   const forgetLocalRunId = vi.fn();
   const openOverlay = vi.fn();
@@ -148,11 +154,13 @@ function createHarness(params?: {
     refreshSessionInfo: refreshSessionInfo as never,
     loadHistory,
     setSession,
+    setEmptySession,
     refreshAgents: vi.fn(),
     abortActive,
     setActivityStatus,
     formatSessionKey: vi.fn(),
     applySessionInfoFromPatch: applySessionInfoFromPatch as never,
+    applySessionMutationResult: applySessionMutationResult as never,
     noteLocalRunId,
     noteLocalBtwRunId,
     forgetLocalRunId,
@@ -176,6 +184,7 @@ function createHarness(params?: {
     resetSession,
     runGoalCommand,
     setSession,
+    setEmptySession,
     addUser,
     addSystem,
     reserveAssistantSlot,
@@ -183,6 +192,7 @@ function createHarness(params?: {
     loadHistory,
     refreshSessionInfo,
     applySessionInfoFromPatch,
+    applySessionMutationResult,
     runAuthFlow,
     setActivityStatus,
     noteLocalRunId,
@@ -638,17 +648,32 @@ describe("tui command handlers", () => {
   it("creates unique session for /new and resets shared session for /reset", async () => {
     const loadHistory = vi.fn().mockResolvedValue(undefined);
     const setSessionMock = vi.fn().mockResolvedValue(undefined) as SetSessionMock;
+    const setEmptySessionMock = vi.fn().mockResolvedValue(undefined) as SetEmptySessionMock;
+    const applySessionMutationResult = vi.fn().mockReturnValue(true);
+    const refreshSessionInfo = vi.fn().mockResolvedValue(undefined);
+    const resetResult = {
+      ok: true as const,
+      key: "agent:main:main",
+      entry: { sessionId: "reset-session" },
+    };
     const { handleCommand, resetSession } = createHarness({
       loadHistory,
       setSession: setSessionMock,
+      setEmptySession: setEmptySessionMock,
+      applySessionMutationResult,
+      refreshSessionInfo,
+      resetSession: vi.fn().mockResolvedValue(resetResult),
     });
 
     await handleCommand("/new");
     await handleCommand("/reset");
 
     // /new creates a unique session key (isolates TUI client) (#39217)
-    expect(setSessionMock).toHaveBeenCalledTimes(1);
-    const newSessionKey = firstMockArg(setSessionMock, "setSession") as string | undefined;
+    expect(setSessionMock).not.toHaveBeenCalled();
+    expect(setEmptySessionMock).toHaveBeenCalledTimes(1);
+    const newSessionKey = firstMockArg(setEmptySessionMock, "setEmptySession") as
+      | string
+      | undefined;
     if (!newSessionKey) {
       throw new Error("expected /new to set a TUI session key");
     }
@@ -659,7 +684,24 @@ describe("tui command handlers", () => {
     // /reset still resets the shared session
     expect(resetSession).toHaveBeenCalledTimes(1);
     expect(resetSession).toHaveBeenCalledWith("agent:main:main", "reset", undefined);
-    expect(loadHistory).toHaveBeenCalledTimes(1); // /reset calls loadHistory directly; /new does so indirectly via setSession
+    expect(applySessionMutationResult).toHaveBeenCalledWith(resetResult);
+    expect(refreshSessionInfo).toHaveBeenCalledTimes(1);
+    expect(loadHistory).not.toHaveBeenCalled();
+  });
+
+  it("reloads history after /reset when the backend does not return a session entry", async () => {
+    const loadHistory = vi.fn().mockResolvedValue(undefined);
+    const applySessionMutationResult = vi.fn().mockReturnValue(false);
+    const { handleCommand } = createHarness({
+      loadHistory,
+      applySessionMutationResult,
+      resetSession: vi.fn().mockResolvedValue({ ok: true }),
+    });
+
+    await handleCommand("/reset");
+
+    expect(applySessionMutationResult).toHaveBeenCalledWith({ ok: true });
+    expect(loadHistory).toHaveBeenCalledTimes(1);
   });
 
   it("scopes /reset for the selected global agent", async () => {
@@ -705,10 +747,10 @@ describe("tui command handlers", () => {
   });
 
   it("sanitizes control sequences in /new and /reset failures", async () => {
-    const setSession = vi.fn().mockRejectedValue(new Error("\u001b[31mboom\u001b[0m"));
+    const setEmptySession = vi.fn().mockRejectedValue(new Error("\u001b[31mboom\u001b[0m"));
     const resetSession = vi.fn().mockRejectedValue(new Error("\u001b[31mboom\u001b[0m"));
     const { handleCommand, addSystem } = createHarness({
-      setSession,
+      setEmptySession,
       resetSession,
     });
 
