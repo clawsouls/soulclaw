@@ -148,6 +148,9 @@ Skills own workflows; root owns hard policy and routing.
 - After landing or requested close/sweep: search duplicates; comment proof + canonical commit/PR/release before closing.
 - After landing/ship final: include 2-5 sentence recap of what landed: behavior change, key files/surface, proof run, issue/PR state. Do not answer with only status/links.
 - `ship` that fixes an issue: after push, comment proof + commit link, then close the issue.
+- Public GH comments: show draft in chat first unless user explicitly asked to post/comment/reply/close/merge/land. After work starts and changes/proof exist, post the review/proof/commit comment.
+- Representing user: if user already has a comment/thread for the point, update/reply there when possible; avoid duplicate PR/issue comments.
+- No surprise GH writes: chat must mention every posted/updated public comment with URL.
 - GH comments with backticks, `$`, or shell snippets: use heredoc/body file, not inline double-quoted `--body`.
 - PR create: real body required. Include Summary + Verification; mention refs, behavior, and proof.
 - PR create/refresh: keep PR branches takeover-ready. Use a branch maintainers can push to, or for fork PRs ensure `maintainer_can_modify` / GitHub's `Allow edits by maintainers` is enabled unless explicitly told otherwise or GitHub's Actions/secrets warning makes that unsafe.
