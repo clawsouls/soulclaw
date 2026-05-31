@@ -10,12 +10,16 @@ const WEBHOOK_MONITOR_START_MAX_ATTEMPTS = 4;
 
 export async function getFreePort(): Promise<number> {
   const server = createServer();
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
   const address = server.address() as AddressInfo | null;
   if (!address) {
     throw new Error("missing server address");
   }
-  await new Promise<void>((resolve) => server.close(() => resolve()));
+  await new Promise<void>((resolve) => {
+    server.close(() => resolve());
+  });
   return address.port;
 }
 
@@ -29,7 +33,9 @@ async function waitUntilServerReady(url: string): Promise<void> {
     } catch {
       // retry
     }
-    await new Promise((resolve) => setTimeout(resolve, WEBHOOK_READY_RETRY_DELAY_MS));
+    await new Promise((resolve) => {
+      setTimeout(resolve, WEBHOOK_READY_RETRY_DELAY_MS);
+    });
   }
   throw new Error(`server did not start: ${url}`);
 }
@@ -108,7 +114,9 @@ export async function withRunningWebhookMonitor(
       abortController.abort();
       await monitorPromise.catch(() => undefined);
       if (attempt < WEBHOOK_MONITOR_START_MAX_ATTEMPTS) {
-        await new Promise((resolve) => setTimeout(resolve, attempt * WEBHOOK_READY_RETRY_DELAY_MS));
+        await new Promise((resolve) => {
+          setTimeout(resolve, attempt * WEBHOOK_READY_RETRY_DELAY_MS);
+        });
       }
     }
   }
