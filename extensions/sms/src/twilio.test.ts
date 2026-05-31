@@ -29,6 +29,16 @@ function createAccount(overrides: Partial<ResolvedSmsAccount> = {}): ResolvedSms
   };
 }
 
+function readUrlEncodedRequestBody(init: RequestInit | undefined): URLSearchParams {
+  if (typeof init?.body === "string") {
+    return new URLSearchParams(init.body);
+  }
+  if (init?.body instanceof URLSearchParams) {
+    return init.body;
+  }
+  throw new Error("Expected Twilio request body to be URL-encoded.");
+}
+
 describe("Twilio SMS helpers", () => {
   it("parses Twilio form bodies and inbound messages", () => {
     const form = parseTwilioFormBody(
@@ -105,7 +115,7 @@ describe("Twilio SMS helpers", () => {
   });
 
   it("sends SMS through Twilio's Messages API", async () => {
-    const fetchImpl = vi.fn(
+    const fetchImpl = vi.fn<typeof fetch>(
       async () =>
         new Response(
           JSON.stringify({
@@ -156,14 +166,14 @@ describe("Twilio SMS helpers", () => {
       authorization: `Basic ${Buffer.from("AC123:secret").toString("base64")}`,
       "content-type": "application/x-www-form-urlencoded",
     });
-    const body = new URLSearchParams(String(init?.body));
+    const body = readUrlEncodedRequestBody(init);
     expect(body.get("From")).toBe("+15557654321");
     expect(body.get("To")).toBe("+15551234567");
     expect(body.get("Body")).toBe("hello");
   });
 
   it("can send through a Twilio Messaging Service SID", async () => {
-    const fetchImpl = vi.fn(
+    const fetchImpl = vi.fn<typeof fetch>(
       async () =>
         new Response(JSON.stringify({ sid: "SM789" }), {
           status: 201,
@@ -193,14 +203,14 @@ describe("Twilio SMS helpers", () => {
     });
 
     const [, init] = fetchImpl.mock.calls[0] ?? [];
-    const body = new URLSearchParams(String(init?.body));
+    const body = readUrlEncodedRequestBody(init);
     expect(body.get("MessagingServiceSid")).toBe("MG123");
     expect(body.get("To")).toBe("+15551234567");
     expect(body.get("Body")).toBe("hello");
   });
 
   it("prefers an explicit from number when both sender options are resolved", async () => {
-    const fetchImpl = vi.fn(
+    const fetchImpl = vi.fn<typeof fetch>(
       async () =>
         new Response(JSON.stringify({ sid: "SM999" }), {
           status: 201,
@@ -230,7 +240,7 @@ describe("Twilio SMS helpers", () => {
     });
 
     const [, init] = fetchImpl.mock.calls[0] ?? [];
-    const body = new URLSearchParams(String(init?.body));
+    const body = readUrlEncodedRequestBody(init);
     expect(body.get("From")).toBe("+15557654321");
     expect(body.get("MessagingServiceSid")).toBeNull();
   });
