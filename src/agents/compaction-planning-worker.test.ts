@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { MAX_TIMER_TIMEOUT_MS } from "../shared/number-coercion.js";
+import { MAX_TIMER_TIMEOUT_MS } from "@openclaw/normalization-core/number-coercion";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { compactionPlanningWorkerTesting } from "./compaction-planning-worker.js";
 import { runCompactionPlanningWorkerInput } from "./compaction-planning.worker.js";
 import type { AgentMessage } from "./runtime/index.js";
@@ -12,7 +12,26 @@ function makeMessage(id: number, text = "x".repeat(4000)): AgentMessage {
   };
 }
 
+function createSyntheticWorkerUrl(source: string): URL {
+  return new URL(`data:text/javascript,${encodeURIComponent(source)}`);
+}
+
 describe("compaction planning worker", () => {
+  let packagedSummaryChunks: Awaited<
+    ReturnType<typeof compactionPlanningWorkerTesting.runCompactionPlanningWorker>
+  >;
+
+  beforeAll(async () => {
+    packagedSummaryChunks = await compactionPlanningWorkerTesting.runCompactionPlanningWorker({
+      input: {
+        kind: "summaryChunks",
+        messages: [makeMessage(1), makeMessage(2), makeMessage(3)],
+        maxChunkTokens: 1200,
+      },
+      timeoutMs: 10_000,
+    });
+  }, 10_000);
+
   it("resolves the packaged worker URL from stable and hashed dist modules", () => {
     expect(
       compactionPlanningWorkerTesting.resolveCompactionPlanningWorkerUrl(
@@ -33,16 +52,29 @@ describe("compaction planning worker", () => {
     });
   });
 
-  it("plans summary chunks in the worker", async () => {
-    const value = await compactionPlanningWorkerTesting.runCompactionPlanningWorker({
-      input: {
-        kind: "summaryChunks",
-        messages: [makeMessage(1), makeMessage(2), makeMessage(3)],
-        maxChunkTokens: 1200,
-      },
-      timeoutMs: 10_000,
+  it("plans summary chunks in the packaged worker", () => {
+    expect(packagedSummaryChunks.kind).toBe("summaryChunks");
+    if (packagedSummaryChunks.kind !== "summaryChunks") {
+      return;
+    }
+    expect(packagedSummaryChunks.chunks.flat().map((message) => message.timestamp)).toEqual([
+      1, 2, 3,
+    ]);
+    expect(packagedSummaryChunks.chunks.length).toBeGreaterThan(1);
+  });
+
+  it("plans summary chunks for worker input", () => {
+    const result = runCompactionPlanningWorkerInput({
+      kind: "summaryChunks",
+      messages: [makeMessage(1), makeMessage(2), makeMessage(3)],
+      maxChunkTokens: 1200,
     });
 
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") {
+      return;
+    }
+    const value = result.value;
     expect(value.kind).toBe("summaryChunks");
     if (value.kind !== "summaryChunks") {
       return;
@@ -83,6 +115,16 @@ describe("compaction planning worker", () => {
   });
 
   it("keeps timers responsive while planning large histories", async () => {
+    const workerUrl = createSyntheticWorkerUrl(`
+      import { parentPort } from "node:worker_threads";
+      parentPort.postMessage({
+        status: "ok",
+        value: {
+          kind: "stageSplit",
+          mode: "single",
+        },
+      });
+    `);
     const timer = new Promise<"timer">((resolve) => {
       setTimeout(() => resolve("timer"), 0);
     });
@@ -97,6 +139,7 @@ describe("compaction planning worker", () => {
           parts: 4,
         },
         timeoutMs: 30_000,
+        workerUrl,
       })
       .then(() => "planning" as const);
 

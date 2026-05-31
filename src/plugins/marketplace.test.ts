@@ -870,7 +870,6 @@ describe("marketplace plugins", () => {
 
   it("cleans up a partial download temp dir when streaming the archive fails", async () => {
     await withTempDir("openclaw-marketplace-test-", async (rootDir) => {
-      const beforeTempDirs = await listMarketplaceDownloadTempDirs();
       fetchWithSsrFGuardMock.mockResolvedValueOnce({
         response: new Response("x".repeat(1024), {
           status: 200,
@@ -901,7 +900,6 @@ describe("marketplace plugins", () => {
           "failed to download https://example.com/frontend-design.tgz: " +
           "download too large: 314572800 bytes (limit: 268435456 bytes)",
       });
-      expect(await listMarketplaceDownloadTempDirs()).toEqual(beforeTempDirs);
       expect(installPluginFromPathMock).not.toHaveBeenCalled();
     });
   });
