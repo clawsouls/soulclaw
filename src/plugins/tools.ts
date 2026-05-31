@@ -18,6 +18,7 @@ import type { PluginManifestRecord } from "./manifest-registry.js";
 import { hasManifestToolAvailability } from "./manifest-tool-availability.js";
 import type { PluginMetadataManifestView } from "./plugin-metadata-snapshot.types.js";
 import type { PluginRegistry, PluginToolRegistration } from "./registry-types.js";
+import { withPluginRuntimePluginScope } from "./runtime/gateway-request-scope.js";
 import {
   buildPluginRuntimeLoadOptions,
   resolvePluginRuntimeLoadContext,
@@ -74,6 +75,7 @@ const PLUGIN_TOOL_FACTORY_WARN_FACTORY_MS = 1_000;
 const PLUGIN_TOOL_FACTORY_SUMMARY_LIMIT = 20;
 
 const pluginToolMeta = new WeakMap<AnyAgentTool, PluginToolMeta>();
+const scopedPluginTools = new WeakMap<AnyAgentTool, Map<string, AnyAgentTool>>();
 
 export function setPluginToolMeta(tool: AnyAgentTool, meta: PluginToolMeta): void {
   pluginToolMeta.set(tool, meta);
@@ -88,6 +90,83 @@ export function copyPluginToolMeta(source: AnyAgentTool, target: AnyAgentTool): 
   if (meta) {
     pluginToolMeta.set(target, meta);
   }
+}
+
+function pluginToolScopeKey(entry: PluginToolRegistration): string {
+  return JSON.stringify([entry.pluginId, entry.source]);
+}
+
+function runWithPluginToolScope<T>(entry: PluginToolRegistration, run: () => T): T {
+  return withPluginRuntimePluginScope(
+    {
+      pluginId: entry.pluginId,
+      ...(entry.source ? { pluginSource: entry.source } : {}),
+    },
+    run,
+  );
+}
+
+function isAgentTool(value: unknown): value is AnyAgentTool {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    typeof (value as { execute?: unknown }).execute === "function"
+  );
+}
+
+function wrapPluginToolCallbacks(entry: PluginToolRegistration, tool: AnyAgentTool): AnyAgentTool {
+  const key = pluginToolScopeKey(entry);
+  const scopedByKey = scopedPluginTools.get(tool);
+  const cached = scopedByKey?.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const prepareArguments = tool.prepareArguments;
+  const wrapped: AnyAgentTool = {
+    ...tool,
+    ...(prepareArguments
+      ? {
+          prepareArguments(args) {
+            return runWithPluginToolScope(entry, () =>
+              Reflect.apply(prepareArguments, tool, [args]),
+            );
+          },
+        }
+      : {}),
+    execute(toolCallId, params, signal, onUpdate) {
+      return runWithPluginToolScope(
+        entry,
+        () =>
+          Reflect.apply(tool.execute, tool, [toolCallId, params, signal, onUpdate]) as ReturnType<
+            AnyAgentTool["execute"]
+          >,
+      );
+    },
+  };
+
+  copyPluginToolMeta(tool, wrapped);
+  const nextScopedByKey = scopedByKey ?? new Map<string, AnyAgentTool>();
+  nextScopedByKey.set(key, wrapped);
+  scopedPluginTools.set(tool, nextScopedByKey);
+  return wrapped;
+}
+
+function wrapPluginToolFactoryResult(
+  entry: PluginToolRegistration,
+  result: PluginToolFactoryResult,
+): PluginToolFactoryResult {
+  if (Array.isArray(result)) {
+    return result.map((tool) => (isAgentTool(tool) ? wrapPluginToolCallbacks(entry, tool) : tool));
+  }
+  return isAgentTool(result) ? wrapPluginToolCallbacks(entry, result) : result;
+}
+
+function resolvePluginToolFactory(entry: PluginToolRegistration, ctx: OpenClawPluginToolContext) {
+  return runWithPluginToolScope(entry, () =>
+    wrapPluginToolFactoryResult(entry, entry.factory(ctx)),
+  );
 }
 
 /**
@@ -271,7 +350,7 @@ function resolvePluginToolFactoryEntry(params: {
   const factoryStartedAt = Date.now();
 
   try {
-    resolved = params.entry.factory(params.ctx);
+    resolved = resolvePluginToolFactory(params.entry, params.ctx);
   } catch (err) {
     failed = true;
     params.logError(`plugin tool failed (${params.entry.pluginId}): ${String(err)}`);
@@ -582,7 +661,7 @@ function createCachedDescriptorPluginTool(params: {
       const resolveCandidateTool = (
         candidate: PluginToolRegistration,
       ): AnyAgentTool | undefined => {
-        const resolved = candidate.factory(params.ctx);
+        const resolved = resolvePluginToolFactory(candidate, params.ctx);
         const listRaw: unknown[] = Array.isArray(resolved) ? resolved : resolved ? [resolved] : [];
         for (const toolRaw of listRaw) {
           const malformedReason = describeMalformedPluginTool(toolRaw);
