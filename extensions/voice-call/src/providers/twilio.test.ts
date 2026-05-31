@@ -1,9 +1,13 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebhookContext } from "../types.js";
 import { TwilioProvider } from "./twilio.js";
 import { TwilioApiError } from "./twilio/api.js";
 
 const STREAM_URL = "wss://example.ngrok.app/voice/stream";
+
+beforeEach(() => {
+  vi.useRealTimers();
+});
 
 function createProvider(): TwilioProvider {
   return new TwilioProvider(
