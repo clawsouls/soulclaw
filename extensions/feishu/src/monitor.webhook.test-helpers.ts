@@ -1,5 +1,9 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+import {
+  fetchWithSsrFGuard,
+  ssrfPolicyFromDangerouslyAllowPrivateNetwork,
+} from "openclaw/plugin-sdk/ssrf-runtime";
 import { vi } from "vitest";
 import type { ClawdbotConfig } from "../runtime-api.js";
 import type { monitorFeishuProvider } from "./monitor.js";
@@ -26,9 +30,18 @@ export async function getFreePort(): Promise<number> {
 async function waitUntilServerReady(url: string): Promise<void> {
   for (let i = 0; i < WEBHOOK_READY_MAX_ATTEMPTS; i += 1) {
     try {
-      const response = await fetch(url, { method: "GET" });
-      if (response.status >= 200 && response.status < 500) {
-        return;
+      const { response, release } = await fetchWithSsrFGuard({
+        url,
+        init: { method: "GET" },
+        policy: ssrfPolicyFromDangerouslyAllowPrivateNetwork(true),
+        auditContext: "feishu-webhook-test-ready",
+      });
+      try {
+        if (response.status >= 200 && response.status < 500) {
+          return;
+        }
+      } finally {
+        await release();
       }
     } catch {
       // retry
