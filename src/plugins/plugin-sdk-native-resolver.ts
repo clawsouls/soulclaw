@@ -38,6 +38,7 @@ export type InstallOpenClawPluginSdkNativeResolverOptions = {
   allowedParentRoots?: readonly string[];
   argv1?: string;
   moduleUrl?: string;
+  devSourceRoot?: string | null;
   pluginSdkResolution?: PluginSdkResolutionPreference;
 };
 
@@ -220,6 +221,7 @@ function listPluginSdkNativeAliases(
       // Native require hooks must point at JavaScript artifacts, even when the
       // plugin loader itself is configured to prefer source imports.
       "dist",
+      options.devSourceRoot,
     ),
   )
     .filter(([specifier]) => isPluginSdkAliasSpecifier(specifier))
@@ -302,9 +304,9 @@ function registerNativeAlias(params: {
 }): void {
   const entries = pluginSdkNativeAliases.get(params.request) ?? [];
   for (const parentRoot of params.parentRoots) {
-    if (
-      entries.some((entry) => entry.parentRoot === parentRoot && entry.target === params.target)
-    ) {
+    const existingIndex = entries.findIndex((entry) => entry.parentRoot === parentRoot);
+    if (existingIndex !== -1) {
+      entries[existingIndex] = { parentRoot, target: params.target };
       continue;
     }
     entries.push({ parentRoot, target: params.target });
@@ -314,10 +316,26 @@ function registerNativeAlias(params: {
   }
 }
 
+function clearNativeAliasesForParentRoots(parentRoots: readonly string[]): void {
+  if (parentRoots.length === 0) {
+    return;
+  }
+  const parentRootSet = new Set(parentRoots);
+  for (const [request, entries] of pluginSdkNativeAliases) {
+    const nextEntries = entries.filter((entry) => !parentRootSet.has(entry.parentRoot));
+    if (nextEntries.length === 0) {
+      pluginSdkNativeAliases.delete(request);
+    } else {
+      pluginSdkNativeAliases.set(request, nextEntries);
+    }
+  }
+}
+
 export function installOpenClawPluginSdkNativeResolver(
   options: InstallOpenClawPluginSdkNativeResolverOptions = {},
 ): string[] {
   const parentRoots = resolveAllowedParentRoots(options);
+  clearNativeAliasesForParentRoots(parentRoots);
   for (const [specifier, target] of listPluginSdkNativeAliases(options)) {
     registerNativeAlias({ request: specifier, target, parentRoots });
   }

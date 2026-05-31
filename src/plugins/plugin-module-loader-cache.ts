@@ -27,6 +27,7 @@ export type ResolvePluginModuleLoaderCacheEntryParams = {
   loaderFilename?: string;
   aliasMap?: Record<string, string>;
   tryNative?: boolean;
+  devSourceRoot?: string | null;
   pluginSdkResolution?: PluginSdkResolutionPreference;
   cacheScopeKey?: string;
   sharedCacheScopeKey?: string;
@@ -134,6 +135,7 @@ function resolveDefaultPluginModuleLoaderConfig(
     modulePath: params.modulePath,
     argv1: params.argvEntry ?? process.argv[1],
     moduleUrl: params.importerUrl,
+    devSourceRoot: params.devSourceRoot,
     ...(params.preferBuiltDist ? { preferBuiltDist: true } : {}),
     ...(params.pluginSdkResolution ? { pluginSdkResolution: params.pluginSdkResolution } : {}),
   });
