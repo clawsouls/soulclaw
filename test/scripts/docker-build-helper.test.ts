@@ -1359,7 +1359,9 @@ test -f "$TMPDIR/docker-cmd-seen"
     );
     expect(runner).toContain('-e "OPENCLAW_E2E_COMMAND_TIMEOUT=$COMMAND_TIMEOUT"');
     expect(runner).toContain('--name "$CONTAINER_NAME"');
-    expect(runner).toContain("docker_e2e_docker_cmd stats --no-stream");
+    expect(runner).toContain("docker_e2e_sample_stats_until_exit \\");
+    expect(runner).toContain('"$STATS_LOG" \\');
+    expect(runner).toContain('"$RUN_LOG" \\');
     expect(runner).toContain("assert-resource-ceiling.mjs");
     expect(runner).not.toContain("docker_e2e_run_with_harness -t");
   });
@@ -1379,8 +1381,9 @@ test -f "$TMPDIR/docker-cmd-seen"
         'DOCKER_COMMAND_TIMEOUT="$DOCKER_RUN_TIMEOUT" docker_e2e_docker_run_cmd run --name "$CONTAINER_NAME"',
       );
       expect(runner, path).toContain('DOCKER_RUN_TIMEOUT="${OPENCLAW_');
-      expect(runner, path).toContain('docker_e2e_docker_cmd inspect "$CONTAINER_NAME"');
-      expect(runner, path).toContain("docker_e2e_docker_cmd stats --no-stream");
+      expect(runner, path).toContain("docker_e2e_sample_stats_until_exit \\");
+      expect(runner, path).toContain('"$STATS_LOG" \\');
+      expect(runner, path).toContain('"$RUN_LOG" \\');
       expect(runner, path).not.toMatch(/(^|\n)docker run --name "\$CONTAINER_NAME"/u);
       expect(runner, path).not.toMatch(/(^|\n)docker (?:inspect|stats) /u);
       expect(runner, path).toMatch(/cleanup\(\) \{[\s\S]*rm -f "\$RUN_LOG" "\$STATS_LOG"/u);
