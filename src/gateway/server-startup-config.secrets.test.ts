@@ -224,9 +224,7 @@ describe("gateway startup config secret preflight", () => {
     process.env.OPENCLAW_DIAGNOSTICS_TIMELINE_PATH = timelinePath;
     try {
       const config = gatewaySecretRefSnapshot().config;
-      const prepareRuntimeSecretsSnapshot = vi.fn(async ({ configLocal }) =>
-        preparedSnapshot(configLocal),
-      );
+      const prepareRuntimeSecretsSnapshot = vi.fn(async ({ config }) => preparedSnapshot(config));
 
       const activateRuntimeSecrets = createRuntimeSecretsActivator({
         logSecrets: {
