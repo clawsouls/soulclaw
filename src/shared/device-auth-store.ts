@@ -45,6 +45,20 @@ function copyCanonicalDeviceAuthTokens(
   return out;
 }
 
+export function coerceDeviceAuthStore(value: unknown): DeviceAuthStore | null {
+  if (!isRecord(value) || value.version !== 1 || typeof value.deviceId !== "string") {
+    return null;
+  }
+  if (!isRecord(value.tokens)) {
+    return null;
+  }
+  return {
+    version: 1,
+    deviceId: value.deviceId,
+    tokens: copyCanonicalDeviceAuthTokens(value.tokens),
+  };
+}
+
 export function loadDeviceAuthTokenFromStore(params: {
   adapter: DeviceAuthStoreAdapter;
   deviceId: string;

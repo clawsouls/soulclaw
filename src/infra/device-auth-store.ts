@@ -3,61 +3,18 @@ import path from "node:path";
 import { resolveStateDir } from "../config/paths.js";
 import {
   clearDeviceAuthTokenFromStore,
+  coerceDeviceAuthStore,
   type DeviceAuthEntry,
+  type DeviceAuthStore,
   loadDeviceAuthTokenFromStore,
   storeDeviceAuthTokenInStore,
 } from "../shared/device-auth-store.js";
-import type { DeviceAuthStore } from "../shared/device-auth.js";
 import { privateFileStoreSync } from "./private-file-store.js";
 
 const DEVICE_AUTH_FILE = "device-auth.json";
 
 type StoreCacheEntry = { store: DeviceAuthStore | null; mtimeMs: number; size: number };
 const storeReadCache = new Map<string, StoreCacheEntry>();
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function parseDeviceAuthEntry(role: string, value: unknown): DeviceAuthEntry | null {
-  if (
-    !isRecord(value) ||
-    typeof value.token !== "string" ||
-    !Array.isArray(value.scopes) ||
-    !value.scopes.every((scope) => typeof scope === "string") ||
-    typeof value.updatedAtMs !== "number" ||
-    !Number.isFinite(value.updatedAtMs)
-  ) {
-    return null;
-  }
-  return {
-    token: value.token,
-    role,
-    scopes: value.scopes,
-    updatedAtMs: value.updatedAtMs,
-  };
-}
-
-function parseDeviceAuthStore(value: unknown): DeviceAuthStore | null {
-  if (!isRecord(value) || value.version !== 1 || typeof value.deviceId !== "string") {
-    return null;
-  }
-  if (!isRecord(value.tokens)) {
-    return null;
-  }
-  const tokens: Record<string, DeviceAuthEntry> = {};
-  for (const [role, rawEntry] of Object.entries(value.tokens)) {
-    const entry = parseDeviceAuthEntry(role, rawEntry);
-    if (entry) {
-      tokens[role] = entry;
-    }
-  }
-  return {
-    version: 1,
-    deviceId: value.deviceId,
-    tokens,
-  };
-}
 
 function storeCacheHit(
   cached: StoreCacheEntry | undefined,
@@ -90,7 +47,7 @@ function readStore(filePath: string): DeviceAuthStore | null {
     const parsed = privateFileStoreSync(path.dirname(filePath)).readJsonIfExists(
       path.basename(filePath),
     );
-    const store = parseDeviceAuthStore(parsed);
+    const store = coerceDeviceAuthStore(parsed);
     storeReadCache.set(filePath, { store, mtimeMs: stat.mtimeMs, size: stat.size });
     return store;
   } catch {
