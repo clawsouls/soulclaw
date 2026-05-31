@@ -81,11 +81,26 @@ function normalizeRuntimeModelRefForComparison(
   return model ? `${canonicalProvider}/${model}` : canonicalProvider;
 }
 
+function normalizeRuntimeModelRefWithoutAlias(raw: string): string {
+  const trimmed = raw.trim();
+  const slash = trimmed.indexOf("/");
+  if (slash <= 0 || slash >= trimmed.length - 1) {
+    return normalizeProviderId(trimmed);
+  }
+  const provider = trimmed.slice(0, slash).trim();
+  const model = trimmed.slice(slash + 1).trim();
+  const normalizedProvider = normalizeProviderId(provider);
+  return model ? `${normalizedProvider}/${model}` : normalizedProvider;
+}
+
 export function areRuntimeModelRefsEquivalent(
   left: string,
   right: string,
   options: RuntimeAliasComparisonOptions = {},
 ): boolean {
+  if (normalizeRuntimeModelRefWithoutAlias(left) === normalizeRuntimeModelRefWithoutAlias(right)) {
+    return true;
+  }
   return (
     normalizeRuntimeModelRefForComparison(left, options) ===
     normalizeRuntimeModelRefForComparison(right, options)
