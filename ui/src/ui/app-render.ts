@@ -1278,8 +1278,8 @@ export function renderApp(state: AppViewState) {
     configPath: state.configSnapshot?.path ?? null,
     rawAvailable:
       typeof state.configSnapshot?.raw === "string" ||
-      !!state.configSnapshot?.config ||
-      !!state.configForm,
+      Boolean(state.configSnapshot?.config) ||
+      Boolean(state.configForm),
   } satisfies Omit<
     ConfigProps,
     | "formMode"

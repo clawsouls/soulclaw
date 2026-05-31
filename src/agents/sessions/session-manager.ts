@@ -25,7 +25,7 @@ import {
   type SessionTreeEntry as CoreSessionTreeEntry,
   uuidv7,
 } from "../runtime/index.js";
-import { type BashExecutionMessage, type CustomMessage } from "./messages.js";
+import type { BashExecutionMessage, CustomMessage } from "./messages.js";
 
 export { CURRENT_SESSION_VERSION };
 

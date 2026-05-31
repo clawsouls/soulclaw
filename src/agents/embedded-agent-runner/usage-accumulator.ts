@@ -34,7 +34,7 @@ export const createUsageAccumulator = (): UsageAccumulator => ({
 type MaybeUsage = NormalizedUsage | undefined;
 
 const hasUsageValues = (usage: MaybeUsage): usage is NormalizedUsage =>
-  !!usage &&
+  Boolean(usage) &&
   [
     usage.input,
     usage.output,

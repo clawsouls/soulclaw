@@ -1016,7 +1016,7 @@ describe("normalizeToolParameters", () => {
       ]),
     });
     expect(
-      Object.prototype.hasOwnProperty.call(
+      Object.hasOwn(
         (normalized.parameters as { properties?: Record<string, unknown> }).properties,
         "__proto__",
       ),

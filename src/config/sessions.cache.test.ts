@@ -312,7 +312,7 @@ describe("Session Store Cache", () => {
 
     expect(entry).toBeDefined();
     expect(entry?.polluted).toBeUndefined();
-    expect(Object.prototype.hasOwnProperty.call(entry, "__proto__")).toBe(true);
+    expect(Object.hasOwn(entry, "__proto__")).toBe(true);
     expect(Object.prototype).not.toHaveProperty("polluted");
   });
 

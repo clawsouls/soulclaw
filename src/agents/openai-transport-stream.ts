@@ -887,7 +887,7 @@ function encryptedReasoningReplayMetadataMatches(
   context: OpenAIResponsesReplayContext,
 ): boolean {
   return (
-    !!metadata &&
+    Boolean(metadata) &&
     metadata.provider === context.provider &&
     metadata.api === context.api &&
     metadata.model === context.model &&

@@ -31,7 +31,7 @@ type ProviderAuthWarmWorkerResult =
 
 function isWorkerInput(value: unknown): value is ProviderAuthWarmWorkerInput {
   return (
-    !!value &&
+    Boolean(value) &&
     typeof value === "object" &&
     "cfg" in value &&
     (!("runtimeAuthStores" in value) ||

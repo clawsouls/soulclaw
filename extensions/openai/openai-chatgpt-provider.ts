@@ -113,7 +113,7 @@ function isOpenAIOrLegacyCodexProvider(provider: string | undefined): boolean {
 
 function isLegacyCodexCompatBaseUrl(baseUrl?: string): boolean {
   const trimmed = baseUrl?.trim();
-  return !!trimmed && /^https?:\/\/api\.githubcopilot\.com(?:\/v1)?\/?$/iu.test(trimmed);
+  return Boolean(trimmed) && /^https?:\/\/api\.githubcopilot\.com(?:\/v1)?\/?$/iu.test(trimmed);
 }
 
 function normalizeCodexTransportFields(params: {

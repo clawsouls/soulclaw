@@ -63,12 +63,12 @@ function resolveNativeUserHomeDir(): string | undefined {
 
 function resolveCompactHomePrefixes(): string[] {
   const homes = [resolveHomeDir(), resolveUserHomeDir(), resolveNativeUserHomeDir()].filter(
-    (home): home is string => !!home,
+    (home): home is string => Boolean(home),
   );
   const resolvedHomes = homes.map((home) => path.resolve(home));
   const realHomes = resolvedHomes
     .map((home) => tryRealpath(home))
-    .filter((home): home is string => !!home);
+    .filter((home): home is string => Boolean(home));
   return uniqueStrings([...resolvedHomes, ...realHomes]).toSorted((a, b) => b.length - a.length);
 }
 
@@ -372,7 +372,7 @@ function hasLoadableSkillFrontmatter(
   });
   const fallbackName = path.basename(skillDir).trim();
   const name = frontmatter?.name?.trim() || fallbackName;
-  return !!name && !!frontmatter?.description?.trim();
+  return Boolean(name) && Boolean(frontmatter?.description?.trim());
 }
 
 function tryRealpath(filePath: string): string | null {

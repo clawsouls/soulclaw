@@ -156,7 +156,7 @@ function shouldSkipScriptPreflightPathError(
     return true;
   }
   const errorCode = getNodeErrorCode(error);
-  return !!(errorCode && SKIPPABLE_SCRIPT_PREFLIGHT_FS_ERROR_CODES.has(errorCode));
+  return Boolean(errorCode && SKIPPABLE_SCRIPT_PREFLIGHT_FS_ERROR_CODES.has(errorCode));
 }
 
 function resolvePreflightRelativePath(params: { rootDir: string; absPath: string }): string | null {

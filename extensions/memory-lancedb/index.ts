@@ -1024,7 +1024,7 @@ export default definePluginEntry({
                   return -1 * direction;
                 }
                 if (a[col] > b[col]) {
-                  return 1 * direction;
+                  return Number(direction);
                 }
                 return 0;
               });
