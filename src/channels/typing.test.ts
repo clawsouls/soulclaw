@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_TIMER_TIMEOUT_MS } from "../shared/number-coercion.js";
 import { createTypingCallbacks } from "./typing.js";
 
@@ -16,6 +16,7 @@ async function withFakeTimers(run: () => Promise<void>) {
   try {
     await run();
   } finally {
+    vi.clearAllTimers();
     vi.useRealTimers();
   }
 }
@@ -56,6 +57,15 @@ function createTypingHarness(overrides: TypingCallbackOverrides = {}) {
 }
 
 describe("createTypingCallbacks", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
   it("invokes start on reply start", async () => {
     const { start, onStartError, callbacks } = createTypingHarness();
 
