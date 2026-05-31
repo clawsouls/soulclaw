@@ -12,6 +12,7 @@ Skills own workflows; root owns hard policy and routing.
 - Reviews/answers: high confidence required. Default to exhaustive relevant codebase search/read, including owners, callers, siblings, tests, docs, and upstream/dependency contracts before verdict. Diff-only review is insufficient.
 - Dependency-touching work: direct dependency inspection is mandatory when feasible; do not rely on assumptions, wrappers, or memory. Most dependencies are OSS, so read their source/docs/types. Codex-related work: before any verdict, comment, approval, merge recommendation, or `proof sufficient` claim, inspect sibling `../codex` source for the exact protocol/runtime behavior involved; if missing, clone `https://github.com/openai/codex.git` there first. Do not rely on PR text, OpenClaw wrappers, generated schemas, memory, or prior bot reviews as a substitute. Cite Codex files/lines checked in final/review/comment.
 - Dependency-backed behavior: read upstream docs/source/types first. No API/default/error/timing guesses.
+- External API work: Google/search for additional proof. Prefer official docs/source/types; cite current proof. No memory-only API claims.
 - Live-verify when feasible. Never print secrets.
 - Missing deps: `pnpm install`, retry once, then report first actionable error.
 - CODEOWNERS: maint/refactor/tests ok. Larger behavior/product/security/ownership: owner ask/review.
