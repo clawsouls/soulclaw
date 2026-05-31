@@ -65,6 +65,30 @@ describe("isSafeBuiltinSegment", () => {
     ).toBe(false);
   });
 
+  it("allows test and well-formed bracket predicates", () => {
+    expect(
+      isSafeBuiltinSegment({
+        segment: builtinSegment(["test", "-d", "/tmp"]),
+        platform: "linux",
+      }),
+    ).toBe(true);
+    expect(
+      isSafeBuiltinSegment({
+        segment: builtinSegment(["[", "-d", "/tmp", "]"]),
+        platform: "linux",
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects malformed bracket predicates", () => {
+    expect(
+      isSafeBuiltinSegment({
+        segment: builtinSegment(["[", "-d", "/tmp"]),
+        platform: "linux",
+      }),
+    ).toBe(false);
+  });
+
   it("returns false on Windows hosts (PowerShell semantics differ)", () => {
     expect(
       isSafeBuiltinSegment({
@@ -103,6 +127,32 @@ describe("evaluateShellAllowlist with known safe builtins (regression for #46056
   it("'cd /tmp && git status' passes with allowlist plus safe builtin handling", () => {
     const result = evaluateShellAllowlist({
       command: "cd /tmp && git status",
+      allowlist: gitAllowlist,
+      safeBins: new Set(),
+      cwd: "/tmp",
+    });
+    expect(result.analysisOk).toBe(true);
+    expect(result.allowlistSatisfied).toBe(true);
+    expect(result.segmentSatisfiedBy).toContain("safeBuiltins");
+    expect(result.segmentSatisfiedBy).toContain("allowlist");
+  });
+
+  it("'test -d /tmp && git status' passes with allowlist plus safe builtin handling", () => {
+    const result = evaluateShellAllowlist({
+      command: "test -d /tmp && git status",
+      allowlist: gitAllowlist,
+      safeBins: new Set(),
+      cwd: "/tmp",
+    });
+    expect(result.analysisOk).toBe(true);
+    expect(result.allowlistSatisfied).toBe(true);
+    expect(result.segmentSatisfiedBy).toContain("safeBuiltins");
+    expect(result.segmentSatisfiedBy).toContain("allowlist");
+  });
+
+  it("'[ -d /tmp ] && git status' passes with allowlist plus safe builtin handling", () => {
+    const result = evaluateShellAllowlist({
+      command: "[ -d /tmp ] && git status",
       allowlist: gitAllowlist,
       safeBins: new Set(),
       cwd: "/tmp",
