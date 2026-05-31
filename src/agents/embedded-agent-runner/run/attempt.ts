@@ -1422,7 +1422,7 @@ export async function runEmbeddedAttempt(
           cfg: params.config,
         })
       : undefined;
-    const bundleMcpRuntime = bundleMcpSessionRuntime
+    bundleMcpRuntime = bundleMcpSessionRuntime
       ? await materializeBundleMcpToolsForRun({
           runtime: bundleMcpSessionRuntime,
           reservedToolNames: [
@@ -1436,7 +1436,7 @@ export async function runEmbeddedAttempt(
       disableTools: params.disableTools || isRawModelRun,
       toolsAllow: params.toolsAllow,
     });
-    const bundleLspRuntime = bundleLspEnabled
+    bundleLspRuntime = bundleLspEnabled
       ? await createBundleLspToolRuntime({
           workspaceDir: effectiveWorkspace,
           cfg: params.config,
@@ -2953,13 +2953,6 @@ export async function runEmbeddedAttempt(
       }
 
       let yieldAborted = false;
-      const getAbortReason = (signal: AbortSignal): unknown =>
-        "reason" in signal ? (signal as { reason?: unknown }).reason : undefined;
-      const makeTimeoutAbortReason = (): Error => {
-        const err = new Error("request timed out");
-        err.name = "TimeoutError";
-        return err;
-      };
       const abortCompaction = () => {
         if (!activeSession.isCompacting) {
           return;
@@ -3190,7 +3183,6 @@ export async function runEmbeddedAttempt(
 
       let abortWarnTimer: NodeJS.Timeout | undefined;
       const isProbeSession = params.sessionId?.startsWith("probe-") ?? false;
-      const compactionTimeoutMs = resolveCompactionTimeoutMs(params.config);
       let abortTimer: NodeJS.Timeout | undefined;
       let compactionGraceUsed = false;
       const scheduleAbortTimer = (delayMs: number, reason: "initial" | "compaction-grace") => {
