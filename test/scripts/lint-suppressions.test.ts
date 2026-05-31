@@ -184,11 +184,8 @@ describe("production lint suppressions", () => {
       "extensions/feishu/src/bitable.ts|typescript/no-unnecessary-type-parameters|1",
       "extensions/matrix/src/onboarding.test-harness.ts|typescript/no-unnecessary-type-parameters|1",
       "extensions/slack/src/monitor/provider-support.ts|typescript/no-unnecessary-type-parameters|1",
-      "extensions/telegram/src/telegram-ingress-worker.runtime.ts|unicorn/require-post-message-target-origin|1",
-      "extensions/telegram/src/telegram-ingress-worker.ts|unicorn/require-post-message-target-origin|1",
       "scripts/lib/extension-package-boundary.ts|typescript/no-unnecessary-type-parameters|1",
       "scripts/lib/plugin-npm-release.ts|typescript/no-unnecessary-type-parameters|1",
-      "src/agents/code-mode.worker.ts|unicorn/require-post-message-target-origin|1",
       "src/channels/plugins/channel-runtime-surface.types.ts|typescript/no-unnecessary-type-parameters|1",
       "src/channels/plugins/contracts/test-helpers.ts|typescript/no-unnecessary-type-parameters|1",
       "src/channels/plugins/types.plugin.ts|typescript/no-explicit-any|1",
@@ -196,7 +193,6 @@ describe("production lint suppressions", () => {
       "src/cli/command-options.ts|typescript/no-unnecessary-type-parameters|1",
       "src/cli/plugins-cli-test-helpers.ts|typescript/no-unnecessary-type-parameters|1",
       "src/cli/test-runtime-capture.ts|typescript/no-unnecessary-type-parameters|1",
-      "src/config/types.channels.ts|typescript/no-explicit-any|1",
       "src/gateway/test-helpers.server.ts|typescript/no-unnecessary-type-parameters|1",
       "src/hooks/module-loader.ts|typescript/no-unnecessary-type-parameters|1",
       "src/infra/channel-runtime-context.ts|typescript/no-unnecessary-type-parameters|1",
@@ -227,7 +223,6 @@ describe("production lint suppressions", () => {
       "src/test-utils/vitest-mock-fn.ts|typescript/no-explicit-any|1",
       "src/utils.ts|typescript/no-unnecessary-type-parameters|1",
       "src/version.ts|eslint/no-underscore-dangle|1",
-      "ui/src/ui/views/overview-log-tail.ts|no-control-regex|1",
     ]);
   });
 
@@ -239,10 +234,6 @@ describe("production lint suppressions", () => {
     expect(anySuppressions).toEqual([
       {
         file: "src/channels/plugins/types.plugin.ts",
-        rule: "typescript/no-explicit-any",
-      },
-      {
-        file: "src/config/types.channels.ts",
         rule: "typescript/no-explicit-any",
       },
       {
