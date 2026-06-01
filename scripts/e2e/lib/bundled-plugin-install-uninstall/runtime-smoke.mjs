@@ -40,6 +40,7 @@ const READY_OFFSET_LOG_NEEDLES = [
   Buffer.from("[gateway] http server listening"),
 ];
 const FORBIDDEN_POST_READY_DEPS_WORK = [/\b(?:npm|pnpm|yarn|corepack) install\b/iu];
+const isolatedStateRoots = new WeakMap();
 
 function readPositiveInt(raw, fallback) {
   const text = String(raw ?? "").trim();
@@ -339,7 +340,7 @@ export function runCommand(command, args, options = {}) {
       if (clearCommandTimer) {
         clearTimeout(clearCommandTimer);
       }
-      reject(error);
+      reject(toLintErrorObject(error, "Command spawn failed"));
     });
     child.on("close", (status, signal) => {
       if (settled) {
@@ -533,7 +534,7 @@ async function assertReadyzProbe(options) {
   );
 }
 
-async function rpcCall(method, params, options) {
+export async function rpcCall(method, params, options) {
   const rpcStateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-plugin-runtime-rpc-"));
   const args = [
     options.entrypoint,
@@ -550,15 +551,19 @@ async function rpcCall(method, params, options) {
     "--params",
     JSON.stringify(params ?? {}),
   ];
-  const { stdout } = await runCommand("node", args, {
-    env: {
-      ...process.env,
-      ...options.env,
-      OPENCLAW_NO_ONBOARD: "1",
-      OPENCLAW_STATE_DIR: rpcStateDir,
-    },
-  });
-  return unwrapRpcPayload(parseJsonOutput(stdout));
+  try {
+    const { stdout } = await runCommand("node", args, {
+      env: {
+        ...process.env,
+        ...options.env,
+        OPENCLAW_NO_ONBOARD: "1",
+        OPENCLAW_STATE_DIR: rpcStateDir,
+      },
+    });
+    return unwrapRpcPayload(parseJsonOutput(stdout));
+  } finally {
+    fs.rmSync(rpcStateDir, { force: true, recursive: true });
+  }
 }
 
 async function retryRpcCall(method, params, options) {
@@ -937,6 +942,7 @@ async function smokeTtsGlobalDisable(pluginId, pluginDir, provider, pluginIndex,
     throw error;
   } finally {
     await stopGateway(child);
+    cleanupIsolatedStateEnv(env);
   }
 }
 
@@ -999,6 +1005,7 @@ async function smokeOpenAiTts(pluginIndex) {
     throw error;
   } finally {
     await stopGateway(child);
+    cleanupIsolatedStateEnv(env);
   }
 }
 
@@ -1008,7 +1015,7 @@ export function createIsolatedStateEnv(label) {
   const stateDir = path.join(home, ".openclaw");
   const configPath = path.join(stateDir, "openclaw.json");
   fs.mkdirSync(stateDir, { recursive: true });
-  return {
+  const env = {
     ...process.env,
     HOME: home,
     USERPROFILE: home,
@@ -1016,6 +1023,17 @@ export function createIsolatedStateEnv(label) {
     OPENCLAW_STATE_DIR: stateDir,
     OPENCLAW_CONFIG_PATH: configPath,
   };
+  isolatedStateRoots.set(env, root);
+  return env;
+}
+
+export function cleanupIsolatedStateEnv(env) {
+  const root = isolatedStateRoots.get(env);
+  if (!root) {
+    return;
+  }
+  isolatedStateRoots.delete(env);
+  fs.rmSync(root, { force: true, recursive: true });
 }
 
 function tailFile(file) {
