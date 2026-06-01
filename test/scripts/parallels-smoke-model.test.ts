@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { delimiter, join, win32 } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   modelProviderConfigBatchJson,
   readPositiveIntEnv,
@@ -21,6 +21,7 @@ import { testing as hostServerTesting } from "../../scripts/e2e/parallels/host-s
 import { parseArgs as parseLinuxSmokeArgs } from "../../scripts/e2e/parallels/linux-smoke.ts";
 import { parseArgs as parseMacosSmokeArgs } from "../../scripts/e2e/parallels/macos-smoke.ts";
 import { parseArgs as parseNpmUpdateSmokeArgs } from "../../scripts/e2e/parallels/npm-update-smoke.ts";
+import { PhaseRunner } from "../../scripts/e2e/parallels/phase-runner.ts";
 import { parseArgs as parseWindowsSmokeArgs } from "../../scripts/e2e/parallels/windows-smoke.ts";
 import { spawnNodeEvalSync } from "../../src/test-utils/node-process.js";
 
@@ -615,6 +616,37 @@ if (isPrlctl) {
     }
   });
 
+  it("streams full phase logs to disk while bounding the failure tail", async () => {
+    const runDir = mkdtempSync(join(tmpdir(), "openclaw-parallels-phase-"));
+    const phaseRunner = new PhaseRunner(runDir, 128);
+    const writes: string[] = [];
+    const stderrWrite = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      writes.push(String(chunk));
+      return true;
+    });
+
+    try {
+      await expect(
+        phaseRunner.phase("noisy", 30, () => {
+          phaseRunner.append(`old-${"x".repeat(256)}`);
+          phaseRunner.append("recent failure");
+          throw new Error("phase failed");
+        }),
+      ).rejects.toThrow("phase failed");
+
+      const logText = readFileSync(join(runDir, "noisy.log"), "utf8");
+      expect(logText).toContain("old-");
+      expect(logText).toContain("recent failure");
+      const stderr = writes.join("");
+      expect(stderr).toContain("phase log tail truncated");
+      expect(stderr).toContain("recent failure");
+      expect(stderr).not.toContain(`old-${"x".repeat(200)}`);
+    } finally {
+      stderrWrite.mockRestore();
+      rmSync(runDir, { force: true, recursive: true });
+    }
+  });
+
   it("runs POSIX guest shell scripts with a normal install umask", () => {
     const guestTransports = readFileSync(TS_PATHS.guestTransports, "utf8");
 
@@ -775,30 +807,24 @@ if (isPrlctl) {
     expect(Date.now() - startedAt).toBeLessThan(500);
   });
 
-  it.runIf(process.platform !== "win32")(
-    "throws checked timed host command timeouts",
-    () => {
-      expect(() =>
-        run(process.execPath, ["-e", "setInterval(() => {}, 1000);"], {
-          quiet: true,
-          timeoutMs: 50,
-        }),
-      ).toThrow(/timed out after 50ms/u);
-    },
-  );
-
-  it.runIf(process.platform !== "win32")(
-    "preserves child exit 124 in timed host commands",
-    () => {
-      const result = run(process.execPath, ["-e", "process.exit(124)"], {
-        check: false,
+  it.runIf(process.platform !== "win32")("throws checked timed host command timeouts", () => {
+    expect(() =>
+      run(process.execPath, ["-e", "setInterval(() => {}, 1000);"], {
         quiet: true,
-        timeoutMs: 1_000,
-      });
+        timeoutMs: 50,
+      }),
+    ).toThrow(/timed out after 50ms/u);
+  });
 
-      expect(result.status).toBe(124);
-    },
-  );
+  it.runIf(process.platform !== "win32")("preserves child exit 124 in timed host commands", () => {
+    const result = run(process.execPath, ["-e", "process.exit(124)"], {
+      check: false,
+      quiet: true,
+      timeoutMs: 1_000,
+    });
+
+    expect(result.status).toBe(124);
+  });
 
   it.runIf(process.platform !== "win32")(
     "kills timed-out host command process groups",
@@ -843,18 +869,15 @@ setInterval(() => {}, 1000);
     },
   );
 
-  it.runIf(process.platform !== "win32")(
-    "preserves timed host command spawn errors",
-    () => {
-      expect(() =>
-        run("openclaw-definitely-missing-host-command", [], {
-          check: false,
-          quiet: true,
-          timeoutMs: 50,
-        }),
-      ).toThrow(/ENOENT/u);
-    },
-  );
+  it.runIf(process.platform !== "win32")("preserves timed host command spawn errors", () => {
+    expect(() =>
+      run("openclaw-definitely-missing-host-command", [], {
+        check: false,
+        quiet: true,
+        timeoutMs: 50,
+      }),
+    ).toThrow(/ENOENT/u);
+  });
 
   it.runIf(process.platform !== "win32")(
     "does not treat timed command stderr as wrapper control data",
@@ -873,20 +896,17 @@ setInterval(() => {}, 1000);
     },
   );
 
-  it.runIf(process.platform !== "win32")(
-    "preserves timed host command output capture",
-    () => {
-      const expected = "x".repeat(256 * 1024);
-      const result = run(process.execPath, ["-e", "process.stdout.write('x'.repeat(256 * 1024))"], {
-        check: false,
-        quiet: true,
-        timeoutMs: 1_000,
-      });
+  it.runIf(process.platform !== "win32")("preserves timed host command output capture", () => {
+    const expected = "x".repeat(256 * 1024);
+    const result = run(process.execPath, ["-e", "process.stdout.write('x'.repeat(256 * 1024))"], {
+      check: false,
+      quiet: true,
+      timeoutMs: 1_000,
+    });
 
-      expect(result.status).toBe(0);
-      expect(result.stdout).toBe(expected);
-    },
-  );
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe(expected);
+  });
 
   it.runIf(process.platform !== "win32")(
     "ignores broken stdin pipes from timed host commands that exit early",
