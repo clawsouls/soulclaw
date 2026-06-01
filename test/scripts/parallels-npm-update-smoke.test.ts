@@ -77,6 +77,19 @@ describe("parallels npm update smoke", () => {
     expect(updateBlock).not.toContain("log += text");
   });
 
+  it("streams fresh lane logs instead of retaining them in memory", () => {
+    const script = readFileSync(SCRIPT_PATH, "utf8");
+    const spawnLoggedBlock = script.slice(
+      script.indexOf("  private spawnLogged"),
+      script.indexOf("  private async monitorJobs"),
+    );
+
+    expect(spawnLoggedBlock).toContain('writeFileSync(logPath, "", "utf8")');
+    expect(spawnLoggedBlock).toContain("appendFileSync(logPath, text");
+    expect(spawnLoggedBlock).not.toContain("let log");
+    expect(spawnLoggedBlock).not.toContain("log += text");
+  });
+
   it("runs Windows updates through a detached done-file runner", () => {
     const script = readFileSync(SCRIPT_PATH, "utf8");
     const transports = readFileSync(GUEST_TRANSPORTS_PATH, "utf8");

@@ -1,7 +1,7 @@
 #!/usr/bin/env -S pnpm tsx
 import { spawn } from "node:child_process";
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -638,28 +638,25 @@ class NpmUpdateSmoke {
     onOutput: (text: string) => void = () => undefined,
   ): Promise<number> {
     return new Promise((resolve, reject) => {
+      writeFileSync(logPath, "", "utf8");
       const child = spawn(command, args, {
         cwd: repoRoot,
         env: { ...process.env, ...env },
         stdio: ["ignore", "pipe", "pipe"],
       });
-      let log = "";
       child.stdout.on("data", (chunk: Buffer) => {
         const text = chunk.toString("utf8");
-        log += text;
+        appendFileSync(logPath, text, "utf8");
         onOutput(text);
       });
       child.stderr.on("data", (chunk: Buffer) => {
         const text = chunk.toString("utf8");
-        log += text;
+        appendFileSync(logPath, text, "utf8");
         onOutput(text);
       });
       child.on("error", reject);
       child.on("close", (code) => {
-        void (async () => {
-          await writeFile(logPath, log, "utf8");
-          resolve(code ?? 1);
-        })();
+        resolve(code ?? 1);
       });
     });
   }
