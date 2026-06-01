@@ -1,45 +1,36 @@
-import fs from "node:fs/promises";
-import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
-import { type RawData, WebSocketServer } from "ws";
-import { PROTOCOL_VERSION } from "../../packages/gateway-protocol/src/index.js";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { WebSocketServer } from "ws";
 import { loadOrCreateDeviceIdentity } from "../infra/device-identity.js";
+import { createSuiteTempRootTracker } from "../test-helpers/temp-dir.js";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
 import { connectTestGatewayClient } from "./gateway-cli-backend.live-helpers.js";
+import {
+  buildMinimalGatewayHelloOkPayload,
+  closeMinimalGatewayServer,
+  parseMinimalGatewayRequestFrame,
+  sendMinimalGatewayConnectChallenge,
+  sendMinimalGatewayResponse,
+} from "./minimal-gateway.test-helpers.js";
 
 const GATEWAY_CONNECT_TIMEOUT_MS = 5_000;
-const tempRoots: string[] = [];
+const tempDirs = createSuiteTempRootTracker({ prefix: "openclaw-gateway-connect-" });
 
 async function createTempDeviceIdentity() {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gateway-connect-"));
-  tempRoots.push(tempRoot);
+  const tempRoot = await tempDirs.make("device");
   return loadOrCreateDeviceIdentity(path.join(tempRoot, "device.json"));
 }
 
 async function startMinimalGatewayServer(params: { token: string }) {
-  const httpServer = createServer();
-  const wss = new WebSocketServer({ server: httpServer });
+  const wss = new WebSocketServer({ host: "127.0.0.1", port: 0 });
   const requests: string[] = [];
   let connectParams: Record<string, unknown> | undefined;
 
   wss.on("connection", (ws) => {
-    ws.send(
-      JSON.stringify({
-        type: "event",
-        event: "connect.challenge",
-        payload: { nonce: "test-nonce" },
-      }),
-    );
+    sendMinimalGatewayConnectChallenge(ws);
     ws.on("message", (data) => {
-      const frame = JSON.parse(rawWsDataToString(data)) as {
-        type?: string;
-        id?: string;
-        method?: string;
-        params?: { auth?: { token?: string }; device?: { nonce?: string } };
-      };
+      const frame = parseMinimalGatewayRequestFrame(data);
       if (frame.type !== "req" || !frame.id) {
         return;
       }
@@ -48,42 +39,37 @@ async function startMinimalGatewayServer(params: { token: string }) {
         connectParams = frame.params as Record<string, unknown> | undefined;
         expect(frame.params?.auth?.token).toBe(params.token);
         expect(frame.params?.device?.nonce).toBe("test-nonce");
-        ws.send(
-          JSON.stringify({
-            type: "res",
-            id: frame.id,
-            ok: true,
-            payload: {
-              type: "hello-ok",
-              protocol: PROTOCOL_VERSION,
-              server: { version: "test", connId: "conn-1" },
-              features: { methods: ["health"], events: ["connect.challenge"] },
-              snapshot: {
-                presence: [],
-                health: { ok: true },
-                stateVersion: { presence: 0, health: 0 },
-                uptimeMs: 0,
-              },
-              policy: {
-                maxPayload: 1,
-                maxBufferedBytes: 1,
-                tickIntervalMs: 60_000,
-              },
+        sendMinimalGatewayResponse(
+          ws,
+          frame.id,
+          buildMinimalGatewayHelloOkPayload({
+            connId: "conn-1",
+            methods: ["health"],
+            snapshot: {
+              presence: [],
+              health: { ok: true },
+              stateVersion: { presence: 0, health: 0 },
+              uptimeMs: 0,
+            },
+            policy: {
+              maxPayload: 1,
+              maxBufferedBytes: 1,
+              tickIntervalMs: 60_000,
             },
           }),
         );
         return;
       }
       if (frame.method === "health") {
-        ws.send(JSON.stringify({ type: "res", id: frame.id, ok: true, payload: { ok: true } }));
+        sendMinimalGatewayResponse(ws, frame.id, { ok: true });
       }
     });
   });
 
   await new Promise<void>((resolve) => {
-    httpServer.listen(0, "127.0.0.1", resolve);
+    wss.once("listening", resolve);
   });
-  const address = httpServer.address() as AddressInfo;
+  const address = wss.address() as AddressInfo;
   return {
     requests,
     get connectParams() {
@@ -91,37 +77,18 @@ async function startMinimalGatewayServer(params: { token: string }) {
     },
     url: `ws://127.0.0.1:${address.port}`,
     close: async () => {
-      for (const client of wss.clients) {
-        client.terminate();
-      }
-      await new Promise<void>((resolve, reject) => {
-        wss.close((error) => (error ? reject(error) : resolve()));
-      });
-      await new Promise<void>((resolve, reject) => {
-        httpServer.close((error) => (error ? reject(error) : resolve()));
-      });
+      await closeMinimalGatewayServer(wss);
     },
   };
 }
 
-function rawWsDataToString(data: RawData): string {
-  if (typeof data === "string") {
-    return data;
-  }
-  if (Buffer.isBuffer(data)) {
-    return data.toString("utf8");
-  }
-  if (Array.isArray(data)) {
-    return Buffer.concat(data).toString("utf8");
-  }
-  return Buffer.from(data).toString("utf8");
-}
-
 describe("gateway cli backend connect", () => {
-  afterEach(async () => {
-    await Promise.all(
-      tempRoots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })),
-    );
+  beforeAll(async () => {
+    await tempDirs.setup();
+  });
+
+  afterAll(async () => {
+    await tempDirs.cleanup();
   });
 
   it(
