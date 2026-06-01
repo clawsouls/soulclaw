@@ -1773,6 +1773,20 @@ test -f "$TMPDIR/docker-cmd-seen"
     expect(client).not.toContain('"agent.wait"');
   });
 
+  it("cleans OpenAI web search smoke processes through the E2E helpers", () => {
+    const scenario = readFileSync(OPENAI_WEB_SEARCH_MINIMAL_SCENARIO_PATH, "utf8");
+
+    expect(scenario).toContain('openclaw_e2e_terminate_gateways "${gateway_pid:-}"');
+    expect(scenario).toContain('openclaw_e2e_stop_process "${mock_pid:-}"');
+    expect(scenario).toContain(
+      'gateway_pid="$(openclaw_e2e_start_gateway "$entry" "$PORT" "$GATEWAY_LOG")"',
+    );
+    expect(scenario).toContain('openclaw_e2e_wait_gateway_ready "$gateway_pid" "$GATEWAY_LOG" 360');
+    expect(scenario).not.toContain('kill "$gateway_pid"');
+    expect(scenario).not.toContain('kill "$mock_pid"');
+    expect(scenario).not.toContain('node "$entry" gateway --port "$PORT"');
+  });
+
   it("keeps ClawHub plugin Docker smoke hermetic by default", () => {
     const runner = readFileSync(PLUGINS_DOCKER_E2E_PATH, "utf8");
     const sweep = readFileSync(PLUGINS_DOCKER_SWEEP_PATH, "utf8");
