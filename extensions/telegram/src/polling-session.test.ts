@@ -600,6 +600,7 @@ describe("TelegramPollingSession", () => {
   });
 
   afterEach(() => {
+    pollingSessionTesting.resetActiveSpooledUpdateHandlersForTests();
     clearTelegramRuntime();
     closeOpenClawStateDatabaseForTest();
   });
@@ -1921,21 +1922,17 @@ describe("TelegramPollingSession", () => {
     });
 
     let workerTaskCalls = 0;
-    let stopWorker: (() => void) | undefined;
-    const workerDone = new Promise<void>((resolve) => {
-      stopWorker = resolve;
-    });
     const createWorker = vi.fn(() => ({
       onMessage: vi.fn(() => () => undefined),
-      stop: vi.fn(async () => {
-        stopWorker?.();
-      }),
+      stop: vi.fn(async () => undefined),
       task: vi.fn(async () => {
         workerTaskCalls += 1;
         if (workerTaskCalls === 1) {
           return;
         }
-        await workerDone;
+        await new Promise<void>((resolve) => {
+          abort.signal.addEventListener("abort", () => resolve(), { once: true });
+        });
       }),
     }));
 
