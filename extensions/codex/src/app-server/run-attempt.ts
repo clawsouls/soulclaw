@@ -1832,6 +1832,22 @@ export async function runCodexAppServerAttempt(
   });
 
   let turn: CodexTurnStartResponse | undefined;
+  const throwIfTurnStartAcceptedAfterAbort = () => {
+    if (!runAbortController.signal.aborted) {
+      return;
+    }
+    const reason = runAbortController.signal.reason;
+    if (reason instanceof Error) {
+      throw reason;
+    }
+    const error = new Error(
+      typeof reason === "string" && reason.length > 0
+        ? reason
+        : "codex app-server turn start aborted before acceptance",
+    );
+    error.name = "AbortError";
+    throw error;
+  };
   const startCodexTurn = async (): Promise<CodexTurnStartResponse> => {
     const turnStartParams = buildTurnStartParams(params, {
       threadId: thread.threadId,
@@ -1847,12 +1863,14 @@ export async function runCodexAppServerAttempt(
         workspaceBootstrapContext.heartbeatCollaborationInstructions,
     });
     codexModelCallDiagnostics.setRequestPayloadBytes(utf8JsonByteLength(turnStartParams));
-    return assertCodexTurnStartResponse(
+    const startedTurn = assertCodexTurnStartResponse(
       await client.request("turn/start", turnStartParams, {
         timeoutMs: params.timeoutMs,
         signal: runAbortController.signal,
       }),
     );
+    throwIfTurnStartAcceptedAfterAbort();
+    return startedTurn;
   };
   try {
     codexModelCallDiagnostics.emitStarted();
@@ -2123,7 +2141,7 @@ export async function runCodexAppServerAttempt(
     kind: "embedded" as const,
     queueMessage: async (text: string, optionsLocal?: CodexSteeringQueueOptions) =>
       activeSteeringQueue.queue(text, optionsLocal),
-    isStreaming: () => !completed,
+    isStreaming: () => !completed && !runAbortController.signal.aborted,
     isCompacting: () => projectorRef.current?.isCompacting() ?? false,
     sourceReplyDeliveryMode: params.sourceReplyDeliveryMode,
     cancel: () => runAbortController.abort("cancelled"),

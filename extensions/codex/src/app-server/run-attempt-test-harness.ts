@@ -465,6 +465,7 @@ export function createRuntimeDynamicTool(name: string): RuntimeDynamicToolForTes
 
 export function setupRunAttemptTestHooks(): void {
   beforeEach(async () => {
+    vi.useRealTimers();
     clearInternalHooks();
     resetAgentEventsForTest();
     resetDiagnosticEventsForTest();
