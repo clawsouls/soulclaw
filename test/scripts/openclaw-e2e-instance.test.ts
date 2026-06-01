@@ -374,28 +374,33 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
     }
   });
 
-  it("escalates Node watchdog children that ignore parent termination", () => {
-    const tempDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "openclaw-e2e-instance-node-watchdog-signal-"),
-    );
-    try {
-      writeNodeShim(tempDir);
-      const childPath = path.join(tempDir, "ignore-term.cjs");
-      const pidPath = path.join(tempDir, "child.pid");
-      const watchdogPidPath = path.join(tempDir, "watchdog.pid");
-      fs.writeFileSync(
-        childPath,
-        [
-          "const fs = require('node:fs');",
-          "fs.writeFileSync(process.argv[2], String(process.pid));",
-          "fs.writeFileSync(process.argv[3], String(process.ppid));",
-          "process.on('SIGTERM', () => {});",
-          "setInterval(() => {}, 1000);",
-          "",
-        ].join("\n"),
+  for (const [shellSignal, expectedStatus] of [
+    ["TERM", "143"],
+    ["HUP", "129"],
+  ] as const) {
+    it(`escalates Node watchdog children that ignore parent SIG${shellSignal}`, () => {
+      const tempDir = fs.mkdtempSync(
+        path.join(os.tmpdir(), "openclaw-e2e-instance-node-watchdog-signal-"),
       );
+      try {
+        writeNodeShim(tempDir);
+        const childPath = path.join(tempDir, "ignore-term.cjs");
+        const pidPath = path.join(tempDir, "child.pid");
+        const watchdogPidPath = path.join(tempDir, "watchdog.pid");
+        fs.writeFileSync(
+          childPath,
+          [
+            "const fs = require('node:fs');",
+            "fs.writeFileSync(process.argv[2], String(process.pid));",
+            "fs.writeFileSync(process.argv[3], String(process.ppid));",
+            "process.on('SIGTERM', () => {});",
+            "process.on('SIGHUP', () => {});",
+            "setInterval(() => {}, 1000);",
+            "",
+          ].join("\n"),
+        );
 
-      const script = `
+        const script = `
 set -euo pipefail
 source ${shellQuote(helperPath)}
 export OPENCLAW_E2E_TIMEOUT_KILL_GRACE_MS=100
@@ -407,12 +412,12 @@ for ((i = 0; i < 100; i += 1)); do
 done
 [ -s ${shellQuote(pidPath)} ]
 [ -s ${shellQuote(watchdogPidPath)} ]
-kill -TERM "$(/bin/cat ${shellQuote(watchdogPidPath)})"
+kill -${shellSignal} "$(/bin/cat ${shellQuote(watchdogPidPath)})"
 set +e
 wait "$wrapper_pid"
 status="$?"
 set -e
-[ "$status" = "143" ]
+[ "$status" = "${expectedStatus}" ]
 child_pid="$(/bin/cat ${shellQuote(pidPath)})"
 for ((i = 0; i < 100; i += 1)); do
   kill -0 "$child_pid" 2>/dev/null || exit 0
@@ -422,19 +427,20 @@ echo "child still alive after watchdog termination" >&2
 exit 1
 `;
 
-      const result = spawnSync("/bin/bash", ["-c", script], {
-        encoding: "utf8",
-        env: shellTestEnv({
-          PATH: tempDir,
-        }),
-        timeout: 5_000,
-      });
+        const result = spawnSync("/bin/bash", ["-c", script], {
+          encoding: "utf8",
+          env: shellTestEnv({
+            PATH: tempDir,
+          }),
+          timeout: 5_000,
+        });
 
-      expectShellSuccess(result);
-    } finally {
-      fs.rmSync(tempDir, { force: true, recursive: true });
-    }
-  });
+        expectShellSuccess(result);
+      } finally {
+        fs.rmSync(tempDir, { force: true, recursive: true });
+      }
+    });
+  }
 
   it("terminates only the tracked gateway process", () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-e2e-gateway-terminate-"));

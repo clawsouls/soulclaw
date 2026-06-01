@@ -517,29 +517,33 @@ stderr="$(<"$TMPDIR/stderr")"
     }
   });
 
-  it("escalates Docker watchdog children that ignore parent termination", () => {
-    const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-node-signal-"));
+  for (const [shellSignal, expectedStatus] of [
+    ["TERM", "143"],
+    ["HUP", "129"],
+  ] as const) {
+    it(`escalates Docker watchdog children that ignore parent SIG${shellSignal}`, () => {
+      const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-node-signal-"));
 
-    try {
-      const binDir = join(workDir, "bin");
-      mkdirSync(binDir);
-      writeFileSync(
-        join(binDir, "node"),
-        `#!/bin/bash\nexec ${shellQuote(process.execPath)} "$@"\n`,
-      );
-      writeFileSync(
-        join(binDir, "docker"),
-        `#!/bin/bash
+      try {
+        const binDir = join(workDir, "bin");
+        mkdirSync(binDir);
+        writeFileSync(
+          join(binDir, "node"),
+          `#!/bin/bash\nexec ${shellQuote(process.execPath)} "$@"\n`,
+        );
+        writeFileSync(
+          join(binDir, "docker"),
+          `#!/bin/bash
 printf "%s\\n" "$$" >"$TMPDIR/docker-pid"
 printf "%s\\n" "$PPID" >"$TMPDIR/watchdog-pid"
-trap "" TERM
+trap "" TERM HUP
 while true; do /bin/sleep 1; done
 `,
-      );
-      chmodSync(join(binDir, "node"), 0o755);
-      chmodSync(join(binDir, "docker"), 0o755);
-      const rootDir = process.cwd();
-      const script = `
+        );
+        chmodSync(join(binDir, "node"), 0o755);
+        chmodSync(join(binDir, "docker"), 0o755);
+        const rootDir = process.cwd();
+        const script = `
 set -euo pipefail
 ROOT_DIR=${shellQuote(rootDir)}
 TMPDIR=${shellQuote(workDir)}
@@ -558,12 +562,12 @@ for ((i = 0; i < 100; i += 1)); do
 done
 [ -s "$TMPDIR/docker-pid" ]
 [ -s "$TMPDIR/watchdog-pid" ]
-kill -TERM "$(/bin/cat "$TMPDIR/watchdog-pid")"
+kill -${shellSignal} "$(/bin/cat "$TMPDIR/watchdog-pid")"
 set +e
 wait "$watchdog_pid"
 status="$?"
 set -e
-[ "$status" = "143" ]
+[ "$status" = "${expectedStatus}" ]
 docker_pid="$(/bin/cat "$TMPDIR/docker-pid")"
 for ((i = 0; i < 100; i += 1)); do
   kill -0 "$docker_pid" 2>/dev/null || exit 0
@@ -573,11 +577,12 @@ echo "docker child still alive after watchdog termination" >&2
 exit 1
 `;
 
-      execFileSync("bash", ["-lc", script], { encoding: "utf8" });
-    } finally {
-      rmSync(workDir, { recursive: true, force: true });
-    }
-  });
+        execFileSync("bash", ["-lc", script], { encoding: "utf8" });
+      } finally {
+        rmSync(workDir, { recursive: true, force: true });
+      }
+    });
+  }
 
   it("uses plain timeout when kill-after is unsupported", () => {
     const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-plain-timeout-"));
