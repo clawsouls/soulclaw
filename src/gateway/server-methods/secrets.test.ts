@@ -73,6 +73,25 @@ function expectWarnMessageWith(warn: ReturnType<typeof vi.fn>, text: string): vo
   expect(warn.mock.calls.map(([message]) => String(message)).join("\n")).toContain(text);
 }
 
+async function expectMemoryStatusResolveUnavailable(params: {
+  handlers: ReturnType<typeof createSecretsHandlers>;
+  warn: ReturnType<typeof vi.fn>;
+  warningText: string;
+}) {
+  const respond = vi.fn();
+  await invokeSecretsResolve({
+    handlers: params.handlers,
+    respond,
+    commandName: "memory status",
+    targetIds: ["talk.providers.*.apiKey"],
+  });
+  expectRespondError(respond, {
+    code: "UNAVAILABLE",
+    message: "secrets.resolve failed",
+  });
+  expectWarnMessageWith(params.warn, params.warningText);
+}
+
 describe("secrets handlers", () => {
   function createHandlers(overrides?: {
     reloadSecrets?: () => Promise<{ warningCount: number }>;
@@ -223,18 +242,11 @@ describe("secrets handlers", () => {
       inactiveRefPaths: [],
     });
     const handlers = createHandlers({ resolveSecrets, log: { warn } });
-    const respond = vi.fn();
-    await invokeSecretsResolve({
+    await expectMemoryStatusResolveUnavailable({
       handlers,
-      respond,
-      commandName: "memory status",
-      targetIds: ["talk.providers.*.apiKey"],
+      warn,
+      warningText: "secrets.resolve returned invalid payload.",
     });
-    expectRespondError(respond, {
-      code: "UNAVAILABLE",
-      message: "secrets.resolve failed",
-    });
-    expectWarnMessageWith(warn, "secrets.resolve returned invalid payload.");
   });
 
   it("logs error details when secrets.resolve throws", async () => {
@@ -243,17 +255,10 @@ describe("secrets handlers", () => {
       resolveSecrets: vi.fn().mockRejectedValue(new Error("EACCES: permission denied")),
       log: { warn },
     });
-    const respond = vi.fn();
-    await invokeSecretsResolve({
+    await expectMemoryStatusResolveUnavailable({
       handlers,
-      respond,
-      commandName: "memory status",
-      targetIds: ["talk.providers.*.apiKey"],
+      warn,
+      warningText: "EACCES: permission denied",
     });
-    expectRespondError(respond, {
-      code: "UNAVAILABLE",
-      message: "secrets.resolve failed",
-    });
-    expectWarnMessageWith(warn, "EACCES: permission denied");
   });
 });
