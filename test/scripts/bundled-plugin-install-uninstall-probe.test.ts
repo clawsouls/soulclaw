@@ -201,6 +201,15 @@ describe("bundled plugin install/uninstall probe", () => {
     expect(sweep).not.toContain("readarray ");
   });
 
+  it("bounds bundled plugin package lifecycle commands", () => {
+    const sweep = fs.readFileSync(sweepPath, "utf8");
+
+    expect(sweep).toContain("OPENCLAW_BUNDLED_PLUGIN_SWEEP_COMMAND_TIMEOUT:-300s");
+    expect(sweep.match(/openclaw_e2e_maybe_timeout/g)).toHaveLength(1);
+    expect(sweep).toContain('run_logged_sweep_command "install $plugin_id"');
+    expect(sweep).toContain('run_logged_sweep_command "uninstall $plugin_id"');
+  });
+
   it("keeps runtime command output capture bounded", async () => {
     const runtimeSmoke = await import(pathToFileURL(runtimeSmokePath).href);
 
