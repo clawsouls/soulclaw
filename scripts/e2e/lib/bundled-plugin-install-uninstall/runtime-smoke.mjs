@@ -705,11 +705,7 @@ async function runManifestProbes(plan, options) {
       { probe: false, timeoutMs: 2000 },
       options,
     );
-    if (!isChannelVisible(status, channel)) {
-      console.log(
-        `Runtime channel status smoke skipped for ${options.pluginId}: ${channel} is not visible in dry channels.status`,
-      );
-    }
+    assertChannelVisible(status, channel, options.pluginId);
   }
   if (plan.runtimeSlashAliases.length > 0 && plan.activeInThisProbe) {
     await retryCommandsListWithAliases(plan.runtimeSlashAliases, options);
@@ -746,6 +742,15 @@ function isChannelVisible(payload, channel) {
     return true;
   }
   return false;
+}
+
+export function assertChannelVisible(payload, channel, pluginId) {
+  if (isChannelVisible(payload, channel)) {
+    return;
+  }
+  throw new Error(
+    `Runtime channel status missing manifest channel ${channel} for ${pluginId}: channels.status did not expose the declared channel`,
+  );
 }
 
 export function isCommandVisible(payload, alias) {

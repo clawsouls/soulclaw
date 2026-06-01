@@ -188,6 +188,23 @@ describe("bundled plugin install/uninstall probe", () => {
     expect(runtimeSmoke.isCommandVisible(payload, "/missing")).toBe(false);
   });
 
+  it("fails runtime smoke when declared channels are absent from status", async () => {
+    const runtimeSmoke = await import(pathToFileURL(runtimeSmokePath).href);
+
+    expect(() =>
+      runtimeSmoke.assertChannelVisible(
+        { channelMeta: [{ id: "qa-channel" }] },
+        "qa-channel",
+        "qa-channel",
+      ),
+    ).not.toThrow();
+    expect(() =>
+      runtimeSmoke.assertChannelVisible({}, "qa-channel", "qa-channel"),
+    ).toThrow(
+      "Runtime channel status missing manifest channel qa-channel for qa-channel",
+    );
+  });
+
   it("rejects loose runtime output limit env values instead of parsing prefixes", async () => {
     const runtimeSmoke = await importRuntimeSmokeWithEnv({
       OPENCLAW_BUNDLED_PLUGIN_RUNTIME_OUTPUT_CHARS: "5chars",
