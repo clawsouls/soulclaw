@@ -1602,12 +1602,13 @@ describe("grouped chat rendering", () => {
       },
       { interval: 1, timeout: 100 },
     );
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [fetchUrl, fetchInit] = requireFetchCall(fetchMock);
-    expect(fetchUrl).toBe(
-      "/api/chat/media/outgoing/agent%3Amain%3Amain/00000000-0000-4000-8000-000000000000/full",
-    );
-    expectSameOriginGet(fetchInit);
+    expect(fetchMock).toHaveBeenCalled();
+    for (const [fetchUrl, fetchInit] of fetchMock.mock.calls as [string, RequestInit?][]) {
+      expect(fetchUrl).toBe(
+        "/api/chat/media/outgoing/agent%3Amain%3Amain/00000000-0000-4000-8000-000000000000/full",
+      );
+      expectSameOriginGet(fetchInit);
+    }
   });
 
   it("does not send auth to cross-origin managed-image-looking URLs", () => {

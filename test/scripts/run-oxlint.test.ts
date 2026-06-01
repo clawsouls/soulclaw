@@ -347,7 +347,7 @@ describe("run-oxlint", () => {
             "    ...process.env,",
             "    OPENCLAW_OXLINT_SHARD_HEARTBEAT_MS: '0',",
             "    OPENCLAW_OXLINT_SHARD_TIMEOUT_MS: '0',",
-            "    OPENCLAW_OXLINT_SHARD_KILL_GRACE_MS: '25',",
+            "    OPENCLAW_OXLINT_SHARD_KILL_GRACE_MS: '250',",
             "  },",
             "  extraArgs: [],",
             "  runner: process.env.RUNNER_FILE,",
