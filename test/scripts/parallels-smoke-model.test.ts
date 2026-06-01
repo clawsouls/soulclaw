@@ -602,10 +602,15 @@ if (isPrlctl) {
   it("clears phase timers and applies phase deadlines to guest commands", () => {
     const phaseRunner = readFileSync(TS_PATHS.phaseRunner, "utf8");
     const guestTransports = readFileSync(TS_PATHS.guestTransports, "utf8");
+    const parallelsVm = readFileSync(TS_PATHS.parallelsVm, "utf8");
+    const snapshots = readFileSync(TS_PATHS.snapshots, "utf8");
 
     expect(phaseRunner).toContain("clearTimeout(timer)");
     expect(phaseRunner).toContain("remainingTimeoutMs");
     expect(guestTransports).toContain("this.phases.remainingTimeoutMs");
+    expect(parallelsVm).toContain("PRLCTL_STATUS_TIMEOUT_MS");
+    expect(parallelsVm).toContain("probeTimeoutMs");
+    expect(snapshots).toContain("SNAPSHOT_LIST_TIMEOUT_MS");
 
     for (const scriptPath of OS_TS_PATHS) {
       const script = readFileSync(scriptPath, "utf8");
@@ -614,6 +619,14 @@ if (isPrlctl) {
       expect(script, scriptPath).toContain("remainingPhaseTimeoutMs");
       expect(script, scriptPath).toContain("timeoutMs:");
     }
+
+    const linux = readFileSync(TS_PATHS.linux, "utf8");
+    const macos = readFileSync(TS_PATHS.macos, "utf8");
+    const windows = readFileSync(TS_PATHS.windows, "utf8");
+    expect(linux).toContain("probeTimeoutMs: () => this.remainingPhaseTimeoutMs(30_000)");
+    expect(windows).toContain("probeTimeoutMs: () => this.remainingPhaseTimeoutMs(30_000)");
+    expect(macos).toContain("probeTimeoutMs: () => this.remainingPhaseTimeoutMs(30_000)");
+    expect(macos).toContain("timeoutMs: this.remainingPhaseTimeoutMs(360_000)");
   });
 
   it("streams full phase logs to disk while bounding the failure tail", async () => {
