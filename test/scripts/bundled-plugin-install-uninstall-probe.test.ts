@@ -306,6 +306,22 @@ describe("bundled plugin install/uninstall probe", () => {
     });
   });
 
+  it("adds channel-prefixed env activation markers for runtime smoke startup", async () => {
+    const runtimeSmoke = await import(pathToFileURL(runtimeSmokePath).href);
+
+    expect(
+      runtimeSmoke.withManifestChannelActivationEnv({ TELEGRAM_RUNTIME_SMOKE: "kept" }, [
+        "clickclack",
+        "nextcloud-talk",
+        "telegram",
+      ]),
+    ).toMatchObject({
+      CLICKCLACK_RUNTIME_SMOKE: "1",
+      NEXTCLOUD_TALK_RUNTIME_SMOKE: "1",
+      TELEGRAM_RUNTIME_SMOKE: "kept",
+    });
+  });
+
   it("rejects loose runtime output limit env values instead of parsing prefixes", async () => {
     const runtimeSmoke = await importRuntimeSmokeWithEnv({
       OPENCLAW_BUNDLED_PLUGIN_RUNTIME_OUTPUT_CHARS: "5chars",
