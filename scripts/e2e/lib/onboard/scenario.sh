@@ -3,9 +3,14 @@ set -euo pipefail
 trap "" PIPE
 export TERM=xterm-256color
 source scripts/lib/openclaw-e2e-instance.sh
-openclaw_e2e_eval_test_state_from_b64 "${OPENCLAW_TEST_STATE_FUNCTION_B64:?missing OPENCLAW_TEST_STATE_FUNCTION_B64}"
-ONBOARD_FLAGS="--flow quickstart --auth-choice skip --skip-channels --skip-skills --skip-daemon --skip-ui"
-OPENCLAW_ENTRY="$(openclaw_e2e_resolve_entrypoint)"
+OPENCLAW_ONBOARD_SCENARIO_SOURCE_ONLY="${OPENCLAW_ONBOARD_SCENARIO_SOURCE_ONLY:-0}"
+if [ "$OPENCLAW_ONBOARD_SCENARIO_SOURCE_ONLY" != "1" ]; then
+  openclaw_e2e_eval_test_state_from_b64 "${OPENCLAW_TEST_STATE_FUNCTION_B64:?missing OPENCLAW_TEST_STATE_FUNCTION_B64}"
+fi
+ONBOARD_FLAGS="${ONBOARD_FLAGS:---flow quickstart --auth-choice skip --skip-channels --skip-skills --skip-daemon --skip-ui}"
+if [ -z "${OPENCLAW_ENTRY:-}" ] && [ "$OPENCLAW_ONBOARD_SCENARIO_SOURCE_ONLY" != "1" ]; then
+  OPENCLAW_ENTRY="$(openclaw_e2e_resolve_entrypoint)"
+fi
 export OPENCLAW_ENTRY
 ONBOARD_TMP_ROOT="${OPENCLAW_ONBOARD_E2E_TMPDIR:-${TMPDIR:-/tmp}}"
 ONBOARD_TMP_ROOT="${ONBOARD_TMP_ROOT%/}"
@@ -19,10 +24,14 @@ cleanup_onboard_artifacts() {
   openclaw_e2e_stop_process "${GATEWAY_PID:-}"
   rm -rf "$ONBOARD_TMP_DIR"
 }
-trap cleanup_onboard_artifacts EXIT
+if [ "$OPENCLAW_ONBOARD_SCENARIO_SOURCE_ONLY" != "1" ]; then
+  trap cleanup_onboard_artifacts EXIT
+fi
 
 # Provide a minimal trash shim to avoid noisy "missing trash" logs in containers.
-openclaw_e2e_install_trash_shim
+if [ "$OPENCLAW_ONBOARD_SCENARIO_SOURCE_ONLY" != "1" ]; then
+  openclaw_e2e_install_trash_shim
+fi
 
 send() {
   local payload="$1"
@@ -313,8 +322,10 @@ validate_local_basic_log() {
   openclaw_e2e_assert_log_not_contains "$log_path" "systemctl --user unavailable"
 }
 
-run_case_local_basic
-run_case_remote_non_interactive
-run_case_reset
-run_case_channels
-run_case_skills
+if [ "$OPENCLAW_ONBOARD_SCENARIO_SOURCE_ONLY" != "1" ]; then
+  run_case_local_basic
+  run_case_remote_non_interactive
+  run_case_reset
+  run_case_channels
+  run_case_skills
+fi
