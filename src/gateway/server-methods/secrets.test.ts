@@ -48,13 +48,6 @@ async function invokeSecretsResolve(params: {
   });
 }
 
-function requireRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Expected a non-array record");
-  }
-  return value as Record<string, unknown>;
-}
-
 function expectRespondError(
   respond: ReturnType<typeof vi.fn>,
   expected: { code: string; message?: string },
@@ -62,10 +55,14 @@ function expectRespondError(
   const call = respond.mock.calls.at(0);
   expect(call?.[0]).toBe(false);
   expect(call?.[1]).toBeUndefined();
-  const error = requireRecord(call?.[2]);
-  expect(error.code).toBe(expected.code);
+  const error = call?.[2];
+  if (!error || typeof error !== "object" || Array.isArray(error)) {
+    throw new Error("Expected a non-array error record");
+  }
+  const errorRecord = error as Record<string, unknown>;
+  expect(errorRecord.code).toBe(expected.code);
   if (expected.message !== undefined) {
-    expect(error.message).toBe(expected.message);
+    expect(errorRecord.message).toBe(expected.message);
   }
 }
 
