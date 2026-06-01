@@ -495,6 +495,11 @@ describe("scoped vitest configs", () => {
     expectThreadedNonIsolatedRunner(defaultExtensionsConfig);
   });
 
+  it("serializes Telegram extension files that share process globals", () => {
+    expectThreadedNonIsolatedRunner(defaultExtensionTelegramConfig);
+    expect(requireTestConfig(defaultExtensionTelegramConfig).fileParallelism).toBe(false);
+  });
+
   it("serializes Slack extension files that share process globals", () => {
     expect(requireTestConfig(defaultExtensionSlackConfig).fileParallelism).toBe(false);
   });
