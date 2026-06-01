@@ -17,7 +17,7 @@ const { execFileMock, loadGatewayRuntimeConfigSchemaMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("node:child_process", async () => {
-  const { mockNodeChildProcessModule } = await import("./node-child-process.test-helpers.js");
+  const { mockNodeChildProcessModule } = await import("./node-child-process.test-support.js");
   return mockNodeChildProcessModule({
     execFile: Object.assign(execFileMock, {
       __promisify__: vi.fn(),
