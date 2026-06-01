@@ -241,7 +241,7 @@ export function activateSmokePlugin(config, pluginId, channels = []) {
   const allow = Array.isArray(config.plugins?.allow)
     ? Array.from(new Set([...config.plugins.allow, pluginId].filter(isNonEmptyString)))
     : undefined;
-  const channelConfig = { ...(config.channels ?? {}) };
+  const channelConfig = { ...config.channels };
   for (const channel of channels) {
     channelConfig[channel] = {
       ...(typeof channelConfig[channel] === "object" && channelConfig[channel] !== null
