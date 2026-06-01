@@ -954,7 +954,7 @@ function mergeCronDelivery(
     }
   }
   if ("failureDestination" in patch) {
-    if (patch.failureDestination === undefined) {
+    if (patch.failureDestination == null) {
       next.failureDestination = undefined;
     } else {
       const existingFd = next.failureDestination;
@@ -983,7 +983,12 @@ function mergeCronDelivery(
           nextFd.mode = mode === "announce" || mode === "webhook" ? mode : undefined;
         }
       }
-      next.failureDestination = nextFd;
+      const hasFailureDestination =
+        nextFd.channel !== undefined ||
+        nextFd.to !== undefined ||
+        nextFd.accountId !== undefined ||
+        nextFd.mode !== undefined;
+      next.failureDestination = hasFailureDestination ? nextFd : undefined;
     }
   }
 

@@ -532,6 +532,92 @@ describe("cron method validation", () => {
     expect(clearDelivery.completionDestination).toBeNull();
   });
 
+  it("accepts nullable delivery target clears on update", async () => {
+    const { context, respond } = await invokeCronUpdate(
+      {
+        id: "cron-1",
+        patch: {
+          delivery: {
+            channel: null,
+            to: null,
+            threadId: null,
+            accountId: null,
+            failureDestination: null,
+          },
+        },
+      },
+      createCronJob({
+        delivery: {
+          mode: "announce",
+          channel: "telegram",
+          to: "telegram:123",
+          threadId: "99",
+          accountId: "bot-a",
+          failureDestination: {
+            mode: "announce",
+            channel: "slack",
+            to: "C123",
+            accountId: "bot-b",
+          },
+        },
+      }),
+    );
+
+    expect(context.cron.update).toHaveBeenCalled();
+    expect(requireCronUpdatePatch(context).delivery).toEqual({
+      channel: null,
+      to: null,
+      threadId: null,
+      accountId: null,
+      failureDestination: null,
+    });
+    expectCronSuccess(respond);
+  });
+
+  it("accepts nullable failure destination field clears on update", async () => {
+    setRuntimeConfig(telegramSlackConfig());
+
+    const { context, respond } = await invokeCronUpdate(
+      {
+        id: "cron-1",
+        patch: {
+          delivery: {
+            failureDestination: {
+              channel: null,
+              to: null,
+              accountId: null,
+              mode: null,
+            },
+          },
+        },
+      },
+      createCronJob({
+        delivery: {
+          mode: "announce",
+          channel: "telegram",
+          to: "telegram:123",
+          failureDestination: {
+            mode: "announce",
+            channel: "slack",
+            to: "C123",
+            accountId: "bot-b",
+          },
+        },
+      }),
+    );
+
+    expect(context.cron.update).toHaveBeenCalled();
+    expect(requireCronUpdatePatch(context).delivery).toEqual({
+      failureDestination: {
+        channel: null,
+        to: null,
+        accountId: null,
+        mode: null,
+      },
+    });
+    expectCronSuccess(respond);
+  });
+
   it("rejects underscored provider prefixes for a different explicit delivery channel", async () => {
     setRuntimeConfig(slackSynologyConfig());
 
