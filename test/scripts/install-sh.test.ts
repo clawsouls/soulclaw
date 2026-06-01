@@ -1008,7 +1008,7 @@ describe("install.sh", () => {
           "set +e",
           "unset -f node 2>/dev/null || true",
           "unalias node 2>/dev/null || true",
-          "hash -r",
+          'node() { printf "%s\\n" "${FAKE_NODE_VERSION:-v0.0.0}"; }',
           `FAKE_NODE_VERSION="v22.${minMinor - 1}.0"`,
           "export FAKE_NODE_VERSION",
           "node_is_at_least_required",

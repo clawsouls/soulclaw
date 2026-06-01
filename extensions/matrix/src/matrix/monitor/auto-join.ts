@@ -60,8 +60,8 @@ export function registerMatrixAutoJoin(params: {
   };
 
   // Handle invites directly so both "always" and "allowlist" modes share the same path.
-  client.on("room.invite", (roomId: string, _inviteEvent: unknown) => {
-    void (async () => {
+  client.on("room.invite", (roomId: string, _inviteEvent: unknown) =>
+    (async () => {
       if (autoJoin === "allowlist") {
         const allowedAliasRoomIds = await resolveAllowedAliasRoomIds();
         const allowed =
@@ -81,6 +81,6 @@ export function registerMatrixAutoJoin(params: {
       } catch (err) {
         runtime.error?.(`matrix: failed to join room ${roomId}: ${String(err)}`);
       }
-    })();
-  });
+    })(),
+  );
 }
