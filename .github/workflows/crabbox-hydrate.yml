@@ -435,7 +435,16 @@ jobs:
           if (Test-Path $workspaceNodeModules) {
             $workspaceNodeModulesItem = Get-Item $workspaceNodeModules -Force
             if (($workspaceNodeModulesItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -eq 0) {
-              throw "workspace node_modules exists and is not a link: $workspaceNodeModules"
+              $nodeModulesChildren = @(Get-ChildItem -LiteralPath $workspaceNodeModules -Force)
+              $hasOnlyPnpmWorkspaceState = $nodeModulesChildren.Count -eq 1 -and $nodeModulesChildren[0].Name -eq ".pnpm-workspace-state-v1.json"
+              if ($nodeModulesChildren.Count -ne 0 -and -not $hasOnlyPnpmWorkspaceState) {
+                throw "workspace node_modules exists and is not a link: $workspaceNodeModules"
+              }
+              foreach ($nodeModulesChild in $nodeModulesChildren) {
+                Remove-Item -LiteralPath $nodeModulesChild.FullName -Force
+              }
+              Remove-Item -LiteralPath $workspaceNodeModules -Force
+              New-Item -ItemType Junction -Path $workspaceNodeModules -Target $env:PNPM_CONFIG_MODULES_DIR | Out-Null
             }
           } else {
             New-Item -ItemType Junction -Path $workspaceNodeModules -Target $env:PNPM_CONFIG_MODULES_DIR | Out-Null
