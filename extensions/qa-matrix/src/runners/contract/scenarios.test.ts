@@ -2047,7 +2047,7 @@ describe("matrix live qa scenarios", () => {
         callOrder.push(`wait:${kind}`);
         if (kind === "first") {
           await writeMatrixInboundDedupePluginStateEntry({
-            accountId: "sut",
+            accountId: "runtime-default",
             eventId: "$first-trigger",
             roomId: staleSyncRoomId,
             stateRoot,
