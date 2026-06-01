@@ -194,6 +194,36 @@ function messageDisplaySignature(message: unknown): string | null {
   }
 }
 
+function messageTimestampMs(message: unknown): number | null {
+  if (!message || typeof message !== "object") {
+    return null;
+  }
+  const timestamp = (message as { timestamp?: unknown; ts?: unknown }).timestamp;
+  if (typeof timestamp === "number" && Number.isFinite(timestamp)) {
+    return timestamp;
+  }
+  const ts = (message as { timestamp?: unknown; ts?: unknown }).ts;
+  return typeof ts === "number" && Number.isFinite(ts) ? ts : null;
+}
+
+function historyHasSameOrNewerDisplayMessage(
+  historyMessages: unknown[],
+  signature: string,
+  message: unknown,
+): boolean {
+  const timestamp = messageTimestampMs(message);
+  if (timestamp == null) {
+    return false;
+  }
+  return historyMessages.some((historyMessage) => {
+    if (messageDisplaySignature(historyMessage) !== signature) {
+      return false;
+    }
+    const historyTimestamp = messageTimestampMs(historyMessage);
+    return historyTimestamp != null && historyTimestamp >= timestamp;
+  });
+}
+
 export function preserveOptimisticTailMessages(
   historyMessages: unknown[],
   previousMessages: unknown[],
@@ -245,6 +275,34 @@ export function preserveOptimisticTailMessages(
     optimisticTail.push(message);
   }
   return optimisticTail.length > 0 ? [...historyMessages, ...optimisticTail] : historyMessages;
+}
+
+function collectLateOptimisticTailMessages(
+  previousMessages: unknown[],
+  currentMessages: unknown[],
+  historyMessages: unknown[],
+): unknown[] {
+  if (currentMessages === previousMessages || currentMessages.length <= previousMessages.length) {
+    return [];
+  }
+  if (previousMessages.some((message, index) => currentMessages[index] !== message)) {
+    return [];
+  }
+  const lateTail: unknown[] = [];
+  for (const message of currentMessages.slice(previousMessages.length)) {
+    if (!isLocallyOptimisticHistoryMessage(message) || shouldHideHistoryMessage(message)) {
+      return [];
+    }
+    const signature = messageDisplaySignature(message);
+    if (!signature) {
+      return [];
+    }
+    if (historyHasSameOrNewerDisplayMessage(historyMessages, signature, message)) {
+      continue;
+    }
+    lateTail.push(message);
+  }
+  return lateTail;
 }
 
 function isRetryableStartupUnavailable(err: unknown, method: string): err is GatewayRequestError {
@@ -489,6 +547,7 @@ async function loadChatHistoryUncached(
   const requestVersion = beginChatHistoryRequest(state);
   const startedAt = Date.now();
   const previousMessages = state.chatMessages;
+  const previousRunId = state.chatRunId;
   // Any pending input-history snapshot becomes invalid once we start reloading transcript state.
   state.resetChatInputHistoryNavigation?.();
   state.chatLoading = true;
@@ -524,7 +583,15 @@ async function loadChatHistoryUncached(
     }
     const messages = Array.isArray(res.messages) ? res.messages : [];
     const visibleMessages = messages.filter((message) => !shouldHideHistoryMessage(message));
+    const lateOptimisticTail = collectLateOptimisticTailMessages(
+      previousMessages,
+      state.chatMessages,
+      visibleMessages,
+    );
     state.chatMessages = preserveOptimisticTailMessages(visibleMessages, previousMessages);
+    if (lateOptimisticTail.length > 0) {
+      state.chatMessages = [...state.chatMessages, ...lateOptimisticTail];
+    }
     state.currentSessionId =
       typeof res.sessionInfo?.sessionId === "string" && res.sessionInfo.sessionId.trim()
         ? res.sessionInfo.sessionId
@@ -532,11 +599,13 @@ async function loadChatHistoryUncached(
           ? res.sessionId
           : null;
     state.chatThinkingLevel = res.sessionInfo?.thinkingLevel ?? res.thinkingLevel ?? null;
-    // Clear all streaming state — history includes tool results and text
-    // inline, so keeping streaming artifacts would cause duplicates.
-    maybeResetToolStream(state);
-    state.chatStream = null;
-    state.chatStreamStartedAt = null;
+    if (!state.chatRunId || state.chatRunId === previousRunId) {
+      // Clear all streaming state — history includes tool results and text
+      // inline, so keeping streaming artifacts would cause duplicates.
+      maybeResetToolStream(state);
+      state.chatStream = null;
+      state.chatStreamStartedAt = null;
+    }
     return res;
   } catch (err) {
     if (!shouldApplyChatHistoryResult(state, requestVersion, sessionKey, requestAgentId)) {

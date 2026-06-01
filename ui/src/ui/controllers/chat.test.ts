@@ -1962,6 +1962,111 @@ describe("loadChatHistory retry handling", () => {
     expect(state.chatLoading).toBe(false);
   });
 
+  it("preserves a first send appended while the startup history request is in flight", async () => {
+    const history = createDeferred<{ messages: Array<unknown>; thinkingLevel?: string }>();
+    const request = vi.fn(() => history.promise);
+    const state = createState({
+      connected: true,
+      client: { request } as unknown as ChatState["client"],
+    });
+
+    const load = loadChatHistory(state);
+    await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+
+    const optimisticMessage = {
+      role: "user",
+      content: [{ type: "text", text: "send before history settles" }],
+      timestamp: 123,
+    };
+    state.chatMessages = [optimisticMessage];
+    state.chatRunId = "run-after-history-start";
+    state.chatStream = "";
+    state.chatStreamStartedAt = 456;
+
+    history.resolve({ messages: [], thinkingLevel: "low" });
+    await load;
+
+    expect(state.chatMessages).toEqual([optimisticMessage]);
+    expect(state.chatRunId).toBe("run-after-history-start");
+    expect(state.chatStream).toBe("");
+    expect(state.chatStreamStartedAt).toBe(456);
+    expect(state.chatThinkingLevel).toBe("low");
+    expect(state.chatLoading).toBe(false);
+  });
+
+  it("preserves late assistant messages when startup history only catches up to the user turn", async () => {
+    const history = createDeferred<{ messages: Array<unknown>; thinkingLevel?: string }>();
+    const request = vi.fn(() => history.promise);
+    const state = createState({
+      connected: true,
+      client: { request } as unknown as ChatState["client"],
+    });
+
+    const load = loadChatHistory(state);
+    await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+
+    const userMessage = {
+      role: "user",
+      content: [{ type: "text", text: "send before history settles" }],
+      timestamp: 123,
+    };
+    const assistantMessage = {
+      role: "assistant",
+      content: [{ type: "text", text: "answer before history catches up" }],
+      timestamp: 456,
+    };
+    state.chatMessages = [userMessage, assistantMessage];
+
+    history.resolve({ messages: [userMessage], thinkingLevel: "low" });
+    await load;
+
+    expect(state.chatMessages).toEqual([userMessage, assistantMessage]);
+    expect(state.chatThinkingLevel).toBe("low");
+    expect(state.chatLoading).toBe(false);
+  });
+
+  it("keeps repeated late prompts when startup history only has an older matching prompt", async () => {
+    const history = createDeferred<{ messages: Array<unknown>; thinkingLevel?: string }>();
+    const request = vi.fn(() => history.promise);
+    const state = createState({
+      connected: true,
+      client: { request } as unknown as ChatState["client"],
+    });
+
+    const load = loadChatHistory(state);
+    await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+
+    const repeatedPrompt = {
+      role: "user",
+      content: [{ type: "text", text: "continue" }],
+      timestamp: 200,
+    };
+    state.chatMessages = [repeatedPrompt];
+
+    history.resolve({
+      messages: [
+        {
+          role: "user",
+          content: [{ type: "text", text: "continue" }],
+          timestamp: 100,
+        },
+      ],
+      thinkingLevel: "low",
+    });
+    await load;
+
+    expect(state.chatMessages).toEqual([
+      {
+        role: "user",
+        content: [{ type: "text", text: "continue" }],
+        timestamp: 100,
+      },
+      repeatedPrompt,
+    ]);
+    expect(state.chatThinkingLevel).toBe("low");
+    expect(state.chatLoading).toBe(false);
+  });
+
   it("starts a fresh same-session history load after local messages change", async () => {
     const staleRequest = createDeferred<{ messages: Array<unknown>; thinkingLevel?: string }>();
     const freshRequest = createDeferred<{ messages: Array<unknown>; thinkingLevel?: string }>();

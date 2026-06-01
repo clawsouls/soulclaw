@@ -187,7 +187,7 @@ describeControlUiE2e("Control UI mocked Gateway E2E", () => {
     });
     const page = await context.newPage();
     const gateway = await installMockGateway(page, {
-      deferredMethods: ["agents.list"],
+      deferredMethods: ["agents.list", "chat.history"],
       historyMessages: [],
     });
 
@@ -206,6 +206,16 @@ describeControlUiE2e("Control UI mocked Gateway E2E", () => {
       const params = requireRecord(sendRequest.params);
       expect(params.message).toBe(prompt);
       expect(params.sessionKey).toBe("main");
+
+      const runId = requireString(params.idempotencyKey, "chat send idempotency key");
+      await gateway.resolveDeferred("chat.history", {
+        messages: [],
+        sessionId: "control-ui-e2e-session",
+        thinkingLevel: null,
+      });
+      await page.locator(".chat-thread").getByText(prompt).waitFor({ timeout: 10_000 });
+      await gateway.emitChatFinal({ runId, text: "History race stayed visible." });
+      await page.getByText("History race stayed visible.").waitFor({ timeout: 10_000 });
 
       await gateway.resolveDeferred("agents.list");
     } finally {

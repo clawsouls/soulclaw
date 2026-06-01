@@ -602,21 +602,25 @@ function canRefreshActiveTabBeforeAgents(host: GatewayHost): boolean {
   return normalizeAgentId(parsed.agentId) === resolveFreshDefaultAgentId(host);
 }
 
+function normalizeStartupRefreshError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 async function loadAgentsThenRefreshActiveTab(host: GatewayHost) {
-  let initialRefreshError: unknown;
+  let initialRefreshError: Error | undefined;
   const refreshBeforeAgents = canRefreshActiveTabBeforeAgents(host);
   const initialRefresh = refreshBeforeAgents
-    ? refreshActiveTab(host as unknown as Parameters<typeof refreshActiveTab>[0]).catch((err) => {
-        initialRefreshError = err;
+    ? refreshActiveTab(host as unknown as Parameters<typeof refreshActiveTab>[0]).catch((err: unknown) => {
+        initialRefreshError = normalizeStartupRefreshError(err);
       })
     : Promise.resolve();
   let refreshAfterAgents = !refreshBeforeAgents;
-  let agentsError: unknown;
+  let agentsError: Error | undefined;
   try {
     await loadAgents(host as unknown as AgentsState);
     refreshAfterAgents = fallbackUnconfiguredSessionSelection(host) || refreshAfterAgents;
-  } catch (err) {
-    agentsError = err;
+  } catch (err: unknown) {
+    agentsError = normalizeStartupRefreshError(err);
   }
   await initialRefresh;
   if (refreshAfterAgents) {
