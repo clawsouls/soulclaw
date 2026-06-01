@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { createServer as createNetServer, type Server as NetServer, type Socket } from "node:net";
@@ -151,6 +151,41 @@ async function closeServer(server: HttpServer | NetServer): Promise<void> {
   });
 }
 
+async function waitForFile(filePath: string, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (fs.existsSync(filePath)) {
+      return;
+    }
+    await new Promise((resolve) => {
+      setTimeout(resolve, 20);
+    });
+  }
+  throw new Error(`timeout waiting for ${filePath}`);
+}
+
+function pidIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function waitForDead(pid: number, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!pidIsAlive(pid)) {
+      return;
+    }
+    await new Promise((resolve) => {
+      setTimeout(resolve, 20);
+    });
+  }
+  throw new Error(`timeout waiting for pid ${pid} to exit`);
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   for (const dir of tempDirs.splice(0)) {
@@ -174,6 +209,55 @@ describe("bundled plugin install/uninstall probe", () => {
 
     const second = runtimeSmoke.appendBoundedOutput(first, "ghij", 5);
     expect(second).toEqual({ text: "fghij", truncatedChars: 5 });
+  });
+
+  it("caps noisy runtime gateway logs", async () => {
+    const runtimeSmoke = await importRuntimeSmokeWithEnv({
+      OPENCLAW_BUNDLED_PLUGIN_RUNTIME_GATEWAY_LOG_BYTES: "64",
+    });
+    const root = makePackageRoot();
+    const entrypoint = path.join(root, "dist", "noisy-gateway.js");
+    const logPath = path.join(root, "gateway.log");
+    fs.writeFileSync(
+      entrypoint,
+      [
+        "if (process.argv[2] === 'gateway') {",
+        "  process.stdout.write('x'.repeat(2048));",
+        "  setInterval(() => {}, 1000);",
+        "}",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const child = runtimeSmoke.startGateway({
+      entrypoint,
+      env: {},
+      logPath,
+      port: 19002,
+      skipChannels: true,
+    });
+    try {
+      const marker = "[gateway log truncated after 64 bytes]";
+      const deadline = Date.now() + 1000;
+      while (Date.now() < deadline) {
+        if (fs.existsSync(logPath) && fs.readFileSync(logPath, "utf8").includes(marker)) {
+          break;
+        }
+        await new Promise((resolve) => {
+          setTimeout(resolve, 20);
+        });
+      }
+
+      const log = fs.readFileSync(logPath, "utf8");
+      expect(log).toContain(marker);
+      expect(log.length).toBeLessThan(256);
+      expect(() => runtimeSmoke.assertGatewayLogNotTruncated(logPath)).toThrow(
+        /runtime smoke cannot validate complete post-ready output/u,
+      );
+    } finally {
+      await runtimeSmoke.stopGateway(child);
+    }
   });
 
   it("matches runtime slash aliases across command list surfaces", async () => {
@@ -290,6 +374,136 @@ describe("bundled plugin install/uninstall probe", () => {
 
     expect(child.kill).not.toHaveBeenCalled();
   });
+
+  it.runIf(process.platform !== "win32")("stops runtime gateway process groups", async () => {
+    const runtimeSmoke = await importRuntimeSmokeWithEnv({
+      OPENCLAW_BUNDLED_PLUGIN_RUNTIME_TEARDOWN_GRACE_MS: "50",
+      OPENCLAW_BUNDLED_PLUGIN_RUNTIME_TEARDOWN_KILL_GRACE_MS: "1000",
+    });
+    const root = makePackageRoot();
+    const entrypoint = path.join(root, "dist", "gateway-with-sidecar.js");
+    const logPath = path.join(root, "gateway.log");
+    const descendantPidPath = path.join(root, "descendant.pid");
+    const descendantScript = [
+      "import fs from 'node:fs';",
+      `fs.writeFileSync(${JSON.stringify(descendantPidPath)}, String(process.pid));`,
+      "process.on('SIGTERM', () => {});",
+      "setInterval(() => {}, 1000);",
+    ].join("\n");
+    fs.writeFileSync(
+      entrypoint,
+      [
+        "import childProcess from 'node:child_process';",
+        "if (process.argv[2] === 'gateway') {",
+        `  childProcess.spawn(process.execPath, ["--input-type=module", "--eval", ${JSON.stringify(
+          descendantScript,
+        )}], { stdio: "ignore" });`,
+        "  process.on('SIGTERM', () => process.exit(0));",
+        "  setInterval(() => {}, 1000);",
+        "}",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const child = runtimeSmoke.startGateway({
+      entrypoint,
+      env: {},
+      logPath,
+      port: 19003,
+      skipChannels: true,
+    });
+    let descendantPid: number | undefined;
+    try {
+      await waitForFile(descendantPidPath, 1000);
+      descendantPid = Number(fs.readFileSync(descendantPidPath, "utf8"));
+      expect(pidIsAlive(descendantPid)).toBe(true);
+
+      await runtimeSmoke.stopGateway(child);
+
+      await waitForDead(descendantPid, 2000);
+    } finally {
+      if (descendantPid !== undefined && pidIsAlive(descendantPid)) {
+        process.kill(descendantPid, "SIGKILL");
+      }
+    }
+  });
+
+  it.runIf(process.platform !== "win32")(
+    "cleans detached runtime gateway groups when the parent is signaled",
+    async () => {
+      const root = makePackageRoot();
+      const entrypoint = path.join(root, "dist", "gateway-with-signaled-sidecar.js");
+      const runnerPath = path.join(root, "run-runtime-smoke.mjs");
+      const logPath = path.join(root, "gateway-signal.log");
+      const descendantPidPath = path.join(root, "signaled-descendant.pid");
+      const descendantScript = [
+        "import fs from 'node:fs';",
+        `fs.writeFileSync(${JSON.stringify(descendantPidPath)}, String(process.pid));`,
+        "process.on('SIGTERM', () => {});",
+        "setInterval(() => {}, 1000);",
+      ].join("\n");
+      fs.writeFileSync(
+        entrypoint,
+        [
+          "import childProcess from 'node:child_process';",
+          "if (process.argv[2] === 'gateway') {",
+          `  childProcess.spawn(process.execPath, ["--input-type=module", "--eval", ${JSON.stringify(
+            descendantScript,
+          )}], { stdio: "ignore" });`,
+          "  setTimeout(() => process.exit(0), 50);",
+          "}",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      fs.writeFileSync(
+        runnerPath,
+        [
+          `const runtimeSmoke = await import(${JSON.stringify(pathToFileURL(runtimeSmokePath).href)});`,
+          "runtimeSmoke.startGateway({",
+          `  entrypoint: ${JSON.stringify(entrypoint)},`,
+          "  env: {},",
+          `  logPath: ${JSON.stringify(logPath)},`,
+          "  port: 19004,",
+          "  skipChannels: true,",
+          "});",
+          "setInterval(() => {}, 1000);",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const runner = spawn(process.execPath, [runnerPath], {
+        env: {
+          ...process.env,
+          OPENCLAW_BUNDLED_PLUGIN_RUNTIME_TEARDOWN_GRACE_MS: "50",
+          OPENCLAW_BUNDLED_PLUGIN_RUNTIME_TEARDOWN_KILL_GRACE_MS: "1000",
+        },
+        stdio: "ignore",
+      });
+      let descendantPid: number | undefined;
+      try {
+        await waitForFile(descendantPidPath, 1000);
+        descendantPid = Number(fs.readFileSync(descendantPidPath, "utf8"));
+        expect(pidIsAlive(descendantPid)).toBe(true);
+        await new Promise((resolve) => {
+          setTimeout(resolve, 150);
+        });
+
+        runner.kill("SIGTERM");
+
+        await waitForDead(descendantPid, 2000);
+      } finally {
+        if (runner.pid && pidIsAlive(runner.pid)) {
+          runner.kill("SIGKILL");
+        }
+        if (descendantPid !== undefined && pidIsAlive(descendantPid)) {
+          process.kill(descendantPid, "SIGKILL");
+        }
+      }
+    },
+  );
 
   it("does not treat shallow HTTP listen logs as runtime readiness", async () => {
     const runtimeSmoke = await import(pathToFileURL(runtimeSmokePath).href);
