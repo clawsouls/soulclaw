@@ -436,6 +436,49 @@ exit 1
     }
   });
 
+  it("terminates only the tracked gateway process", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-e2e-gateway-terminate-"));
+    try {
+      const forbiddenToolLog = path.join(tempDir, "process-tools.log");
+      fs.writeFileSync(forbiddenToolLog, "");
+      writeBashExecutable(path.join(tempDir, "pkill"), [
+        'printf "pkill %s\\n" "$*" >>"$OPENCLAW_TEST_FORBIDDEN_PROCESS_TOOL_LOG"',
+        "exit 42",
+      ]);
+      writeBashExecutable(path.join(tempDir, "pgrep"), [
+        'printf "pgrep %s\\n" "$*" >>"$OPENCLAW_TEST_FORBIDDEN_PROCESS_TOOL_LOG"',
+        "exit 42",
+      ]);
+
+      const script = `
+set -euo pipefail
+source ${shellQuote(helperPath)}
+openclaw_e2e_terminate_gateways ""
+/bin/sleep 30 &
+tracked_pid="$!"
+openclaw_e2e_terminate_gateways "$tracked_pid"
+if kill -0 "$tracked_pid" 2>/dev/null; then
+  echo "tracked gateway process still alive" >&2
+  exit 1
+fi
+[ ! -s "$OPENCLAW_TEST_FORBIDDEN_PROCESS_TOOL_LOG" ]
+`;
+
+      const result = spawnSync("/bin/bash", ["-c", script], {
+        encoding: "utf8",
+        env: shellTestEnv({
+          PATH: `${tempDir}:${hostPath}`,
+          OPENCLAW_TEST_FORBIDDEN_PROCESS_TOOL_LOG: forbiddenToolLog,
+        }),
+        timeout: 5_000,
+      });
+
+      expectShellSuccess(result);
+    } finally {
+      fs.rmSync(tempDir, { force: true, recursive: true });
+    }
+  });
+
   it("bounds HTTP readiness probes when a server accepts connections but never responds", () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-e2e-http-probe-"));
     try {
