@@ -936,14 +936,17 @@ case "$1" in
     exit 0
     ;;
   --kill-after=30s)
-    printf "%s %s\\n" "$1" "$2" >"$TMPDIR/docker-timeout-seen"
+    timeout_args="$1 $2"
     shift 2
     ;;
   *)
-    printf "%s\\n" "$1" >"$TMPDIR/docker-timeout-seen"
+    timeout_args="$1"
     shift
     ;;
 esac
+if [[ "\${1:-}" == "docker" && "\${2:-}" == "run" ]]; then
+  printf "%s\\n" "$timeout_args" >"$TMPDIR/docker-timeout-seen"
+fi
 "$@"
 SH
 chmod +x "$TMPDIR/bin/timeout"
@@ -984,13 +987,32 @@ export -f node
 source "$ROOT_DIR/scripts/lib/docker-e2e-package.sh"
 
 docker() {
+  if [[ "$1" == "rm" ]]; then
+    shift
+    test "$1" = "-f"
+    shift
+    printf "%s\\n" "$1" >>"$TMPDIR/docker-rm-seen"
+    return 0
+  fi
+
+  local cidfile=""
   local mount_path=""
   local expect_volume_path=0
+  local expect_cidfile=0
   local arg
   for arg in "$@"; do
+    if [[ "$expect_cidfile" == "1" ]]; then
+      cidfile="$arg"
+      expect_cidfile=0
+      continue
+    fi
     if [[ "$expect_volume_path" == "1" ]]; then
       mount_path="\${arg%%:*}"
       expect_volume_path=0
+      continue
+    fi
+    if [[ "$arg" == "--cidfile" ]]; then
+      expect_cidfile=1
       continue
     fi
     if [[ "$arg" == "-v" ]]; then
@@ -998,6 +1020,9 @@ docker() {
     fi
   done
 
+  test -n "$cidfile"
+  test ! -e "$cidfile"
+  printf "container-%s\\n" "\${DOCKER_STUB_STATUS:-}" >"$cidfile"
   test -n "$mount_path"
   test -f "$mount_path"
   printf "%s\\n" "$mount_path" >"$TMPDIR/package-mount-seen"
@@ -1011,8 +1036,10 @@ docker_e2e_package_mount_args "$package_tgz"
 DOCKER_STUB_STATUS=7 docker_e2e_run_with_harness image-name bash -lc true || run_status="$?"
 test "\${run_status:-0}" = "7"
 test "$(cat "$TMPDIR/docker-timeout-seen")" = "--kill-after=30s 3s"
+grep -qx "container-7" "$TMPDIR/docker-rm-seen"
 test -f "$TMPDIR/package-mount-seen"
 test ! -e "$pack_dir"
+test -z "$(find "$TMPDIR" -maxdepth 1 -name 'openclaw-docker-e2e-container.*' -print)"
 
 external_dir="$TMPDIR/external-package"
 mkdir -p "$external_dir"
@@ -1022,6 +1049,7 @@ unset DOCKER_COMMAND_TIMEOUT
 rm -f "$TMPDIR/docker-timeout-seen"
 docker_e2e_run_with_harness image-name bash -lc true
 test "$(cat "$TMPDIR/docker-timeout-seen")" = "--kill-after=30s 3600s"
+grep -qx "container-" "$TMPDIR/docker-rm-seen"
 test -f "$external_dir/openclaw-current.tgz"
 `;
 
