@@ -108,6 +108,7 @@ describe("gateway cli backend connect", () => {
           timeoutMs: GATEWAY_CONNECT_OPERATION_TIMEOUT_MS,
           maxAttemptTimeoutMs: GATEWAY_CONNECT_OPERATION_TIMEOUT_MS,
           requestTimeoutMs: GATEWAY_CONNECT_OPERATION_TIMEOUT_MS,
+          waitForEventLoopReady: false,
         });
         const health = await client.request("health", undefined, {
           timeoutMs: GATEWAY_CONNECT_OPERATION_TIMEOUT_MS,
