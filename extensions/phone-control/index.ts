@@ -300,7 +300,7 @@ export default definePluginEntry({
 
     const timerService: OpenClawPluginService = {
       id: "phone-control-expiry",
-      start: async () => {
+      start: async (ctx) => {
         const tick = async () => {
           const state = await readArmState(api);
           if (!state || state.expiresAtMs == null) {
@@ -320,7 +320,7 @@ export default definePluginEntry({
         }, 15_000);
         expiryInterval.unref?.();
 
-        if (hasPhoneControlAllowOverride(api.runtime.config.current())) {
+        if (hasPhoneControlAllowOverride(ctx.config)) {
           // Active dangerous command allows must be reconciled before gateway
           // readiness; otherwise an expired phone-control window can survive.
           await tick().catch(() => {});

@@ -369,7 +369,7 @@ describe("phone-control plugin", () => {
       }
 
       await service.start({
-        config: {},
+        config: createPhoneControlConfig(),
         stateDir,
         logger: { info() {}, warn() {}, error() {}, debug() {} },
       });
@@ -381,7 +381,7 @@ describe("phone-control plugin", () => {
       expect(lookup).toHaveBeenCalledWith("current");
 
       await service.stop?.({
-        config: {},
+        config: createPhoneControlConfig(),
         stateDir,
         logger: { info() {}, warn() {}, error() {}, debug() {} },
       });
@@ -439,7 +439,7 @@ describe("phone-control plugin", () => {
       }
 
       await service.start({
-        config: {},
+        config,
         stateDir,
         logger: { info() {}, warn() {}, error() {}, debug() {} },
       });
@@ -454,7 +454,7 @@ describe("phone-control plugin", () => {
       });
 
       await service.stop?.({
-        config: {},
+        config,
         stateDir,
         logger: { info() {}, warn() {}, error() {}, debug() {} },
       });
