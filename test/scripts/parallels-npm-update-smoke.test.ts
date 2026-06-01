@@ -1,9 +1,15 @@
-import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   macosUpdateScript,
   windowsUpdateScript,
 } from "../../scripts/e2e/parallels/npm-update-scripts.ts";
+import {
+  freshLaneTimeoutMs,
+  spawnLoggedCommand,
+} from "../../scripts/e2e/parallels/npm-update-smoke.ts";
 
 const SCRIPT_PATH = "scripts/e2e/parallels/npm-update-smoke.ts";
 const GUEST_TRANSPORTS_PATH = "scripts/e2e/parallels/guest-transports.ts";
@@ -15,6 +21,41 @@ const TEST_AUTH = {
   apiKeyValue: "test-key",
   modelId: "gpt-5.4",
 };
+const tempDirs: string[] = [];
+
+function makeTempDir(): string {
+  const root = mkdtempSync(path.join(tmpdir(), "openclaw-parallels-npm-update-"));
+  tempDirs.push(root);
+  return root;
+}
+
+function pidIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function waitForDead(pid: number, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!pidIsAlive(pid)) {
+      return;
+    }
+    await new Promise((resolve) => {
+      setTimeout(resolve, 20);
+    });
+  }
+  throw new Error(`timeout waiting for pid ${pid} to exit`);
+}
+
+afterEach(() => {
+  for (const dir of tempDirs.splice(0)) {
+    rmSync(dir, { force: true, recursive: true });
+  }
+});
 
 describe("parallels npm update smoke", () => {
   it("does not leave guard/server children attached to the wrapper", () => {
@@ -77,17 +118,83 @@ describe("parallels npm update smoke", () => {
     expect(updateBlock).not.toContain("log += text");
   });
 
-  it("streams fresh lane logs instead of retaining them in memory", () => {
-    const script = readFileSync(SCRIPT_PATH, "utf8");
-    const spawnLoggedBlock = script.slice(
-      script.indexOf("  private spawnLogged"),
-      script.indexOf("  private async monitorJobs"),
+  it("streams fresh lane logs instead of retaining them in memory", async () => {
+    const root = makeTempDir();
+    const logPath = path.join(root, "fresh.log");
+    const output: string[] = [];
+
+    const code = await spawnLoggedCommand(
+      process.execPath,
+      ["-e", "process.stdout.write('fresh-out'); process.stderr.write('fresh-err');"],
+      logPath,
+      {},
+      (text) => output.push(text),
+      { timeoutMs: 1000 },
     );
 
-    expect(spawnLoggedBlock).toContain('writeFileSync(logPath, "", "utf8")');
-    expect(spawnLoggedBlock).toContain("appendFileSync(logPath, text");
-    expect(spawnLoggedBlock).not.toContain("let log");
-    expect(spawnLoggedBlock).not.toContain("log += text");
+    expect(code).toBe(0);
+    const log = readFileSync(logPath, "utf8");
+    expect(log).toContain("fresh-out");
+    expect(log).toContain("fresh-err");
+    expect(output.join("")).toContain("fresh-out");
+    expect(output.join("")).toContain("fresh-err");
+  });
+
+  it("sets platform-aware fresh lane timeouts", () => {
+    const previous = process.env.OPENCLAW_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S;
+    try {
+      delete process.env.OPENCLAW_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S;
+      expect(freshLaneTimeoutMs("macos")).toBe(75 * 60 * 1000);
+      expect(freshLaneTimeoutMs("linux")).toBe(75 * 60 * 1000);
+      expect(freshLaneTimeoutMs("windows")).toBe(90 * 60 * 1000);
+
+      process.env.OPENCLAW_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S = "3";
+      expect(freshLaneTimeoutMs("macos")).toBe(3000);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.OPENCLAW_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S;
+      } else {
+        process.env.OPENCLAW_PARALLELS_NPM_UPDATE_FRESH_TIMEOUT_S = previous;
+      }
+    }
+  });
+
+  it.runIf(process.platform !== "win32")("times out fresh lane process groups", async () => {
+    const root = makeTempDir();
+    const logPath = path.join(root, "fresh.log");
+    const scriptPath = path.join(root, "hung-fresh-lane.mjs");
+    const descendantPidPath = path.join(root, "descendant.pid");
+    const descendantScript = [
+      "import { writeFileSync } from 'node:fs';",
+      `writeFileSync(${JSON.stringify(descendantPidPath)}, String(process.pid));`,
+      "process.on('SIGTERM', () => {});",
+      "setInterval(() => {}, 1000);",
+    ].join("\n");
+    writeFileSync(
+      scriptPath,
+      [
+        "import { spawn } from 'node:child_process';",
+        `spawn(process.execPath, ["--input-type=module", "--eval", ${JSON.stringify(
+          descendantScript,
+        )}], { stdio: "ignore" });`,
+        "process.on('SIGTERM', () => process.exit(0));",
+        "setInterval(() => {}, 1000);",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const code = await spawnLoggedCommand(process.execPath, [scriptPath], logPath, {}, undefined, {
+      timeoutKillGraceMs: 25,
+      timeoutLabel: "fresh lane test",
+      timeoutMs: 250,
+    });
+
+    expect(code).toBe(124);
+    expect(readFileSync(logPath, "utf8")).toContain("fresh lane test timed out after 250ms");
+    expect(existsSync(descendantPidPath)).toBe(true);
+    const descendantPid = Number(readFileSync(descendantPidPath, "utf8"));
+    await waitForDead(descendantPid, 2000);
   });
 
   it("runs Windows updates through a detached done-file runner", () => {
