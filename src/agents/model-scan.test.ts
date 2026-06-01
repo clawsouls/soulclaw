@@ -1,5 +1,5 @@
 import { MAX_TIMER_TIMEOUT_MS } from "@openclaw/normalization-core/number-coercion";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { withEnvAsync } from "../test-utils/env.js";
 import { withFetchPreconnect } from "../test-utils/fetch-mock.js";
 import { scanOpenRouterModels } from "./model-scan.js";
@@ -15,8 +15,13 @@ function createFetchFixture(payload: unknown): typeof fetch {
 }
 
 describe("scanOpenRouterModels", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("lists free models without probing", async () => {
