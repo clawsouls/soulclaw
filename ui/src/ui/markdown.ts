@@ -634,7 +634,7 @@ export function toSanitizedMarkdownHtml(
     // Large plain-text replies should stay readable without inheriting the
     // capped code-block chrome, while still preserving whitespace for logs
     // and other structured text that commonly trips the parse guard.
-    const html = renderEscapedPlainTextHtml(`${truncated.text}${suffix}`);
+    const html = toEscapedPlainTextHtml(`${truncated.text}${suffix}`);
     const sanitized = DOMPurify.sanitize(html, sanitizeOptions);
     if (input.length <= MARKDOWN_CACHE_MAX_CHARS) {
       setCachedMarkdown(cacheKey, sanitized);
@@ -657,6 +657,18 @@ export function toSanitizedMarkdownHtml(
   return sanitized;
 }
 
-function renderEscapedPlainTextHtml(value: string): string {
+export function toEscapedPlainTextHtml(value: string): string {
   return `<div class="markdown-plain-text-fallback">${escapeHtml(value.replace(/\r\n?/g, "\n"))}</div>`;
+}
+
+export function toStreamingPlainTextHtml(markdownLocal: string): string {
+  const input = stripUnsupportedCitationControlMarkers(markdownLocal).trim();
+  if (!input) {
+    return "";
+  }
+  const truncated = truncateText(input, MARKDOWN_CHAR_LIMIT);
+  const suffix = truncated.truncated
+    ? `\n\n… truncated (${truncated.total} chars, showing first ${truncated.text.length}).`
+    : "";
+  return toEscapedPlainTextHtml(`${truncated.text}${suffix}`);
 }

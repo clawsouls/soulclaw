@@ -15,6 +15,9 @@ const localStorageValues = vi.hoisted(() => new Map<string, string>());
 const markdownRenderMock = vi.hoisted(() =>
   vi.fn((value: string, _options?: { codeBlockChrome?: "copy" | "none" }) => value),
 );
+const streamingTextRenderMock = vi.hoisted(() =>
+  vi.fn((value: string) => `<div class="markdown-plain-text-fallback">${value}</div>`),
+);
 
 vi.mock("../../local-storage.ts", () => ({
   getSafeLocalStorage: () => ({
@@ -26,6 +29,7 @@ vi.mock("../../local-storage.ts", () => ({
 
 vi.mock("../markdown.ts", () => ({
   toSanitizedMarkdownHtml: markdownRenderMock,
+  toStreamingPlainTextHtml: streamingTextRenderMock,
 }));
 
 vi.mock("../icons.ts", () => ({
@@ -885,6 +889,19 @@ describe("grouped chat rendering", () => {
 
     const bubble = container.querySelector(".chat-bubble");
     expect(bubble?.classList.contains("streaming")).toBe(false);
+  });
+
+  it("renders streaming text without markdown sanitization", () => {
+    const container = document.createElement("div");
+    markdownRenderMock.mockClear();
+    streamingTextRenderMock.mockClear();
+
+    render(renderStreamingGroup("**live**\nreply", 1), container);
+
+    expect(markdownRenderMock).not.toHaveBeenCalled();
+    expect(streamingTextRenderMock).toHaveBeenCalledWith("**live**\nreply");
+    const text = container.querySelector(".markdown-plain-text-fallback");
+    expect(text?.textContent).toBe("**live**\nreply");
   });
 
   it("renders configured local user names", () => {

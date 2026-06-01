@@ -1,7 +1,7 @@
 import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
 import { i18n } from "../i18n/index.ts";
-import { md, toSanitizedMarkdownHtml } from "./markdown.ts";
+import { md, toSanitizedMarkdownHtml, toStreamingPlainTextHtml } from "./markdown.ts";
 import { renderMarkdownSidebar } from "./views/markdown-sidebar.ts";
 
 function htmlFragment(html: string): HTMLElement {
@@ -682,6 +682,20 @@ PY
         warnSpy.mockRestore();
       }
     });
+  });
+});
+
+describe("toStreamingPlainTextHtml", () => {
+  it("strips unsupported citation control markers before escaping streaming text", () => {
+    const html = toStreamingPlainTextHtml(
+      "v2026.5.20 release note citeturn2view0\n\nStill readable.",
+    );
+
+    expect(html).toBe(
+      '<div class="markdown-plain-text-fallback">v2026.5.20 release note\n\nStill readable.</div>',
+    );
+    expect(html).not.toContain("cite");
+    expect(html).not.toContain("turn2view0");
   });
 });
 
