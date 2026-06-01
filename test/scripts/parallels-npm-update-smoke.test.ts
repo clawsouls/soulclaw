@@ -2,6 +2,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { runWindowsBackgroundPowerShell } from "../../scripts/e2e/parallels/guest-transports.ts";
+import { run as hostCommandRun } from "../../scripts/e2e/parallels/host-command.ts";
 import {
   macosUpdateScript,
   windowsUpdateScript,
@@ -49,6 +51,11 @@ async function waitForDead(pid: number, timeoutMs: number): Promise<void> {
     });
   }
   throw new Error(`timeout waiting for pid ${pid} to exit`);
+}
+
+function decodePowerShellFromArgs(args: string[]): string {
+  const encoded = args[args.indexOf("-EncodedCommand") + 1];
+  return encoded ? Buffer.from(encoded, "base64").toString("utf16le") : "";
 }
 
 afterEach(() => {
@@ -206,6 +213,106 @@ describe("parallels npm update smoke", () => {
     expect(transports).toContain("__OPENCLAW_BACKGROUND_EXIT__");
     expect(transports).toContain("__OPENCLAW_BACKGROUND_DONE__");
     expect(transports).toContain("${options.label} timed out");
+  });
+
+  it("cleans timed-out Windows background work and reads bounded log chunks", async () => {
+    const decodedCommands: string[] = [];
+    const fakeRun: typeof hostCommandRun = (_command, args) => {
+      const decoded = decodePowerShellFromArgs(args);
+      decodedCommands.push(decoded);
+      if (decoded.includes("Start-Process")) {
+        return { status: 0, stderr: "", stdout: "started\n" };
+      }
+      return { status: 0, stderr: "", stdout: "" };
+    };
+
+    await expect(
+      runWindowsBackgroundPowerShell({
+        label: "windows background timeout",
+        logChunkBytes: 64,
+        pollIntervalMs: 1,
+        runCommand: fakeRun,
+        script: "Start-Sleep -Seconds 60",
+        timeoutMs: 5,
+        vmName: "Windows Test",
+      }),
+    ).rejects.toThrow("windows background timeout timed out");
+
+    const commands = decodedCommands.join("\n---\n");
+    expect(commands).toContain("$pidPath");
+    expect(commands).toContain("Start-Process -FilePath powershell.exe");
+    expect(commands).toContain("-PassThru");
+    expect(commands).toContain("[System.IO.File]::Open($logPath");
+    expect(commands).toContain("[Math]::Min($length - $offset, 64)");
+    expect(commands).toContain("Stop-OpenClawBackgroundProcessTree ([int]$backgroundPid)");
+    expect(commands).toContain(
+      'Get-CimInstance Win32_Process -Filter "ParentProcessId=$ProcessId"',
+    );
+    expect(commands).toContain(
+      "Remove-Item -Path $scriptPath, $logPath, $donePath, $exitPath, $pidPath",
+    );
+    expect(commands).not.toContain("ReadAllBytes");
+  });
+
+  it("drains completed Windows background logs before cleanup", async () => {
+    const decodedCommands: string[] = [];
+    const output: string[] = [];
+    let pollCount = 0;
+    const fakeRun: typeof hostCommandRun = (_command, args) => {
+      const decoded = decodePowerShellFromArgs(args);
+      decodedCommands.push(decoded);
+      if (decoded.includes("Start-Process")) {
+        return { status: 0, stderr: "", stdout: "started\n" };
+      }
+      if (decoded.includes("__OPENCLAW_LOG_LENGTH__")) {
+        pollCount += 1;
+        return {
+          status: 0,
+          stderr: "",
+          stdout:
+            pollCount === 1
+              ? [
+                  "__OPENCLAW_LOG_LENGTH__:128",
+                  "__OPENCLAW_LOG_OFFSET__:64",
+                  "first chunk",
+                  "__OPENCLAW_BACKGROUND_EXIT__:0",
+                  "__OPENCLAW_BACKGROUND_DONE__",
+                  "",
+                ].join("\n")
+              : [
+                  "__OPENCLAW_LOG_LENGTH__:128",
+                  "__OPENCLAW_LOG_OFFSET__:128",
+                  "second chunk",
+                  "__OPENCLAW_BACKGROUND_EXIT__:0",
+                  "__OPENCLAW_BACKGROUND_DONE__",
+                  "",
+                ].join("\n"),
+        };
+      }
+      return { status: 0, stderr: "", stdout: "" };
+    };
+
+    await expect(
+      runWindowsBackgroundPowerShell({
+        append: (chunk) => output.push(String(chunk)),
+        completedLogDrainGraceMs: 1000,
+        label: "windows background drain",
+        logChunkBytes: 64,
+        pollIntervalMs: 5000,
+        runCommand: fakeRun,
+        script: "Write-Output done",
+        timeoutMs: 20,
+        vmName: "Windows Test",
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(pollCount).toBe(2);
+    expect(output.join("")).toContain("first chunk");
+    expect(output.join("")).toContain("second chunk");
+    expect(decodedCommands.join("\n")).not.toContain("Stop-OpenClawBackgroundProcessTree");
+    expect(decodedCommands.join("\n")).toContain(
+      "Remove-Item -Path $scriptPath, $logPath, $donePath, $exitPath, $pidPath",
+    );
   });
 
   it("keeps macOS sudo fallback update scripts readable by the desktop user", () => {
