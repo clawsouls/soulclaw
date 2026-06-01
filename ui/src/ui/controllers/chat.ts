@@ -310,6 +310,8 @@ export type ChatEventPayload = {
   agentId?: string;
   state: "delta" | "final" | "aborted" | "error";
   message?: unknown;
+  deltaText?: string;
+  replace?: boolean;
   errorMessage?: string;
 };
 
@@ -408,6 +410,32 @@ function maybeResetToolStream(state: ChatState) {
   ) {
     resetToolStream(toolHost as Parameters<typeof resetToolStream>[0]);
   }
+}
+
+function resolveDeltaChatStreamText(
+  currentStream: string | null,
+  payload: ChatEventPayload,
+): string | null {
+  const snapshot = payload.message == null ? null : extractText(payload.message);
+  if (typeof payload.deltaText === "string") {
+    if (payload.replace === true) {
+      return payload.deltaText;
+    }
+    if (currentStream === null) {
+      return typeof snapshot === "string" ? snapshot : payload.deltaText;
+    }
+    if (typeof snapshot === "string") {
+      const prefixLength = snapshot.length - payload.deltaText.length;
+      if (
+        prefixLength !== currentStream.length ||
+        snapshot.slice(0, prefixLength) !== currentStream
+      ) {
+        return snapshot;
+      }
+    }
+    return `${currentStream}${payload.deltaText}`;
+  }
+  return typeof snapshot === "string" ? snapshot : null;
 }
 
 type InFlightChatHistoryRequest = {
@@ -942,7 +970,7 @@ export function handleChatEvent(state: ChatState, payload?: ChatEventPayload) {
     });
 
   if (payload.state === "delta") {
-    const next = extractText(payload.message);
+    const next = resolveDeltaChatStreamText(state.chatStream, payload);
     if (
       typeof next === "string" &&
       !isSilentReplyStream(next) &&

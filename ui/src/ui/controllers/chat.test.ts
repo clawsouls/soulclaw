@@ -224,6 +224,129 @@ describe("handleChatEvent", () => {
     expect(state.chatRunId).toBe("run-1");
   });
 
+  it("appends gateway deltaText when the cumulative snapshot matches the current prefix", () => {
+    const state = createState({
+      sessionKey: "main",
+      chatRunId: "run-1",
+      chatStream: "Live",
+    });
+    const payload: ChatEventPayload = {
+      runId: "run-1",
+      sessionKey: "main",
+      state: "delta",
+      deltaText: " reply",
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "Live reply" }],
+      },
+    };
+
+    expect(handleChatEvent(state, payload)).toBe("delta");
+    expect(state.chatStream).toBe("Live reply");
+  });
+
+  it("uses the cumulative snapshot when the first observed delta joins mid-stream", () => {
+    const state = createState({
+      sessionKey: "main",
+      chatRunId: "run-1",
+      chatStream: null,
+    });
+    const payload: ChatEventPayload = {
+      runId: "run-1",
+      sessionKey: "main",
+      state: "delta",
+      deltaText: " reply",
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "Live reply" }],
+      },
+    };
+
+    expect(handleChatEvent(state, payload)).toBe("delta");
+    expect(state.chatStream).toBe("Live reply");
+  });
+
+  it("appends gateway deltaText when no full message snapshot is present", () => {
+    const state = createState({
+      sessionKey: "main",
+      chatRunId: "run-1",
+      chatStream: "Live",
+    });
+    const payload: ChatEventPayload = {
+      runId: "run-1",
+      sessionKey: "main",
+      state: "delta",
+      deltaText: " reply",
+    };
+
+    expect(handleChatEvent(state, payload)).toBe("delta");
+    expect(state.chatStream).toBe("Live reply");
+  });
+
+  it("uses the cumulative snapshot when a missed delta would make append stale", () => {
+    const state = createState({
+      sessionKey: "main",
+      chatRunId: "run-1",
+      chatStream: "Hello",
+    });
+    const payload: ChatEventPayload = {
+      runId: "run-1",
+      sessionKey: "main",
+      state: "delta",
+      deltaText: "!",
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "Hello world!" }],
+      },
+    };
+
+    expect(handleChatEvent(state, payload)).toBe("delta");
+    expect(state.chatStream).toBe("Hello world!");
+  });
+
+  it("uses the cumulative snapshot when a same-length missed replacement changes the prefix", () => {
+    const state = createState({
+      sessionKey: "main",
+      chatRunId: "run-1",
+      chatStream: "AB",
+    });
+    const payload: ChatEventPayload = {
+      runId: "run-1",
+      sessionKey: "main",
+      state: "delta",
+      deltaText: "E",
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "CDE" }],
+      },
+    };
+
+    expect(handleChatEvent(state, payload)).toBe("delta");
+    expect(state.chatStream).toBe("CDE");
+  });
+
+  it("replaces the stream when gateway deltaText marks a replacement", () => {
+    const state = createState({
+      sessionKey: "main",
+      chatRunId: "run-1",
+      chatStream: "Alpha beta",
+    });
+    const payload: ChatEventPayload = {
+      runId: "run-1",
+      sessionKey: "main",
+      state: "delta",
+      deltaText: "Alpha",
+      replace: true,
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "ignored snapshot" }],
+      },
+    };
+
+    expect(handleChatEvent(state, payload)).toBe("delta");
+    expect(state.chatStream).toBe("Alpha");
+  });
+
   it("adopts the run id for selected-session live deltas observed from another channel", () => {
     const state = createState({
       sessionKey: "agent:main:feishu:direct:peer-1",
