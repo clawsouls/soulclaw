@@ -252,11 +252,11 @@ describe("run-oxlint", () => {
           runner,
           [
             "import { writeFileSync } from 'node:fs';",
-            "writeFileSync(process.env.READY_FILE, String(process.pid));",
             "process.on('SIGTERM', () => {",
             "  writeFileSync(process.env.SIGNALED_FILE, 'SIGTERM');",
             "  process.exit(0);",
             "});",
+            "writeFileSync(process.env.READY_FILE, String(process.pid));",
             "setInterval(() => {}, 1000);",
             "",
           ].join("\n"),
