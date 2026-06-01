@@ -16,6 +16,7 @@ function collectTrackedActiveSessionRuns(
   for (const active of context.chatAbortControllers.values()) {
     if (
       active.projectSessionActive !== false &&
+      active.controlUiVisible !== false &&
       typeof active.sessionKey === "string" &&
       active.sessionKey.trim()
     ) {
