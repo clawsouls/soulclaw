@@ -237,12 +237,22 @@ function ensureGatewayConfig(config, port) {
   };
 }
 
-function activateSmokePlugin(config, pluginId) {
+export function activateSmokePlugin(config, pluginId, channels = []) {
   const allow = Array.isArray(config.plugins?.allow)
     ? Array.from(new Set([...config.plugins.allow, pluginId].filter(isNonEmptyString)))
     : undefined;
+  const channelConfig = { ...(config.channels ?? {}) };
+  for (const channel of channels) {
+    channelConfig[channel] = {
+      ...(typeof channelConfig[channel] === "object" && channelConfig[channel] !== null
+        ? channelConfig[channel]
+        : {}),
+      enabled: true,
+    };
+  }
   return {
     ...config,
+    ...(channels.length > 0 ? { channels: channelConfig } : {}),
     plugins: {
       ...config.plugins,
       enabled: true,
@@ -645,7 +655,10 @@ async function smokePlugin(pluginId, pluginDir, requiresConfig, pluginIndex, plu
   const plan = buildPluginPlan(manifest);
   const port =
     readPositiveInt(process.env.OPENCLAW_BUNDLED_PLUGIN_RUNTIME_PORT_BASE, 19000) + pluginIndex * 3;
-  const config = ensureGatewayConfig(activateSmokePlugin(readConfig(), pluginId), port);
+  const config = ensureGatewayConfig(
+    activateSmokePlugin(readConfig(), pluginId, plan.channels),
+    port,
+  );
   if (plan.speechProviders[0]) {
     const provider = plan.speechProviders[0];
     config.messages = {

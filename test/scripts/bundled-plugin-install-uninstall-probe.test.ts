@@ -205,6 +205,25 @@ describe("bundled plugin install/uninstall probe", () => {
     );
   });
 
+  it("activates channel config for channel plugin runtime smoke", async () => {
+    const runtimeSmoke = await import(pathToFileURL(runtimeSmokePath).href);
+
+    expect(
+      runtimeSmoke.activateSmokePlugin(
+        { plugins: { allow: ["browser"] }, channels: { telegram: { dmPolicy: "open" } } },
+        "telegram",
+        ["telegram"],
+      ),
+    ).toMatchObject({
+      channels: { telegram: { dmPolicy: "open", enabled: true } },
+      plugins: {
+        allow: ["browser", "telegram"],
+        enabled: true,
+        entries: { telegram: { enabled: true } },
+      },
+    });
+  });
+
   it("rejects loose runtime output limit env values instead of parsing prefixes", async () => {
     const runtimeSmoke = await importRuntimeSmokeWithEnv({
       OPENCLAW_BUNDLED_PLUGIN_RUNTIME_OUTPUT_CHARS: "5chars",
