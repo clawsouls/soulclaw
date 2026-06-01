@@ -608,6 +608,40 @@ describe("cron method validation", () => {
     expectResponseError(respond, { messageIncludes: "delivery.channel is required" });
   });
 
+  it("does not revalidate stale delivery config for unrelated updates", async () => {
+    setRuntimeConfig({
+      session: {
+        mainKey: "main",
+      },
+      channels: {
+        slack: {
+          botToken: "xoxb-slack-token",
+          appToken: "xapp-slack-token",
+        },
+      },
+      plugins: {
+        entries: {
+          slack: { enabled: true },
+        },
+      },
+    });
+
+    const { context, respond } = await invokeCronUpdate(
+      {
+        id: "cron-1",
+        patch: {
+          enabled: false,
+        },
+      },
+      createCronJob({
+        delivery: { mode: "announce", channel: "telegram", to: "telegram:123" },
+      }),
+    );
+
+    expect(context.cron.update).toHaveBeenCalledWith("cron-1", { enabled: false });
+    expect(respond).toHaveBeenCalledWith(true, { id: "cron-1" }, undefined);
+  });
+
   it("rejects target ids mistakenly supplied as delivery.channel providers", async () => {
     setRuntimeConfig({
       session: {

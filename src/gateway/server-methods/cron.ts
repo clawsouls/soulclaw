@@ -166,16 +166,19 @@ function assertValidCronUpdatePatch(params: {
   currentJob: CronJob;
   patch: CronJobPatch;
 }) {
-  // Validate the post-patch job, not just the sparse patch, because delivery
-  // and payload/session fields can be split across existing state and patch.
+  // Apply the full patch so service-owned payload/session constraints are
+  // checked before mutation; configured-channel checks stay delivery-scoped so
+  // stale existing delivery does not block unrelated updates like disabling.
   const nextJob = structuredClone(params.currentJob);
   applyJobPatch(nextJob, params.patch, {
     defaultAgentId: params.defaultAgentId,
   });
-  assertValidCronAnnounceDelivery({
-    cfg: params.cfg,
-    delivery: nextJob.delivery,
-  });
+  if ("delivery" in params.patch) {
+    assertValidCronAnnounceDelivery({
+      cfg: params.cfg,
+      delivery: nextJob.delivery,
+    });
+  }
 }
 
 function resolveCronJobId(params: CronJobIdParams): string | undefined {
