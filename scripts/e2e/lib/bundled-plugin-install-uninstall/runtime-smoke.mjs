@@ -53,6 +53,8 @@ const READY_OFFSET_LOG_NEEDLES = [
 ];
 const GATEWAY_LOG_TRUNCATED_NEEDLE = "[gateway log truncated after ";
 const FORBIDDEN_POST_READY_DEPS_WORK = [/\b(?:npm|pnpm|yarn|corepack) install\b/iu];
+const PACKAGE_MANAGER_PROCESS_BASENAME = /^(?:npm|pnpm|yarn|corepack)(?:$|[.-])/u;
+const PROCESS_SNAPSHOT_ARGS = ["-ww", "-eo", "pid=,ppid=,args="];
 const isolatedStateRoots = new WeakMap();
 const activeGatewayChildren = new Set();
 const parentSignalHandlers = new Map();
@@ -1062,28 +1064,81 @@ export function assertNoPostReadyRuntimeDepsWork(logPath, readyOffset) {
   }
 }
 
-async function assertNoPackageManagerChildren(pid) {
+function commandIncludesPackageManager(args) {
+  return String(args ?? "")
+    .trim()
+    .split(/\s+/u)
+    .some((token) =>
+      PACKAGE_MANAGER_PROCESS_BASENAME.test(
+        path.basename(token.replace(/^['"]|['"]$/gu, "")).toLowerCase(),
+      ),
+    );
+}
+
+function parseProcessSnapshot(stdout) {
+  const processes = [];
+  for (const line of String(stdout ?? "").split("\n")) {
+    const match = /^\s*(\d+)\s+(\d+)\s+(.+?)\s*$/u.exec(line);
+    if (!match) {
+      continue;
+    }
+    processes.push({
+      args: match[3],
+      pid: Number(match[1]),
+      ppid: Number(match[2]),
+    });
+  }
+  return processes;
+}
+
+export function findPackageManagerDescendants(psOutput, rootPid) {
+  const root = Number(rootPid);
+  if (!Number.isInteger(root) || root <= 0) {
+    return [];
+  }
+
+  const childrenByParent = new Map();
+  for (const processInfo of parseProcessSnapshot(psOutput)) {
+    const list = childrenByParent.get(processInfo.ppid) ?? [];
+    list.push(processInfo);
+    childrenByParent.set(processInfo.ppid, list);
+  }
+
+  const matches = [];
+  const pending = [...(childrenByParent.get(root) ?? [])];
+  const seen = new Set();
+  while (pending.length > 0) {
+    const current = pending.shift();
+    if (!current || seen.has(current.pid)) {
+      continue;
+    }
+    seen.add(current.pid);
+    if (commandIncludesPackageManager(current.args)) {
+      matches.push(current);
+    }
+    pending.push(...(childrenByParent.get(current.pid) ?? []));
+  }
+  return matches;
+}
+
+export async function assertNoPackageManagerChildren(pid) {
   if (!pid || process.platform === "win32") {
     return;
   }
   try {
-    const { stdout } = await runCommand("pgrep", [
-      "-P",
-      String(pid),
-      "-af",
-      "npm|pnpm|yarn|corepack",
-    ]);
-    if (stdout.trim()) {
+    const { stdout } = await runCommand("ps", PROCESS_SNAPSHOT_ARGS);
+    const packageManagerDescendants = findPackageManagerDescendants(stdout, pid);
+    if (packageManagerDescendants.length > 0) {
+      const formatted = packageManagerDescendants
+        .map((entry) => `${entry.pid} ${entry.args}`)
+        .join("\n");
       throw new Error(
-        `package manager child process still running under gateway ${pid}:\n${stdout}`,
+        `package manager descendant process still running under gateway ${pid}:\n${formatted}`,
       );
     }
   } catch (error) {
     if (error?.code === "ENOENT") {
-      console.log("Runtime deps child-process watchdog skipped: pgrep unavailable");
-      return;
-    }
-    if (error instanceof Error && error.message.includes("failed with 1")) {
+      console.log("Runtime deps child-process watchdog skipped: ps unavailable");
       return;
     }
     throw error;
