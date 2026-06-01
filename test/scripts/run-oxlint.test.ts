@@ -327,10 +327,10 @@ describe("run-oxlint", () => {
           runner,
           [
             "import { writeFileSync } from 'node:fs';",
-            "writeFileSync(process.env.READY_FILE, String(process.pid));",
             "process.on('SIGTERM', () => {",
             "  writeFileSync(process.env.IGNORED_FILE, 'SIGTERM');",
             "});",
+            "writeFileSync(process.env.READY_FILE, String(process.pid));",
             "setInterval(() => {}, 1000);",
             "",
           ].join("\n"),
