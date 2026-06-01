@@ -1103,10 +1103,10 @@ async function p8ManagedServiceEnvProof() {
       }
     }
     if (proofError) {
-      throw proofError;
+      throw toLintErrorObject(proofError, "Non-Error thrown");
     }
     if (cleanupError) {
-      throw cleanupError;
+      throw toLintErrorObject(cleanupError, "Non-Error thrown");
     }
   });
   return "real managed service install preserved auth-profile exec provider passEnv";
@@ -1578,7 +1578,7 @@ async function main() {
     });
   }
   if (runError) {
-    throw runError;
+    throw toLintErrorObject(runError, "Non-Error thrown");
   }
   const failed = results.filter((entry) => entry.status !== "pass");
   if (failed.length > 0) {
@@ -1590,4 +1590,18 @@ export { gatewayCall, runCommand, startGateway, waitForManagedGatewayStatus };
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   await main();
+}
+
+function toLintErrorObject(value, fallbackMessage) {
+  if (value instanceof Error) {
+    return value;
+  }
+  if (typeof value === "string") {
+    return new Error(value);
+  }
+  const error = new Error(fallbackMessage, { cause: value });
+  if ((typeof value === "object" && value !== null) || typeof value === "function") {
+    Object.assign(error, value);
+  }
+  return error;
 }

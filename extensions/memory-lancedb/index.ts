@@ -229,7 +229,7 @@ class MemoryDB {
       return this.initPromise;
     }
 
-    this.initPromise = this.doInitialize().catch((error) => {
+    this.initPromise = this.doInitialize().catch((error: unknown) => {
       this.initPromise = null;
       throw error;
     });
@@ -403,7 +403,7 @@ class ProviderAdapterEmbeddings implements Embeddings {
   private getProvider(): Promise<MemoryEmbeddingProvider> {
     // Auth profiles and local providers can be repaired while the Gateway stays up.
     // Cache successful setup, but retry after failed provider discovery/auth.
-    this.providerPromise ??= this.createProvider().catch((err) => {
+    this.providerPromise ??= this.createProvider().catch((err: unknown) => {
       this.providerPromise = undefined;
       throw err;
     });

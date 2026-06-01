@@ -1457,8 +1457,10 @@ async function main() {
 }
 
 if (IS_MAIN) {
-  await main().catch((error) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  });
+  await main().catch(
+    /** @param {unknown} error */ (error) => {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    },
+  );
 }

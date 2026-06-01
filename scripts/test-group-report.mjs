@@ -571,8 +571,10 @@ const isMain =
   import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 
 if (isMain) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
-  });
+  main().catch(
+    /** @param {unknown} error */ (error) => {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exit(1);
+    },
+  );
 }

@@ -657,7 +657,7 @@ export function connectGateway(host: GatewayHost, options?: ConnectGatewayOption
                   ...(abort.agentId ? { agentId: abort.agentId } : {}),
                 },
           )
-          .catch((err) => {
+          .catch((err: unknown) => {
             // Log to console for diagnostics; user sees no feedback for a stale abort
             // since the run likely completed during the disconnect window anyway.
             console.warn("[openclaw] pending abort failed:", err);

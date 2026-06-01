@@ -504,7 +504,10 @@ async function retryRpcCall(method, params, options) {
       await delay(500);
     }
   }
-  throw lastError ?? new Error(`gateway RPC ${method} timed out before retry`);
+  throw toLintErrorObject(
+    lastError ?? new Error(`gateway RPC ${method} timed out before retry`),
+    "Non-Error thrown",
+  );
 }
 
 function isRetryableGatewayCallError(error) {
@@ -585,7 +588,7 @@ export async function fetchJson(url, options = {}) {
       }
     }
   }
-  throw lastError ?? new Error(`fetch ${url} failed`);
+  throw toLintErrorObject(lastError ?? new Error(`fetch ${url} failed`), "Non-Error thrown");
 }
 
 export async function readBoundedResponseText(response, byteLimit = FETCH_BODY_MAX_BYTES) {
@@ -1629,4 +1632,18 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   } else {
     await main();
   }
+}
+
+function toLintErrorObject(value, fallbackMessage) {
+  if (value instanceof Error) {
+    return value;
+  }
+  if (typeof value === "string") {
+    return new Error(value);
+  }
+  const error = new Error(fallbackMessage, { cause: value });
+  if ((typeof value === "object" && value !== null) || typeof value === "function") {
+    Object.assign(error, value);
+  }
+  return error;
 }

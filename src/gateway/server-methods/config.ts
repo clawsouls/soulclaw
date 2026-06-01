@@ -178,7 +178,7 @@ function execConfigOpenCommand(command: ConfigOpenCommand): Promise<void> {
   return new Promise((resolve, reject) => {
     execFile(command.command, command.args, (error) => {
       if (error) {
-        reject(error);
+        reject(toLintErrorObject(error, "Non-Error rejection"));
         return;
       }
       resolve();
@@ -738,3 +738,17 @@ export const configHandlers: GatewayRequestHandlers = {
     }
   },
 };
+
+function toLintErrorObject(value: unknown, fallbackMessage: string): Error {
+  if (value instanceof Error) {
+    return value;
+  }
+  if (typeof value === "string") {
+    return new Error(value);
+  }
+  const error = new Error(fallbackMessage, { cause: value });
+  if ((typeof value === "object" && value !== null) || typeof value === "function") {
+    Object.assign(error, value);
+  }
+  return error;
+}

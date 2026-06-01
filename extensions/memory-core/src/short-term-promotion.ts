@@ -751,7 +751,7 @@ async function ensureShortTermArtifactsDir(workspaceDir: string): Promise<void> 
   const ensuring = fs
     .mkdir(artifactsDir, { recursive: true })
     .then(() => undefined)
-    .catch((err) => {
+    .catch((err: unknown) => {
       ensuredShortTermDirs.delete(artifactsDir);
       throw err;
     });

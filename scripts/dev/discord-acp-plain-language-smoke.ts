@@ -534,7 +534,7 @@ async function requestDiscordJson<T>(params: {
           label: `${params.errorPrefix} ${params.method} ${redactDiscordApiPath(params.path)}`,
           signal: controller.signal,
           maxBytes: responseBodyMaxBytes,
-        }).catch((error) => {
+        }).catch((error: unknown) => {
           if (isTooLargeError(error)) {
             throw error;
           }
@@ -1039,7 +1039,7 @@ async function main(): Promise<number> {
     return 0;
   }
   const result = await run().catch(
-    (err): FailureResult => ({
+    (err: unknown): FailureResult => ({
       ok: false,
       stage: "unexpected",
       smokeId: "n/a",

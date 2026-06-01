@@ -739,7 +739,7 @@ function scheduleChatHistoryManagedImageCleanup(params: {
     ...(params.sessionKey === "global" && params.agentId ? { agentId: params.agentId } : {}),
   })
     .then(() => undefined)
-    .catch((error) => {
+    .catch((error: unknown) => {
       params.context.logGateway.debug(
         `chat.history managed image cleanup skipped sessionKey=${JSON.stringify(params.sessionKey)} error=${formatForLog(error)}`,
       );
@@ -4150,12 +4150,12 @@ export const chatHandlers: GatewayRequestHandlers = {
             },
           );
         })
-        .catch(async (err) => {
+        .catch(async (err: unknown) => {
           const emitAfterError =
             userTurnRecorder.hasPersisted() || userTurnRecorder.isBlocked()
               ? Promise.resolve()
               : persistGatewayUserTurnTranscript();
-          await emitAfterError.catch((transcriptErr) => {
+          await emitAfterError.catch((transcriptErr: unknown) => {
             context.logGateway.warn(
               `webchat user transcript update failed after error: ${formatForLog(transcriptErr)}`,
             );

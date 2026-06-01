@@ -928,7 +928,7 @@ export async function enqueueRun(state: CronServiceState, id: string, mode?: "du
         );
       },
     },
-  ).catch((err) => {
+  ).catch((err: unknown) => {
     state.deps.log.error(
       { jobId: id, runId, err: String(err) },
       "cron: queued manual run background execution failed",

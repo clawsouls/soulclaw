@@ -131,7 +131,7 @@ function emitFailureAlert(
         mode: params.mode,
         accountId: params.accountId,
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         state.deps.log.warn(
           { jobId: params.job.id, err: String(err) },
           "cron: failure alert delivery failed",

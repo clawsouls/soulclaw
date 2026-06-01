@@ -190,7 +190,7 @@ function scheduleBaseToolsEffectiveRefresh(
         }
         resolve(value);
       } catch (err) {
-        reject(err);
+        reject(toLintErrorObject(err, "Non-Error rejection"));
       } finally {
         toolsEffectiveInflight.delete(key);
       }
@@ -204,7 +204,7 @@ function refreshBaseToolsEffectiveInBackground(
   key: string,
   context: TrustedToolsEffectiveContext,
 ): void {
-  void scheduleBaseToolsEffectiveRefresh(key, context).catch((err) => {
+  void scheduleBaseToolsEffectiveRefresh(key, context).catch((err: unknown) => {
     logWarn(`tools-effective: background refresh failed: ${String(err)}`);
   });
 }
@@ -600,3 +600,17 @@ export const testing = {
   },
 } as const;
 export { testing as __testing };
+
+function toLintErrorObject(value: unknown, fallbackMessage: string): Error {
+  if (value instanceof Error) {
+    return value;
+  }
+  if (typeof value === "string") {
+    return new Error(value);
+  }
+  const error = new Error(fallbackMessage, { cause: value });
+  if ((typeof value === "object" && value !== null) || typeof value === "function") {
+    Object.assign(error, value);
+  }
+  return error;
+}

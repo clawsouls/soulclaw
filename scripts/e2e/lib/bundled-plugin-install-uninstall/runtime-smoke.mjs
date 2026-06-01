@@ -500,7 +500,10 @@ async function assertHttpOk(port, pathName) {
     }
     await delay(500);
   }
-  throw lastError ?? new Error(`${pathName} did not return HTTP 200`);
+  throw toLintErrorObject(
+    lastError ?? new Error(`${pathName} did not return HTTP 200`),
+    "Non-Error thrown",
+  );
 }
 
 async function assertReadyzProbe(options) {
@@ -524,7 +527,10 @@ async function assertReadyzProbe(options) {
     }
     await delay(500);
   }
-  throw lastError ?? new Error("/readyz did not return HTTP 200");
+  throw toLintErrorObject(
+    lastError ?? new Error("/readyz did not return HTTP 200"),
+    "Non-Error thrown",
+  );
 }
 
 async function rpcCall(method, params, options) {
@@ -569,7 +575,10 @@ async function retryRpcCall(method, params, options) {
       await delay(500);
     }
   }
-  throw lastError ?? new Error(`gateway RPC ${method} timed out before retry`);
+  throw toLintErrorObject(
+    lastError ?? new Error(`gateway RPC ${method} timed out before retry`),
+    "Non-Error thrown",
+  );
 }
 
 function isRetryableGatewayCallError(error) {
@@ -1035,4 +1044,18 @@ export async function main(argv = process.argv.slice(2)) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   await main();
+}
+
+function toLintErrorObject(value, fallbackMessage) {
+  if (value instanceof Error) {
+    return value;
+  }
+  if (typeof value === "string") {
+    return new Error(value);
+  }
+  const error = new Error(fallbackMessage, { cause: value });
+  if ((typeof value === "object" && value !== null) || typeof value === "function") {
+    Object.assign(error, value);
+  }
+  return error;
 }

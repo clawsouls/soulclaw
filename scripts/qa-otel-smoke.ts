@@ -1348,7 +1348,7 @@ export const testing = {
 };
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  main().catch((error) => {
+  main().catch((error: unknown) => {
     process.stderr.write(
       `qa-otel-smoke: ${error instanceof Error ? error.stack || error.message : String(error)}\n`,
     );

@@ -944,7 +944,7 @@ function dispatchAgentRunFromGateway(params: {
       // Swift clients will typically treat the first res as the result and ignore this.
       params.respond(true, payload, undefined, { runId: params.runId });
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       const aborted = isGatewayAgentAbortRejection(err, params.abortController.signal);
       const renderedErr = formatForLog(err);
       if (taskTracked) {

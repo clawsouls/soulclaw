@@ -230,7 +230,7 @@ export function registerMatrixMonitorEvents(params: {
     }
     return Promise.resolve()
       .then(task)
-      .catch((error) => {
+      .catch((error: unknown) => {
         logVerboseMessage(`matrix: ${label} failed (${String(error)})`);
       });
   };

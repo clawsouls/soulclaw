@@ -112,7 +112,7 @@ function createHarness(params?: {
   const runDetachedTask = vi.fn((_label: string, task: () => Promise<void>) => {
     const promise = Promise.resolve()
       .then(task)
-      .catch((error) => {
+      .catch((error: unknown) => {
         throw error;
       })
       .finally(() => {
