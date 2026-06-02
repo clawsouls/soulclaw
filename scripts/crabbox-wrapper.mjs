@@ -11,6 +11,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -1939,35 +1940,90 @@ function fullCheckoutSyncRoot() {
 function prepareFullCheckoutForSync(options = {}) {
   const dir = mkdtempSync(resolve(fullCheckoutSyncRoot(), "openclaw-crabbox-sync-"));
   let active = false;
-  const add = gitOutput(["worktree", "add", "--detach", dir, "HEAD"]);
-  if (add.status !== 0) {
-    rmSync(dir, { recursive: true, force: true });
-    throw new Error(`git worktree add failed: ${add.text}`);
-  }
-  active = true;
 
-  const disableSparse = gitOutput(["-C", dir, "sparse-checkout", "disable"]);
-  if (disableSparse.status !== 0) {
-    cleanupFullCheckout(dir, active);
-    throw new Error(`git sparse-checkout disable failed: ${disableSparse.text}`);
-  }
+  function create() {
+    const add = gitOutput(["worktree", "add", "--detach", dir, "HEAD"]);
+    if (add.status !== 0) {
+      rmSync(dir, { recursive: true, force: true });
+      throw new Error(`git worktree add failed: ${add.text}`);
+    }
+    active = true;
 
-  if (options.changedGateBase) {
-    const reset = gitOutput(["-C", dir, "reset", "--mixed", "--quiet", options.changedGateBase]);
-    if (reset.status !== 0) {
+    const disableSparse = gitOutput(["-C", dir, "sparse-checkout", "disable"]);
+    if (disableSparse.status !== 0) {
       cleanupFullCheckout(dir, active);
-      throw new Error(`git reset for changed-gate sync failed: ${reset.text}`);
+      active = false;
+      throw new Error(`git sparse-checkout disable failed: ${disableSparse.text}`);
+    }
+
+    if (options.changedGateBase) {
+      const reset = gitOutput(["-C", dir, "reset", "--mixed", "--quiet", options.changedGateBase]);
+      if (reset.status !== 0) {
+        cleanupFullCheckout(dir, active);
+        active = false;
+        throw new Error(`git reset for changed-gate sync failed: ${reset.text}`);
+      }
     }
   }
+
+  create();
 
   return {
     dir,
     changedGateBase: options.changedGateBase ?? "",
+    restoreIfMissing() {
+      try {
+        if (statSync(dir).isDirectory()) {
+          return false;
+        }
+      } catch {
+        // Recreate below.
+      }
+
+      console.error(`[crabbox] temporary full checkout disappeared; recreating ${dir}`);
+      if (active) {
+        const remove = gitOutput(["worktree", "remove", "--force", dir]);
+        if (remove.status !== 0) {
+          console.error(`[crabbox] warning: git worktree remove failed for ${dir}: ${remove.text}`);
+        }
+        active = false;
+      }
+      rmSync(dir, { recursive: true, force: true });
+      create();
+      return true;
+    },
     cleanup() {
       cleanupFullCheckout(dir, active);
       active = false;
     },
   };
+}
+
+function startFullCheckoutKeepalive(checkout) {
+  const refresh = () => {
+    try {
+      checkout.restoreIfMissing();
+      const now = new Date();
+      utimesSync(checkout.dir, now, now);
+    } catch (error) {
+      console.error(
+        `[crabbox] warning: failed to refresh temporary full checkout ${checkout.dir}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  };
+
+  refresh();
+  const intervalMs = Number.parseInt(
+    process.env.OPENCLAW_CRABBOX_SYNC_KEEPALIVE_MS ?? "5000",
+    10,
+  );
+  if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
+    return () => {};
+  }
+
+  const interval = setInterval(refresh, intervalMs);
+  interval.unref?.();
+  return () => clearInterval(interval);
 }
 
 function cleanupFullCheckout(dir, active) {
@@ -1979,6 +2035,20 @@ function cleanupFullCheckout(dir, active) {
     console.error(`[crabbox] warning: git worktree remove failed for ${dir}: ${remove.text}`);
   }
   rmSync(dir, { recursive: true, force: true });
+}
+
+function assertFullCheckoutAvailableBeforeExit(dir) {
+  try {
+    if (statSync(dir).isDirectory()) {
+      return;
+    }
+  } catch {
+    // Report below.
+  }
+
+  console.error(
+    `[crabbox] temporary full checkout vanished before Crabbox finished syncing: ${dir}`,
+  );
 }
 
 const version = checkedOutput(binary, ["--version"]);
@@ -2138,6 +2208,8 @@ if (canonicalProvider === "blacksmith-testbox") {
 
 let childCwd = repoRoot;
 let cleanupChildCwd = () => {};
+let fullCheckout = null;
+let stopFullCheckoutKeepalive = () => {};
 let cleanupDone = false;
 let remoteChangedGateBase = "";
 const scriptBootstrap = prepareAwsMacosScriptStdinBootstrap(normalizedArgs, provider);
@@ -2148,6 +2220,7 @@ try {
     const runWords = runCommandArgs(normalizedArgs);
     const changedGateBase = isChangedGateCommand(runWords) ? mergeBaseForChangedGate() : "";
     const checkout = prepareFullCheckoutForSync({ changedGateBase });
+    fullCheckout = checkout;
     childCwd = checkout.dir;
     cleanupChildCwd = () => checkout.cleanup();
     remoteChangedGateBase = checkout.changedGateBase;
@@ -2170,6 +2243,7 @@ function cleanupOnce() {
     return;
   }
   cleanupDone = true;
+  stopFullCheckoutKeepalive();
   scriptBootstrap.cleanup();
   preserveTemporaryCrabboxRuns();
   cleanupChildCwd();
@@ -2233,6 +2307,9 @@ const childArgs =
         ),
         remoteChangedGateBase,
       );
+if (fullCheckout) {
+  stopFullCheckoutKeepalive = startFullCheckoutKeepalive(fullCheckout);
+}
 const childInvocation = spawnInvocation(binary, childArgs, childEnv, process.platform);
 const child = spawn(childInvocation.command, childInvocation.args, {
   cwd: childCwd,
@@ -2258,6 +2335,9 @@ for (const signal of signalExitCodes.keys()) {
 process.once("exit", cleanupOnce);
 
 child.on("exit", (code, signal) => {
+  if (fullCheckout) {
+    assertFullCheckoutAvailableBeforeExit(fullCheckout.dir);
+  }
   cleanupOnce();
   if (signal) {
     process.exit(signalExitCodes.get(signal) ?? 1);
@@ -2267,6 +2347,9 @@ child.on("exit", (code, signal) => {
 });
 
 child.on("error", (error) => {
+  if (fullCheckout) {
+    assertFullCheckoutAvailableBeforeExit(fullCheckout.dir);
+  }
   cleanupOnce();
   console.error(`[crabbox] failed to execute ${displayBinary}: ${error.message}`);
   process.exit(2);
