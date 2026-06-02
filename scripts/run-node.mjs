@@ -473,10 +473,22 @@ const listRequiredOpenClawExtensionAliasOutputs = (deps) => {
 };
 
 const listRequiredStaticExtensionAssetOutputs = (deps) => {
+  if (deps.env.OPENCLAW_RUNTIME_POSTBUILD_STATIC_ASSETS === "0") {
+    return [];
+  }
   const distRoot = resolveRuntimePostBuildDistRoot(deps);
+  const runtimeRoot = resolveRuntimePostBuildRuntimeRoot(deps);
+  const runtimeExtensionsRoot = path.join(runtimeRoot, "extensions");
+  const hasRuntimeOverlay = deps.fs.existsSync(runtimeExtensionsRoot);
   return discoverStaticExtensionAssets({ rootDir: deps.cwd, fs: deps.fs })
     .filter((asset) => deps.fs.existsSync(path.join(deps.cwd, asset.src)))
-    .map((asset) => path.join(distRoot, normalizePath(asset.dest).replace(/^dist\//u, "")))
+    .flatMap((asset) => {
+      const relativeOutput = normalizePath(asset.dest).replace(/^dist\//u, "");
+      return [
+        path.join(distRoot, relativeOutput),
+        ...(hasRuntimeOverlay ? [path.join(runtimeRoot, relativeOutput)] : []),
+      ];
+    })
     .toSorted((left, right) => left.localeCompare(right));
 };
 
