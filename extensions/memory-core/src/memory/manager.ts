@@ -392,13 +392,14 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
   }
 
   private refreshIndexIdentityDirty(params?: { providerKeyKnown?: boolean }) {
-    const provider = !this.vector.enabled
-      ? null
-      : this.providerInitialized
-        ? this.provider
-          ? { id: this.provider.id, model: this.provider.model }
-          : null
-        : undefined;
+    const provider =
+      this.settings.provider === "none"
+        ? null
+        : this.providerInitialized
+          ? this.provider
+            ? { id: this.provider.id, model: this.provider.model }
+            : null
+          : undefined;
     const state = this.resolveCurrentIndexIdentityState({
       ...(provider !== undefined ? { provider } : {}),
       providerKeyKnown: params?.providerKeyKnown,
@@ -453,7 +454,7 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
         log.warn(`memory sync failed (search): ${String(err)}`);
       },
     });
-    if (preflight.shouldInitializeProvider && this.vector.enabled) {
+    if (preflight.shouldInitializeProvider && this.settings.provider !== "none") {
       await this.ensureProviderInitialized();
     }
     if (!this.provider && this.providerLifecycle.mode === "degraded") {
@@ -791,7 +792,7 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
       return this.syncing;
     }
     this.syncing = (async () => {
-      if (this.vector.enabled) {
+      if (this.settings.provider !== "none") {
         await this.ensureProviderInitialized();
       }
       await this.runSyncWithReadonlyRecovery(params);

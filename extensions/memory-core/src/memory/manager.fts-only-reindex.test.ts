@@ -129,7 +129,7 @@ describe("memory manager FTS-only reindex", () => {
     expect(countChunksContaining("Alpha topic")).toBeGreaterThan(0);
   });
 
-  it("syncs vector-disabled memory without resolving an embedding provider", async () => {
+  it("syncs explicit provider-none memory without resolving an embedding provider", async () => {
     const memoryManager = await createManager({ provider: "none", vectorEnabled: false });
 
     await memoryManager.sync({ force: true });
@@ -137,6 +137,15 @@ describe("memory manager FTS-only reindex", () => {
     expect(createEmbeddingProviderMock).not.toHaveBeenCalled();
     expect(countChunksContaining("Alpha topic")).toBeGreaterThan(0);
     expect(memoryManager.status().custom?.indexIdentity).toEqual({ status: "valid" });
+  });
+
+  it("still initializes configured providers when vector storage is disabled", async () => {
+    const memoryManager = await createManager({ provider: "auto", vectorEnabled: false });
+
+    await memoryManager.sync({ force: true });
+
+    expect(createEmbeddingProviderMock).toHaveBeenCalledOnce();
+    expect(countChunksContaining("Alpha topic")).toBeGreaterThan(0);
   });
 
   it("refreshes FTS-only indexed content after memory file updates", async () => {
