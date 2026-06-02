@@ -1823,6 +1823,23 @@ test -f "$TMPDIR/docker-cmd-seen"
     expect(scenario).not.toContain('node "$entry" gateway --port "$PORT"');
   });
 
+  it("keeps OpenAI web search smoke logs isolated per run", () => {
+    const scenario = readFileSync(OPENAI_WEB_SEARCH_MINIMAL_SCENARIO_PATH, "utf8");
+
+    expect(scenario).toContain(
+      'scenario_tmp="$(mktemp -d "${TMPDIR:-/tmp}/openclaw-openai-web-search-minimal.XXXXXX")"',
+    );
+    expect(scenario).toContain('MOCK_REQUEST_LOG="$scenario_tmp/requests.jsonl"');
+    expect(scenario).toContain('GATEWAY_LOG="$scenario_tmp/gateway.log"');
+    expect(scenario).toContain('MOCK_LOG="$scenario_tmp/mock.log"');
+    expect(scenario).toContain('CLIENT_SUCCESS_LOG="$scenario_tmp/client-success.log"');
+    expect(scenario).toContain('CLIENT_REJECT_LOG="$scenario_tmp/client-reject.log"');
+    expect(scenario).toContain('rm -rf "$scenario_tmp"');
+    expect(scenario).not.toContain("/tmp/openclaw-openai-web-search-minimal-requests.jsonl");
+    expect(scenario).not.toContain("/tmp/openclaw-openai-web-search-minimal-client-success.log");
+    expect(scenario).not.toContain("/tmp/openclaw-openai-web-search-minimal-client-reject.log");
+  });
+
   it("keeps ClawHub plugin Docker smoke hermetic by default", () => {
     const runner = readFileSync(PLUGINS_DOCKER_E2E_PATH, "utf8");
     const sweep = readFileSync(PLUGINS_DOCKER_SWEEP_PATH, "utf8");
