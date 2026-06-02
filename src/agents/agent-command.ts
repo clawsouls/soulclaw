@@ -105,12 +105,13 @@ import { normalizeConfiguredProviderCatalogModelId } from "./model-ref-shared.js
 import type { ModelManifestNormalizationContext } from "./model-selection-normalize.js";
 import {
   buildConfiguredModelCatalog,
+  buildModelAliasIndex,
   modelKey,
   normalizeModelRef,
   normalizeProviderId,
-  parseModelRef,
   resolveConfiguredModelRef,
   resolveDefaultModelForAgent,
+  resolveModelRefFromString,
   resolveThinkingDefault,
 } from "./model-selection.js";
 import {
@@ -201,10 +202,19 @@ function parseAgentCommandModelRef(
   defaultProvider: string,
   modelManifestContext: ModelManifestNormalizationContext,
 ) {
-  const parsed = parseModelRef(raw, defaultProvider, {
+  const parsed = resolveModelRefFromString({
+    cfg,
+    raw,
+    defaultProvider,
+    aliasIndex: buildModelAliasIndex({
+      cfg,
+      defaultProvider,
+      ...modelManifestContext,
+      allowPluginNormalization: false,
+    }),
     ...modelManifestContext,
     allowPluginNormalization: false,
-  });
+  })?.ref;
   return parsed
     ? normalizeAgentCommandModelRef(cfg, parsed.provider, parsed.model, modelManifestContext)
     : null;
@@ -1497,25 +1507,9 @@ async function agentCommandInternal(
         catalog: thinkingCatalog,
       });
       if (fallbackThinkLevel !== resolvedThinkLevel) {
-        const previousThinkLevel = resolvedThinkLevel;
+        // Execution fallbacks are turn-local; directive/model persistence owns
+        // durable thinking remaps so explicit session overrides survive runs.
         resolvedThinkLevel = fallbackThinkLevel;
-        if (
-          sessionEntry &&
-          sessionStore &&
-          sessionKey &&
-          sessionEntry.thinkingLevel === previousThinkLevel &&
-          !suppressVisibleSessionEffects
-        ) {
-          const entry = sessionEntry;
-          entry.thinkingLevel = fallbackThinkLevel;
-          entry.updatedAt = Date.now();
-          await persistSessionEntry({
-            sessionStore,
-            sessionKey,
-            storePath,
-            entry,
-          });
-        }
       }
     }
     const { resolveSessionTranscriptFile } = await loadTranscriptResolveRuntime();
