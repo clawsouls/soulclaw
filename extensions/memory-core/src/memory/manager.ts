@@ -464,7 +464,7 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
         log.warn(`memory sync failed (search): ${String(err)}`);
       },
     });
-    if (preflight.shouldInitializeProvider && this.settings.provider !== "none") {
+    if (preflight.shouldInitializeProvider) {
       await this.ensureProviderInitialized();
     }
     if (!this.provider && this.providerLifecycle.mode === "degraded") {
@@ -802,9 +802,7 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
       return this.syncing;
     }
     this.syncing = (async () => {
-      if (this.settings.provider !== "none") {
-        await this.ensureProviderInitialized();
-      }
+      await this.ensureProviderInitialized();
       await this.runSyncWithReadonlyRecovery(params);
     })().finally(() => {
       this.syncing = null;

@@ -137,6 +137,11 @@ describe("memory manager FTS-only reindex", () => {
     expect(createEmbeddingProviderMock).not.toHaveBeenCalled();
     expect(countChunksContaining("Alpha topic")).toBeGreaterThan(0);
     expect(memoryManager.status().custom?.indexIdentity).toEqual({ status: "valid" });
+    expect(memoryManager.status().custom?.providerState).toEqual({
+      mode: "fts-only",
+      reason: "No embedding provider available (FTS-only mode)",
+      attemptedProviderId: "none",
+    });
   });
 
   it("reports explicit provider-none probes as FTS-only without resolving providers", async () => {
