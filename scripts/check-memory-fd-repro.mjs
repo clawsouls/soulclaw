@@ -712,25 +712,7 @@ async function main() {
     OPENCLAW_CONFIG_PATH: configPath,
     OPENCLAW_GATEWAY_TOKEN: token,
   };
-  preindexSyntheticMemory(env);
-  const child = spawn(
-    process.execPath,
-    [
-      "scripts/run-node.mjs",
-      "gateway",
-      "run",
-      "--port",
-      String(port),
-      "--auth",
-      "token",
-      "--token",
-      token,
-      "--bind",
-      "loopback",
-      "--allow-unconfigured",
-    ],
-    { cwd: process.cwd(), env, stdio: ["ignore", "pipe", "pipe"] },
-  );
+  let child = null;
 
   const summary = {
     generatedAt: new Date().toISOString(),
@@ -749,6 +731,25 @@ async function main() {
   };
 
   try {
+    preindexSyntheticMemory(env);
+    child = spawn(
+      process.execPath,
+      [
+        "scripts/run-node.mjs",
+        "gateway",
+        "run",
+        "--port",
+        String(port),
+        "--auth",
+        "token",
+        "--token",
+        token,
+        "--bind",
+        "loopback",
+        "--allow-unconfigured",
+      ],
+      { cwd: process.cwd(), env, stdio: ["ignore", "pipe", "pipe"] },
+    );
     logStep(`workspace=${workspaceDir}`);
     logStep(`files=${options.fileCount} mode=${options.mode} port=${port}`);
     await waitForGatewayReady({ child, port, logPath, timeoutMs: 60_000 });
@@ -786,7 +787,9 @@ async function main() {
       throw new Error(summary.failure);
     }
   } finally {
-    await stopGateway({ child, port });
+    if (child) {
+      await stopGateway({ child, port });
+    }
     if (!options.keep) {
       fs.rmSync(rootDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
     } else {
