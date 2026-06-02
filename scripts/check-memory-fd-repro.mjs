@@ -712,7 +712,7 @@ async function main() {
     OPENCLAW_CONFIG_PATH: configPath,
     OPENCLAW_GATEWAY_TOKEN: token,
   };
-  let child = null;
+  let child;
 
   const summary = {
     generatedAt: new Date().toISOString(),
