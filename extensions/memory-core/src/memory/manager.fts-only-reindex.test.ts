@@ -165,9 +165,10 @@ describe("memory manager FTS-only reindex", () => {
 
     await memoryManager.sync({ force: true });
 
+    const status = memoryManager.status();
     expect(createEmbeddingProviderMock).not.toHaveBeenCalled();
-    expect(memoryManager.status().vector.enabled).toBe(false);
-    expect(memoryManager.status().custom?.indexIdentity).toEqual({ status: "valid" });
+    expect(status.vector).toMatchObject({ enabled: false });
+    expect(status.custom?.indexIdentity).toEqual({ status: "valid" });
     expect(countChunksContaining("Alpha topic")).toBeGreaterThan(0);
   });
 
