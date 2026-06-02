@@ -1202,6 +1202,61 @@ grep -qx -- "OPENCLAW_E2E_COMMAND_TIMEOUT=23s" "$TMPDIR/package-args"
     );
   });
 
+  it("keeps append-only mock E2E state under per-run scratch roots", () => {
+    const scripts = [
+      {
+        path: "scripts/e2e/lib/release-typed-onboarding/scenario.sh",
+        scratch:
+          'scenario_tmp="$(mktemp -d "${TMPDIR:-/tmp}/openclaw-release-typed-onboarding.XXXXXX")"',
+        requestLog: 'MOCK_REQUEST_LOG="$scenario_tmp/openai-requests.jsonl"',
+        removed: ["/tmp/openclaw-release-typed-onboarding-openai.jsonl"],
+      },
+      {
+        path: "scripts/e2e/lib/release-user-journey/scenario.sh",
+        scratch:
+          'scenario_tmp="$(mktemp -d "${TMPDIR:-/tmp}/openclaw-release-user-journey.XXXXXX")"',
+        requestLog: 'MOCK_REQUEST_LOG="$scenario_tmp/openai-requests.jsonl"',
+        extraState: 'CLICKCLACK_STATE="$scenario_tmp/clickclack.json"',
+        removed: [
+          "/tmp/openclaw-release-user-journey-openai.jsonl",
+          "/tmp/openclaw-release-user-journey-clickclack.json",
+        ],
+      },
+      {
+        path: RELEASE_UPGRADE_USER_JOURNEY_SCENARIO_PATH,
+        scratch:
+          'scenario_tmp="$(mktemp -d "${TMPDIR:-/tmp}/openclaw-release-upgrade-user-journey.XXXXXX")"',
+        requestLog: 'MOCK_REQUEST_LOG="$scenario_tmp/openai-requests.jsonl"',
+        extraState: 'CLICKCLACK_STATE="$scenario_tmp/clickclack.json"',
+        removed: [
+          "/tmp/openclaw-release-upgrade-user-journey-openai.jsonl",
+          "/tmp/openclaw-release-upgrade-user-journey-clickclack.json",
+        ],
+      },
+      {
+        path: NPM_ONBOARD_CHANNEL_AGENT_DOCKER_E2E_PATH,
+        scratch:
+          'scenario_tmp="$(mktemp -d "${TMPDIR:-/tmp}/openclaw-npm-onboard-channel-agent.XXXXXX")"',
+        requestLog: 'MOCK_REQUEST_LOG="$scenario_tmp/mock-openai-requests.jsonl"',
+        removed: ["/tmp/openclaw-mock-openai-requests.jsonl"],
+      },
+    ];
+
+    for (const { path, scratch, requestLog, extraState, removed } of scripts) {
+      const script = readFileSync(path, "utf8");
+
+      expect(script, path).toContain(scratch);
+      expect(script, path).toContain(requestLog);
+      expect(script, path).toContain('rm -rf "$scenario_tmp"');
+      if (extraState) {
+        expect(script, path).toContain(extraState);
+      }
+      for (const stalePath of removed) {
+        expect(script, path).not.toContain(stalePath);
+      }
+    }
+  });
+
   it("kills timed Docker scenario runners after the grace period", () => {
     const multiNode = readFileSync(MULTI_NODE_UPDATE_DOCKER_E2E_PATH, "utf8");
     const upgradeSurvivor = readFileSync(UPGRADE_SURVIVOR_DOCKER_E2E_PATH, "utf8");
