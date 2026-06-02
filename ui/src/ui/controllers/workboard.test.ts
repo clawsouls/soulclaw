@@ -141,8 +141,18 @@ describe("workboard controller", () => {
   });
 
   it("summarizes parent dependency readiness from loaded cards", () => {
-    const parentDone = { ...sampleCard, id: "parent-done", title: "Done parent", status: "done" };
-    const parentTodo = { ...sampleCard, id: "parent-todo", title: "Todo parent", status: "todo" };
+    const parentDone = {
+      ...sampleCard,
+      id: "parent-done",
+      title: "Done parent",
+      status: "done",
+    } satisfies WorkboardCard;
+    const parentTodo = {
+      ...sampleCard,
+      id: "parent-todo",
+      title: "Todo parent",
+      status: "todo",
+    } satisfies WorkboardCard;
     const child = {
       ...sampleCard,
       id: "child-1",
