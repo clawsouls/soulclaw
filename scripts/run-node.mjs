@@ -484,10 +484,11 @@ const listRequiredStaticExtensionAssetOutputs = (deps) => {
     .filter((asset) => deps.fs.existsSync(path.join(deps.cwd, asset.src)))
     .flatMap((asset) => {
       const relativeOutput = normalizePath(asset.dest).replace(/^dist\//u, "");
-      return [
-        path.join(distRoot, relativeOutput),
-        ...(hasRuntimeOverlay ? [path.join(runtimeRoot, relativeOutput)] : []),
-      ];
+      const outputs = [path.join(distRoot, relativeOutput)];
+      if (hasRuntimeOverlay) {
+        outputs.push(path.join(runtimeRoot, relativeOutput));
+      }
+      return outputs;
     })
     .toSorted((left, right) => left.localeCompare(right));
 };
