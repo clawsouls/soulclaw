@@ -118,6 +118,24 @@ export async function closeMemoryIndexManagersForAgent(params: {
   }
 }
 
+function resolveEffectiveMemorySearchSettings(
+  settings: ResolvedMemorySearchConfig,
+): ResolvedMemorySearchConfig {
+  if (settings.provider !== "none" || !settings.store.vector.enabled) {
+    return settings;
+  }
+  return {
+    ...settings,
+    store: {
+      ...settings.store,
+      vector: {
+        ...settings.store.vector,
+        enabled: false,
+      },
+    },
+  };
+}
+
 export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements MemorySearchManager {
   private readonly cacheKey: string;
   protected readonly cfg: OpenClawConfig;
@@ -244,30 +262,31 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
     purpose?: MemoryIndexManagerPurpose;
   }) {
     super();
+    const effectiveSettings = resolveEffectiveMemorySearchSettings(params.settings);
     this.cacheKey = params.cacheKey;
     this.cfg = params.cfg;
     this.agentId = params.agentId;
     this.workspaceDir = params.workspaceDir;
-    this.settings = params.settings;
+    this.settings = effectiveSettings;
     this.provider = null;
-    this.requestedProvider = params.settings.provider;
+    this.requestedProvider = effectiveSettings.provider;
     this.providerLifecycle = createPendingMemoryProviderLifecycle(this.requestedProvider);
     if (params.providerResult) {
       this.applyProviderResult(params.providerResult);
     }
-    this.sources = new Set(params.settings.sources);
+    this.sources = new Set(effectiveSettings.sources);
     this.db = this.openDatabase();
     this.providerKey = this.computeProviderKey();
     this.cache = {
-      enabled: params.settings.cache.enabled,
-      maxEntries: params.settings.cache.maxEntries,
+      enabled: effectiveSettings.cache.enabled,
+      maxEntries: effectiveSettings.cache.maxEntries,
     };
-    this.fts = { enabled: params.settings.query.hybrid.enabled, available: false };
+    this.fts = { enabled: effectiveSettings.query.hybrid.enabled, available: false };
     this.ensureSchema();
     this.vector = {
-      enabled: params.settings.store.vector.enabled,
+      enabled: effectiveSettings.store.vector.enabled,
       available: null,
-      extensionPath: params.settings.store.vector.extensionPath,
+      extensionPath: effectiveSettings.store.vector.extensionPath,
     };
     const meta = this.readMeta();
     if (meta?.vectorDims) {

@@ -160,6 +160,17 @@ describe("memory manager FTS-only reindex", () => {
     });
   });
 
+  it("forces provider-none memory to FTS-only when vector config is omitted", async () => {
+    const memoryManager = await createManager({ provider: "none" });
+
+    await memoryManager.sync({ force: true });
+
+    expect(createEmbeddingProviderMock).not.toHaveBeenCalled();
+    expect(memoryManager.status().vector.enabled).toBe(false);
+    expect(memoryManager.status().custom?.indexIdentity).toEqual({ status: "valid" });
+    expect(countChunksContaining("Alpha topic")).toBeGreaterThan(0);
+  });
+
   it("still initializes configured providers when vector storage is disabled", async () => {
     const memoryManager = await createManager({ provider: "auto", vectorEnabled: false });
 
