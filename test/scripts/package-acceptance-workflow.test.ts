@@ -733,6 +733,9 @@ describe("package artifact reuse", () => {
     expect(retryHelper).toContain("fetch failed");
     expect(retryHelper).toContain("gateway request timeout");
     expect(retryHelper).toContain("model idle timeout");
+    expect(retryHelper).toContain("OPENCLAW_LIVE_COMMAND_RATE_LIMIT_RETRY_DELAY_SECONDS:-60");
+    expect(retryHelper).toContain("Rate limit reached");
+    expect(retryHelper).toContain("tokens per min");
   });
 
   it("runs Docker live harnesses from trusted helper scripts", () => {
