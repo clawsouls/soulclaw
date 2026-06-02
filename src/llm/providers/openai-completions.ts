@@ -366,6 +366,7 @@ export const streamOpenAICompletions: StreamFunction<
           // (e.g., chutes.ai returns both reasoning_content and reasoning with same content)
           const reasoningFields = ["reasoning_content", "reasoning", "reasoning_text"];
           const deltaFields = choice.delta as Record<string, unknown>;
+          const shouldEmitReasoning = Boolean(model.reasoning && options?.reasoningEffort);
           let foundReasoningField: string | null = null;
           for (const field of reasoningFields) {
             const value = deltaFields[field];
@@ -385,7 +386,7 @@ export const streamOpenAICompletions: StreamFunction<
             appendPartitionedContent(choice.delta.content, Boolean(foundReasoningField));
           }
 
-          if (foundReasoningField) {
+          if (shouldEmitReasoning && foundReasoningField) {
             const delta = deltaFields[foundReasoningField];
             if (typeof delta === "string" && delta.length > 0) {
               const thinkingSignature =
