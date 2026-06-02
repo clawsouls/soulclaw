@@ -139,6 +139,22 @@ describe("memory manager FTS-only reindex", () => {
     expect(memoryManager.status().custom?.indexIdentity).toEqual({ status: "valid" });
   });
 
+  it("reports explicit provider-none probes as FTS-only without resolving providers", async () => {
+    const memoryManager = await createManager({ provider: "none", vectorEnabled: false });
+
+    await expect(memoryManager.probeEmbeddingAvailability()).resolves.toEqual({
+      ok: false,
+      error: "No embedding provider available (FTS-only mode)",
+    });
+
+    expect(createEmbeddingProviderMock).not.toHaveBeenCalled();
+    expect(memoryManager.status().custom?.providerState).toEqual({
+      mode: "fts-only",
+      reason: "No embedding provider available (FTS-only mode)",
+      attemptedProviderId: "none",
+    });
+  });
+
   it("still initializes configured providers when vector storage is disabled", async () => {
     const memoryManager = await createManager({ provider: "auto", vectorEnabled: false });
 

@@ -313,6 +313,16 @@ export class MemoryIndexManager extends MemoryManagerEmbeddingOps implements Mem
     if (this.providerInitialized) {
       return;
     }
+    if (this.settings.provider === "none") {
+      this.applyProviderResult({
+        provider: null,
+        requestedProvider: "none",
+        providerUnavailableReason: "No embedding provider available (FTS-only mode)",
+      });
+      this.providerKey = this.computeProviderKey();
+      this.batch = this.resolveBatchConfig();
+      return;
+    }
     if (!this.providerInitPromise) {
       this.providerInitPromise = (async () => {
         const providerResult = await MemoryIndexManager.loadProviderResult({
