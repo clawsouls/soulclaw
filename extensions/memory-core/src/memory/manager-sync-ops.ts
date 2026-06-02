@@ -290,7 +290,7 @@ export abstract class MemoryManagerSyncOps {
   }): MemoryIndexIdentityState {
     const hasProviderOverride = params && "provider" in params;
     const configuredProvider =
-      this.settings.provider === "none"
+      !this.vector.enabled || this.settings.provider === "none"
         ? null
         : {
             id:

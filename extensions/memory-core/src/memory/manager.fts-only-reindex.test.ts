@@ -9,12 +9,16 @@ import type { MemoryIndexMeta } from "./manager-reindex-state.js";
 import type { MemoryIndexManager } from "./manager.js";
 import "./test-runtime-mocks.js";
 
-vi.mock("./embeddings.js", () => ({
-  createEmbeddingProvider: async () => ({
+const createEmbeddingProviderMock = vi.hoisted(() =>
+  vi.fn(async () => ({
     requestedProvider: "auto",
     provider: null,
     providerUnavailableReason: "No embeddings provider available.",
-  }),
+  })),
+);
+
+vi.mock("./embeddings.js", () => ({
+  createEmbeddingProvider: createEmbeddingProviderMock,
   resolveEmbeddingProviderAdapterId: (providerId: string) => providerId,
   resolveEmbeddingProviderFallbackModel: () => "fts-only",
 }));
@@ -31,6 +35,7 @@ describe("memory manager FTS-only reindex", () => {
   });
 
   beforeEach(async () => {
+    createEmbeddingProviderMock.mockClear();
     workspaceDir = path.join(fixtureRoot, `case-${caseId++}`);
     await fs.mkdir(path.join(workspaceDir, "memory"), { recursive: true });
     await fs.writeFile(path.join(workspaceDir, "MEMORY.md"), "Alpha topic\n\nKeep this note.");
@@ -52,7 +57,13 @@ describe("memory manager FTS-only reindex", () => {
     }
   });
 
-  async function createManager(): Promise<MemoryIndexManager> {
+  async function createManager(
+    params: { provider?: string; vectorEnabled?: boolean } = {},
+  ): Promise<MemoryIndexManager> {
+    const store =
+      params.vectorEnabled === undefined
+        ? { path: indexPath }
+        : { path: indexPath, vector: { enabled: params.vectorEnabled } };
     const cfg = {
       memory: {
         backend: "builtin",
@@ -61,9 +72,9 @@ describe("memory manager FTS-only reindex", () => {
         defaults: {
           workspace: workspaceDir,
           memorySearch: {
-            provider: "auto",
+            provider: params.provider ?? "auto",
             model: "",
-            store: { path: indexPath },
+            store,
             cache: { enabled: false },
             sync: { watch: false, onSessionStart: false, onSearch: false },
           },
@@ -116,6 +127,16 @@ describe("memory manager FTS-only reindex", () => {
     const secondStatus = memoryManager.status();
     expect(secondStatus.chunks).toBeGreaterThan(0);
     expect(countChunksContaining("Alpha topic")).toBeGreaterThan(0);
+  });
+
+  it("syncs vector-disabled memory without resolving an embedding provider", async () => {
+    const memoryManager = await createManager({ provider: "none", vectorEnabled: false });
+
+    await memoryManager.sync({ force: true });
+
+    expect(createEmbeddingProviderMock).not.toHaveBeenCalled();
+    expect(countChunksContaining("Alpha topic")).toBeGreaterThan(0);
+    expect(memoryManager.status().custom?.indexIdentity).toEqual({ status: "valid" });
   });
 
   it("refreshes FTS-only indexed content after memory file updates", async () => {
