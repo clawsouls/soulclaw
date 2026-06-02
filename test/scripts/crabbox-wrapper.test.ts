@@ -681,6 +681,37 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     expectGroupedShellCommand(remoteCommand, "node --version");
   });
 
+  it("normalizes inherited Linux UTF-8 locale names for raw AWS macOS bootstrap", () => {
+    const result = runWrapper(
+      "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
+      ["run", "--provider", "aws", "--target", "macos", "--", "node", "--version"],
+      {
+        env: {
+          LANG: "C.UTF-8",
+          LC_ALL: "C.UTF-8",
+          LC_CTYPE: "C.UTF-8",
+        },
+      },
+    );
+
+    const output = parseFakeCrabboxOutput(result);
+    const remoteCommand = normalizeShellLineEndings(output.args.at(-1) ?? "");
+    expect(result.status).toBe(0);
+    expect(remoteCommand).toContain(
+      'macos_locale="${OPENCLAW_CRABBOX_MACOS_LOCALE:-en_US.UTF-8}"',
+    );
+    expect(remoteCommand).toContain(
+      'case "${LANG:-}" in C.UTF-8|C.utf8|c.UTF-8|c.utf8) export LANG="$macos_locale" ;; esac;',
+    );
+    expect(remoteCommand).toContain(
+      'case "${LC_ALL:-}" in C.UTF-8|C.utf8|c.UTF-8|c.utf8) export LC_ALL="$macos_locale" ;; esac;',
+    );
+    expect(remoteCommand).toContain(
+      'case "${LC_CTYPE:-}" in C.UTF-8|C.utf8|c.UTF-8|c.utf8) export LC_CTYPE="$macos_locale" ;; esac;',
+    );
+    expectGroupedShellCommand(remoteCommand, "node --version");
+  });
+
   it("bootstraps Corepack for raw AWS macOS pnpm commands", () => {
     const result = runWrapper(
       "provider: hetzner, aws, local-container, blacksmith-testbox, or cloudflare\n",
