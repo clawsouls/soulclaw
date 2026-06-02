@@ -45,6 +45,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- Agents/providers: keep streaming tool-call argument parsing record-shaped when providers emit valid non-object JSON such as `null` or arrays.
 - Release/CI/E2E: reset incremental log readers when watched log files rotate without shrinking, so same-size replacements do not hide new readiness or RPC lines.
 - Talk: preserve explicit `null` payloads on controller-created turn and output-audio lifecycle events.
 - Agents/TUI: keep local custom provider runs from loading plugin runtime and auth alias metadata when plugins are disabled.

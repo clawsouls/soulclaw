@@ -116,6 +116,12 @@ function looksLikeWindowsPathPrefix(prefix: string): boolean {
   return /(?:^|[^A-Za-z0-9])[A-Za-z]:(?:[\\/][^"\\/:*?<>|\r\n]*)*$/.test(tail);
 }
 
+function asStreamingJsonRecord(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 /**
  * Attempts to parse potentially incomplete JSON during streaming.
  * Always returns a valid object, even if the JSON is incomplete.
@@ -129,15 +135,15 @@ export function parseStreamingJson(partialJson: string | undefined): Record<stri
   }
 
   try {
-    return parseJsonWithRepair(partialJson) as Record<string, unknown>;
+    return asStreamingJsonRecord(parseJsonWithRepair(partialJson));
   } catch {
     try {
       const result = partialParse(partialJson);
-      return (result ?? {}) as Record<string, unknown>;
+      return asStreamingJsonRecord(result);
     } catch {
       try {
         const result = partialParse(repairJson(partialJson));
-        return (result ?? {}) as Record<string, unknown>;
+        return asStreamingJsonRecord(result);
       } catch {
         return {};
       }

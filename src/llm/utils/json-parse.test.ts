@@ -35,4 +35,11 @@ describe("json-parse repairJson invalid \\u escapes", () => {
     const args = '{"cmd":"\\underline{x}"}';
     expect(parseStreamingJson(args)).toEqual({ cmd: "\\underline{x}" });
   });
+
+  it.each(["null", "[]", '"text"', "1", "true"])(
+    "returns an empty object for non-object streaming JSON: %s",
+    (input) => {
+      expect(parseStreamingJson(input)).toEqual({});
+    },
+  );
 });
