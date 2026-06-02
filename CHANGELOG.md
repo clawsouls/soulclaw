@@ -54,6 +54,7 @@ Docs: https://docs.openclaw.ai
 - Release/CI/E2E: keep temporary full-sync checkouts alive while slow Crabbox leases boot, so sparse worktree runs do not lose their sync source before file-list generation.
 - Release/CI/E2E: normalize inherited Linux `C.UTF-8` locale settings before raw AWS macOS Crabbox bootstrap commands, avoiding macOS locale warnings during package-manager hydration.
 - Release/CI/E2E: keep gateway watch regression checks from copying large static plugin assets inside the measured idle window.
+- Update: keep core updates nonblocking when a missing external plugin repair download stalls, while still blocking installed active plugin payload smoke failures.
 - Agents/providers: keep streaming tool-call argument parsing record-shaped when providers emit valid non-object JSON such as `null` or arrays.
 - Release/CI/E2E: reset incremental log readers when watched log files rotate without shrinking, so same-size replacements do not hide new readiness or RPC lines.
 - Talk: preserve explicit `null` payloads on controller-created turn and output-audio lifecycle events.
