@@ -1,4 +1,11 @@
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import {
+  createChildDiagnosticTraceContext,
+  createDiagnosticTraceContext,
+  freezeDiagnosticTraceContext,
+  getActiveDiagnosticTraceContext,
+  runWithDiagnosticTraceContext,
+} from "../../infra/diagnostic-trace-context.js";
 import { formatErrorMessage } from "../../infra/errors.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { parseAgentSessionKey } from "../../routing/session-key.js";
@@ -29,13 +36,13 @@ import {
 import { expandToolGroups, normalizeToolName } from "../tool-policy.js";
 import { createOpenClawAgentHarness } from "./builtin-openclaw.js";
 import { MissingAgentHarnessError } from "./errors.js";
+import { runAgentHarnessLifecycleAttempt } from "./lifecycle.js";
 import {
   resolveAgentHarnessPolicy as resolveConfiguredAgentHarnessPolicy,
   type AgentHarnessPolicy,
 } from "./policy.js";
 import { getRegisteredAgentHarness, listRegisteredAgentHarnesses } from "./registry.js";
 import type { AgentHarness, AgentHarnessSupport } from "./types.js";
-import { adaptAgentHarnessToV2, runAgentHarnessV2LifecycleAttempt } from "./v2.js";
 
 const log = createSubsystemLogger("agents/harness");
 export { resolveAgentHarnessPolicy } from "./policy.js";
@@ -262,6 +269,10 @@ function selectAgentHarnessDecision(params: {
 export async function runAgentHarnessAttempt(
   params: EmbeddedRunAttemptParams,
 ): Promise<EmbeddedRunAttemptResult> {
+  const activeTrace = getActiveDiagnosticTraceContext();
+  const harnessTrace = freezeDiagnosticTraceContext(
+    activeTrace ? createChildDiagnosticTraceContext(activeTrace) : createDiagnosticTraceContext(),
+  );
   const selection = selectAgentHarnessDecision({
     provider: params.provider,
     modelId: params.modelId,
@@ -280,13 +291,13 @@ export async function runAgentHarnessAttempt(
     sessionKey: params.sessionKey,
     agentId: params.agentId,
   });
-  const v2Harness = adaptAgentHarnessToV2(harness);
+  const runAttempt = () => runAgentHarnessLifecycleAttempt(harness, attemptParams);
   if (harness.id === "openclaw") {
-    return await runAgentHarnessV2LifecycleAttempt(v2Harness, attemptParams);
+    return await runWithDiagnosticTraceContext(harnessTrace, runAttempt);
   }
 
   try {
-    return await runAgentHarnessV2LifecycleAttempt(v2Harness, attemptParams);
+    return await runWithDiagnosticTraceContext(harnessTrace, runAttempt);
   } catch (error) {
     log.warn(`${harness.label} failed; not falling back to embedded OpenClaw backend`, {
       harnessId: harness.id,
