@@ -56,6 +56,7 @@ Docs: https://docs.openclaw.ai
 - Release/CI/E2E: bound RPC RTT gateway readiness probes so a half-open local HTTP response cannot stall cleanup past the readiness deadline.
 - Release/CI/E2E: stop RPC RTT gateway process groups so pnpm wrapper children cannot survive measurement cleanup.
 - Release/CI/E2E: fail the kitchen-sink RPC walk when command RSS sampling captures no process samples.
+- Release/CI/E2E: fail kitchen-sink RPC commands that exit cleanly only after their timeout expires.
 - Release/CI/E2E: force-stop memory/fd repro gateway children that survive listener cleanup.
 - Release/CI/E2E: remove fallback ClawHub skill-install home directories when proof runs fail.
 - Release/CI/E2E: let plugin lifecycle measurement wrappers exit promptly after external shutdown while preserving descendant cleanup.
