@@ -1667,9 +1667,32 @@ function resolveConventionalToolingTestTargets(changedPath, cwd = process.cwd())
   return targets.length > 0 ? targets : null;
 }
 
+function resolveParallelsToolingTestTargets(changedPath) {
+  if (!/^scripts\/e2e\/parallels\/[^/]+\.ts$/u.test(changedPath)) {
+    return null;
+  }
+  const targets = ["test/scripts/parallels-smoke-model.test.ts"];
+  if (
+    [
+      "scripts/e2e/parallels/guest-transports.ts",
+      "scripts/e2e/parallels/host-command.ts",
+      "scripts/e2e/parallels/npm-update-scripts.ts",
+      "scripts/e2e/parallels/npm-update-smoke.ts",
+    ].includes(changedPath)
+  ) {
+    targets.push("test/scripts/parallels-npm-update-smoke.test.ts");
+  }
+  if (changedPath === "scripts/e2e/parallels/update-job-timeout.ts") {
+    targets.push("test/scripts/parallels-update-job-timeout.test.ts");
+  }
+  return targets;
+}
+
 function resolveToolingTestTargets(changedPath, cwd = process.cwd()) {
   const explicitTargets =
-    TOOLING_SOURCE_TEST_TARGETS.get(changedPath) ?? TOOLING_TEST_TARGETS.get(changedPath);
+    TOOLING_SOURCE_TEST_TARGETS.get(changedPath) ??
+    TOOLING_TEST_TARGETS.get(changedPath) ??
+    resolveParallelsToolingTestTargets(changedPath);
   const conventionalTargets = resolveConventionalToolingTestTargets(changedPath, cwd);
   if (explicitTargets && conventionalTargets) {
     return uniqueOrdered([...explicitTargets, ...conventionalTargets]);

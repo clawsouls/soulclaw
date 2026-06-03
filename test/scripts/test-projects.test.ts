@@ -782,6 +782,36 @@ describe("scripts/test-projects changed-target routing", () => {
     ]);
   });
 
+  it("routes changed Parallels process helpers to their owner tooling tests", () => {
+    expect(
+      buildVitestRunPlans(["--changed", "origin/main"], process.cwd(), () => [
+        "scripts/e2e/parallels/filesystem.ts",
+        "scripts/e2e/parallels/guest-transports.ts",
+        "scripts/e2e/parallels/host-command.ts",
+        "scripts/e2e/parallels/host-server.ts",
+        "scripts/e2e/parallels/linux-smoke.ts",
+        "scripts/e2e/parallels/phase-runner.ts",
+        "scripts/e2e/parallels/macos-smoke.ts",
+        "scripts/e2e/parallels/npm-update-smoke.ts",
+        "scripts/e2e/parallels/npm-update-scripts.ts",
+        "scripts/e2e/parallels/smoke-common.ts",
+        "scripts/e2e/parallels/update-job-timeout.ts",
+        "scripts/e2e/parallels/windows-smoke.ts",
+      ]),
+    ).toEqual([
+      {
+        config: "test/vitest/vitest.tooling.config.ts",
+        forwardedArgs: [],
+        includePatterns: [
+          "test/scripts/parallels-smoke-model.test.ts",
+          "test/scripts/parallels-npm-update-smoke.test.ts",
+          "test/scripts/parallels-update-job-timeout.test.ts",
+        ],
+        watchMode: false,
+      },
+    ]);
+  });
+
   it("routes MCP Docker E2E script targets instead of skipping changed tests", () => {
     const targets = [
       "scripts/e2e/mcp-channels-docker.sh",
