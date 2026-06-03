@@ -56,6 +56,38 @@ async function chatThreadDistanceFromBottom(page: Page): Promise<number> {
   });
 }
 
+async function waitForChatScrollIdle(page: Page): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const app = document.querySelector("openclaw-app") as
+            | (Element & {
+                chatIsProgrammaticScroll?: boolean;
+                chatScrollFrame?: number | null;
+                chatScrollTimeout?: number | null;
+              })
+            | null;
+          return Boolean(
+            app &&
+              app.chatScrollFrame == null &&
+              app.chatScrollTimeout == null &&
+              !app.chatIsProgrammaticScroll,
+          );
+        }),
+      { timeout: 10_000 },
+    )
+    .toBe(true);
+}
+
+async function scrollChatThreadToTop(page: Page): Promise<void> {
+  await page.locator(".chat-thread").evaluate((element) => {
+    const thread = element as HTMLElement;
+    thread.scrollTop = 0;
+    thread.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+}
+
 async function controlUiEventPayloads(
   page: Page,
   event: string,
@@ -485,9 +517,8 @@ describeControlUiE2e("Control UI mocked Gateway E2E", () => {
         .poll(() => chatThreadDistanceFromBottom(page), { timeout: 10_000 })
         .toBeLessThanOrEqual(4);
 
-      await page.locator(".chat-thread").evaluate((element) => {
-        (element as HTMLElement).scrollTop = 0;
-      });
+      await waitForChatScrollIdle(page);
+      await scrollChatThreadToTop(page);
       await expect
         .poll(() => chatThreadDistanceFromBottom(page), { timeout: 10_000 })
         .toBeGreaterThan(200);
