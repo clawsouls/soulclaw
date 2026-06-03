@@ -2,6 +2,15 @@
 
 Docs: https://docs.openclaw.ai
 
+## 2026.6.2
+
+### Fixes
+
+- Release/packaging: restore package changelog extraction for 2026.6.2 after the post-2026.6.1 version bump, keeping Docker package lanes from failing before runtime proof.
+- CI/Crabbox: keep hydrated pnpm modules under a real `node_modules` path on ARM/Linux runners so package lifecycle scripts can resolve optional native dependencies during package and Docker validation.
+- Testing/live cache: keep missing optional OpenAI live-cache prerequisites advisory while preserving blocking Anthropic prerequisite failures, so ARM changed gates report provider setup gaps accurately.
+- Config docs: refresh generated config baseline hashes after channel config surface updates.
+
 ## 2026.6.1
 
 ### Highlights
