@@ -53,6 +53,7 @@ Docs: https://docs.openclaw.ai
 - Release/CI/E2E: keep release user-journey logs and temporary plugin fixtures under per-run scratch roots so parallel runs cannot collide or leak artifacts.
 - Release/CI/E2E: bound release candidate GitHub API calls so stalled network requests cannot wedge workflow and artifact polling.
 - Release/CI/E2E: bound Discord smoke API calls in cross-OS release checks so host-side round trips cannot hang on stalled fetches.
+- Release/CI/E2E: bound RPC RTT gateway readiness probes so a half-open local HTTP response cannot stall cleanup past the readiness deadline.
 - Control UI: lazy-load the usage view so the initial app bundle stays below the chunk warning threshold.
 - Build: keep Baileys optional image backends external so source builds do not warn about missing `jimp` or `sharp`.
 - Build: render independent CLI startup metadata help snapshots concurrently to cut cold build-all metadata time.
