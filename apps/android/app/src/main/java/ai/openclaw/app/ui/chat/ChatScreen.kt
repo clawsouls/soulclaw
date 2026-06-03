@@ -38,7 +38,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
@@ -80,10 +79,8 @@ import java.util.Locale
 @Composable
 fun ChatScreen(
   viewModel: MainViewModel,
-  onBack: () -> Unit,
   onVoice: () -> Unit,
-  onOpenSessions: (() -> Unit)? = null,
-  showBackButton: Boolean = true,
+  onOpenSessions: () -> Unit,
 ) {
   val messages by viewModel.chatMessages.collectAsState()
   val historyLoading by viewModel.chatHistoryLoading.collectAsState()
@@ -162,12 +159,10 @@ fun ChatScreen(
       thinkingLevel = thinkingLevel,
       healthOk = healthOk,
       pendingRunCount = pendingRunCount,
-      onBack = onBack,
       onMore = {
         viewModel.refreshChat()
         viewModel.refreshChatSessions(limit = 100)
       },
-      showBackButton = showBackButton,
     )
 
     ChatSessionSwitcher(
@@ -236,7 +231,7 @@ private fun ChatSessionSwitcher(
   sessions: List<ChatSessionEntry>,
   mainSessionKey: String,
   onSelectSession: (String) -> Unit,
-  onOpenSessions: (() -> Unit)?,
+  onOpenSessions: () -> Unit,
 ) {
   val choices =
     remember(sessionKey, sessions, mainSessionKey) {
@@ -260,7 +255,7 @@ private fun ChatSessionSwitcher(
         onClick = { onSelectSession(entry.key) },
       )
     }
-    if (onOpenSessions != null && sessions.size > choices.size) {
+    if (sessions.size > choices.size) {
       Surface(
         onClick = onOpenSessions,
         modifier = Modifier.heightIn(min = 36.dp),
@@ -312,20 +307,14 @@ private fun ChatHeader(
   thinkingLevel: String,
   healthOk: Boolean,
   pendingRunCount: Int,
-  onBack: () -> Unit,
   onMore: () -> Unit,
-  showBackButton: Boolean,
 ) {
   Row(
     modifier = Modifier.fillMaxWidth(),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(6.dp),
   ) {
-    if (showBackButton) {
-      HeaderIcon(icon = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", onClick = onBack)
-    } else {
-      Box(modifier = Modifier.size(ClawTheme.spacing.touchTarget))
-    }
+    Box(modifier = Modifier.size(ClawTheme.spacing.touchTarget))
 
     Column(
       modifier = Modifier.weight(1f),

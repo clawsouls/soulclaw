@@ -793,10 +793,8 @@ private fun ChatShellScreen(
   ) {
     ChatScreen(
       viewModel = viewModel,
-      onBack = {},
       onVoice = onVoice,
       onOpenSessions = onOpenSessions,
-      showBackButton = false,
     )
   }
 }

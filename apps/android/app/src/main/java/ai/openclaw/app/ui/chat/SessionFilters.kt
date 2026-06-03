@@ -4,22 +4,9 @@ import ai.openclaw.app.chat.ChatSessionEntry
 
 private const val RECENT_WINDOW_MS = 24 * 60 * 60 * 1000L
 
-/**
- * Derive a human-friendly label from a raw session key.
- * Examples:
- *   "telegram:g-agent-main-main" -> "Main"
- *   "agent:main:main" -> "Main"
- *   "discord:g-server-channel" -> "Server Channel"
- *   "my-custom-session" -> "My Custom Session"
- */
 fun friendlySessionName(key: String): String {
-  // Strip common prefixes like "telegram:", "agent:", "discord:" etc.
   val stripped = key.substringAfterLast(":")
-
-  // Remove leading "g-" prefix (gateway artifact)
   val cleaned = if (stripped.startsWith("g-")) stripped.removePrefix("g-") else stripped
-
-  // Split on hyphens/underscores, title-case each word, collapse "main main" -> "Main"
   val words =
     cleaned
       .split('-', '_')
@@ -79,7 +66,6 @@ fun resolveSessionChoices(
   return result
 }
 
-/** Builds the compact top-of-chat session switcher without dropping main or the active session. */
 fun resolveCompactSessionChoices(
   currentSessionKey: String,
   sessions: List<ChatSessionEntry>,
@@ -94,24 +80,14 @@ fun resolveCompactSessionChoices(
       mainSessionKey = mainSessionKey,
       nowMs = nowMs,
     )
-  if (allChoices.size <= maxOptions) return allChoices
-
   val mainKey = mainSessionKey.trim().ifEmpty { "main" }
   val current = currentSessionKey.trim().let { if (it == "main" && mainKey != "main") mainKey else it }
-  val pinnedKeys = listOf(mainKey, current).filter { it.isNotBlank() }
-  val result = mutableListOf<ChatSessionEntry>()
-  val seen = mutableSetOf<String>()
+  val pinnedRank = listOf(mainKey, current).filter { it.isNotBlank() }.distinct().withIndex().associate { it.value to it.index }
+  val unpinnedRank = pinnedRank.size
 
-  pinnedKeys.forEach { key ->
-    allChoices.firstOrNull { it.key == key }?.let { entry ->
-      if (seen.add(entry.key)) result.add(entry)
-    }
-  }
-
-  allChoices.forEach { entry ->
-    if (result.size >= maxOptions) return@forEach
-    if (seen.add(entry.key)) result.add(entry)
-  }
-
-  return result
+  return allChoices
+    .withIndex()
+    .sortedWith(compareBy({ pinnedRank[it.value.key] ?: unpinnedRank }, { it.index }))
+    .take(maxOptions)
+    .map { it.value }
 }
