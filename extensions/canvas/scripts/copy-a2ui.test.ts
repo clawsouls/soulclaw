@@ -34,6 +34,23 @@ describe("canvas a2ui copy", () => {
     );
   }
 
+  it("ships provider assets and the legacy granola compatibility image", async () => {
+    const srcDir = path.join(process.cwd(), "extensions", "canvas", "src", "host", "a2ui");
+    const requiredAssets = [
+      path.join("assets", "providers", "google.png"),
+      path.join("assets", "providers", "x.png"),
+      "granola.png",
+    ];
+    const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+    for (const asset of requiredAssets) {
+      const bytes = await fs.readFile(path.join(srcDir, asset));
+
+      expect([...bytes.subarray(0, pngSignature.length)]).toEqual(pngSignature);
+      expect(bytes.length).toBeGreaterThan(64);
+    }
+  });
+
   it("throws a helpful error when assets are missing", async () => {
     await withA2uiFixture(async (dir) => {
       await expect(copyA2uiAssets({ srcDir: dir, outDir: path.join(dir, "out") })).rejects.toThrow(
