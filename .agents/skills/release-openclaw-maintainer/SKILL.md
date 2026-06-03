@@ -150,10 +150,11 @@ Use this skill for release and publish-time workflow. Load `$release-private` if
   `openclaw/openclaw` GitHub Release. Use the public `Windows Node Release`
   workflow after the matching `openclaw/openclaw-windows-node` release exists;
   it verifies Authenticode signatures on Windows before uploading assets.
-- Website Windows Hub download links should target the canonical
-  `openclaw/openclaw/releases/latest/download/...` assets so the installable
-  signed Windows artifact is visible from both the GitHub release page and
-  openclaw.ai.
+- Website Windows Hub download links should target exact canonical
+  `openclaw/openclaw/releases/download/vYYYY.M.D/...` assets for the current
+  stable release, or `releases/latest/download/...` only after verifying the
+  redirect resolves to that same tag, so the installable signed Windows artifact
+  is visible from both the GitHub release page and openclaw.ai.
 
 ## Build changelog-backed release notes
 
