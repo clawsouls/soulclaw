@@ -47,6 +47,7 @@ Docs: https://docs.openclaw.ai
 
 - Agents/providers: avoid loading owner plugin runtimes for explicitly configured custom provider models during OpenAI-compatible transport setup.
 - Release/CI/E2E: fail early when Crabbox sparse-sync full checkouts do not have enough local disk, with guidance for moving the sync root.
+- Release/CI/E2E: reset shared Crabbox pnpm hydrate state before installs so stale `/var/tmp` stores cannot leave `pnpm install` spinning after completion.
 - Build: render independent CLI startup metadata help snapshots concurrently to cut cold build-all metadata time.
 - Plugins: stop timed-out package-boundary prep steps by process group so descendant TypeScript/helper processes do not survive local check cleanup.
 - Control UI: serve static assets asynchronously after safe-open checks so large UI files do not block Gateway request handling.
