@@ -57,6 +57,7 @@ Docs: https://docs.openclaw.ai
 - Scripts/UI: stop descendant processes from wrapped non-interactive commands when `run-with-env` receives shutdown signals.
 - Release/CI/E2E: write multi-node update Docker artifacts to unique per-run directories by default so parallel runs cannot overwrite evidence.
 - Release/CI/E2E: write package Telegram Docker artifacts to unique per-run directories by default so parallel live/RTT runs cannot overwrite evidence.
+- Release/CI/E2E: keep plugin lifecycle matrix resource artifacts under a unique per-run scratch root so parallel runs cannot overwrite tarballs or inspect output.
 - Release/CI/E2E: fail secret-provider proof runs when temporary state cleanup still fails after retries instead of hiding the cleanup error.
 - Release/CI/E2E: fail package-candidate ref proofs when temporary source worktree cleanup fails instead of leaving stale worktrees behind.
 - Release/CI/E2E: remove package tarball extract directories when tar extraction fails before validation can continue.
