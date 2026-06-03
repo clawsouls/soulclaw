@@ -1,6 +1,10 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
-import { startGateway, waitForGatewayReady } from "../../scripts/measure-rpc-rtt.mjs";
+import {
+  cleanupTempRoot,
+  startGateway,
+  waitForGatewayReady,
+} from "../../scripts/measure-rpc-rtt.mjs";
 
 describe("scripts/measure-rpc-rtt.mjs", () => {
   it("closes parent gateway log handles after spawning", async () => {
@@ -77,6 +81,18 @@ describe("scripts/measure-rpc-rtt.mjs", () => {
       }),
     ).rejects.toThrow("gateway exited before readiness code=1 signal=null");
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("surfaces temp root cleanup failures", async () => {
+    const rmImpl = vi.fn().mockRejectedValue(new Error("device busy"));
+
+    await expect(cleanupTempRoot("/tmp/rpc-rtt-stuck", { rmImpl })).rejects.toThrow(
+      "failed to remove RPC RTT temp root: device busy",
+    );
+    expect(rmImpl).toHaveBeenCalledWith("/tmp/rpc-rtt-stuck", {
+      force: true,
+      recursive: true,
+    });
   });
 
   it("bounds readiness probes and keeps polling after a stalled response", async () => {

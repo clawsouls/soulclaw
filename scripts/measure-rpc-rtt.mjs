@@ -88,6 +88,16 @@ async function sleep(ms) {
   });
 }
 
+function formatErrorMessage(error) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  return String(error);
+}
+
 export async function waitForGatewayReady({
   child,
   fetchImpl = fetch,
@@ -234,6 +244,16 @@ export async function startGateway({
   }
 
   return child;
+}
+
+export async function cleanupTempRoot(tempRoot, { rmImpl = fs.rm } = {}) {
+  try {
+    await rmImpl(tempRoot, { force: true, recursive: true });
+  } catch (error) {
+    throw new Error(`failed to remove RPC RTT temp root: ${formatErrorMessage(error)}`, {
+      cause: error,
+    });
+  }
 }
 
 function quantile(sorted, q) {
@@ -402,6 +422,7 @@ async function main() {
   let status = "fail";
   let details = "";
   let measurement;
+  let cleanupError;
   const events = [];
   try {
     await fs.writeFile(
@@ -518,7 +539,16 @@ async function main() {
     if (gatewayChild) {
       await stopGateway(gatewayChild).catch(() => {});
     }
-    await fs.rm(tempRoot, { force: true, recursive: true }).catch(() => {});
+    try {
+      await cleanupTempRoot(tempRoot);
+    } catch (error) {
+      cleanupError = error;
+    }
+  }
+  if (cleanupError) {
+    const cleanupDetails = formatErrorMessage(cleanupError);
+    details = details ? `${details}\n${cleanupDetails}` : cleanupDetails;
+    status = "fail";
   }
   const finishedAt = new Date();
   await writeSummary({ details, events, finishedAt, outputDir, measurement, startedAt, status });
