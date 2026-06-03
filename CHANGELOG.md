@@ -2,6 +2,20 @@
 
 Docs: https://docs.openclaw.ai
 
+## 2026.6.3
+
+### Highlights
+
+- The unreleased 2026.6.3 train is limited to release metadata alignment and a Windows Parallels validation hardening fix; the broader 2026.6.1 release notes stay in the shipped 2026.6.1 release.
+
+### Changes
+
+- Release metadata: align the root package, publishable plugin manifests, generated shrinkwraps, iOS, Android, macOS, and Matrix plugin changelog with the 2026.6.3 unreleased train.
+
+### Fixes
+
+- Release/CI/E2E: retry Windows Parallels background log appends on transient file-lock errors so long-running Windows smoke lanes keep draining proof logs instead of failing on a locked log write.
+
 ## 2026.6.2
 
 ### Fixes
