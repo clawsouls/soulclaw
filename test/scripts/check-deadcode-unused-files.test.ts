@@ -135,7 +135,9 @@ src/a.ts: src/a.ts
       args: [
         "--config.minimum-release-age=0",
         "dlx",
+        "--package",
         "knip@6.8.0",
+        "knip",
         "--config",
         "config/knip.config.ts",
         "--production",

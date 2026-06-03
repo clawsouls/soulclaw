@@ -118,7 +118,14 @@ export function runKnipUnusedFiles(params = {}) {
   const run = params.spawnSyncCommand ?? spawnSync;
   const result = run(
     "pnpm",
-    ["--config.minimum-release-age=0", "dlx", `knip@${KNIP_VERSION}`, ...KNIP_ARGS],
+    [
+      "--config.minimum-release-age=0",
+      "dlx",
+      "--package",
+      `knip@${KNIP_VERSION}`,
+      "knip",
+      ...KNIP_ARGS,
+    ],
     {
       encoding: "utf8",
       killSignal: "SIGTERM",
