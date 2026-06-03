@@ -111,9 +111,10 @@ Use this skill for release and publish-time workflow. Load `$release-private` if
 - For fallback correction tags like `vYYYY.M.D-N`, the repo version locations still stay at `YYYY.M.D`.
 - “Bump version everywhere” means all version locations above except `appcast.xml`.
 - Release signing and notary credentials live outside the repo in the private maintainer docs.
-- Every stable OpenClaw release ships the npm package and macOS app together.
-  Beta releases normally ship npm/package artifacts first and skip mac app
-  build/sign/notarize unless the operator requests mac beta validation.
+- Every stable OpenClaw release ships the npm package, macOS app, and signed
+  Windows Hub installers together. Beta releases normally ship npm/package
+  artifacts first and skip native app build/sign/notarize/promote unless the
+  operator requests native beta validation.
 - Do not let the slower macOS signing/notary path block npm publication once
   the npm preflight has passed. Keep mac validation/publish running in
   parallel, publish npm from the successful npm preflight, then start published
@@ -143,6 +144,16 @@ Use this skill for release and publish-time workflow. Load `$release-private` if
   at `YYYY.M.D`, but the mac release must use a strictly higher numeric
   `APP_BUILD` / Sparkle build than the original release so existing installs
   see it as newer.
+- Stable Windows Hub release closeout requires the signed
+  `OpenClawCompanion-Setup-x64.exe`, `OpenClawCompanion-Setup-arm64.exe`, and
+  `OpenClawCompanion-SHA256SUMS.txt` assets on the canonical
+  `openclaw/openclaw` GitHub Release. Use the public `Windows Node Release`
+  workflow after the matching `openclaw/openclaw-windows-node` release exists;
+  it verifies Authenticode signatures on Windows before uploading assets.
+- Website Windows Hub download links should target the canonical
+  `openclaw/openclaw/releases/latest/download/...` assets so the installable
+  signed Windows artifact is visible from both the GitHub release page and
+  openclaw.ai.
 
 ## Build changelog-backed release notes
 
