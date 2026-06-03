@@ -76,7 +76,7 @@ docker_build_timeout_required() {
 docker_build_heartbeat_seconds() {
   local configured="${OPENCLAW_DOCKER_BUILD_HEARTBEAT_SECONDS:-30}"
   if [[ "$configured" =~ ^[0-9]+$ ]] && [ "$configured" -ge 1 ]; then
-    echo "$configured"
+    echo "$((10#$configured))"
     return
   fi
   echo 30
