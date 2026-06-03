@@ -267,6 +267,29 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("routes unmatched script changes to the tooling suite instead of skipping tests", () => {
+    const targets = [
+      "scripts/check-no-raw-http2-imports.mjs",
+      "scripts/e2e/lib/clawhub-fixture-server.cjs",
+      "scripts/install.ps1",
+    ];
+
+    expect(resolveChangedTestTargetPlan(targets)).toEqual({
+      mode: "targets",
+      targets: ["test/vitest/vitest.tooling.config.ts"],
+    });
+    expect(buildVitestRunPlans(["--changed", "origin/main"], process.cwd(), () => targets)).toEqual(
+      [
+        {
+          config: "test/vitest/vitest.tooling.config.ts",
+          forwardedArgs: [],
+          includePatterns: null,
+          watchMode: false,
+        },
+      ],
+    );
+  });
+
   it("routes Z.AI fallback repro script changes through its regression test", () => {
     expect(resolveChangedTestTargetPlan(["scripts/zai-fallback-repro.ts"])).toEqual({
       mode: "targets",
