@@ -67,6 +67,7 @@ Docs: https://docs.openclaw.ai
 - Release/CI/E2E: require the Kitchen Sink RPC walk to prove every expected plugin tool is cataloged and effective before invoking tool fixtures.
 - Release/CI/E2E: stop tracked Docker build commands when centralized build wrappers receive shutdown signals.
 - Release/CI/E2E: cover MCP channel pairing reconnects by asserting the same temporary client state is reused across reconnects.
+- Release/CI/E2E: require QA channel baseline and reconnect scenarios to assert their scenario markers instead of accepting any outbound reply.
 - Release/CI/E2E: fail secret-provider proof runs when temporary state cleanup still fails after retries instead of hiding the cleanup error.
 - Release/CI/E2E: fail package-candidate ref proofs when temporary source worktree cleanup fails instead of leaving stale worktrees behind.
 - Release/CI/E2E: remove package tarball extract directories when tar extraction fails before validation can continue.
