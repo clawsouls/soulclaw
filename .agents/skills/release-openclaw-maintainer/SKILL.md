@@ -178,6 +178,13 @@ Use this skill for release and publish-time workflow. Load `$release-private` if
   `CHANGELOG.md` version section, not highlights or an excerpt. When creating
   or editing a release, extract from `## YYYY.M.D` through the line before the
   next level-2 heading and use that complete block as the release notes.
+- To update an existing GitHub Release body, resolve the numeric release id and
+  patch that resource with the notes file as the `body` field:
+  `gh api repos/openclaw/openclaw/releases/tags/vYYYY.M.D --jq .id`, then
+  `gh api -X PATCH repos/openclaw/openclaw/releases/<id> -F body=@/tmp/notes.md`.
+  Do not trust `gh release edit --notes-file` or `--input` JSON if verification
+  disagrees; verify with `gh api repos/openclaw/openclaw/releases/<id>` because
+  the tag lookup and `gh release view` can lag or show stale body text.
 - When preparing release notes, scan `src/plugins/compat/registry.ts` and
   `src/commands/doctor/shared/deprecation-compat.ts` for compatibility records
   with `warningStarts` or `removeAfter` within 7 days after the release date.
