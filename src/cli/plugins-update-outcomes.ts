@@ -1,3 +1,4 @@
+// User-facing logging for plugin and hook-pack update outcomes.
 import { theme } from "../../packages/terminal-core/src/theme.js";
 
 type PluginUpdateCliOutcome = {
@@ -5,6 +6,7 @@ type PluginUpdateCliOutcome = {
   message: string;
 };
 
+/** Log update outcomes with severity styling and report whether any errors occurred. */
 export function logPluginUpdateOutcomes(params: {
   outcomes: readonly PluginUpdateCliOutcome[];
   log: (message: string) => void;
