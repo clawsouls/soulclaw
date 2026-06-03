@@ -2153,7 +2153,9 @@ output="$(run_logged_print_heartbeat plugins-run 08 bash -c 'printf "captured co
     expect(scenario).toContain(
       'gateway_pid="$(openclaw_e2e_start_gateway "$entry" "$PORT" "$GATEWAY_LOG")"',
     );
+    expect(scenario).toContain('openclaw_e2e_wait_mock_openai "$MOCK_PORT"');
     expect(scenario).toContain('openclaw_e2e_wait_gateway_ready "$gateway_pid" "$GATEWAY_LOG" 360');
+    expect(scenario).not.toContain("fetch('http://127.0.0.1:${MOCK_PORT}/health')");
     expect(scenario).not.toContain('kill "$gateway_pid"');
     expect(scenario).not.toContain('kill "$mock_pid"');
     expect(scenario).not.toContain('node "$entry" gateway --port "$PORT"');
