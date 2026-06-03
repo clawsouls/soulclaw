@@ -429,6 +429,7 @@ describe("scripts/run-vitest", () => {
     for (const configArg of [
       "--config=test/vitest/vitest.e2e.config.ts",
       "--config=./test/vitest/vitest.ui-e2e.config.ts",
+      "--config=test/vitest/vitest.full-agentic.config.ts",
       "--config=test/vitest/vitest.full-core-contracts.config.ts",
     ]) {
       expect(resolveRunVitestSpawnEnv({ PATH: "/usr/bin" }, ["run", configArg])).toEqual({
@@ -442,6 +443,13 @@ describe("scripts/run-vitest", () => {
         "run",
         "-c",
         "/repo/test/vitest/vitest.e2e.config.ts",
+      ]),
+    ).toBe(DEFAULT_LONG_RUNNING_VITEST_NO_OUTPUT_TIMEOUT_MS);
+    expect(
+      resolveDefaultVitestNoOutputTimeoutMs([
+        "run",
+        "--config",
+        "/repo/test/vitest/vitest.full-agentic.config.ts",
       ]),
     ).toBe(DEFAULT_LONG_RUNNING_VITEST_NO_OUTPUT_TIMEOUT_MS);
     expect(
