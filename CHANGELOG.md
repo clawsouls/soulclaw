@@ -32,6 +32,15 @@ Docs: https://docs.openclaw.ai
 - Security/config/tooling: reject corrupt shell snapshots, suspicious gateway startup configs, malformed release/test/tooling/Docker/perf numeric limits, oversized audit responses, unsafe exec precheck env, and invalid pending-agent SQLite scaffold denials. (#89701, #89705, #89480, #81488) Thanks @RomneyDa and @mmaps.
 - Release/CI/E2E: restore package changelog extraction after the post-2026.6.1 version bump, keep hydrated pnpm modules under `node_modules` for ARM/Linux package lifecycle scripts, keep OpenAI live-cache prerequisites advisory while Anthropic prerequisites stay blocking, retry Windows Parallels background log appends on transient file-lock errors, bound candidate GitHub and cross-OS Discord fetches, harden ARM smoke/browser checks, show Docker build heartbeats, reset Crabbox pnpm hydrate state, and isolate Testbox/Docker/release journey artifacts.
 
+## 2026.6.2
+
+### Fixes
+
+- Release/packaging: restore package changelog extraction for 2026.6.2 after the post-2026.6.1 version bump, keeping Docker package lanes from failing before runtime proof.
+- CI/Crabbox: keep hydrated pnpm modules under a real `node_modules` path on ARM/Linux runners so package lifecycle scripts can resolve optional native dependencies during package and Docker validation.
+- Testing/live cache: keep missing optional OpenAI live-cache prerequisites advisory while preserving blocking Anthropic prerequisite failures, so ARM changed gates report provider setup gaps accurately.
+- Config docs: refresh generated config baseline hashes after channel config surface updates.
+
 ## 2026.6.1
 
 ### Highlights
