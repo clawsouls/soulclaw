@@ -61,6 +61,7 @@ Docs: https://docs.openclaw.ai
 - Release/CI/E2E: retry generated temp-state cleanup after removal failures and route plugin lifecycle measurement edits to their owner tests.
 - Release/CI/E2E: close parent gateway log handles after spawning RPC RTT probes so repeated measurements do not leak file descriptors.
 - Release/CI/E2E: fail RPC RTT probes when temporary state cleanup fails instead of hiding leftover scratch directories.
+- Release/CI/E2E: fail Kitchen Sink RPC walks when temporary state cleanup still fails after retries instead of silently preserving scratch roots.
 - Control UI: lazy-load the usage view so the initial app bundle stays below the chunk warning threshold.
 - Build: keep Baileys optional image backends external so source builds do not warn about missing `jimp` or `sharp`.
 - Build: render independent CLI startup metadata help snapshots concurrently to cut cold build-all metadata time.
