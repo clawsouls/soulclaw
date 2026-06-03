@@ -758,6 +758,7 @@ describe("scripts/test-projects changed-target routing", () => {
       "scripts/e2e/kitchen-sink-rpc-docker.sh",
       "scripts/e2e/kitchen-sink-rpc-walk.mjs",
       "scripts/e2e/onboard-docker.sh",
+      "scripts/e2e/lib/plugin-lifecycle-matrix/measure.mjs",
       "scripts/e2e/plugin-lifecycle-matrix-docker.sh",
       "scripts/e2e/release-media-memory-docker.sh",
     ];
@@ -772,6 +773,7 @@ describe("scripts/test-projects changed-target routing", () => {
           "test/scripts/plugin-prerelease-test-plan.test.ts",
           "test/scripts/kitchen-sink-rpc-walk.test.ts",
           "test/scripts/openclaw-test-state.test.ts",
+          "test/scripts/plugin-lifecycle-measure.test.ts",
           "test/scripts/docker-e2e-plan.test.ts",
           "test/scripts/release-media-memory-scenario.test.ts",
         ],

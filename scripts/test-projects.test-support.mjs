@@ -609,6 +609,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ],
   ["scripts/e2e/plugin-lifecycle-matrix-docker.sh", ["test/scripts/docker-build-helper.test.ts"]],
   [
+    "scripts/e2e/lib/plugin-lifecycle-matrix/measure.mjs",
+    ["test/scripts/plugin-lifecycle-measure.test.ts"],
+  ],
+  [
     "scripts/e2e/lib/plugin-lifecycle-matrix/probe.mjs",
     ["test/scripts/plugin-lifecycle-probe.test.ts"],
   ],
