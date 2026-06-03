@@ -46,6 +46,7 @@ Docs: https://docs.openclaw.ai
 ### Fixes
 
 - Agents/providers: avoid loading owner plugin runtimes for explicitly configured custom provider models during OpenAI-compatible transport setup.
+- Tooling: fail Codex app-server protocol generation before invoking Cargo when local disk headroom is too low.
 - Release/CI/E2E: fail early when Crabbox sparse-sync full checkouts do not have enough local disk, with guidance for moving the sync root.
 - Release/CI/E2E: reset shared Crabbox pnpm hydrate state before installs so stale `/var/tmp` stores cannot leave `pnpm install` spinning after completion.
 - Release/CI/E2E: print heartbeat progress during centralized Docker builds while keeping successful build logs quiet.
