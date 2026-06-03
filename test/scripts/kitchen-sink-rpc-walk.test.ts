@@ -1006,8 +1006,8 @@ describe("kitchen-sink RPC process sampling", () => {
     expect(() => assertResourceCeiling(null)).toThrow("gateway RSS sample was not captured");
   });
 
-  it("allows missing command samples but fails command RSS spikes", () => {
-    expect(() => assertCommandResourceCeiling(null)).not.toThrow();
+  it("fails missing command samples and command RSS spikes", () => {
+    expect(() => assertCommandResourceCeiling(null)).toThrow("command RSS sample was not captured");
     expect(() => assertCommandResourceCeiling({ aggregateRssMiB: 8193, rssMiB: 1024 })).toThrow(
       "command aggregate RSS exceeded 8192 MiB: 8193 MiB",
     );

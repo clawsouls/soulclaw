@@ -1416,7 +1416,6 @@ export function assertCommandResourceCeiling(sample) {
   assertProcessResourceCeiling(sample, {
     label: "command",
     maxRssMiB: MAX_COMMAND_RSS_MIB,
-    requireSample: false,
   });
 }
 
