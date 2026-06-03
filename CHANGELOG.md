@@ -58,6 +58,7 @@ Docs: https://docs.openclaw.ai
 - Release/CI/E2E: fail the kitchen-sink RPC walk when command RSS sampling captures no process samples.
 - Release/CI/E2E: force-stop memory/fd repro gateway children that survive listener cleanup.
 - Release/CI/E2E: remove fallback ClawHub skill-install home directories when proof runs fail.
+- Installers: fail the PowerShell installer when interactive onboarding exits non-zero.
 - Scripts/UI: stop descendant processes from wrapped non-interactive commands when `run-with-env` receives shutdown signals.
 - Release/CI/E2E: write multi-node update Docker artifacts to unique per-run directories by default so parallel runs cannot overwrite evidence.
 - Release/CI/E2E: write package Telegram Docker artifacts to unique per-run directories by default so parallel live/RTT runs cannot overwrite evidence.
