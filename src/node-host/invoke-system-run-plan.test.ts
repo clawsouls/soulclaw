@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { formatExecCommand } from "../infra/system-run-command.js";
+import { withEnv } from "../test-utils/env.js";
 import {
   buildSystemRunApprovalPlan,
   hardenApprovedExecutionPaths,
@@ -154,17 +155,10 @@ function withFakeRuntimeBins<T>(params: {
     writeFakeRuntimeBin(sharedRuntimeBinDir, binName);
     sharedRuntimeBins.add(binName);
   }
-  const oldPath = process.env.PATH;
-  process.env.PATH = `${sharedRuntimeBinDir}${path.delimiter}${oldPath ?? ""}`;
-  try {
-    return params.run();
-  } finally {
-    if (oldPath === undefined) {
-      delete process.env.PATH;
-    } else {
-      process.env.PATH = oldPath;
-    }
-  }
+  return withEnv(
+    { PATH: `${sharedRuntimeBinDir}${path.delimiter}${process.env.PATH ?? ""}` },
+    params.run,
+  );
 }
 
 function uniqueRuntimeBinNames(
