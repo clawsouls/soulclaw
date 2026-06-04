@@ -1,3 +1,8 @@
+/**
+ * Anthropic-family request payload policy helpers.
+ * Applies service-tier and cache-control markers only when provider endpoint
+ * capabilities allow them.
+ */
 import { resolveProviderRequestCapabilities } from "./provider-attribution.js";
 import {
   splitSystemPromptCacheBoundary,
@@ -52,6 +57,7 @@ function isLongTtlEligibleEndpoint(baseUrl: string | undefined): boolean {
   );
 }
 
+/** Resolve Anthropic cache-control marker retention for a request endpoint. */
 export function resolveAnthropicEphemeralCacheControl(
   baseUrl: string | undefined,
   cacheRetention: AnthropicPayloadPolicyInput["cacheRetention"],

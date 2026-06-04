@@ -1,3 +1,8 @@
+/**
+ * Tests Anthropic payload policy mutation.
+ * Covers service tier, cache-control retention, prompt cache boundaries, and
+ * deprecated marker compatibility.
+ */
 import { describe, expect, it } from "vitest";
 import {
   applyAnthropicPayloadPolicyToParams,
