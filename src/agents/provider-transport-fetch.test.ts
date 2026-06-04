@@ -113,6 +113,41 @@ function latestTrustedEnvProxyParams(): Record<string, unknown> {
   return params;
 }
 
+function responseStreamText(text: string): ReadableStream<Uint8Array> {
+  return responseStreamChunks([text]);
+}
+
+function responseStreamChunks(chunks: string[]): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(chunk));
+      }
+      controller.close();
+    },
+  });
+}
+
+function openResponseStreamText(text: string): {
+  close: () => void;
+  stream: ReadableStream<Uint8Array>;
+} {
+  const encoder = new TextEncoder();
+  let streamController: ReadableStreamDefaultController<Uint8Array> | undefined;
+  return {
+    close() {
+      streamController?.close();
+    },
+    stream: new ReadableStream({
+      start(controller) {
+        streamController = controller;
+        controller.enqueue(encoder.encode(text));
+      },
+    }),
+  };
+}
+
 describe("buildGuardedModelFetch", () => {
   beforeEach(() => {
     managedStreamCleanupRegistrations.length = 0;
@@ -200,6 +235,164 @@ describe("buildGuardedModelFetch", () => {
     });
     expect(error).toBeInstanceOf(Error);
     expect((error as Error).message).toMatch(/baseUrl.*\/v1 path prefix/);
+    expect(release).toHaveBeenCalled();
+  });
+
+  it("allows missing content-type when streamed OpenAI-compatible responses contain SSE", async () => {
+    fetchWithSsrFGuardMock.mockResolvedValue({
+      response: new Response(responseStreamText('data: {"ok": true}\n\ndata: [DONE]\n\n')),
+      finalUrl: "https://chatgpt.com/backend-api/codex/responses",
+      release: vi.fn(async () => undefined),
+    });
+    const model = {
+      id: "gpt-5.5",
+      provider: "openai",
+      api: "openclaw-openai-responses-transport",
+      baseUrl: "https://chatgpt.com/backend-api/codex",
+    } as unknown as Model<"openai-responses">;
+
+    const response = await buildGuardedModelFetch(model)(
+      "https://chatgpt.com/backend-api/codex/responses",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: "gpt-5.5", stream: true }),
+      },
+    );
+    const items = [];
+    for await (const item of Stream.fromSSEResponse(response, new AbortController())) {
+      items.push(item);
+    }
+
+    expect(items).toEqual([{ ok: true }]);
+  });
+
+  it("returns promptly for missing content-type SSE streams that remain open", async () => {
+    const source = openResponseStreamText('data: {"ok": true}\n\n');
+    fetchWithSsrFGuardMock.mockResolvedValue({
+      response: new Response(source.stream),
+      finalUrl: "https://chatgpt.com/backend-api/codex/responses",
+      release: vi.fn(async () => undefined),
+    });
+    const model = {
+      id: "gpt-5.5",
+      provider: "openai",
+      api: "openclaw-openai-responses-transport",
+      baseUrl: "https://chatgpt.com/backend-api/codex",
+    } as unknown as Model<"openai-responses">;
+
+    const responsePromise = buildGuardedModelFetch(model)(
+      "https://chatgpt.com/backend-api/codex/responses",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: "gpt-5.5", stream: true }),
+      },
+    );
+    const timeout = Symbol("timeout");
+    const result = await Promise.race<Response | typeof timeout>([
+      responsePromise,
+      new Promise<typeof timeout>((resolve) => {
+        setTimeout(() => resolve(timeout), 100);
+      }),
+    ]);
+    source.close();
+
+    expect(result).not.toBe(timeout);
+    const response = result as Response;
+    const items = [];
+    for await (const item of Stream.fromSSEResponse(response, new AbortController())) {
+      items.push(item);
+    }
+
+    expect(items).toEqual([{ ok: true }]);
+  });
+
+  it("allows missing content-type when the SSE prefix is split across chunks", async () => {
+    fetchWithSsrFGuardMock.mockResolvedValue({
+      response: new Response(responseStreamChunks(["d", "ata", ': {"ok": true}\n\n'])),
+      finalUrl: "https://chatgpt.com/backend-api/codex/responses",
+      release: vi.fn(async () => undefined),
+    });
+    const model = {
+      id: "gpt-5.5",
+      provider: "openai",
+      api: "openclaw-openai-responses-transport",
+      baseUrl: "https://chatgpt.com/backend-api/codex",
+    } as unknown as Model<"openai-responses">;
+
+    const response = await buildGuardedModelFetch(model)(
+      "https://chatgpt.com/backend-api/codex/responses",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: "gpt-5.5", stream: true }),
+      },
+    );
+    const items = [];
+    for await (const item of Stream.fromSSEResponse(response, new AbortController())) {
+      items.push(item);
+    }
+
+    expect(items).toEqual([{ ok: true }]);
+  });
+
+  it("synthesizes SSE for missing content-type JSON returned to streaming SDK requests", async () => {
+    fetchWithSsrFGuardMock.mockResolvedValue({
+      response: new Response(responseStreamText('{"ok": true}')),
+      finalUrl: "https://chatgpt.com/backend-api/codex/responses",
+      release: vi.fn(async () => undefined),
+    });
+    const model = {
+      id: "gpt-5.5",
+      provider: "openai",
+      api: "openclaw-openai-responses-transport",
+      baseUrl: "https://chatgpt.com/backend-api/codex",
+    } as unknown as Model<"openai-responses">;
+
+    const response = await buildGuardedModelFetch(model)(
+      "https://chatgpt.com/backend-api/codex/responses",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: "gpt-5.5", stream: true }),
+      },
+    );
+    const items = [];
+    for await (const item of Stream.fromSSEResponse(response, new AbortController())) {
+      items.push(item);
+    }
+
+    expect(response.headers.get("content-type")).toContain("text/event-stream");
+    expect(items).toEqual([{ ok: true }]);
+  });
+
+  it("rejects missing content-type streamed OpenAI-compatible responses with HTML bodies", async () => {
+    const release = vi.fn(async () => undefined);
+    const model = {
+      id: "private-model",
+      provider: "custom-openai",
+      api: "openai-completions",
+      baseUrl: "https://proxy.example.com",
+    } as unknown as Model<"openai-completions">;
+    fetchWithSsrFGuardMock.mockResolvedValue({
+      response: new Response(responseStreamText("<html>not the API</html>")),
+      finalUrl: "https://proxy.example.com/chat/completions",
+      release,
+    });
+
+    await expect(
+      buildGuardedModelFetch(model)("https://proxy.example.com/chat/completions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ model: "private-model", stream: true }),
+      }),
+    ).rejects.toMatchObject({
+      name: "ProviderHttpError",
+      status: 200,
+      code: "invalid_provider_content_type",
+      errorType: "invalid_response",
+    });
     expect(release).toHaveBeenCalled();
   });
 
