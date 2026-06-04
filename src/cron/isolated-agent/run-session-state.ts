@@ -1,3 +1,4 @@
+/** Mutates and persists isolated cron session state around one run. */
 import fs from "node:fs";
 import type { LiveSessionModelSelection } from "../../agents/live-model-switch.js";
 import type { SessionEntry } from "../../config/sessions.js";
