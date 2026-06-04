@@ -1,3 +1,4 @@
+// Model list status tests cover status column construction and auth/probe summaries.
 import { describe, expect, it, type Mock, vi } from "vitest";
 import { withEnvAsync } from "../../test-utils/env.js";
 
