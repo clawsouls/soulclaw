@@ -158,6 +158,21 @@ function withTinyGitRepo(files: Record<string, string>, test: (cwd: string) => v
   }
 }
 
+function commitTinyGitRepo(cwd: string): void {
+  const commit = spawnSync("git", ["commit", "-m", "initial"], {
+    cwd,
+    env: {
+      ...process.env,
+      GIT_AUTHOR_EMAIL: "test@example.com",
+      GIT_AUTHOR_NAME: "OpenClaw Test",
+      GIT_COMMITTER_EMAIL: "test@example.com",
+      GIT_COMMITTER_NAME: "OpenClaw Test",
+    },
+    stdio: "ignore",
+  });
+  expect(commit.status).toBe(0);
+}
+
 function withTinyFileTree(files: Record<string, string>, test: (cwd: string) => void): void {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-test-projects-"));
   try {
@@ -1159,6 +1174,29 @@ describe("scripts/test-projects changed-target routing", () => {
       mode: "targets",
       skippedBroadFallbackPaths: ["unknown/file.txt"],
       targets: [],
+    });
+  });
+
+  it("explains changed paths that need explicit broad fallback before skipping", () => {
+    withTinyGitRepo({ "package.json": '{"scripts":{}}\n' }, (cwd) => {
+      commitTinyGitRepo(cwd);
+      fs.writeFileSync(path.join(cwd, "package.json"), '{"scripts":{"test":"node"}}\n');
+
+      const result = spawnSync(
+        process.execPath,
+        [path.resolve(process.cwd(), "scripts/test-projects.mjs"), "--changed", "HEAD"],
+        {
+          cwd,
+          encoding: "utf8",
+        },
+      );
+
+      expect(result.status).toBe(0);
+      expect(result.stderr).toContain("[test] no precise changed test targets; skipping Vitest.");
+      expect(result.stderr).toContain("[test]   package.json");
+      expect(result.stderr).toContain(
+        "[test] run `OPENCLAW_TEST_CHANGED_BROAD=1 pnpm test:changed` for broad coverage.",
+      );
     });
   });
 
