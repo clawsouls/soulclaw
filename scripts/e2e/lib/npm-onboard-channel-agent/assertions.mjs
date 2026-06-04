@@ -29,7 +29,11 @@ const statusSectionTitles = new Set([
 ]);
 
 function normalizedStatusHeading(line) {
-  return stripAnsi(line).trim().replace(/^#+\s*/, "").trim().toLowerCase();
+  return stripAnsi(line)
+    .trim()
+    .replace(/^#+\s*/, "")
+    .trim()
+    .toLowerCase();
 }
 
 function extractStatusSection(text, title) {
