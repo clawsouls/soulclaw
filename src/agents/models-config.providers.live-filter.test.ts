@@ -1,3 +1,4 @@
+// Covers live-test provider filters before they reach runtime plugin discovery.
 import { describe, expect, it } from "vitest";
 import type { PluginMetadataSnapshotOwnerMaps } from "../plugins/plugin-metadata-snapshot.js";
 import {
@@ -5,7 +6,6 @@ import {
   resolveProviderDiscoveryFilterForTest,
 } from "./models-config.providers.implicit.js";
 
-// Covers live-test provider filters before they reach runtime plugin discovery.
 function liveFilterEnv(overrides: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   // VITEST enables the live-filter parsing path without requiring real live creds.
   return {

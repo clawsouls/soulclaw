@@ -1,3 +1,4 @@
+// Verifies implicit provider secret wiring for NVIDIA, MiniMax portal, and vLLM.
 import { describe, expect, it, vi } from "vitest";
 import type { ModelDefinitionConfig, ModelProviderConfig } from "../config/types.models.js";
 import { resolveEnvApiKey } from "./model-auth-env.js";
@@ -6,7 +7,6 @@ import {
   resolveMissingProviderApiKey,
 } from "./models-config.providers.secret-helpers.js";
 
-// Verifies implicit provider secret wiring for NVIDIA, MiniMax portal, and vLLM.
 vi.mock("../plugins/setup-registry.js", () => ({
   resolvePluginSetupProvider: () => undefined,
 }));

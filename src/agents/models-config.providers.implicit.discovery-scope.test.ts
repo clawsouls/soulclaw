@@ -1,8 +1,8 @@
+// Exercises startup provider discovery scoping without loading real plugin manifests.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PluginMetadataSnapshotOwnerMaps } from "../plugins/plugin-metadata-snapshot.js";
 import type { ProviderPlugin } from "../plugins/types.js";
 
-// Exercises startup provider discovery scoping without loading real plugin manifests.
 const mocks = vi.hoisted(() => ({
   resolveRuntimePluginDiscoveryProviders: vi.fn(),
   runProviderCatalog: vi.fn(),

@@ -1,3 +1,4 @@
+// Covers provider-key canonicalization plus secret marker persistence safeguards.
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -8,7 +9,6 @@ import { normalizeProviders } from "./models-config.providers.normalize.js";
 import { resolveApiKeyFromProfiles } from "./models-config.providers.secret-helpers.js";
 import { enforceSourceManagedProviderSecrets } from "./models-config.providers.source-managed.js";
 
-// Covers provider-key canonicalization plus secret marker persistence safeguards.
 function normalizeLmstudioBaseUrl(baseUrl: string): string {
   const trimmed = baseUrl.trim().replace(/\/+$/, "");
   return trimmed.replace(/\/api\/v1$/, "").replace(/\/v1$/, "") + "/v1";

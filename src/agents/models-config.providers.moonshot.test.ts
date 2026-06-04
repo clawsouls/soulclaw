@@ -1,9 +1,9 @@
+// Isolates Moonshot implicit-provider auth and streaming compat decisions.
 import { describe, expect, it, vi } from "vitest";
 import type { ModelProviderConfig } from "../config/types.models.js";
 import { applyProviderNativeStreamingUsageCompat } from "../plugin-sdk/provider-catalog-shared.js";
 import { resolveMissingProviderApiKey } from "./models-config.providers.secret-helpers.js";
 
-// Isolates Moonshot implicit-provider auth and streaming compat decisions.
 vi.mock("../plugins/setup-registry.js", () => ({
   resolvePluginSetupProvider: () => undefined,
 }));

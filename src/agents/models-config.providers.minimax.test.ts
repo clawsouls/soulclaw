@@ -1,6 +1,6 @@
+// Mirrors the implicit API-key and OAuth MiniMax catalogs that must stay in lockstep.
 import { describe, expect, it } from "vitest";
 
-// Mirrors the implicit API-key and OAuth MiniMax catalogs that must stay in lockstep.
 function buildMinimaxCatalog() {
   return [
     {
