@@ -1939,6 +1939,15 @@ extension NodeAppModel {
             forceReconnect: forceReconnect)
     }
 
+    func resetGatewaySessionsForForcedReconnect() async {
+        self.nodeGatewayTask?.cancel()
+        self.nodeGatewayTask = nil
+        self.operatorGatewayTask?.cancel()
+        self.operatorGatewayTask = nil
+        await self.operatorGateway.disconnect()
+        await self.nodeGateway.disconnect()
+    }
+
     func disconnectGateway() {
         self.gatewayAutoReconnectEnabled = false
         self.gatewayPairingPaused = false
@@ -4555,6 +4564,10 @@ extension NodeAppModel {
         in config: GatewayConnectConfig?) -> GatewayConnectConfig?
     {
         self.clearingBootstrapToken(in: config)
+    }
+
+    func _test_hasGatewayLoopTasks() -> (node: Bool, operator: Bool) {
+        (self.nodeGatewayTask != nil, self.operatorGatewayTask != nil)
     }
 
     func _test_handleSuccessfulBootstrapGatewayOnboarding() async {
