@@ -455,17 +455,9 @@ describe("hardenApprovedExecutionPaths", () => {
     for (const testCase of cases) {
       runNamedCase(testCase.name, () => {
         const tmp = createFixtureDir("openclaw-approval-hardening-");
-        const oldPath = process.env.PATH;
         let pathToken: PathTokenSetup | null = null;
-        if (testCase.withPathToken) {
-          const binDir = path.join(tmp, "bin");
-          fs.mkdirSync(binDir, { recursive: true });
-          const link = path.join(binDir, "poccmd");
-          fs.symlinkSync("/bin/echo", link);
-          pathToken = { expected: fs.realpathSync(link) };
-          process.env.PATH = `${binDir}${path.delimiter}${oldPath ?? ""}`;
-        }
-        try {
+
+        const checkCase = () => {
           if (testCase.mode === "build-plan") {
             const prepared = buildSystemRunApprovalPlan({
               command: testCase.argv,
@@ -502,15 +494,21 @@ describe("hardenApprovedExecutionPaths", () => {
           if (typeof testCase.expectedArgvChanged === "boolean") {
             expect(hardened.argvChanged).toBe(testCase.expectedArgvChanged);
           }
-        } finally {
-          if (testCase.withPathToken) {
-            if (oldPath === undefined) {
-              delete process.env.PATH;
-            } else {
-              process.env.PATH = oldPath;
-            }
-          }
+        };
+
+        if (testCase.withPathToken) {
+          const binDir = path.join(tmp, "bin");
+          fs.mkdirSync(binDir, { recursive: true });
+          const link = path.join(binDir, "poccmd");
+          fs.symlinkSync("/bin/echo", link);
+          pathToken = { expected: fs.realpathSync(link) };
+          return withEnv(
+            { PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}` },
+            checkCase,
+          );
         }
+
+        return checkCase();
       });
     }
   });
