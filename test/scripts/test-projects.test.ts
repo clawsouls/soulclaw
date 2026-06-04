@@ -18,6 +18,7 @@ import {
   listFullExtensionVitestProjectConfigs,
   orderFullSuiteSpecsForParallelRun,
   shouldAcquireLocalHeavyCheckLock,
+  resolveChangedTestTargetPlanForArgs,
   resolveChangedTestTargetPlan,
   resolveChangedTargetArgs,
   resolveParallelFullSuiteConcurrency,
@@ -196,6 +197,19 @@ describe("scripts/test-projects changed-target routing", () => {
         "src/utils/provider-utils.ts",
       ]),
     ).toEqual(["src/utils/provider-utils.test.ts"]);
+  });
+
+  it("records broad fallback paths skipped by focused changed mode", () => {
+    expect(
+      resolveChangedTestTargetPlan([
+        "test/vitest/vitest.shared.config.ts",
+        "src/utils/provider-utils.ts",
+      ]),
+    ).toEqual({
+      mode: "targets",
+      skippedBroadFallbackPaths: ["test/vitest/vitest.shared.config.ts"],
+      targets: ["src/utils/provider-utils.test.ts"],
+    });
   });
 
   it("keeps the broad changed run available for Vitest wiring edits", () => {
@@ -1136,6 +1150,18 @@ describe("scripts/test-projects changed-target routing", () => {
     ).toStrictEqual([]);
   });
 
+  it("keeps unknown root surface skip reasons available to changed-mode callers", () => {
+    expect(
+      resolveChangedTestTargetPlanForArgs(["--changed", "origin/main"], process.cwd(), () => [
+        "unknown/file.txt",
+      ]),
+    ).toEqual({
+      mode: "targets",
+      skippedBroadFallbackPaths: ["unknown/file.txt"],
+      targets: [],
+    });
+  });
+
   it("keeps the broad changed run available for unknown root surfaces", () => {
     expect(
       resolveChangedTargetArgs(
@@ -1690,6 +1716,7 @@ describe("scripts/test-projects changed-target routing", () => {
   it("keeps changed mode to precise targets by default", () => {
     expect(resolveChangedTestTargetPlan(["package.json", "src/commands/channels.add.ts"])).toEqual({
       mode: "targets",
+      skippedBroadFallbackPaths: ["package.json"],
       targets: ["src/commands/channels.add.test.ts"],
     });
   });
@@ -1709,6 +1736,7 @@ describe("scripts/test-projects changed-target routing", () => {
 
     expect(plan).toEqual({
       mode: "targets",
+      skippedBroadFallbackPaths: ["src/gateway/server.impl.ts"],
       targets: ["test/scripts/package-acceptance-workflow.test.ts", "test/scripts/check.test.ts"],
     });
     expect(repoSourceReads).toEqual([]);
