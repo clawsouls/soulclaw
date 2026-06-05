@@ -272,7 +272,7 @@ struct OnboardingWizardView: View {
                     OnboardingStateStore.markCompleted(mode: selectedMode)
                     self.didMarkCompleted = true
                 }
-                self.onClose()
+                self.step = .success
             }
             .onChange(of: self.scenePhase) { _, newValue in
                 guard newValue == .active else { return }
