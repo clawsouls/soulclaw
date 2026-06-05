@@ -318,16 +318,7 @@ struct OnboardingWizardView: View {
                 self.selectMode(.remoteDomain)
             }
 
-            Toggle(
-                "Developer mode",
-                isOn: Binding(
-                    get: { self.developerModeEnabled },
-                    set: { newValue in
-                        self.developerModeEnabled = newValue
-                        if !newValue, self.selectedMode == .developerLocal {
-                            self.selectedMode = nil
-                        }
-                    }))
+            self.developerModeToggleRow
 
             if self.developerModeEnabled {
                 OnboardingModeRow(
@@ -346,6 +337,40 @@ struct OnboardingWizardView: View {
             }
             .disabled(self.selectedMode == nil)
         }
+    }
+
+    private var developerModeToggleRow: some View {
+        // Onboarding Form switch rows need full-width taps; native Toggle only hits the switch edge on iOS 26.
+        Button {
+            let enabled = !self.developerModeEnabled
+            self.developerModeEnabled = enabled
+            if !enabled, self.selectedMode == .developerLocal {
+                self.selectedMode = nil
+            }
+        } label: {
+            HStack {
+                Text("Developer mode")
+                Spacer(minLength: 8)
+                self.onboardingSwitchIndicator(isOn: self.developerModeEnabled)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Developer mode")
+        .accessibilityValue(self.developerModeEnabled ? "On" : "Off")
+    }
+
+    private func onboardingSwitchIndicator(isOn: Bool) -> some View {
+        Capsule()
+            .fill(isOn ? Color.accentColor : Color.secondary.opacity(0.35))
+            .frame(width: 52, height: 32)
+            .overlay(alignment: isOn ? .trailing : .leading) {
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 28, height: 28)
+                    .padding(2)
+                    .shadow(color: Color.black.opacity(0.14), radius: 1, x: 0, y: 1)
+            }
     }
 
     @ViewBuilder
