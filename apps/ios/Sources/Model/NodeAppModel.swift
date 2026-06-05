@@ -2077,6 +2077,9 @@ extension NodeAppModel {
         if self.gatewayServerName != nil {
             self.gatewayStatusText = "Connected"
         }
+        if self.gatewayConnected {
+            LiveActivityManager.shared.handleReconnect()
+        }
     }
 
     private func shouldKeepGatewayProblemStatus(forDisconnectReason reason: String) -> Bool {
