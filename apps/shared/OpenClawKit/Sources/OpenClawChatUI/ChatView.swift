@@ -177,12 +177,15 @@ public struct OpenClawChatView: View {
             #if !os(macOS)
             .scrollDismissesKeyboard(.interactively)
             #endif
+            .safeAreaInset(edge: .top, spacing: 0) {
+                self.messageListNoticeBanner
+            }
             // Keep the scroll pinned to the bottom for new messages.
-                .scrollPosition(id: self.$scrollPosition, anchor: .bottom)
-                .onChange(of: self.scrollPosition) { _, position in
-                    guard let position else { return }
-                    self.isPinnedToBottom = position == self.scrollerBottomID
-                }
+            .scrollPosition(id: self.$scrollPosition, anchor: .bottom)
+            .onChange(of: self.scrollPosition) { _, position in
+                guard let position else { return }
+                self.isPinnedToBottom = position == self.scrollerBottomID
+            }
 
             if self.viewModel.isLoading, self.composerChrome == .full {
                 ProgressView()
@@ -346,22 +349,10 @@ public struct OpenClawChatView: View {
         } else if self.showsCleanLoadingPlaceholder {
             EmptyView()
         } else if let error = self.activeErrorText {
-            let presentation = self.errorPresentation(for: error)
             if self.hasVisibleMessageListContent {
-                VStack(spacing: 0) {
-                    ChatNoticeBanner(
-                        systemImage: presentation.systemImage,
-                        title: presentation.title,
-                        message: error,
-                        tint: presentation.tint,
-                        dismiss: { self.viewModel.errorText = nil },
-                        refresh: { self.viewModel.refresh() })
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 10)
-                .padding(.top, 8)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                EmptyView()
             } else {
+                let presentation = self.errorPresentation(for: error)
                 ChatNoticeCard(
                     systemImage: presentation.systemImage,
                     title: presentation.title,
@@ -411,6 +402,28 @@ public struct OpenClawChatView: View {
             return true
         }
         return false
+    }
+
+    @ViewBuilder
+    private var messageListNoticeBanner: some View {
+        if let error = self.activeErrorText,
+           self.hasVisibleMessageListContent,
+           !self.viewModel.isLoading,
+           self.visibleEmptyAssistantIntro == nil,
+           !self.showsCleanLoadingPlaceholder
+        {
+            let presentation = self.errorPresentation(for: error)
+            ChatNoticeBanner(
+                systemImage: presentation.systemImage,
+                title: presentation.title,
+                message: error,
+                tint: presentation.tint,
+                dismiss: { self.viewModel.errorText = nil },
+                refresh: { self.viewModel.refresh() })
+                .padding(.horizontal, 10)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
+        }
     }
 
     private var showsCleanLoadingPlaceholder: Bool {
