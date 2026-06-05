@@ -340,24 +340,33 @@ struct OnboardingWizardView: View {
     }
 
     private var developerModeToggleRow: some View {
+        self.onboardingButtonToggle(
+            "Developer mode",
+            isOn: Binding(
+                get: { self.developerModeEnabled },
+                set: { enabled in
+                    self.developerModeEnabled = enabled
+                    if !enabled, self.selectedMode == .developerLocal {
+                        self.selectedMode = nil
+                    }
+                }))
+    }
+
+    private func onboardingButtonToggle(_ title: String, isOn: Binding<Bool>) -> some View {
         // Onboarding Form switch rows need full-width taps; native Toggle only hits the switch edge on iOS 26.
         Button {
-            let enabled = !self.developerModeEnabled
-            self.developerModeEnabled = enabled
-            if !enabled, self.selectedMode == .developerLocal {
-                self.selectedMode = nil
-            }
+            isOn.wrappedValue.toggle()
         } label: {
             HStack {
-                Text("Developer mode")
+                Text(title)
                 Spacer(minLength: 8)
-                self.onboardingSwitchIndicator(isOn: self.developerModeEnabled)
+                self.onboardingSwitchIndicator(isOn: isOn.wrappedValue)
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Developer mode")
-        .accessibilityValue(self.developerModeEnabled ? "On" : "Off")
+        .accessibilityLabel(title)
+        .accessibilityValue(isOn.wrappedValue ? "On" : "Off")
     }
 
     private func onboardingSwitchIndicator(isOn: Bool) -> some View {
@@ -465,7 +474,7 @@ struct OnboardingWizardView: View {
                 .autocorrectionDisabled()
             TextField("Port", text: self.$manualPortText)
                 .keyboardType(.numberPad)
-            Toggle("Use TLS", isOn: self.$manualTLS)
+            self.onboardingButtonToggle("Use TLS", isOn: self.$manualTLS)
             self.manualConnectButton
         } header: {
             Text("Developer Local")
@@ -602,7 +611,7 @@ extension OnboardingWizardView {
                 .autocorrectionDisabled()
             TextField("Port", text: self.$manualPortText)
                 .keyboardType(.numberPad)
-            Toggle("Use TLS", isOn: self.$manualTLS)
+            self.onboardingButtonToggle("Use TLS", isOn: self.$manualTLS)
             TextField("Discovery Domain (optional)", text: self.$discoveryDomain)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
