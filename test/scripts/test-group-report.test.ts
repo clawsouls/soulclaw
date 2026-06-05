@@ -19,6 +19,7 @@ import {
   resolveRunPlans,
   spawnText,
 } from "../../scripts/test-group-report.mjs";
+import { withEnv } from "../../src/test-utils/env.js";
 
 describe("scripts/test-group-report grouping", () => {
   it("groups repo files by stable product area", () => {
@@ -479,37 +480,26 @@ describe("scripts/test-group-report run plans", () => {
   });
 
   it("uses leaf configs for full-suite profiling without requiring parallel env", () => {
-    const previousParallel = process.env.OPENCLAW_TEST_PROJECTS_PARALLEL;
-    const previousLeaf = process.env.OPENCLAW_TEST_PROJECTS_LEAF_SHARDS;
-    delete process.env.OPENCLAW_TEST_PROJECTS_PARALLEL;
-    delete process.env.OPENCLAW_TEST_PROJECTS_LEAF_SHARDS;
-    try {
-      const plans = resolveRunPlans(parseTestGroupReportArgs(["--full-suite"]));
+    withEnv(
+      {
+        OPENCLAW_TEST_PROJECTS_PARALLEL: undefined,
+        OPENCLAW_TEST_PROJECTS_LEAF_SHARDS: undefined,
+      },
+      () => {
+        const plans = resolveRunPlans(parseTestGroupReportArgs(["--full-suite"]));
 
-      expect(plans.map((plan) => plan.config)).not.toContain(
-        "test/vitest/vitest.full-agentic.config.ts",
-      );
-      expect(plans.map((plan) => plan.config)).toContain(
-        "test/vitest/vitest.agents-tools.config.ts",
-      );
-    } finally {
-      if (previousParallel === undefined) {
-        delete process.env.OPENCLAW_TEST_PROJECTS_PARALLEL;
-      } else {
-        process.env.OPENCLAW_TEST_PROJECTS_PARALLEL = previousParallel;
-      }
-      if (previousLeaf === undefined) {
-        delete process.env.OPENCLAW_TEST_PROJECTS_LEAF_SHARDS;
-      } else {
-        process.env.OPENCLAW_TEST_PROJECTS_LEAF_SHARDS = previousLeaf;
-      }
-    }
+        expect(plans.map((plan) => plan.config)).not.toContain(
+          "test/vitest/vitest.full-agentic.config.ts",
+        );
+        expect(plans.map((plan) => plan.config)).toContain(
+          "test/vitest/vitest.agents-tools.config.ts",
+        );
+      },
+    );
   });
 
   it("preserves full-suite shard file args and unique report labels", () => {
-    const previousParallel = process.env.OPENCLAW_TEST_PROJECTS_PARALLEL;
-    process.env.OPENCLAW_TEST_PROJECTS_PARALLEL = "6";
-    try {
+    withEnv({ OPENCLAW_TEST_PROJECTS_PARALLEL: "6" }, () => {
       const plans = resolveRunPlans(parseTestGroupReportArgs(["--full-suite"]));
       const gatewayServerPlans = plans.filter(
         (plan) => plan.config === "test/vitest/vitest.gateway-server.config.ts",
@@ -523,13 +513,7 @@ describe("scripts/test-group-report run plans", () => {
       expect(gatewayServerPlans.flatMap((plan) => plan.forwardedArgs)).toContain(
         "src/gateway/server.node-pairing-authz.test.ts",
       );
-    } finally {
-      if (previousParallel === undefined) {
-        delete process.env.OPENCLAW_TEST_PROJECTS_PARALLEL;
-      } else {
-        process.env.OPENCLAW_TEST_PROJECTS_PARALLEL = previousParallel;
-      }
-    }
+    });
   });
 });
 
