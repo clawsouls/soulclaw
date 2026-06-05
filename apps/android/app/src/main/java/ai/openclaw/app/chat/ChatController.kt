@@ -61,9 +61,11 @@ class ChatController(
 
   private val pendingRuns = mutableSetOf<String>()
   private val pendingRunTimeoutJobs = ConcurrentHashMap<String, Job>()
+
   // Preserve sent messages locally until chat.history includes the gateway-confirmed copy.
   private val optimisticMessagesByRunId = LinkedHashMap<String, ChatMessage>()
   private val pendingRunTimeoutMs = 120_000L
+
   // Drops stale history responses after session switches or refresh races.
   private val historyLoadGeneration = AtomicLong(0)
 
