@@ -37,6 +37,8 @@ extension SettingsProTab {
                     NavigationLink(value: SettingsRoute.gateway) {
                         self.gatewayConnectionRow
                             .padding(14)
+                            .frame(maxWidth: .infinity, minHeight: SettingsLayout.rowHeight, alignment: .leading)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     Divider()
@@ -239,11 +241,11 @@ extension SettingsProTab {
             }
             .padding(.horizontal, OpenClawProMetric.pagePadding)
 
+            self.manualGatewayCard
             self.deviceIdentityCard
             self.agentSelectionCard
             self.gatewaySetupCard
             self.discoveredGatewaysCard
-            self.manualGatewayCard
             self.gatewayAdvancedCard
         }
     }
