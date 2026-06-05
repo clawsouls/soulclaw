@@ -971,7 +971,7 @@ private fun AboutSettingsScreen(
         listOf(
           SettingsMetric("Android App", BuildConfig.VERSION_NAME),
           SettingsMetric("Build", BuildConfig.VERSION_CODE.toString()),
-          SettingsMetric("Channel", "Play"),
+          SettingsMetric("Channel", androidDistributionChannel()),
           SettingsMetric("Gateway", currentGatewayVersion ?: "Not connected"),
         ),
     )
@@ -993,6 +993,14 @@ private fun AboutSettingsScreen(
     }
   }
 }
+
+internal fun androidDistributionChannel(flavor: String = BuildConfig.FLAVOR): String =
+  when (flavor.trim()) {
+    "play" -> "Play"
+    "thirdParty" -> "Third-party"
+    "" -> "Unknown"
+    else -> flavor.trim()
+  }
 
 @Composable
 private fun AboutStatusRow(
