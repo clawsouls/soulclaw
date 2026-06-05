@@ -181,6 +181,7 @@ struct OnboardingModeRow: View {
                 Image(systemName: self.selected ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(self.selected ? Color.accentColor : Color.secondary)
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
