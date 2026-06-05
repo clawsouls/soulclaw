@@ -204,11 +204,7 @@ extension SettingsProTab {
                     }
                 }
                 .padding(.top, 18)
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear
-                    .frame(height: OpenClawProMetric.pagePadding)
-                    .accessibilityHidden(true)
+                .padding(.bottom, OpenClawProMetric.bottomScrollInset)
             }
         }
         .navigationTitle(self.title(for: route))
