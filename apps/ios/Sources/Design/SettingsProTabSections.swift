@@ -744,11 +744,10 @@ extension SettingsProTab {
     var diagnosticsAdvancedCard: some View {
         ProCard(radius: SettingsLayout.cardRadius) {
             VStack(alignment: .leading, spacing: 12) {
-                Toggle("Discovery Debug Logs", isOn: self.$discoveryDebugLogsEnabled)
-                    .onChange(of: self.discoveryDebugLogsEnabled) { _, enabled in
-                        self.gatewayController.setDiscoveryDebugLoggingEnabled(enabled)
-                    }
-                Toggle("Debug Screen Status", isOn: self.$canvasDebugStatusEnabled)
+                self.settingsButtonToggle("Discovery Debug Logs", isOn: self.$discoveryDebugLogsEnabled) { enabled in
+                    self.gatewayController.setDiscoveryDebugLoggingEnabled(enabled)
+                }
+                self.settingsButtonToggle("Debug Screen Status", isOn: self.$canvasDebugStatusEnabled)
                 NavigationLink {
                     GatewayDiscoveryDebugLogView()
                 } label: {
@@ -793,6 +792,44 @@ extension SettingsProTab {
         Toggle(title, isOn: isOn)
             .onChange(of: isOn.wrappedValue) { _, enabled in
                 onChange?(enabled)
+            }
+    }
+
+    func settingsButtonToggle(
+        _ title: String,
+        isOn: Binding<Bool>,
+        onChange: ((Bool) -> Void)? = nil) -> some View
+    {
+        // Diagnostics rows need full-width taps; wrapping Toggle crashes this NavigationStack on iOS 26.
+        Button {
+            isOn.wrappedValue.toggle()
+        } label: {
+            HStack {
+                Text(title)
+                Spacer(minLength: 8)
+                self.settingsSwitchIndicator(isOn: isOn.wrappedValue)
+            }
+            .font(.subheadline)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue(isOn.wrappedValue ? "On" : "Off")
+        .onChange(of: isOn.wrappedValue) { _, enabled in
+            onChange?(enabled)
+        }
+    }
+
+    func settingsSwitchIndicator(isOn: Bool) -> some View {
+        Capsule()
+            .fill(isOn ? Color.accentColor : Color.secondary.opacity(0.35))
+            .frame(width: 52, height: 32)
+            .overlay(alignment: isOn ? .trailing : .leading) {
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 28, height: 28)
+                    .padding(2)
+                    .shadow(color: Color.black.opacity(0.14), radius: 1, x: 0, y: 1)
             }
     }
 
