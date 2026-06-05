@@ -203,9 +203,13 @@ extension SettingsProTab {
                         self.aboutDestination
                     }
                 }
-                .padding(.vertical, 18)
+                .padding(.top, 18)
+                .padding(.bottom, SettingsLayout.bottomContentPadding)
             }
-            .safeAreaPadding(.bottom, OpenClawProMetric.bottomScrollInset)
+            .contentMargins(.bottom, self.bottomScrollMargin, for: .scrollContent)
+            SettingsBottomOverlayInsetReader(inset: self.$bottomOverlayInset)
+                .frame(width: 0, height: 0)
+                .allowsHitTesting(false)
         }
         .navigationTitle(self.title(for: route))
         .navigationBarTitleDisplayMode(.inline)
