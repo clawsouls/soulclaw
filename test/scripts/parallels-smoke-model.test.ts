@@ -1,3 +1,4 @@
+// Parallels Smoke Model tests cover parallels smoke model script behavior.
 import { EventEmitter } from "node:events";
 import {
   chmodSync,

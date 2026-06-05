@@ -1,3 +1,4 @@
+// Docker E2E Plan tests cover docker e2e plan script behavior.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
