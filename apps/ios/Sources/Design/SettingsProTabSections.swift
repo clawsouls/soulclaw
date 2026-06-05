@@ -616,7 +616,7 @@ extension SettingsProTab {
     var manualGatewayCard: some View {
         ProCard(radius: SettingsLayout.cardRadius) {
             VStack(alignment: .leading, spacing: 12) {
-                Toggle("Use Manual Gateway", isOn: self.$manualGatewayEnabled)
+                self.settingsButtonToggle("Use Manual Gateway", isOn: self.$manualGatewayEnabled)
                 TextField("Host", text: self.$manualGatewayHost)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -624,7 +624,7 @@ extension SettingsProTab {
                 TextField("Port", text: self.manualPortBinding)
                     .keyboardType(.numberPad)
                     .textFieldStyle(.roundedBorder)
-                Toggle("Use TLS", isOn: self.$manualGatewayTLS)
+                self.settingsButtonToggle("Use TLS", isOn: self.$manualGatewayTLS)
                 self.gatewayActionButton(
                     title: "Connect Manual",
                     icon: "network",
@@ -643,16 +643,21 @@ extension SettingsProTab {
     var gatewayAdvancedCard: some View {
         ProCard(radius: SettingsLayout.cardRadius) {
             VStack(alignment: .leading, spacing: 12) {
-                Toggle("Auto-connect on launch", isOn: self.$gatewayAutoConnect)
+                self.settingsButtonToggle("Auto-connect on launch", isOn: self.$gatewayAutoConnect)
                 SecureField("Gateway Auth Token", text: self.$gatewayToken)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .textFieldStyle(.roundedBorder)
                 SecureField("Gateway Password", text: self.$gatewayPassword)
                     .textFieldStyle(.roundedBorder)
-                Button("Reset Onboarding", role: .destructive) {
+                Button(role: .destructive) {
                     self.showResetOnboardingAlert = true
+                } label: {
+                    Label("Reset Onboarding", systemImage: "arrow.counterclockwise")
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
         }
         .padding(.horizontal, OpenClawProMetric.pagePadding)
@@ -800,7 +805,7 @@ extension SettingsProTab {
         isOn: Binding<Bool>,
         onChange: ((Bool) -> Void)? = nil) -> some View
     {
-        // Diagnostics rows need full-width taps; wrapping Toggle crashes this NavigationStack on iOS 26.
+        // Settings switch rows need full-width taps; wrapping Toggle crashes this NavigationStack on iOS 26.
         Button {
             isOn.wrappedValue.toggle()
         } label: {
