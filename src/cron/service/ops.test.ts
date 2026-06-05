@@ -1,3 +1,4 @@
+// Cron service ops tests cover high-level service operations and state transitions.
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
