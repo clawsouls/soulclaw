@@ -10,6 +10,10 @@ struct TalkProTab: View {
     @State private var showPermissionPrompt = false
     var openSettings: () -> Void
 
+    private enum Layout {
+        static let bottomScrollInset: CGFloat = OpenClawProMetric.bottomScrollInset + 160
+    }
+
     private var state: TalkProState {
         TalkProState(
             gatewayConnected: self.gatewayConnected,
@@ -37,7 +41,7 @@ struct TalkProTab: View {
                     .padding(.top, 16)
                     .padding(.bottom, 18)
                 }
-                .safeAreaPadding(.bottom, OpenClawProMetric.bottomScrollInset)
+                .safeAreaPadding(.bottom, Layout.bottomScrollInset)
             }
             .navigationBarHidden(true)
         }
@@ -192,13 +196,9 @@ struct TalkProTab: View {
                     .padding(.horizontal, 12)
                     .padding(.top, 11)
                     .padding(.bottom, 3)
-                Toggle("Speakerphone", isOn: self.$talkSpeakerphoneEnabled)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
+                self.controlToggleRow("Speakerphone", isOn: self.talkSpeakerphoneBinding)
                 Divider().padding(.leading, 14)
-                Toggle("Background listening", isOn: self.$talkBackgroundEnabled)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
+                self.controlToggleRow("Background listening", isOn: self.$talkBackgroundEnabled)
                 Divider().padding(.leading, 14)
                 Button(action: self.openSettings) {
                     HStack {
@@ -216,6 +216,25 @@ struct TalkProTab: View {
             }
         }
         .padding(.horizontal, OpenClawProMetric.pagePadding)
+    }
+
+    private func controlToggleRow(_ title: String, isOn: Binding<Bool>) -> some View {
+        Toggle(title, isOn: isOn)
+            .contentShape(Rectangle())
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .overlay {
+                // Keep Toggle semantics for accessibility while making the full visual row tappable.
+                Button {
+                    isOn.wrappedValue.toggle()
+                } label: {
+                    Rectangle()
+                        .fill(.clear)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHidden(true)
+            }
     }
 
     private func cardHeader(
@@ -320,6 +339,15 @@ struct TalkProTab: View {
         } else if self.talkEnabled != self.appModel.talkMode.isEnabled {
             self.appModel.setTalkEnabled(self.talkEnabled)
         }
+    }
+
+    private var talkSpeakerphoneBinding: Binding<Bool> {
+        Binding(
+            get: { self.talkSpeakerphoneEnabled },
+            set: { enabled in
+                self.talkSpeakerphoneEnabled = enabled
+                self.appModel.setTalkSpeakerphoneEnabled(enabled)
+            })
     }
 
     private func handlePrimaryAction() {
