@@ -14,6 +14,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * UI-facing bridge that exposes NodeRuntime and preference state as Compose-friendly StateFlows.
@@ -32,7 +34,11 @@ class MainViewModel(
   private val nodeApp = app as NodeApp
   private val prefs = nodeApp.prefs
   private val runtimeRef = MutableStateFlow<NodeRuntime?>(null)
-  private var foreground = true
+
+  @Volatile private var foreground = false
+
+  @Volatile private var runtimeStartupQueued = false
+
   private val _requestedHomeDestination = MutableStateFlow<HomeDestination?>(null)
   val requestedHomeDestination: StateFlow<HomeDestination?> = _requestedHomeDestination
   private val _startOnboardingAtGatewaySetup = MutableStateFlow(false)
@@ -51,6 +57,19 @@ class MainViewModel(
     runtime.setForeground(foreground)
     runtimeRef.value = runtime
     return runtime
+  }
+
+  /**
+   * Starts the node runtime off the main thread so fresh installs can render
+   * the shell before encrypted prefs, device identity, and gateway setup warm up.
+   */
+  private fun queueRuntimeStartup() {
+    if (runtimeRef.value != null || runtimeStartupQueued) return
+    runtimeStartupQueued = true
+    viewModelScope.launch(Dispatchers.Default) {
+      runCatching { ensureRuntime() }
+      runtimeStartupQueued = false
+    }
   }
 
   /**
@@ -180,12 +199,6 @@ class MainViewModel(
   val chatSessions: StateFlow<List<ChatSessionEntry>> = runtimeState(initial = emptyList()) { it.chatSessions }
   val pendingRunCount: StateFlow<Int> = runtimeState(initial = 0) { it.pendingRunCount }
 
-  init {
-    if (prefs.onboardingCompleted.value) {
-      ensureRuntime()
-    }
-  }
-
   val canvas: CanvasController
     get() = ensureRuntime().canvas
 
@@ -213,13 +226,10 @@ class MainViewModel(
    */
   fun setForeground(value: Boolean) {
     foreground = value
-    val runtime =
-      if (value && prefs.onboardingCompleted.value) {
-        ensureRuntime()
-      } else {
-        runtimeRef.value
-      }
-    runtime?.setForeground(value)
+    if (value && prefs.onboardingCompleted.value) {
+      queueRuntimeStartup()
+    }
+    runtimeRef.value?.setForeground(value)
   }
 
   fun setDisplayName(value: String) {

@@ -119,8 +119,10 @@ fun ShellScreen(
     var settingsRoute by rememberSaveable { mutableStateOf(SettingsRoute.Home) }
     var returnToOverviewFromSettings by rememberSaveable { mutableStateOf(false) }
     var commandOpen by rememberSaveable { mutableStateOf(false) }
+    var voiceScreenWasActive by rememberSaveable { mutableStateOf(false) }
     val requestedHomeDestination by viewModel.requestedHomeDestination.collectAsState()
     val pendingTrust by viewModel.pendingGatewayTrust.collectAsState()
+    val runtimeInitialized by viewModel.runtimeInitialized.collectAsState()
 
     LaunchedEffect(requestedHomeDestination) {
       val destination = requestedHomeDestination ?: return@LaunchedEffect
@@ -141,8 +143,12 @@ fun ShellScreen(
       viewModel.clearRequestedHomeDestination()
     }
 
-    LaunchedEffect(activeTab) {
-      viewModel.setVoiceScreenActive(activeTab == Tab.Voice)
+    LaunchedEffect(activeTab, runtimeInitialized) {
+      val voiceScreenActive = activeTab == Tab.Voice
+      if (voiceScreenActive || voiceScreenWasActive || runtimeInitialized) {
+        viewModel.setVoiceScreenActive(voiceScreenActive)
+      }
+      voiceScreenWasActive = voiceScreenActive
     }
 
     BackHandler(enabled = activeTab != Tab.Overview) {
