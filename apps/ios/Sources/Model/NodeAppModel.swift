@@ -2216,6 +2216,9 @@ extension NodeAppModel {
                 let operatorOptions = self.makeOperatorConnectOptions(
                     clientId: effectiveClientId,
                     displayName: nodeOptions.clientDisplayName,
+                    includeAdminScope: self.shouldRequestOperatorAdminScope(
+                        token: reconnectAuth.token,
+                        password: reconnectAuth.password),
                     includeApprovalScope: self.shouldRequestOperatorApprovalScope(
                         token: reconnectAuth.token,
                         password: reconnectAuth.password),
@@ -2554,13 +2557,44 @@ extension NodeAppModel {
         return storedOperatorScopes.contains("operator.approvals")
     }
 
+    private func shouldRequestOperatorAdminScope(token: String?, password: String?) -> Bool {
+        let identity = DeviceIdentityStore.loadOrCreate()
+        let storedOperatorScopes = DeviceAuthStore
+            .loadToken(deviceId: identity.deviceId, role: "operator")?
+            .scopes ?? []
+        return Self.shouldRequestOperatorAdminScope(
+            token: token,
+            password: password,
+            storedOperatorScopes: storedOperatorScopes)
+    }
+
+    fileprivate nonisolated static func shouldRequestOperatorAdminScope(
+        token: String?,
+        password: String?,
+        storedOperatorScopes: [String]) -> Bool
+    {
+        let trimmedToken = token?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmedToken.isEmpty {
+            return true
+        }
+        let trimmedPassword = password?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmedPassword.isEmpty {
+            return true
+        }
+        return storedOperatorScopes.contains("operator.admin")
+    }
+
     private func makeOperatorConnectOptions(
         clientId: String,
         displayName: String?,
+        includeAdminScope: Bool = false,
         includeApprovalScope: Bool,
         forceExplicitScopes: Bool = false) -> GatewayConnectOptions
     {
         var scopes = ["operator.read", "operator.write", "operator.talk.secrets"]
+        if includeAdminScope {
+            scopes.append("operator.admin")
+        }
         // Preserve reconnect compatibility for older paired operator tokens that were
         // approved before iOS requested operator.approvals by default.
         if includeApprovalScope {
@@ -4441,12 +4475,14 @@ extension NodeAppModel {
     func _test_makeOperatorConnectOptions(
         clientId: String,
         displayName: String?,
+        includeAdminScope: Bool = false,
         includeApprovalScope: Bool,
         forceExplicitScopes: Bool = false) -> GatewayConnectOptions
     {
         self.makeOperatorConnectOptions(
             clientId: clientId,
             displayName: displayName,
+            includeAdminScope: includeAdminScope,
             includeApprovalScope: includeApprovalScope,
             forceExplicitScopes: forceExplicitScopes)
     }
@@ -4555,6 +4591,17 @@ extension NodeAppModel {
         storedOperatorScopes: [String]) -> Bool
     {
         self.shouldRequestOperatorApprovalScope(
+            token: token,
+            password: password,
+            storedOperatorScopes: storedOperatorScopes)
+    }
+
+    nonisolated static func _test_shouldRequestOperatorAdminScope(
+        token: String?,
+        password: String?,
+        storedOperatorScopes: [String]) -> Bool
+    {
+        self.shouldRequestOperatorAdminScope(
             token: token,
             password: password,
             storedOperatorScopes: storedOperatorScopes)

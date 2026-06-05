@@ -1,7 +1,7 @@
 import Foundation
-import OpenClawKit
 import Testing
 import UIKit
+@testable import OpenClawKit
 @testable import OpenClaw
 
 @Suite(.serialized) struct GatewayConnectionControllerTests {
@@ -97,8 +97,14 @@ import UIKit
             clientId: "openclaw-ios",
             displayName: "OpenClaw iOS",
             includeApprovalScope: true)
+        let withAdminScope = appModel._test_makeOperatorConnectOptions(
+            clientId: "openclaw-ios",
+            displayName: "OpenClaw iOS",
+            includeAdminScope: true,
+            includeApprovalScope: false)
 
         #expect(withoutApprovalScope.role == "operator")
+        #expect(!withoutApprovalScope.scopes.contains("operator.admin"))
         #expect(withoutApprovalScope.scopes.contains("operator.read"))
         #expect(withoutApprovalScope.scopes.contains("operator.write"))
         #expect(!withoutApprovalScope.scopes.contains("operator.approvals"))
@@ -106,6 +112,7 @@ import UIKit
         #expect(!withoutApprovalScope.scopesAreExplicit)
 
         #expect(withApprovalScope.scopes.contains("operator.approvals"))
+        #expect(withAdminScope.scopes.contains("operator.admin"))
     }
 
     @Test @MainActor func operatorTalkPermissionUpgradeUsesExplicitScopes() {
@@ -113,13 +120,56 @@ import UIKit
         let options = appModel._test_makeOperatorConnectOptions(
             clientId: "openclaw-ios",
             displayName: "OpenClaw iOS",
+            includeAdminScope: true,
             includeApprovalScope: false,
             forceExplicitScopes: true)
 
         #expect(options.scopesAreExplicit)
+        #expect(options.scopes.contains("operator.admin"))
         #expect(options.scopes.contains("operator.read"))
         #expect(options.scopes.contains("operator.write"))
         #expect(options.scopes.contains("operator.talk.secrets"))
+    }
+
+    @Test func operatorAdminScopeRequestsOnlyWhenSharedAuthOrAlreadyGranted() {
+        #expect(
+            !NodeAppModel._test_shouldRequestOperatorAdminScope(
+                token: nil,
+                password: nil,
+                storedOperatorScopes: ["operator.read", "operator.write", "operator.talk.secrets"]))
+        #expect(
+            NodeAppModel._test_shouldRequestOperatorAdminScope(
+                token: nil,
+                password: nil,
+                storedOperatorScopes: ["operator.admin"]))
+        #expect(
+            NodeAppModel._test_shouldRequestOperatorAdminScope(
+                token: "shared-token",
+                password: nil,
+                storedOperatorScopes: []))
+        #expect(
+            NodeAppModel._test_shouldRequestOperatorAdminScope(
+                token: nil,
+                password: "shared-password",
+                storedOperatorScopes: []))
+    }
+
+    @Test func storedDeviceTokenScopeGapUsesGatewayScopeCompatibility() {
+        #expect(!GatewayChannelActor._test_requestedScopesExceedStoredToken(
+            role: "operator",
+            requestedScopes: ["operator.read", "operator.write", "operator.talk.secrets"],
+            storedToken: "stored-device-token",
+            storedScopes: ["operator.admin"]))
+        #expect(!GatewayChannelActor._test_requestedScopesExceedStoredToken(
+            role: "operator",
+            requestedScopes: ["operator.read"],
+            storedToken: "stored-device-token",
+            storedScopes: []))
+        #expect(GatewayChannelActor._test_requestedScopesExceedStoredToken(
+            role: "operator",
+            requestedScopes: ["operator.admin"],
+            storedToken: "stored-device-token",
+            storedScopes: ["operator.read"]))
     }
 
     @Test func operatorApprovalScopeRequestsStayBackwardCompatible() {
