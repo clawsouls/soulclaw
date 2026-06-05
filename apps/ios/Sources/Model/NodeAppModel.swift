@@ -125,6 +125,7 @@ final class NodeAppModel {
     var gatewayPairingPaused: Bool = false
     var gatewayPairingRequestId: String?
     private(set) var lastGatewayProblem: GatewayConnectionProblem?
+    private var operatorGatewayProblem: GatewayConnectionProblem?
     var gatewayDisplayStatusText: String {
         self.lastGatewayProblem?.statusText ?? self.gatewayStatusText
     }
@@ -630,6 +631,7 @@ final class NodeAppModel {
         self.gatewayPairingPaused = false
         self.gatewayPairingRequestId = nil
         self.lastGatewayProblem = nil
+        self.operatorGatewayProblem = nil
         self.operatorGatewayTask?.cancel()
         self.operatorGatewayTask = nil
         let sessionBox = config.tls.map { WebSocketSessionBox(session: GatewayTLSPinningSession(params: $0)) }
@@ -1953,6 +1955,7 @@ extension NodeAppModel {
         self.gatewayPairingPaused = false
         self.gatewayPairingRequestId = nil
         self.lastGatewayProblem = nil
+        self.operatorGatewayProblem = nil
         self.nodeGatewayTask?.cancel()
         self.nodeGatewayTask = nil
         self.operatorGatewayTask?.cancel()
@@ -1987,6 +1990,7 @@ extension NodeAppModel {
         self.gatewayPairingPaused = false
         self.gatewayPairingRequestId = nil
         self.lastGatewayProblem = nil
+        self.operatorGatewayProblem = nil
         self.nodeGatewayTask?.cancel()
         self.operatorGatewayTask?.cancel()
         self.gatewayHealthMonitor.stop()
@@ -2006,6 +2010,17 @@ extension NodeAppModel {
     }
 
     private func clearGatewayConnectionProblem() {
+        if let operatorGatewayProblem {
+            self.lastGatewayProblem = operatorGatewayProblem
+            if operatorGatewayProblem.needsPairingApproval {
+                self.gatewayPairingPaused = true
+                self.gatewayPairingRequestId = operatorGatewayProblem.requestId
+            } else {
+                self.gatewayPairingPaused = false
+                self.gatewayPairingRequestId = nil
+            }
+            return
+        }
         self.lastGatewayProblem = nil
         self.gatewayPairingPaused = false
         self.gatewayPairingRequestId = nil
@@ -2033,6 +2048,34 @@ extension NodeAppModel {
                 statusText: problem.needsPairingApproval ? "Approval needed" : "Action required",
                 agentName: self.activeAgentName,
                 sessionKey: self.mainSessionKey)
+        }
+    }
+
+    private func applyOperatorGatewayConnectionProblem(_ problem: GatewayConnectionProblem) {
+        self.operatorGatewayProblem = problem
+        self.lastGatewayProblem = problem
+        self.gatewayStatusText = problem.statusText
+        if problem.needsPairingApproval {
+            self.gatewayPairingPaused = true
+            self.gatewayPairingRequestId = problem.requestId
+        }
+        if problem.needsPairingApproval || problem.pauseReconnect {
+            LiveActivityManager.shared.showAttention(
+                statusText: problem.needsPairingApproval ? "Approval needed" : "Action required",
+                agentName: self.activeAgentName,
+                sessionKey: self.mainSessionKey)
+        }
+    }
+
+    private func clearOperatorGatewayConnectionProblemIfCurrent() {
+        guard let operatorGatewayProblem else { return }
+        self.operatorGatewayProblem = nil
+        guard self.lastGatewayProblem == operatorGatewayProblem else { return }
+        self.lastGatewayProblem = nil
+        self.gatewayPairingPaused = false
+        self.gatewayPairingRequestId = nil
+        if self.gatewayServerName != nil {
+            self.gatewayStatusText = "Connected"
         }
     }
 
@@ -2213,16 +2256,19 @@ extension NodeAppModel {
                     fallbackPassword: password)
                 let effectiveClientId =
                     GatewaySettingsStore.loadGatewayClientIdOverride(stableID: stableID) ?? nodeOptions.clientId
+                let talkPermissionUpgradeRequest = self.forceOperatorTalkPermissionUpgradeRequest
                 let operatorOptions = self.makeOperatorConnectOptions(
                     clientId: effectiveClientId,
                     displayName: nodeOptions.clientDisplayName,
                     includeAdminScope: self.shouldRequestOperatorAdminScope(
                         token: reconnectAuth.token,
-                        password: reconnectAuth.password),
+                        password: reconnectAuth.password,
+                        forceTalkPermissionUpgradeRequest: talkPermissionUpgradeRequest),
                     includeApprovalScope: self.shouldRequestOperatorApprovalScope(
                         token: reconnectAuth.token,
-                        password: reconnectAuth.password),
-                    forceExplicitScopes: self.forceOperatorTalkPermissionUpgradeRequest)
+                        password: reconnectAuth.password,
+                        forceTalkPermissionUpgradeRequest: talkPermissionUpgradeRequest),
+                    forceExplicitScopes: talkPermissionUpgradeRequest)
 
                 do {
                     try await self.operatorGateway.connect(
@@ -2236,6 +2282,7 @@ extension NodeAppModel {
                             guard let self else { return }
                             await MainActor.run {
                                 self.setOperatorConnected(true)
+                                self.clearOperatorGatewayConnectionProblemIfCurrent()
                                 self.forceOperatorTalkPermissionUpgradeRequest = false
                                 self.talkMode.updateGatewayConnected(true)
                             }
@@ -2278,9 +2325,10 @@ extension NodeAppModel {
                     let problem = await MainActor.run {
                         let nextProblem = GatewayConnectionProblemMapper.map(error: error)
                         if let nextProblem {
-                            if nextProblem.kind == .pairingScopeUpgradeRequired {
-                                self.gatewayPairingPaused = true
-                                self.gatewayPairingRequestId = nextProblem.requestId
+                            if nextProblem.needsPairingApproval || nextProblem.pauseReconnect {
+                                self.applyOperatorGatewayConnectionProblem(nextProblem)
+                            }
+                            if talkPermissionUpgradeRequest, nextProblem.kind == .pairingScopeUpgradeRequired {
                                 self.talkMode.markTalkPermissionUpgradeRequested(requestId: nextProblem.requestId)
                             }
                         }
@@ -2530,7 +2578,11 @@ extension NodeAppModel {
         }
     }
 
-    private func shouldRequestOperatorApprovalScope(token: String?, password: String?) -> Bool {
+    private func shouldRequestOperatorApprovalScope(
+        token: String?,
+        password: String?,
+        forceTalkPermissionUpgradeRequest: Bool = false) -> Bool
+    {
         let identity = DeviceIdentityStore.loadOrCreate()
         let storedOperatorScopes = DeviceAuthStore
             .loadToken(deviceId: identity.deviceId, role: "operator")?
@@ -2538,14 +2590,19 @@ extension NodeAppModel {
         return Self.shouldRequestOperatorApprovalScope(
             token: token,
             password: password,
-            storedOperatorScopes: storedOperatorScopes)
+            storedOperatorScopes: storedOperatorScopes,
+            forceTalkPermissionUpgradeRequest: forceTalkPermissionUpgradeRequest)
     }
 
     fileprivate nonisolated static func shouldRequestOperatorApprovalScope(
         token: String?,
         password: String?,
-        storedOperatorScopes: [String]) -> Bool
+        storedOperatorScopes: [String],
+        forceTalkPermissionUpgradeRequest: Bool = false) -> Bool
     {
+        if forceTalkPermissionUpgradeRequest {
+            return storedOperatorScopes.contains("operator.approvals")
+        }
         let trimmedToken = token?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if !trimmedToken.isEmpty {
             return true
@@ -2557,7 +2614,11 @@ extension NodeAppModel {
         return storedOperatorScopes.contains("operator.approvals")
     }
 
-    private func shouldRequestOperatorAdminScope(token: String?, password: String?) -> Bool {
+    private func shouldRequestOperatorAdminScope(
+        token: String?,
+        password: String?,
+        forceTalkPermissionUpgradeRequest: Bool = false) -> Bool
+    {
         let identity = DeviceIdentityStore.loadOrCreate()
         let storedOperatorScopes = DeviceAuthStore
             .loadToken(deviceId: identity.deviceId, role: "operator")?
@@ -2565,14 +2626,19 @@ extension NodeAppModel {
         return Self.shouldRequestOperatorAdminScope(
             token: token,
             password: password,
-            storedOperatorScopes: storedOperatorScopes)
+            storedOperatorScopes: storedOperatorScopes,
+            forceTalkPermissionUpgradeRequest: forceTalkPermissionUpgradeRequest)
     }
 
     fileprivate nonisolated static func shouldRequestOperatorAdminScope(
         token: String?,
         password: String?,
-        storedOperatorScopes: [String]) -> Bool
+        storedOperatorScopes: [String],
+        forceTalkPermissionUpgradeRequest: Bool = false) -> Bool
     {
+        if forceTalkPermissionUpgradeRequest {
+            return false
+        }
         let trimmedToken = token?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if !trimmedToken.isEmpty {
             return true
@@ -4459,6 +4525,10 @@ extension NodeAppModel {
         self.gatewayConnected = connected
     }
 
+    func _test_isGatewayConnected() -> Bool {
+        self.gatewayConnected
+    }
+
     func _test_applyPendingForegroundNodeActions(
         _ actions: [(id: String, command: String, paramsJSON: String?)]) async
     {
@@ -4493,6 +4563,18 @@ extension NodeAppModel {
 
     func _test_dismissPendingExecApprovalPrompt() {
         self.dismissPendingExecApprovalPrompt()
+    }
+
+    func _test_applyOperatorGatewayConnectionProblem(_ problem: GatewayConnectionProblem) {
+        self.applyOperatorGatewayConnectionProblem(problem)
+    }
+
+    func _test_clearOperatorGatewayConnectionProblemIfCurrent() {
+        self.clearOperatorGatewayConnectionProblemIfCurrent()
+    }
+
+    func _test_clearGatewayConnectionProblem() {
+        self.clearGatewayConnectionProblem()
     }
 
     func _test_pendingExecApprovalPrompt() -> ExecApprovalPrompt? {
@@ -4588,23 +4670,27 @@ extension NodeAppModel {
     nonisolated static func _test_shouldRequestOperatorApprovalScope(
         token: String?,
         password: String?,
-        storedOperatorScopes: [String]) -> Bool
+        storedOperatorScopes: [String],
+        forceTalkPermissionUpgradeRequest: Bool = false) -> Bool
     {
         self.shouldRequestOperatorApprovalScope(
             token: token,
             password: password,
-            storedOperatorScopes: storedOperatorScopes)
+            storedOperatorScopes: storedOperatorScopes,
+            forceTalkPermissionUpgradeRequest: forceTalkPermissionUpgradeRequest)
     }
 
     nonisolated static func _test_shouldRequestOperatorAdminScope(
         token: String?,
         password: String?,
-        storedOperatorScopes: [String]) -> Bool
+        storedOperatorScopes: [String],
+        forceTalkPermissionUpgradeRequest: Bool = false) -> Bool
     {
         self.shouldRequestOperatorAdminScope(
             token: token,
             password: password,
-            storedOperatorScopes: storedOperatorScopes)
+            storedOperatorScopes: storedOperatorScopes,
+            forceTalkPermissionUpgradeRequest: forceTalkPermissionUpgradeRequest)
     }
 
     nonisolated static func _test_clearingBootstrapToken(

@@ -115,17 +115,17 @@ import UIKit
         #expect(withAdminScope.scopes.contains("operator.admin"))
     }
 
-    @Test @MainActor func operatorTalkPermissionUpgradeUsesExplicitScopes() {
+    @Test @MainActor func operatorTalkPermissionUpgradeUsesExplicitLeastPrivilegeScopes() {
         let appModel = NodeAppModel()
         let options = appModel._test_makeOperatorConnectOptions(
             clientId: "openclaw-ios",
             displayName: "OpenClaw iOS",
-            includeAdminScope: true,
             includeApprovalScope: false,
             forceExplicitScopes: true)
 
         #expect(options.scopesAreExplicit)
-        #expect(options.scopes.contains("operator.admin"))
+        #expect(!options.scopes.contains("operator.admin"))
+        #expect(!options.scopes.contains("operator.approvals"))
         #expect(options.scopes.contains("operator.read"))
         #expect(options.scopes.contains("operator.write"))
         #expect(options.scopes.contains("operator.talk.secrets"))
@@ -152,6 +152,12 @@ import UIKit
                 token: nil,
                 password: "shared-password",
                 storedOperatorScopes: []))
+        #expect(
+            !NodeAppModel._test_shouldRequestOperatorAdminScope(
+                token: "shared-token",
+                password: nil,
+                storedOperatorScopes: [],
+                forceTalkPermissionUpgradeRequest: true))
     }
 
     @Test func storedDeviceTokenScopeGapUsesGatewayScopeCompatibility() {
@@ -193,6 +199,57 @@ import UIKit
                 token: "shared-token",
                 password: nil,
                 storedOperatorScopes: []))
+        #expect(
+            !NodeAppModel._test_shouldRequestOperatorApprovalScope(
+                token: "shared-token",
+                password: nil,
+                storedOperatorScopes: [],
+                forceTalkPermissionUpgradeRequest: true))
+        #expect(
+            NodeAppModel._test_shouldRequestOperatorApprovalScope(
+                token: nil,
+                password: nil,
+                storedOperatorScopes: ["operator.approvals"],
+                forceTalkPermissionUpgradeRequest: true))
+    }
+
+    @Test @MainActor func operatorPairingProblemPreservesPrimaryGatewayConnectionState() {
+        let appModel = NodeAppModel()
+        appModel._test_setGatewayConnected(true)
+        appModel.gatewayServerName = "gateway.example.com"
+        appModel.gatewayRemoteAddress = "127.0.0.1:53380"
+        let problem = GatewayConnectionProblem(
+            kind: .pairingScopeUpgradeRequired,
+            owner: .gateway,
+            title: "Additional permissions required",
+            message: "Approve the requested permissions on the gateway.",
+            requestId: "req-admin",
+            retryable: false,
+            pauseReconnect: true)
+
+        appModel._test_applyOperatorGatewayConnectionProblem(problem)
+
+        #expect(appModel._test_isGatewayConnected())
+        #expect(appModel.gatewayServerName == "gateway.example.com")
+        #expect(appModel.gatewayRemoteAddress == "127.0.0.1:53380")
+        #expect(appModel.lastGatewayProblem == problem)
+        #expect(appModel.gatewayPairingPaused)
+        #expect(appModel.gatewayPairingRequestId == "req-admin")
+
+        appModel._test_clearGatewayConnectionProblem()
+
+        #expect(appModel.lastGatewayProblem == problem)
+        #expect(appModel.gatewayPairingPaused)
+        #expect(appModel.gatewayPairingRequestId == "req-admin")
+
+        appModel._test_clearOperatorGatewayConnectionProblemIfCurrent()
+
+        #expect(appModel._test_isGatewayConnected())
+        #expect(appModel.gatewayServerName == "gateway.example.com")
+        #expect(appModel.lastGatewayProblem == nil)
+        #expect(!appModel.gatewayPairingPaused)
+        #expect(appModel.gatewayPairingRequestId == nil)
+        #expect(appModel.gatewayStatusText == "Connected")
     }
 
     @Test @MainActor func savedManualEndpointFallbackUsesOnboardingHostWhenAutoConnectIsEnabled() {
