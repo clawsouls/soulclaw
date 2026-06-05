@@ -1,7 +1,5 @@
 import OpenClawKit
 import SwiftUI
-import UIKit
-import UserNotifications
 
 struct SettingsProTab: View {
     @Environment(NodeAppModel.self) var appModel
@@ -59,11 +57,6 @@ struct SettingsProTab: View {
     @State var notificationActionText = "Request Access"
     @State var diagnosticsLastRunText = "Not run"
     @State var diagnosticsIssueCount: Int?
-    @State var bottomOverlayInset: CGFloat = 0
-
-    var bottomScrollMargin: CGFloat {
-        max(0, self.bottomOverlayInset - SettingsLayout.rowHeight - SettingsLayout.bottomContentPadding)
-    }
 
     var body: some View {
         NavigationStack {
@@ -77,12 +70,12 @@ struct SettingsProTab: View {
                         self.settingsListSection
                     }
                     .padding(.top, 18)
-                    .padding(.bottom, SettingsLayout.bottomContentPadding)
                 }
-                .contentMargins(.bottom, self.bottomScrollMargin, for: .scrollContent)
-                SettingsBottomOverlayInsetReader(inset: self.$bottomOverlayInset)
-                    .frame(width: 0, height: 0)
-                    .allowsHitTesting(false)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    Color.clear
+                        .frame(height: OpenClawProMetric.pagePadding)
+                        .accessibilityHidden(true)
+                }
             }
             .navigationBarHidden(true)
             .navigationDestination(for: SettingsRoute.self) { route in

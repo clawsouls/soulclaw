@@ -204,12 +204,12 @@ extension SettingsProTab {
                     }
                 }
                 .padding(.top, 18)
-                .padding(.bottom, SettingsLayout.bottomContentPadding)
             }
-            .contentMargins(.bottom, self.bottomScrollMargin, for: .scrollContent)
-            SettingsBottomOverlayInsetReader(inset: self.$bottomOverlayInset)
-                .frame(width: 0, height: 0)
-                .allowsHitTesting(false)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Color.clear
+                    .frame(height: OpenClawProMetric.pagePadding)
+                    .accessibilityHidden(true)
+            }
         }
         .navigationTitle(self.title(for: route))
         .navigationBarTitleDisplayMode(.inline)
