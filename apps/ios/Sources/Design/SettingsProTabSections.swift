@@ -294,18 +294,6 @@ extension SettingsProTab {
                 value: self.diagnosticsHealthValue,
                 color: self.gatewayConnected ? OpenClawBrand.ok : OpenClawBrand.warn)
 
-            self.diagnosticChecksCard
-
-            self.detailListCard {
-                self.detailRow("Device", value: DeviceInfoHelper.deviceFamily())
-                Divider()
-                self.detailRow("Platform", value: DeviceInfoHelper.platformStringForDisplay())
-                Divider()
-                self.detailRow("App", value: DeviceInfoHelper.openClawVersionString())
-                Divider()
-                self.detailRow("Model", value: DeviceInfoHelper.modelIdentifier())
-            }
-
             ProCard(radius: SettingsLayout.cardRadius) {
                 self.gatewayActionButton(
                     title: "Run Diagnostics",
@@ -317,6 +305,18 @@ extension SettingsProTab {
                 }
             }
             .padding(.horizontal, OpenClawProMetric.pagePadding)
+
+            self.diagnosticChecksCard
+
+            self.detailListCard {
+                self.detailRow("Device", value: DeviceInfoHelper.deviceFamily())
+                Divider()
+                self.detailRow("Platform", value: DeviceInfoHelper.platformStringForDisplay())
+                Divider()
+                self.detailRow("App", value: DeviceInfoHelper.openClawVersionString())
+                Divider()
+                self.detailRow("Model", value: DeviceInfoHelper.modelIdentifier())
+            }
 
             self.diagnosticsAdvancedCard
         }
