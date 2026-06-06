@@ -5,6 +5,7 @@ struct CommandCenterTab: View {
     @Environment(NodeAppModel.self) private var appModel
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
+    @State private var defaultChatSessionEntry: OpenClawChatSessionEntry?
     @State private var recentChatSessions: [OpenClawChatSessionEntry] = []
     var openChat: () -> Void
     var openSettings: () -> Void
@@ -44,6 +45,7 @@ struct CommandCenterTab: View {
                     VStack(alignment: .leading, spacing: 10) {
                         self.header
                         self.gatewayCard
+                        self.defaultChatSessionSection
                         self.pendingApprovals
                         self.recentSessions
                         self.liveActivity
@@ -150,6 +152,30 @@ struct CommandCenterTab: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)
+    }
+
+    private var defaultChatSessionSection: some View {
+        CommandPanel(padding: 0) {
+            VStack(spacing: 0) {
+                self.cardHeader(
+                    title: "Agent session",
+                    value: nil,
+                    color: OpenClawBrand.accent)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 10)
+                    .padding(.bottom, 3)
+
+                Button {
+                    self.open(.chat(nil))
+                } label: {
+                    CommandSessionRow(item: self.defaultChatWorkItem)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
+            }
+        }
+        .padding(.horizontal, OpenClawProMetric.pagePadding)
     }
 
     private var pendingApprovals: some View {
@@ -424,6 +450,27 @@ struct CommandCenterTab: View {
         self.colorScheme == .dark ? Color.black.opacity(0.12) : Color.black.opacity(0.022)
     }
 
+    private var defaultChatWorkItem: WorkItem {
+        let isOpen = self.appModel.chatSessionKey == self.appModel.defaultChatSessionKey
+        return WorkItem(
+            id: "default-chat",
+            icon: isOpen ? "bubble.left.and.text.bubble.right.fill" : "bubble.left.fill",
+            title: self.appModel.activeAgentName,
+            detail: self.defaultChatActivityText,
+            state: isOpen ? "open" : "default",
+            trailing: "chat",
+            color: isOpen ? OpenClawBrand.accent : OpenClawBrand.ok,
+            progress: nil,
+            route: .chat(nil))
+    }
+
+    private var defaultChatActivityText: String {
+        guard let updatedAt = self.defaultChatSessionEntry?.updatedAt, updatedAt > 0 else {
+            return "No recent activity"
+        }
+        return Self.relativeTimeText(forMilliseconds: updatedAt)
+    }
+
     private var recentSessionRows: [WorkItem] {
         self.sessionItems
     }
@@ -485,6 +532,7 @@ struct CommandCenterTab: View {
         let currentSessionKey = self.appModel.chatSessionKey
         return self.recentChatSessions
             .filter { !Self.isHiddenInternalSession($0.key) }
+            .filter { $0.key != self.appModel.defaultChatSessionKey }
             .map { session in
                 Self.sessionWorkItem(for: session, currentSessionKey: currentSessionKey)
             }
@@ -503,6 +551,9 @@ struct CommandCenterTab: View {
     private func refreshRecentSessionsIfNeeded() async {
         guard self.scenePhase == .active else { return }
         guard self.appModel.isOperatorGatewayConnected else {
+            if self.defaultChatSessionEntry != nil {
+                self.defaultChatSessionEntry = nil
+            }
             if !self.recentChatSessions.isEmpty {
                 self.recentChatSessions = []
             }
@@ -512,29 +563,38 @@ struct CommandCenterTab: View {
         do {
             let transport = IOSGatewayChatTransport(gateway: appModel.operatorSession)
             let response = try await transport.listSessions(limit: 20)
+            self.defaultChatSessionEntry = response.sessions.first {
+                $0.key == self.appModel.defaultChatSessionKey
+            }
             self.recentChatSessions = Self.sessionChoices(
                 response.sessions,
-                currentSessionKey: self.appModel.chatSessionKey)
+                currentSessionKey: self.appModel.chatSessionKey,
+                defaultSessionKey: self.appModel.defaultChatSessionKey)
         } catch {
+            self.defaultChatSessionEntry = nil
             self.recentChatSessions = []
         }
     }
 
     private static func sessionChoices(
         _ sessions: [OpenClawChatSessionEntry],
-        currentSessionKey: String) -> [OpenClawChatSessionEntry]
+        currentSessionKey: String,
+        defaultSessionKey: String) -> [OpenClawChatSessionEntry]
     {
         let sorted = sessions.sorted { ($0.updatedAt ?? 0) > ($1.updatedAt ?? 0) }
         var result: [OpenClawChatSessionEntry] = []
         var included = Set<String>()
 
-        if let current = sorted.first(where: { $0.key == currentSessionKey }) {
+        if currentSessionKey != defaultSessionKey,
+           let current = sorted.first(where: { $0.key == currentSessionKey })
+        {
             result.append(current)
             included.insert(current.key)
         }
 
         for session in sorted {
             guard !included.contains(session.key) else { continue }
+            guard session.key != defaultSessionKey else { continue }
             guard !Self.isHiddenInternalSession(session.key) else { continue }
             result.append(session)
             included.insert(session.key)
@@ -554,7 +614,7 @@ struct CommandCenterTab: View {
             icon: isCurrent ? "bubble.left.and.text.bubble.right.fill" : "bubble.left.fill",
             title: Self.sessionTitle(session),
             detail: Self.sessionDetail(session),
-            state: isCurrent ? "current" : "recent",
+            state: isCurrent ? "open" : "recent",
             trailing: "chat",
             color: isCurrent ? OpenClawBrand.accent : OpenClawBrand.ok,
             progress: nil,
@@ -765,6 +825,7 @@ private struct CommandSessionsScreen: View {
     private var sessionRows: [CommandCenterTab.WorkItem] {
         self.sessions
             .filter { !CommandCenterTab.isHiddenInternalSession($0.key) }
+            .filter { $0.key != self.appModel.defaultChatSessionKey }
             .sorted { ($0.updatedAt ?? 0) > ($1.updatedAt ?? 0) }
             .map {
                 CommandCenterTab.sessionWorkItem(

@@ -310,6 +310,22 @@ private final class MockBootstrapNotificationCenter: NotificationCentering, @unc
         #expect(appModel.chatSessionKey == "incident-42")
     }
 
+    @Test @MainActor func openingNilChatSessionClearsExplicitChatFocus() {
+        let appModel = NodeAppModel()
+        appModel.gatewayDefaultAgentId = "main"
+        appModel.setSelectedAgentId("rust-claw")
+        appModel.openChat(sessionKey: "incident-42")
+
+        appModel.openChat(sessionKey: nil)
+
+        #expect(appModel.chatSessionKey == SessionKey.makeAgentSessionKey(
+            agentId: "rust-claw",
+            baseKey: "main"))
+
+        appModel.setSelectedAgentId("main")
+        #expect(appModel.chatSessionKey == "main")
+    }
+
     @Test @MainActor func execApprovalPromptPresentationTracksLatestNotificationTap() throws {
         let appModel = NodeAppModel()
         try appModel._test_presentExecApprovalPrompt(

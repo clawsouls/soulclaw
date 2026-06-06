@@ -231,7 +231,7 @@ extension SettingsProTab {
                 Divider()
                 self.detailRow("Discovered", value: "\(self.gatewayController.gateways.count)")
                 Divider()
-                self.detailRow("Active Agent", value: self.appModel.activeAgentName)
+                self.detailRow("Default Agent", value: self.appModel.activeAgentName)
                 Divider()
                 self.detailRow("Agents", value: "\(self.appModel.gatewayAgents.count)")
             }
@@ -499,7 +499,7 @@ extension SettingsProTab {
     var agentSelectionCard: some View {
         ProCard(radius: SettingsLayout.cardRadius) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Active Agent")
+                Text("Default Agent")
                     .font(.subheadline.weight(.semibold))
                 Picker("Agent", selection: self.$selectedAgentPickerId) {
                     Text("Default").tag("")
@@ -510,7 +510,7 @@ extension SettingsProTab {
                         Text(name.isEmpty ? agent.id : name).tag(agent.id)
                     }
                 }
-                Text("Controls which agent Chat and Talk use.")
+                Text("Used for new Chat and Talk sessions.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

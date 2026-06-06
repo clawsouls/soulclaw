@@ -285,7 +285,7 @@ extension AgentProTab {
                         Circle().strokeBorder(self.iconButtonStroke, lineWidth: 1)
                     }
             }
-            .accessibilityLabel(isActive ? "Active agent" : "Make active agent")
+            .accessibilityLabel(isActive ? "Default agent" : "Set default agent")
         }
         .padding(.vertical, 14)
         .padding(.horizontal, 13)
