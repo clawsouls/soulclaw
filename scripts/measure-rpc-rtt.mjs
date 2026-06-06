@@ -453,14 +453,24 @@ function quantile(sorted, q) {
   return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * q) - 1))];
 }
 
-function stats(samples) {
+function roundMeasuredMs(value, label) {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${label} must be a non-negative finite duration.`);
+  }
+  return Math.max(1, Math.round(value));
+}
+
+export function summarizeRttSamples(samples) {
+  if (samples.length === 0) {
+    throw new Error("RPC RTT measurement produced no samples.");
+  }
   const sorted = samples.toSorted((left, right) => left - right);
   return {
-    avgMs: Math.round(sorted.reduce((sum, value) => sum + value, 0) / sorted.length),
-    maxMs: Math.round(sorted.at(-1)),
-    minMs: Math.round(sorted[0]),
-    p50Ms: Math.round(quantile(sorted, 0.5)),
-    p95Ms: Math.round(quantile(sorted, 0.95)),
+    avgMs: roundMeasuredMs(sorted.reduce((sum, value) => sum + value, 0) / sorted.length, "avgMs"),
+    maxMs: roundMeasuredMs(sorted.at(-1), "maxMs"),
+    minMs: roundMeasuredMs(sorted[0], "minMs"),
+    p50Ms: roundMeasuredMs(quantile(sorted, 0.5), "p50Ms"),
+    p95Ms: roundMeasuredMs(quantile(sorted, 0.95), "p95Ms"),
   };
 }
 
@@ -686,7 +696,7 @@ async function main() {
       payload: {
         method: "connect",
         ok: true,
-        durationMs: Math.round(performance.now() - connectStarted),
+        durationMs: roundMeasuredMs(performance.now() - connectStarted, "connect durationMs"),
       },
     });
     const samples = [];
@@ -694,23 +704,30 @@ async function main() {
       for (let iteration = 1; iteration <= args.iterations; iteration += 1) {
         const requestStartedAtMs = performance.now();
         const response = await client.request(method, {}, 10_000);
-        const durationMs = Math.round(performance.now() - requestStartedAtMs);
+        const durationMs = performance.now() - requestStartedAtMs;
+        const roundedDurationMs = roundMeasuredMs(durationMs, `${method} durationMs`);
         if (!response.ok) {
           throw new Error(`${method} failed: ${JSON.stringify(response.error)}`);
         }
         samples.push({ method, durationMs });
         events.push({
           event: "gateway-rpc",
-          payload: { kind: "gateway-rpc", method, ok: true, durationMs, iteration },
+          payload: {
+            kind: "gateway-rpc",
+            method,
+            ok: true,
+            durationMs: roundedDurationMs,
+            iteration,
+          },
         });
       }
     }
     client.close();
-    const sampleStats = stats(samples.map((sample) => sample.durationMs));
+    const sampleStats = summarizeRttSamples(samples.map((sample) => sample.durationMs));
     const byMethod = Object.fromEntries(
       args.methods.map((method) => [
         method,
-        stats(
+        summarizeRttSamples(
           samples.filter((sample) => sample.method === method).map((sample) => sample.durationMs),
         ),
       ]),

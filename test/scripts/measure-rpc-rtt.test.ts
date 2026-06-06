@@ -9,6 +9,7 @@ import {
   signalGatewayProcess,
   startGateway,
   stopGateway,
+  summarizeRttSamples,
   waitForGatewayReady,
 } from "../../scripts/measure-rpc-rtt.mjs";
 
@@ -40,6 +41,33 @@ describe("scripts/measure-rpc-rtt.mjs", () => {
     );
     expect(() => parseArgs(["--output-dir", "/tmp/rpc-rtt", "--methods"])).toThrow(
       "--methods requires a value.",
+    );
+  });
+
+  it("does not publish zero-millisecond RPC RTT summaries", () => {
+    expect(summarizeRttSamples([0, 0.1, 0.49])).toEqual({
+      avgMs: 1,
+      maxMs: 1,
+      minMs: 1,
+      p50Ms: 1,
+      p95Ms: 1,
+    });
+    expect(summarizeRttSamples([1.4, 2.6])).toEqual({
+      avgMs: 2,
+      maxMs: 3,
+      minMs: 1,
+      p50Ms: 1,
+      p95Ms: 3,
+    });
+  });
+
+  it("rejects invalid RPC RTT summary samples", () => {
+    expect(() => summarizeRttSamples([])).toThrow("RPC RTT measurement produced no samples.");
+    expect(() => summarizeRttSamples([Number.NaN])).toThrow(
+      "avgMs must be a non-negative finite duration.",
+    );
+    expect(() => summarizeRttSamples([-1])).toThrow(
+      "avgMs must be a non-negative finite duration.",
     );
   });
 
