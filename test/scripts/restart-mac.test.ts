@@ -98,4 +98,19 @@ describe("scripts/restart-mac.sh", () => {
       chooseBlock.indexOf("/Applications/OpenClaw.app"),
     );
   });
+
+  it("keeps restart cleanup scoped to known OpenClaw app and build paths", () => {
+    const script = readFileSync(restartScriptPath, "utf8");
+    const cleanupBlock = script.slice(
+      script.indexOf("kill_all_openclaw()"),
+      script.indexOf("stop_launch_agent()"),
+    );
+
+    expect(cleanupBlock).toContain('pkill -f "${APP_PROCESS_PATTERN}"');
+    expect(cleanupBlock).toContain('pkill -f "${DEBUG_PROCESS_PATTERN}"');
+    expect(cleanupBlock).toContain('pkill -f "${LOCAL_PROCESS_PATTERN}"');
+    expect(cleanupBlock).toContain('pkill -f "${RELEASE_PROCESS_PATTERN}"');
+    expect(cleanupBlock).not.toContain('pkill -x "OpenClaw"');
+    expect(cleanupBlock).not.toContain('pgrep -x "OpenClaw"');
+  });
 });
