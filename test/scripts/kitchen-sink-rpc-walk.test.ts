@@ -17,6 +17,8 @@ import {
   assertCommandResourceCeiling,
   assertDiagnosticStabilityClean,
   assertExpectedKitchenSinkToolEntries,
+  assertGatewayHealthPayload,
+  assertGatewayStatusPayload,
   assertKitchenSinkSearchInvokeResult,
   assertKitchenSinkTextInvokeResult,
   assertResourceCeiling,
@@ -772,6 +774,57 @@ describe("kitchen-sink RPC diagnostics assertions", () => {
             truncated: 0,
             chunked: 1,
           },
+        },
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe("kitchen-sink RPC health/status assertions", () => {
+  it("rejects empty health and status RPC payloads", () => {
+    expect(() => assertGatewayHealthPayload({})).toThrow("health payload missing");
+    expect(() => assertGatewayStatusPayload({})).toThrow("status payload missing");
+  });
+
+  it("accepts minimally valid gateway health and status RPC payloads", () => {
+    expect(() =>
+      assertGatewayHealthPayload({
+        ok: true,
+        ts: Date.now(),
+        durationMs: 12,
+        channels: {},
+        channelOrder: [],
+        channelLabels: {},
+        heartbeatSeconds: 30,
+        defaultAgentId: "main",
+        agents: [],
+        sessions: {
+          path: "/tmp/openclaw-sessions.sqlite",
+          count: 0,
+          recent: [],
+        },
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      assertGatewayStatusPayload({
+        heartbeat: {
+          defaultAgentId: "main",
+          agents: [],
+        },
+        channelSummary: [],
+        queuedSystemEvents: [],
+        tasks: {},
+        taskAudit: {},
+        sessions: {
+          paths: [],
+          count: 0,
+          defaults: {
+            model: null,
+            contextTokens: null,
+          },
+          recent: [],
+          byAgent: [],
         },
       }),
     ).not.toThrow();
