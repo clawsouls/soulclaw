@@ -1,5 +1,6 @@
 import Foundation
 import OpenClawKit
+import OpenClawProtocol
 import Testing
 import UIKit
 import UserNotifications
@@ -212,6 +213,63 @@ private final class MockBootstrapNotificationCenter: NotificationCentering, @unc
         appModel.setSelectedAgentId("agent-123")
         #expect(appModel.chatSessionKey == SessionKey.makeAgentSessionKey(agentId: "agent-123", baseKey: "main"))
         #expect(appModel.mainSessionKey == "agent:agent-123:main")
+    }
+
+    @Test @MainActor func sessionKeyExtractsCanonicalAgentID() {
+        #expect(SessionKey.agentId(from: "agent:rust-claw:mattermost:channel:w6g") == "rust-claw")
+        #expect(SessionKey.agentId(from: " agent:main:main ") == "main")
+        #expect(SessionKey.agentId(from: "main") == nil)
+        #expect(SessionKey.agentId(from: "agent::main") == nil)
+        #expect(SessionKey.agentId(from: nil) == nil)
+    }
+
+    @Test @MainActor func chatAgentNameUsesFocusedCanonicalSessionAgent() {
+        let appModel = NodeAppModel()
+        appModel.gatewayDefaultAgentId = "main"
+        appModel.gatewayAgents = [
+            AgentSummary(
+                id: "main",
+                name: "Joshtimus Prime",
+                identity: nil,
+                workspace: nil,
+                model: nil,
+                agentruntime: nil),
+            AgentSummary(
+                id: "rust-claw",
+                name: "Rust Claw",
+                identity: nil,
+                workspace: nil,
+                model: nil,
+                agentruntime: nil),
+        ]
+        appModel.setSelectedAgentId("main")
+
+        appModel.openChat(sessionKey: "agent:rust-claw:mattermost:channel:w6gjp6iz3fyp3fo15q4fwfpnno")
+
+        #expect(appModel.selectedAgentId == "main")
+        #expect(appModel.activeAgentName == "Joshtimus Prime")
+        #expect(appModel.chatAgentId == "rust-claw")
+        #expect(appModel.chatAgentName == "Rust Claw")
+    }
+
+    @Test @MainActor func chatAgentNameFallsBackToSelectedAgentForUnscopedSession() {
+        let appModel = NodeAppModel()
+        appModel.gatewayDefaultAgentId = "main"
+        appModel.gatewayAgents = [
+            AgentSummary(
+                id: "rust-claw",
+                name: "Rust Claw",
+                identity: nil,
+                workspace: nil,
+                model: nil,
+                agentruntime: nil),
+        ]
+        appModel.setSelectedAgentId("rust-claw")
+
+        appModel.openChat(sessionKey: "incident-42")
+
+        #expect(appModel.chatAgentId == "rust-claw")
+        #expect(appModel.chatAgentName == "Rust Claw")
     }
 
     @Test @MainActor func selectingAgentClearsExplicitChatFocus() {

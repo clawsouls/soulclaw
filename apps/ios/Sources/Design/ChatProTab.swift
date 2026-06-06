@@ -132,8 +132,7 @@ struct ChatProTab: View {
     }
 
     private var activeAgentID: String {
-        self.normalized(self.appModel.selectedAgentId)
-            ?? self.normalized(self.appModel.gatewayDefaultAgentId)
+        self.normalized(self.appModel.chatAgentId)
             ?? "main"
     }
 
@@ -171,7 +170,7 @@ struct ChatProTab: View {
     }
 
     private var agentDisplayName: String {
-        self.normalized(self.activeAgent?.name) ?? self.appModel.activeAgentName
+        self.normalized(self.activeAgent?.name) ?? self.appModel.chatAgentName
     }
 
     private var agentBadge: String {

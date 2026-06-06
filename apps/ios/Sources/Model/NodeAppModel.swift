@@ -1864,11 +1864,30 @@ extension NodeAppModel {
         self.talkMode.updateMainSessionKey(self.chatSessionKey)
     }
 
+    var chatAgentId: String {
+        if let sessionAgentId = SessionKey.agentId(from: self.chatSessionKey) {
+            return sessionAgentId
+        }
+        return self.selectedOrDefaultAgentId
+    }
+
+    var chatAgentName: String {
+        self.agentDisplayName(for: self.chatAgentId, fallback: "Main")
+    }
+
     var activeAgentName: String {
+        self.agentDisplayName(for: self.selectedOrDefaultAgentId, fallback: "Main")
+    }
+
+    private var selectedOrDefaultAgentId: String {
         let agentId = (self.selectedAgentId ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let defaultId = (self.gatewayDefaultAgentId ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedId = agentId.isEmpty ? defaultId : agentId
-        if resolvedId.isEmpty { return "Main" }
+        return agentId.isEmpty ? defaultId : agentId
+    }
+
+    private func agentDisplayName(for agentId: String, fallback: String) -> String {
+        let resolvedId = agentId.trimmingCharacters(in: .whitespacesAndNewlines)
+        if resolvedId.isEmpty { return fallback }
         if let match = self.gatewayAgents.first(where: { $0.id == resolvedId }) {
             let name = (match.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             return name.isEmpty ? match.id : name

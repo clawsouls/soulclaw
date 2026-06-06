@@ -153,7 +153,7 @@ struct TalkProTab: View {
                     .padding(.horizontal, 12)
                     .padding(.top, 11)
                     .padding(.bottom, 3)
-                self.infoRow(icon: "person.crop.circle.fill", title: "Agent", value: self.appModel.activeAgentName)
+                self.infoRow(icon: "person.crop.circle.fill", title: "Agent", value: self.appModel.chatAgentName)
                 Divider().padding(.leading, 54)
                 self.infoRow(
                     icon: "bubble.left.and.text.bubble.right.fill",
@@ -292,7 +292,7 @@ struct TalkProTab: View {
 
     private var headerSubtitle: String {
         let mode = self.appModel.talkMode.gatewayTalkVoiceModeTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        let agent = self.appModel.activeAgentName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let agent = self.appModel.chatAgentName.trimmingCharacters(in: .whitespacesAndNewlines)
         if mode.isEmpty || mode == "Not loaded" { return agent.isEmpty ? "Realtime voice" : agent }
         if agent.isEmpty { return mode }
         return "\(agent) • \(mode)"
@@ -308,7 +308,7 @@ struct TalkProTab: View {
         let subtitle = (self.appModel.talkMode.gatewayTalkVoiceModeSubtitle ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         if !subtitle.isEmpty { return subtitle }
-        return "Routes voice to \(self.appModel.activeAgentName)."
+        return "Routes voice to \(self.appModel.chatAgentName)."
     }
 
     private var transportText: String {
@@ -368,6 +368,7 @@ struct TalkProTab: View {
 
     private func startTalk() {
         self.talkEnabled = true
+        self.appModel.talkMode.updateMainSessionKey(self.appModel.chatSessionKey)
         self.appModel.setTalkEnabled(true)
     }
 
