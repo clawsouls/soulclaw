@@ -145,15 +145,12 @@ struct CommandCenterTab: View {
     }
 
     private var defaultChatSessionSection: some View {
-        CommandPanel(padding: 0) {
-            VStack(spacing: 0) {
+        CommandPanel(padding: 12) {
+            VStack(spacing: 10) {
                 self.cardHeader(
                     title: "Agent session",
                     value: nil,
                     color: OpenClawBrand.accent)
-                    .padding(.horizontal, 12)
-                    .padding(.top, 10)
-                    .padding(.bottom, 3)
 
                 Button {
                     self.open(.chat(nil))
@@ -161,23 +158,18 @@ struct CommandCenterTab: View {
                     CommandSessionRow(item: self.defaultChatWorkItem)
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, 10)
-                .padding(.bottom, 10)
             }
         }
         .padding(.horizontal, OpenClawProMetric.pagePadding)
     }
 
     private var recentSessions: some View {
-        CommandPanel(padding: 0) {
-            VStack(spacing: 0) {
+        CommandPanel(padding: 12) {
+            VStack(spacing: 10) {
                 self.cardHeader(
                     title: "Recent sessions",
                     value: nil,
                     color: .secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.top, 10)
-                    .padding(.bottom, 3)
 
                 if self.recentSessionPreviewRows.isEmpty {
                     CommandEmptyStateRow(
@@ -185,8 +177,6 @@ struct CommandCenterTab: View {
                         title: self.gatewayConnected ? "No recent sessions" : "Gateway offline",
                         detail: self
                             .gatewayConnected ? "Start a chat and it will appear here." : "Connect to the gateway.")
-                        .padding(.horizontal, 10)
-                        .padding(.bottom, 10)
                 } else {
                     VStack(spacing: 8) {
                         ForEach(self.recentSessionPreviewRows) { item in
@@ -207,8 +197,6 @@ struct CommandCenterTab: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 10)
                 }
             }
         }
