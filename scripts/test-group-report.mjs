@@ -57,6 +57,14 @@ function usage() {
   ].join("\n");
 }
 
+function readRequiredValue(argv, index, flag) {
+  const value = argv[index + 1];
+  if (!value || value.startsWith("--")) {
+    throw new Error(`${flag} requires a value`);
+  }
+  return value;
+}
+
 /**
  * Parses report, compare, and Vitest-run options for grouped test reports.
  */
@@ -102,30 +110,30 @@ export function parseTestGroupReportArgs(argv) {
       continue;
     }
     if (arg === "--config") {
-      args.configs.push(argv[index + 1] ?? "");
+      args.configs.push(readRequiredValue(argv, index, "--config"));
       index += 1;
       continue;
     }
     if (arg === "--compare") {
       args.compare = {
-        before: argv[index + 1] ?? "",
-        after: argv[index + 2] ?? "",
+        before: readRequiredValue(argv, index, "--compare"),
+        after: readRequiredValue(argv, index + 1, "--compare"),
       };
       index += 2;
       continue;
     }
     if (arg === "--report") {
-      args.reports.push(argv[index + 1] ?? "");
+      args.reports.push(readRequiredValue(argv, index, "--report"));
       index += 1;
       continue;
     }
     if (arg === "--group-by") {
-      args.groupBy = argv[index + 1] ?? args.groupBy;
+      args.groupBy = readRequiredValue(argv, index, "--group-by");
       index += 1;
       continue;
     }
     if (arg === "--output") {
-      args.output = argv[index + 1] ?? args.output;
+      args.output = readRequiredValue(argv, index, "--output");
       index += 1;
       continue;
     }
