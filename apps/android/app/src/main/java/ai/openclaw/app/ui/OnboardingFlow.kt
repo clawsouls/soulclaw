@@ -1,5 +1,6 @@
 package ai.openclaw.app.ui
 
+import ai.openclaw.app.GatewayConnectionProblem
 import ai.openclaw.app.LocationMode
 import ai.openclaw.app.MainViewModel
 import ai.openclaw.app.SensitiveFeatureConfig
@@ -48,6 +49,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -91,6 +93,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -122,6 +125,7 @@ fun OnboardingFlow(
   ClawDesignTheme {
     val context = LocalContext.current
     val statusText by viewModel.statusText.collectAsState()
+    val gatewayConnectionProblem by viewModel.gatewayConnectionProblem.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
     val isNodeConnected by viewModel.isNodeConnected.collectAsState()
     val serverName by viewModel.serverName.collectAsState()
@@ -293,9 +297,8 @@ fun OnboardingFlow(
           serverName = serverName,
           remoteAddress = remoteAddress,
           ready = ready,
-          attemptedConnect = attemptedConnect,
+          gatewayConnectionProblem = gatewayConnectionProblem,
           connectSettling = recoveryNowMs - connectAttemptStartedAtMs < GATEWAY_CONNECT_SETTLING_MS,
-          onAutoRetry = viewModel::refreshGatewayConnection,
           onBack = { step = OnboardingStep.Gateway },
           onRetry = {
             attemptedConnect = true
@@ -524,18 +527,16 @@ private fun GatewayRecoveryScreen(
   serverName: String?,
   remoteAddress: String?,
   ready: Boolean,
-  attemptedConnect: Boolean,
+  gatewayConnectionProblem: GatewayConnectionProblem?,
   connectSettling: Boolean,
-  onAutoRetry: () -> Unit,
   onBack: () -> Unit,
   onRetry: () -> Unit,
   onEdit: () -> Unit,
   onContinue: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val recoveryState = gatewayRecoveryUiState(ready = ready, statusText = statusText, connectSettling = connectSettling)
+  val recoveryState = gatewayRecoveryUiState(ready = ready, statusText = statusText, connectSettling = connectSettling, gatewayConnectionProblem = gatewayConnectionProblem)
   val context = LocalContext.current
-  PairingAutoRetryEffect(enabled = recoveryState.canAutoRetry && attemptedConnect, onRetry = onAutoRetry)
 
   ClawScaffold(modifier = modifier, contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp)) {
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -546,6 +547,7 @@ private fun GatewayRecoveryScreen(
           imageVector =
             when (recoveryState) {
               GatewayRecoveryUiState.Connected -> Icons.Default.CheckCircle
+              GatewayRecoveryUiState.ApprovalRequired -> Icons.Default.WifiTethering
               GatewayRecoveryUiState.Pairing -> Icons.Default.WifiTethering
               GatewayRecoveryUiState.Finishing -> Icons.Default.WifiTethering
               GatewayRecoveryUiState.Failed -> Icons.Default.ErrorOutline
@@ -555,6 +557,7 @@ private fun GatewayRecoveryScreen(
           tint =
             when (recoveryState) {
               GatewayRecoveryUiState.Connected -> ClawTheme.colors.success
+              GatewayRecoveryUiState.ApprovalRequired -> ClawTheme.colors.warning
               GatewayRecoveryUiState.Pairing -> ClawTheme.colors.text
               GatewayRecoveryUiState.Finishing -> ClawTheme.colors.text
               GatewayRecoveryUiState.Failed -> ClawTheme.colors.warning
@@ -573,11 +576,15 @@ private fun GatewayRecoveryScreen(
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
           Text(text = "Last gateway", style = ClawTheme.type.caption, color = ClawTheme.colors.textMuted)
           Text(text = serverName?.takeIf { it.isNotBlank() } ?: "Home Gateway", style = ClawTheme.type.section, color = ClawTheme.colors.text)
-          Text(text = recoveryGatewayDetail(ready = ready, remoteAddress = remoteAddress, statusText = statusText), style = ClawTheme.type.body, color = ClawTheme.colors.textMuted)
+          Text(text = recoveryGatewayDetail(ready = ready, remoteAddress = remoteAddress, statusText = statusText, gatewayConnectionProblem = gatewayConnectionProblem), style = ClawTheme.type.body, color = ClawTheme.colors.textMuted)
+          recoveryGatewayApprovalCommand(gatewayConnectionProblem)?.let { command ->
+            ApprovalCommandBlock(command = command, onCopy = { copyApprovalCommand(context, command) })
+          }
           ClawStatusPill(
             text =
               when (recoveryState) {
                 GatewayRecoveryUiState.Connected -> "Healthy"
+                GatewayRecoveryUiState.ApprovalRequired -> "Needs approval"
                 GatewayRecoveryUiState.Pairing -> "Pairing"
                 GatewayRecoveryUiState.Finishing -> "Connecting"
                 GatewayRecoveryUiState.Failed -> "Needs attention"
@@ -585,6 +592,7 @@ private fun GatewayRecoveryScreen(
             status =
               when (recoveryState) {
                 GatewayRecoveryUiState.Connected -> ClawStatus.Success
+                GatewayRecoveryUiState.ApprovalRequired -> ClawStatus.Warning
                 GatewayRecoveryUiState.Pairing -> ClawStatus.Neutral
                 GatewayRecoveryUiState.Finishing -> ClawStatus.Neutral
                 GatewayRecoveryUiState.Failed -> ClawStatus.Warning
@@ -601,7 +609,42 @@ private fun GatewayRecoveryScreen(
           modifier = Modifier.fillMaxWidth(),
         )
         OutlinedAction(title = "Edit connection", icon = Icons.Default.Edit, onClick = onEdit)
-        OutlinedAction(title = "Copy diagnostic", icon = Icons.Default.ContentCopy, onClick = { copyGatewayDiagnostic(context, statusText, serverName, remoteAddress, ready) })
+        OutlinedAction(title = "Copy diagnostic", icon = Icons.Default.ContentCopy, onClick = { copyGatewayDiagnostic(context, statusText, serverName, remoteAddress, ready, gatewayConnectionProblem) })
+      }
+    }
+  }
+}
+
+@Composable
+private fun ApprovalCommandBlock(
+  command: String,
+  onCopy: () -> Unit,
+) {
+  Surface(
+    modifier = Modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(8.dp),
+    color = ClawTheme.colors.surfacePressed,
+    border = BorderStroke(1.dp, ClawTheme.colors.border),
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      SelectionContainer(modifier = Modifier.weight(1f)) {
+        Text(text = command, style = ClawTheme.type.body.copy(fontFamily = FontFamily.Monospace), color = ClawTheme.colors.text)
+      }
+      Surface(
+        onClick = onCopy,
+        modifier = Modifier.size(36.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = ClawTheme.colors.surfaceRaised,
+        contentColor = ClawTheme.colors.text,
+        border = BorderStroke(1.dp, ClawTheme.colors.border),
+      ) {
+        Box(contentAlignment = Alignment.Center) {
+          Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copy approval command", modifier = Modifier.size(18.dp))
+        }
       }
     }
   }
@@ -885,27 +928,26 @@ private fun PermissionContinueButton(onClick: () -> Unit) {
 internal enum class GatewayRecoveryUiState(
   val title: String,
   val message: String,
-  val canAutoRetry: Boolean,
 ) {
   Connected(
     title = "Connected",
     message = "Your Gateway is ready.",
-    canAutoRetry = false,
+  ),
+  ApprovalRequired(
+    title = "Pairing Gateway",
+    message = "Approve this phone on the gateway.\nThen retry the connection.",
   ),
   Pairing(
     title = "Pairing Gateway",
     message = "Approval is in progress.\nOpenClaw will reconnect automatically.",
-    canAutoRetry = true,
   ),
   Finishing(
     title = "Finishing Setup",
     message = "Gateway approved this phone.\nOpenClaw is bringing the node online.",
-    canAutoRetry = true,
   ),
   Failed(
     title = "Connection issue",
     message = "We could not reach your Gateway.\nLet's fix this.",
-    canAutoRetry = false,
   ),
 }
 
@@ -914,9 +956,14 @@ internal fun gatewayRecoveryUiState(
   ready: Boolean,
   statusText: String,
   connectSettling: Boolean,
+  gatewayConnectionProblem: GatewayConnectionProblem? = null,
 ): GatewayRecoveryUiState =
   when {
     ready -> GatewayRecoveryUiState.Connected
+    gatewayConnectionProblem?.isPairingRequired == true &&
+      !gatewayConnectionProblem.canAutoRetry -> GatewayRecoveryUiState.ApprovalRequired
+    gatewayConnectionProblem?.isPairingRequired == true -> GatewayRecoveryUiState.Pairing
+    gatewayConnectionProblem?.pauseReconnect == true -> GatewayRecoveryUiState.Failed
     connectSettling -> GatewayRecoveryUiState.Finishing
     gatewayStatusLooksLikePairing(statusText) -> GatewayRecoveryUiState.Pairing
     gatewayStatusLooksLikePartialConnect(statusText) -> GatewayRecoveryUiState.Finishing
@@ -988,11 +1035,16 @@ private fun recoveryGatewayDetail(
   ready: Boolean,
   remoteAddress: String?,
   statusText: String,
+  gatewayConnectionProblem: GatewayConnectionProblem?,
 ): String =
   remoteAddress
     ?.takeIf { it.isNotBlank() }
     ?: if (ready) {
       "Ready for chat and voice"
+    } else if (gatewayConnectionProblem?.isPairingRequired == true && !gatewayConnectionProblem.canAutoRetry) {
+      recoveryGatewayApprovalCommand(gatewayConnectionProblem)
+        ?.let { "Gateway approval is pending. Run this on the gateway host:" }
+        ?: "Gateway approval is pending. Run openclaw devices list on the gateway host, approve this phone, then retry."
     } else if (statusText.contains("operator offline", ignoreCase = true)) {
       "Gateway paired. Waiting for operator access."
     } else if (gatewayStatusLooksLikePairing(statusText)) {
@@ -1001,6 +1053,25 @@ private fun recoveryGatewayDetail(
       "Gateway unreachable"
     }
 
+private fun recoveryGatewayApprovalCommand(gatewayConnectionProblem: GatewayConnectionProblem?): String? {
+  if (gatewayConnectionProblem?.isPairingRequired != true || gatewayConnectionProblem.canAutoRetry) return null
+  val requestId = gatewayConnectionProblem.requestId?.trim()?.takeIf { it.isNotEmpty() }
+  return if (requestId != null) {
+    "openclaw devices approve $requestId"
+  } else {
+    "openclaw devices list"
+  }
+}
+
+private fun copyApprovalCommand(
+  context: Context,
+  command: String,
+) {
+  val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+  clipboard.setPrimaryClip(ClipData.newPlainText("OpenClaw pairing approval command", command))
+  Toast.makeText(context, "Approval command copied", Toast.LENGTH_SHORT).show()
+}
+
 /** Copies the onboarding recovery snapshot for support without including credentials. */
 private fun copyGatewayDiagnostic(
   context: Context,
@@ -1008,11 +1079,16 @@ private fun copyGatewayDiagnostic(
   serverName: String?,
   remoteAddress: String?,
   ready: Boolean,
+  gatewayConnectionProblem: GatewayConnectionProblem?,
 ) {
+  val approvalCommand = recoveryGatewayApprovalCommand(gatewayConnectionProblem)
   val diagnostic =
-    listOf(
+    listOfNotNull(
       "OpenClaw Android gateway diagnostic",
       "Status: $statusText",
+      gatewayConnectionProblem?.message?.let { "Gateway problem: $it" },
+      gatewayConnectionProblem?.requestId?.let { "Pairing request: $it" },
+      approvalCommand?.let { "Approval command: $it" },
       "Gateway: ${serverName?.takeIf { it.isNotBlank() } ?: "Home Gateway"}",
       "Address: ${remoteAddress?.takeIf { it.isNotBlank() } ?: "Not available"}",
       "Ready: ${if (ready) "yes" else "no"}",

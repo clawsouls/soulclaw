@@ -1,5 +1,6 @@
 package ai.openclaw.app.ui
 
+import ai.openclaw.app.GatewayConnectionProblem
 import ai.openclaw.app.MainViewModel
 import ai.openclaw.app.ui.mobileCardSurface
 import androidx.compose.animation.AnimatedVisibility
@@ -65,6 +66,7 @@ private enum class ConnectInputMode {
 fun ConnectTabScreen(viewModel: MainViewModel) {
   val context = LocalContext.current
   val statusText by viewModel.statusText.collectAsState()
+  val gatewayConnectionProblem by viewModel.gatewayConnectionProblem.collectAsState()
   val isConnected by viewModel.isConnected.collectAsState()
   val remoteAddress by viewModel.remoteAddress.collectAsState()
   val manualHost by viewModel.manualHost.collectAsState()
@@ -146,13 +148,10 @@ fun ConnectTabScreen(viewModel: MainViewModel) {
       }
     }
 
-  val showDiagnostics = !isConnected && gatewayStatusHasDiagnostics(statusText)
-  val pairingRequired = !isConnected && gatewayStatusLooksLikePairing(statusText)
-  val statusLabel = gatewayStatusForDisplay(statusText)
-
-  PairingAutoRetryEffect(enabled = pairingRequired) {
-    viewModel.refreshGatewayConnection()
-  }
+  val showDiagnostics = !isConnected && (gatewayConnectionProblem != null || gatewayStatusHasDiagnostics(statusText))
+  val pairingRequired = !isConnected && (gatewayConnectionProblem?.isPairingRequired == true || gatewayStatusLooksLikePairing(statusText))
+  val pairingInstruction = gatewayPairingInstruction(gatewayConnectionProblem)
+  val statusLabel = gatewayStatusForDisplay(gatewayConnectionProblem?.message ?: statusText)
 
   Column(
     modifier = Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
@@ -327,7 +326,7 @@ fun ConnectTabScreen(viewModel: MainViewModel) {
           Text(statusLabel, style = mobileBody.copy(fontFamily = FontFamily.Monospace), color = mobileText)
           if (pairingRequired) {
             Text(
-              "Approve this phone on the gateway. OpenClaw retries automatically while this screen stays open.",
+              pairingInstruction,
               style = mobileCallout,
               color = mobileTextSecondary,
             )
@@ -575,6 +574,13 @@ fun ConnectTabScreen(viewModel: MainViewModel) {
     }
   }
 }
+
+private fun gatewayPairingInstruction(problem: GatewayConnectionProblem?): String =
+  if (problem?.canAutoRetry == true) {
+    "Approve this phone on the gateway. OpenClaw will reconnect automatically."
+  } else {
+    "Approve this phone on the gateway, then retry the connection."
+  }
 
 @Composable
 private fun MethodChip(

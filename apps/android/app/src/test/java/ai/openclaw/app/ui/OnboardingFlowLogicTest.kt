@@ -1,5 +1,6 @@
 package ai.openclaw.app.ui
 
+import ai.openclaw.app.GatewayConnectionProblem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,6 +47,50 @@ class OnboardingFlowLogicTest {
         ready = true,
         statusText = "Gateway error: pairing required",
         connectSettling = false,
+      ),
+    )
+  }
+
+  @Test
+  fun showsApprovalRequiredForPausedPairingProblem() {
+    assertEquals(
+      GatewayRecoveryUiState.ApprovalRequired,
+      gatewayRecoveryUiState(
+        ready = false,
+        statusText = "Connecting…",
+        connectSettling = false,
+        gatewayConnectionProblem =
+          GatewayConnectionProblem(
+            code = "PAIRING_REQUIRED",
+            message = "pairing required: device approval is required",
+            reason = "not-paired",
+            requestId = "request-1",
+            recommendedNextStep = null,
+            pauseReconnect = true,
+            retryable = false,
+          ),
+      ),
+    )
+  }
+
+  @Test
+  fun showsPairingForRetryablePairingProblem() {
+    assertEquals(
+      GatewayRecoveryUiState.Pairing,
+      gatewayRecoveryUiState(
+        ready = false,
+        statusText = "Connecting…",
+        connectSettling = false,
+        gatewayConnectionProblem =
+          GatewayConnectionProblem(
+            code = "PAIRING_REQUIRED",
+            message = "pairing required: device approval is required",
+            reason = "not-paired",
+            requestId = "request-1",
+            recommendedNextStep = "wait_then_retry",
+            pauseReconnect = false,
+            retryable = true,
+          ),
       ),
     )
   }
