@@ -119,6 +119,13 @@ extension SettingsProTab {
     var settingsListSection: some View {
         VStack(spacing: 10) {
             self.settingsListRow(
+                icon: "checkmark.shield.fill",
+                title: "Approvals",
+                detail: self.approvalsDetail,
+                route: .approvals,
+                color: self.pendingApproval == nil ? .secondary : OpenClawBrand.warn,
+                badgeValue: self.pendingApproval == nil ? nil : "1")
+            self.settingsListRow(
                 icon: "person.2",
                 title: "Permissions",
                 detail: self.permissionsDetail,
@@ -156,11 +163,13 @@ extension SettingsProTab {
         icon: String,
         title: String,
         detail: String,
-        route: SettingsRoute) -> some View
+        route: SettingsRoute,
+        color: Color = .secondary,
+        badgeValue: String? = nil) -> some View
     {
         NavigationLink(value: route) {
             HStack(spacing: 12) {
-                ProIconBadge(systemName: icon, color: .secondary)
+                ProIconBadge(systemName: icon, color: color)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.subheadline.weight(.semibold))
@@ -170,6 +179,9 @@ extension SettingsProTab {
                         .lineLimit(1)
                 }
                 Spacer(minLength: 8)
+                if let badgeValue {
+                    ProValuePill(value: badgeValue, color: color)
+                }
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -189,6 +201,8 @@ extension SettingsProTab {
                     switch route {
                     case .gateway:
                         self.gatewayDestination
+                    case .approvals:
+                        self.approvalsDestination
                     case .permissions:
                         self.permissionsDestination
                     case .voice:
@@ -248,6 +262,90 @@ extension SettingsProTab {
             self.discoveredGatewaysCard
             self.gatewayAdvancedCard
         }
+    }
+
+    var approvalsDestination: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            self.detailStatusCard(
+                icon: "checkmark.shield.fill",
+                title: "Approvals",
+                detail: self.pendingApproval == nil ? "No gateway actions are waiting for review." :
+                    "Review the pending gateway action.",
+                value: self.pendingApproval == nil ? "clear" : "1 waiting",
+                color: self.pendingApproval == nil ? OpenClawBrand.ok : OpenClawBrand.warn)
+
+            self.approvalsReviewCard
+        }
+    }
+
+    var approvalsReviewCard: some View {
+        ProCard(radius: SettingsLayout.cardRadius) {
+            VStack(alignment: .leading, spacing: 12) {
+                if let pendingApproval {
+                    VStack(spacing: 0) {
+                        ForEach(Array(self.approvalItems.enumerated()), id: \.element.id) { index, item in
+                            SettingsApprovalRow(item: item)
+                            if index < self.approvalItems.count - 1 {
+                                Divider().padding(.leading, 46)
+                            }
+                        }
+                    }
+
+                    if let errorText = self.appModel.pendingExecApprovalPromptErrorText {
+                        Text(errorText)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(OpenClawBrand.danger)
+                    }
+
+                    HStack(spacing: 8) {
+                        Button {
+                            Task { await self.appModel.resolvePendingExecApprovalPrompt(decision: "allow-once") }
+                        } label: {
+                            Label("Allow", systemImage: "checkmark")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(self.appModel.pendingExecApprovalPromptResolving)
+
+                        if pendingApproval.allowsAllowAlways {
+                            Button {
+                                Task {
+                                    await self.appModel.resolvePendingExecApprovalPrompt(decision: "allow-always")
+                                }
+                            } label: {
+                                Label("Always", systemImage: "checkmark.shield")
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(self.appModel.pendingExecApprovalPromptResolving)
+                        }
+
+                        Button(role: .destructive) {
+                            Task { await self.appModel.resolvePendingExecApprovalPrompt(decision: "deny") }
+                        } label: {
+                            Label("Deny", systemImage: "xmark")
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(self.appModel.pendingExecApprovalPromptResolving)
+
+                        Spacer(minLength: 0)
+                    }
+                    .controlSize(.small)
+                } else {
+                    HStack(spacing: 12) {
+                        ProIconBadge(systemName: "checkmark.shield.fill", color: OpenClawBrand.ok)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("No approvals waiting")
+                                .font(.subheadline.weight(.semibold))
+                            Text(self
+                                .gatewayConnected ? "Gateway requests will appear here." : "Connect to the gateway.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, OpenClawProMetric.pagePadding)
     }
 
     var permissionsDestination: some View {

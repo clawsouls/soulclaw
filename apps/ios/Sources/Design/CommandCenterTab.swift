@@ -27,15 +27,6 @@ struct CommandCenterTab: View {
         let route: WorkRoute
     }
 
-    struct ApprovalItem: Identifiable {
-        let id: String
-        let icon: String
-        let title: String
-        let detail: String
-        let priority: String
-        let color: Color
-    }
-
     var body: some View {
         NavigationStack {
             ZStack {
@@ -46,7 +37,6 @@ struct CommandCenterTab: View {
                         self.header
                         self.gatewayCard
                         self.defaultChatSessionSection
-                        self.pendingApprovals
                         self.recentSessions
                         self.liveActivity
                     }
@@ -175,90 +165,6 @@ struct CommandCenterTab: View {
             }
         }
         .padding(.horizontal, OpenClawProMetric.pagePadding)
-    }
-
-    private var pendingApprovals: some View {
-        self.pendingApprovalsContent
-            .padding(.horizontal, OpenClawProMetric.pagePadding)
-    }
-
-    private var pendingApprovalsContent: some View {
-        CommandPanel(
-            tint: self.pendingApproval == nil ? nil : OpenClawBrand.warn,
-            isProminent: self.pendingApproval != nil,
-            padding: self.pendingApproval == nil ? 11 : 13)
-        {
-            VStack(alignment: .leading, spacing: 10) {
-                self.cardHeader(
-                    title: "Pending approvals",
-                    value: self.pendingApproval == nil ? nil : "Review requests ›",
-                    color: OpenClawBrand.accentHot,
-                    badgeValue: self.approvalItems.isEmpty ? nil : "\(self.approvalItems.count)")
-
-                if self.approvalItems.isEmpty {
-                    CommandEmptyStateRow(
-                        icon: "checkmark.shield.fill",
-                        title: "No approvals waiting",
-                        detail: self
-                            .gatewayConnected ? "Gateway requests will appear here." : "Connect to the gateway.")
-                } else {
-                    VStack(spacing: 0) {
-                        ForEach(Array(self.approvalItems.enumerated()), id: \.element.id) { index, item in
-                            CommandApprovalRow(item: item)
-                            if index < self.approvalItems.count - 1 {
-                                Divider().padding(.leading, 48)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 4)
-                    .background {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(self.approvalRowsFill)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .strokeBorder(
-                                        Color.primary.opacity(self.colorScheme == .dark ? 0.08 : 0.04),
-                                        lineWidth: 1)
-                            }
-                    }
-                }
-
-                if let pendingApproval {
-                    HStack(spacing: 8) {
-                        Button {
-                            Task { await self.appModel.resolvePendingExecApprovalPrompt(decision: "allow-once") }
-                        } label: {
-                            Label("Allow", systemImage: "checkmark")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(self.appModel.pendingExecApprovalPromptResolving)
-
-                        if pendingApproval.allowsAllowAlways {
-                            Button {
-                                Task {
-                                    await self.appModel.resolvePendingExecApprovalPrompt(decision: "allow-always")
-                                }
-                            } label: {
-                                Label("Always", systemImage: "checkmark.shield")
-                            }
-                            .buttonStyle(.bordered)
-                            .disabled(self.appModel.pendingExecApprovalPromptResolving)
-                        }
-
-                        Button(role: .destructive) {
-                            Task { await self.appModel.resolvePendingExecApprovalPrompt(decision: "deny") }
-                        } label: {
-                            Label("Deny", systemImage: "xmark")
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(self.appModel.pendingExecApprovalPromptResolving)
-
-                        Spacer(minLength: 0)
-                    }
-                    .controlSize(.small)
-                }
-            }
-        }
     }
 
     private var recentSessions: some View {
@@ -398,33 +304,6 @@ struct CommandCenterTab: View {
     private var gatewayAgentCountText: String {
         guard self.gatewayConnected else { return "—" }
         return "\(self.appModel.gatewayAgents.count)"
-    }
-
-    private var approvalItems: [ApprovalItem] {
-        if let pendingApproval {
-            return [
-                ApprovalItem(
-                    id: "pending-real",
-                    icon: "terminal.fill",
-                    title: pendingApproval.commandPreview ?? "Review gateway action",
-                    detail: "Agent: \(self.appModel.activeAgentName)",
-                    priority: self.appModel.pendingExecApprovalPromptResolving ? "Resolving" : "High",
-                    color: OpenClawBrand.danger),
-                ApprovalItem(
-                    id: "pending-context",
-                    icon: "doc.text.fill",
-                    title: pendingApproval.allowsAllowAlways ? "Permission can be saved" : "One-time approval",
-                    detail: "Gateway request",
-                    priority: pendingApproval.allowsAllowAlways ? "Medium" : "Review",
-                    color: OpenClawBrand.warn),
-            ]
-        }
-
-        return []
-    }
-
-    private var approvalRowsFill: Color {
-        self.colorScheme == .dark ? Color.black.opacity(0.12) : Color.black.opacity(0.022)
     }
 
     private var defaultChatWorkItem: WorkItem {
