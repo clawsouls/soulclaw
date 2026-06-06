@@ -17,18 +17,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -145,7 +142,6 @@ internal fun ProvidersModelsScreen(
           }
         }
       }
-      ProviderAddButton(onClick = onAddProvider, modifier = Modifier.align(Alignment.BottomCenter))
     }
   }
 }
@@ -505,30 +501,6 @@ private fun ProviderHeaderIconButton(
   ) {
     Box(contentAlignment = Alignment.Center) {
       Icon(imageVector = icon, contentDescription = contentDescription, modifier = Modifier.size(if (outlined) 17.dp else 20.dp))
-    }
-  }
-}
-
-@Composable
-private fun ProviderAddButton(
-  onClick: () -> Unit,
-  modifier: Modifier = Modifier,
-) {
-  Surface(
-    onClick = onClick,
-    modifier = modifier.fillMaxWidth().height(ClawTheme.spacing.touchTarget),
-    shape = RoundedCornerShape(ClawTheme.radii.pill),
-    color = ClawTheme.colors.primary,
-    contentColor = ClawTheme.colors.primaryText,
-  ) {
-    Row(
-      modifier = Modifier.fillMaxSize(),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.Center,
-    ) {
-      Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(17.dp))
-      Spacer(modifier = Modifier.width(7.dp))
-      Text(text = "Open Gateway Setup", style = ClawTheme.type.label, maxLines = 1)
     }
   }
 }
