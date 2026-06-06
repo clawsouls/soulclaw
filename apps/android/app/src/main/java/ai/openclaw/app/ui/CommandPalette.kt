@@ -1,6 +1,7 @@
 package ai.openclaw.app.ui
 
 import ai.openclaw.app.GatewayModelProviderSummary
+import ai.openclaw.app.GatewayModelSummary
 import ai.openclaw.app.MainViewModel
 import ai.openclaw.app.ui.design.ClawEmptyState
 import ai.openclaw.app.ui.design.ClawPanel
@@ -63,6 +64,7 @@ internal fun CommandPalette(
 ) {
   val isConnected by viewModel.isConnected.collectAsState()
   val sessions by viewModel.chatSessions.collectAsState()
+  val models by viewModel.modelCatalog.collectAsState()
   val providers by viewModel.modelAuthProviders.collectAsState()
   val pendingRunCount by viewModel.pendingRunCount.collectAsState()
   var query by rememberSaveable { mutableStateOf("") }
@@ -72,7 +74,7 @@ internal fun CommandPalette(
       CommandItem("Open Chat", "Start or continue a conversation", Icons.Outlined.ChatBubbleOutline, onOpenChat),
       CommandItem("Start Voice", "Talk or dictate with OpenClaw", Icons.Outlined.MicNone, onOpenVoice),
       CommandItem("Browse Sessions", "Find previous conversations", Icons.Outlined.AccessTime, onOpenSessions),
-      CommandItem("Providers & Models", providerCommandSubtitle(isConnected, providers), Icons.Outlined.Inventory2, onOpenProviders),
+      CommandItem("Providers & Models", providerCommandSubtitle(isConnected, providers, models), Icons.Outlined.Inventory2, onOpenProviders),
       CommandItem("Settings", "Gateway, voice, notifications, privacy", Icons.Outlined.Settings, onOpenSettings),
     )
   val actionRows = quickActions.filter { it.matches(normalizedQuery) }
@@ -298,11 +300,12 @@ private fun CommandSectionLabel(title: String) {
 internal fun providerCommandSubtitle(
   isConnected: Boolean,
   providers: List<GatewayModelProviderSummary>,
+  models: List<GatewayModelSummary>,
 ): String {
-  if (!isConnected) return "Connect Gateway to manage providers"
-  val readyProviderCount = providers.count { modelProviderReady(it.status) }
+  if (!isConnected) return "Connect Gateway to view providers"
+  val readyProviderCount = providerRows(providers = providers, models = models).count { it.ready }
   if (readyProviderCount > 0) return "$readyProviderCount providers ready"
-  return "Configure model access"
+  return "No ready providers"
 }
 
 /** Falls back to the canonical main-session label when gateway display names are blank. */

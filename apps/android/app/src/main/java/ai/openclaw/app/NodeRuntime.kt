@@ -1905,7 +1905,7 @@ class NodeRuntime(
       return
     }
     try {
-      val modelsRes = operatorSession.request("models.list", """{"view":"all"}""")
+      val modelsRes = operatorSession.request("models.list", "{}")
       val modelsRoot = json.parseToJsonElement(modelsRes).asObjectOrNull()
       _modelCatalog.value = parseGatewayModels(modelsRoot?.get("models") as? JsonArray)
 

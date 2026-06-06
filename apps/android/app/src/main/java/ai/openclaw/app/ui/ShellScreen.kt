@@ -222,11 +222,6 @@ fun ShellScreen(
             ProvidersModelsScreen(
               viewModel = viewModel,
               onBack = { activeTab = Tab.Overview },
-              onAddProvider = {
-                settingsRoute = SettingsRoute.Gateway
-                returnToOverviewFromSettings = false
-                activeTab = Tab.Settings
-              },
             )
           Tab.Sessions ->
             SessionsScreen(
@@ -345,12 +340,13 @@ private fun OverviewScreen(
   val sessions by viewModel.chatSessions.collectAsState()
   val pendingRunCount by viewModel.pendingRunCount.collectAsState()
   val statusText by viewModel.statusText.collectAsState()
+  val models by viewModel.modelCatalog.collectAsState()
   val providers by viewModel.modelAuthProviders.collectAsState()
   val pendingToolCalls by viewModel.chatPendingToolCalls.collectAsState()
   val cronStatus by viewModel.cronStatus.collectAsState()
   val nodesDevicesSummary by viewModel.nodesDevicesSummary.collectAsState()
   val channelsSummary by viewModel.channelsSummary.collectAsState()
-  val readyProviderCount = providers.count { modelProviderReady(it.status) }
+  val readyProviderCount = providerRows(providers = providers, models = models).count { it.ready }
   val attentionRows =
     homeAttentionRows(
       isConnected = isConnected,
@@ -463,12 +459,12 @@ private fun OverviewScreen(
                 ModuleRow("Sessions", "Conversation history", if (sessions.isEmpty()) "Empty" else "${sessions.size} recent", Icons.Outlined.AccessTime, Tab.Sessions),
                 ModuleRow(
                   title = "Providers & Models",
-                  subtitle = "Model setup",
+                  subtitle = "Provider readiness",
                   metadata =
                     when {
                       !isConnected -> "Offline"
                       readyProviderCount > 0 -> "$readyProviderCount ready"
-                      else -> "Setup"
+                      else -> "No ready"
                     },
                   icon = Icons.Outlined.Inventory2,
                   tab = Tab.ProvidersModels,
@@ -571,13 +567,8 @@ internal fun homeAttentionRows(
     } else {
       null
     },
-    if (isConnected && expiringProviderCount > 0) {
-      HomeAttentionRow("Providers", "Provider auth expires soon", Icons.Outlined.Inventory2, Tab.ProvidersModels)
-    } else {
-      null
-    },
-    if (isConnected && readyProviderCount == 0 && expiringProviderCount == 0) {
-      HomeAttentionRow("Providers", "No ready providers", Icons.Outlined.Inventory2, Tab.ProvidersModels)
+    if (isConnected && readyProviderCount == 0) {
+      HomeAttentionRow("Providers", "No ready providers", Icons.Outlined.Inventory2, Tab.Settings, SettingsRoute.Gateway)
     } else {
       null
     },
