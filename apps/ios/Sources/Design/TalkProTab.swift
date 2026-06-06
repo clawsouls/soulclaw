@@ -10,10 +10,6 @@ struct TalkProTab: View {
     @State private var showPermissionPrompt = false
     var openSettings: () -> Void
 
-    private enum Layout {
-        static let bottomScrollInset: CGFloat = OpenClawProMetric.bottomScrollInset + 160
-    }
-
     private var state: TalkProState {
         TalkProState(
             gatewayConnected: self.gatewayConnected,
@@ -41,7 +37,6 @@ struct TalkProTab: View {
                     .padding(.top, 16)
                     .padding(.bottom, 18)
                 }
-                .safeAreaPadding(.bottom, Layout.bottomScrollInset)
             }
             .navigationBarHidden(true)
         }

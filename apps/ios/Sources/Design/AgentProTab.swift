@@ -137,7 +137,6 @@ struct AgentProTab: View {
                 .refreshable {
                     await self.refreshOverview(force: true)
                 }
-                .safeAreaPadding(.bottom, OpenClawProMetric.bottomScrollInset)
             }
             .navigationBarHidden(true)
             .navigationDestination(for: AgentRoute.self) { route in

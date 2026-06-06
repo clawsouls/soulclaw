@@ -70,7 +70,7 @@ struct SettingsProTab: View {
                         self.settingsListSection
                     }
                     .padding(.top, 18)
-                    .padding(.bottom, OpenClawProMetric.bottomScrollInset)
+                    .padding(.bottom, 18)
                 }
             }
             .navigationBarHidden(true)
