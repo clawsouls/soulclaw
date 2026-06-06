@@ -128,16 +128,14 @@ public struct OpenClawChatView: View {
         VStack(spacing: 0) {
             self.messageList
                 .padding(.horizontal, Layout.outerPaddingHorizontal)
-        }
-        .padding(.top, Layout.outerPaddingVertical)
-        .frame(maxWidth: .infinity)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
             self.composer
                 .padding(.horizontal, Layout.composerPaddingHorizontal)
                 .padding(.top, Layout.stackSpacing)
                 .padding(.bottom, Layout.outerPaddingVertical)
         }
+        .padding(.top, Layout.outerPaddingVertical)
+        .frame(maxWidth: .infinity)
+        .frame(maxHeight: .infinity, alignment: .top)
         #endif
     }
 
