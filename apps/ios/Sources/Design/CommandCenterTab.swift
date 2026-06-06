@@ -5,7 +5,7 @@ struct CommandCenterTab: View {
     @Environment(NodeAppModel.self) private var appModel
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
-    @State private var activeChatSessions: [OpenClawChatSessionEntry] = []
+    @State private var recentChatSessions: [OpenClawChatSessionEntry] = []
     var openChat: () -> Void
     var openSettings: () -> Void
 
@@ -45,7 +45,7 @@ struct CommandCenterTab: View {
                         self.header
                         self.gatewayCard
                         self.pendingApprovals
-                        self.activeTasks
+                        self.recentSessions
                         self.liveActivity
                         self.startWorkAction
                     }
@@ -56,8 +56,8 @@ struct CommandCenterTab: View {
             }
             .navigationBarHidden(true)
         }
-        .task(id: self.activeSessionsRefreshID) {
-            await self.refreshActiveSessionsIfNeeded()
+        .task(id: self.recentSessionsRefreshID) {
+            await self.refreshRecentSessionsIfNeeded()
         }
     }
 
@@ -236,29 +236,48 @@ struct CommandCenterTab: View {
         }
     }
 
-    private var activeTasks: some View {
+    private var recentSessions: some View {
         CommandPanel(padding: 0) {
             VStack(spacing: 0) {
                 self.cardHeader(
-                    title: "Active sessions",
-                    value: self.activeSessionsSummaryText,
+                    title: "Recent sessions",
+                    value: nil,
                     color: .secondary)
                     .padding(.horizontal, 12)
                     .padding(.top, 10)
                     .padding(.bottom, 3)
 
-                VStack(spacing: 8) {
-                    ForEach(self.visibleActiveSessionRows) { item in
-                        Button {
-                            self.open(item.route)
-                        } label: {
-                            CommandSessionRow(item: item)
+                if self.recentSessionPreviewRows.isEmpty {
+                    CommandEmptyStateRow(
+                        icon: self.gatewayConnected ? "bubble.left.and.text.bubble.right.fill" : "wifi.slash",
+                        title: self.gatewayConnected ? "No recent sessions" : "Gateway offline",
+                        detail: self
+                            .gatewayConnected ? "Start a chat and it will appear here." : "Connect to the gateway.")
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 10)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(self.recentSessionPreviewRows) { item in
+                            Button {
+                                self.open(item.route)
+                            } label: {
+                                CommandSessionRow(item: item)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
+
+                        if self.hasMoreRecentSessions {
+                            NavigationLink {
+                                CommandSessionsScreen(openChat: self.openChat)
+                            } label: {
+                                CommandViewMoreRow()
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 10)
                 }
-                .padding(.horizontal, 10)
-                .padding(.bottom, 10)
             }
         }
         .padding(.horizontal, OpenClawProMetric.pagePadding)
@@ -378,17 +397,6 @@ struct CommandCenterTab: View {
         return "\(self.appModel.gatewayAgents.count)"
     }
 
-    private var activeSessionsSummaryText: String {
-        let count = self.activeSessionRows.count
-        if count == 0 {
-            return self.gatewayConnected ? "No sessions" : "Offline"
-        }
-        if self.sessionWorkItems.isEmpty {
-            return self.gatewayConnected ? "\(count) ready" : "Offline"
-        }
-        return "\(count) \(count == 1 ? "session" : "sessions")"
-    }
-
     private var approvalItems: [ApprovalItem] {
         if let pendingApproval {
             return [
@@ -416,16 +424,20 @@ struct CommandCenterTab: View {
         self.colorScheme == .dark ? Color.black.opacity(0.12) : Color.black.opacity(0.022)
     }
 
-    private var activeSessionRows: [WorkItem] {
+    private var recentSessionRows: [WorkItem] {
         self.sessionItems
     }
 
-    private var visibleActiveSessionRows: [WorkItem] {
-        Array(self.activeSessionRows.prefix(3))
+    private var recentSessionPreviewRows: [WorkItem] {
+        Array(self.recentSessionRows.prefix(3))
+    }
+
+    private var hasMoreRecentSessions: Bool {
+        self.sessionWorkItems.count > self.recentSessionPreviewRows.count
     }
 
     private var liveActivityTitle: String {
-        if let session = self.activeChatSessions.first(where: { !Self.isHiddenInternalSession($0.key) }) {
+        if let session = recentChatSessions.first(where: { !Self.isHiddenInternalSession($0.key) }) {
             return "\(Self.sessionTitle(session)) updated"
         }
         if self.pendingApproval != nil {
@@ -435,7 +447,7 @@ struct CommandCenterTab: View {
     }
 
     private var liveActivityValue: String {
-        if let session = self.activeChatSessions.first(where: { !Self.isHiddenInternalSession($0.key) }),
+        if let session = recentChatSessions.first(where: { !Self.isHiddenInternalSession($0.key) }),
            let updatedAt = session.updatedAt,
            updatedAt > 0
         {
@@ -457,7 +469,7 @@ struct CommandCenterTab: View {
         return status.isEmpty ? self.gatewayStateText : status
     }
 
-    private var activeSessionsRefreshID: String {
+    private var recentSessionsRefreshID: String {
         [
             self.appModel.isOperatorGatewayConnected ? "connected" : "offline",
             self.appModel.chatSessionKey,
@@ -466,74 +478,16 @@ struct CommandCenterTab: View {
     }
 
     private var sessionItems: [WorkItem] {
-        let liveItems = self.sessionWorkItems
-        if !liveItems.isEmpty { return liveItems }
-        return self.defaultSessionItems
+        self.sessionWorkItems
     }
 
     private var sessionWorkItems: [WorkItem] {
         let currentSessionKey = self.appModel.chatSessionKey
-        return self.activeChatSessions
+        return self.recentChatSessions
             .filter { !Self.isHiddenInternalSession($0.key) }
-            .prefix(4)
             .map { session in
-                let isCurrent = session.key == currentSessionKey
-                return WorkItem(
-                    id: "chat-session-\(session.key)",
-                    icon: isCurrent ? "bubble.left.and.text.bubble.right.fill" : "bubble.left.fill",
-                    title: Self.sessionTitle(session),
-                    detail: Self.sessionDetail(session),
-                    state: isCurrent ? "current" : "recent",
-                    trailing: "chat",
-                    color: isCurrent ? OpenClawBrand.accent : OpenClawBrand.ok,
-                    progress: nil,
-                    route: .chat(session.key))
+                Self.sessionWorkItem(for: session, currentSessionKey: currentSessionKey)
             }
-    }
-
-    private var defaultSessionItems: [WorkItem] {
-        [
-            WorkItem(
-                id: "main-chat",
-                icon: "bubble.left.and.text.bubble.right.fill",
-                title: "Main chat",
-                detail: self.appModel.activeAgentName,
-                state: self.gatewayConnected ? "ready" : "offline",
-                trailing: "session",
-                color: self.gatewayConnected ? OpenClawBrand.ok : .secondary,
-                progress: nil,
-                route: .chat(self.appModel.defaultChatSessionKey)),
-            WorkItem(
-                id: "talk-mode",
-                icon: "waveform",
-                title: "Talk",
-                detail: self.appModel.talkMode.statusText,
-                state: self.appModel.talkMode.isEnabled ? "active" : "off",
-                trailing: "voice",
-                color: self.appModel.talkMode.isEnabled ? OpenClawBrand.ok : .secondary,
-                progress: nil,
-                route: .settings),
-            WorkItem(
-                id: "device-capture",
-                icon: self.appModel.screenRecordActive ? "record.circle.fill" : "display",
-                title: "Device capture",
-                detail: self.appModel.screenRecordActive ? "Screen capture is active" : "Screen and device tools",
-                state: self.appModel.screenRecordActive ? "running" : "idle",
-                trailing: "device",
-                color: self.appModel.screenRecordActive ? OpenClawBrand.warn : .secondary,
-                progress: nil,
-                route: .settings),
-            WorkItem(
-                id: "agent-roster",
-                icon: "person.2.fill",
-                title: "Agents",
-                detail: self.gatewayConnected ? "\(self.appModel.gatewayAgents.count) available" : "Roster unavailable",
-                state: self.gatewayConnected ? "online" : "offline",
-                trailing: "gateway",
-                color: self.gatewayConnected ? OpenClawBrand.ok : .secondary,
-                progress: nil,
-                route: .settings),
-        ]
     }
 
     private func open(_ route: WorkRoute) {
@@ -546,23 +500,23 @@ struct CommandCenterTab: View {
         }
     }
 
-    private func refreshActiveSessionsIfNeeded() async {
+    private func refreshRecentSessionsIfNeeded() async {
         guard self.scenePhase == .active else { return }
         guard self.appModel.isOperatorGatewayConnected else {
-            if !self.activeChatSessions.isEmpty {
-                self.activeChatSessions = []
+            if !self.recentChatSessions.isEmpty {
+                self.recentChatSessions = []
             }
             return
         }
 
         do {
             let transport = IOSGatewayChatTransport(gateway: appModel.operatorSession)
-            let response = try await transport.listSessions(limit: 12)
-            self.activeChatSessions = Self.sessionChoices(
+            let response = try await transport.listSessions(limit: 20)
+            self.recentChatSessions = Self.sessionChoices(
                 response.sessions,
                 currentSessionKey: self.appModel.chatSessionKey)
         } catch {
-            self.activeChatSessions = []
+            self.recentChatSessions = []
         }
     }
 
@@ -590,7 +544,24 @@ struct CommandCenterTab: View {
         return result
     }
 
-    private static func sessionTitle(_ session: OpenClawChatSessionEntry) -> String {
+    fileprivate static func sessionWorkItem(
+        for session: OpenClawChatSessionEntry,
+        currentSessionKey: String) -> WorkItem
+    {
+        let isCurrent = session.key == currentSessionKey
+        return WorkItem(
+            id: "chat-session-\(session.key)",
+            icon: isCurrent ? "bubble.left.and.text.bubble.right.fill" : "bubble.left.fill",
+            title: Self.sessionTitle(session),
+            detail: Self.sessionDetail(session),
+            state: isCurrent ? "current" : "recent",
+            trailing: "chat",
+            color: isCurrent ? OpenClawBrand.accent : OpenClawBrand.ok,
+            progress: nil,
+            route: .chat(session.key))
+    }
+
+    fileprivate static func sessionTitle(_ session: OpenClawChatSessionEntry) -> String {
         if let title = redactedSessionTitle(for: session.key) {
             return title
         }
@@ -606,7 +577,7 @@ struct CommandCenterTab: View {
         return session.key
     }
 
-    private static func redactedSessionTitle(for key: String) -> String? {
+    fileprivate static func redactedSessionTitle(for key: String) -> String? {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         let lowercased = trimmed.lowercased()
         guard !trimmed.isEmpty else { return nil }
@@ -625,7 +596,7 @@ struct CommandCenterTab: View {
         return nil
     }
 
-    private static func humanizedSessionKey(_ key: String) -> String? {
+    fileprivate static func humanizedSessionKey(_ key: String) -> String? {
         let words = key
             .replacingOccurrences(of: "_", with: "-")
             .split(separator: "-")
@@ -645,14 +616,14 @@ struct CommandCenterTab: View {
             .joined(separator: " ")
     }
 
-    private static func sessionDetail(_ session: OpenClawChatSessionEntry) -> String {
+    fileprivate static func sessionDetail(_ session: OpenClawChatSessionEntry) -> String {
         if let updatedAt = session.updatedAt, updatedAt > 0 {
             return self.relativeTimeText(forMilliseconds: updatedAt)
         }
         return session.key
     }
 
-    private static func relativeTimeText(forMilliseconds milliseconds: Double) -> String {
+    fileprivate static func relativeTimeText(forMilliseconds milliseconds: Double) -> String {
         let date = Date(timeIntervalSince1970: milliseconds / 1000)
         let formatter = RelativeDateTimeFormatter()
         formatter.dateTimeStyle = .numeric
@@ -660,7 +631,7 @@ struct CommandCenterTab: View {
         return formatter.localizedString(for: date, relativeTo: .now)
     }
 
-    private static func isHiddenInternalSession(_ key: String) -> Bool {
+    fileprivate static func isHiddenInternalSession(_ key: String) -> Bool {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
         return trimmed == "onboarding" || trimmed.hasSuffix(":onboarding")
@@ -688,5 +659,153 @@ struct CommandCenterTab: View {
         guard let value else { return nil }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+private struct CommandSessionsScreen: View {
+    @Environment(NodeAppModel.self) private var appModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var sessions: [OpenClawChatSessionEntry] = []
+    @State private var isLoading = false
+    @State private var loadErrorText: String?
+    let openChat: () -> Void
+
+    var body: some View {
+        ZStack {
+            CommandControlBackground()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    self.header
+                    self.sessionsPanel
+                }
+                .padding(.top, 16)
+                .padding(.bottom, 18)
+            }
+            .safeAreaPadding(.bottom, OpenClawProMetric.bottomScrollInset)
+        }
+        .navigationTitle("Sessions")
+        .navigationBarTitleDisplayMode(.inline)
+        .task(id: self.refreshID) {
+            await self.refreshSessions()
+        }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Sessions")
+                .font(.system(size: 27, weight: .bold, design: .rounded))
+            Text(self.headerDetail)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, OpenClawProMetric.pagePadding)
+    }
+
+    private var sessionsPanel: some View {
+        CommandPanel(padding: 0) {
+            VStack(spacing: 0) {
+                HStack(spacing: 8) {
+                    Text("Recent sessions")
+                        .font(.subheadline.weight(.bold))
+                    Spacer(minLength: 8)
+                    if self.isLoading {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+                .padding(.bottom, 3)
+
+                if let loadErrorText {
+                    CommandEmptyStateRow(
+                        icon: "exclamationmark.triangle.fill",
+                        title: "Sessions unavailable",
+                        detail: loadErrorText)
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 10)
+                } else if self.sessionRows.isEmpty {
+                    CommandEmptyStateRow(
+                        icon: self.appModel
+                            .isOperatorGatewayConnected ? "bubble.left.and.text.bubble.right.fill" : "wifi.slash",
+                        title: self.appModel.isOperatorGatewayConnected ? "No recent sessions" : "Gateway offline",
+                        detail: self.appModel
+                            .isOperatorGatewayConnected ? "Start a chat and it will appear here." :
+                            "Connect to the gateway.")
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 10)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(self.sessionRows) { item in
+                            Button {
+                                self.open(item)
+                            } label: {
+                                CommandSessionRow(item: item)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 10)
+                }
+            }
+        }
+        .padding(.horizontal, OpenClawProMetric.pagePadding)
+    }
+
+    private var headerDetail: String {
+        if self.isLoading, self.sessions.isEmpty { return "Loading recent sessions" }
+        let count = self.sessionRows.count
+        if count == 0 {
+            return self.appModel.isOperatorGatewayConnected ? "No recent sessions" : "Gateway offline"
+        }
+        return "\(count) \(count == 1 ? "session" : "sessions")"
+    }
+
+    private var sessionRows: [CommandCenterTab.WorkItem] {
+        self.sessions
+            .filter { !CommandCenterTab.isHiddenInternalSession($0.key) }
+            .sorted { ($0.updatedAt ?? 0) > ($1.updatedAt ?? 0) }
+            .map {
+                CommandCenterTab.sessionWorkItem(
+                    for: $0,
+                    currentSessionKey: self.appModel.chatSessionKey)
+            }
+    }
+
+    private var refreshID: String {
+        self.appModel.isOperatorGatewayConnected ? "connected" : "offline"
+    }
+
+    private func open(_ item: CommandCenterTab.WorkItem) {
+        switch item.route {
+        case let .chat(sessionKey):
+            self.appModel.openChat(sessionKey: sessionKey)
+            self.dismiss()
+            self.openChat()
+        case .settings:
+            break
+        }
+    }
+
+    private func refreshSessions() async {
+        guard self.appModel.isOperatorGatewayConnected else {
+            self.sessions = []
+            self.loadErrorText = nil
+            return
+        }
+
+        self.isLoading = true
+        self.loadErrorText = nil
+        defer { self.isLoading = false }
+
+        do {
+            let transport = IOSGatewayChatTransport(gateway: appModel.operatorSession)
+            let response = try await transport.listSessions(limit: 200)
+            self.sessions = response.sessions
+        } catch {
+            self.sessions = []
+            self.loadErrorText = "Try again after the gateway reconnects."
+        }
     }
 }

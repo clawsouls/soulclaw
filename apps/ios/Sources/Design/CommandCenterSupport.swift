@@ -126,13 +126,41 @@ struct CommandSessionRow: View {
     }
 
     private var progressLabel: String {
-        guard let progress = self.item.progress else {
+        guard let progress = item.progress else {
             return self.item.state
         }
         if self.item.state == "offline" || self.item.state == "off" || self.item.state == "idle" {
             return self.item.state
         }
         return "\(Int((progress * 100).rounded()))%"
+    }
+
+    private var rowFill: Color {
+        self.colorScheme == .dark ? Color.white.opacity(0.035) : Color.black.opacity(0.025)
+    }
+
+    private var rowBorder: Color {
+        self.colorScheme == .dark ? Color.white.opacity(0.065) : Color.black.opacity(0.045)
+    }
+}
+
+struct CommandViewMoreRow: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Text("View More")
+            .font(.subheadline.weight(.bold))
+            .foregroundStyle(OpenClawBrand.accent)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(self.rowFill)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(self.rowBorder, lineWidth: 1)
+                    }
+            }
     }
 
     private var rowFill: Color {
