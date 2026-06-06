@@ -2,6 +2,8 @@ import OpenClawChatUI
 import SwiftUI
 
 struct CommandCenterTab: View {
+    fileprivate static let recentSessionsFetchLimit = 200
+
     @Environment(NodeAppModel.self) private var appModel
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
@@ -331,8 +333,7 @@ struct CommandCenterTab: View {
     private var sessionWorkItems: [WorkItem] {
         let currentSessionKey = self.appModel.chatSessionKey
         return self.recentChatSessions
-            .filter { !Self.isHiddenInternalSession($0.key) }
-            .filter { $0.key != self.appModel.defaultChatSessionKey }
+            .filter { Self.isRecentChatSession($0.key, defaultSessionKey: self.appModel.defaultChatSessionKey) }
             .map { session in
                 Self.sessionWorkItem(for: session, currentSessionKey: currentSessionKey)
             }
@@ -362,7 +363,7 @@ struct CommandCenterTab: View {
 
         do {
             let transport = IOSGatewayChatTransport(gateway: appModel.operatorSession)
-            let response = try await transport.listSessions(limit: 20)
+            let response = try await transport.listSessions(limit: Self.recentSessionsFetchLimit)
             self.defaultChatSessionEntry = response.sessions.first {
                 $0.key == self.appModel.defaultChatSessionKey
             }
@@ -385,7 +386,7 @@ struct CommandCenterTab: View {
         var result: [OpenClawChatSessionEntry] = []
         var included = Set<String>()
 
-        if currentSessionKey != defaultSessionKey,
+        if Self.isRecentChatSession(currentSessionKey, defaultSessionKey: defaultSessionKey),
            let current = sorted.first(where: { $0.key == currentSessionKey })
         {
             result.append(current)
@@ -394,8 +395,7 @@ struct CommandCenterTab: View {
 
         for session in sorted {
             guard !included.contains(session.key) else { continue }
-            guard session.key != defaultSessionKey else { continue }
-            guard !Self.isHiddenInternalSession(session.key) else { continue }
+            guard Self.isRecentChatSession(session.key, defaultSessionKey: defaultSessionKey) else { continue }
             result.append(session)
             included.insert(session.key)
             if result.count >= 4 { break }
@@ -491,10 +491,51 @@ struct CommandCenterTab: View {
         return formatter.localizedString(for: date, relativeTo: .now)
     }
 
-    fileprivate static func isHiddenInternalSession(_ key: String) -> Bool {
+    fileprivate nonisolated static func isHiddenInternalSession(_ key: String) -> Bool {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
         return trimmed == "onboarding" || trimmed.hasSuffix(":onboarding")
+    }
+
+    nonisolated static func isRecentChatSession(_ key: String, defaultSessionKey: String) -> Bool {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        if trimmed == defaultSessionKey { return false }
+        let normalized = trimmed.lowercased()
+        let defaultBase = self.sessionBaseKey(defaultSessionKey)
+        if !normalized.contains(":"),
+           self.isDirectSessionBase(normalized, defaultBase: defaultBase)
+        {
+            return false
+        }
+        if self.isHiddenInternalSession(trimmed) { return false }
+        return !self.isAgentDeviceSession(trimmed, defaultSessionKey: defaultSessionKey)
+    }
+
+    private nonisolated static func isAgentDeviceSession(_ key: String, defaultSessionKey: String) -> Bool {
+        let parts = key
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count >= 3, parts[0].lowercased() == "agent" else { return false }
+        guard parts.count == 3 || parts[3].lowercased() == "thread" else { return false }
+
+        let base = String(parts[2]).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let defaultKey = self.sessionBaseKey(defaultSessionKey)
+        return self.isDirectSessionBase(base, defaultBase: defaultKey)
+    }
+
+    private nonisolated static func isDirectSessionBase(_ base: String, defaultBase: String) -> Bool {
+        base == defaultBase || base == "main" || base == "global" || base.hasPrefix("node-")
+    }
+
+    private nonisolated static func sessionBaseKey(_ key: String) -> String {
+        let parts = key
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count >= 3, parts[0].lowercased() == "agent" else {
+            return key.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+        return String(parts[2]).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
     private var gatewaySubtitle: String {
@@ -620,8 +661,9 @@ private struct CommandSessionsScreen: View {
 
     private var sessionRows: [CommandCenterTab.WorkItem] {
         self.sessions
-            .filter { !CommandCenterTab.isHiddenInternalSession($0.key) }
-            .filter { $0.key != self.appModel.defaultChatSessionKey }
+            .filter { CommandCenterTab.isRecentChatSession(
+                $0.key,
+                defaultSessionKey: self.appModel.defaultChatSessionKey) }
             .sorted { ($0.updatedAt ?? 0) > ($1.updatedAt ?? 0) }
             .map {
                 CommandCenterTab.sessionWorkItem(
@@ -658,7 +700,7 @@ private struct CommandSessionsScreen: View {
 
         do {
             let transport = IOSGatewayChatTransport(gateway: appModel.operatorSession)
-            let response = try await transport.listSessions(limit: 200)
+            let response = try await transport.listSessions(limit: CommandCenterTab.recentSessionsFetchLimit)
             self.sessions = response.sessions
         } catch {
             self.sessions = []
