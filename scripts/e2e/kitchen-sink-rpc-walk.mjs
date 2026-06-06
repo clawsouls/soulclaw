@@ -994,10 +994,10 @@ export async function waitForGatewayReady(child, port, logPath, options = {}) {
         throw outcome.error;
       }
       const readyz = outcome.readyz;
-      if (readyz.ok) {
+      if (readyz.ok && readyz.body?.ready === true) {
         return;
       }
-      lastError = `/readyz HTTP ${readyz.status}`;
+      lastError = `/readyz HTTP ${readyz.status} body=${JSON.stringify(readyz.body)}`;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
     }

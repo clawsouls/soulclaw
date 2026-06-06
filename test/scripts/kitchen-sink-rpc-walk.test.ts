@@ -302,6 +302,30 @@ describe("kitchen-sink RPC gateway teardown", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("requires /readyz body.ready before accepting gateway readiness", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "openclaw-kitchen-rpc-ready-body-"));
+    try {
+      const logPath = path.join(root, "gateway.log");
+      writeFileSync(logPath, "[gateway] ready\n");
+      const fetchImpl = vi
+        .fn()
+        .mockResolvedValueOnce(new Response('{"ready":false}', { status: 200 }))
+        .mockResolvedValueOnce(new Response('{"ready":true}', { status: 200 }));
+
+      await expect(
+        waitForGatewayReady({ exitCode: null, signalCode: null }, 9, logPath, {
+          fetchImpl,
+          pollDelayMs: 1,
+          timeoutMs: 100,
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("kitchen-sink RPC gateway readiness logs", () => {
