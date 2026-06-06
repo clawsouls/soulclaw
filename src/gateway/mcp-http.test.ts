@@ -866,6 +866,81 @@ describe("mcp loopback server", () => {
     expect(response.status).toBe(415);
   });
 
+  it("returns JSON-RPC parse errors only for invalid JSON", async () => {
+    server = await startMcpLoopbackServer(0);
+    const runtime = getActiveMcpLoopbackRuntime();
+    const response = await sendRaw({
+      port: server.port,
+      token: runtime?.ownerToken,
+      headers: { "content-type": "application/json" },
+      body: "{",
+    });
+    const payload = (await response.json()) as {
+      id?: unknown;
+      error?: { code?: number; message?: string };
+    };
+
+    expect(response.status).toBe(400);
+    expect(payload.id).toBeNull();
+    expect(payload.error).toMatchObject({
+      code: -32700,
+      message: "Parse error",
+    });
+  });
+
+  it("returns internal errors for valid JSON when gateway tool resolution fails", async () => {
+    resolveGatewayScopedToolsMock.mockImplementationOnce(() => {
+      throw new Error("tool resolution exploded");
+    });
+    server = await startMcpLoopbackServer(0);
+    const runtime = getActiveMcpLoopbackRuntime();
+    const response = await sendRaw({
+      port: server.port,
+      token: runtime?.ownerToken,
+      headers: { "content-type": "application/json" },
+      body: mcpToolsListBody(42),
+    });
+    const payload = (await response.json()) as {
+      id?: unknown;
+      error?: { code?: number; message?: string };
+    };
+
+    expect(response.status).toBe(500);
+    expect(payload.id).toBe(42);
+    expect(payload.error).toMatchObject({
+      code: -32603,
+      message: "Internal error",
+    });
+  });
+
+  it("returns invalid request errors for malformed batch entries without resetting the request", async () => {
+    server = await startMcpLoopbackServer(0);
+    const runtime = getActiveMcpLoopbackRuntime();
+    const response = await sendRaw({
+      port: server.port,
+      token: runtime?.ownerToken,
+      headers: { "content-type": "application/json" },
+      body: `[null,${mcpToolsListBody(7)}]`,
+    });
+    const payload = (await response.json()) as Array<{
+      id?: unknown;
+      error?: { code?: number; message?: string };
+      result?: { tools?: Array<{ name: string }> };
+    }>;
+
+    expect(response.status).toBe(200);
+    expect(payload).toHaveLength(2);
+    expect(payload[0]).toMatchObject({
+      id: null,
+      error: {
+        code: -32600,
+        message: "Invalid Request",
+      },
+    });
+    expect(payload[1]?.id).toBe(7);
+    expect(payload[1]?.result?.tools?.map((tool) => tool.name)).toContain("message");
+  });
+
   it("returns 413 instead of resetting oversized request bodies", async () => {
     server = await startMcpLoopbackServer(0);
     const runtime = getActiveMcpLoopbackRuntime();
