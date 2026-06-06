@@ -1139,6 +1139,36 @@ describe("package artifact reuse", () => {
     }
   });
 
+  it("fails Docker E2E release lanes when summary artifacts are missing", () => {
+    const cases = [
+      {
+        jobName: "validate_docker_e2e",
+        summaryStep: "Summarize Docker E2E chunk",
+        uploadStep: "Upload Docker E2E chunk artifacts",
+      },
+      {
+        jobName: "validate_docker_lanes",
+        summaryStep: "Summarize targeted Docker E2E lanes",
+        uploadStep: "Upload targeted Docker E2E artifacts",
+      },
+      {
+        jobName: "validate_docker_openwebui",
+        summaryStep: "Summarize Open WebUI Docker E2E chunk",
+        uploadStep: "Upload Open WebUI Docker E2E artifacts",
+      },
+    ];
+
+    for (const item of cases) {
+      const job = workflowJob(LIVE_E2E_WORKFLOW, item.jobName);
+      const summaryStep = workflowStep(job, item.summaryStep);
+      const uploadStep = workflowStep(job, item.uploadStep);
+
+      expect(summaryStep.run, item.jobName).toContain("summary missing:");
+      expect(summaryStep.run, item.jobName).toContain("exit 1");
+      expect(uploadStep.with?.["if-no-files-found"], item.jobName).toBe("error");
+    }
+  });
+
   it("names package acceptance Telegram as artifact-backed package validation", () => {
     const workflow = readFileSync(PACKAGE_ACCEPTANCE_WORKFLOW, "utf8");
 
