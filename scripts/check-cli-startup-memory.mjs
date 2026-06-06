@@ -153,7 +153,8 @@ function parseMaxRssMb(stderr) {
   if (!lastMatch) {
     return null;
   }
-  return Number(lastMatch[1]) / 1024;
+  const maxRssKb = Number(lastMatch[1]);
+  return Number.isFinite(maxRssKb) && maxRssKb > 0 ? maxRssKb / 1024 : null;
 }
 
 function formatMb(value) {
