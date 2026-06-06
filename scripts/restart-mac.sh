@@ -141,16 +141,19 @@ kill_all_openclaw() {
     fi
     sleep 0.3
   done
+  return 1
 }
 
 stop_launch_agent() {
   launchctl bootout gui/"$UID"/ai.openclaw.mac 2>/dev/null || true
 }
 
-# 1) Kill all running instances first.
-log "==> Killing existing OpenClaw instances"
-kill_all_openclaw
+# 1) Stop launchd supervision, then kill all running instances.
 stop_launch_agent
+log "==> Killing existing OpenClaw instances"
+if ! kill_all_openclaw; then
+  fail "OpenClaw instances did not exit after cleanup attempts"
+fi
 
 # Bundle Gateway-hosted plugin assets.
 run_step "bundle plugin assets" bash -lc "cd '${ROOT_DIR}' && pnpm plugins:assets:build"
