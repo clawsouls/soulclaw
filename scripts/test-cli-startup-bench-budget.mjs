@@ -174,6 +174,10 @@ for (const currentCase of currentCases.values()) {
     console.error(`[test-cli-startup-bench-budget] ${currentCase.name} timed out.`);
     failed = true;
   }
+  if (samples.some((sample) => !Number.isFinite(sample.maxRssMb))) {
+    console.error(`[test-cli-startup-bench-budget] ${currentCase.name} did not report max RSS.`);
+    failed = true;
+  }
 }
 
 if (!opts.skipBaseline) {
