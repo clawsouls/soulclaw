@@ -368,13 +368,6 @@ private fun WelcomeScreen(
       Spacer(modifier = Modifier.height(30.dp))
       Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         HeroPrimaryAction(title = "Connect Gateway", onClick = onConnect)
-        OutlinedAction(title = "Enter setup code", icon = Icons.AutoMirrored.Filled.KeyboardArrowRight, onClick = onConnect)
-        Surface(onClick = onConnect, color = Color.Transparent, contentColor = ClawTheme.colors.text) {
-          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            Text(text = "Already have a setup?  ", style = ClawTheme.type.body, color = ClawTheme.colors.textMuted)
-            Text(text = "Sign in", style = ClawTheme.type.body.copy(fontWeight = FontWeight.SemiBold), color = ClawTheme.colors.text)
-          }
-        }
       }
       Spacer(modifier = Modifier.height(104.dp))
     }
