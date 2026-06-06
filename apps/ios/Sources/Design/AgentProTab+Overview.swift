@@ -514,10 +514,8 @@ extension AgentProTab {
                 true
             case .online:
                 self.agentRosterState(for: agent) == .online
-            case .busy:
-                self.agentRosterState(for: agent) == .busy
-            case .idle:
-                self.agentRosterState(for: agent) == .idle
+            case .ready:
+                self.agentRosterState(for: agent) == .ready
             }
 
             guard matchesFilter else { return false }
