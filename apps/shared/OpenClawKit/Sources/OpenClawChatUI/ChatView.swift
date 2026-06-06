@@ -269,7 +269,7 @@ public struct OpenClawChatView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        if self.composerChrome == .clean, let error = self.activeErrorText, !self.hasVisibleMessageListContent {
+        if let error = self.inlineCleanErrorText {
             let presentation = self.errorPresentation(for: error)
             ChatNoticeCard(
                 systemImage: presentation.systemImage,
@@ -348,6 +348,8 @@ public struct OpenClawChatView: View {
             EmptyView()
         } else if self.showsCleanLoadingPlaceholder {
             EmptyView()
+        } else if self.inlineCleanErrorText != nil {
+            EmptyView()
         } else if let error = self.activeErrorText {
             if self.hasVisibleMessageListContent {
                 EmptyView()
@@ -384,6 +386,13 @@ public struct OpenClawChatView: View {
             return nil
         }
         return text
+    }
+
+    private var inlineCleanErrorText: String? {
+        guard self.composerChrome == .clean, !self.hasVisibleMessageListContent else {
+            return nil
+        }
+        return self.activeErrorText
     }
 
     private var hasVisibleMessageListContent: Bool {
