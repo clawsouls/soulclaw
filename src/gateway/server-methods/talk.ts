@@ -411,10 +411,6 @@ function resolveTalkResponseFromConfig(params: {
     return undefined;
   }
 
-  if (params.includeSecrets) {
-    return payload;
-  }
-
   const sourceResolved = resolveActiveTalkProviderConfig(normalizedTalk);
   const runtimeResolved = resolveActiveTalkProviderConfig(params.runtimeConfig.talk);
   const activeProviderId = sourceResolved?.provider ?? runtimeResolved?.provider;
@@ -453,7 +449,7 @@ function resolveTalkResponseFromConfig(params: {
       timeoutMs: typeof selectedBaseTts.timeoutMs === "number" ? selectedBaseTts.timeoutMs : 30_000,
     }) ?? providerInputConfig;
   const responseConfig =
-    sourceProviderConfig.apiKey === undefined
+    params.includeSecrets || sourceProviderConfig.apiKey === undefined
       ? resolvedConfig
       : { ...resolvedConfig, apiKey: sourceProviderConfig.apiKey };
 

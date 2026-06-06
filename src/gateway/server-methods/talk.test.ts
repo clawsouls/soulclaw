@@ -516,6 +516,73 @@ describe("talk.config handler", () => {
     expectRecordFields(resolved, { provider: "acme" });
     expectRecordFields(resolved?.config, { apiKey: "__OPENCLAW_REDACTED__" });
   });
+
+  it("returns runtime-resolved talk provider secrets to scoped clients", async () => {
+    const sourceConfig = {
+      talk: {
+        provider: "acme",
+        providers: {
+          acme: {
+            apiKey: { source: "env", provider: "default", id: "ACME_SPEECH_API_KEY" },
+            speakerVoiceId: "talk-speaker-id",
+          },
+        },
+      },
+    } as OpenClawConfig;
+    const runtimeConfig = {
+      talk: {
+        provider: "acme",
+        providers: {
+          acme: {
+            apiKey: "env-acme-key",
+            speakerVoiceId: "talk-speaker-id",
+          },
+        },
+      },
+    } as OpenClawConfig;
+
+    mocks.readConfigFileSnapshot.mockResolvedValue({
+      path: "/tmp/openclaw.json",
+      hash: "test-hash",
+      valid: true,
+      config: sourceConfig,
+    });
+    mocks.getSpeechProvider.mockReturnValue({
+      id: "acme",
+      label: "Acme Strict Speech",
+      resolveTalkConfig: ({
+        talkProviderConfig,
+      }: {
+        talkProviderConfig: Record<string, unknown>;
+      }) => {
+        expectRecordFields(talkProviderConfig, {
+          apiKey: "env-acme-key",
+          speakerVoiceId: "talk-speaker-id",
+          voiceId: "talk-speaker-id",
+        });
+        return talkProviderConfig;
+      },
+    });
+
+    const respond = vi.fn();
+    await talkHandlers["talk.config"]({
+      req: { type: "req", id: "1", method: "talk.config" },
+      params: { includeSecrets: true },
+      client: { connect: { scopes: ["operator.read", "operator.talk.secrets"] } } as never,
+      isWebchatConnect: () => false,
+      respond: respond as never,
+      context: { getRuntimeConfig: () => runtimeConfig } as never,
+    });
+
+    const response = expectRespondOk(respond) as { config?: { talk?: Record<string, unknown> } };
+    const resolved = response.config?.talk?.resolved as Record<string, unknown> | undefined;
+    expectRecordFields(resolved, { provider: "acme" });
+    expectRecordFields(resolved?.config, {
+      apiKey: "env-acme-key",
+      speakerVoiceId: "talk-speaker-id",
+      voiceId: "talk-speaker-id",
+    });
+  });
 });
 
 describe("talk.session unified handlers", () => {
