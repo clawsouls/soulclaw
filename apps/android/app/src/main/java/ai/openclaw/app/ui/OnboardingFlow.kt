@@ -3,6 +3,7 @@ package ai.openclaw.app.ui
 import ai.openclaw.app.GatewayConnectionProblem
 import ai.openclaw.app.LocationMode
 import ai.openclaw.app.MainViewModel
+import ai.openclaw.app.R
 import ai.openclaw.app.SensitiveFeatureConfig
 import ai.openclaw.app.node.DeviceNotificationListenerService
 import ai.openclaw.app.ui.design.ClawDesignTheme
@@ -31,20 +32,25 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -89,10 +95,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -359,20 +367,39 @@ private fun WelcomeScreen(
   onConnect: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  ClawScaffold(modifier = modifier, contentPadding = PaddingValues(horizontal = 24.dp, vertical = 18.dp)) {
+  val welcomeBackground =
+    Brush.verticalGradient(
+      colors =
+        listOf(
+          Color(0xFFFF4D4D),
+          Color(0xFFD73332),
+          Color(0xFF991B1B),
+          Color(0xFF260707),
+        ),
+    )
+
+  Box(
+    modifier =
+      modifier
+        .fillMaxSize()
+        .background(welcomeBackground)
+        .windowInsetsPadding(WindowInsets.safeDrawing)
+        .padding(horizontal = 24.dp, vertical = 18.dp),
+  ) {
     Column(
       modifier = Modifier.fillMaxSize(),
       horizontalAlignment = Alignment.CenterHorizontally,
     ) {
       Spacer(modifier = Modifier.height(96.dp))
       Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        WelcomeLogo()
         Text(
           text = "OPENCLAW",
           style = ClawTheme.type.display.copy(fontSize = 34.sp, lineHeight = 38.sp, fontWeight = FontWeight.Black),
           color = ClawTheme.colors.text,
         )
         Text(
-          text = "Your AI command center.\nPrivate. Local. Under your control.",
+          text = "Your personal AI assistant.\nExfoliate! Exfoliate!",
           style = ClawTheme.type.section,
           color = ClawTheme.colors.text,
           textAlign = TextAlign.Center,
@@ -385,6 +412,20 @@ private fun WelcomeScreen(
         HeroPrimaryAction(title = "Connect Gateway", onClick = onConnect)
       }
       Spacer(modifier = Modifier.height(104.dp))
+    }
+  }
+}
+
+@Composable
+private fun WelcomeLogo() {
+  Surface(
+    modifier = Modifier.size(82.dp),
+    shape = CircleShape,
+    color = Color.White.copy(alpha = 0.92f),
+    contentColor = Color.Unspecified,
+  ) {
+    Box(modifier = Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.Center) {
+      Image(painter = painterResource(id = R.drawable.openclaw_logo), contentDescription = "OpenClaw logo", modifier = Modifier.fillMaxSize())
     }
   }
 }
