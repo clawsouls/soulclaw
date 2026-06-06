@@ -12,6 +12,11 @@ type FetchJsonOptions = {
   timeoutMs?: number;
 };
 
+export type McpCodeModeMentions = Record<
+  "apiCall" | "apiFileList" | "apiFileRead" | "mcpNamespace" | "mcpTool" | "toolSearchPollution",
+  number
+>;
+
 export type McpCodeModeClientFetchLimits = {
   bodyMaxBytes: number;
   timeoutMs: number;
@@ -129,6 +134,31 @@ async function readSessionLogMentions(stateDir: string): Promise<Record<string, 
   });
 }
 
+export function validateMcpCodeModeResult(
+  response: unknown,
+  mentions: McpCodeModeMentions,
+): string {
+  const finalText = outputText(response);
+  assert(
+    finalText.includes("MCP_CODE_MODE_FILE_OK"),
+    `agent did not complete MCP API file check: ${finalText}`,
+  );
+  assert(
+    finalText.includes("fixture-note-alpha"),
+    `agent did not return fixture note from MCP call: ${finalText}`,
+  );
+  assert(
+    !/MCP\s+(?:was\s+)?not\s+defined|failed|error/i.test(finalText),
+    `agent reported MCP failure instead of a successful call: ${finalText}`,
+  );
+  assert(mentions.apiFileRead > 0, "session log lacks API.read usage");
+  assert(mentions.mcpNamespace > 0, "session log lacks MCP.fixture usage");
+  assert(mentions.mcpTool > 0, "session log lacks fixture__lookup_note call");
+  assert(mentions.apiCall === 0, "agent should not call MCP.$api when API files are available");
+  assert(mentions.toolSearchPollution === 0, "agent should not use tools.search for MCP lookup");
+  return finalText;
+}
+
 async function main() {
   const gatewayUrl = process.env.GW_URL?.trim();
   const gatewayToken = process.env.GW_TOKEN?.trim();
@@ -176,26 +206,8 @@ async function main() {
       stream: false,
     }),
   });
-  const finalText = outputText(response);
   const mentions = await readSessionLogMentions(stateDir);
-
-  assert(
-    finalText.includes("MCP_CODE_MODE_FILE_OK"),
-    `agent did not complete MCP API file check: ${finalText}`,
-  );
-  assert(
-    finalText.includes("fixture-note-alpha"),
-    `agent did not return fixture note from MCP call: ${finalText}`,
-  );
-  assert(
-    !/MCP\s+(?:was\s+)?not\s+defined|failed|error/i.test(finalText),
-    `agent reported MCP failure instead of a successful call: ${finalText}`,
-  );
-  assert(mentions.apiFileRead > 0, "session log lacks API.read usage");
-  assert(mentions.mcpNamespace > 0, "session log lacks MCP.fixture usage");
-  assert(mentions.mcpTool > 0, "session log lacks fixture__lookup_note call");
-  assert(mentions.apiCall === 0, "agent should not call MCP.$api when API files are available");
-  assert(mentions.toolSearchPollution === 0, "agent should not use tools.search for MCP lookup");
+  const finalText = validateMcpCodeModeResult(response, mentions as McpCodeModeMentions);
 
   process.stdout.write(
     `${JSON.stringify(
