@@ -1452,11 +1452,14 @@ class NodeRuntime(
   }
 
   fun refreshGatewayConnection() {
-    val endpoint =
-      connectedEndpoint ?: run {
-        _statusText.value = "Failed: no cached gateway endpoint"
-        return
-      }
+    val endpoint = connectedEndpoint
+    if (endpoint == null) {
+      resolvePreferredGatewayEndpoint()?.let(::connect)
+        ?: run {
+          _statusText.value = "Failed: no saved gateway endpoint"
+        }
+      return
+    }
     operatorStatusText = "Connecting…"
     updateStatus()
     connectWithAuth(endpoint = endpoint, auth = resolveGatewayConnectAuth(), reconnect = true)
