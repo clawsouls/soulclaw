@@ -38,7 +38,6 @@ struct CommandCenterTab: View {
                         self.gatewayCard
                         self.defaultChatSessionSection
                         self.recentSessions
-                        self.liveActivity
                     }
                     .padding(.top, 16)
                     .padding(.bottom, 18)
@@ -214,28 +213,6 @@ struct CommandCenterTab: View {
         .padding(.horizontal, OpenClawProMetric.pagePadding)
     }
 
-    private var liveActivity: some View {
-        CommandPanel(padding: 0) {
-            VStack(spacing: 0) {
-                self.cardHeader(
-                    title: "Live activity",
-                    value: nil,
-                    color: OpenClawBrand.accent)
-                    .padding(.horizontal, 12)
-                    .padding(.top, 11)
-                    .padding(.bottom, 3)
-
-                CommandLiveActivityRow(
-                    title: self.liveActivityTitle,
-                    value: self.liveActivityValue,
-                    color: self.liveActivityColor)
-                    .padding(.horizontal, 14)
-                    .padding(.bottom, 10)
-            }
-        }
-        .padding(.horizontal, OpenClawProMetric.pagePadding)
-    }
-
     private func cardHeader(
         title: String,
         value: String?,
@@ -321,7 +298,7 @@ struct CommandCenterTab: View {
     }
 
     private var defaultChatActivityText: String {
-        guard let updatedAt = self.defaultChatSessionEntry?.updatedAt, updatedAt > 0 else {
+        guard let updatedAt = defaultChatSessionEntry?.updatedAt, updatedAt > 0 else {
             return "No recent activity"
         }
         return Self.relativeTimeText(forMilliseconds: updatedAt)
@@ -337,39 +314,6 @@ struct CommandCenterTab: View {
 
     private var hasMoreRecentSessions: Bool {
         self.sessionWorkItems.count > self.recentSessionPreviewRows.count
-    }
-
-    private var liveActivityTitle: String {
-        if let session = recentChatSessions.first(where: { !Self.isHiddenInternalSession($0.key) }) {
-            return "\(Self.sessionTitle(session)) updated"
-        }
-        if self.pendingApproval != nil {
-            return "Approval waiting"
-        }
-        return self.gatewayConnected ? "Gateway connected" : self.gatewayStateText
-    }
-
-    private var liveActivityValue: String {
-        if let session = recentChatSessions.first(where: { !Self.isHiddenInternalSession($0.key) }),
-           let updatedAt = session.updatedAt,
-           updatedAt > 0
-        {
-            return Self.relativeTimeText(forMilliseconds: updatedAt)
-        }
-        if self.pendingApproval != nil {
-            return "review"
-        }
-        return self.gatewayConnected ? self.gatewayAddressText : self.gatewayDisplayStatusValue
-    }
-
-    private var liveActivityColor: Color {
-        if self.pendingApproval != nil { return OpenClawBrand.warn }
-        return self.gatewayConnected ? OpenClawBrand.ok : .secondary
-    }
-
-    private var gatewayDisplayStatusValue: String {
-        let status = self.appModel.gatewayDisplayStatusText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return status.isEmpty ? self.gatewayStateText : status
     }
 
     private var recentSessionsRefreshID: String {
@@ -561,10 +505,6 @@ struct CommandCenterTab: View {
             return "\(self.appModel.activeAgentName) via \(address)"
         }
         return self.appModel.gatewayDisplayStatusText
-    }
-
-    private var pendingApproval: NodeAppModel.ExecApprovalPrompt? {
-        self.appModel.pendingExecApprovalPrompt
     }
 
     private func normalized(_ value: String?) -> String? {
