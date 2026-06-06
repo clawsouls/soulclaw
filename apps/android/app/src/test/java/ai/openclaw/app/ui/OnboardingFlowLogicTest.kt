@@ -28,6 +28,53 @@ class OnboardingFlowLogicTest {
   }
 
   @Test
+  fun nearbyGatewayFoundStateIsConnectable() {
+    assertEquals(
+      NearbyGatewayUiState(subtitle = "Studio Gateway", status = "Found", canConnect = true),
+      nearbyGatewayUiState(nearbyGatewayName = "Studio Gateway", discoveryStatusText = "Searching…", discoveryStarted = false),
+    )
+  }
+
+  @Test
+  fun nearbyGatewayBeforeDiscoveryStartsIsNotConnectable() {
+    assertEquals(
+      NearbyGatewayUiState(subtitle = "Starting discovery...", status = "Starting", canConnect = false),
+      nearbyGatewayUiState(nearbyGatewayName = null, discoveryStatusText = "Searching…", discoveryStarted = false, searchTimedOut = true),
+    )
+  }
+
+  @Test
+  fun nearbyGatewaySearchingStateIsNotConnectable() {
+    assertEquals(
+      NearbyGatewayUiState(subtitle = "Searching for gateways...", status = "Searching", canConnect = false),
+      nearbyGatewayUiState(nearbyGatewayName = null, discoveryStatusText = "Searching for gateways…"),
+    )
+  }
+
+  @Test
+  fun nearbyGatewayTimedOutSearchShowsEmptyState() {
+    assertEquals(
+      NearbyGatewayUiState(subtitle = "No gateway found", status = "Not found", canConnect = false),
+      nearbyGatewayUiState(nearbyGatewayName = null, discoveryStatusText = "Searching for gateways…", searchTimedOut = true),
+    )
+  }
+
+  @Test
+  fun nearbyGatewayEmptyResultStateIsNotConnectable() {
+    assertEquals(
+      NearbyGatewayUiState(subtitle = "No gateway found", status = "Not found", canConnect = false),
+      nearbyGatewayUiState(nearbyGatewayName = null, discoveryStatusText = "Local: 0 • Wide: 0"),
+    )
+  }
+
+  @Test
+  fun recoveryGatewayNamePrefersServerThenAttemptedGateway() {
+    assertEquals("Server Gateway", recoveryGatewayName(serverName = "Server Gateway", attemptedGatewayName = "Discovered Gateway"))
+    assertEquals("Discovered Gateway", recoveryGatewayName(serverName = null, attemptedGatewayName = "Discovered Gateway"))
+    assertEquals("Home Gateway", recoveryGatewayName(serverName = " ", attemptedGatewayName = " "))
+  }
+
+  @Test
   fun showsPairingStateForPairingRequiredGatewayStatus() {
     assertEquals(
       GatewayRecoveryUiState.Pairing,

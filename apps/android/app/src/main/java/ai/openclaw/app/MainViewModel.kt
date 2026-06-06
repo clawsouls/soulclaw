@@ -446,6 +446,10 @@ class MainViewModel(
     }
   }
 
+  fun startGatewayDiscovery() {
+    queueRuntimeStartup()
+  }
+
   fun connect(endpoint: GatewayEndpoint) {
     ensureRuntime().connect(endpoint)
   }

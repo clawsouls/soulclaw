@@ -128,9 +128,11 @@ fun OnboardingFlow(
     val gatewayConnectionProblem by viewModel.gatewayConnectionProblem.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
     val isNodeConnected by viewModel.isNodeConnected.collectAsState()
+    val runtimeInitialized by viewModel.runtimeInitialized.collectAsState()
     val serverName by viewModel.serverName.collectAsState()
     val remoteAddress by viewModel.remoteAddress.collectAsState()
     val gateways by viewModel.gateways.collectAsState()
+    val discoveryStatusText by viewModel.discoveryStatusText.collectAsState()
     val savedToken by viewModel.gatewayToken.collectAsState()
     val pendingTrust by viewModel.pendingGatewayTrust.collectAsState()
     val startAtGatewaySetup by viewModel.startOnboardingAtGatewaySetup.collectAsState()
@@ -145,6 +147,7 @@ fun OnboardingFlow(
     var password by rememberSaveable { mutableStateOf("") }
     var setupError by rememberSaveable { mutableStateOf<String?>(null) }
     var attemptedConnect by rememberSaveable { mutableStateOf(false) }
+    var attemptedGatewayName by rememberSaveable { mutableStateOf<String?>(null) }
     var connectAttemptStartedAtMs by rememberSaveable { mutableLongStateOf(0L) }
     var recoveryNowMs by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
 
@@ -163,6 +166,12 @@ fun OnboardingFlow(
       if (startAtGatewaySetup) {
         step = OnboardingStep.Gateway
         viewModel.clearGatewaySetupStartRequest()
+      }
+    }
+
+    LaunchedEffect(step) {
+      if (step == OnboardingStep.Gateway) {
+        viewModel.startGatewayDiscovery()
       }
     }
 
@@ -220,6 +229,8 @@ fun OnboardingFlow(
           token = token,
           password = password,
           nearbyGatewayName = gateways.firstOrNull()?.name,
+          discoveryStatusText = discoveryStatusText,
+          discoveryStarted = runtimeInitialized,
           error = setupError,
           onBack = { step = OnboardingStep.Welcome },
           onScan = {
@@ -256,7 +267,9 @@ fun OnboardingFlow(
           onPasswordChange = { password = it },
           onUseNearby = {
             val endpoint = gateways.firstOrNull() ?: return@GatewaySetupScreen
+            attemptedGatewayName = endpoint.name
             attemptedConnect = true
+            connectAttemptStartedAtMs = SystemClock.elapsedRealtime()
             viewModel.connectInBackground(endpoint)
             step = OnboardingStep.Recovery
           },
@@ -276,6 +289,7 @@ fun OnboardingFlow(
             }
 
             setupError = null
+            attemptedGatewayName = null
             attemptedConnect = true
             connectAttemptStartedAtMs = SystemClock.elapsedRealtime()
             viewModel.saveGatewayConfigAndConnect(
@@ -295,6 +309,7 @@ fun OnboardingFlow(
           modifier = modifier,
           statusText = statusText,
           serverName = serverName,
+          attemptedGatewayName = attemptedGatewayName,
           remoteAddress = remoteAddress,
           ready = ready,
           gatewayConnectionProblem = gatewayConnectionProblem,
@@ -419,6 +434,8 @@ private fun GatewaySetupScreen(
   token: String,
   password: String,
   nearbyGatewayName: String?,
+  discoveryStatusText: String,
+  discoveryStarted: Boolean,
   error: String?,
   onBack: () -> Unit,
   onScan: () -> Unit,
@@ -433,6 +450,29 @@ private fun GatewaySetupScreen(
   modifier: Modifier = Modifier,
 ) {
   var advancedOpen by rememberSaveable { mutableStateOf(false) }
+  var nearbySearchTimedOut by remember { mutableStateOf(false) }
+
+  LaunchedEffect(nearbyGatewayName, discoveryStatusText, discoveryStarted) {
+    if (!nearbyGatewayName.isNullOrBlank()) {
+      nearbySearchTimedOut = false
+      return@LaunchedEffect
+    }
+    if (!discoveryStarted) {
+      nearbySearchTimedOut = false
+      return@LaunchedEffect
+    }
+    nearbySearchTimedOut = false
+    delay(5_000)
+    nearbySearchTimedOut = true
+  }
+
+  val nearbyGateway =
+    nearbyGatewayUiState(
+      nearbyGatewayName = nearbyGatewayName,
+      discoveryStatusText = discoveryStatusText,
+      discoveryStarted = discoveryStarted,
+      searchTimedOut = nearbySearchTimedOut,
+    )
 
   ClawScaffold(modifier = modifier, contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp)) {
     Column(modifier = Modifier.fillMaxSize().imePadding(), verticalArrangement = Arrangement.SpaceBetween) {
@@ -452,9 +492,9 @@ private fun GatewaySetupScreen(
           GatewayOption(
             icon = Icons.Default.WifiTethering,
             title = "Nearby gateway",
-            subtitle = nearbyGatewayName ?: "Discovery ready",
-            status = nearbyGatewayName?.let { "Found" },
-            onClick = onUseNearby,
+            subtitle = nearbyGateway.subtitle,
+            status = nearbyGateway.status,
+            onClick = onUseNearby.takeIf { nearbyGateway.canConnect },
           )
         }
         item {
@@ -518,6 +558,7 @@ private fun GatewaySetupScreen(
 private fun GatewayRecoveryScreen(
   statusText: String,
   serverName: String?,
+  attemptedGatewayName: String?,
   remoteAddress: String?,
   ready: Boolean,
   gatewayConnectionProblem: GatewayConnectionProblem?,
@@ -568,7 +609,7 @@ private fun GatewayRecoveryScreen(
       ClawPanel {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
           Text(text = "Last gateway", style = ClawTheme.type.caption, color = ClawTheme.colors.textMuted)
-          Text(text = serverName?.takeIf { it.isNotBlank() } ?: "Home Gateway", style = ClawTheme.type.section, color = ClawTheme.colors.text)
+          Text(text = recoveryGatewayName(serverName = serverName, attemptedGatewayName = attemptedGatewayName), style = ClawTheme.type.section, color = ClawTheme.colors.text)
           Text(text = recoveryGatewayDetail(ready = ready, remoteAddress = remoteAddress, statusText = statusText, gatewayConnectionProblem = gatewayConnectionProblem), style = ClawTheme.type.body, color = ClawTheme.colors.textMuted)
           recoveryGatewayApprovalCommand(gatewayConnectionProblem)?.let { command ->
             ApprovalCommandBlock(command = command, onCopy = { copyApprovalCommand(context, command) })
@@ -734,7 +775,7 @@ private fun GatewayOption(
   icon: ImageVector,
   title: String,
   subtitle: String,
-  onClick: () -> Unit,
+  onClick: (() -> Unit)?,
   status: String? = null,
 ) {
   ClawPanel(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
@@ -743,9 +784,12 @@ private fun GatewayOption(
       subtitle = subtitle,
       metadata = status,
       leading = { Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(22.dp), tint = ClawTheme.colors.text) },
-      trailing = {
-        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Open $title", modifier = Modifier.size(20.dp), tint = ClawTheme.colors.text)
-      },
+      trailing =
+        onClick?.let {
+          {
+            Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Open $title", modifier = Modifier.size(20.dp), tint = ClawTheme.colors.text)
+          }
+        },
       onClick = onClick,
     )
   }
@@ -935,13 +979,51 @@ internal enum class GatewayRecoveryUiState(
     message = "Approval is in progress.\nOpenClaw will reconnect automatically.",
   ),
   Finishing(
-    title = "Finishing Setup",
-    message = "Gateway approved this phone.\nOpenClaw is bringing the node online.",
+    title = "Connecting Gateway",
+    message = "OpenClaw is checking gateway and node access.",
   ),
   Failed(
     title = "Connection issue",
     message = "We could not reach your Gateway.\nLet's fix this.",
   ),
+}
+
+internal data class NearbyGatewayUiState(
+  val subtitle: String,
+  val status: String?,
+  val canConnect: Boolean,
+)
+
+/** Maps best-effort discovery into row copy and clickability for onboarding. */
+internal fun nearbyGatewayUiState(
+  nearbyGatewayName: String?,
+  discoveryStatusText: String,
+  discoveryStarted: Boolean = true,
+  searchTimedOut: Boolean = false,
+): NearbyGatewayUiState {
+  val name = nearbyGatewayName?.trim().takeUnless { it.isNullOrEmpty() }
+  if (name != null) {
+    return NearbyGatewayUiState(subtitle = name, status = "Found", canConnect = true)
+  }
+  if (!discoveryStarted) {
+    return NearbyGatewayUiState(subtitle = "Starting discovery...", status = "Starting", canConnect = false)
+  }
+
+  val status = discoveryStatusText.trim()
+  val searching =
+    status.isEmpty() ||
+      status.equals("Searching…", ignoreCase = true) ||
+      status.contains("Searching", ignoreCase = true) ||
+      status.endsWith("?", ignoreCase = true)
+  return if (searching) {
+    if (searchTimedOut) {
+      NearbyGatewayUiState(subtitle = "No gateway found", status = "Not found", canConnect = false)
+    } else {
+      NearbyGatewayUiState(subtitle = "Searching for gateways...", status = "Searching", canConnect = false)
+    }
+  } else {
+    NearbyGatewayUiState(subtitle = "No gateway found", status = "Not found", canConnect = false)
+  }
 }
 
 /** Derives recovery screen state from gateway/node readiness and transient status text. */
@@ -968,6 +1050,18 @@ internal fun gatewayStatusLooksLikePartialConnect(statusText: String): Boolean {
   val lower = gatewayStatusForDisplay(statusText).lowercase()
   return lower.contains("operator offline") || lower.contains("node offline")
 }
+
+internal fun recoveryGatewayName(
+  serverName: String?,
+  attemptedGatewayName: String?,
+): String =
+  serverName
+    ?.trim()
+    ?.takeIf { it.isNotEmpty() }
+    ?: attemptedGatewayName
+      ?.trim()
+      ?.takeIf { it.isNotEmpty() }
+    ?: "Home Gateway"
 
 private data class GatewayConfig(
   val host: String,
