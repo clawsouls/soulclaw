@@ -155,7 +155,9 @@ export function extractAgentReplyTexts(text) {
         ? payload.result.payloads
         : [];
     const payloadTexts = payloadEntries.flatMap((entry) =>
-      typeof entry?.text === "string" && entry.text.length > 0 ? [entry.text] : [],
+      entry?.isError !== true && typeof entry?.text === "string" && entry.text.length > 0
+        ? [entry.text]
+        : [],
     );
     return directTexts.concat(payloadTexts);
   });

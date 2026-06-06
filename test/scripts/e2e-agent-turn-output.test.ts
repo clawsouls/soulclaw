@@ -80,6 +80,28 @@ describe("scripts/e2e/lib/agent-turn-output", () => {
     }
   });
 
+  it("does not accept markers that only appear in error payload text", () => {
+    const dir = mkdtempSync(join(tmpdir(), "openclaw-e2e-agent-output-"));
+    try {
+      const outputPath = join(dir, "agent.log");
+      writeFileSync(
+        outputPath,
+        JSON.stringify({
+          payloads: [
+            { isError: true, text: "OPENCLAW_E2E_OK_ERROR_PAYLOAD" },
+            { text: "regular reply without marker" },
+          ],
+        }),
+      );
+
+      expect(() =>
+        assertAgentReplyContainsMarker("OPENCLAW_E2E_OK_ERROR_PAYLOAD", outputPath),
+      ).toThrow(/agent reply payload did not contain marker/u);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("ignores stale reply markers outside the recent output tail", () => {
     const dir = mkdtempSync(join(tmpdir(), "openclaw-e2e-agent-output-"));
     try {
