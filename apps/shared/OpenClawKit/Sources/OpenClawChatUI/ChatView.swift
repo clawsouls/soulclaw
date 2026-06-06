@@ -34,6 +34,7 @@ public struct OpenClawChatView: View {
     private let assistantAvatarTint: Color?
     private let showsAssistantAvatars: Bool
     private let composerChrome: ComposerChrome
+    private let isComposerEnabled: Bool
     private let messagePlaceholder: String?
     private let emptyAssistantIntro: String?
     private let talkControl: OpenClawChatTalkControl?
@@ -73,6 +74,7 @@ public struct OpenClawChatView: View {
         assistantAvatarTint: Color? = nil,
         showsAssistantAvatars: Bool = true,
         composerChrome: ComposerChrome = .full,
+        isComposerEnabled: Bool = true,
         messagePlaceholder: String? = nil,
         emptyAssistantIntro: String? = nil,
         talkControl: OpenClawChatTalkControl? = nil)
@@ -89,6 +91,7 @@ public struct OpenClawChatView: View {
         self.assistantAvatarTint = assistantAvatarTint
         self.showsAssistantAvatars = showsAssistantAvatars
         self.composerChrome = composerChrome
+        self.isComposerEnabled = isComposerEnabled
         self.messagePlaceholder = messagePlaceholder
         self.emptyAssistantIntro = emptyAssistantIntro
         self.talkControl = talkControl
@@ -149,6 +152,7 @@ public struct OpenClawChatView: View {
             assistantAvatarText: self.assistantAvatarText,
             assistantAvatarTint: self.assistantAvatarTint,
             composerChrome: self.composerChrome,
+            isComposerEnabled: self.isComposerEnabled,
             messagePlaceholder: self.messagePlaceholder,
             talkControl: self.talkControl)
     }

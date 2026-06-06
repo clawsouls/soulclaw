@@ -24,7 +24,8 @@ struct ChatProTab: View {
                             assistantAvatarTint: OpenClawBrand.accent,
                             showsAssistantAvatars: false,
                             composerChrome: .clean,
-                            messagePlaceholder: "Message \(self.agentDisplayName)...",
+                            isComposerEnabled: self.gatewayConnected,
+                            messagePlaceholder: self.messagePlaceholder,
                             talkControl: self.talkControl)
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     } else {
@@ -159,6 +160,10 @@ struct ChatProTab: View {
     private var gatewayConnected: Bool {
         GatewayStatusBuilder.build(appModel: self.appModel) == .connected &&
             self.appModel.isOperatorGatewayConnected
+    }
+
+    private var messagePlaceholder: String {
+        self.gatewayConnected ? "Message \(self.agentDisplayName)..." : "Connect to a gateway"
     }
 
     private var chatUserAccent: Color {
