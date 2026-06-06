@@ -30,14 +30,12 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -46,9 +44,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,7 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Android providers/models browser backed by the gateway catalog. */
+/** Android provider readiness and setup screen backed by the gateway catalog. */
 @Composable
 internal fun ProvidersModelsScreen(
   viewModel: MainViewModel,
@@ -72,9 +67,7 @@ internal fun ProvidersModelsScreen(
   val refreshing by viewModel.modelCatalogRefreshing.collectAsState()
   val errorText by viewModel.modelCatalogErrorText.collectAsState()
   val providerRows = providerRows(providers = providers, models = models)
-  val modelGroups = sortedModelGroups(models)
   val setupRows = providerSetupRows(providerRows)
-  var expandedModelProviders by rememberSaveable { mutableStateOf(emptyList<String>()) }
 
   LaunchedEffect(isConnected) {
     if (isConnected) {
@@ -105,7 +98,7 @@ internal fun ProvidersModelsScreen(
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
               Text(text = "Providers & Models", style = ClawTheme.type.display.copy(fontSize = 14.8.sp, lineHeight = 18.sp), color = ClawTheme.colors.text, maxLines = 1)
               Text(
-                text = "Connect and manage AI providers\nBrowse models and their capabilities.",
+                text = "Connect and manage AI providers\nReview provider readiness and setup.",
                 style = ClawTheme.type.caption.copy(fontSize = 12.5.sp, lineHeight = 16.sp),
                 color = ClawTheme.colors.textMuted,
               )
@@ -149,36 +142,6 @@ internal fun ProvidersModelsScreen(
             ClawPanel {
               Text(text = message, style = ClawTheme.type.body, color = ClawTheme.colors.textMuted)
             }
-          }
-        }
-
-        item {
-          ProviderSectionLabel(title = "Model catalog")
-        }
-
-        if (modelGroups.isEmpty()) {
-          item {
-            ModelCatalogEmpty(
-              title = if (refreshing) "Loading models" else "No models loaded",
-              body = if (isConnected) "Refresh after configuring a provider on the Gateway." else "Connect the Gateway to browse models.",
-            )
-          }
-        } else {
-          items(modelGroups, key = { it.first }) { entry ->
-            val expanded = expandedModelProviders.contains(entry.first)
-            ModelGroup(
-              provider = entry.first,
-              models = entry.second,
-              expanded = expanded,
-              onToggle = {
-                expandedModelProviders =
-                  if (expanded) {
-                    expandedModelProviders - entry.first
-                  } else {
-                    expandedModelProviders + entry.first
-                  }
-              },
-            )
           }
         }
       }
@@ -334,15 +297,6 @@ internal fun expiringModelProviderCount(providers: List<GatewayModelProviderSumm
     .size
 
 private fun String.normalizedProviderId(): String = trim().lowercase()
-
-/** Groups models by provider using the same display priority as provider rows. */
-private fun sortedModelGroups(models: List<GatewayModelSummary>): List<Pair<String, List<GatewayModelSummary>>> =
-  models
-    .groupBy { it.provider }
-    .entries
-    .sortedWith(compareBy({ providerPriority(it.key) }, { providerDisplayName(it.key).lowercase() }))
-    .map { it.key to it.value }
-
 private fun providerPriority(row: ProviderRow): Int = providerPriority(row.id)
 
 private fun providerPriority(provider: String): Int =
@@ -528,79 +482,6 @@ private fun providerInitials(value: String): String =
     .ifBlank { "AI" }
 
 @Composable
-private fun ModelCatalogEmpty(
-  title: String,
-  body: String,
-) {
-  ClawPanel(contentPadding = PaddingValues(horizontal = 11.dp, vertical = 10.dp)) {
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-      Text(text = title, style = ClawTheme.type.section, color = ClawTheme.colors.text)
-      Text(text = body, style = ClawTheme.type.caption.copy(fontSize = 12.5.sp, lineHeight = 16.sp), color = ClawTheme.colors.textMuted)
-    }
-  }
-}
-
-@Composable
-private fun ModelGroup(
-  provider: String,
-  models: List<GatewayModelSummary>,
-  expanded: Boolean,
-  onToggle: () -> Unit,
-) {
-  ClawPanel(contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)) {
-    Column {
-      Surface(onClick = onToggle, color = Color.Transparent, contentColor = ClawTheme.colors.text) {
-        Row(modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-          ProviderBadge(text = providerDisplayName(provider))
-          Text(text = providerDisplayName(provider), style = ClawTheme.type.body, color = ClawTheme.colors.text, modifier = Modifier.weight(1f), maxLines = 1)
-          ProviderMiniTag(text = "${models.size} models")
-          Icon(imageVector = if (expanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = if (expanded) "Collapse ${providerDisplayName(provider)} models" else "Expand ${providerDisplayName(provider)} models", modifier = Modifier.size(14.dp), tint = ClawTheme.colors.textMuted)
-        }
-      }
-      HorizontalDivider(color = ClawTheme.colors.border, thickness = 1.dp)
-      val visibleModels = if (expanded) models else models.take(3)
-      visibleModels.forEachIndexed { index, model ->
-        ModelRow(model)
-        if (index != visibleModels.lastIndex || models.size > visibleModels.size) {
-          HorizontalDivider(color = ClawTheme.colors.border, thickness = 1.dp)
-        }
-      }
-      if (models.size > visibleModels.size) {
-        Surface(onClick = onToggle, color = Color.Transparent, contentColor = ClawTheme.colors.text) {
-          Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "View all models", style = ClawTheme.type.caption.copy(fontSize = 12.5.sp, lineHeight = 16.sp), color = ClawTheme.colors.textMuted, modifier = Modifier.weight(1f))
-            Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "View all models", modifier = Modifier.size(14.dp), tint = ClawTheme.colors.text)
-          }
-        }
-      }
-    }
-  }
-}
-
-@Composable
-private fun ModelRow(model: GatewayModelSummary) {
-  val available = modelAvailabilityUsable(model)
-  Row(modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-    Text(text = model.name, style = ClawTheme.type.mono, color = ClawTheme.colors.text, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-    modelCapabilityLabels(model).take(3).forEach { label ->
-      ProviderMiniTag(text = label)
-    }
-    Box(modifier = Modifier.size(4.5.dp).clip(CircleShape).background(if (available) ClawTheme.colors.success else ClawTheme.colors.warning))
-  }
-}
-
-/** Derives compact capability chips for model catalog rows. */
-private fun modelCapabilityLabels(model: GatewayModelSummary): List<String> =
-  buildList {
-    if (model.supportsReasoning) add("Reasoning")
-    if (model.supportsVision) add("Vision")
-    if (model.supportsAudio) add("Voice")
-    if (model.supportsDocuments) add("Docs")
-    if ((model.contextTokens ?: 0L) >= 100_000L) add("Long context")
-    if (isEmpty()) add("Fast")
-  }
-
-@Composable
 private fun ProviderSectionLabel(title: String) {
   Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
     Text(text = title.uppercase(), style = ClawTheme.type.caption.copy(fontSize = 12.5.sp, lineHeight = 16.sp), color = ClawTheme.colors.textMuted)
@@ -649,17 +530,5 @@ private fun ProviderAddButton(
       Spacer(modifier = Modifier.width(7.dp))
       Text(text = "Open Gateway Setup", style = ClawTheme.type.label, maxLines = 1)
     }
-  }
-}
-
-@Composable
-private fun ProviderMiniTag(text: String) {
-  Surface(
-    shape = RoundedCornerShape(5.dp),
-    color = Color.Transparent,
-    border = BorderStroke(1.dp, ClawTheme.colors.border),
-    contentColor = ClawTheme.colors.textMuted,
-  ) {
-    Text(text = text, modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.5.dp), style = ClawTheme.type.caption.copy(fontSize = 12.5.sp, lineHeight = 16.sp), maxLines = 1)
   }
 }

@@ -345,14 +345,12 @@ private fun OverviewScreen(
   val sessions by viewModel.chatSessions.collectAsState()
   val pendingRunCount by viewModel.pendingRunCount.collectAsState()
   val statusText by viewModel.statusText.collectAsState()
-  val models by viewModel.modelCatalog.collectAsState()
   val providers by viewModel.modelAuthProviders.collectAsState()
   val pendingToolCalls by viewModel.chatPendingToolCalls.collectAsState()
   val cronStatus by viewModel.cronStatus.collectAsState()
   val nodesDevicesSummary by viewModel.nodesDevicesSummary.collectAsState()
   val channelsSummary by viewModel.channelsSummary.collectAsState()
-  val readyProviderCount = readyModelProviderCount(providers, models)
-  val expiringProviderCount = expiringModelProviderCount(providers)
+  val readyProviderCount = providers.count { modelProviderReady(it.status) }
   val attentionRows =
     homeAttentionRows(
       isConnected = isConnected,
@@ -360,7 +358,6 @@ private fun OverviewScreen(
       channelsSummary = channelsSummary,
       nodesDevicesSummary = nodesDevicesSummary,
       readyProviderCount = readyProviderCount,
-      expiringProviderCount = expiringProviderCount,
     )
 
   LaunchedEffect(isConnected) {
@@ -471,8 +468,6 @@ private fun OverviewScreen(
                     when {
                       !isConnected -> "Offline"
                       readyProviderCount > 0 -> "$readyProviderCount ready"
-                      expiringProviderCount > 0 -> "$expiringProviderCount expiring"
-                      models.isNotEmpty() -> "${models.size} models"
                       else -> "Setup"
                     },
                   icon = Icons.Outlined.Inventory2,
