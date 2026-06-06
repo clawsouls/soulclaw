@@ -83,6 +83,17 @@ describe("check-cli-startup-memory", () => {
     ).toBe(1000);
   });
 
+  it("rejects missing startup memory artifact paths", () => {
+    for (const args of [
+      ["--json"],
+      ["--json", "--summary"],
+      ["--summary"],
+      ["--summary", "--json"],
+    ]) {
+      expect(() => testing.parseArgs(args)).toThrow(/--(?:json|summary) requires a path/u);
+    }
+  });
+
   it("does not create a temp home before argument validation succeeds", () => {
     if (process.platform !== "darwin" && process.platform !== "linux") {
       return;
