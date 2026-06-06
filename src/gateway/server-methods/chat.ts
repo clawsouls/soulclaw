@@ -164,6 +164,7 @@ import {
 } from "./chat-webchat-media.js";
 import { loadOptionalServerMethodModelCatalog } from "./optional-model-catalog.js";
 import { hasTrackedActiveSessionRun } from "./session-active-runs.js";
+import { emitSessionsChanged } from "./session-change-event.js";
 import type {
   GatewayClient,
   GatewayRequestContext,
@@ -3626,6 +3627,11 @@ export const chatHandlers: GatewayRequestHandlers = {
             ctx,
             cfg,
             dispatcher,
+            onSessionMetadataChanges: (changes) => {
+              for (const change of changes) {
+                emitSessionsChanged(context, change);
+              }
+            },
             replyOptions: {
               runId: clientRunId,
               ...(isOperatorUiClient(clientInfo)
