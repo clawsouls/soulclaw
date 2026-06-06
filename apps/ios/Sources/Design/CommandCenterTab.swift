@@ -502,7 +502,7 @@ struct CommandCenterTab: View {
                 trailing: "session",
                 color: self.gatewayConnected ? OpenClawBrand.ok : .secondary,
                 progress: nil,
-                route: .chat(self.appModel.chatSessionKey)),
+                route: .chat(self.appModel.defaultChatSessionKey)),
             WorkItem(
                 id: "talk-mode",
                 icon: "waveform",

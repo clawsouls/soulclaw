@@ -6,6 +6,7 @@ struct ChatProTab: View {
     @Environment(NodeAppModel.self) private var appModel
     @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel: OpenClawChatViewModel?
+    @State private var programmaticSessionSwitchCounts: [String: Int] = [:]
 
     var body: some View {
         NavigationStack {
@@ -104,6 +105,14 @@ struct ChatProTab: View {
                 sessionKey: sessionKey,
                 transport: IOSGatewayChatTransport(gateway: self.appModel.operatorSession),
                 onSessionChanged: { sessionKey in
+                    if self.consumeProgrammaticSessionSwitch(sessionKey) {
+                        // Programmatic switches complete asynchronously; stale completions
+                        // must repair back to the current app-model session, not become focus.
+                        if sessionKey != self.appModel.chatSessionKey {
+                            self.syncChatViewModel()
+                        }
+                        return
+                    }
                     self.appModel.focusChatSession(sessionKey)
                 },
                 diagnosticsLog: { message in
@@ -112,7 +121,24 @@ struct ChatProTab: View {
             return
         }
         guard viewModel.sessionKey != sessionKey else { return }
+        self.recordProgrammaticSessionSwitch(sessionKey)
         viewModel.switchSession(to: sessionKey)
+    }
+
+    private func recordProgrammaticSessionSwitch(_ sessionKey: String) {
+        self.programmaticSessionSwitchCounts[sessionKey, default: 0] += 1
+    }
+
+    private func consumeProgrammaticSessionSwitch(_ sessionKey: String) -> Bool {
+        guard let count = self.programmaticSessionSwitchCounts[sessionKey] else {
+            return false
+        }
+        if count <= 1 {
+            self.programmaticSessionSwitchCounts[sessionKey] = nil
+        } else {
+            self.programmaticSessionSwitchCounts[sessionKey] = count - 1
+        }
+        return true
     }
 
     private var talkControl: OpenClawChatTalkControl {

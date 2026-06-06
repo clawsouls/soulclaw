@@ -214,6 +214,44 @@ private final class MockBootstrapNotificationCenter: NotificationCentering, @unc
         #expect(appModel.mainSessionKey == "agent:agent-123:main")
     }
 
+    @Test @MainActor func selectingAgentClearsExplicitChatFocus() {
+        let appModel = NodeAppModel()
+        appModel.gatewayDefaultAgentId = "main"
+        let rustSessionKey = SessionKey.makeAgentSessionKey(agentId: "rust-claw", baseKey: "main")
+
+        appModel.setSelectedAgentId("rust-claw")
+        #expect(appModel.chatSessionKey == rustSessionKey)
+        appModel.focusChatSession(rustSessionKey)
+
+        appModel.setSelectedAgentId("main")
+        #expect(appModel.defaultChatSessionKey == "main")
+        #expect(appModel.mainSessionKey == "main")
+        #expect(appModel.chatSessionKey == "main")
+    }
+
+    @Test @MainActor func sameSelectedAgentKeepsExplicitChatFocus() {
+        let appModel = NodeAppModel()
+        appModel.gatewayDefaultAgentId = "main"
+        appModel.setSelectedAgentId("main")
+        appModel.openChat(sessionKey: "incident-42")
+
+        appModel.setSelectedAgentId("main")
+        #expect(appModel.defaultChatSessionKey == "main")
+        #expect(appModel.chatSessionKey == "incident-42")
+    }
+
+    @Test @MainActor func defaultChatSessionKeyIgnoresExplicitChatFocus() {
+        let appModel = NodeAppModel()
+        appModel.gatewayDefaultAgentId = "main"
+        appModel.setSelectedAgentId("rust-claw")
+        appModel.openChat(sessionKey: "incident-42")
+
+        #expect(appModel.defaultChatSessionKey == SessionKey.makeAgentSessionKey(
+            agentId: "rust-claw",
+            baseKey: "main"))
+        #expect(appModel.chatSessionKey == "incident-42")
+    }
+
     @Test @MainActor func execApprovalPromptPresentationTracksLatestNotificationTap() throws {
         let appModel = NodeAppModel()
         try appModel._test_presentExecApprovalPrompt(

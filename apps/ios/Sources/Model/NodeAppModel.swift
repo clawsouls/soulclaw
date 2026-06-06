@@ -762,6 +762,7 @@ final class NodeAppModel {
                 let selected = (self.selectedAgentId ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                 if !selected.isEmpty, !decoded.agents.contains(where: { $0.id == selected }) {
                     self.selectedAgentId = nil
+                    self.focusedChatSessionKey = nil
                 }
                 self.talkMode.updateMainSessionKey(self.mainSessionKey)
                 self.homeCanvasRevision &+= 1
@@ -779,12 +780,18 @@ final class NodeAppModel {
 
     func setSelectedAgentId(_ agentId: String?) {
         let trimmed = (agentId ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let nextSelectedAgentId = trimmed.isEmpty ? nil : trimmed
+        let currentSelectedAgentId = self.selectedAgentId?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let selectedAgentChanged = currentSelectedAgentId != nextSelectedAgentId
         let stableID = (self.connectedGatewayID ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         if stableID.isEmpty {
-            self.selectedAgentId = trimmed.isEmpty ? nil : trimmed
+            self.selectedAgentId = nextSelectedAgentId
         } else {
-            self.selectedAgentId = trimmed.isEmpty ? nil : trimmed
+            self.selectedAgentId = nextSelectedAgentId
             GatewaySettingsStore.saveGatewaySelectedAgentId(stableID: stableID, agentId: self.selectedAgentId)
+        }
+        if selectedAgentChanged {
+            self.focusedChatSessionKey = nil
         }
         self.talkMode.updateMainSessionKey(self.mainSessionKey)
         self.homeCanvasRevision &+= 1
@@ -1837,9 +1844,13 @@ extension NodeAppModel {
         {
             return focused
         }
+        return self.defaultChatSessionKey
+    }
+
+    var defaultChatSessionKey: String {
         // Keep chat aligned with the gateway's resolved main session key.
         // A hardcoded "ios" base creates synthetic placeholder sessions in the chat UI.
-        return self.mainSessionKey
+        self.mainSessionKey
     }
 
     func openChat(sessionKey: String?) {
@@ -2005,6 +2016,7 @@ extension NodeAppModel {
         self.gatewayDefaultAgentId = nil
         self.gatewayAgents = []
         self.selectedAgentId = GatewaySettingsStore.loadGatewaySelectedAgentId(stableID: stableID)
+        self.focusedChatSessionKey = nil
         self.homeCanvasRevision &+= 1
         self.apnsLastRegisteredTokenHex = nil
     }
