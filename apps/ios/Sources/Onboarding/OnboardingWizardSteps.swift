@@ -7,9 +7,7 @@ struct OnboardingIntroStep: View {
         VStack(spacing: 0) {
             Spacer()
 
-            Image(systemName: UIDevice.current.userInterfaceIdiom == .pad ? "ipad" : "iphone.gen3")
-                .font(.system(size: 60, weight: .semibold))
-                .foregroundStyle(.tint)
+            OpenClawProMark(size: 64, shadowRadius: 14)
                 .padding(.bottom, 18)
 
             Text("Welcome to OpenClaw")
