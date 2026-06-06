@@ -1669,6 +1669,10 @@ grep -qx -- "OPENCLAW_E2E_COMMAND_TIMEOUT=23s" "$TMPDIR/package-args"
       'openclaw_e2e_maybe_timeout "$COMMAND_TIMEOUT" openclaw gateway status',
     );
     expect(publishedRunner).toContain('openclaw gateway --port "$port" --bind loopback');
+    expect(publishedRunner).toContain("start_gateway legacy-ready-log-ok");
+    expect(publishedRunner).toContain(
+      'openclaw_e2e_wait_gateway_ready "$gateway_pid" "$GATEWAY_LOG" 360 "$port" "${1:-strict}"',
+    );
 
     expect(updateRestartAuth).toContain(
       'command_timeout="${OPENCLAW_UPGRADE_SURVIVOR_COMMAND_TIMEOUT:-900s}"',
@@ -1677,6 +1681,9 @@ grep -qx -- "OPENCLAW_E2E_COMMAND_TIMEOUT=23s" "$TMPDIR/package-args"
       'openclaw_e2e_maybe_timeout "$command_timeout" env -u OPENCLAW_GATEWAY_TOKEN',
     );
     expect(updateRestartAuth).toContain('openclaw gateway --port "$port" --bind loopback');
+    expect(updateRestartAuth).toContain(
+      'openclaw_e2e_wait_gateway_ready "$gateway_pid" "$log_file" 360 "$port"',
+    );
   });
 
   it("keeps the harness run wrapper available with pre-sourced Docker command helpers", () => {
@@ -2307,7 +2314,9 @@ output="$(run_logged_print_heartbeat plugins-run 08 bash -c 'printf "captured co
       'gateway_pid="$(openclaw_e2e_start_gateway "$entry" "$PORT" "$GATEWAY_LOG")"',
     );
     expect(scenario).toContain('openclaw_e2e_wait_mock_openai "$MOCK_PORT"');
-    expect(scenario).toContain('openclaw_e2e_wait_gateway_ready "$gateway_pid" "$GATEWAY_LOG" 360');
+    expect(scenario).toContain(
+      'openclaw_e2e_wait_gateway_ready "$gateway_pid" "$GATEWAY_LOG" 360 "$PORT"',
+    );
     expect(scenario).not.toContain("fetch('http://127.0.0.1:${MOCK_PORT}/health')");
     expect(scenario).not.toContain('kill "$gateway_pid"');
     expect(scenario).not.toContain('kill "$mock_pid"');
