@@ -49,7 +49,6 @@ struct CommandCenterTab: View {
                         self.pendingApprovals
                         self.recentSessions
                         self.liveActivity
-                        self.startWorkAction
                     }
                     .padding(.top, 16)
                     .padding(.bottom, 18)
@@ -327,28 +326,6 @@ struct CommandCenterTab: View {
                     .padding(.horizontal, 14)
                     .padding(.bottom, 10)
             }
-        }
-        .padding(.horizontal, OpenClawProMetric.pagePadding)
-    }
-
-    private var startWorkAction: some View {
-        CommandPanel(tint: OpenClawBrand.accent, isProminent: true, padding: 9) {
-            Button(action: self.openChat) {
-                Label("Start work", systemImage: "play.fill")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background {
-                        RoundedRectangle(cornerRadius: 13, style: .continuous)
-                            .fill(LinearGradient(
-                                colors: [OpenClawBrand.accentHot, OpenClawBrand.accent],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing))
-                            .shadow(color: OpenClawBrand.accentHot.opacity(0.34), radius: 18, y: 8)
-                    }
-            }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, OpenClawProMetric.pagePadding)
     }
