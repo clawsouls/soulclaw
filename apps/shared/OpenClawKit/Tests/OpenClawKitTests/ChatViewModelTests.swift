@@ -97,6 +97,7 @@ private func makeViewModel(
     historyResponses: [OpenClawChatHistoryPayload],
     sessionsResponses: [OpenClawChatSessionsListResponse] = [],
     modelResponses: [[OpenClawChatModelChoice]] = [],
+    setActiveSessionHook: (@Sendable (String) async throws -> Void)? = nil,
     createSessionHook: (@Sendable (String, String?) async throws -> Void)? = nil,
     resetSessionHook: (@Sendable (String) async throws -> Void)? = nil,
     compactSessionHook: (@Sendable (String) async throws -> Void)? = nil,
@@ -105,6 +106,7 @@ private func makeViewModel(
     waitForRunCompletionHook: (@Sendable (String, Int) async -> Bool)? = nil,
     healthResponses: [Bool] = [true],
     initialThinkingLevel: String? = nil,
+    onSessionChanged: (@MainActor (String) -> Void)? = nil,
     onThinkingLevelChanged: (@MainActor @Sendable (String) -> Void)? = nil) async
     -> (TestChatTransport, OpenClawChatViewModel)
 {
@@ -112,6 +114,7 @@ private func makeViewModel(
         historyResponses: historyResponses,
         sessionsResponses: sessionsResponses,
         modelResponses: modelResponses,
+        setActiveSessionHook: setActiveSessionHook,
         createSessionHook: createSessionHook,
         resetSessionHook: resetSessionHook,
         compactSessionHook: compactSessionHook,
@@ -124,6 +127,7 @@ private func makeViewModel(
             sessionKey: sessionKey,
             transport: transport,
             initialThinkingLevel: initialThinkingLevel,
+            onSessionChanged: onSessionChanged,
             onThinkingLevelChanged: onThinkingLevelChanged)
     }
     return (transport, vm)
@@ -276,11 +280,30 @@ private actor AsyncCounter {
     }
 }
 
+private actor SessionSubscribeGate {
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        await withCheckedContinuation { continuation in
+            self.waiters.append(continuation)
+        }
+    }
+
+    func release() {
+        let waiters = self.waiters
+        self.waiters = []
+        for waiter in waiters {
+            waiter.resume()
+        }
+    }
+}
+
 private actor TestChatTransportState {
     var historyCallCount: Int = 0
     var sessionsCallCount: Int = 0
     var modelsCallCount: Int = 0
     var healthCallCount: Int = 0
+    var activeSessionKeys: [String] = []
     var createdSessionKeys: [String] = []
     var createdParentSessionKeys: [String?] = []
     var resetSessionKeys: [String] = []
@@ -299,6 +322,7 @@ private final class TestChatTransport: @unchecked Sendable, OpenClawChatTranspor
     private let historyResponses: [OpenClawChatHistoryPayload]
     private let sessionsResponses: [OpenClawChatSessionsListResponse]
     private let modelResponses: [[OpenClawChatModelChoice]]
+    private let setActiveSessionHook: (@Sendable (String) async throws -> Void)?
     private let createSessionHook: (@Sendable (String, String?) async throws -> Void)?
     private let resetSessionHook: (@Sendable (String) async throws -> Void)?
     private let compactSessionHook: (@Sendable (String) async throws -> Void)?
@@ -314,6 +338,7 @@ private final class TestChatTransport: @unchecked Sendable, OpenClawChatTranspor
         historyResponses: [OpenClawChatHistoryPayload],
         sessionsResponses: [OpenClawChatSessionsListResponse] = [],
         modelResponses: [[OpenClawChatModelChoice]] = [],
+        setActiveSessionHook: (@Sendable (String) async throws -> Void)? = nil,
         createSessionHook: (@Sendable (String, String?) async throws -> Void)? = nil,
         resetSessionHook: (@Sendable (String) async throws -> Void)? = nil,
         compactSessionHook: (@Sendable (String) async throws -> Void)? = nil,
@@ -325,6 +350,7 @@ private final class TestChatTransport: @unchecked Sendable, OpenClawChatTranspor
         self.historyResponses = historyResponses
         self.sessionsResponses = sessionsResponses
         self.modelResponses = modelResponses
+        self.setActiveSessionHook = setActiveSessionHook
         self.createSessionHook = createSessionHook
         self.resetSessionHook = resetSessionHook
         self.compactSessionHook = compactSessionHook
@@ -343,7 +369,12 @@ private final class TestChatTransport: @unchecked Sendable, OpenClawChatTranspor
         self.stream
     }
 
-    func setActiveSessionKey(_: String) async throws {}
+    func setActiveSessionKey(_ sessionKey: String) async throws {
+        await self.state.activeSessionKeysAppend(sessionKey)
+        if let setActiveSessionHook {
+            try await setActiveSessionHook(sessionKey)
+        }
+    }
 
     func createSession(
         key: String,
@@ -483,6 +514,10 @@ private final class TestChatTransport: @unchecked Sendable, OpenClawChatTranspor
         await self.state.patchedModels
     }
 
+    func activeSessionKeys() async -> [String] {
+        await self.state.activeSessionKeys
+    }
+
     func patchedThinkingLevels() async -> [String] {
         await self.state.patchedThinkingLevels
     }
@@ -523,6 +558,10 @@ extension TestChatTransportState {
 
     fileprivate func setHealthCallCount(_ v: Int) {
         self.healthCallCount = v
+    }
+
+    fileprivate func activeSessionKeysAppend(_ v: String) {
+        self.activeSessionKeys.append(v)
     }
 
     fileprivate func sentRunIdsAppend(_ v: String) {
@@ -2160,6 +2199,133 @@ extension TestChatTransportState {
         }
 
         #expect(await transport.patchedModels() == ["openai/gpt-5.4", "openai/gpt-5.4-pro"])
+    }
+
+    @Test @MainActor func switchSessionNotifiesSessionChangedCallback() async throws {
+        var changedSessionKeys: [String] = []
+        let (_, vm) = await makeViewModel(
+            historyResponses: [
+                historyPayload(sessionKey: "main", sessionId: "sess-main"),
+                historyPayload(sessionKey: "other", sessionId: "sess-other"),
+            ],
+            onSessionChanged: { changedSessionKeys.append($0) })
+
+        try await loadAndWaitBootstrap(vm: vm, sessionId: "sess-main")
+
+        vm.switchSession(to: "other")
+
+        try await waitUntil("user switch bootstrapped target session") {
+            await MainActor.run { vm.sessionKey == "other" && vm.sessionId == "sess-other" }
+        }
+        #expect(changedSessionKeys == ["other"])
+    }
+
+    @Test @MainActor func syncSessionDoesNotNotifySessionChangedCallback() async throws {
+        var changedSessionKeys: [String] = []
+        let (_, vm) = await makeViewModel(
+            historyResponses: [
+                historyPayload(sessionKey: "main", sessionId: "sess-main"),
+                historyPayload(sessionKey: "other", sessionId: "sess-other"),
+            ],
+            onSessionChanged: { changedSessionKeys.append($0) })
+
+        try await loadAndWaitBootstrap(vm: vm, sessionId: "sess-main")
+
+        vm.syncSession(to: "other")
+
+        try await waitUntil("external sync bootstrapped target session") {
+            await MainActor.run { vm.sessionKey == "other" && vm.sessionId == "sess-other" }
+        }
+        #expect(changedSessionKeys.isEmpty)
+    }
+
+    @Test @MainActor func staleSyncBootstrapRestoresCurrentActiveSessionSubscription() async throws {
+        let staleSubscribeGate = SessionSubscribeGate()
+        let (transport, vm) = await makeViewModel(
+            historyResponses: [
+                historyPayload(sessionKey: "main", sessionId: "sess-main"),
+                historyPayload(sessionKey: "main", sessionId: "sess-main"),
+                historyPayload(sessionKey: "other", sessionId: "sess-other"),
+            ],
+            setActiveSessionHook: { sessionKey in
+                if sessionKey == "other" {
+                    await staleSubscribeGate.wait()
+                }
+            })
+
+        try await loadAndWaitBootstrap(vm: vm, sessionId: "sess-main")
+
+        vm.syncSession(to: "other")
+        try await waitUntil("stale subscribe is in flight") {
+            await transport.activeSessionKeys().last == "other"
+        }
+
+        vm.syncSession(to: "main")
+        try await waitUntil("current session subscribed") {
+            let sessionKey = await MainActor.run { vm.sessionKey }
+            let activeSessionKeys = await transport.activeSessionKeys()
+            return sessionKey == "main" &&
+                Array(activeSessionKeys.suffix(2)) == ["other", "main"]
+        }
+
+        await staleSubscribeGate.release()
+
+        try await waitUntil("current session resubscribed after stale subscribe") {
+            Array(await transport.activeSessionKeys().suffix(3)) == ["other", "main", "main"]
+        }
+    }
+
+    @Test @MainActor func staleSyncRepairReassertsLatestActiveSessionSubscription() async throws {
+        let staleSubscribeGate = SessionSubscribeGate()
+        let staleRepairGate = SessionSubscribeGate()
+        let mainSubscribeCount = AsyncCounter()
+        let (transport, vm) = await makeViewModel(
+            historyResponses: [
+                historyPayload(sessionKey: "main", sessionId: "sess-main"),
+                historyPayload(sessionKey: "main", sessionId: "sess-main"),
+                historyPayload(sessionKey: "final", sessionId: "sess-final"),
+            ],
+            setActiveSessionHook: { sessionKey in
+                if sessionKey == "other" {
+                    await staleSubscribeGate.wait()
+                }
+                if sessionKey == "main" {
+                    let count = await mainSubscribeCount.increment()
+                    if count == 3 {
+                        await staleRepairGate.wait()
+                    }
+                }
+            })
+
+        try await loadAndWaitBootstrap(vm: vm, sessionId: "sess-main")
+
+        vm.syncSession(to: "other")
+        try await waitUntil("stale subscribe is in flight") {
+            await transport.activeSessionKeys().last == "other"
+        }
+
+        vm.syncSession(to: "main")
+        try await waitUntil("main session subscribed") {
+            Array(await transport.activeSessionKeys().suffix(2)) == ["other", "main"]
+        }
+
+        await staleSubscribeGate.release()
+        try await waitUntil("stale repair is in flight") {
+            Array(await transport.activeSessionKeys().suffix(3)) == ["other", "main", "main"]
+        }
+
+        vm.syncSession(to: "final")
+        try await waitUntil("newest session subscribed") {
+            let sessionKey = await MainActor.run { vm.sessionKey }
+            let activeSessionKeys = await transport.activeSessionKeys()
+            return sessionKey == "final" && activeSessionKeys.last == "final"
+        }
+
+        await staleRepairGate.release()
+
+        try await waitUntil("newest session resubscribed after stale repair") {
+            Array(await transport.activeSessionKeys().suffix(3)) == ["main", "final", "final"]
+        }
     }
 
     @Test func switchingSessionsIgnoresLateModelPatchCompletionFromPreviousSession() async throws {

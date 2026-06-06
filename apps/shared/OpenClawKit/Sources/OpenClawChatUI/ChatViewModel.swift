@@ -72,6 +72,11 @@ public final class OpenClawChatViewModel {
     private var lastCompactAt: Date?
     private let compactCooldown: TimeInterval = 60
 
+    private enum SessionSwitchIntent {
+        case userInitiated
+        case externalSync
+    }
+
     private var pendingToolCallsById: [String: OpenClawChatPendingToolCall] = [:] {
         didSet {
             self.pendingToolCalls = self.pendingToolCallsById.values
@@ -151,7 +156,11 @@ public final class OpenClawChatViewModel {
     }
 
     public func switchSession(to sessionKey: String) {
-        Task { await self.performSwitchSession(to: sessionKey) }
+        self.applySessionSwitch(to: sessionKey, intent: .userInitiated)
+    }
+
+    public func syncSession(to sessionKey: String) {
+        self.applySessionSwitch(to: sessionKey, intent: .externalSync)
     }
 
     public func selectThinkingLevel(_ level: String) {
@@ -261,7 +270,9 @@ public final class OpenClawChatViewModel {
         self.diagnosticsLog?(message)
     }
 
-    private func bootstrap() async {
+    private func bootstrap(sessionKey requestedSessionKey: String? = nil) async {
+        let sessionKey = requestedSessionKey ?? self.sessionKey
+        guard sessionKey == self.sessionKey else { return }
         self.isLoading = true
         self.errorText = nil
         self.healthOK = false
@@ -269,15 +280,24 @@ public final class OpenClawChatViewModel {
         self.pendingToolCallsById = [:]
         self.streamingAssistantText = nil
         self.sessionId = nil
-        defer { self.isLoading = false }
+        defer {
+            if self.sessionKey == sessionKey {
+                self.isLoading = false
+            }
+        }
         do {
             do {
-                try await self.transport.setActiveSessionKey(self.sessionKey)
+                try await self.transport.setActiveSessionKey(sessionKey)
             } catch {
                 // Best-effort only; history/send/health still work without push events.
             }
+            guard self.sessionKey == sessionKey else {
+                await self.restoreActiveSessionAfterStaleBootstrap(staleSessionKey: sessionKey)
+                return
+            }
 
-            let payload = try await self.transport.requestHistory(sessionKey: self.sessionKey)
+            let payload = try await self.transport.requestHistory(sessionKey: sessionKey)
+            guard self.sessionKey == sessionKey else { return }
             self.messages = Self.reconcileMessageIDs(
                 previous: self.messages,
                 incoming: Self.decodeMessages(payload.messages ?? []))
@@ -290,12 +310,34 @@ public final class OpenClawChatViewModel {
             }
             self.syncThinkingLevelOptions()
             await self.pollHealthIfNeeded(force: true)
+            guard self.sessionKey == sessionKey else { return }
             await self.fetchSessions(limit: 50)
+            guard self.sessionKey == sessionKey else { return }
             await self.fetchModels()
+            guard self.sessionKey == sessionKey else { return }
             self.errorText = nil
         } catch {
+            guard self.sessionKey == sessionKey else { return }
             self.errorText = error.localizedDescription
             chatUILogger.error("bootstrap failed \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func restoreActiveSessionAfterStaleBootstrap(staleSessionKey: String) async {
+        var lastSubscribedSessionKey = staleSessionKey
+        while true {
+            let currentSessionKey = self.sessionKey
+            guard currentSessionKey != lastSubscribedSessionKey else { return }
+            do {
+                // A stale bootstrap may complete its subscribe side effect after the winning switch.
+                // Reassert and recheck so push events stay aligned with the visible session.
+                try await self.transport.setActiveSessionKey(currentSessionKey)
+            } catch {
+                // Best-effort only; the current bootstrap still owns history/send/health.
+                return
+            }
+            guard self.sessionKey != currentSessionKey else { return }
+            lastSubscribedSessionKey = currentSessionKey
         }
     }
 
@@ -757,14 +799,16 @@ public final class OpenClawChatViewModel {
         }
     }
 
-    private func performSwitchSession(to sessionKey: String) async {
+    private func applySessionSwitch(to sessionKey: String, intent: SessionSwitchIntent) {
         let next = sessionKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !next.isEmpty else { return }
         guard next != self.sessionKey else { return }
         self.sessionKey = next
-        self.onSessionChanged?(next)
+        if intent == .userInitiated {
+            self.onSessionChanged?(next)
+        }
         self.modelSelectionID = Self.defaultModelSelectionID
-        await self.bootstrap()
+        Task { await self.bootstrap(sessionKey: next) }
     }
 
     private func performStartNewSession() async {
