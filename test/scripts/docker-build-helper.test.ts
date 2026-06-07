@@ -2044,6 +2044,35 @@ output="$(cat "$sampler_log")"
     }
   });
 
+  it("keeps Open WebUI Docker E2E resource-guarded", () => {
+    const runner = readFileSync(OPENWEBUI_DOCKER_E2E_PATH, "utf8");
+
+    expect(runner).toContain("OPENCLAW_OPENWEBUI_MAX_MEMORY_MIB");
+    expect(runner).toContain("OPENCLAW_OPENWEBUI_MAX_CPU_PERCENT");
+    expect(runner).toContain('STATS_LOG="$(mktemp');
+    expect(runner).toContain('PROBE_LOG="$(mktemp');
+    expect(runner).toContain('STATS_STOP_FILE="$(mktemp');
+    expect(runner).toContain("sample_openwebui_stats_once()");
+    expect(runner).toContain("start_openwebui_stats_sampler()");
+    expect(runner).toContain("start_openwebui_stats_sampler\n");
+    expect(runner).toContain('for container_name in "$GW_NAME" "$OW_NAME"; do');
+    expect(runner).toContain('"$GW_NAME" \\');
+    expect(runner).toContain('"$OW_NAME" \\');
+    expect(runner).toContain('"$container_name" >>"$STATS_LOG"');
+    expect(runner).toContain("assert_openwebui_stats()");
+    expect(runner).toContain(
+      'node scripts/e2e/lib/docker-stats/assert-resource-ceiling.mjs "$STATS_LOG" "$MAX_MEMORY_MIB" "$MAX_CPU_PERCENT" openwebui',
+    );
+    expect(runner).toMatch(
+      /cleanup\(\) \{[\s\S]*rm -f "\$STATS_STOP_FILE"[\s\S]*wait "\$stats_pid"/u,
+    );
+    expect(runner).toMatch(/cleanup\(\) \{[\s\S]*rm -f "\$STATS_LOG" "\$PROBE_LOG"/u);
+    expect(runner).toContain('node /app/scripts/e2e/openwebui-probe.mjs >"$PROBE_LOG" 2>&1 &');
+    expect(runner).toMatch(
+      /sample_openwebui_stats_once\nstop_openwebui_stats_samplers\nassert_openwebui_stats\necho "OK"/u,
+    );
+  });
+
   it("forwards every kitchen-sink RPC runtime env knob into Docker", () => {
     const runner = readFileSync(KITCHEN_SINK_RPC_DOCKER_E2E_PATH, "utf8");
     const walk = readFileSync("scripts/e2e/kitchen-sink-rpc-walk.mjs", "utf8");
