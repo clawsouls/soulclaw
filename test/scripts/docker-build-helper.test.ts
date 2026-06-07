@@ -58,6 +58,7 @@ const BUNDLED_PLUGIN_INSTALL_UNINSTALL_PROBE_PATH =
 const BUNDLED_PLUGIN_INSTALL_UNINSTALL_RUNTIME_SMOKE_PATH =
   "scripts/e2e/lib/bundled-plugin-install-uninstall/runtime-smoke.mjs";
 const CLEANUP_SMOKE_DOCKERFILE_PATH = "scripts/docker/cleanup-smoke/Dockerfile";
+const CLEANUP_SMOKE_RUN_PATH = "scripts/docker/cleanup-smoke/run.sh";
 const PLUGINS_DOCKER_E2E_PATH = "scripts/e2e/plugins-docker.sh";
 const PLUGINS_DOCKER_SWEEP_PATH = "scripts/e2e/lib/plugins/sweep.sh";
 const PLUGINS_DOCKER_MARKETPLACE_PATH = "scripts/e2e/lib/plugins/marketplace.sh";
@@ -190,6 +191,14 @@ describe("docker build helper", () => {
     );
     expect(installE2eSmoke).toContain("docker_e2e_docker_run_cmd run --rm \\");
     expect(installE2eSmoke).not.toContain("docker run --rm \\");
+  });
+
+  it("bounds cleanup-smoke failure log output", () => {
+    const cleanupRun = readFileSync(CLEANUP_SMOKE_RUN_PATH, "utf8");
+
+    expect(cleanupRun).toContain("OPENCLAW_CLEANUP_SMOKE_LOG_PRINT_BYTES");
+    expect(cleanupRun.match(/print_log_tail \/tmp\/openclaw-cleanup-/g)).toHaveLength(3);
+    expect(cleanupRun).not.toContain("cat /tmp/openclaw-cleanup-");
   });
 
   it("prints Docker MCP client logs through the bounded helper", () => {
