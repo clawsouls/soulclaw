@@ -2922,7 +2922,9 @@ output="$(cat "$sampler_log")"
     expect(scenario).toContain('MOCK_LOG="$scenario_tmp/mock.log"');
     expect(scenario).toContain('CLIENT_SUCCESS_LOG="$scenario_tmp/client-success.log"');
     expect(scenario).toContain('CLIENT_REJECT_LOG="$scenario_tmp/client-reject.log"');
+    expect(scenario).toContain('openclaw_e2e_print_log "$file"');
     expect(scenario).toContain('rm -rf "$scenario_tmp"');
+    expect(scenario).not.toContain("sed -n '1,260p'");
     expect(scenario).not.toContain("/tmp/openclaw-openai-web-search-minimal-requests.jsonl");
     expect(scenario).not.toContain("/tmp/openclaw-openai-web-search-minimal-client-success.log");
     expect(scenario).not.toContain("/tmp/openclaw-openai-web-search-minimal-client-reject.log");
