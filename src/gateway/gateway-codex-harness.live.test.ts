@@ -25,9 +25,9 @@ import {
 import {
   EXPECTED_CODEX_MODELS_COMMAND_TEXT,
   EXPECTED_CODEX_STATUS_COMMAND_TEXT,
-  isExpectedCodexModelsCommandText,
   isExpectedCodexStatusCommandText,
   isRetryableCodexHarnessLiveError,
+  isStrictExpectedCodexModelsCommandText,
 } from "./gateway-codex-harness.live-helpers.js";
 import {
   assertCronJobMatches,
@@ -354,6 +354,7 @@ async function requestCodexCommandText(params: {
   events: EventFrame[];
   expectedText: string | string[];
   isExpectedText?: (text: string) => boolean;
+  predicateOnly?: boolean;
   sessionKey: string;
 }): Promise<string> {
   const runId = `idem-${randomUUID()}-codex-command`;
@@ -381,8 +382,9 @@ async function requestCodexCommandText(params: {
     : [params.expectedText];
   const matchedByText = expectedTexts.some((expectedText) => text.includes(expectedText));
   const matchedByPredicate = params.isExpectedText?.(text) ?? false;
+  const matched = params.predicateOnly ? matchedByPredicate : matchedByText || matchedByPredicate;
   expect(
-    matchedByText || matchedByPredicate,
+    matched,
     `Expected "${params.command}" response to contain one of: ${expectedTexts.join(", ")}\nReceived:\n${text}`,
   ).toBe(true);
   return text;
@@ -1102,7 +1104,8 @@ describeLive("gateway live (Codex harness)", () => {
               sessionKey,
               command: "/codex models",
               expectedText: [...EXPECTED_CODEX_MODELS_COMMAND_TEXT],
-              isExpectedText: isExpectedCodexModelsCommandText,
+              isExpectedText: isStrictExpectedCodexModelsCommandText,
+              predicateOnly: true,
             });
             logCodexLiveStep("codex-models-command", { modelsText });
 
