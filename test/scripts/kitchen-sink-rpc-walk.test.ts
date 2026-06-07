@@ -462,6 +462,21 @@ describe("kitchen-sink RPC command output capture", () => {
     expect(second).toEqual({ text: "fghij", truncatedChars: 5 });
   });
 
+  it("honors the resolved command output capture limit", async () => {
+    const result = await runCommand(
+      process.execPath,
+      ["-e", "process.stdout.write('abcdef'); process.stderr.write('UVWXYZ');"],
+      {
+        outputCaptureChars: 3,
+      },
+    );
+
+    expect(result.stdout).toBe("def");
+    expect(result.stderr).toBe("XYZ");
+    expect(result.stdoutTruncatedChars).toBe(3);
+    expect(result.stderrTruncatedChars).toBe(3);
+  });
+
   posixIt("kills timed command process groups", async () => {
     const root = mkdtempSync(path.join(tmpdir(), "openclaw-kitchen-rpc-timeout-"));
     const scriptPath = path.join(root, "trap-term.mjs");

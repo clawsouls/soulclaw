@@ -245,6 +245,7 @@ export function runCommand(command, args, options = {}) {
       resourceSampleIntervalMs = 1000,
       resourceSampleOptions,
       resourceSamples,
+      outputCaptureChars = config.outputCaptureChars,
       requireResourceSample = false,
       sampleProcessImpl = sampleProcess,
       timeoutKillGraceMs = 2000,
@@ -318,10 +319,10 @@ export function runCommand(command, args, options = {}) {
       forceKillTimer.unref();
     }, timeoutMs);
     child.stdout?.on("data", (chunk) => {
-      stdout = appendBoundedOutput(stdout, chunk);
+      stdout = appendBoundedOutput(stdout, chunk, outputCaptureChars);
     });
     child.stderr?.on("data", (chunk) => {
-      stderr = appendBoundedOutput(stderr, chunk);
+      stderr = appendBoundedOutput(stderr, chunk, outputCaptureChars);
     });
     child.on("error", (error) => {
       clearTimeout(timer);
@@ -395,6 +396,7 @@ async function runOpenClaw(runner, args, env, options = {}) {
     resourceSampleIntervalMs: options.resourceSampleIntervalMs,
     resourceSampleOptions: options.resourceSampleOptions,
     resourceSamples: options.resourceSamples,
+    outputCaptureChars: config.outputCaptureChars,
     requireResourceSample: options.requireResourceSample,
     timeoutMs: options.timeoutMs ?? config.commandTimeoutMs,
   });
