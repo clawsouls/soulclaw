@@ -14,6 +14,10 @@ const LOG_SCAN_MAX_FILES = 5000;
 const LOG_SCAN_MAX_FINDINGS = 100;
 const LOG_SCAN_MAX_LINE_CHARS = 16 * 1024;
 const LOG_SCAN_SEGMENT_OVERLAP_CHARS = 256;
+const EXPECT_FAILURE_OUTPUT_MAX_BYTES = readPositiveIntEnv(
+  "KITCHEN_SINK_EXPECT_FAILURE_OUTPUT_MAX_BYTES",
+  1024 * 1024,
+);
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
 const scratchFile = (name) => path.join(scratchRoot, name);
@@ -45,9 +49,21 @@ function resolveHomePath(value) {
   return value;
 }
 
+function readTextFileBounded(file, maxBytes, label) {
+  const stats = fs.statSync(file);
+  if (stats.size > maxBytes) {
+    throw new Error(`${label} exceeded ${maxBytes} bytes: ${file} (${stats.size} bytes)`);
+  }
+  return fs.readFileSync(file, "utf8");
+}
+
 function expectFailure() {
   const outputFile = process.argv[3];
-  const output = fs.readFileSync(outputFile, "utf8");
+  const output = readTextFileBounded(
+    outputFile,
+    EXPECT_FAILURE_OUTPUT_MAX_BYTES,
+    "expected failure output",
+  );
   const source = process.env.KITCHEN_SINK_SOURCE;
   const spec = process.env.KITCHEN_SINK_SPEC;
   const displayedSpec = source === "npm" ? spec.replace(/^npm:/u, "") : spec;

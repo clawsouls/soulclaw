@@ -222,6 +222,33 @@ function runSweepShell(script: string, env: NodeJS.ProcessEnv = {}) {
 }
 
 describe("kitchen-sink plugin assertions", () => {
+  it("bounds expected-failure output before matching failure diagnostics", () => {
+    const scratchRoot = mkdtempSync(path.join(tmpdir(), "openclaw-kitchen-sink-failure-cap-"));
+    const outputPath = path.join(scratchRoot, "expected-failure.log");
+    try {
+      writeFileSync(outputPath, "x".repeat(128));
+
+      const result = spawnSync(
+        process.execPath,
+        [ASSERTIONS_SCRIPT, "expect-failure", outputPath],
+        {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            KITCHEN_SINK_EXPECT_FAILURE_OUTPUT_MAX_BYTES: "64",
+            KITCHEN_SINK_SOURCE: "npm",
+            KITCHEN_SINK_SPEC: "npm:@openclaw/kitchen-sink@0.0.0",
+          },
+        },
+      );
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("expected failure output exceeded 64 bytes");
+    } finally {
+      rmSync(scratchRoot, { force: true, recursive: true });
+    }
+  });
+
   it("fails full-surface installs when stable diagnostic canaries disappear", () => {
     const result = runAssertInstalled();
 
