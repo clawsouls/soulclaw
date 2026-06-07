@@ -190,6 +190,38 @@ describe("gateway cli backend live helpers", () => {
     });
   });
 
+  it("retries Codex CLI timeout payloads only before the final attempt", async () => {
+    const { isCliBackendLiveTimeoutPayload, shouldRetryCliBackendLiveTimeout } =
+      await import("./gateway-cli-backend.live-helpers.js");
+    const timeoutPayload = { status: "timeout" };
+
+    expect(isCliBackendLiveTimeoutPayload(timeoutPayload)).toBe(true);
+    expect(
+      shouldRetryCliBackendLiveTimeout({
+        attempt: 1,
+        maxAttempts: 2,
+        payload: timeoutPayload,
+        providerId: "codex-cli",
+      }),
+    ).toBe(true);
+    expect(
+      shouldRetryCliBackendLiveTimeout({
+        attempt: 2,
+        maxAttempts: 2,
+        payload: timeoutPayload,
+        providerId: "codex-cli",
+      }),
+    ).toBe(false);
+    expect(
+      shouldRetryCliBackendLiveTimeout({
+        attempt: 1,
+        maxAttempts: 2,
+        payload: timeoutPayload,
+        providerId: "claude-cli",
+      }),
+    ).toBe(false);
+  });
+
   it("allows live env overrides for fresh and resume CLI args", async () => {
     const { resolveCliBackendLiveArgs } = await import("./gateway-cli-backend.live-helpers.js");
 

@@ -232,6 +232,27 @@ export function resolveCliBackendLiveProviderSkipDecision(params: {
   };
 }
 
+export function isCliBackendLiveTimeoutPayload(payload: unknown): boolean {
+  return (
+    typeof payload === "object" &&
+    payload !== null &&
+    (payload as { status?: unknown }).status === "timeout"
+  );
+}
+
+export function shouldRetryCliBackendLiveTimeout(params: {
+  attempt: number;
+  maxAttempts: number;
+  payload: unknown;
+  providerId: string;
+}): boolean {
+  return (
+    params.providerId === "codex-cli" &&
+    params.attempt < params.maxAttempts &&
+    isCliBackendLiveTimeoutPayload(params.payload)
+  );
+}
+
 export function matchesCliBackendReply(text: string, expected: string): boolean {
   const normalized = text.trim();
   const target = expected.trim();
