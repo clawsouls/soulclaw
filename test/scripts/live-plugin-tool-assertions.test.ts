@@ -126,6 +126,30 @@ describe("live plugin tool assertions", () => {
     }
   });
 
+  it("bounds session transcript traversal before scanning unbounded trees", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "openclaw-live-plugin-tool-"));
+    const sessionsDir = path.join(root, "state", "agents", "main", "sessions");
+
+    try {
+      writeJson(path.join(root, "agent.json"), {
+        payloads: [{ text: "live-plugin-slug" }],
+      });
+      mkdirSync(sessionsDir, { recursive: true });
+      for (let index = 0; index < 4; index += 1) {
+        writeFileSync(path.join(sessionsDir, `noise-${index}.jsonl`), "noise\n", "utf8");
+      }
+
+      const result = runAssertion(root, {
+        OPENCLAW_LIVE_PLUGIN_TOOL_SESSION_SCAN_MAX_ENTRIES: "2",
+      });
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("session transcript scan exceeded 2 filesystem entries");
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it("rejects markers that only appear in error payload text", () => {
     const root = mkdtempSync(path.join(tmpdir(), "openclaw-live-plugin-tool-"));
     const sessionsDir = path.join(root, "state", "agents", "main", "sessions");

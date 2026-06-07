@@ -32,6 +32,10 @@ const AGENT_OUTPUT_MAX_BYTES = readPositiveIntEnv(
   1024 * 1024,
 );
 const SESSION_FILE_LIST_LIMIT = 20;
+const SESSION_SCAN_MAX_ENTRIES = readPositiveIntEnv(
+  "OPENCLAW_LIVE_PLUGIN_TOOL_SESSION_SCAN_MAX_ENTRIES",
+  50_000,
+);
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -112,28 +116,38 @@ function scanSessionTranscripts(sessionsDir, needles) {
   }
 
   const pendingDirs = [sessionsDir];
+  let scannedEntries = 0;
   while (pendingDirs.length > 0) {
     const dir = pendingDirs.pop();
-    const entries = fs
-      .readdirSync(dir, { withFileTypes: true })
-      .toSorted((left, right) => left.name.localeCompare(right.name));
-    for (const entry of entries) {
-      const entryPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        pendingDirs.push(entryPath);
-        continue;
+    const handle = fs.opendirSync(dir);
+    try {
+      let entry;
+      while ((entry = handle.readSync()) !== null) {
+        scannedEntries += 1;
+        if (scannedEntries > SESSION_SCAN_MAX_ENTRIES) {
+          throw new Error(
+            `session transcript scan exceeded ${SESSION_SCAN_MAX_ENTRIES} filesystem entries`,
+          );
+        }
+        const entryPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          pendingDirs.push(entryPath);
+          continue;
+        }
+        if (!entry.isFile() || !entry.name.endsWith(".jsonl")) {
+          continue;
+        }
+        filesChecked += 1;
+        if (checkedFiles.length < SESSION_FILE_LIST_LIMIT) {
+          checkedFiles.push(path.relative(sessionsDir, entryPath));
+        }
+        if (scanFileForNeedles(entryPath, needles).size === 0) {
+          pendingNeedles.clear();
+          return { checkedFiles, filesChecked, missingDir: false, pendingNeedles };
+        }
       }
-      if (!entry.isFile() || !entry.name.endsWith(".jsonl")) {
-        continue;
-      }
-      filesChecked += 1;
-      if (checkedFiles.length < SESSION_FILE_LIST_LIMIT) {
-        checkedFiles.push(path.relative(sessionsDir, entryPath));
-      }
-      if (scanFileForNeedles(entryPath, needles).size === 0) {
-        pendingNeedles.clear();
-        return { checkedFiles, filesChecked, missingDir: false, pendingNeedles };
-      }
+    } finally {
+      handle.closeSync();
     }
   }
   return { checkedFiles, filesChecked, missingDir: false, pendingNeedles };
