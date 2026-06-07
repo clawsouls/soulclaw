@@ -1478,6 +1478,10 @@ grep -qx -- "OPENCLAW_E2E_COMMAND_TIMEOUT=23s" "$TMPDIR/package-args"
     expect(updateChannel).toContain(
       'openclaw_e2e_maybe_timeout "${OPENCLAW_E2E_NPM_INSTALL_TIMEOUT:-600s}" npm install -g --prefix /tmp/npm-prefix --omit=optional "$pkg_tgz_path"',
     );
+    expect(updateChannel).toContain("openclaw_e2e_print_log /tmp/openclaw-git-install.log");
+    expect(updateChannel).toContain('openclaw_e2e_print_log "$package_install_log"');
+    expect(updateChannel).not.toContain("cat /tmp/openclaw-git-install.log");
+    expect(updateChannel).not.toContain('cat "$package_install_log"');
     expect(doctorSwitch).toContain(
       'openclaw_e2e_maybe_timeout "${OPENCLAW_E2E_NPM_INSTALL_TIMEOUT:-600s}" npm install --omit=optional --no-fund --no-audit',
     );
