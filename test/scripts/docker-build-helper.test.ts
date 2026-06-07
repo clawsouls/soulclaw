@@ -37,6 +37,8 @@ const KITCHEN_SINK_RPC_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-rpc-docker.sh
 const CODEX_ON_DEMAND_DOCKER_E2E_PATH = "scripts/e2e/codex-on-demand-docker.sh";
 const CODEX_MEDIA_PATH_SCENARIO_PATH = "scripts/e2e/lib/codex-media-path/scenario.sh";
 const CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH = "scripts/e2e/codex-npm-plugin-live-docker.sh";
+const CODEX_NPM_PLUGIN_LIVE_ASSERTIONS_PATH =
+  "scripts/e2e/lib/codex-npm-plugin-live/assertions.mjs";
 const LIVE_PLUGIN_TOOL_DOCKER_E2E_PATH = "scripts/e2e/live-plugin-tool-docker.sh";
 const NPM_ONBOARD_CHANNEL_AGENT_DOCKER_E2E_PATH = "scripts/e2e/npm-onboard-channel-agent-docker.sh";
 const SKILL_INSTALL_DOCKER_E2E_PATH = "scripts/e2e/skill-install-docker.sh";
@@ -1820,6 +1822,27 @@ test -f "$TMPDIR/docker-cmd-seen"
     );
     expect(runner).toContain("trap cleanup EXIT");
     expect(runner).not.toContain('rm -f "$run_log"\n  exit 1');
+  });
+
+  it("bounds Codex npm plugin live assertion file and transcript reads", () => {
+    const assertions = readFileSync(CODEX_NPM_PLUGIN_LIVE_ASSERTIONS_PATH, "utf8");
+    const runner = readFileSync(CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH, "utf8");
+
+    expect(assertions).toContain("OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_TEXT_FILE_BYTES");
+    expect(assertions).toContain("OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_ERROR_TAIL_BYTES");
+    expect(assertions).toContain("OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_TRANSCRIPT_FILES");
+    expect(assertions).toContain("OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_TRANSCRIPT_WALK_ENTRIES");
+    expect(assertions).toContain("OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_TRANSCRIPT_SCAN_BYTES");
+    expect(assertions).toContain("readTextFileBounded");
+    expect(assertions).toContain("readTextFileTail");
+    expect(assertions).toContain(
+      ".toSorted((left, right) => right.stat.mtimeMs - left.stat.mtimeMs)",
+    );
+    expect(assertions).toContain(".slice(0, MAX_TRANSCRIPT_FILES)");
+    expect(assertions).toContain("scannedBytes + readableBytes > MAX_TRANSCRIPT_SCAN_BYTES");
+    expect(assertions).not.toContain('const content = fs.readFileSync(filePath, "utf8")');
+    expect(runner).toContain("tail -n 120 /tmp/openclaw-codex-agent-after-uninstall.err");
+    expect(runner).not.toContain("cat /tmp/openclaw-codex-agent-after-uninstall.err");
   });
 
   it("cleans package-backed onboarding and plugin Docker artifacts on every exit path", () => {
