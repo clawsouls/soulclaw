@@ -1017,28 +1017,31 @@ describeLive("gateway live (Codex harness)", () => {
       const deviceIdentity = await ensurePairedTestGatewayClientIdentity({
         displayName: "vitest-codex-harness-live",
       });
+      let server: Awaited<ReturnType<typeof startGatewayServer>> | undefined;
+      let client: Awaited<ReturnType<typeof connectTestGatewayClient>> | undefined;
       const gatewayEvents: EventFrame[] = [];
       logCodexLiveStep("config-written", { configPath, modelKey, port });
 
-      const server = await startGatewayServer(port, {
-        bind: "loopback",
-        auth: { mode: "token", token },
-        controlUiEnabled: false,
-      });
-      const client = await connectTestGatewayClient({
-        url: `ws://127.0.0.1:${port}`,
-        token,
-        deviceIdentity,
-        timeoutMs: GATEWAY_CONNECT_TIMEOUT_MS,
-        requestTimeoutMs: CODEX_HARNESS_REQUEST_TIMEOUT_MS,
-        clientDisplayName: "vitest-codex-harness-live",
-        onEvent: (event) => {
-          gatewayEvents.push(event);
-        },
-      });
-      logCodexLiveStep("client-connected");
-
       try {
+        server = await startGatewayServer(port, {
+          bind: "loopback",
+          auth: { mode: "token", token },
+          controlUiEnabled: false,
+        });
+        client = await connectTestGatewayClient({
+          url: `ws://127.0.0.1:${port}`,
+          token,
+          deviceIdentity,
+          timeoutMs: GATEWAY_CONNECT_TIMEOUT_MS,
+          requestTimeoutMs: CODEX_HARNESS_REQUEST_TIMEOUT_MS,
+          clientDisplayName: "vitest-codex-harness-live",
+          onEvent: (event) => {
+            gatewayEvents.push(event);
+          },
+        });
+        logCodexLiveStep("client-connected");
+        const activeClient = client;
+
         const maxAttempts = CODEX_HARNESS_SUBAGENT_PROBE ? 1 : 2;
         for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
           try {
@@ -1046,9 +1049,9 @@ describeLive("gateway live (Codex harness)", () => {
 
             if (CODEX_HARNESS_SUBAGENT_PROBE) {
               logCodexLiveStep("subagent-probe:start", { sessionKey });
-              await verifyCodexSubagentProbe({ client, sessionKey });
+              await verifyCodexSubagentProbe({ client: activeClient, sessionKey });
               logCodexLiveStep("native-subagent-bridge-probe:start", { sessionKey });
-              await verifyCodexNativeSubagentBridgeProbe({ client, sessionKey });
+              await verifyCodexNativeSubagentBridgeProbe({ client: activeClient, sessionKey });
               logCodexLiveStep("subagent-probe:done");
               if (CODEX_HARNESS_SUBAGENT_ONLY) {
                 return;
@@ -1060,7 +1063,7 @@ describeLive("gateway live (Codex harness)", () => {
             try {
               const firstToken = `CODEX-HARNESS-${firstNonce}`;
               const firstText = await requestAgentText({
-                client,
+                client: activeClient,
                 sessionKey,
                 expectedToken: firstToken,
                 message: `Reply with exactly ${firstToken} and nothing else.`,
@@ -1071,7 +1074,7 @@ describeLive("gateway live (Codex harness)", () => {
               const secondNonce = randomBytes(3).toString("hex").toUpperCase();
               const secondToken = `CODEX-HARNESS-RESUME-${secondNonce}`;
               const secondText = await requestAgentText({
-                client,
+                client: activeClient,
                 sessionKey,
                 expectedToken: secondToken,
                 message: `Reply with exactly ${secondToken} and nothing else. Do not repeat ${firstToken}.`,
@@ -1081,7 +1084,10 @@ describeLive("gateway live (Codex harness)", () => {
 
               if (CODEX_HARNESS_CODE_MODE_ONLY) {
                 logCodexLiveStep("code-mode-only-tool-probe:start", { sessionKey });
-                await verifyCodexCodeModeOnlyDynamicToolProbe({ client, sessionKey });
+                await verifyCodexCodeModeOnlyDynamicToolProbe({
+                  client: activeClient,
+                  sessionKey,
+                });
                 logCodexLiveStep("code-mode-only-tool-probe:done");
               }
             } finally {
@@ -1089,7 +1095,7 @@ describeLive("gateway live (Codex harness)", () => {
             }
 
             const statusText = await requestCodexCommandText({
-              client,
+              client: activeClient,
               events: gatewayEvents,
               sessionKey,
               command: "/codex status",
@@ -1099,7 +1105,7 @@ describeLive("gateway live (Codex harness)", () => {
             logCodexLiveStep("codex-status-command", { statusText });
 
             const modelsText = await requestCodexCommandText({
-              client,
+              client: activeClient,
               events: gatewayEvents,
               sessionKey,
               command: "/codex models",
@@ -1111,20 +1117,20 @@ describeLive("gateway live (Codex harness)", () => {
 
             if (CODEX_HARNESS_CHAT_IMAGE_PROBE) {
               logCodexLiveStep("chat-image-probe:start", { sessionKey });
-              await verifyCodexChatImageProbe({ client, sessionKey });
+              await verifyCodexChatImageProbe({ client: activeClient, sessionKey });
               logCodexLiveStep("chat-image-probe:done");
             }
 
             if (CODEX_HARNESS_IMAGE_PROBE) {
               logCodexLiveStep("image-probe:start", { sessionKey });
-              await verifyCodexImageProbe({ client, sessionKey });
+              await verifyCodexImageProbe({ client: activeClient, sessionKey });
               logCodexLiveStep("image-probe:done");
             }
 
             if (CODEX_HARNESS_MCP_PROBE) {
               logCodexLiveStep("cron-mcp-probe:start", { sessionKey });
               await verifyCodexCronMcpProbe({
-                client,
+                client: activeClient,
                 sessionKey,
                 port,
                 token,
@@ -1136,7 +1142,10 @@ describeLive("gateway live (Codex harness)", () => {
             if (CODEX_HARNESS_GUARDIAN_PROBE) {
               const guardianSessionKey = "agent:dev:live-codex-harness-guardian";
               logCodexLiveStep("guardian-probe:start", { sessionKey: guardianSessionKey });
-              await verifyCodexGuardianProbe({ client, sessionKey: guardianSessionKey });
+              await verifyCodexGuardianProbe({
+                client: activeClient,
+                sessionKey: guardianSessionKey,
+              });
               logCodexLiveStep("guardian-probe:done");
             }
             break;
@@ -1166,18 +1175,24 @@ describeLive("gateway live (Codex harness)", () => {
           }
         }
       } finally {
-        clearRuntimeConfigSnapshot();
-        await client.stopAndWait();
-        await server.close();
-        const [{ resetTaskRegistryForTests }, { resetTaskFlowRegistryForTests }] =
-          await Promise.all([
-            import("../tasks/runtime-internal.js"),
-            import("../tasks/task-flow-runtime-internal.js"),
-          ]);
-        resetTaskRegistryForTests({ persist: false });
-        resetTaskFlowRegistryForTests({ persist: false });
-        restoreEnv(previousEnv);
-        await removeLiveTempDir(tempDir);
+        try {
+          clearRuntimeConfigSnapshot();
+          try {
+            await client?.stopAndWait();
+          } finally {
+            await server?.close();
+          }
+          const [{ resetTaskRegistryForTests }, { resetTaskFlowRegistryForTests }] =
+            await Promise.all([
+              import("../tasks/runtime-internal.js"),
+              import("../tasks/task-flow-runtime-internal.js"),
+            ]);
+          resetTaskRegistryForTests({ persist: false });
+          resetTaskFlowRegistryForTests({ persist: false });
+        } finally {
+          restoreEnv(previousEnv);
+          await removeLiveTempDir(tempDir);
+        }
       }
     },
     CODEX_HARNESS_TIMEOUT_MS,
