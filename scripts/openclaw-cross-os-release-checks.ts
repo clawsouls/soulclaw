@@ -3785,14 +3785,33 @@ async function runCommandInvocation(invocation, options) {
       }
     };
 
+    const finishLogStream = (callback) => {
+      let completed = false;
+      const finish = (error) => {
+        if (completed) {
+          return;
+        }
+        completed = true;
+        callback(error);
+      };
+      logStream.once("finish", finish);
+      logStream.once("error", finish);
+      logStream.end();
+    };
+
     const finalize = (callback) => {
       if (settled) {
         return;
       }
       settled = true;
       clearTimers();
-      logStream.end();
-      callback();
+      finishLogStream((logError) => {
+        if (logError) {
+          rejectPromise(new Error(`Command log write failed: ${formatError(logError)}`));
+          return;
+        }
+        callback();
+      });
     };
 
     const requestKill = () => {

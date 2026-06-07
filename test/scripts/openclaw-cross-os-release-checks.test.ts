@@ -1100,6 +1100,35 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
     }
   });
 
+  it("flushes command logs before resolving", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "openclaw-cross-os-run-command-flush-"));
+    try {
+      const logPath = join(dir, "flush.log");
+      const marker = `flush-start-${"x".repeat(128 * 1024)}-flush-end`;
+
+      await runCommand(
+        process.execPath,
+        [
+          "-e",
+          [
+            "const marker = `flush-start-${'x'.repeat(128 * 1024)}-flush-end`;",
+            "process.stdout.write(marker);",
+          ].join(""),
+        ],
+        {
+          cwd: dir,
+          env: process.env,
+          logPath,
+          maxOutputBytes: 64,
+        },
+      );
+
+      expect(readFileSync(logPath, "utf8")).toContain(marker);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("kills timed-out command process groups", async () => {
     if (process.platform === "win32") {
       return;
