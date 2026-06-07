@@ -324,13 +324,18 @@ function assertSimplePlugin(jsonFile, inspectFile, pluginId, method) {
   }
 }
 
-function assertUpdateOutput(logFile, expectedSnippet) {
-  if (!fileContainsText(logFile, expectedSnippet)) {
-    const outputTail = readTextFileTail(logFile, ERROR_DETAIL_TAIL_BYTES);
-    throw new Error(
-      `expected update output to include ${JSON.stringify(expectedSnippet)}. Output tail:\n${outputTail}`,
-    );
+function assertTextFileIncludes(file, expectedSnippet, label) {
+  if (fileContainsText(file, expectedSnippet)) {
+    return;
   }
+  const outputTail = readTextFileTail(file, ERROR_DETAIL_TAIL_BYTES);
+  throw new Error(
+    `expected ${label} to include ${JSON.stringify(expectedSnippet)}. Output tail:\n${outputTail}`,
+  );
+}
+
+function assertUpdateOutput(logFile, expectedSnippet) {
+  assertTextFileIncludes(logFile, expectedSnippet, "update output");
 }
 
 function assertClaudeBundleDisabled() {
@@ -504,10 +509,11 @@ function assertGitPlugin() {
     throw new Error(`expected demo-git cli command, got ${inspect.cliCommands?.join(", ")}`);
   }
 
-  const cliOutput = fs.readFileSync(scratchFile("plugins-git-cli.txt"), "utf8");
-  if (!cliOutput.includes("demo-plugin-git:pong")) {
-    throw new Error(`unexpected git plugin cli output: ${cliOutput.trim()}`);
-  }
+  assertTextFileIncludes(
+    scratchFile("plugins-git-cli.txt"),
+    "demo-plugin-git:pong",
+    "git plugin CLI output",
+  );
 
   const record = getInstallRecords()["demo-plugin-git"];
   if (!record) {
@@ -690,10 +696,11 @@ function assertNpmPlugin() {
     throw new Error(`expected demo-npm cli command, got ${inspect.cliCommands?.join(", ")}`);
   }
 
-  const cliOutput = fs.readFileSync(scratchFile("plugins-npm-cli.txt"), "utf8");
-  if (!cliOutput.includes("demo-plugin-npm:pong")) {
-    throw new Error(`unexpected npm plugin cli output: ${cliOutput.trim()}`);
-  }
+  assertTextFileIncludes(
+    scratchFile("plugins-npm-cli.txt"),
+    "demo-plugin-npm:pong",
+    "npm plugin CLI output",
+  );
 
   const record = getInstallRecords()["demo-plugin-npm"];
   if (!record) {
@@ -781,13 +788,12 @@ function assertNpmPluginRemoved() {
 
 function assertInvalidOpenClawExtensionsRejected() {
   const pluginId = "demo-plugin-invalid-metadata";
-  const output = fs.readFileSync(scratchFile("plugins-invalid-openclaw-extensions.log"), "utf8");
   for (const expected of ["openclaw.extensions[1]", "non-empty string"]) {
-    if (!output.includes(expected)) {
-      throw new Error(
-        `expected malformed metadata install output to include ${JSON.stringify(expected)}:\n${output}`,
-      );
-    }
+    assertTextFileIncludes(
+      scratchFile("plugins-invalid-openclaw-extensions.log"),
+      expected,
+      "malformed metadata install output",
+    );
   }
 
   const list = readJson(scratchFile("plugins-invalid-openclaw-extensions-list.json"));
@@ -835,10 +841,11 @@ function assertGitPluginUpdated() {
     throw new Error(`expected demo-git-update cli command, got ${inspect.cliCommands?.join(", ")}`);
   }
 
-  const cliOutput = fs.readFileSync(scratchFile("plugins-git-update-cli.txt"), "utf8");
-  if (!cliOutput.includes("demo-plugin-git-update:pong-v2")) {
-    throw new Error(`unexpected updated git plugin cli output: ${cliOutput.trim()}`);
-  }
+  assertTextFileIncludes(
+    scratchFile("plugins-git-update-cli.txt"),
+    "demo-plugin-git-update:pong-v2",
+    "updated git plugin CLI output",
+  );
 
   const record = getInstallRecords()["demo-plugin-git-update"];
   if (!record) {
@@ -1037,10 +1044,11 @@ function assertClawHubRemoved() {
 }
 
 function assertClawHubUpdated() {
-  const output = fs.readFileSync(scratchFile("plugins-clawhub-update.log"), "utf8");
-  if (!output.includes(`${process.env.CLAWHUB_PLUGIN_ID} already at `)) {
-    throw new Error(`expected ClawHub update to report already-at version:\n${output}`);
-  }
+  assertTextFileIncludes(
+    scratchFile("plugins-clawhub-update.log"),
+    `${process.env.CLAWHUB_PLUGIN_ID} already at `,
+    "ClawHub update output",
+  );
   assertClawHubInstalled();
 }
 
