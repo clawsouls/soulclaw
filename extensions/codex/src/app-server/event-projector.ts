@@ -298,11 +298,14 @@ export class CodexAppServerEventProjector {
       this.reasoningItemOrder,
     ).join("\n\n");
     const planText = collectTextValues(this.planTextByItem).join("\n\n");
+    const legacyFailClosed =
+      !this.completedTurn || this.completedTurn.status !== "completed" || assistantTexts.length > 0;
+    const hasDeliverableAssistantOnCompletedTurn =
+      this.completedTurn?.status === "completed" &&
+      assistantTexts.some((text) => text.trim().length > 0);
     this.synthesizeMissingToolResults({
-      failClosed:
-        !this.completedTurn ||
-        this.completedTurn.status !== "completed" ||
-        assistantTexts.length > 0,
+      synthesize: legacyFailClosed,
+      recordPromptError: legacyFailClosed && !hasDeliverableAssistantOnCompletedTurn,
     });
     const lastAssistant =
       assistantTexts.length > 0
@@ -1449,8 +1452,11 @@ export class CodexAppServerEventProjector {
     );
   }
 
-  private synthesizeMissingToolResults(params: { failClosed: boolean }): void {
-    if (!params.failClosed) {
+  private synthesizeMissingToolResults(params: {
+    synthesize: boolean;
+    recordPromptError: boolean;
+  }): void {
+    if (!params.synthesize) {
       return;
     }
     const missingTranscriptIds = [...this.toolTranscriptCallIds].filter(
@@ -1496,6 +1502,9 @@ export class CodexAppServerEventProjector {
       });
     }
 
+    if (!params.recordPromptError) {
+      return;
+    }
     const missingCount = new Set([...missingTranscriptIds, ...missingTrajectoryIds]).size;
     this.synthesizedMissingToolResultError =
       missingCount === 1

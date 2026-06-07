@@ -1653,7 +1653,7 @@ describe("CodexAppServerEventProjector", () => {
     });
   });
 
-  it("fails closed when a native tool call finishes without a matching result", async () => {
+  it("delivers completed assistant text when a native tool call finishes without a matching result", async () => {
     const trajectoryRecorder = {
       filePath: "trajectory.jsonl",
       recordEvent: vi.fn(),
@@ -1690,8 +1690,11 @@ describe("CodexAppServerEventProjector", () => {
 
     const result = projector.buildResult(buildEmptyToolTelemetry());
 
-    expect(String(result.promptError)).toContain("without a matching tool.result");
-    expect(result.promptErrorSource).toBe("prompt");
+    expect(result.promptError).toBeNull();
+    expect(result.promptErrorSource).toBeNull();
+    expect(result.assistantTexts).toEqual([
+      "The requested publish command was denied before execution.",
+    ]);
     expect(result.messagesSnapshot.map((message) => message.role)).toEqual([
       "user",
       "assistant",
@@ -1704,6 +1707,13 @@ describe("CodexAppServerEventProjector", () => {
     expect(toolResultMessage.isError).toBe(true);
     const toolResultContent = requireArray(toolResultMessage.content, "tool result content");
     expect(JSON.stringify(toolResultContent)).toContain("matching tool.result");
+    const finalAssistant = requireRecord(result.messagesSnapshot[3], "final assistant message");
+    expect(finalAssistant.content).toEqual([
+      {
+        type: "text",
+        text: "The requested publish command was denied before execution.",
+      },
+    ]);
     expect(trajectoryRecorder.recordEvent).toHaveBeenCalledWith("tool.call", {
       threadId: THREAD_ID,
       turnId: TURN_ID,
