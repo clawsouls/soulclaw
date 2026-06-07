@@ -455,9 +455,21 @@ function assertInstalled() {
   const list = readJson(scratchFile(`kitchen-sink-${label}-plugins.json`));
   const inspect = readJson(scratchFile(`kitchen-sink-${label}-inspect.json`));
   const allInspect = readJson(scratchFile(`kitchen-sink-${label}-inspect-all.json`));
+  if (!Array.isArray(allInspect)) {
+    throw new Error("kitchen-sink inspect --all output was not an array");
+  }
   const plugin = (list.plugins || []).find((entry) => entry.id === pluginId);
   if (!plugin) {
     throw new Error(`kitchen-sink plugin not found after install: ${pluginId}`);
+  }
+  const allInspectPlugin = allInspect.find((entry) => entry?.plugin?.id === pluginId);
+  if (!allInspectPlugin) {
+    throw new Error(`kitchen-sink plugin missing from inspect --all output: ${pluginId}`);
+  }
+  if (!allInspectPlugin.plugin?.enabled || allInspectPlugin.plugin?.status !== "loaded") {
+    throw new Error(
+      `expected enabled loaded kitchen-sink plugin in inspect --all, got enabled=${allInspectPlugin.plugin?.enabled} status=${allInspectPlugin.plugin?.status}`,
+    );
   }
   if (plugin.status !== "loaded") {
     throw new Error(`unexpected kitchen-sink status after enable: ${plugin.status}`);
@@ -482,7 +494,7 @@ function assertInstalled() {
   const diagnostics = [
     ...(list.diagnostics || []),
     ...(inspect.diagnostics || []),
-    ...(allInspect.diagnostics || []),
+    ...(allInspectPlugin.diagnostics || []),
   ];
   const errorMessages = new Set(
     diagnostics.filter((diag) => diag?.level === "error").map((diag) => String(diag.message || "")),

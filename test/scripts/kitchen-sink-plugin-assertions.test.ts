@@ -63,10 +63,12 @@ function diagnosticErrors(messages: string[]) {
 }
 
 function runAssertInstalled({
+  allInspectPayload,
   diagnostics = [],
   env = {},
   inspectPayload,
 }: {
+  allInspectPayload?: unknown;
   diagnostics?: Array<{ level: string; message: string }>;
   env?: NodeJS.ProcessEnv;
   inspectPayload?: ReturnType<typeof fullSurfaceInspectPayload>;
@@ -89,8 +91,9 @@ function runAssertInstalled({
       diagnostics,
       plugins: [{ id: pluginId, status: "loaded" }],
     });
-    writeJson(inspectJsonPath, inspectPayload ?? fullSurfaceInspectPayload(pluginId));
-    writeJson(inspectAllJsonPath, { diagnostics: [] });
+    const pluginInspectPayload = inspectPayload ?? fullSurfaceInspectPayload(pluginId);
+    writeJson(inspectJsonPath, pluginInspectPayload);
+    writeJson(inspectAllJsonPath, allInspectPayload ?? [pluginInspectPayload]);
     writeJson(installsPath, {
       installRecords: {
         [pluginId]: {
@@ -150,7 +153,7 @@ function runAssertClawhubInstalled({
       plugins: [{ id: pluginId, status: "loaded" }],
     });
     writeJson(inspectJsonPath, inspectPayload);
-    writeJson(inspectAllJsonPath, { diagnostics: [] });
+    writeJson(inspectAllJsonPath, [inspectPayload]);
     writeJson(installsPath, {
       installRecords: {
         [pluginId]: {
@@ -264,6 +267,34 @@ describe("kitchen-sink plugin assertions", () => {
     });
 
     expect(result.status).toBe(0);
+  });
+
+  it("requires kitchen-sink plugins to appear in inspect-all output", () => {
+    const result = runAssertInstalled({
+      allInspectPayload: [fullSurfaceInspectPayload("other-plugin")],
+      diagnostics: diagnosticErrors(REQUIRED_FULL_DIAGNOSTIC_CANARIES),
+    });
+
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(
+      "kitchen-sink plugin missing from inspect --all output",
+    );
+  });
+
+  it("fails kitchen-sink inspect-all diagnostics for the installed plugin", () => {
+    const inspectPayload = fullSurfaceInspectPayload("openclaw-kitchen-sink-fixture");
+    const result = runAssertInstalled({
+      allInspectPayload: [
+        {
+          ...inspectPayload,
+          diagnostics: [{ level: "error", message: "inspect-all runtime failed" }],
+        },
+      ],
+      diagnostics: diagnosticErrors(REQUIRED_FULL_DIAGNOSTIC_CANARIES),
+    });
+
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("inspect-all runtime failed");
   });
 
   it("requires the full kitchen-sink tool surface in full mode", () => {
