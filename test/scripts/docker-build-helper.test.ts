@@ -2133,8 +2133,11 @@ output="$(cat "$sampler_log")"
       expect(runner, path).toMatch(/cleanup\(\) \{[\s\S]*rm -f "\$RUN_LOG" "\$STATS_LOG"/u);
       expect(runner, path).toContain(`if [ "$run_status" -eq 0 ]; then\n  ${resourceAssertion}`);
       expect(runner, path).toContain(
-        `elif [ -s "$STATS_LOG" ]; then\n  ${resourceAssertion} || true`,
+        `elif [ -s "$STATS_LOG" ]; then\n  if ! ${resourceAssertion}; then`,
       );
+      expect(runner, path).toContain("RESOURCE_CEILING_FAILED lane=");
+      expect(runner, path).toContain("primary_status=$run_status");
+      expect(runner, path).not.toContain(`${resourceAssertion} || true`);
       expect(runner, path).not.toContain(`${resourceAssertion}\n\nexit "$run_status"`);
     }
   });
