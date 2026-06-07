@@ -422,6 +422,42 @@ describe("script-specific dev tooling hardening", () => {
     expect(closeCalls).toBe(1);
   });
 
+  it("waits for Anthropic prompt gateway log writes before closing the log file", async () => {
+    let resolveWrite: (() => void) | undefined;
+    const order: string[] = [];
+    const pendingWrite = new Promise<void>((resolve) => {
+      resolveWrite = () => {
+        order.push("write");
+        resolve();
+      };
+    });
+    const stop = promptProbeTesting.stopGatewayPromptChild(
+      {
+        exitCode: 0,
+        signalCode: null,
+        kill: () => true,
+        once(_event: "exit", _listener: () => void) {},
+      },
+      {
+        close: async () => {
+          order.push("close");
+        },
+      },
+      1,
+      1,
+      [pendingWrite],
+    );
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 10);
+    });
+    expect(order).toEqual([]);
+
+    resolveWrite?.();
+    await expect(stop).resolves.toBe(true);
+    expect(order).toEqual(["write", "close"]);
+  });
+
   it("uses exact Claude cookie host matchers instead of broad substring matches", () => {
     expect(claudeUsageTesting.CLAUDE_COOKIE_HOST_SQL).toContain("host_key = 'claude.ai'");
     expect(claudeUsageTesting.CLAUDE_COOKIE_HOST_SQL).toContain("LIKE '%.claude.ai'");

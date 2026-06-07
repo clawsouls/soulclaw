@@ -120,6 +120,7 @@ type StoppableGatewayChild = {
 };
 
 type ClosableLogFile = {
+  appendFile?(data: string | Uint8Array): Promise<void>;
   close(): Promise<void>;
 };
 
@@ -520,11 +521,32 @@ async function startGatewayProcess(params: {
       stdio: ["ignore", "pipe", "pipe"],
     },
   );
-  child.stdout.on("data", (chunk) => void logFile.appendFile(chunk));
-  child.stderr.on("data", (chunk) => void logFile.appendFile(chunk));
+  const pendingLogWrites = new Set<Promise<void>>();
+  const logWriteErrors: unknown[] = [];
+  const trackLogWrite = (chunk: Buffer) => {
+    const write = logFile.appendFile(chunk).catch((error: unknown) => {
+      logWriteErrors.push(error);
+      throw error;
+    });
+    pendingLogWrites.add(write);
+    void write
+      .finally(() => {
+        pendingLogWrites.delete(write);
+      })
+      .catch(() => undefined);
+  };
+  child.stdout.on("data", trackLogWrite);
+  child.stderr.on("data", trackLogWrite);
   return {
     async stop(): Promise<boolean> {
-      return await stopGatewayPromptChild(child, logFile);
+      return await stopGatewayPromptChild(
+        child,
+        logFile,
+        1_500,
+        1_500,
+        pendingLogWrites,
+        logWriteErrors,
+      );
     },
   };
 }
@@ -534,6 +556,8 @@ async function stopGatewayPromptChild(
   logFile: ClosableLogFile,
   sigintTimeoutMs = 1_500,
   sigkillTimeoutMs = 1_500,
+  pendingLogWrites: Iterable<Promise<void>> = [],
+  logWriteErrors: readonly unknown[] = [],
 ): Promise<boolean> {
   let exited = child.exitCode !== null || child.signalCode !== null;
   const exitPromise = exited
@@ -560,7 +584,14 @@ async function stopGatewayPromptChild(
       () => false,
     );
   }
+  const failedLogWrite = (await Promise.allSettled(pendingLogWrites)).find(
+    (result): result is PromiseRejectedResult => result.status === "rejected",
+  );
   await logFile.close();
+  const logWriteError = failedLogWrite?.reason ?? logWriteErrors[0];
+  if (logWriteError) {
+    throw new Error(`Anthropic prompt gateway log write failed: ${String(logWriteError)}`);
+  }
   return exited;
 }
 
