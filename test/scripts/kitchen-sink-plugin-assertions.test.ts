@@ -713,4 +713,58 @@ test -d "$SCRATCH_ROOT"
       rmSync(parent, { force: true, recursive: true });
     }
   });
+
+  it("bounds ClawHub fixture server logs on startup timeout", () => {
+    const parent = mkdtempSync(path.join(tmpdir(), "openclaw-kitchen-sink-clawhub-log-"));
+    const fakeBin = path.join(parent, "bin");
+    const scratchRoot = path.join(parent, "scratch");
+    const fixtureDir = path.join(scratchRoot, "clawhub-fixture");
+    const nodeShim = path.join(fakeBin, "node");
+    try {
+      mkdirSync(fakeBin, { recursive: true });
+      mkdirSync(fixtureDir, { recursive: true });
+      writeFileSync(
+        nodeShim,
+        [
+          "#!/usr/bin/env bash",
+          "printf 'DO_NOT_DUMP_CLAWHUB_PREFIX\\n'",
+          "head -c 2048 /dev/zero | tr '\\0' x",
+          "printf '\\nFIXTURE_TAIL_MARKER\\n'",
+          "sleep 30",
+          "",
+        ].join("\n"),
+      );
+      chmodSync(nodeShim, 0o755);
+
+      const result = runSweepShell(
+        `
+set -euo pipefail
+export PATH="$FAKE_BIN:$PATH"
+export KITCHEN_SINK_SWEEP_SOURCE_ONLY=1
+export KITCHEN_SINK_TMP_DIR="$SCRATCH_ROOT"
+export OPENCLAW_CLAWHUB_FIXTURE_WAIT_ATTEMPTS=5
+export OPENCLAW_DOCKER_E2E_LOG_PRINT_BYTES=64
+source scripts/e2e/lib/kitchen-sink-plugin/sweep.sh
+set +e
+start_kitchen_sink_clawhub_fixture_server "$FIXTURE_DIR"
+status="$?"
+set -e
+cleanup_kitchen_sink_sweep
+exit "$status"
+`,
+        {
+          FAKE_BIN: fakeBin,
+          FIXTURE_DIR: fixtureDir,
+          SCRATCH_ROOT: scratchRoot,
+        },
+      );
+
+      expect(result.status).not.toBe(0);
+      expect(result.stdout).toContain("truncated: showing last 64");
+      expect(result.stdout).toContain("FIXTURE_TAIL_MARKER");
+      expect(result.stdout).not.toContain("DO_NOT_DUMP_CLAWHUB_PREFIX");
+    } finally {
+      rmSync(parent, { force: true, recursive: true });
+    }
+  });
 });
