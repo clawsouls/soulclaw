@@ -2820,6 +2820,26 @@ output="$(cat "$sampler_log")"
     expect(runner).toContain('TURN4_SESSION_ID="${SESSION_ID_PREFIX}-image-write"');
   });
 
+  it("bounds installer E2E session transcript tool scans", () => {
+    const runner = readFileSync(INSTALL_E2E_RUNNER_PATH, "utf8");
+    const start = runner.indexOf("assert_session_used_tools() {");
+    const end = runner.indexOf("\nsession_jsonl_path()", start);
+    const helper = runner.slice(start, end);
+
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    expect(helper).toContain("OPENCLAW_INSTALL_E2E_SESSION_SCAN_BYTES");
+    expect(helper).toContain("OPENCLAW_INSTALL_E2E_SESSION_LINE_BYTES");
+    expect(helper).toContain("OPENCLAW_INSTALL_E2E_SESSION_SCAN_DEPTH");
+    expect(helper).toContain("OPENCLAW_INSTALL_E2E_SESSION_SCAN_NODES");
+    expect(helper).toContain("fs.createReadStream");
+    expect(helper).toContain("Buffer.concat");
+    expect(helper).toContain("skippedOversizedLines");
+    expect(helper).not.toContain('require("node:readline")');
+    expect(helper).not.toContain("fs.readFileSync");
+    expect(helper).not.toContain('.split("\\n")');
+  });
+
   it("keeps OpenAI web search smoke on one gateway agent connection", () => {
     const runner = readFileSync(OPENAI_WEB_SEARCH_MINIMAL_E2E_PATH, "utf8");
     const scenario = readFileSync(OPENAI_WEB_SEARCH_MINIMAL_SCENARIO_PATH, "utf8");
