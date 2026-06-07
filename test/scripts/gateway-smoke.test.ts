@@ -1,6 +1,35 @@
 // Gateway Smoke tests cover gateway smoke script behavior.
-import { describe, expect, it } from "vitest";
+import { createServer, type Server } from "node:http";
+import { afterEach, describe, expect, it } from "vitest";
+import { WebSocket, WebSocketServer } from "ws";
 import { runGatewaySmoke } from "../../scripts/dev/gateway-smoke.js";
+
+let server: Server | undefined;
+let wss: WebSocketServer | undefined;
+
+afterEach(async () => {
+  await new Promise<void>((resolve) => {
+    wss?.close(() => resolve());
+    if (!wss) {
+      resolve();
+    }
+  });
+  wss = undefined;
+
+  await new Promise<void>((resolve, reject) => {
+    server?.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+    if (!server) {
+      resolve();
+    }
+  });
+  server = undefined;
+});
 
 describe("gateway-smoke", () => {
   function healthResponse() {
@@ -17,6 +46,58 @@ describe("gateway-smoke", () => {
         ts: Date.now(),
       },
     };
+  }
+
+  async function listenGatewaySmokeServer() {
+    const requests: Array<{ method: string; params?: unknown; timeout?: number }> = [];
+    server = createServer();
+    wss = new WebSocketServer({ server });
+    wss.on("connection", (ws: WebSocket) => {
+      ws.on("message", (data) => {
+        const frame = JSON.parse(data.toString()) as {
+          id: string;
+          method: string;
+          params?: unknown;
+          type: string;
+        };
+        requests.push({ method: frame.method, params: frame.params });
+        if (frame.method === "connect") {
+          ws.send(JSON.stringify({ id: frame.id, ok: true, payload: {}, type: "res" }));
+          return;
+        }
+        if (frame.method === "health") {
+          ws.send(JSON.stringify({ id: frame.id, type: "res", ...healthResponse() }));
+          return;
+        }
+        if (frame.method === "chat.history") {
+          ws.send(
+            JSON.stringify({
+              id: frame.id,
+              ok: true,
+              payload: { messages: [] },
+              type: "res",
+            }),
+          );
+          return;
+        }
+        ws.send(
+          JSON.stringify({
+            error: `unexpected method ${frame.method}`,
+            id: frame.id,
+            ok: false,
+            type: "res",
+          }),
+        );
+      });
+    });
+    await new Promise<void>((resolve) => {
+      server?.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") {
+      throw new Error("test gateway smoke server did not get a TCP address");
+    }
+    return { requests, url: `ws://127.0.0.1:${address.port}` };
   }
 
   function createSmokeDeps(
@@ -62,6 +143,40 @@ describe("gateway-smoke", () => {
       },
     };
   }
+
+  it("passes against a loopback gateway websocket using the real client", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const loopback = await listenGatewaySmokeServer();
+
+    const code = await runGatewaySmoke(
+      { token: "secret-token", urlRaw: loopback.url },
+      {
+        stderr: (message) => {
+          stderr.push(message);
+        },
+        stdout: (message) => {
+          stdout.push(message);
+        },
+      },
+    );
+
+    expect(code).toBe(0);
+    expect(loopback.requests.map((request) => request.method)).toEqual([
+      "connect",
+      "health",
+      "chat.history",
+    ]);
+    expect(loopback.requests[0]?.params).toMatchObject({
+      auth: { token: "secret-token" },
+      client: { id: "openclaw-ios" },
+      role: "operator",
+      scopes: ["operator.read", "operator.write", "operator.admin"],
+    });
+    expect(loopback.requests[2]?.params).toEqual({ sessionKey: "main" });
+    expect(stdout).toEqual(["ok: connected + health + chat.history"]);
+    expect(stderr).toEqual([]);
+  });
 
   it("closes the websocket client when connect fails", async () => {
     const stderr: string[] = [];
