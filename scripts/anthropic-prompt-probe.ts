@@ -61,6 +61,12 @@ const GATEWAY_TIMEOUT_MS = parseStrictIntegerOption({
   min: 1,
   raw: process.env.OPENCLAW_PROMPT_GATEWAY_TIMEOUT_MS,
 });
+const CAPTURE_PROXY_MAX_BODY_BYTES = parseStrictIntegerOption({
+  fallback: 2 * 1024 * 1024,
+  label: "OPENCLAW_PROMPT_CAPTURE_MAX_BODY_BYTES",
+  min: 1,
+  raw: process.env.OPENCLAW_PROMPT_CAPTURE_MAX_BODY_BYTES,
+});
 const SETUP_TOKEN_RAW = process.env.OPENCLAW_LIVE_SETUP_TOKEN?.trim() ?? "";
 const SETUP_TOKEN_VALUE = process.env.OPENCLAW_LIVE_SETUP_TOKEN_VALUE?.trim() ?? "";
 const SETUP_TOKEN_PROFILE = process.env.OPENCLAW_LIVE_SETUP_TOKEN_PROFILE?.trim() ?? "";
@@ -284,12 +290,22 @@ async function withTimeout<T>(
   return await Promise.race([promise, sleep(timeoutMs).then(() => fallback())]);
 }
 
-async function readRequestBody(req: http.IncomingMessage): Promise<Buffer> {
+async function readRequestBody(
+  req: http.IncomingMessage,
+  maxBytes = CAPTURE_PROXY_MAX_BODY_BYTES,
+): Promise<Buffer> {
   const chunks: Buffer[] = [];
+  let totalBytes = 0;
   for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    totalBytes += buffer.length;
+    if (totalBytes > maxBytes) {
+      req.destroy();
+      throw new Error(`Anthropic capture proxy request body exceeded ${maxBytes} bytes`);
+    }
+    chunks.push(buffer);
   }
-  return Buffer.concat(chunks);
+  return Buffer.concat(chunks, totalBytes);
 }
 
 function extractProxyCapture(rawBody: string, req: http.IncomingMessage): ProxyCapture {
@@ -799,6 +815,7 @@ export const testing = {
   cleanupPromptProbeTmpDir,
   matchesExtraUsage400,
   promptProbeTmpResult,
+  readRequestBody,
   resolveAnthropicUpstreamUrl,
   stopGatewayPromptChild,
   summarizeCapture,

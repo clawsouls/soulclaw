@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testing as promptProbeTesting } from "../../scripts/anthropic-prompt-probe.ts";
 import { testing as claudeUsageTesting } from "../../scripts/debug-claude-usage.ts";
@@ -338,6 +339,16 @@ describe("script-specific dev tooling hardening", () => {
         "https://api.anthropic.com",
       ),
     ).toThrow(/refusing non-origin proxy request URL/u);
+  });
+
+  it("bounds Anthropic capture proxy request bodies", async () => {
+    const request = Readable.from([Buffer.alloc(8), Buffer.alloc(8)]) as never;
+    const destroy = vi.spyOn(request, "destroy");
+
+    await expect(promptProbeTesting.readRequestBody(request, 12)).rejects.toThrow(
+      "Anthropic capture proxy request body exceeded 12 bytes",
+    );
+    expect(destroy).toHaveBeenCalled();
   });
 
   it("cleans Anthropic prompt probe temp dirs unless explicitly kept", async () => {
