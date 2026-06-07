@@ -1762,6 +1762,51 @@ grep -qx -- "OPENCLAW_E2E_COMMAND_TIMEOUT=23s" "$TMPDIR/package-args"
     );
   });
 
+  it("bounds upgrade survivor failure log diagnostics", () => {
+    const runner = readFileSync(UPGRADE_SURVIVOR_DOCKER_E2E_PATH, "utf8");
+    const publishedRunner = readFileSync(UPGRADE_SURVIVOR_RUN_SCRIPT, "utf8");
+
+    expect(runner).toContain("openclaw_e2e_print_log /tmp/openclaw-upgrade-survivor-update.err");
+    expect(runner).toContain("openclaw_e2e_print_log /tmp/openclaw-upgrade-survivor-update.json");
+    expect(runner).toContain("openclaw_e2e_print_log /tmp/openclaw-upgrade-survivor-doctor.log");
+    expect(runner).toContain("openclaw_e2e_print_log /tmp/openclaw-upgrade-survivor-status.err");
+    expect(runner).toContain("openclaw_e2e_print_log /tmp/openclaw-upgrade-survivor-status.json");
+    expect(runner).toContain('openclaw_e2e_print_log "$GATEWAY_LOG"');
+    expect(runner).toContain('openclaw_e2e_print_log "$SYSTEMCTL_SHIM_DAEMON_LOG"');
+    expect(runner).toContain('openclaw_e2e_print_log "$log_file"');
+    expect(runner).not.toContain("cat /tmp/openclaw-upgrade-survivor-update.err");
+    expect(runner).not.toContain("cat /tmp/openclaw-upgrade-survivor-update.json");
+    expect(runner).not.toContain("cat /tmp/openclaw-upgrade-survivor-doctor.log");
+    expect(runner).not.toContain("cat /tmp/openclaw-upgrade-survivor-status.err");
+    expect(runner).not.toContain("cat /tmp/openclaw-upgrade-survivor-status.json");
+    expect(runner).not.toContain('cat "$GATEWAY_LOG"');
+    expect(runner).not.toContain('cat "$SYSTEMCTL_SHIM_DAEMON_LOG"');
+    expect(runner).not.toContain('cat "$log_file"');
+
+    expect(publishedRunner).toContain('openclaw_e2e_print_log "$BASELINE_INSTALL_LOG"');
+    expect(publishedRunner).toContain('openclaw_e2e_print_log "$BASELINE_CONFIG_VALIDATE_LOG"');
+    expect(publishedRunner).toContain('openclaw_e2e_print_log "$BASELINE_SERVICE_INSTALL_ERR"');
+    expect(publishedRunner).toContain('openclaw_e2e_print_log "$BASELINE_SERVICE_INSTALL_JSON"');
+    expect(publishedRunner).toContain('openclaw_e2e_print_log "$UPDATE_ERR"');
+    expect(publishedRunner).toContain('openclaw_e2e_print_log "$UPDATE_JSON"');
+    expect(publishedRunner).toContain('openclaw_e2e_print_log "$DOCTOR_LOG"');
+    expect(publishedRunner).toContain('openclaw_e2e_print_log "$GATEWAY_LOG"');
+    expect(publishedRunner).toContain('openclaw_e2e_print_log "$STATUS_ERR"');
+    expect(publishedRunner).toContain('openclaw_e2e_print_log "$STATUS_JSON"');
+    expect(publishedRunner).toContain('openclaw_e2e_print_log "$log_file"');
+    expect(publishedRunner).not.toContain('cat "$BASELINE_INSTALL_LOG"');
+    expect(publishedRunner).not.toContain('cat "$BASELINE_CONFIG_VALIDATE_LOG"');
+    expect(publishedRunner).not.toContain('cat "$BASELINE_SERVICE_INSTALL_ERR"');
+    expect(publishedRunner).not.toContain('cat "$BASELINE_SERVICE_INSTALL_JSON"');
+    expect(publishedRunner).not.toContain('cat "$UPDATE_ERR"');
+    expect(publishedRunner).not.toContain('cat "$UPDATE_JSON"');
+    expect(publishedRunner).not.toContain('cat "$DOCTOR_LOG"');
+    expect(publishedRunner).not.toContain('cat "$GATEWAY_LOG"');
+    expect(publishedRunner).not.toContain('cat "$STATUS_ERR"');
+    expect(publishedRunner).not.toContain('cat "$STATUS_JSON"');
+    expect(publishedRunner).not.toContain('cat "$log_file"');
+  });
+
   it("keeps the harness run wrapper available with pre-sourced Docker command helpers", () => {
     const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-package-helper-guard-"));
 
