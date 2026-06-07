@@ -884,6 +884,31 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
     }
   });
 
+  it("flushes static release artifact logs before close resolves", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "openclaw-cross-os-static-server-log-flush-"));
+    const filePath = join(dir, "openclaw-2026.4.14.tgz");
+    const logPath = join(dir, "server.log");
+    let server: Awaited<ReturnType<typeof startStaticFileServer>> | undefined;
+
+    try {
+      writeFileSync(filePath, Buffer.alloc(128, "x"));
+      server = await startStaticFileServer({ filePath, logPath });
+      const marker = `flush-${"x".repeat(512)}-done`;
+
+      for (let index = 0; index < 8; index += 1) {
+        const response = await fetch(`${server.url}?${marker}-${index}`);
+        await response.text();
+      }
+      await server.close();
+      server = undefined;
+
+      expect(readFileSync(logPath, "utf8")).toContain(`${marker}-7`);
+    } finally {
+      await server?.close().catch(() => {});
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("does not preload static release artifacts before serving them", () => {
     const source = readFileSync("scripts/openclaw-cross-os-release-checks.ts", "utf8");
     const serverSource = source.slice(
