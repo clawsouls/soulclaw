@@ -166,14 +166,6 @@ function logLiveStep(message: string): void {
   console.info(`[live-acp-bind] ${message}`);
 }
 
-function shouldRequireBoundAssistantTranscript(liveAgent: LiveAcpAgent): boolean {
-  return (
-    liveAgent === "droid" ||
-    liveAgent === "opencode" ||
-    isTruthyEnvValue(process.env.OPENCLAW_LIVE_ACP_BIND_REQUIRE_TRANSCRIPT)
-  );
-}
-
 function shouldRequireCronMcpProbe(): boolean {
   return isTruthyEnvValue(process.env.OPENCLAW_LIVE_ACP_BIND_REQUIRE_CRON);
 }
@@ -799,15 +791,9 @@ describeLive("gateway live (ACP bind)", () => {
             });
           } catch {
             if (attempt === 2) {
-              if (shouldRequireBoundAssistantTranscript(liveAgent)) {
-                throw new Error(
-                  `${liveAgent} ACP bind completed, but the bound session did not emit an assistant transcript`,
-                );
-              }
-              console.error(
-                `SKIP: ${liveAgent} ACP bind completed, but the bound session did not emit an assistant transcript; skipping post-bind live probes.`,
+              throw new Error(
+                `${liveAgent} ACP bind completed, but the bound session did not emit an assistant transcript`,
               );
-              return;
             }
             logLiveStep("bound follow-up token not observed yet; retrying");
           }
@@ -932,15 +918,9 @@ describeLive("gateway live (ACP bind)", () => {
             });
           } catch {
             if (attempt === 2) {
-              if (shouldRequireBoundAssistantTranscript(liveAgent)) {
-                throw new Error(
-                  `${liveAgent} ACP bind completed, but the bound session did not emit the marker transcript`,
-                );
-              }
-              console.error(
-                `SKIP: ${liveAgent} ACP bind completed, but the bound session did not emit the marker transcript; skipping remaining post-bind live probes.`,
+              throw new Error(
+                `${liveAgent} ACP bind completed, but the bound session did not emit the marker transcript`,
               );
-              return;
             }
             logLiveStep("bound marker token not observed yet; retrying");
           }
