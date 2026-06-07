@@ -1222,6 +1222,85 @@ describe("bundled plugin install/uninstall probe", () => {
     expect(result.status).toBe(0);
   });
 
+  it("requires bundled install source paths to match the selected plugin root", () => {
+    const root = makePackageRoot();
+    const stateDir = path.join(root, "state");
+    const selectedRoot = path.join(root, "dist-runtime", "extensions", "nostr");
+    const staleRoot = path.join(root, "dist-runtime", "extensions", "nostr-copy");
+    fs.mkdirSync(path.join(stateDir, "plugins"), { recursive: true });
+    fs.mkdirSync(selectedRoot, { recursive: true });
+    fs.mkdirSync(staleRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(stateDir, "openclaw.json"),
+      JSON.stringify({ plugins: { entries: { nostr: { enabled: true } } } }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(stateDir, "plugins", "installs.json"),
+      JSON.stringify({
+        installRecords: {
+          nostr: {
+            source: "path",
+            sourcePath: staleRoot,
+            installPath: staleRoot,
+          },
+        },
+      }),
+      "utf8",
+    );
+    writePluginsList(root, []);
+
+    const result = runProbeCommand(
+      root,
+      ["assert-installed", "nostr", "nostr", "0", selectedRoot],
+      {
+        HOME: undefined,
+        OPENCLAW_STATE_DIR: stateDir,
+      },
+    );
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("did not match selected root");
+  });
+
+  it("requires bundled install source paths to exist", () => {
+    const root = makePackageRoot();
+    const stateDir = path.join(root, "state");
+    const selectedRoot = path.join(root, "dist-runtime", "extensions", "nostr");
+    fs.mkdirSync(path.join(stateDir, "plugins"), { recursive: true });
+    fs.writeFileSync(
+      path.join(stateDir, "openclaw.json"),
+      JSON.stringify({ plugins: { entries: { nostr: { enabled: true } } } }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(stateDir, "plugins", "installs.json"),
+      JSON.stringify({
+        installRecords: {
+          nostr: {
+            source: "path",
+            sourcePath: selectedRoot,
+            installPath: selectedRoot,
+          },
+        },
+      }),
+      "utf8",
+    );
+    writePluginsList(root, []);
+
+    const result = runProbeCommand(
+      root,
+      ["assert-installed", "nostr", "nostr", "0", selectedRoot],
+      {
+        HOME: undefined,
+        OPENCLAW_STATE_DIR: stateDir,
+      },
+    );
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("does not exist");
+  });
+
   it("detects native Windows bundled load paths after uninstall", () => {
     const root = makePackageRoot();
     const stateDir = path.join(root, "state");
