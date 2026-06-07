@@ -8,11 +8,14 @@ import {
   readPluginInstallRecords,
   writePluginInstallIndexForE2E,
 } from "../plugin-index-sqlite.mjs";
+import { readTextFileTail } from "../text-file-utils.mjs";
 
 const command = process.argv[2];
 const scratchRoot = process.env.OPENCLAW_PLUGINS_TMP_DIR || os.tmpdir();
 const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
 const scratchFile = (name) => path.join(scratchRoot, name);
+const ERROR_DETAIL_TAIL_BYTES = 16 * 1024;
+const LOG_SCAN_CHUNK_BYTES = 64 * 1024;
 
 function readClawHubPreflightLimits() {
   return {
@@ -112,6 +115,40 @@ function comparablePath(value) {
 
 function pathsEqual(left, right) {
   return comparablePath(left) === comparablePath(right);
+}
+
+function fileContainsText(file, needle) {
+  let stat;
+  try {
+    stat = fs.statSync(file);
+  } catch {
+    return false;
+  }
+  if (!stat.isFile() || stat.size <= 0) {
+    return false;
+  }
+  const fd = fs.openSync(file, "r");
+  try {
+    const buffer = Buffer.alloc(Math.min(LOG_SCAN_CHUNK_BYTES, stat.size));
+    let carry = "";
+    let offset = 0;
+    while (offset < stat.size) {
+      const bytesToRead = Math.min(buffer.length, stat.size - offset);
+      const bytesRead = fs.readSync(fd, buffer, 0, bytesToRead, offset);
+      if (bytesRead <= 0) {
+        break;
+      }
+      offset += bytesRead;
+      const text = carry + buffer.subarray(0, bytesRead).toString("utf8");
+      if (text.includes(needle)) {
+        return true;
+      }
+      carry = text.slice(-Math.max(0, needle.length - 1));
+    }
+    return false;
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 function getInstallRecords() {
@@ -288,10 +325,10 @@ function assertSimplePlugin(jsonFile, inspectFile, pluginId, method) {
 }
 
 function assertUpdateOutput(logFile, expectedSnippet) {
-  const output = fs.readFileSync(logFile, "utf8");
-  if (!output.includes(expectedSnippet)) {
+  if (!fileContainsText(logFile, expectedSnippet)) {
+    const outputTail = readTextFileTail(logFile, ERROR_DETAIL_TAIL_BYTES);
     throw new Error(
-      `expected update output to include ${JSON.stringify(expectedSnippet)}:\n${output}`,
+      `expected update output to include ${JSON.stringify(expectedSnippet)}. Output tail:\n${outputTail}`,
     );
   }
 }

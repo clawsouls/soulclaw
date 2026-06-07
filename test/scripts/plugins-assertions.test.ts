@@ -208,6 +208,40 @@ test -d "$OPENCLAW_PLUGINS_TMP_DIR"
     }
   });
 
+  it("scans plugin update logs without echoing whole files on failure", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "openclaw-plugin-update-log-"));
+    try {
+      const passRoot = path.join(root, "pass");
+      mkdirSync(passRoot, { recursive: true });
+      writeFileSync(
+        path.join(passRoot, "plugins-dir-update.log"),
+        `Skipping "demo-plugin-dir" (source: path).\n${"x".repeat(256 * 1024)}`,
+        "utf8",
+      );
+      const pass = await runAssertionAsync(["plugin-dir-update-skipped"], {
+        OPENCLAW_PLUGINS_TMP_DIR: passRoot,
+      });
+      expect(pass.status).toBe(0);
+
+      const failRoot = path.join(root, "fail");
+      mkdirSync(failRoot, { recursive: true });
+      writeFileSync(
+        path.join(failRoot, "plugins-dir-update.log"),
+        `${"x".repeat(256 * 1024)}\nmissing marker tail`,
+        "utf8",
+      );
+      const fail = await runAssertionAsync(["plugin-dir-update-skipped"], {
+        OPENCLAW_PLUGINS_TMP_DIR: failRoot,
+      });
+      expect(fail.status).toBe(1);
+      expect(fail.stderr).toContain("Output tail:");
+      expect(fail.stderr).toContain("missing marker tail");
+      expect(fail.stderr.length).toBeLessThan(20 * 1024);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("cleans npm fixture registry children when readiness times out", () => {
     const root = mkdtempSync(path.join(tmpdir(), "openclaw-plugin-npm-fixture-cleanup-"));
     try {
