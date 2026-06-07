@@ -36,6 +36,7 @@ const KITCHEN_SINK_PLUGIN_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-plugin-doc
 const KITCHEN_SINK_RPC_DOCKER_E2E_PATH = "scripts/e2e/kitchen-sink-rpc-docker.sh";
 const CODEX_ON_DEMAND_DOCKER_E2E_PATH = "scripts/e2e/codex-on-demand-docker.sh";
 const CODEX_MEDIA_PATH_SCENARIO_PATH = "scripts/e2e/lib/codex-media-path/scenario.sh";
+const OPENAI_CHAT_TOOLS_SCENARIO_PATH = "scripts/e2e/lib/openai-chat-tools/scenario.sh";
 const CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH = "scripts/e2e/codex-npm-plugin-live-docker.sh";
 const CODEX_NPM_PLUGIN_LIVE_ASSERTIONS_PATH =
   "scripts/e2e/lib/codex-npm-plugin-live/assertions.mjs";
@@ -197,6 +198,16 @@ describe("docker build helper", () => {
 
       expect(script, scriptPath).toContain('source "$ROOT_DIR/scripts/lib/docker-e2e-image.sh"');
       expect(script.match(/docker_e2e_print_log "\$CLIENT_LOG"/g), scriptPath).toHaveLength(2);
+      expect(script, scriptPath).not.toContain('cat "$CLIENT_LOG"');
+    }
+  });
+
+  it("prints in-container Docker client logs through bounded helpers", () => {
+    for (const scriptPath of [CODEX_MEDIA_PATH_SCENARIO_PATH, OPENAI_CHAT_TOOLS_SCENARIO_PATH]) {
+      const script = readFileSync(scriptPath, "utf8");
+
+      expect(script, scriptPath).toContain("source scripts/lib/openclaw-e2e-instance.sh");
+      expect(script, scriptPath).toContain('openclaw_e2e_print_log "$CLIENT_LOG"');
       expect(script, scriptPath).not.toContain('cat "$CLIENT_LOG"');
     }
   });
