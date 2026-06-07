@@ -7,7 +7,7 @@ import { liveTurnTimeoutMs } from "./suite-runtime-agent-common.js";
 import { readRawQaSessionStore } from "./suite-runtime-agent-session.js";
 import type { QaSuiteRuntimeEnv } from "./suite-runtime-types.js";
 
-type QaRuntimeToolFixtureConfig = {
+type QaRuntimeToolFixtureConfig = Record<string, unknown> & {
   toolName?: unknown;
   happyPrompt?: unknown;
   failurePrompt?: unknown;
@@ -64,28 +64,33 @@ type QaRuntimeToolFixtureDeps = {
   ensureImageGenerationConfigured: (env: QaSuiteRuntimeEnv) => Promise<unknown>;
 };
 
-function readString(value: unknown, fallback = "") {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
+function readString(raw: unknown, fallback = "") {
+  return typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : fallback;
 }
 
-function readBoolean(value: unknown, fallback: boolean) {
-  return typeof value === "boolean" ? value : fallback;
+function readBoolean(raw: unknown, fallback: boolean) {
+  return typeof raw === "boolean" ? raw : fallback;
 }
 
-function isKnownBroken(value: unknown) {
-  return Boolean(value && typeof value === "object");
+function isKnownBroken(raw: unknown): raw is Record<string, unknown> {
+  return isRecord(raw);
 }
 
-function isKnownHarnessGap(value: unknown) {
-  return Boolean(value && typeof value === "object");
+function isKnownHarnessGap(raw: unknown): raw is Record<string, unknown> {
+  return isRecord(raw);
 }
 
-function isQaRuntimeToolFixtureRequest(value: unknown): value is QaRuntimeToolFixtureRequest {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+function isQaRuntimeToolFixtureRequest(raw: unknown): raw is QaRuntimeToolFixtureRequest {
+  return isRecord(raw);
 }
 
-function readQaRuntimeToolFixtureRequests(value: unknown): QaRuntimeToolFixtureRequest[] {
-  return Array.isArray(value) ? value.filter(isQaRuntimeToolFixtureRequest) : [];
+function readQaRuntimeToolFixtureRequests(raw: unknown): QaRuntimeToolFixtureRequest[] {
+  return Array.isArray(raw) ? raw.filter(isQaRuntimeToolFixtureRequest) : [];
+}
+
+function formatPlannedToolArgs(rawArgs: unknown) {
+  const encodedArgs = JSON.stringify(rawArgs ?? {});
+  return encodedArgs ?? "undefined";
 }
 
 function requestMatchesPrompt(request: QaRuntimeToolFixtureRequest, promptSnippet: string) {
@@ -117,7 +122,7 @@ function stringifyTranscriptToolResult(value: unknown): string {
   try {
     return JSON.stringify(value);
   } catch {
-    return String(value);
+    return "";
   }
 }
 
@@ -454,9 +459,7 @@ function formatKnownBrokenDetails(
   tools: Set<string>,
   config: QaRuntimeToolFixtureConfig,
 ) {
-  const knownBroken = isKnownBroken(config.knownBroken)
-    ? (config.knownBroken as Record<string, unknown>)
-    : {};
+  const knownBroken = isKnownBroken(config.knownBroken) ? config.knownBroken : {};
   const issue = readString(knownBroken.issue);
   const reason = readString(knownBroken.reason, "known broken runtime tool fixture");
   return [
@@ -487,10 +490,10 @@ function formatCodexNativeWorkspaceDetails(params: {
     params.reason ? `reason: ${params.reason}` : undefined,
     `available OpenClaw dynamic tools: ${[...params.tools].toSorted().join(", ")}`,
     params.happyRequest
-      ? `${params.toolName} mock provider happy planned args (diagnostic only): ${JSON.stringify(params.happyRequest.plannedToolArgs ?? {})}`
+      ? `${params.toolName} mock provider happy planned args (diagnostic only): ${formatPlannedToolArgs(params.happyRequest.plannedToolArgs)}`
       : undefined,
     params.failureRequest
-      ? `${params.toolName} mock provider failure planned args (diagnostic only): ${JSON.stringify(params.failureRequest.plannedToolArgs ?? {})}`
+      ? `${params.toolName} mock provider failure planned args (diagnostic only): ${formatPlannedToolArgs(params.failureRequest.plannedToolArgs)}`
       : undefined,
   ]
     .filter(Boolean)
@@ -498,9 +501,7 @@ function formatCodexNativeWorkspaceDetails(params: {
 }
 
 function formatKnownHarnessGapDetails(toolName: string, config: QaRuntimeToolFixtureConfig) {
-  const knownHarnessGap = isKnownHarnessGap(config.knownHarnessGap)
-    ? (config.knownHarnessGap as Record<string, unknown>)
-    : {};
+  const knownHarnessGap = isKnownHarnessGap(config.knownHarnessGap) ? config.knownHarnessGap : {};
   const issue = readString(knownHarnessGap.issue);
   const reason = readString(knownHarnessGap.reason, "known QA harness gap");
   return [`known-harness-gap ${toolName}: ${reason}`, issue ? `tracking: ${issue}` : undefined]
@@ -538,7 +539,7 @@ export async function runRuntimeToolFixture(
   );
   const tools = await deps.readEffectiveTools(env, happySessionKey);
   const metadata = readRuntimeToolCoverageMetadata({
-    config: config as Record<string, unknown>,
+    config,
   });
   const dynamicExposureIntentionallyExcluded =
     env.gateway.runtimeEnv.OPENCLAW_QA_FORCE_RUNTIME === "codex" &&
@@ -709,7 +710,7 @@ export async function runRuntimeToolFixture(
   }
 
   return [
-    `${toolName} mock provider happy planned args (diagnostic only): ${JSON.stringify(happyRequest.plannedRequest.plannedToolArgs ?? {})}`,
-    `${toolName} mock provider failure planned args (diagnostic only): ${JSON.stringify(failureRequest.plannedRequest.plannedToolArgs ?? {})}`,
+    `${toolName} mock provider happy planned args (diagnostic only): ${formatPlannedToolArgs(happyRequest.plannedRequest.plannedToolArgs)}`,
+    `${toolName} mock provider failure planned args (diagnostic only): ${formatPlannedToolArgs(failureRequest.plannedRequest.plannedToolArgs)}`,
   ].join("\n");
 }
