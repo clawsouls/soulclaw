@@ -387,6 +387,13 @@ describe("kitchen-sink plugin assertions", () => {
     }
   });
 
+  it("streams kitchen-sink log directories instead of sorting full child lists", () => {
+    const source = readFileSync(ASSERTIONS_SCRIPT, "utf8");
+
+    expect(source).toContain("fs.opendirSync(entry)");
+    expect(source).not.toContain("fs.readdirSync(entry).toSorted");
+  });
+
   it("does not allow dirty error lines just because they mention zero errors", () => {
     const parent = mkdtempSync(path.join(tmpdir(), "openclaw-kitchen-sink-scan-"));
     const home = path.join(parent, "home");
