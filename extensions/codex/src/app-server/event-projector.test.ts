@@ -1692,6 +1692,12 @@ describe("CodexAppServerEventProjector", () => {
 
     expect(result.promptError).toBeNull();
     expect(result.promptErrorSource).toBeNull();
+    expect(result.lastToolError).toMatchObject({
+      toolName: "bash",
+      error: expect.stringContaining("without a matching tool.result"),
+      mutatingAction: true,
+    });
+    expect(result.lastToolError?.actionFingerprint).toContain("node scripts/report.js --publish");
     expect(result.assistantTexts).toEqual([
       "The requested publish command was denied before execution.",
     ]);
@@ -1736,6 +1742,44 @@ describe("CodexAppServerEventProjector", () => {
       result: { status: "failed", reason: "missing_tool_result" },
       output: expect.stringContaining("without a matching tool.result"),
     });
+  });
+
+  it("records promptError when a completed turn has only whitespace assistant text and an orphan tool call", async () => {
+    const projector = await createProjector(await createParams());
+
+    await projector.handleNotification(
+      forCurrentTurn("item/started", {
+        item: {
+          type: "commandExecution",
+          id: "cmd-whitespace",
+          command: "pnpm test extensions/codex",
+          cwd: "/workspace",
+          processId: null,
+          source: "agent",
+          status: "inProgress",
+          commandActions: [],
+          aggregatedOutput: null,
+          exitCode: null,
+          durationMs: null,
+        },
+      }),
+    );
+    await projector.handleNotification(
+      turnCompleted([
+        {
+          type: "agentMessage",
+          id: "msg-whitespace",
+          text: "   \n\t  ",
+        },
+      ]),
+    );
+
+    const result = projector.buildResult(buildEmptyToolTelemetry());
+
+    expect(result.promptError).toContain("without a matching tool.result");
+    expect(result.promptErrorSource).toBe("prompt");
+    expect(result.lastToolError).toBeUndefined();
+    expect(result.assistantTexts).toEqual([]);
   });
 
   it("uses streamed command output when final command snapshots omit aggregated output", async () => {

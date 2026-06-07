@@ -1358,6 +1358,12 @@ describe("runCodexAppServerAttempt", () => {
     const result = await run;
 
     expect(result.promptError).toBeNull();
+    expect(result.lastToolError).toMatchObject({
+      toolName: "bash",
+      error: expect.stringContaining("without a matching tool.result"),
+      mutatingAction: true,
+    });
+    expect(result.lastToolError?.actionFingerprint).toContain("pnpm test extensions/codex");
     expect(result.assistantTexts).toEqual(["Recovered with final answer after orphan tool call."]);
     expect(result.messagesSnapshot.map((message) => message.role)).toEqual([
       "user",
