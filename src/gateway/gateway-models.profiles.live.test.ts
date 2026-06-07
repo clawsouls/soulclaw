@@ -364,6 +364,27 @@ function assertGatewayLiveDidNotSkipAllDueToTimeout(params: {
   );
 }
 
+function assertGatewayLiveCompletedSomeModels(params: {
+  label: string;
+  passedCount: number;
+  skippedCount: number;
+  timeoutSkippedCount: number;
+  total: number;
+}): void {
+  if (params.total === 0 || params.passedCount > 0) {
+    return;
+  }
+  assertGatewayLiveDidNotSkipAllDueToTimeout({
+    label: params.label,
+    skippedCount: params.skippedCount,
+    timeoutSkippedCount: params.timeoutSkippedCount,
+    total: params.total,
+  });
+  throw new Error(
+    `[${params.label}] completed zero successful live model run(s) across ${params.total} selected model(s); skipped=${params.skippedCount}. Live proof must exercise at least one model.`,
+  );
+}
+
 function formatGatewayLiveFilterSet(filter: ReadonlySet<string> | null): string {
   if (!filter || filter.size === 0) {
     return "all";
@@ -396,6 +417,20 @@ function assertGatewayLiveSelectedSomeModels(params: {
   const mode = params.useExplicit ? "explicit" : params.useSmall ? "small" : "high-signal";
   throw new Error(
     `[${params.label}] selected no ${mode} live models for providers=${formatGatewayLiveFilterSet(params.providerFilter)} models=${formatGatewayLiveFilterSet(params.modelFilter)} from ${params.total} registry model(s); update the live model selection or pass explicit live model refs.`,
+  );
+}
+
+function assertGatewayLiveHasRunnableCandidates(params: {
+  candidatesCount: number;
+  label: string;
+  skipped: Array<{ model: string; error: string }>;
+}): void {
+  if (params.candidatesCount > 0) {
+    return;
+  }
+  const preview = params.skipped.length > 0 ? `:\n${formatFailurePreview(params.skipped, 8)}` : ".";
+  throw new Error(
+    `[${params.label}] selected no runnable live model candidates with usable credentials; skipped ${params.skipped.length} candidate(s)${preview}`,
   );
 }
 
@@ -893,6 +928,32 @@ describe("assertGatewayLiveDidNotSkipAllDueToTimeout", () => {
   });
 });
 
+describe("assertGatewayLiveCompletedSomeModels", () => {
+  it("allows live sweeps with at least one successful model run", () => {
+    expect(() =>
+      assertGatewayLiveCompletedSomeModels({
+        label: "all-models",
+        passedCount: 1,
+        skippedCount: 4,
+        timeoutSkippedCount: 0,
+        total: 5,
+      }),
+    ).not.toThrow();
+  });
+
+  it("fails live sweeps with no successful model runs", () => {
+    expect(() =>
+      assertGatewayLiveCompletedSomeModels({
+        label: "all-models",
+        passedCount: 0,
+        skippedCount: 2,
+        timeoutSkippedCount: 0,
+        total: 2,
+      }),
+    ).toThrow(/completed zero successful live model run/);
+  });
+});
+
 describe("assertGatewayLiveSelectedSomeModels", () => {
   it("allows unfiltered sweeps with no high-signal models", () => {
     expect(() =>
@@ -935,6 +996,28 @@ describe("assertGatewayLiveSelectedSomeModels", () => {
         useSmall: false,
         useExplicit: false,
         wantedCount: 0,
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe("assertGatewayLiveHasRunnableCandidates", () => {
+  it("fails selected sweeps when auth lookup leaves no runnable candidates", () => {
+    expect(() =>
+      assertGatewayLiveHasRunnableCandidates({
+        candidatesCount: 0,
+        label: "all-models",
+        skipped: [{ model: "openai/gpt-5.5", error: "missing auth profile" }],
+      }),
+    ).toThrow(/selected no runnable live model candidates/);
+  });
+
+  it("allows selected sweeps with runnable candidates", () => {
+    expect(() =>
+      assertGatewayLiveHasRunnableCandidates({
+        candidatesCount: 1,
+        label: "all-models",
+        skipped: [],
       }),
     ).not.toThrow();
   });
@@ -2859,6 +2942,7 @@ async function runGatewayModelSuite(params: GatewayModelSuiteParams) {
       logProgress(`[${params.label}] anthropic keys loaded: ${anthropicKeys.length}`);
     }
     const failures: Array<{ model: string; error: string }> = [];
+    let passedCount = 0;
     let skippedCount = 0;
     let timeoutSkippedCount = 0;
     const total = params.candidates.length;
@@ -3276,6 +3360,7 @@ async function runGatewayModelSuite(params: GatewayModelSuiteParams) {
             skippedCount += 1;
             break;
           }
+          passedCount += 1;
           logProgress(`${progressLabel}: done`);
           break;
         } catch (err) {
@@ -3474,15 +3559,13 @@ async function runGatewayModelSuite(params: GatewayModelSuiteParams) {
         `gateway live model failures (${failures.length}, showing ${Math.min(failures.length, 20)}):\n${preview}`,
       );
     }
-    if (skippedCount === total) {
-      assertGatewayLiveDidNotSkipAllDueToTimeout({
-        label: params.label,
-        skippedCount,
-        timeoutSkippedCount,
-        total,
-      });
-      logProgress(`[${params.label}] skipped all models (no runnable profiles or provider drift)`);
-    }
+    assertGatewayLiveCompletedSomeModels({
+      label: params.label,
+      passedCount,
+      skippedCount,
+      timeoutSkippedCount,
+      total,
+    });
   } finally {
     clearRuntimeConfigSnapshot();
     restoreProductionEnvForLiveRun(runtimeEnv);
@@ -3688,9 +3771,12 @@ describeLive("gateway live (dev agent, profile keys)", () => {
               `[all-models] auth lookup skipped candidates:\n${formatFailurePreview(skipped, 8)}`,
             );
           }
-          logProgress("[all-models] no API keys found; skipping");
-          return;
         }
+        assertGatewayLiveHasRunnableCandidates({
+          candidatesCount: candidates.length,
+          label: "all-models",
+          skipped,
+        });
         const selectCandidates = useSmall ? selectSmallLiveItems : selectHighSignalLiveItems;
         const selectedCandidates = selectCandidates(
           candidates,
