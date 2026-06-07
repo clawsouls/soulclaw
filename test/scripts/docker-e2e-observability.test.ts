@@ -9,8 +9,8 @@ describe("Docker E2E observability", () => {
       const script = readFileSync(scriptPath, "utf8");
       const successTail = script.slice(script.lastIndexOf('if [ "$status" -ne 0 ]; then'));
 
-      expect(successTail).toContain('cat "$CLIENT_LOG"');
-      expect(successTail.indexOf('cat "$CLIENT_LOG"')).toBeLessThan(
+      expect(successTail).toContain('docker_e2e_print_log "$CLIENT_LOG"');
+      expect(successTail.indexOf('docker_e2e_print_log "$CLIENT_LOG"')).toBeLessThan(
         successTail.indexOf('echo "OK"'),
       );
     },

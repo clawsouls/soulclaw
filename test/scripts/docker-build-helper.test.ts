@@ -99,6 +99,12 @@ const CENTRALIZED_BUILD_SCRIPTS = [
   "scripts/test-install-sh-e2e-docker.sh",
   "scripts/test-live-build-docker.sh",
 ] as const;
+const BOUNDED_CLIENT_LOG_DOCKER_E2E_SCRIPTS = [
+  "scripts/e2e/cron-mcp-cleanup-docker.sh",
+  "scripts/e2e/mcp-channels-docker.sh",
+  "scripts/e2e/mcp-code-mode-gateway-docker.sh",
+  "scripts/e2e/mcp-code-mode-gateway-live-docker.sh",
+] as const;
 
 function packageBackedDockerRunnerPaths(): string[] {
   return readdirSync("scripts/e2e")
@@ -183,6 +189,16 @@ describe("docker build helper", () => {
     );
     expect(installE2eSmoke).toContain("docker_e2e_docker_run_cmd run --rm \\");
     expect(installE2eSmoke).not.toContain("docker run --rm \\");
+  });
+
+  it("prints Docker MCP client logs through the bounded helper", () => {
+    for (const scriptPath of BOUNDED_CLIENT_LOG_DOCKER_E2E_SCRIPTS) {
+      const script = readFileSync(scriptPath, "utf8");
+
+      expect(script, scriptPath).toContain('source "$ROOT_DIR/scripts/lib/docker-e2e-image.sh"');
+      expect(script.match(/docker_e2e_print_log "\$CLIENT_LOG"/g), scriptPath).toHaveLength(2);
+      expect(script, scriptPath).not.toContain('cat "$CLIENT_LOG"');
+    }
   });
 
   it("runs cleanup smoke on the native ARM platform instead of pulling an amd64 tag", () => {
