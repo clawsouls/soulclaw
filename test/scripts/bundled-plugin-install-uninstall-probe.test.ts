@@ -205,10 +205,15 @@ describe("bundled plugin install/uninstall probe", () => {
   it("bounds bundled plugin package lifecycle commands", () => {
     const sweep = fs.readFileSync(sweepPath, "utf8");
 
+    expect(sweep).toContain("source scripts/lib/docker-e2e-logs.sh");
     expect(sweep).toContain("OPENCLAW_BUNDLED_PLUGIN_SWEEP_COMMAND_TIMEOUT:-300s");
     expect(sweep.match(/openclaw_e2e_maybe_timeout/g)).toHaveLength(1);
     expect(sweep).toContain('run_logged_sweep_command "install $plugin_id"');
     expect(sweep).toContain('run_logged_sweep_command "uninstall $plugin_id"');
+    expect(sweep.match(/docker_e2e_print_log/g)).toHaveLength(3);
+    expect(sweep).not.toContain('cat "$log_file"');
+    expect(sweep).not.toContain('cat "$install_log"');
+    expect(sweep).not.toContain('cat "$uninstall_log"');
   });
 
   it("keeps runtime command output capture bounded", async () => {
