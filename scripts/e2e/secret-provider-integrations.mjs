@@ -45,6 +45,11 @@ const OUTPUT_CAPTURE_LIMIT_BYTES = readPositiveInt(
   4 * 1024 * 1024,
   "OPENCLAW_SECRET_PROOF_OUTPUT_BYTES",
 );
+const RESOLVER_STDIN_LIMIT_BYTES = readPositiveInt(
+  process.env.OPENCLAW_SECRET_PROOF_RESOLVER_STDIN_BYTES,
+  1024 * 1024,
+  "OPENCLAW_SECRET_PROOF_RESOLVER_STDIN_BYTES",
+);
 const RESULTS_PATH =
   process.env.OPENCLAW_SECRET_PROOF_RESULTS_PATH?.trim() ||
   path.join(os.tmpdir(), `openclaw-secret-provider-e2e-results-${process.pid}.json`);
@@ -596,15 +601,36 @@ if (!storePath) {
   console.error("missing PROOF_SECRET_STORE_PATH");
   process.exit(4);
 }
+const stdinLimitBytes = ${RESOLVER_STDIN_LIMIT_BYTES};
 
 function readStdin() {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let body = "";
+    let bytes = 0;
+    let failed = false;
+    const fail = (error) => {
+      if (failed) {
+        return;
+      }
+      failed = true;
+      reject(error);
+    };
     process.stdin.setEncoding("utf8");
     process.stdin.on("data", (chunk) => {
+      bytes += Buffer.byteLength(chunk, "utf8");
+      if (bytes > stdinLimitBytes) {
+        fail(new Error(\`resolver stdin exceeded \${stdinLimitBytes} bytes\`));
+        process.stdin.destroy();
+        return;
+      }
       body += chunk;
     });
-    process.stdin.on("end", () => resolve(body));
+    process.stdin.on("error", fail);
+    process.stdin.on("end", () => {
+      if (!failed) {
+        resolve(body);
+      }
+    });
   });
 }
 
@@ -1835,6 +1861,7 @@ export {
   runCommand,
   startGateway,
   waitForManagedGatewayStatus,
+  writeProofPlugin,
 };
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
