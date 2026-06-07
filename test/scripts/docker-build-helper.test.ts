@@ -2126,6 +2126,8 @@ output="$(cat "$sampler_log")"
       expect(runner, path).toContain("docker_e2e_sample_stats_until_exit \\");
       expect(runner, path).toContain('"$STATS_LOG" \\');
       expect(runner, path).toContain('"$RUN_LOG" \\');
+      expect(runner, path).toContain('docker_e2e_print_log "$RUN_LOG"');
+      expect(runner, path).not.toContain('cat "$RUN_LOG"');
       expect(runner, path).not.toMatch(/(^|\n)docker run --name "\$CONTAINER_NAME"/u);
       expect(runner, path).not.toMatch(/(^|\n)docker (?:inspect|stats) /u);
       expect(runner, path).toMatch(/cleanup\(\) \{[\s\S]*rm -f "\$RUN_LOG" "\$STATS_LOG"/u);

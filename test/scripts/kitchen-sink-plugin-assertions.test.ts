@@ -522,6 +522,43 @@ grep -q "cli transcript: plugins install demo" "$SCRATCH_ROOT/install_log.log"
     }
   });
 
+  it("bounds printed kitchen-sink CLI command logs without truncating saved logs", () => {
+    const parent = mkdtempSync(path.join(tmpdir(), "openclaw-kitchen-sink-log-print-"));
+    const scratchRoot = path.join(parent, "scratch");
+    const entry = path.join(parent, "entry.mjs");
+    try {
+      mkdirSync(scratchRoot, { recursive: true });
+      writeFileSync(
+        entry,
+        'process.stdout.write(`prefix\\n${"x".repeat(2048)}\\nTAIL_MARKER\\n`);\n',
+      );
+
+      const result = runSweepShell(
+        `
+set -euo pipefail
+export KITCHEN_SINK_SWEEP_SOURCE_ONLY=1
+export KITCHEN_SINK_TMP_DIR="$SCRATCH_ROOT"
+export OPENCLAW_ENTRY="$ENTRY"
+export OPENCLAW_DOCKER_E2E_LOG_PRINT_BYTES=64
+source scripts/e2e/lib/kitchen-sink-plugin/sweep.sh
+run_kitchen_sink_openclaw_logged "install/noisy" plugins install demo
+grep -q "prefix" "$SCRATCH_ROOT/install_noisy.log"
+`,
+        {
+          ENTRY: entry,
+          SCRATCH_ROOT: scratchRoot,
+        },
+      );
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("truncated: showing last 64");
+      expect(result.stdout).toContain("TAIL_MARKER");
+      expect(result.stdout).not.toContain("prefix");
+    } finally {
+      rmSync(parent, { force: true, recursive: true });
+    }
+  });
+
   it("includes expected-failure transcripts in the final kitchen-sink log scan", () => {
     const parent = mkdtempSync(path.join(tmpdir(), "openclaw-kitchen-sink-failure-log-"));
     const home = path.join(parent, "home");

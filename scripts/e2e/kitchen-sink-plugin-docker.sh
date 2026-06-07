@@ -77,7 +77,7 @@ wait "$docker_pid"
 run_status="$?"
 set -e
 
-cat "$RUN_LOG"
+docker_e2e_print_log "$RUN_LOG"
 
 if [ "$run_status" -eq 0 ]; then
   node scripts/e2e/lib/docker-stats/assert-resource-ceiling.mjs "$STATS_LOG" "$MAX_MEMORY_MIB" "$MAX_CPU_PERCENT" kitchen-sink
