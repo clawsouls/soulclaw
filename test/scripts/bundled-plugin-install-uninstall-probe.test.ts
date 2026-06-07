@@ -933,6 +933,106 @@ describe("bundled plugin install/uninstall probe", () => {
     }
   });
 
+  it("allows degraded runtime readiness only for expected channel failures", async () => {
+    const runtimeSmoke = await importRuntimeSmokeWithEnv({
+      OPENCLAW_BUNDLED_PLUGIN_RUNTIME_HTTP_MS: "100",
+      OPENCLAW_BUNDLED_PLUGIN_RUNTIME_RPC_READY_MS: "50",
+    });
+    const server = createHttpServer((_request, response) => {
+      response.writeHead(503, { "content-type": "application/json" });
+      response.end(JSON.stringify({ ready: false, failing: ["qa-channel"] }));
+    });
+
+    try {
+      const port = await listenOnLoopback(server);
+
+      await expect(
+        runtimeSmoke.assertReadyzProbe({
+          allowedDegradedReadyzFailures: ["qa-channel"],
+          pluginId: "qa-channel",
+          port,
+        }),
+      ).resolves.toBeUndefined();
+    } finally {
+      await closeServer(server);
+    }
+  });
+
+  it("rejects degraded runtime readiness for unexpected channel failures", async () => {
+    const runtimeSmoke = await importRuntimeSmokeWithEnv({
+      OPENCLAW_BUNDLED_PLUGIN_RUNTIME_HTTP_MS: "100",
+      OPENCLAW_BUNDLED_PLUGIN_RUNTIME_RPC_READY_MS: "50",
+    });
+    const server = createHttpServer((_request, response) => {
+      response.writeHead(503, { "content-type": "application/json" });
+      response.end(JSON.stringify({ ready: false, failing: ["unexpected"] }));
+    });
+
+    try {
+      const port = await listenOnLoopback(server);
+
+      await expect(
+        runtimeSmoke.assertReadyzProbe({
+          allowedDegradedReadyzFailures: ["qa-channel"],
+          pluginId: "qa-channel",
+          port,
+        }),
+      ).rejects.toThrow('/readyz returned HTTP 503: {"ready":false,"failing":["unexpected"]}');
+    } finally {
+      await closeServer(server);
+    }
+  });
+
+  it("rejects generic readyz server errors in degraded runtime mode", async () => {
+    const runtimeSmoke = await importRuntimeSmokeWithEnv({
+      OPENCLAW_BUNDLED_PLUGIN_RUNTIME_HTTP_MS: "100",
+      OPENCLAW_BUNDLED_PLUGIN_RUNTIME_RPC_READY_MS: "50",
+    });
+    const server = createHttpServer((_request, response) => {
+      response.writeHead(500, { "content-type": "application/json" });
+      response.end(JSON.stringify({ ready: true }));
+    });
+
+    try {
+      const port = await listenOnLoopback(server);
+
+      await expect(
+        runtimeSmoke.assertReadyzProbe({
+          allowedDegradedReadyzFailures: ["qa-channel"],
+          pluginId: "qa-channel",
+          port,
+        }),
+      ).rejects.toThrow('/readyz returned HTTP 500: {"ready":true}');
+    } finally {
+      await closeServer(server);
+    }
+  });
+
+  it("keeps readyz HTTP status diagnostics when the body is malformed", async () => {
+    const runtimeSmoke = await importRuntimeSmokeWithEnv({
+      OPENCLAW_BUNDLED_PLUGIN_RUNTIME_HTTP_MS: "100",
+      OPENCLAW_BUNDLED_PLUGIN_RUNTIME_RPC_READY_MS: "50",
+    });
+    const server = createHttpServer((_request, response) => {
+      response.writeHead(503, { "content-type": "application/json" });
+      response.end("not json");
+    });
+
+    try {
+      const port = await listenOnLoopback(server);
+
+      await expect(
+        runtimeSmoke.assertReadyzProbe({
+          allowedDegradedReadyzFailures: ["qa-channel"],
+          pluginId: "qa-channel",
+          port,
+        }),
+      ).rejects.toThrow('/readyz returned HTTP 503: "not json"');
+    } finally {
+      await closeServer(server);
+    }
+  });
+
   it("bounds stalled runtime HTTP probes", async () => {
     const runtimeSmoke = await import(pathToFileURL(runtimeSmokePath).href);
     const sockets = new Set<Socket>();
