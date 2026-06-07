@@ -503,13 +503,7 @@ describe("qa cli runtime", () => {
       watchUrl: "http://127.0.0.1:43124",
       reportPath: suiteReportPath,
       summaryPath: suiteSummaryPath,
-      scenarios: [
-        {
-          name: "channel chat baseline",
-          status: "fail",
-          steps: [],
-        },
-      ],
+      scenarios: [],
     });
 
     try {

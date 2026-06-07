@@ -79,11 +79,18 @@ export function readQaSuiteFailedScenarioCountFromSummary(summary: unknown): num
     };
     scenarios?: Array<QaSuiteScenarioStatus>;
   };
-  if (typeof payload.counts?.failed === "number" && Number.isFinite(payload.counts.failed)) {
-    return Math.max(0, Math.floor(payload.counts.failed));
+  const countedFailures =
+    typeof payload.counts?.failed === "number" && Number.isFinite(payload.counts.failed)
+      ? Math.max(0, Math.floor(payload.counts.failed))
+      : null;
+  const scenarioFailures = Array.isArray(payload.scenarios)
+    ? countQaSuiteFailedScenarios(payload.scenarios)
+    : null;
+  if (countedFailures !== null && scenarioFailures !== null) {
+    return Math.max(countedFailures, scenarioFailures);
   }
-  if (Array.isArray(payload.scenarios)) {
-    return countQaSuiteFailedScenarios(payload.scenarios);
+  if (scenarioFailures !== null) {
+    return scenarioFailures;
   }
-  return null;
+  return countedFailures;
 }

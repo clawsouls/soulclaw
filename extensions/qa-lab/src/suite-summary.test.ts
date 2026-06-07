@@ -12,7 +12,14 @@ describe("qa suite summary helpers", () => {
     ).toBe(2);
   });
 
-  it("prefers counts.failed when available", () => {
+  it("uses the larger failure signal when counts and scenarios disagree", () => {
+    expect(
+      readQaSuiteFailedScenarioCountFromSummary({
+        counts: { failed: 0 },
+        scenarios: [{ status: "pass" }, { status: "fail" }],
+      }),
+    ).toBe(1);
+
     expect(
       readQaSuiteFailedScenarioCountFromSummary({
         counts: { failed: 3.8 },

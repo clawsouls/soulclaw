@@ -706,7 +706,7 @@ export async function runQaSuiteCommand(opts: {
   process.stdout.write(`QA suite watch: ${result.watchUrl}\n`);
   process.stdout.write(`QA suite report: ${result.reportPath}\n`);
   process.stdout.write(`QA suite summary: ${result.summaryPath}\n`);
-  const failedScenarioCount = readQaSuiteFailedScenarioCountFromSummary(result);
+  const failedScenarioCount = await readQaFailedScenarioCountFromSummary(result.summaryPath);
   if (!allowFailures && failedScenarioCount !== null && failedScenarioCount > 0) {
     process.exitCode = 1;
   }
