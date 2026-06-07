@@ -57,10 +57,6 @@ function resolveLiveTimeoutMs(raw: string | undefined, fallback: number): number
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
 }
 
-class AcpBindSkipError extends Error {
-  override readonly name = "AcpBindSkipError";
-}
-
 function createSlackCurrentConversationBindingRegistry() {
   return createTestRegistry([
     {
@@ -300,16 +296,6 @@ function isRetryableAcpBindWarmupText(texts: string[]): boolean {
   );
 }
 
-function isSkippableAcpBindText(params: { liveAgent: LiveAcpAgent; texts: string[] }): boolean {
-  if (params.liveAgent !== "codex") {
-    return false;
-  }
-  const combined = params.texts.join("\n\n").toLowerCase();
-  return (
-    combined.includes("acp_session_init_failed") && combined.includes("authentication required")
-  );
-}
-
 describe("isRetryableAcpBindWarmupText", () => {
   it.each([
     {
@@ -325,23 +311,6 @@ describe("isRetryableAcpBindWarmupText", () => {
     { texts: ["ACP error (ACP_SESSION_INIT_FAILED): ACP metadata is missing."], expected: false },
   ])("returns $expected for $texts", ({ texts, expected }) => {
     expect(isRetryableAcpBindWarmupText(texts)).toBe(expected);
-  });
-});
-
-describe("isSkippableAcpBindText", () => {
-  it.each([
-    {
-      liveAgent: "codex" as const,
-      texts: ["ACP error (ACP_SESSION_INIT_FAILED): Authentication required"],
-      expected: true,
-    },
-    {
-      liveAgent: "gemini" as const,
-      texts: ["ACP error (ACP_SESSION_INIT_FAILED): Authentication required"],
-      expected: false,
-    },
-  ])("returns $expected for $liveAgent", ({ liveAgent, texts, expected }) => {
-    expect(isSkippableAcpBindText({ liveAgent, texts })).toBe(expected);
   });
 });
 
@@ -427,13 +396,6 @@ async function bindConversationAndWait(params: {
       return { mainAssistantTexts, spawnedSessionKey };
     }
     if (!isRetryableAcpBindWarmupText(mainAssistantTexts)) {
-      if (isSkippableAcpBindText({ liveAgent: params.liveAgent, texts: mainAssistantTexts })) {
-        throw new AcpBindSkipError(
-          `SKIP: ${params.liveAgent} ACP bind unavailable: ${formatAssistantTextPreview(
-            mainAssistantTexts,
-          )}`,
-        );
-      }
       throw new Error(
         `bind command did not produce an ACP session: ${formatAssistantTextPreview(mainAssistantTexts)}`,
       );
@@ -746,23 +708,14 @@ describeLive("gateway live (ACP bind)", () => {
       pinActivePluginChannelRegistry(channelRegistry);
 
       try {
-        let bindResult: Awaited<ReturnType<typeof bindConversationAndWait>>;
-        try {
-          bindResult = await bindConversationAndWait({
-            client,
-            sessionKey: originalSessionKey,
-            liveAgent,
-            originatingChannel: "slack",
-            originatingTo: conversationId,
-            originatingAccountId: accountId,
-          });
-        } catch (error) {
-          if (error instanceof AcpBindSkipError) {
-            console.error(error.message);
-            return;
-          }
-          throw error;
-        }
+        const bindResult = await bindConversationAndWait({
+          client,
+          sessionKey: originalSessionKey,
+          liveAgent,
+          originatingChannel: "slack",
+          originatingTo: conversationId,
+          originatingAccountId: accountId,
+        });
         const { mainAssistantTexts, spawnedSessionKey } = bindResult;
         logLiveStep("bind command completed");
         expect(mainAssistantTexts.join("\n\n")).toContain("Bound this conversation to");
