@@ -116,8 +116,6 @@ describe("tasks commands", () => {
   it("keeps audit JSON stable and sorts combined findings before limiting", async () => {
     await withTaskCommandStateDir(async () => {
       const now = Date.now();
-      vi.useFakeTimers();
-      vi.setSystemTime(now - 40 * 60_000);
       createTaskRecord({
         runtime: "cli",
         ownerKey: "agent:main:main",
@@ -125,8 +123,8 @@ describe("tasks commands", () => {
         runId: "task-stale-queued",
         status: "running",
         task: "Inspect issue backlog",
+        startedAt: now - 40 * 60_000,
       });
-      vi.setSystemTime(now);
       createManagedTaskFlow({
         ownerKey: "agent:main:main",
         controllerId: "tests/tasks-command",
@@ -168,27 +166,26 @@ describe("tasks commands", () => {
       await tasksAuditCommand({ json: true, limit: 1 }, limitedRuntime);
 
       const limitedPayload = readFirstJsonLog(limitedRuntime) as { findings: unknown[] };
+      const [limitedFinding] = limitedPayload.findings as Array<{ ageMs?: number }>;
 
-      expect(limitedPayload.findings).toStrictEqual([
-        {
-          kind: "task_flow",
-          severity: "error",
-          code: "stale_running",
-          detail: "running TaskFlow has not advanced recently",
-          ageMs: 45 * 60_000,
-          status: "running",
-          token: runningFlow.flowId,
-          flow: jsonRoundTrip(runningFlow),
-        },
-      ]);
+      expect(limitedPayload.findings).toHaveLength(1);
+      expect(limitedFinding).toMatchObject({
+        kind: "task_flow",
+        severity: "error",
+        code: "stale_running",
+        detail: "running TaskFlow has not advanced recently",
+        status: "running",
+        token: runningFlow.flowId,
+        flow: jsonRoundTrip(runningFlow),
+      });
+      expect(limitedFinding?.ageMs).toBeGreaterThanOrEqual(45 * 60_000);
+      expect(limitedFinding?.ageMs).toBeLessThan(45 * 60_000 + 1_000);
     });
   });
 
   it("explains stale running tasks retained by backing sessions in maintenance JSON", async () => {
     await withTaskCommandStateDir(async (state) => {
       const now = Date.now();
-      vi.useFakeTimers();
-      vi.setSystemTime(now - 45 * 60_000);
       const childSessionKey = "agent:main:subagent:child-retained";
       const task = createTaskRecord({
         runtime: "subagent",
@@ -198,8 +195,8 @@ describe("tasks commands", () => {
         runId: "run-retained-child",
         status: "running",
         task: "Review retained child session",
+        startedAt: now - 45 * 60_000,
       });
-      vi.setSystemTime(now);
 
       await writeTaskSessionStore(path.join(state.sessionsDir("main"), "sessions.json"), {
         [childSessionKey]: {
@@ -236,8 +233,6 @@ describe("tasks commands", () => {
   it("explains task maintenance decisions before applying session registry pruning", async () => {
     await withTaskCommandStateDir(async (state) => {
       const now = Date.now();
-      vi.useFakeTimers();
-      vi.setSystemTime(now - 45 * 60_000);
       const childSessionKey = "agent:main:cron:done-job:run:old-run";
       const task = createTaskRecord({
         runtime: "subagent",
@@ -247,8 +242,8 @@ describe("tasks commands", () => {
         runId: "run-backed-before-session-sweep",
         status: "running",
         task: "Review old cron child session",
+        startedAt: now - 45 * 60_000,
       });
-      vi.setSystemTime(now);
 
       const sessionsDir = state.sessionsDir("main");
       const storePath = path.join(sessionsDir, "sessions.json");
@@ -429,8 +424,6 @@ describe("tasks commands", () => {
   it("applies a conservative session registry sweep for stale cron run sessions", async () => {
     await withTaskCommandStateDir(async (state) => {
       const now = Date.now();
-      vi.useFakeTimers();
-      vi.setSystemTime(now);
       const sessionsDir = state.sessionsDir("main");
       const storePath = path.join(sessionsDir, "sessions.json");
       const old = now - 8 * 24 * 60 * 60_000;

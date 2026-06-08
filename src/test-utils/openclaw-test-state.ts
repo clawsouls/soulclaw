@@ -6,6 +6,8 @@ import { uniqueStrings } from "@openclaw/normalization-core/string-normalization
 import { resolveAuthProfileDatabasePath } from "../agents/auth-profiles/sqlite.js";
 import { saveAuthProfileStore } from "../agents/auth-profiles/store.js";
 import type { AuthProfileStore } from "../agents/auth-profiles/types.js";
+import { resetConfigRuntimeState } from "../config/config.js";
+import { resetSessionStateMigratedForTest } from "../infra/session-state-migration.js";
 import { captureEnv } from "./env.js";
 import { cleanupSessionStateForTest } from "./session-state-cleanup.js";
 
@@ -311,6 +313,8 @@ export async function createOpenClawTestState(
       return Promise.resolve(resolveAuthProfileDatabasePath(targetAgentDir));
     },
     applyEnv: () => {
+      resetConfigRuntimeState();
+      resetSessionStateMigratedForTest();
       for (const [key, value] of Object.entries(envVars)) {
         // Test fixtures apply a fixed OpenClaw env set, not plugin-provided host env.
         if (value === undefined) {
@@ -324,6 +328,8 @@ export async function createOpenClawTestState(
     restoreEnv: () => {
       if (envApplied) {
         snapshot.restore();
+        resetConfigRuntimeState();
+        resetSessionStateMigratedForTest();
         envApplied = false;
       }
     },

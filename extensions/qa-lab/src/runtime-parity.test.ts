@@ -89,4 +89,51 @@ describe("runtime parity", () => {
       driftDetails: "at least one runtime planned a tool call without a tool result",
     });
   });
+
+  it("treats matching controlled tool errors as equivalent results", async () => {
+    const result = await runRuntimeParityScenario({
+      scenarioId: "matching-tool-errors",
+      runCell: async (runtime) => ({
+        scenarioStatus: "pass",
+        cell: makeRuntimeParityCell(runtime, [
+          {
+            tool: "web_search",
+            argsHash: "same-args",
+            resultHash: runtime === "openclaw" ? "validation-error" : "provider-error",
+            errorClass: "tool-result-error",
+          },
+        ]),
+      }),
+    });
+
+    expect(result.drift).toBe("none");
+  });
+
+  it("prefers transcript tool results when mock debug rows are incomplete", () => {
+    const resolved = __testing.resolveRuntimeParityToolCalls({
+      mockToolCalls: [
+        {
+          tool: "image_generate",
+          argsHash: "same-args",
+          resultHash: "missing",
+          errorClass: "tool-result-missing",
+        },
+      ],
+      transcriptToolCalls: [
+        {
+          tool: "image_generate",
+          argsHash: "same-args",
+          resultHash: "async-started",
+        },
+      ],
+    });
+
+    expect(resolved).toEqual([
+      {
+        tool: "image_generate",
+        argsHash: "same-args",
+        resultHash: "async-started",
+      },
+    ]);
+  });
 });

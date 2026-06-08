@@ -327,7 +327,9 @@ function extractToolResults(message: Record<string, unknown>): Array<{
     results.push({
       tool: toolName,
       result: message.content,
-      ...(TOOL_RESULT_ERROR_RE.test(contentText) ? { errorClass: "tool-result-error" } : {}),
+      ...(message.isError === true || TOOL_RESULT_ERROR_RE.test(contentText)
+        ? { errorClass: "tool-result-error" }
+        : {}),
     });
   }
   const rawContent = message.content;
@@ -743,6 +745,12 @@ function compareToolResultShape(
       continue;
     }
     if (
+      leftCall.errorClass === "tool-result-error" &&
+      rightCall.errorClass === "tool-result-error"
+    ) {
+      continue;
+    }
+    if (
       leftCall.resultHash !== rightCall.resultHash ||
       (leftCall.errorClass ?? "") !== (rightCall.errorClass ?? "")
     ) {
@@ -765,6 +773,23 @@ function isHardFailureRuntimeError(errorClass: string | undefined) {
 
 function hasMissingToolResult(toolCalls: readonly RuntimeParityToolCall[]) {
   return toolCalls.some((toolCall) => toolCall.errorClass === TOOL_RESULT_MISSING_ERROR_CLASS);
+}
+
+function resolveRuntimeParityToolCalls(params: {
+  mockToolCalls: RuntimeParityToolCall[] | null;
+  transcriptToolCalls: RuntimeParityToolCall[];
+}): RuntimeParityToolCall[] {
+  if (!params.mockToolCalls) {
+    return params.transcriptToolCalls;
+  }
+  if (
+    hasMissingToolResult(params.mockToolCalls) &&
+    !hasMissingToolResult(params.transcriptToolCalls) &&
+    compareToolCallShape(params.mockToolCalls, params.transcriptToolCalls) === undefined
+  ) {
+    return params.transcriptToolCalls;
+  }
+  return params.mockToolCalls;
 }
 
 function summarizeSentinelErrorClass(findings: readonly GatewayLogSentinelFinding[]) {
@@ -1005,6 +1030,7 @@ export async function captureRuntimeParityCell(
     agentId,
   });
   const transcriptRecords = buildTranscriptRecords(transcriptBytes);
+  const transcriptToolCalls = resolveToolCallOrder(transcriptRecords);
   const mockToolCalls = await loadRuntimeParityMockToolCalls(params.mockBaseUrl);
   const gatewayLogs = params.gateway.logs?.();
   const sentinelFindings = [
@@ -1016,7 +1042,7 @@ export async function captureRuntimeParityCell(
   return {
     runtime: params.runtime,
     transcriptBytes,
-    toolCalls: mockToolCalls ?? resolveToolCallOrder(transcriptRecords),
+    toolCalls: resolveRuntimeParityToolCalls({ mockToolCalls, transcriptToolCalls }),
     finalText: extractFinalAssistantText(transcriptRecords),
     usage: aggregateUsage(transcriptRecords),
     wallClockMs: params.wallClockMs,
@@ -1053,6 +1079,7 @@ export async function runRuntimeParityScenario(params: {
 
 export const testing = {
   classifyRuntimeParityCells,
+  resolveRuntimeParityToolCalls,
   resolveToolCallOrderFromMockRequests,
 };
 
