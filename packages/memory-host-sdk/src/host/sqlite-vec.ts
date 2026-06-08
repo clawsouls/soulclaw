@@ -28,6 +28,24 @@ function isMissingSqliteVecPackageError(err: unknown): boolean {
   );
 }
 
+function assertSqliteVecAvailable(db: DatabaseSync, source: string): void {
+  try {
+    const row = db.prepare("SELECT vec_version() AS version").get() as
+      | { version?: unknown }
+      | undefined;
+    if (typeof row?.version !== "string" || row.version.trim().length === 0) {
+      throw new Error("vec_version() did not return a version");
+    }
+  } catch (err) {
+    throw new Error(`sqlite-vec health check failed after loading ${source}`, { cause: err });
+  }
+}
+
+function loadExtensionAndVerify(db: DatabaseSync, extensionPath: string): void {
+  db.loadExtension(extensionPath);
+  assertSqliteVecAvailable(db, extensionPath);
+}
+
 export async function loadSqliteVecExtension(params: {
   db: DatabaseSync;
   extensionPath?: string;
@@ -36,7 +54,7 @@ export async function loadSqliteVecExtension(params: {
     const resolvedPath = normalizeOptionalString(params.extensionPath);
     params.db.enableLoadExtension(true);
     if (resolvedPath) {
-      params.db.loadExtension(resolvedPath);
+      loadExtensionAndVerify(params.db, resolvedPath);
       return { ok: true, extensionPath: resolvedPath };
     }
 
@@ -44,6 +62,7 @@ export async function loadSqliteVecExtension(params: {
       const sqliteVec = await loadSqliteVecModule();
       const extensionPath = sqliteVec.getLoadablePath();
       sqliteVec.load(params.db);
+      assertSqliteVecAvailable(params.db, extensionPath);
       return { ok: true, extensionPath };
     } catch (err) {
       if (!isMissingSqliteVecPackageError(err)) {
@@ -61,7 +80,7 @@ export async function loadSqliteVecExtension(params: {
         };
       }
       try {
-        params.db.loadExtension(variant.extensionPath);
+        loadExtensionAndVerify(params.db, variant.extensionPath);
         return { ok: true, extensionPath: variant.extensionPath };
       } catch (variantErr) {
         const message = formatErrorMessage(variantErr);
