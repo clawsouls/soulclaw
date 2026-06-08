@@ -2158,7 +2158,7 @@ export function createPluginRegistry(registryParams: PluginRegistryParams) {
     if (
       !id ||
       !label ||
-      !controlUiSurfaces.has(surface as PluginControlUiDescriptor["surface"]) ||
+      !controlUiSurfaces.has(surface) ||
       description === "" ||
       placement === "" ||
       requiredScopes === null
@@ -2214,7 +2214,7 @@ export function createPluginRegistry(registryParams: PluginRegistryParams) {
       descriptor: {
         ...descriptor,
         id,
-        surface: surface as PluginControlUiDescriptor["surface"],
+        surface,
         label,
         ...(description !== undefined ? { description } : {}),
         ...(placement !== undefined ? { placement } : {}),
