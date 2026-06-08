@@ -3,6 +3,7 @@ import syncFs from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetConfigRuntimeState } from "../config/config.js";
 import { resolveSqliteSessionStoreDatabasePath } from "../config/sessions/store-sqlite.js";
 import { loadSessionStore, saveSessionStore } from "../config/sessions/store.js";
 import { saveCronStore } from "../cron/store.js";
@@ -23,6 +24,7 @@ import * as taskRegistryMaintenance from "../tasks/task-registry.maintenance.js"
 import type { TaskRecord } from "../tasks/task-registry.types.js";
 import { withOpenClawTestState } from "../test-utils/openclaw-test-state.js";
 import type { OpenClawTestState } from "../test-utils/openclaw-test-state.js";
+import { resetSessionStateMigratedForCommandForTest } from "./session-state-migration.js";
 import { tasksAuditCommand, tasksMaintenanceCommand, tasksShowCommand } from "./tasks.js";
 
 function createRuntime(): RuntimeEnv {
@@ -92,6 +94,8 @@ async function withTaskCommandStateDir(
     async (state) => {
       taskRegistryMaintenance.stopTaskRegistryMaintenanceForTests();
       taskRegistryMaintenance.resetTaskRegistryMaintenanceRuntimeForTests();
+      resetConfigRuntimeState();
+      resetSessionStateMigratedForCommandForTest();
       resetDetachedTaskLifecycleRuntimeForTests();
       resetTaskRegistryDeliveryRuntimeForTests();
       resetTaskRegistryForTests({ persist: false });
@@ -102,6 +106,8 @@ async function withTaskCommandStateDir(
       } finally {
         taskRegistryMaintenance.stopTaskRegistryMaintenanceForTests();
         taskRegistryMaintenance.resetTaskRegistryMaintenanceRuntimeForTests();
+        resetConfigRuntimeState();
+        resetSessionStateMigratedForCommandForTest();
         resetDetachedTaskLifecycleRuntimeForTests();
         resetTaskRegistryDeliveryRuntimeForTests();
         resetTaskRegistryForTests({ persist: false });
@@ -121,6 +127,8 @@ describe("tasks commands", () => {
     vi.useRealTimers();
     taskRegistryMaintenance.stopTaskRegistryMaintenanceForTests();
     taskRegistryMaintenance.resetTaskRegistryMaintenanceRuntimeForTests();
+    resetConfigRuntimeState();
+    resetSessionStateMigratedForCommandForTest();
     resetDetachedTaskLifecycleRuntimeForTests();
     resetTaskRegistryDeliveryRuntimeForTests();
     resetTaskRegistryForTests({ persist: false });
