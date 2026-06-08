@@ -771,7 +771,7 @@ function isHardFailureRuntimeError(errorClass: string | undefined) {
   );
 }
 
-function isRuntimeParityCellPassable(cell: RuntimeParityCell | undefined) {
+export function isRuntimeParityCellPassable(cell: RuntimeParityCell | undefined) {
   if (!cell || cell.transportErrorClass || isHardFailureRuntimeError(cell.runtimeErrorClass)) {
     return false;
   }

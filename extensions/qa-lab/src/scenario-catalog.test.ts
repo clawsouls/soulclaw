@@ -163,7 +163,7 @@ describe("qa scenario catalog", () => {
         bucket: "openclaw-dynamic-integration",
         expectedLayer: "openclaw-dynamic",
         capabilityLayer: "openclaw-dynamic-direct",
-        required: true,
+        required: false,
       },
     });
   });

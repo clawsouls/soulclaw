@@ -31,7 +31,7 @@ execution:
       bucket: openclaw-dynamic-integration
       expectedLayer: openclaw-dynamic
       capabilityLayer: openclaw-dynamic-direct
-      required: true
+      required: false
       codexDefaultImpact: P4
       qaImpact: P1
       action: optional runtime parity gate with async image completion coverage
