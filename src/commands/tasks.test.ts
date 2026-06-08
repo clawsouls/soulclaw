@@ -7,6 +7,7 @@ import { resolveSqliteSessionStoreDatabasePath } from "../config/sessions/store-
 import { loadSessionStore, saveSessionStore } from "../config/sessions/store.js";
 import { saveCronStore } from "../cron/store.js";
 import type { RuntimeEnv } from "../runtime.js";
+import { closeOpenClawAgentDatabasesForTest } from "../state/openclaw-agent-db.js";
 import { resetDetachedTaskLifecycleRuntimeForTests } from "../tasks/detached-task-runtime.js";
 import {
   createManagedTaskFlow as createManagedTaskFlowOrNull,
@@ -67,6 +68,7 @@ async function writeTaskSessionStore(
 ) {
   await fs.mkdir(path.dirname(storePath), { recursive: true });
   await saveSessionStore(storePath, store as never, { skipMaintenance: true });
+  closeOpenClawAgentDatabasesForTest();
 }
 
 function readTaskSessionStore(storePath: string): Record<string, unknown> {
@@ -94,6 +96,7 @@ async function withTaskCommandStateDir(
       resetTaskRegistryDeliveryRuntimeForTests();
       resetTaskRegistryForTests({ persist: false });
       resetTaskFlowRegistryForTests({ persist: false });
+      closeOpenClawAgentDatabasesForTest();
       try {
         await run(state);
       } finally {
@@ -103,6 +106,7 @@ async function withTaskCommandStateDir(
         resetTaskRegistryDeliveryRuntimeForTests();
         resetTaskRegistryForTests({ persist: false });
         resetTaskFlowRegistryForTests({ persist: false });
+        closeOpenClawAgentDatabasesForTest();
       }
     },
   );
@@ -121,6 +125,7 @@ describe("tasks commands", () => {
     resetTaskRegistryDeliveryRuntimeForTests();
     resetTaskRegistryForTests({ persist: false });
     resetTaskFlowRegistryForTests({ persist: false });
+    closeOpenClawAgentDatabasesForTest();
   });
 
   it("keeps audit JSON stable and sorts combined findings before limiting", async () => {

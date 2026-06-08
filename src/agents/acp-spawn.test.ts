@@ -1676,7 +1676,7 @@ describe("spawnAcpDirect", () => {
             channel: "matrix",
             accountId: input.conversation.accountId,
             conversationId: "child-thread",
-            parentConversationId: input.conversation.parentConversationId ?? "!room:example",
+            parentConversationId: input.conversation.parentConversationId ?? "!room:example.org",
           },
           metadata: {
             boundBy:
@@ -1695,10 +1695,11 @@ describe("spawnAcpDirect", () => {
         thread: true,
       },
       {
-        agentSessionKey: "agent:main:matrix:channel:!room:example",
+        agentSessionKey: "agent:main:matrix:channel:!room:example.org",
         agentChannel: "matrix",
         agentAccountId: "default",
-        agentTo: "channel:!room:example",
+        agentTo: "room:!room:example.org",
+        agentGroupId: "!room:example.org",
       },
     );
     expect(result.status, JSON.stringify(result)).toBe("accepted");
@@ -1707,13 +1708,13 @@ describe("spawnAcpDirect", () => {
       conversation: {
         channel: "matrix",
         accountId: "default",
-        conversationId: "!room:example",
+        conversationId: "!room:example.org",
       },
     });
     expectAgentGatewayCall({
       deliver: true,
       channel: "matrix",
-      to: "room:!room:example",
+      to: "room:!room:example.org",
       threadId: "child-thread",
     });
   });
