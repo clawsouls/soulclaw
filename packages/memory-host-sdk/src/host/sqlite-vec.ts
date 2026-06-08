@@ -65,14 +65,16 @@ export async function loadSqliteVecExtension(params: {
       assertSqliteVecAvailable(params.db, extensionPath);
       return { ok: true, extensionPath };
     } catch (err) {
-      if (!isMissingSqliteVecPackageError(err)) {
-        throw err;
-      }
       // Optional-dep installs sometimes land only the platform-specific variant
       // (e.g. sqlite-vec-linux-x64) without the meta sqlite-vec package. Load
       // the loadable extension straight from the variant when we can find it.
+      // Bundled runtimes can also fail the meta-package import while the native
+      // variant is still present, so try the concrete extension before failing.
       const variant = resolveSqliteVecPlatformVariant();
       if (!variant) {
+        if (!isMissingSqliteVecPackageError(err)) {
+          throw err;
+        }
         const message = formatErrorMessage(err);
         return {
           ok: false,
@@ -84,6 +86,13 @@ export async function loadSqliteVecExtension(params: {
         return { ok: true, extensionPath: variant.extensionPath };
       } catch (variantErr) {
         const message = formatErrorMessage(variantErr);
+        if (!isMissingSqliteVecPackageError(err)) {
+          const packageMessage = formatErrorMessage(err);
+          return {
+            ok: false,
+            error: `sqlite-vec package failed to load, and platform variant ${variant.pkg} failed to load from ${variant.extensionPath}. ${SQLITE_VEC_CONFIG_HINT} Package error: ${packageMessage}. Variant error: ${message}`,
+          };
+        }
         return {
           ok: false,
           error: `sqlite-vec platform variant ${variant.pkg} failed to load from ${variant.extensionPath}. ${SQLITE_VEC_CONFIG_HINT} Original error: ${message}`,
