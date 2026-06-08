@@ -270,8 +270,6 @@ describe("tasks commands", () => {
 
       const sessionsDir = state.sessionsDir("main");
       const storePath = path.join(sessionsDir, "sessions.json");
-      await state.writeConfig({ session: { store: storePath } });
-      resetConfigRuntimeState();
       await writeTaskSessionStore(storePath, {
         [childSessionKey]: {
           sessionId: "old-run",
@@ -335,8 +333,6 @@ describe("tasks commands", () => {
   it("keeps session registry maintenance preview from importing legacy JSON stores", async () => {
     await withTaskCommandStateDir(async (state) => {
       const storePath = path.join(state.sessionsDir("main"), "sessions.json");
-      await state.writeConfig({ session: { store: storePath } });
-      resetConfigRuntimeState();
       await fs.mkdir(path.dirname(storePath), { recursive: true });
       await fs.writeFile(
         storePath,
