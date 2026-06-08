@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { writeAcpSessionMetaForMigration } from "../acp/runtime/session-meta.js";
 import type { SessionEntry } from "../config/sessions/types.js";
 import { closeOpenClawStateDatabaseForTest } from "../state/openclaw-state-db.js";
@@ -13,18 +13,6 @@ import {
   setMockSessionsConfig,
   writeStore,
 } from "./sessions.test-helpers.js";
-
-vi.mock("../infra/state-migrations.js", async () => ({
-  ...(await vi.importActual<typeof import("../infra/state-migrations.js")>(
-    "../infra/state-migrations.js",
-  )),
-  autoMigrateLegacyState: vi.fn(async () => ({
-    migrated: false,
-    skipped: true,
-    changes: [],
-    warnings: [],
-  })),
-}));
 
 /**
  * Catalog #20 — `model` / `modelProvider` reported as agent-config, not ACP runtime actuals.
