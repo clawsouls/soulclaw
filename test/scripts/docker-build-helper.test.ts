@@ -162,6 +162,33 @@ describe("docker build helper", () => {
     expect(helper).toContain("frontend grpc server closed unexpectedly");
   });
 
+  it("treats Docker registry auth 5xx failures as transient build failures", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-build-transient-"));
+
+    try {
+      const logPath = join(workDir, "docker-build.log");
+      writeFileSync(
+        logPath,
+        [
+          "#3 ERROR: failed to authorize: failed to fetch oauth token: unexpected status from POST request to https://auth.docker.io/token: 504 Gateway Timeout: error code: 504",
+          "ERROR: failed to solve: failed to resolve source metadata for docker.io/docker/dockerfile:1.7",
+        ].join("\n"),
+      );
+      const rootDir = process.cwd();
+      const script = `
+set -euo pipefail
+ROOT_DIR=${shellQuote(rootDir)}
+LOG_PATH=${shellQuote(logPath)}
+source "$ROOT_DIR/scripts/lib/docker-build.sh"
+docker_build_transient_failure "$LOG_PATH"
+`;
+
+      execFileSync("bash", ["-lc", script], { encoding: "utf8" });
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
   it("keeps shell-script Docker builds behind the helper", () => {
     for (const path of CENTRALIZED_BUILD_SCRIPTS) {
       const script = readFileSync(path, "utf8");
