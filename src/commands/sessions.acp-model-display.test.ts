@@ -14,6 +14,18 @@ import {
   writeStore,
 } from "./sessions.test-helpers.js";
 
+vi.mock("../infra/state-migrations.js", async () => ({
+  ...(await vi.importActual<typeof import("../infra/state-migrations.js")>(
+    "../infra/state-migrations.js",
+  )),
+  autoMigrateLegacyState: vi.fn(async () => ({
+    migrated: false,
+    skipped: true,
+    changes: [],
+    warnings: [],
+  })),
+}));
+
 /**
  * Catalog #20 — `model` / `modelProvider` reported as agent-config, not ACP runtime actuals.
  *
@@ -147,8 +159,6 @@ function buildNonAcpSessionEntry(): SessionEntry {
 
 describe("sessionsCommand model/modelProvider display for ACP sessions (catalog #20)", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2025-12-06T00:00:00Z"));
     originalStateDir = process.env.OPENCLAW_STATE_DIR;
     mockAgentConfigWithCopilotModel();
   });
@@ -165,7 +175,6 @@ describe("sessionsCommand model/modelProvider display for ACP sessions (catalog 
       process.env.OPENCLAW_STATE_DIR = originalStateDir;
     }
     resetMockSessionsConfig();
-    vi.useRealTimers();
   });
 
   it("RED: ACP control-plane session must NOT report the agent-configured model", async () => {
