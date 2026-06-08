@@ -270,10 +270,16 @@ describe("tasks commands", () => {
 
       const sessionsDir = state.sessionsDir("main");
       const storePath = path.join(sessionsDir, "sessions.json");
+      await state.writeConfig({ session: { store: storePath } });
+      resetConfigRuntimeState();
       await writeTaskSessionStore(storePath, {
         [childSessionKey]: {
           sessionId: "old-run",
           updatedAt: now - 8 * 24 * 60 * 60_000,
+        },
+        "agent:main:telegram:dm:recent": {
+          sessionId: "recent-session",
+          updatedAt: now - 60_000,
         },
       });
 
@@ -308,6 +314,7 @@ describe("tasks commands", () => {
 
       const updated = readTaskSessionStore(storePath);
       expect(updated[childSessionKey]).toBeUndefined();
+      expect(updated["agent:main:telegram:dm:recent"]).toBeDefined();
     });
   });
 
@@ -328,6 +335,8 @@ describe("tasks commands", () => {
   it("keeps session registry maintenance preview from importing legacy JSON stores", async () => {
     await withTaskCommandStateDir(async (state) => {
       const storePath = path.join(state.sessionsDir("main"), "sessions.json");
+      await state.writeConfig({ session: { store: storePath } });
+      resetConfigRuntimeState();
       await fs.mkdir(path.dirname(storePath), { recursive: true });
       await fs.writeFile(
         storePath,
