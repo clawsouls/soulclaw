@@ -453,18 +453,15 @@ function resolveMatrixRoomTargetForTest(value: string | undefined): string | und
 }
 
 function enableMatrixAcpThreadBindings(): void {
-  replaceSpawnConfig({
-    ...hoisted.state.cfg,
-    channels: {
-      ...hoisted.state.cfg.channels,
-      matrix: {
-        threadBindings: {
-          enabled: true,
-          spawnSessions: true,
-        },
+  hoisted.state.cfg.channels = {
+    ...hoisted.state.cfg.channels,
+    matrix: {
+      threadBindings: {
+        enabled: true,
+        spawnSessions: true,
       },
     },
-  });
+  };
   const matrixPlugin = {
     conversationBindings: {
       defaultTopLevelPlacement: "child",
@@ -1693,6 +1690,7 @@ describe("spawnAcpDirect", () => {
         agentId: "codex",
         mode: "session",
         thread: true,
+        cwd: os.tmpdir(),
       },
       {
         agentSessionKey: "agent:main:matrix:channel:!room:example.org",
