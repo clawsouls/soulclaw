@@ -7,6 +7,7 @@ import { resolveSqliteSessionStoreDatabasePath } from "../config/sessions/store-
 import { loadSessionStore, saveSessionStore } from "../config/sessions/store.js";
 import { saveCronStore } from "../cron/store.js";
 import type { RuntimeEnv } from "../runtime.js";
+import { resetDetachedTaskLifecycleRuntimeForTests } from "../tasks/detached-task-runtime.js";
 import {
   createManagedTaskFlow as createManagedTaskFlowOrNull,
   resetTaskFlowRegistryForTests,
@@ -87,12 +88,18 @@ async function withTaskCommandStateDir(
   await withOpenClawTestState(
     { layout: "state-only", prefix: "openclaw-tasks-command-" },
     async (state) => {
+      taskRegistryMaintenance.stopTaskRegistryMaintenanceForTests();
+      taskRegistryMaintenance.resetTaskRegistryMaintenanceRuntimeForTests();
+      resetDetachedTaskLifecycleRuntimeForTests();
       resetTaskRegistryDeliveryRuntimeForTests();
       resetTaskRegistryForTests({ persist: false });
       resetTaskFlowRegistryForTests({ persist: false });
       try {
         await run(state);
       } finally {
+        taskRegistryMaintenance.stopTaskRegistryMaintenanceForTests();
+        taskRegistryMaintenance.resetTaskRegistryMaintenanceRuntimeForTests();
+        resetDetachedTaskLifecycleRuntimeForTests();
         resetTaskRegistryDeliveryRuntimeForTests();
         resetTaskRegistryForTests({ persist: false });
         resetTaskFlowRegistryForTests({ persist: false });
@@ -108,6 +115,9 @@ describe("tasks commands", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    taskRegistryMaintenance.stopTaskRegistryMaintenanceForTests();
+    taskRegistryMaintenance.resetTaskRegistryMaintenanceRuntimeForTests();
+    resetDetachedTaskLifecycleRuntimeForTests();
     resetTaskRegistryDeliveryRuntimeForTests();
     resetTaskRegistryForTests({ persist: false });
     resetTaskFlowRegistryForTests({ persist: false });
