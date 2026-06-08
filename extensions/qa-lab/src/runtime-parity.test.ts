@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import {
   __testing,
+  isRuntimeParityResultPass,
   runRuntimeParityScenario,
   type RuntimeId,
   type RuntimeParityCell,
@@ -95,18 +96,22 @@ describe("runtime parity", () => {
       scenarioId: "matching-tool-errors",
       runCell: async (runtime) => ({
         scenarioStatus: "pass",
-        cell: makeRuntimeParityCell(runtime, [
-          {
-            tool: "web_search",
-            argsHash: "same-args",
-            resultHash: runtime === "openclaw" ? "validation-error" : "provider-error",
-            errorClass: "tool-result-error",
-          },
-        ]),
+        cell: {
+          ...makeRuntimeParityCell(runtime, [
+            {
+              tool: "web_search",
+              argsHash: "same-args",
+              resultHash: runtime === "openclaw" ? "validation-error" : "provider-error",
+              errorClass: "tool-result-error",
+            },
+          ]),
+          ...(runtime === "codex" ? { runtimeErrorClass: "tool-error" } : {}),
+        },
       }),
     });
 
     expect(result.drift).toBe("none");
+    expect(isRuntimeParityResultPass(result)).toBe(true);
   });
 
   it("prefers transcript tool results when mock debug rows are incomplete", () => {

@@ -81,8 +81,8 @@ export function runtimeParityCellStatus(
 export function isRuntimeParityResultPass(result: RuntimeParityResult) {
   return (
     result.drift !== "failure-mode" &&
-    runtimeParityCellStatus(result.cells.openclaw) === "pass" &&
-    runtimeParityCellStatus(result.cells.codex) === "pass"
+    isRuntimeParityCellPassable(result.cells.openclaw) &&
+    isRuntimeParityCellPassable(result.cells.codex)
   );
 }
 
@@ -771,6 +771,13 @@ function isHardFailureRuntimeError(errorClass: string | undefined) {
   );
 }
 
+function isRuntimeParityCellPassable(cell: RuntimeParityCell | undefined) {
+  if (!cell || cell.transportErrorClass || isHardFailureRuntimeError(cell.runtimeErrorClass)) {
+    return false;
+  }
+  return !cell.runtimeErrorClass || cell.runtimeErrorClass === "tool-error";
+}
+
 function hasMissingToolResult(toolCalls: readonly RuntimeParityToolCall[]) {
   return toolCalls.some((toolCall) => toolCall.errorClass === TOOL_RESULT_MISSING_ERROR_CLASS);
 }
@@ -869,8 +876,8 @@ function classifyRuntimeParityCells(params: {
   if (
     params.openclawScenarioStatus === "fail" ||
     params.codexScenarioStatus === "fail" ||
-    params.openclaw.runtimeErrorClass ||
-    params.codex.runtimeErrorClass
+    !isRuntimeParityCellPassable(params.openclaw) ||
+    !isRuntimeParityCellPassable(params.codex)
   ) {
     return {
       drift: "failure-mode",
