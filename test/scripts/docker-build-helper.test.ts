@@ -844,6 +844,7 @@ export ROOT_DIR TMPDIR
 export PATH="$TMPDIR/bin:$PATH"
 unset OPENCLAW_DOCKER_E2E_DISABLE_RESOURCE_LIMITS
 unset OPENCLAW_DOCKER_E2E_MEMORY OPENCLAW_DOCKER_E2E_CPUS OPENCLAW_DOCKER_E2E_PIDS_LIMIT
+export OPENCLAW_DOCKER_E2E_AVAILABLE_CPUS=32
 
 docker() {
   printf "%s\\n" "$*" >>"$TMPDIR/docker-seen"
@@ -854,13 +855,15 @@ source "$ROOT_DIR/scripts/lib/docker-e2e-container.sh"
 
 docker_e2e_docker_cmd run demo
 OPENCLAW_DOCKER_E2E_MEMORY=12g OPENCLAW_DOCKER_E2E_CPUS=4 OPENCLAW_DOCKER_E2E_PIDS_LIMIT=512 docker_e2e_docker_cmd run demo
+OPENCLAW_DOCKER_E2E_AVAILABLE_CPUS=8 OPENCLAW_DOCKER_E2E_MEMORY=12g OPENCLAW_DOCKER_E2E_CPUS=16 OPENCLAW_DOCKER_E2E_PIDS_LIMIT=512 docker_e2e_docker_cmd run demo
 docker_e2e_docker_cmd run --memory 2g --cpus 3 --pids-limit 99 demo
 OPENCLAW_DOCKER_E2E_DISABLE_RESOURCE_LIMITS=1 docker_e2e_docker_cmd run demo
 
 [[ "$(sed -n '1p' "$TMPDIR/docker-seen")" = "run --memory 8g --cpus 16 --pids-limit 2048 demo" ]]
 [[ "$(sed -n '2p' "$TMPDIR/docker-seen")" = "run --memory 12g --cpus 4 --pids-limit 512 demo" ]]
-[[ "$(sed -n '3p' "$TMPDIR/docker-seen")" = "run --memory 2g --cpus 3 --pids-limit 99 demo" ]]
-[[ "$(sed -n '4p' "$TMPDIR/docker-seen")" = "run demo" ]]
+[[ "$(sed -n '3p' "$TMPDIR/docker-seen")" = "run --memory 12g --cpus 8 --pids-limit 512 demo" ]]
+[[ "$(sed -n '4p' "$TMPDIR/docker-seen")" = "run --memory 2g --cpus 3 --pids-limit 99 demo" ]]
+[[ "$(sed -n '5p' "$TMPDIR/docker-seen")" = "run demo" ]]
 `;
 
       execFileSync("bash", ["-lc", script], { encoding: "utf8" });
@@ -1010,6 +1013,7 @@ TMPDIR=${shellQuote(workDir)}
 export ROOT_DIR TMPDIR
 export PATH="$TMPDIR/bin"
 export OPENCLAW_DOCKER_E2E_RUN_TIMEOUT=13s
+export OPENCLAW_DOCKER_E2E_AVAILABLE_CPUS=8
 unset OPENCLAW_DOCKER_E2E_DISABLE_RESOURCE_LIMITS
 unset OPENCLAW_DOCKER_E2E_MEMORY OPENCLAW_DOCKER_E2E_CPUS OPENCLAW_DOCKER_E2E_PIDS_LIMIT
 
@@ -1022,8 +1026,8 @@ source "$ROOT_DIR/scripts/lib/docker-e2e-container.sh"
 
 docker_e2e_docker_run_cmd run demo
 
-[[ "$(<"$TMPDIR/timeout-seen")" = "gtimeout:--kill-after=30s 13s|docker run --memory 8g --cpus 16 --pids-limit 2048 demo" ]]
-[[ "$(<"$TMPDIR/docker-seen")" = "run --memory 8g --cpus 16 --pids-limit 2048 demo" ]]
+[[ "$(<"$TMPDIR/timeout-seen")" = "gtimeout:--kill-after=30s 13s|docker run --memory 8g --cpus 8 --pids-limit 2048 demo" ]]
+[[ "$(<"$TMPDIR/docker-seen")" = "run --memory 8g --cpus 8 --pids-limit 2048 demo" ]]
 `;
 
       execFileSync("bash", ["-lc", script], { encoding: "utf8" });
@@ -1105,6 +1109,7 @@ TMPDIR=${shellQuote(workDir)}
 export ROOT_DIR TMPDIR
 export PATH="$TMPDIR/bin"
 export OPENCLAW_DOCKER_E2E_RUN_TIMEOUT=15s
+export OPENCLAW_DOCKER_E2E_AVAILABLE_CPUS=8
 unset OPENCLAW_DOCKER_E2E_DISABLE_RESOURCE_LIMITS
 unset OPENCLAW_DOCKER_E2E_MEMORY OPENCLAW_DOCKER_E2E_CPUS OPENCLAW_DOCKER_E2E_PIDS_LIMIT
 
@@ -1125,8 +1130,8 @@ source "$ROOT_DIR/scripts/lib/docker-e2e-package.sh"
 
 docker_e2e_docker_run_cmd run demo
 
-[[ "$(<"$TMPDIR/timeout-seen")" = "gtimeout:--kill-after=30s 15s|docker run --memory 8g --cpus 16 --pids-limit 2048 demo" ]]
-[[ "$(<"$TMPDIR/docker-seen")" = "run --memory 8g --cpus 16 --pids-limit 2048 demo" ]]
+[[ "$(<"$TMPDIR/timeout-seen")" = "gtimeout:--kill-after=30s 15s|docker run --memory 8g --cpus 8 --pids-limit 2048 demo" ]]
+[[ "$(<"$TMPDIR/docker-seen")" = "run --memory 8g --cpus 8 --pids-limit 2048 demo" ]]
 `;
 
       execFileSync("bash", ["-lc", script], { encoding: "utf8" });
