@@ -120,6 +120,16 @@ type FoundryConfigShape = {
   };
 };
 
+type FoundryImageDefaultPatch = {
+  agents?: {
+    defaults?: {
+      imageGenerationModel?: {
+        primary: string;
+      };
+    };
+  };
+};
+
 function normalizeFoundryModelName(value?: string | null): string | undefined {
   const trimmed = normalizeLowercaseStringOrEmpty(value);
   return trimmed || undefined;
@@ -435,6 +445,47 @@ function buildFoundryProviderConfig(
   };
 }
 
+function resolveSelectedDeploymentModelName(params: {
+  modelId: string;
+  modelNameHint?: string | null;
+  deployments?: FoundryDeploymentConfigInput[];
+}): string | undefined {
+  const selectedDeployment = params.deployments?.find(
+    (deployment) => deployment.name === params.modelId,
+  );
+  return resolveConfiguredModelNameHint(
+    params.modelId,
+    selectedDeployment?.modelName ?? params.modelNameHint,
+  );
+}
+
+function isSelectedMaiImageDeployment(params: {
+  modelId: string;
+  modelNameHint?: string | null;
+  deployments?: FoundryDeploymentConfigInput[];
+}): boolean {
+  return isFoundryMaiImageModel(resolveSelectedDeploymentModelName(params));
+}
+
+function buildFoundryImageDefaultPatch(params: {
+  modelId: string;
+  modelNameHint?: string | null;
+  deployments?: FoundryDeploymentConfigInput[];
+}): FoundryImageDefaultPatch {
+  if (!isSelectedMaiImageDeployment(params)) {
+    return {};
+  }
+  return {
+    agents: {
+      defaults: {
+        imageGenerationModel: {
+          primary: `${PROVIDER_ID}/${params.modelId}`,
+        },
+      },
+    },
+  };
+}
+
 function buildFoundryCredentialMetadata(params: {
   authMethod: "api-key" | "entra-id";
   endpoint: string;
@@ -528,6 +579,10 @@ export function buildFoundryAuthResult(params: {
   currentProviderProfileIds?: string[];
   deployments?: FoundryDeploymentConfigInput[];
 }): ProviderAuthResult {
+  const imageDefaultPatch = buildFoundryImageDefaultPatch(params);
+  const defaultModel = isSelectedMaiImageDeployment(params)
+    ? undefined
+    : `${PROVIDER_ID}/${params.modelId}`;
   return {
     profiles: [
       {
@@ -554,6 +609,7 @@ export function buildFoundryAuthResult(params: {
         profileId: params.profileId,
         currentProviderProfileIds: params.currentProviderProfileIds,
       }),
+      ...imageDefaultPatch,
       models: {
         providers: {
           [PROVIDER_ID]: buildFoundryProviderConfig(
@@ -571,7 +627,7 @@ export function buildFoundryAuthResult(params: {
       },
       ...buildPluginsAllowPatch(params.currentPluginsAllow),
     },
-    defaultModel: `${PROVIDER_ID}/${params.modelId}`,
+    ...(defaultModel ? { defaultModel } : {}),
     notes: params.notes,
   };
 }
