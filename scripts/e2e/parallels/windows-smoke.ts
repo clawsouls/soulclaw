@@ -18,6 +18,7 @@ import {
   run,
   say,
   shouldSkipSnapshotRestore,
+  validateSnapshotRestoreMode,
   warn,
   withProgressOnStderr,
   writeSummaryMarkdown,
@@ -277,6 +278,7 @@ class WindowsSmoke extends SmokeRunController<WindowsOptions> {
     this.guest = new WindowsGuest(this.options.vmName, this.phases);
     this.tgzDir = await makeTempDir("openclaw-parallels-windows-tgz.");
     try {
+      validateSnapshotRestoreMode(this.options.mode, "Windows smoke");
       this.snapshot = shouldSkipSnapshotRestore()
         ? currentRunningSnapshotInfo(this.options.vmName)
         : resolveSnapshot(this.options.vmName, this.options.snapshotHint);

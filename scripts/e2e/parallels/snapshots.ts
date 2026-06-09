@@ -1,12 +1,22 @@
 // Snapshots script supports OpenClaw repository automation.
 import { die, run } from "./host-command.ts";
+import type { Mode } from "./types.ts";
 import type { SnapshotInfo } from "./types.ts";
 
 const SNAPSHOT_LIST_TIMEOUT_MS = 120_000;
-const SKIP_SNAPSHOT_RESTORE_ENV = "OPENCLAW_PARALLELS_SKIP_SNAPSHOT_RESTORE";
+export const SKIP_SNAPSHOT_RESTORE_ENV = "OPENCLAW_PARALLELS_SKIP_SNAPSHOT_RESTORE";
 
 export function shouldSkipSnapshotRestore(): boolean {
   return /^(1|true|yes|on)$/iu.test(process.env[SKIP_SNAPSHOT_RESTORE_ENV] ?? "");
+}
+
+export function validateSnapshotRestoreMode(mode: Mode, platform: string): void {
+  if (!shouldSkipSnapshotRestore() || mode !== "both") {
+    return;
+  }
+  die(
+    `${SKIP_SNAPSHOT_RESTORE_ENV}=1 requires --mode fresh or --mode upgrade for ${platform}; --mode both would reuse the same mutated guest for both lanes`,
+  );
 }
 
 export function currentRunningSnapshotInfo(vmName: string): SnapshotInfo {

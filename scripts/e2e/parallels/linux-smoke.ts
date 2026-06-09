@@ -24,6 +24,7 @@ import {
   say,
   shouldSkipSnapshotRestore,
   shellQuote,
+  validateSnapshotRestoreMode,
   warn,
   withProgressOnStderr,
   writeJson,
@@ -277,6 +278,7 @@ class LinuxSmoke extends SmokeRunController<LinuxOptions> {
     this.tgzDir = await makeTempDir("openclaw-parallels-linux-tgz.");
     try {
       this.options.vmName = this.resolveVmName();
+      validateSnapshotRestoreMode(this.options.mode, "Linux smoke");
       this.snapshot = shouldSkipSnapshotRestore()
         ? currentRunningSnapshotInfo(this.options.vmName)
         : resolveSnapshot(this.options.vmName, this.options.snapshotHint);
