@@ -145,7 +145,7 @@ describe("microsoft foundry image generation provider", () => {
   it("exposes MAI image provider metadata and capabilities", () => {
     const provider = buildMicrosoftFoundryImageGenerationProvider();
     expect(provider.id).toBe(PROVIDER_ID);
-    expect(provider.defaultModel).toBe("MAI-Image-2.5");
+    expect(provider.defaultModel).toBeUndefined();
     expect(provider.models).toEqual([
       "MAI-Image-2.5-Flash",
       "MAI-Image-2.5",
@@ -155,6 +155,7 @@ describe("microsoft foundry image generation provider", () => {
     expect(provider.capabilities.generate.maxCount).toBe(1);
     expect(provider.capabilities.edit.enabled).toBe(true);
     expect(provider.capabilities.edit.maxInputImages).toBe(1);
+    expect(provider.capabilities.geometry?.sizes).toBeUndefined();
     expect(provider.capabilities.output?.formats).toEqual(["png"]);
     expect(provider.isConfigured?.({ agentDir: "/agent" })).toBe(true);
     expect(isProviderApiKeyConfiguredMock).toHaveBeenCalledWith({
@@ -293,6 +294,21 @@ describe("microsoft foundry image generation provider", () => {
     expect(postMultipartRequestMock).not.toHaveBeenCalled();
   });
 
+  it("requires an explicit deployment name before making requests", async () => {
+    const provider = buildMicrosoftFoundryImageGenerationProvider();
+
+    await expect(
+      provider.generateImage({
+        provider: PROVIDER_ID,
+        model: "",
+        prompt: "draw it",
+        cfg: buildConfig(),
+      }),
+    ).rejects.toThrow("requires a deployment name");
+    expect(resolveApiKeyForProviderMock).not.toHaveBeenCalled();
+    expect(postJsonRequestMock).not.toHaveBeenCalled();
+  });
+
   it("allows custom MAI deployment names for generation when model metadata is absent", async () => {
     postJsonRequestMock.mockResolvedValue(
       releasedJson({
@@ -306,14 +322,15 @@ describe("microsoft foundry image generation provider", () => {
       model: "prod-image",
       prompt: "draw it",
       cfg: buildConfig({ includeModel: false }),
+      size: "800x1000",
     });
 
     expect(postJsonRequestMock).toHaveBeenCalledOnce();
     expect(requirePostJsonRequest().body).toEqual({
       model: "prod-image",
       prompt: "draw it",
-      width: 1024,
-      height: 1024,
+      width: 800,
+      height: 1000,
     });
   });
 

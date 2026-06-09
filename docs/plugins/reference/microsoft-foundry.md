@@ -62,7 +62,9 @@ Microsoft AI image models:
 - `MAI-Image-2e`
 - `MAI-Image-2`
 
-Use a deployed MAI image deployment name as the model ref:
+Use a deployed MAI image deployment name as the model ref. The provider does
+not declare a default image model because the MAI API requires your deployment
+name in the request `model` field:
 
 ```json5
 {

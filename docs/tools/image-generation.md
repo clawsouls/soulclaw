@@ -105,7 +105,7 @@ backend emits it.
 | fal               | `fal-ai/flux/dev`                       | Yes (model-specific limits)        | `FAL_KEY`                                             |
 | Google            | `gemini-3.1-flash-image-preview`        | Yes                                | `GEMINI_API_KEY` or `GOOGLE_API_KEY`                  |
 | LiteLLM           | `gpt-image-2`                           | Yes (up to 5 input images)         | `LITELLM_API_KEY`                                     |
-| Microsoft Foundry | `MAI-Image-2.5`                         | Yes (MAI-Image-2.5 models only)    | `AZURE_OPENAI_API_KEY` or Entra ID (`az login`)       |
+| Microsoft Foundry | `<deployment-name>`                     | Yes (MAI-Image-2.5 models only)    | `AZURE_OPENAI_API_KEY` or Entra ID (`az login`)       |
 | MiniMax           | `image-01`                              | Yes (subject reference)            | `MINIMAX_API_KEY` or MiniMax OAuth (`minimax-portal`) |
 | OpenAI            | `gpt-image-2`                           | Yes (up to 4 images)               | `OPENAI_API_KEY` or OpenAI ChatGPT/Codex OAuth        |
 | OpenRouter        | `google/gemini-3.1-flash-image-preview` | Yes (up to 5 input images)         | `OPENROUTER_API_KEY`                                  |
@@ -339,8 +339,10 @@ to 10 for GPT Image 2 edits, up to 10 style references for Krea 2, and up to
 
   </Accordion>
   <Accordion title="Microsoft Foundry MAI image models">
-    Microsoft Foundry image generation uses deployed MAI image model names under
-    the `microsoft-foundry/` provider prefix:
+    Microsoft Foundry image generation uses deployed MAI image deployment names
+    under the `microsoft-foundry/` provider prefix. There is no provider-level
+    default model because the MAI API expects your deployment name in the
+    `model` field:
 
     ```json5
     {

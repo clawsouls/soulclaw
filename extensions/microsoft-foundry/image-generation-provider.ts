@@ -21,14 +21,16 @@ import {
   resolveProviderOperationTimeoutMs,
   sanitizeConfiguredModelProviderRequest,
 } from "openclaw/plugin-sdk/provider-http";
-import { normalizeOptionalLowercaseString } from "openclaw/plugin-sdk/string-coerce-runtime";
+import {
+  normalizeOptionalLowercaseString,
+  normalizeOptionalString,
+} from "openclaw/plugin-sdk/string-coerce-runtime";
 import { prepareFoundryRuntimeAuth } from "./runtime.js";
 import { extractFoundryEndpoint } from "./shared-runtime.js";
 import {
   DEFAULT_API,
   isFoundryMaiImageModel,
   isFoundryProviderApi,
-  MAI_DEFAULT_IMAGE_MODEL,
   MAI_IMAGE_MODELS,
   PROVIDER_ID,
 } from "./shared.js";
@@ -238,7 +240,6 @@ export function buildMicrosoftFoundryImageGenerationProvider(): ImageGenerationP
   return {
     id: PROVIDER_ID,
     label: "Microsoft Foundry",
-    defaultModel: MAI_DEFAULT_IMAGE_MODEL,
     defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
     models: [...MAI_IMAGE_MODELS],
     isConfigured: ({ agentDir }) =>
@@ -257,16 +258,16 @@ export function buildMicrosoftFoundryImageGenerationProvider(): ImageGenerationP
         maxInputImages: 1,
         supportsSize: false,
       },
-      geometry: {
-        sizes: ["1024x1024", "768x1365", "1365x768"],
-      },
       output: {
         formats: ["png"],
       },
     },
     async generateImage(req): Promise<ImageGenerationResult> {
       const providerConfig = readProviderConfig(req);
-      const model = req.model || MAI_DEFAULT_IMAGE_MODEL;
+      const model = normalizeOptionalString(req.model);
+      if (!model) {
+        throw new Error("Microsoft Foundry MAI image generation requires a deployment name.");
+      }
       const { modelName, hasMetadata } = ensureMaiImageModel(providerConfig, model);
       const inputImages = req.inputImages ?? [];
       const mode = inputImages.length > 0 ? "edits" : "generations";
