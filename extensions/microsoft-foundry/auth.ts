@@ -42,6 +42,7 @@ export const entraIdAuthMethod: ProviderAuthMethod = {
     choiceId: "microsoft-foundry-entra",
     choiceLabel: "Microsoft Foundry (Entra ID / az login)",
     choiceHint: "Use your Azure login — no API key needed",
+    onboardingScopes: ["text-inference", "image-generation"],
     groupId: "microsoft-foundry",
     groupLabel: "Microsoft Foundry",
     groupHint: "Entra ID + API key",
@@ -202,6 +203,7 @@ export const apiKeyAuthMethod: ProviderAuthMethod = {
   wizard: {
     choiceId: "microsoft-foundry-apikey",
     choiceLabel: "Microsoft Foundry (API key)",
+    onboardingScopes: ["text-inference", "image-generation"],
     groupId: "microsoft-foundry",
     groupLabel: "Microsoft Foundry",
     groupHint: "Entra ID + API key",
