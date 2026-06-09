@@ -13,6 +13,18 @@
       }
     ]
   },
+  "contracts": {
+    "imageGenerationProviders": ["microsoft-foundry"]
+  },
+  "imageGenerationProviderMetadata": {
+    "microsoft-foundry": {
+      "authSignals": [
+        {
+          "provider": "microsoft-foundry"
+        }
+      ]
+    }
+  },
   "providerAuthChoices": [
     {
       "provider": "microsoft-foundry",
