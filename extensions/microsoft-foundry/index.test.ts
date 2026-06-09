@@ -3,6 +3,7 @@ import type { StreamFn } from "openclaw/plugin-sdk/agent-core";
 import type { OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
 import { createTestPluginApi } from "openclaw/plugin-sdk/plugin-test-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { shouldTestFoundryTextConnection } from "./auth.js";
 import { getAccessTokenResultAsync } from "./cli.js";
 import plugin from "./index.js";
 import {
@@ -688,6 +689,21 @@ describe("microsoft-foundry plugin", () => {
     });
     expect(result.defaultModel).toBeUndefined();
     expect(requireFoundryProviderPatch(result).models[0]?.name).toBe("MAI-Image-2.5");
+  });
+
+  it("skips chat connection probes for MAI image deployments", () => {
+    expect(
+      shouldTestFoundryTextConnection({
+        modelId: "prod-image",
+        modelNameHint: "MAI-Image-2.5",
+      }),
+    ).toBe(false);
+    expect(
+      shouldTestFoundryTextConnection({
+        modelId: "prod-chat",
+        modelNameHint: "gpt-5.4",
+      }),
+    ).toBe(true);
   });
 
   it("classifies custom API-key MAI image deployments during manual setup", async () => {

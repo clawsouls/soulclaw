@@ -702,7 +702,7 @@ describe("createImageGenerateTool", () => {
     expect(text).not.toMatch(/^MEDIA:/m);
   });
 
-  it("runs explicit deployment refs without a configured image-generation default", async () => {
+  it("runs explicit deployment refs and preserves timeout-only image defaults", async () => {
     vi.spyOn(imageGenerationRuntime, "listRuntimeImageGenerationProviders").mockReturnValue([
       {
         id: "microsoft-foundry",
@@ -753,7 +753,7 @@ describe("createImageGenerateTool", () => {
       },
     };
     const tool = requireImageGenerateTool(createImageGenerateTool({ config }));
-    delete config.agents?.defaults?.imageGenerationModel;
+    config.agents!.defaults!.imageGenerationModel = { timeoutMs: 180_000 };
 
     const result = await tool.execute("call-explicit-foundry", {
       prompt: "A product render",
@@ -768,9 +768,12 @@ describe("createImageGenerateTool", () => {
     const defaults = requireRecord(agents.defaults, "generateImage defaults config");
     expect(defaults.imageGenerationModel).toEqual({
       primary: "microsoft-foundry/prod-image",
+      timeoutMs: 180_000,
     });
+    expect(generateArgs.timeoutMs).toBe(180_000);
     expect(resultDetails(result).provider).toBe("microsoft-foundry");
     expect(resultDetails(result).model).toBe("prod-image");
+    expect(resultDetails(result).timeoutMs).toBe(180_000);
   });
 
   it("starts image generation asynchronously when a session delivery context is available", async () => {

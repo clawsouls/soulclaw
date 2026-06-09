@@ -902,13 +902,16 @@ export function createImageGenerateTool(options?: {
       }
 
       const model = readStringParam(params, "model");
+      const configuredImageGenerationModelConfig = coerceToolModelConfig(
+        cfg.agents?.defaults?.imageGenerationModel,
+      );
       const imageGenerationModelConfig =
         resolveImageGenerationModelConfigForTool({
           cfg,
           workspaceDir: options?.workspaceDir,
           agentDir: options?.agentDir,
           authStore: options?.authProfileStore,
-        }) ?? (model ? { primary: model } : null);
+        }) ?? (model ? { ...configuredImageGenerationModelConfig, primary: model } : null);
       if (!imageGenerationModelConfig) {
         throw new ToolInputError("No image-generation model configured.");
       }

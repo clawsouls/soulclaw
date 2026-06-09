@@ -27,11 +27,21 @@ import {
 import {
   buildFoundryAuthResult,
   type FoundryProviderApi,
+  isFoundryMaiImageModel,
   listConfiguredFoundryProfileIds,
   PROVIDER_ID,
   resolveConfiguredModelNameHint,
   resolveFoundryApi,
 } from "./shared.js";
+
+export function shouldTestFoundryTextConnection(params: {
+  modelId: string;
+  modelNameHint?: string | null;
+}): boolean {
+  return !isFoundryMaiImageModel(
+    resolveConfiguredModelNameHint(params.modelId, params.modelNameHint),
+  );
+}
 
 export const entraIdAuthMethod: ProviderAuthMethod = {
   id: "entra-id",
@@ -160,15 +170,17 @@ export const entraIdAuthMethod: ProviderAuthMethod = {
       ({ endpoint, modelId, modelNameHint, api } = await promptEndpointAndModelManually(ctx));
     }
 
-    await testFoundryConnection({
-      ctx,
-      endpoint,
-      modelId,
-      modelNameHint,
-      api,
-      subscriptionId: selectedSub?.id,
-      tenantId,
-    });
+    if (shouldTestFoundryTextConnection({ modelId, modelNameHint })) {
+      await testFoundryConnection({
+        ctx,
+        endpoint,
+        modelId,
+        modelNameHint,
+        api,
+        subscriptionId: selectedSub?.id,
+        tenantId,
+      });
+    }
 
     return buildFoundryAuthResult({
       profileId: `${PROVIDER_ID}:entra`,
