@@ -5,7 +5,11 @@ import { createTestPluginApi } from "openclaw/plugin-sdk/plugin-test-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAccessTokenResultAsync } from "./cli.js";
 import plugin from "./index.js";
-import { buildFoundryConnectionTest, isValidTenantIdentifier } from "./onboard.js";
+import {
+  buildFoundryConnectionTest,
+  isValidTenantIdentifier,
+  promptApiKeyEndpointAndModel,
+} from "./onboard.js";
 import { resetFoundryRuntimeAuthCaches } from "./runtime.js";
 import {
   buildFoundryAuthResult,
@@ -684,6 +688,44 @@ describe("microsoft-foundry plugin", () => {
     });
     expect(result.defaultModel).toBeUndefined();
     expect(requireFoundryProviderPatch(result).models[0]?.name).toBe("MAI-Image-2.5");
+  });
+
+  it("classifies custom API-key MAI image deployments during manual setup", async () => {
+    const text = vi
+      .fn()
+      .mockResolvedValueOnce("https://example.services.ai.azure.com")
+      .mockResolvedValueOnce("prod-image");
+    const select = vi
+      .fn()
+      .mockResolvedValueOnce("mai-image")
+      .mockResolvedValueOnce("MAI-Image-2.5");
+    const selection = await promptApiKeyEndpointAndModel({
+      prompter: {
+        text,
+        select,
+      },
+    } as never);
+
+    const result = buildFoundryAuthResult({
+      profileId: "microsoft-foundry:default",
+      apiKey: "test-api-key",
+      endpoint: selection.endpoint,
+      modelId: selection.modelId,
+      modelNameHint: selection.modelNameHint,
+      api: selection.api,
+      authMethod: "api-key",
+    });
+
+    expect(selection).toEqual({
+      endpoint: "https://example.services.ai.azure.com",
+      modelId: "prod-image",
+      modelNameHint: "MAI-Image-2.5",
+      api: "openai-completions",
+    });
+    expect(result.configPatch?.agents?.defaults?.imageGenerationModel).toEqual({
+      primary: "microsoft-foundry/prod-image",
+    });
+    expect(result.defaultModel).toBeUndefined();
   });
 
   it("uses discovered deployment metadata for MAI image defaults", () => {
