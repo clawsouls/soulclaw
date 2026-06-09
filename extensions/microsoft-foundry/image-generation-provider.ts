@@ -336,7 +336,7 @@ export function buildMicrosoftFoundryImageGenerationProvider(): ImageGenerationP
               })(),
               body: buildEditFormData({
                 req,
-                image: inputImages[0] as ImageGenerationSourceImage,
+                image: inputImages[0],
                 model,
               }),
               timeoutMs,
