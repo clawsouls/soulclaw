@@ -6,6 +6,7 @@ import { PROVIDER_ID } from "./shared.js";
 
 const {
   assertOkOrThrowHttpErrorMock,
+  createProviderOperationDeadlineMock,
   isProviderApiKeyConfiguredMock,
   postJsonRequestMock,
   postMultipartRequestMock,
@@ -16,6 +17,7 @@ const {
   sanitizeConfiguredModelProviderRequestMock,
 } = vi.hoisted(() => ({
   assertOkOrThrowHttpErrorMock: vi.fn(async () => {}),
+  createProviderOperationDeadlineMock: vi.fn((params: Record<string, unknown>) => params),
   isProviderApiKeyConfiguredMock: vi.fn(() => true),
   postJsonRequestMock: vi.fn(),
   postMultipartRequestMock: vi.fn(),
@@ -32,7 +34,8 @@ const {
     dispatcherPolicy: undefined,
   })),
   resolveProviderOperationTimeoutMsMock: vi.fn(
-    (params: Record<string, unknown>) => params.timeoutMs ?? params.defaultTimeoutMs,
+    (params: Record<string, unknown>) =>
+      (params.deadline as { timeoutMs?: number }).timeoutMs ?? params.defaultTimeoutMs,
   ),
   sanitizeConfiguredModelProviderRequestMock: vi.fn((request) => request),
 }));
@@ -47,6 +50,7 @@ vi.mock("openclaw/plugin-sdk/provider-auth-runtime", () => ({
 
 vi.mock("openclaw/plugin-sdk/provider-http", () => ({
   assertOkOrThrowHttpError: assertOkOrThrowHttpErrorMock,
+  createProviderOperationDeadline: createProviderOperationDeadlineMock,
   postJsonRequest: postJsonRequestMock,
   postMultipartRequest: postMultipartRequestMock,
   resolveProviderHttpRequestConfig: resolveProviderHttpRequestConfigMock,
@@ -132,6 +136,7 @@ function requireHeaders(value: unknown): Headers {
 describe("microsoft foundry image generation provider", () => {
   afterEach(() => {
     assertOkOrThrowHttpErrorMock.mockClear();
+    createProviderOperationDeadlineMock.mockClear();
     isProviderApiKeyConfiguredMock.mockClear();
     postJsonRequestMock.mockReset();
     postMultipartRequestMock.mockReset();
@@ -199,6 +204,14 @@ describe("microsoft foundry image generation provider", () => {
       transport: "http",
     });
     expect(postJsonRequestMock).toHaveBeenCalledOnce();
+    expect(createProviderOperationDeadlineMock).toHaveBeenCalledWith({
+      timeoutMs: 12_345,
+      label: "Microsoft Foundry MAI image generation",
+    });
+    expect(resolveProviderOperationTimeoutMsMock).toHaveBeenCalledWith({
+      deadline: { timeoutMs: 12_345, label: "Microsoft Foundry MAI image generation" },
+      defaultTimeoutMs: 600_000,
+    });
     const request = requirePostJsonRequest();
     expect(request.url).toBe("https://example.services.ai.azure.com/mai/v1/images/generations");
     expect(request.body).toEqual({

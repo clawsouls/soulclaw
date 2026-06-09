@@ -15,6 +15,7 @@ import { isProviderApiKeyConfigured } from "openclaw/plugin-sdk/provider-auth";
 import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runtime";
 import {
   assertOkOrThrowHttpError,
+  createProviderOperationDeadline,
   postJsonRequest,
   postMultipartRequest,
   resolveProviderHttpRequestConfig,
@@ -305,8 +306,16 @@ export function buildMicrosoftFoundryImageGenerationProvider(): ImageGenerationP
           capability: "image",
           transport: "http",
         });
-      const timeoutMs = resolveProviderOperationTimeoutMs({
+      const label =
+        mode === "edits"
+          ? "Microsoft Foundry MAI image edit"
+          : "Microsoft Foundry MAI image generation";
+      const deadline = createProviderOperationDeadline({
         timeoutMs: req.timeoutMs,
+        label,
+      });
+      const timeoutMs = resolveProviderOperationTimeoutMs({
+        deadline,
         defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
       });
 
@@ -347,10 +356,6 @@ export function buildMicrosoftFoundryImageGenerationProvider(): ImageGenerationP
 
       const { response, release } = await request;
       try {
-        const label =
-          mode === "edits"
-            ? "Microsoft Foundry MAI image edit"
-            : "Microsoft Foundry MAI image generation";
         await assertOkOrThrowHttpError(response, `${label} failed`);
         return {
           images: parseMaiImageResponse(await response.json(), label),
