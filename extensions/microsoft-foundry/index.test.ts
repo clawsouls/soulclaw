@@ -9,8 +9,10 @@ import { buildFoundryConnectionTest, isValidTenantIdentifier } from "./onboard.j
 import { resetFoundryRuntimeAuthCaches } from "./runtime.js";
 import {
   buildFoundryAuthResult,
+  isFoundryMaiImageModel,
   normalizeFoundryEndpoint,
   requiresFoundryMaxCompletionTokens,
+  supportsFoundryReasoningContent,
   supportsFoundryReasoningEffort,
   supportsFoundryImageInput,
   usesFoundryResponsesByDefault,
@@ -635,9 +637,35 @@ describe("microsoft-foundry plugin", () => {
     expect(supportsFoundryReasoningEffort("gpt-5.1-chat")).toBe(true);
     expect(supportsFoundryReasoningEffort("o3")).toBe(true);
     expect(supportsFoundryReasoningEffort("o1-mini")).toBe(false);
+    expect(supportsFoundryReasoningEffort("MAI-DS-R1")).toBe(false);
+    expect(supportsFoundryReasoningContent("MAI-DS-R1")).toBe(true);
     expect(supportsFoundryImageInput("gpt-5.4")).toBe(true);
     expect(supportsFoundryImageInput("gpt-4o")).toBe(true);
     expect(supportsFoundryImageInput("MAI-DS-R1")).toBe(false);
+    expect(isFoundryMaiImageModel("MAI-Image-2.5-Flash")).toBe(true);
+    expect(isFoundryMaiImageModel("MAI-Image-2e")).toBe(true);
+    expect(isFoundryMaiImageModel("MAI-DS-R1")).toBe(false);
+  });
+
+  it("records MAI chat deployments with reasoning-content token limits", () => {
+    const result = buildFoundryAuthResult({
+      profileId: "microsoft-foundry:entra",
+      apiKey: "__entra_id_dynamic__",
+      endpoint: "https://example.services.ai.azure.com",
+      modelId: "mai-r1-prod",
+      modelNameHint: "MAI-DS-R1",
+      api: "openai-completions",
+      authMethod: "entra-id",
+    });
+
+    const model = requireFoundryProviderPatch(result).models[0];
+    expect(model?.api).toBe("openai-completions");
+    expect(model?.reasoning).toBe(true);
+    expect(model?.contextWindow).toBe(163_840);
+    expect(model?.maxTokens).toBe(163_840);
+    expect(model?.input).toEqual(["text"]);
+    expect(model?.compat?.supportsReasoningEffort).toBe(false);
+    expect(model?.compat?.maxTokensField).toBe("max_tokens");
   });
 
   it("records GPT-family Foundry deployments as image-capable during auth setup", () => {
