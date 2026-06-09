@@ -50,21 +50,27 @@ function readProviderConfig(req: ImageGenerationRequest): ModelProviderConfig | 
 function resolveConfiguredModelName(
   providerConfig: ModelProviderConfig | undefined,
   model: string,
-): string {
-  return providerConfig?.models.find((candidate) => candidate.id === model)?.name ?? model;
+): { modelName: string; hasMetadata: boolean } {
+  const configuredName = providerConfig?.models.find((candidate) => candidate.id === model)?.name;
+  return configuredName
+    ? { modelName: configuredName, hasMetadata: true }
+    : { modelName: model, hasMetadata: false };
 }
 
 function ensureMaiImageModel(
   providerConfig: ModelProviderConfig | undefined,
   model: string,
-): string {
-  const modelName = resolveConfiguredModelName(providerConfig, model);
-  if (!isFoundryMaiImageModel(modelName)) {
+): { modelName: string; hasMetadata: boolean } {
+  const resolved = resolveConfiguredModelName(providerConfig, model);
+  if (
+    !isFoundryMaiImageModel(resolved.modelName) &&
+    (resolved.hasMetadata || normalizeOptionalLowercaseString(model)?.startsWith("mai-"))
+  ) {
     throw new Error(
-      `Microsoft Foundry image generation supports MAI image deployments only, got "${modelName}".`,
+      `Microsoft Foundry image generation supports MAI image deployments only, got "${resolved.modelName}".`,
     );
   }
-  return modelName;
+  return resolved;
 }
 
 function isMaiImageEditModel(modelName: string): boolean {
@@ -261,15 +267,24 @@ export function buildMicrosoftFoundryImageGenerationProvider(): ImageGenerationP
     async generateImage(req): Promise<ImageGenerationResult> {
       const providerConfig = readProviderConfig(req);
       const model = req.model || MAI_DEFAULT_IMAGE_MODEL;
-      const modelName = ensureMaiImageModel(providerConfig, model);
+      const { modelName, hasMetadata } = ensureMaiImageModel(providerConfig, model);
       const inputImages = req.inputImages ?? [];
       const mode = inputImages.length > 0 ? "edits" : "generations";
       assertSingleImageCount(req.count);
       if (inputImages.length > 1) {
         throw new Error("Microsoft Foundry MAI image edits support one input image.");
       }
-      if (mode === "edits" && !isMaiImageEditModel(modelName)) {
+      if (
+        mode === "edits" &&
+        (hasMetadata || isFoundryMaiImageModel(model)) &&
+        !isMaiImageEditModel(modelName)
+      ) {
         throw new Error(`${modelName} does not support Microsoft Foundry MAI image edits.`);
+      }
+      if (mode === "edits" && !hasMetadata && !isFoundryMaiImageModel(model)) {
+        throw new Error(
+          "Microsoft Foundry MAI image edits require MAI-Image-2.5 model metadata for custom deployment names.",
+        );
       }
 
       const auth = await resolveMaiImageAuth({ req, providerConfig, model, modelName });

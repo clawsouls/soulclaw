@@ -366,6 +366,11 @@ to 10 for GPT Image 2 edits, up to 10 style references for Krea 2, and up to
     - Edits: one PNG or JPEG reference image, supported only by
       `MAI-Image-2.5-Flash` and `MAI-Image-2.5` deployments
 
+    Prompt-only generation can use a custom deployment name with just the
+    Foundry endpoint configured. Edits with custom deployment names need
+    onboarding/model metadata so OpenClaw can verify that the deployment is
+    backed by `MAI-Image-2.5-Flash` or `MAI-Image-2.5`.
+
     Current MAI image models are `MAI-Image-2.5-Flash`, `MAI-Image-2.5`,
     `MAI-Image-2e`, and `MAI-Image-2`. See
     [Microsoft Foundry plugin](/plugins/reference/microsoft-foundry) for setup

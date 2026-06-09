@@ -63,6 +63,7 @@ function buildConfig(
     modelId?: string;
     modelName?: string;
     baseUrl?: string;
+    includeModel?: boolean;
   } = {},
 ): OpenClawConfig {
   const baseUrl = params.baseUrl ?? "https://example.services.ai.azure.com/openai/v1";
@@ -74,20 +75,23 @@ function buildConfig(
         [PROVIDER_ID]: {
           baseUrl,
           api: "openai-completions",
-          models: [
-            {
-              provider: PROVIDER_ID,
-              id: modelId,
-              name: modelName,
-              api: "openai-completions",
-              baseUrl,
-              reasoning: false,
-              input: ["text"],
-              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-              contextWindow: 32_000,
-              maxTokens: 0,
-            },
-          ],
+          models:
+            params.includeModel === false
+              ? []
+              : [
+                  {
+                    provider: PROVIDER_ID,
+                    id: modelId,
+                    name: modelName,
+                    api: "openai-completions",
+                    baseUrl,
+                    reasoning: false,
+                    input: ["text"],
+                    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+                    contextWindow: 32_000,
+                    maxTokens: 0,
+                  },
+                ],
         },
       },
     },
@@ -289,6 +293,46 @@ describe("microsoft foundry image generation provider", () => {
     expect(postMultipartRequestMock).not.toHaveBeenCalled();
   });
 
+  it("allows custom MAI deployment names for generation when model metadata is absent", async () => {
+    postJsonRequestMock.mockResolvedValue(
+      releasedJson({
+        data: [{ b64_json: Buffer.from("png").toString("base64") }],
+      }),
+    );
+    const provider = buildMicrosoftFoundryImageGenerationProvider();
+
+    await provider.generateImage({
+      provider: PROVIDER_ID,
+      model: "prod-image",
+      prompt: "draw it",
+      cfg: buildConfig({ includeModel: false }),
+    });
+
+    expect(postJsonRequestMock).toHaveBeenCalledOnce();
+    expect(requirePostJsonRequest().body).toEqual({
+      model: "prod-image",
+      prompt: "draw it",
+      width: 1024,
+      height: 1024,
+    });
+  });
+
+  it("requires MAI-Image-2.5 metadata before editing custom deployment names", async () => {
+    const provider = buildMicrosoftFoundryImageGenerationProvider();
+
+    await expect(
+      provider.generateImage({
+        provider: PROVIDER_ID,
+        model: "prod-image",
+        prompt: "edit it",
+        cfg: buildConfig({ includeModel: false }),
+        inputImages: [{ buffer: Buffer.from("input"), mimeType: "image/png" }],
+      }),
+    ).rejects.toThrow("edits require MAI-Image-2.5 model metadata");
+    expect(resolveApiKeyForProviderMock).not.toHaveBeenCalled();
+    expect(postMultipartRequestMock).not.toHaveBeenCalled();
+  });
+
   it("rejects non-MAI image deployments before making requests", async () => {
     const provider = buildMicrosoftFoundryImageGenerationProvider();
 
@@ -300,6 +344,21 @@ describe("microsoft foundry image generation provider", () => {
         cfg: buildConfig({ modelId: "gpt-deployment", modelName: "gpt-5.4" }),
       }),
     ).rejects.toThrow('supports MAI image deployments only, got "gpt-5.4"');
+    expect(resolveApiKeyForProviderMock).not.toHaveBeenCalled();
+    expect(postJsonRequestMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects literal non-image MAI model names before making requests", async () => {
+    const provider = buildMicrosoftFoundryImageGenerationProvider();
+
+    await expect(
+      provider.generateImage({
+        provider: PROVIDER_ID,
+        model: "MAI-DS-R1",
+        prompt: "draw it",
+        cfg: buildConfig({ includeModel: false }),
+      }),
+    ).rejects.toThrow('supports MAI image deployments only, got "MAI-DS-R1"');
     expect(resolveApiKeyForProviderMock).not.toHaveBeenCalled();
     expect(postJsonRequestMock).not.toHaveBeenCalled();
   });

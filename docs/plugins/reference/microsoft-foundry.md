@@ -82,6 +82,11 @@ Prompt-only generation calls Microsoft Foundry's MAI generations endpoint:
 `/mai/v1/images/edits` and are limited to `MAI-Image-2.5-Flash` and
 `MAI-Image-2.5` deployments.
 
+Prompt-only generation can use a custom deployment name with just the Foundry
+endpoint configured. For image edits with a custom deployment name, select the
+deployment through onboarding or include model metadata so OpenClaw can verify
+that the deployment is backed by `MAI-Image-2.5-Flash` or `MAI-Image-2.5`.
+
 MAI image constraints:
 
 - Output: one PNG image per request.
