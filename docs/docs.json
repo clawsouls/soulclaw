@@ -1741,8 +1741,7 @@
                 "group": "RPC and API",
                 "pages": [
                   "reference/rpc",
-                  "concepts/openclaw-sdk",
-                  "reference/openclaw-sdk-api-design",
+                  "gateway/external-apps",
                   "reference/code-mode",
                   "reference/device-models"
                 ]
