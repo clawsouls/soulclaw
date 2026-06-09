@@ -358,6 +358,30 @@ describe("microsoft foundry image generation provider", () => {
     });
   });
 
+  it("allows manual custom deployment names when configured name only repeats the id", async () => {
+    postJsonRequestMock.mockResolvedValue(
+      releasedJson({
+        data: [{ b64_json: Buffer.from("png").toString("base64") }],
+      }),
+    );
+    const provider = buildMicrosoftFoundryImageGenerationProvider();
+
+    await provider.generateImage({
+      provider: PROVIDER_ID,
+      model: "prod-image",
+      prompt: "draw it",
+      cfg: buildConfig({ modelId: "prod-image", modelName: "prod-image" }),
+    });
+
+    expect(postJsonRequestMock).toHaveBeenCalledOnce();
+    expect(requirePostJsonRequest().body).toEqual({
+      model: "prod-image",
+      prompt: "draw it",
+      width: 1024,
+      height: 1024,
+    });
+  });
+
   it("requires MAI-Image-2.5 metadata before editing custom deployment names", async () => {
     const provider = buildMicrosoftFoundryImageGenerationProvider();
 

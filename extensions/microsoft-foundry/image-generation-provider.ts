@@ -55,8 +55,10 @@ function resolveConfiguredModelName(
   model: string,
 ): { modelName: string; hasMetadata: boolean } {
   const configuredName = providerConfig?.models.find((candidate) => candidate.id === model)?.name;
+  const hasDistinctModelMetadata =
+    normalizeOptionalLowercaseString(configuredName) !== normalizeOptionalLowercaseString(model);
   return configuredName
-    ? { modelName: configuredName, hasMetadata: true }
+    ? { modelName: configuredName, hasMetadata: hasDistinctModelMetadata }
     : { modelName: model, hasMetadata: false };
 }
 
