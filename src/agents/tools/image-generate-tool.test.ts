@@ -706,7 +706,7 @@ describe("createImageGenerateTool", () => {
     vi.spyOn(imageGenerationRuntime, "listRuntimeImageGenerationProviders").mockReturnValue([
       {
         id: "microsoft-foundry",
-        models: ["MAI-Image-2.5"],
+        models: [],
         isConfigured: () => true,
         capabilities: {
           generate: {

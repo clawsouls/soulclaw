@@ -145,18 +145,14 @@ describe("microsoft foundry image generation provider", () => {
     resolveProviderHttpRequestConfigMock.mockClear();
     resolveProviderOperationTimeoutMsMock.mockClear();
     sanitizeConfiguredModelProviderRequestMock.mockClear();
+    vi.unstubAllEnvs();
   });
 
   it("exposes MAI image provider metadata and capabilities", () => {
     const provider = buildMicrosoftFoundryImageGenerationProvider();
     expect(provider.id).toBe(PROVIDER_ID);
     expect(provider.defaultModel).toBeUndefined();
-    expect(provider.models).toEqual([
-      "MAI-Image-2.5-Flash",
-      "MAI-Image-2.5",
-      "MAI-Image-2e",
-      "MAI-Image-2",
-    ]);
+    expect(provider.models).toEqual([]);
     expect(provider.capabilities.generate.maxCount).toBe(1);
     expect(provider.capabilities.edit.enabled).toBe(true);
     expect(provider.capabilities.edit.maxInputImages).toBe(1);
@@ -229,6 +225,27 @@ describe("microsoft foundry image generation provider", () => {
     expect(result.model).toBe("image-deployment");
     expect(result.images[0]?.buffer.toString()).toBe("png");
     expect(result.images[0]?.mimeType).toBe("image/png");
+  });
+
+  it("uses AZURE_OPENAI_ENDPOINT when env API-key auth has no configured base URL", async () => {
+    vi.stubEnv("AZURE_OPENAI_ENDPOINT", "https://env.services.ai.azure.com");
+    postJsonRequestMock.mockResolvedValue(
+      releasedJson({
+        data: [{ b64_json: Buffer.from("png").toString("base64") }],
+      }),
+    );
+    const provider = buildMicrosoftFoundryImageGenerationProvider();
+
+    await provider.generateImage({
+      provider: PROVIDER_ID,
+      model: "image-deployment",
+      prompt: "draw from env endpoint",
+      cfg: buildConfig({ baseUrl: "" }),
+    });
+
+    expect(requirePostJsonRequest().url).toBe(
+      "https://env.services.ai.azure.com/mai/v1/images/generations",
+    );
   });
 
   it("refreshes Entra ID auth and sends MAI image edits as multipart form data", async () => {

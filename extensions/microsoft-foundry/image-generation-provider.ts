@@ -32,7 +32,6 @@ import {
   DEFAULT_API,
   isFoundryMaiImageModel,
   isFoundryProviderApi,
-  MAI_IMAGE_MODELS,
   PROVIDER_ID,
 } from "./shared.js";
 
@@ -118,7 +117,10 @@ function resolveConfiguredEndpoint(params: {
   providerConfig: ModelProviderConfig | undefined;
   preparedBaseUrl?: string;
 }): string {
-  const endpoint = extractFoundryEndpoint(params.preparedBaseUrl ?? params.providerConfig?.baseUrl);
+  const endpoint =
+    extractFoundryEndpoint(params.preparedBaseUrl) ??
+    extractFoundryEndpoint(params.providerConfig?.baseUrl) ??
+    extractFoundryEndpoint(process.env.AZURE_OPENAI_ENDPOINT);
   if (!endpoint) {
     throw new Error("Microsoft Foundry endpoint missing for MAI image generation.");
   }
@@ -244,7 +246,7 @@ export function buildMicrosoftFoundryImageGenerationProvider(): ImageGenerationP
     id: PROVIDER_ID,
     label: "Microsoft Foundry",
     defaultTimeoutMs: DEFAULT_TIMEOUT_MS,
-    models: [...MAI_IMAGE_MODELS],
+    models: [],
     isConfigured: ({ agentDir }) =>
       isProviderApiKeyConfigured({
         provider: PROVIDER_ID,
