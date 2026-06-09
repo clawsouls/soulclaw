@@ -6,6 +6,7 @@ import { windowsAgentWorkspaceScript } from "./agent-workspace.ts";
 import {
   die,
   ensureValue,
+  currentRunningSnapshotInfo,
   makeTempDir,
   parseMode,
   parseProvider,
@@ -16,6 +17,7 @@ import {
   resolveSnapshot,
   run,
   say,
+  shouldSkipSnapshotRestore,
   warn,
   withProgressOnStderr,
   writeSummaryMarkdown,
@@ -275,7 +277,9 @@ class WindowsSmoke extends SmokeRunController<WindowsOptions> {
     this.guest = new WindowsGuest(this.options.vmName, this.phases);
     this.tgzDir = await makeTempDir("openclaw-parallels-windows-tgz.");
     try {
-      this.snapshot = resolveSnapshot(this.options.vmName, this.options.snapshotHint);
+      this.snapshot = shouldSkipSnapshotRestore()
+        ? currentRunningSnapshotInfo(this.options.vmName)
+        : resolveSnapshot(this.options.vmName, this.options.snapshotHint);
       this.latestVersion = resolveLatestVersion(this.options.latestVersion);
       this.installVersion = this.options.installVersion || this.latestVersion;
       await this.prepareHost(
@@ -442,6 +446,10 @@ class WindowsSmoke extends SmokeRunController<WindowsOptions> {
   }
 
   private restoreSnapshot(): void {
+    if (shouldSkipSnapshotRestore()) {
+      say(`Skip snapshot restore; using current running VM ${this.options.vmName}`);
+      return;
+    }
     this.waitForVmNotRestoring(240);
     say(`Restore snapshot ${this.options.snapshotHint} (${this.snapshot.id})`);
     let restored = false;

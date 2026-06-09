@@ -210,14 +210,15 @@ describe("Parallels smoke model selection", () => {
   it("keeps the public shell entrypoints as thin TypeScript launchers", () => {
     for (const [platform, wrapperPath] of Object.entries(WRAPPERS)) {
       const wrapper = readFileSync(wrapperPath, "utf8");
+      const scriptPath =
+        platform === "npmUpdate"
+          ? TS_PATHS.npmUpdate
+          : TS_PATHS[platform as "linux" | "macos" | "windows"];
 
-      expect(wrapper, wrapperPath).toContain('exec pnpm --dir "$ROOT_DIR" exec tsx');
-      if (platform === "npmUpdate") {
-        expect(wrapper, wrapperPath).toContain(TS_PATHS.npmUpdate);
-      } else {
-        expect(wrapper, wrapperPath).toContain(TS_PATHS[platform as "linux" | "macos" | "windows"]);
-      }
-      expect(countNonEmptyLines(wrapper)).toBeLessThanOrEqual(5);
+      expect(wrapper, wrapperPath).toContain('cd "$ROOT_DIR"');
+      expect(wrapper, wrapperPath).toContain(`exec pnpm exec tsx ${scriptPath}`);
+      expect(wrapper, wrapperPath).toContain(`exec node --import tsx ${scriptPath}`);
+      expect(countNonEmptyLines(wrapper)).toBeLessThanOrEqual(9);
     }
   });
 
@@ -1280,6 +1281,7 @@ setInterval(() => {}, 1000);
     expect(powershell).toContain("models.providers.${providerId}");
     expect(powershell).toContain("agents.defaults.models${configPathMapKey(modelId)}");
     expect(powershell).toContain("OPENCLAW_PARALLELS_AGENT_RUNTIME_POLICY_SUPPORTED");
+    expect(powershell).toContain("Programs\\nodejs");
     expect(powershell).toContain('selectedModelEntry.agentRuntime = { id: "openclaw" }');
     expect(powershell).toContain("delete selectedModelEntry.agentRuntime");
     expect(powershell).toContain("delete providerEntry.agentRuntime");
