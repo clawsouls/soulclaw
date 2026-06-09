@@ -323,7 +323,11 @@ export function buildMicrosoftFoundryImageGenerationProvider(): ImageGenerationP
         mode === "edits"
           ? postMultipartRequest({
               url: buildMaiImageUrl(baseUrl, mode),
-              headers,
+              headers: (() => {
+                const multipartHeaders = new Headers(headers);
+                multipartHeaders.delete("Content-Type");
+                return multipartHeaders;
+              })(),
               body: buildEditFormData({
                 req,
                 image: inputImages[0] as ImageGenerationSourceImage,

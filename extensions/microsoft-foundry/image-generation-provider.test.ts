@@ -25,6 +25,7 @@ const {
   resolveApiKeyForProviderMock: vi.fn(async () => ({
     apiKey: "foundry-key",
     mode: "api-key" as const,
+    profileId: undefined as string | undefined,
     source: "test",
   })),
   resolveProviderHttpRequestConfigMock: vi.fn((params: Record<string, unknown>) => ({
@@ -84,7 +85,6 @@ function buildConfig(
               ? []
               : [
                   {
-                    provider: PROVIDER_ID,
                     id: modelId,
                     name: modelName,
                     api: "openai-completions",
@@ -184,7 +184,7 @@ describe("microsoft foundry image generation provider", () => {
       cfg: buildConfig(),
       size: "768x1365",
       timeoutMs: 12_345,
-      ssrfPolicy: { allowDocumentationRanges: true },
+      ssrfPolicy: { allowPrivateNetwork: true },
     });
 
     expect(resolveApiKeyForProviderMock).toHaveBeenCalledWith({
@@ -225,7 +225,7 @@ describe("microsoft foundry image generation provider", () => {
       "content-type": "application/json",
     });
     expect(request.timeoutMs).toBe(12_345);
-    expect(request.ssrfPolicy).toEqual({ allowDocumentationRanges: true });
+    expect(request.ssrfPolicy).toEqual({ allowPrivateNetwork: true });
     expect(result.model).toBe("image-deployment");
     expect(result.images[0]?.buffer.toString()).toBe("png");
     expect(result.images[0]?.mimeType).toBe("image/png");
@@ -243,6 +243,17 @@ describe("microsoft foundry image generation provider", () => {
       baseUrl: "https://example.services.ai.azure.com/openai/v1",
       expiresAt: Date.now() + 60_000,
     });
+    resolveProviderHttpRequestConfigMock.mockImplementationOnce(
+      (params: Record<string, unknown>) => ({
+        baseUrl: params.baseUrl ?? params.defaultBaseUrl,
+        allowPrivateNetwork: false,
+        headers: new Headers({
+          ...(params.defaultHeaders as Record<string, string>),
+          "Content-Type": "application/json",
+        }),
+        dispatcherPolicy: undefined,
+      }),
+    );
     postMultipartRequestMock.mockResolvedValue(
       releasedJson({
         data: [{ b64_json: Buffer.from("edited").toString("base64") }],
