@@ -45,12 +45,28 @@ describe("azure-openai-responses", () => {
         "https://project.services.ai.azure.com/openai/v1",
       ),
     ).toBe(true);
+    expect(
+      testing.isOpenAICompatibleAzureResponsesBaseUrl(
+        "https://eastus.api.cognitive.microsoft.com/openai/v1",
+      ),
+    ).toBe(true);
   });
 
   it("does not treat non-v1 custom endpoints as OpenAI-compatible Responses bases", () => {
     expect(
       testing.isOpenAICompatibleAzureResponsesBaseUrl(
         "https://project.services.ai.azure.com/api/projects/demo",
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps private or APIM Azure OpenAI-compatible paths on the AzureOpenAI client path", () => {
+    expect(testing.isOpenAICompatibleAzureResponsesBaseUrl("https://aoai.internal/openai/v1")).toBe(
+      false,
+    );
+    expect(
+      testing.isOpenAICompatibleAzureResponsesBaseUrl(
+        "https://gateway.example.com/proxy/openai/v1",
       ),
     ).toBe(false);
   });

@@ -16,6 +16,14 @@ export function isOpenAICompatibleAzureResponsesBaseUrl(baseUrl: string): boolea
     return false;
   }
 
+  const hostname = url.hostname.toLowerCase();
+  const isFoundryHost =
+    hostname.endsWith(".services.ai.azure.com") ||
+    hostname.endsWith(".api.cognitive.microsoft.com");
+  if (!isFoundryHost) {
+    return false;
+  }
+
   const normalizedPath = url.pathname.replace(/\/+$/, "");
   return normalizedPath === "/openai/v1" || normalizedPath.endsWith("/openai/v1");
 }
