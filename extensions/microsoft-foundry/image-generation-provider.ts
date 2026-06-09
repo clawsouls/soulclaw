@@ -66,9 +66,11 @@ function ensureMaiImageModel(
   model: string,
 ): { modelName: string; hasMetadata: boolean } {
   const resolved = resolveConfiguredModelName(providerConfig, model);
+  const normalizedModel = normalizeOptionalLowercaseString(model);
   if (
     !isFoundryMaiImageModel(resolved.modelName) &&
-    (resolved.hasMetadata || normalizeOptionalLowercaseString(model)?.startsWith("mai-"))
+    (resolved.hasMetadata ||
+      (normalizedModel?.startsWith("mai-") && !normalizedModel.startsWith("mai-image-")))
   ) {
     throw new Error(
       `Microsoft Foundry image generation supports MAI image deployments only, got "${resolved.modelName}".`,

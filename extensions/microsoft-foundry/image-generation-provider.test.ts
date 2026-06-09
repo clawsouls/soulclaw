@@ -375,6 +375,27 @@ describe("microsoft foundry image generation provider", () => {
     });
   });
 
+  it("allows custom mai-image deployment names for generation without model metadata", async () => {
+    postJsonRequestMock.mockResolvedValue(
+      releasedJson({
+        data: [{ b64_json: Buffer.from("png").toString("base64") }],
+      }),
+    );
+    const provider = buildMicrosoftFoundryImageGenerationProvider();
+
+    await provider.generateImage({
+      provider: PROVIDER_ID,
+      model: "mai-image-2-live",
+      prompt: "draw it",
+      cfg: buildConfig({ modelId: "mai-image-2-live", includeModel: false }),
+    });
+
+    expect(postJsonRequestMock).toHaveBeenCalledOnce();
+    expect(requirePostJsonRequest().body).toMatchObject({
+      model: "mai-image-2-live",
+    });
+  });
+
   it("allows manual custom deployment names when configured name only repeats the id", async () => {
     postJsonRequestMock.mockResolvedValue(
       releasedJson({
