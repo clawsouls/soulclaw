@@ -251,14 +251,17 @@ export const apiKeyAuthMethod: ProviderAuthMethod = {
       throw new Error("Missing Azure OpenAI API key.");
     }
     const selection = await promptApiKeyEndpointAndModel(ctx);
+    const existingModelNameHint =
+      existingMetadata?.modelId === selection.modelId
+        ? (existingMetadata.modelName ?? existingMetadata.modelId)
+        : undefined;
     return buildFoundryAuthResult({
       profileId: `${PROVIDER_ID}:default`,
       apiKey: capturedSecretInput ?? "",
       ...(capturedMode ? { secretInputMode: capturedMode } : {}),
       endpoint: selection.endpoint,
       modelId: selection.modelId,
-      modelNameHint:
-        selection.modelNameHint ?? existingMetadata?.modelName ?? existingMetadata?.modelId,
+      modelNameHint: selection.modelNameHint ?? existingModelNameHint,
       api: selection.api,
       authMethod: "api-key",
       currentProviderProfileIds: listConfiguredFoundryProfileIds(ctx.config),

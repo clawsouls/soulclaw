@@ -963,6 +963,51 @@ describe("microsoft-foundry plugin", () => {
     });
   });
 
+  it("does not reuse stale API-key model metadata when selecting a different deployment", async () => {
+    const provider = registerProvider();
+    ensureAuthProfileStoreMock.mockReturnValueOnce({
+      profiles: {
+        "microsoft-foundry:default": {
+          type: "api_key",
+          provider: "microsoft-foundry",
+          metadata: {
+            authMethod: "api-key",
+            endpoint: "https://example.services.ai.azure.com",
+            modelId: "prod-fable",
+            modelName: "claude-fable-5",
+            api: "anthropic-messages",
+          },
+        },
+      },
+    });
+    const text = vi
+      .fn()
+      .mockResolvedValueOnce("https://example.services.ai.azure.com")
+      .mockResolvedValueOnce("prod-gpt");
+    const select = vi
+      .fn()
+      .mockResolvedValueOnce("other-chat")
+      .mockResolvedValueOnce("openai-completions");
+    const apiKeyAuth = provider.auth.find((method) => method.id === "api-key");
+
+    const result = await apiKeyAuth?.run({
+      config: {},
+      opts: { azureOpenaiApiKey: "test-api-key" },
+      prompter: { text, select },
+      agentDir: defaultFoundryAgentDir,
+      secretInputMode: "plaintext",
+    } as never);
+
+    const model = result?.configPatch?.models?.providers?.["microsoft-foundry"]?.models[0];
+    expect(model).toMatchObject({
+      id: "prod-gpt",
+      name: "prod-gpt",
+      api: "openai-completions",
+      reasoning: false,
+    });
+    expect(model?.thinkingLevelMap).toBeUndefined();
+  });
+
   it("rejects Entra-only Claude Mythos deployments during API-key manual setup", async () => {
     const text = vi.fn(
       async (params: { message: string; validate?: (value: string) => string | undefined }) => {
