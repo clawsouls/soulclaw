@@ -850,6 +850,28 @@ describe("buildReplyPayloads media filter integration", () => {
     expectFields(replyPayloads[0], { text: "new final response" });
   });
 
+  it("keeps only final media after multiple direct text blocks", async () => {
+    const { createBlockReplyContentKey } = await import("./block-reply-pipeline.js");
+    const directlySentBlockKeys = new Set<string>([
+      createBlockReplyContentKey({ text: "Preview" }),
+      createBlockReplyContentKey({ text: " below" }),
+    ]);
+
+    const { replyPayloads } = await buildReplyPayloads({
+      ...baseParams,
+      blockStreamingEnabled: true,
+      directlySentBlockKeys,
+      payloads: [{ text: "Preview below\n\nMEDIA:/tmp/generated.png" }],
+    });
+
+    expect(replyPayloads).toHaveLength(1);
+    expectFields(replyPayloads[0], {
+      text: undefined,
+      mediaUrl: "/tmp/generated.png",
+      mediaUrls: ["/tmp/generated.png"],
+    });
+  });
+
   it("does not suppress same-target replies when accountId differs", async () => {
     const { replyPayloads } = await buildReplyPayloads({
       ...baseParams,

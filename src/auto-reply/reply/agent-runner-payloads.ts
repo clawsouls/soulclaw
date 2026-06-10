@@ -332,6 +332,27 @@ export async function buildReplyPayloads(params: {
     : mediaFilteredPayloads;
   const isDirectlySentBlockPayload = (payload: ReplyPayload) =>
     Boolean(params.directlySentBlockKeys?.has(createBlockReplyContentKey(payload)));
+  const directlySentBlockTexts = Array.from(params.directlySentBlockKeys ?? []).flatMap((key) => {
+    try {
+      const parsed = JSON.parse(key) as { text?: unknown; mediaList?: unknown[] };
+      return typeof parsed.text === "string" && (parsed.mediaList?.length ?? 0) === 0
+        ? [parsed.text]
+        : [];
+    } catch {
+      return [];
+    }
+  });
+  const hasDirectlySentText = (payload: ReplyPayload): boolean => {
+    if (isDirectlySentBlockPayload(payload)) {
+      return true;
+    }
+    const text = resolveSendableOutboundReplyParts(payload).trimmedText;
+    if (!text || directlySentBlockTexts.length === 0) {
+      return false;
+    }
+    const normalize = (value: string) => value.replace(/\s+/g, "");
+    return normalize(directlySentBlockTexts.join("")) === normalize(text);
+  };
   const preserveUnsentMediaAfterBlockSend = (payload: ReplyPayload): ReplyPayload | null => {
     if (payload.isError || payload.isFallbackNotice) {
       return payload;
@@ -351,7 +372,7 @@ export async function buildReplyPayloads(params: {
     });
     const textWasSent = params.blockReplyPipeline?.hasSentPayload(textOnlyPayload)
       ? true
-      : Boolean(params.directlySentBlockKeys?.has(createBlockReplyContentKey(textOnlyPayload)));
+      : hasDirectlySentText(textOnlyPayload);
     if (!textWasSent) {
       return payload;
     }
