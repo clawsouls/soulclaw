@@ -167,6 +167,8 @@ export async function buildReplyPayloads(params: {
   blockReplyPipeline: BlockReplyPipeline | null;
   /** Payload keys sent directly (not via pipeline) during tool flush. */
   directlySentBlockKeys?: Set<string>;
+  /** Ordered text fragments successfully sent directly during tool flush. */
+  directlySentBlockTextFragments?: string[];
   replyToMode: ReplyToMode;
   replyToChannel?: OriginatingChannelType;
   currentMessageId?: string;
@@ -332,26 +334,16 @@ export async function buildReplyPayloads(params: {
     : mediaFilteredPayloads;
   const isDirectlySentBlockPayload = (payload: ReplyPayload) =>
     Boolean(params.directlySentBlockKeys?.has(createBlockReplyContentKey(payload)));
-  const directlySentBlockTexts = Array.from(params.directlySentBlockKeys ?? []).flatMap((key) => {
-    try {
-      const parsed = JSON.parse(key) as { text?: unknown; mediaList?: unknown[] };
-      return typeof parsed.text === "string" && (parsed.mediaList?.length ?? 0) === 0
-        ? [parsed.text]
-        : [];
-    } catch {
-      return [];
-    }
-  });
   const hasDirectlySentText = (payload: ReplyPayload): boolean => {
     if (isDirectlySentBlockPayload(payload)) {
       return true;
     }
     const text = resolveSendableOutboundReplyParts(payload).trimmedText;
-    if (!text || directlySentBlockTexts.length === 0) {
+    if (!text || !params.directlySentBlockTextFragments?.length) {
       return false;
     }
     const normalize = (value: string) => value.replace(/\s+/g, "");
-    return normalize(directlySentBlockTexts.join("")) === normalize(text);
+    return normalize(params.directlySentBlockTextFragments.join("")) === normalize(text);
   };
   const preserveUnsentMediaAfterBlockSend = (payload: ReplyPayload): ReplyPayload | null => {
     if (payload.isError || payload.isFallbackNotice) {

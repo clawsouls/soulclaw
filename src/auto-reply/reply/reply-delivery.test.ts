@@ -33,6 +33,7 @@ describe("createBlockReplyDeliveryHandler", () => {
       blockStreamingEnabled: false,
       blockReplyPipeline: null,
       directlySentBlockKeys,
+      directlySentBlockTextFragments: [],
     });
 
     await handler({
@@ -70,6 +71,7 @@ describe("createBlockReplyDeliveryHandler", () => {
       blockStreamingEnabled: false,
       blockReplyPipeline: null,
       directlySentBlockKeys,
+      directlySentBlockTextFragments: [],
     });
 
     await handler({
@@ -106,6 +108,7 @@ describe("createBlockReplyDeliveryHandler", () => {
       blockStreamingEnabled: false,
       blockReplyPipeline: null,
       directlySentBlockKeys,
+      directlySentBlockTextFragments: [],
     });
 
     await handler({
@@ -149,6 +152,7 @@ describe("createBlockReplyDeliveryHandler", () => {
       blockStreamingEnabled: false,
       blockReplyPipeline: null,
       directlySentBlockKeys,
+      directlySentBlockTextFragments: [],
     });
 
     await handler({ presentation });
@@ -180,6 +184,7 @@ describe("createBlockReplyDeliveryHandler", () => {
       blockStreamingEnabled: false,
       blockReplyPipeline: null,
       directlySentBlockKeys: new Set(),
+      directlySentBlockTextFragments: [],
     });
 
     await handler({ text: "text only" });
@@ -202,6 +207,7 @@ describe("createBlockReplyDeliveryHandler", () => {
       blockStreamingEnabled: true,
       blockReplyPipeline,
       directlySentBlockKeys: new Set(),
+      directlySentBlockTextFragments: [],
     });
 
     await handler({ text: "\n\n  Hello from stream" });
@@ -234,6 +240,7 @@ describe("createBlockReplyDeliveryHandler", () => {
       blockStreamingEnabled: true,
       blockReplyPipeline,
       directlySentBlockKeys: new Set(),
+      directlySentBlockTextFragments: [],
     });
 
     await handler({ text: "reset intro" });
@@ -317,6 +324,7 @@ describe("createBlockReplyDeliveryHandler", () => {
       blockStreamingEnabled: true,
       blockReplyPipeline,
       directlySentBlockKeys: new Set(),
+      directlySentBlockTextFragments: [],
     });
 
     await handler({ text: "Result", mediaUrl: "./image.png" });
@@ -354,6 +362,7 @@ describe("createBlockReplyDeliveryHandler", () => {
       blockStreamingEnabled: true,
       blockReplyPipeline,
       directlySentBlockKeys: new Set(),
+      directlySentBlockTextFragments: [],
     });
 
     await handler({ text: "NO_REPLY", mediaUrls: ["./missing.png", "./survived.png"] });
@@ -385,6 +394,7 @@ describe("createBlockReplyDeliveryHandler", () => {
       blockStreamingEnabled: true,
       blockReplyPipeline,
       directlySentBlockKeys: new Set(),
+      directlySentBlockTextFragments: [],
     });
 
     const payload = setReplyPayloadMetadata({ text: "Alpha" }, { assistantMessageIndex: 7 });

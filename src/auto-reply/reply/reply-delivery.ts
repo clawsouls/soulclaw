@@ -1,5 +1,8 @@
 /** Normalizes reply directives and delivers block replies through streaming or direct paths. */
-import { hasOutboundReplyContent } from "openclaw/plugin-sdk/reply-payload";
+import {
+  hasOutboundReplyContent,
+  resolveSendableOutboundReplyParts,
+} from "openclaw/plugin-sdk/reply-payload";
 import { logVerbose } from "../../globals.js";
 import { copyReplyPayloadMetadata } from "../reply-payload.js";
 import { SILENT_REPLY_TOKEN } from "../tokens.js";
@@ -69,11 +72,16 @@ export function normalizeReplyPayloadDirectives(params: {
 async function sendDirectBlockReply(params: {
   onBlockReply: (payload: ReplyPayload, context?: BlockReplyContext) => Promise<void> | void;
   directlySentBlockKeys: Set<string>;
+  directlySentBlockTextFragments: string[];
   trackingPayload: ReplyPayload;
   payload: ReplyPayload;
 }) {
-  params.directlySentBlockKeys.add(createBlockReplyContentKey(params.trackingPayload));
   await params.onBlockReply(params.payload);
+  params.directlySentBlockKeys.add(createBlockReplyContentKey(params.trackingPayload));
+  const text = resolveSendableOutboundReplyParts(params.trackingPayload).trimmedText;
+  if (text) {
+    params.directlySentBlockTextFragments.push(text);
+  }
 }
 
 /** Creates the handler used for assistant block replies during streaming/tool phases. */
@@ -88,6 +96,7 @@ export function createBlockReplyDeliveryHandler(params: {
   blockStreamingEnabled: boolean;
   blockReplyPipeline: BlockReplyPipeline | null;
   directlySentBlockKeys: Set<string>;
+  directlySentBlockTextFragments: string[];
 }): (payload: ReplyPayload) => Promise<void> {
   return async (payload) => {
     const { text, skip } = params.normalizeStreamingText(payload);
@@ -164,6 +173,7 @@ export function createBlockReplyDeliveryHandler(params: {
       await sendDirectBlockReply({
         onBlockReply: params.onBlockReply,
         directlySentBlockKeys: params.directlySentBlockKeys,
+        directlySentBlockTextFragments: params.directlySentBlockTextFragments,
         trackingPayload: blockPayload,
         payload: blockPayload,
       });
@@ -171,6 +181,7 @@ export function createBlockReplyDeliveryHandler(params: {
       await sendDirectBlockReply({
         onBlockReply: params.onBlockReply,
         directlySentBlockKeys: params.directlySentBlockKeys,
+        directlySentBlockTextFragments: params.directlySentBlockTextFragments,
         trackingPayload: blockPayload,
         payload: blockPayload,
       });
