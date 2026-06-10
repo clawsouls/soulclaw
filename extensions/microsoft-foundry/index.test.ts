@@ -1365,7 +1365,7 @@ describe("microsoft-foundry plugin", () => {
     ["claude-opus-4.8", 128_000],
     ["claude-opus-4.7", 128_000],
     ["claude-opus-4.6", 128_000],
-    ["claude-sonnet-4.6", 64_000],
+    ["claude-sonnet-4.6", 128_000],
   ] as const)("preserves Foundry Claude token limits for %s", (modelNameHint, maxTokens) => {
     const result = buildFoundryAuthResult({
       profileId: "microsoft-foundry:entra",

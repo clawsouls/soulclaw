@@ -227,8 +227,7 @@ function resolveFoundryModelTokenLimits(value?: string | null): {
 } {
   const normalized = normalizeFoundryModelName(value);
   if (normalized && supportsClaudeAdaptiveThinking(normalized)) {
-    const maxTokens = /claude-sonnet-4[.-]6(?:$|[-.:/])/.test(normalized) ? 64_000 : 128_000;
-    return { contextWindow: 1_000_000, maxTokens };
+    return { contextWindow: 1_000_000, maxTokens: 128_000 };
   }
   if (normalized === "mai-ds-r1") {
     return { contextWindow: 163_840, maxTokens: 163_840 };
