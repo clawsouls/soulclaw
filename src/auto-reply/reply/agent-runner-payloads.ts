@@ -355,9 +355,12 @@ export async function buildReplyPayloads(params: {
     }
     const normalize = (value: string) => value.replace(/\s+/g, "");
     const normalizedText = normalize(text);
-    return Array.from(fragmentsByAssistantMessage.values()).some(
-      (fragments) => normalize(fragments.join("")) === normalizedText,
+    const indexedGroups = Array.from(fragmentsByAssistantMessage.entries()).filter(
+      (entry): entry is [number, string[]] => entry[0] !== undefined,
     );
+    const latestIndexedGroup = indexedGroups.sort(([left], [right]) => right - left)[0]?.[1];
+    const applicableFragments = latestIndexedGroup ?? fragmentsByAssistantMessage.get(undefined);
+    return applicableFragments ? normalize(applicableFragments.join("")) === normalizedText : false;
   };
   const preserveUnsentMediaAfterBlockSend = (payload: ReplyPayload): ReplyPayload | null => {
     if (payload.isError || payload.isFallbackNotice) {

@@ -956,7 +956,7 @@ describe("buildReplyPayloads media filter integration", () => {
       payloads: [firstFinal, secondFinal],
     });
 
-    expect(replyPayloads.map((payload) => payload.text)).toEqual([undefined, undefined]);
+    expect(replyPayloads.map((payload) => payload.text)).toEqual(["alpha", undefined]);
     expect(replyPayloads.map((payload) => payload.mediaUrls)).toEqual([
       ["/tmp/a.png"],
       ["/tmp/b.png"],
