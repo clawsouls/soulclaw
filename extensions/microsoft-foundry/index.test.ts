@@ -14,6 +14,8 @@ import {
 } from "./onboard.js";
 import { resetFoundryRuntimeAuthCaches } from "./runtime.js";
 import {
+  COGNITIVE_SERVICES_RESOURCE,
+  FOUNDRY_ANTHROPIC_SCOPE,
   buildFoundryAuthResult,
   isAnthropicFoundryDeployment,
   isFoundryMaiImageModel,
@@ -436,6 +438,9 @@ describe("microsoft-foundry plugin", () => {
     );
 
     expect(prepared.baseUrl).toBe("https://example.services.ai.azure.com/openai/v1");
+    expect(execFileMock.mock.calls[0]?.[1]).toEqual(
+      expect.arrayContaining(["--resource", COGNITIVE_SERVICES_RESOURCE]),
+    );
   });
 
   it("uses active model routing when Entra metadata points at another deployment", async () => {
@@ -466,6 +471,61 @@ describe("microsoft-foundry plugin", () => {
     );
 
     expect(prepared.baseUrl).toBe("https://example.services.ai.azure.com/anthropic");
+    expect(execFileMock.mock.calls[0]?.[1]).toEqual(
+      expect.arrayContaining(["--scope", FOUNDRY_ANTHROPIC_SCOPE]),
+    );
+  });
+
+  it("does not reuse OpenAI Entra tokens for Anthropic Foundry deployments", async () => {
+    const provider = registerProvider();
+    const prepareRuntimeAuth = requirePrepareRuntimeAuth(provider);
+    mockAzureCliToken({ accessToken: "gpt-token", expiresInMs: 60_000 });
+    mockAzureCliToken({ accessToken: "claude-token", expiresInMs: 60_000 });
+    ensureAuthProfileStoreMock.mockReturnValue(
+      buildEntraProfileStore({
+        endpoint: "https://example.services.ai.azure.com",
+        modelId: "deployment-gpt5",
+        modelName: "gpt-5.4",
+        api: "openai-responses",
+      }),
+    );
+
+    const gptPrepared = requireRuntimeAuthResult(
+      await prepareRuntimeAuth(
+        buildFoundryRuntimeAuthContext({
+          modelId: "deployment-gpt5",
+          model: buildFoundryModel({
+            id: "deployment-gpt5",
+            name: "gpt-5.4",
+            api: "openai-responses",
+            baseUrl: "https://example.services.ai.azure.com/openai/v1",
+          }),
+        }),
+      ),
+    );
+    const claudePrepared = requireRuntimeAuthResult(
+      await prepareRuntimeAuth(
+        buildFoundryRuntimeAuthContext({
+          modelId: "deployment-fable",
+          model: buildFoundryModel({
+            id: "deployment-fable",
+            name: "claude-fable-5",
+            api: "anthropic-messages",
+            baseUrl: "https://example.services.ai.azure.com/anthropic",
+          }),
+        }),
+      ),
+    );
+
+    expect(gptPrepared.apiKey).toBe("gpt-token");
+    expect(claudePrepared.apiKey).toBe("claude-token");
+    expect(execFileMock).toHaveBeenCalledTimes(2);
+    expect(execFileMock.mock.calls[0]?.[1]).toEqual(
+      expect.arrayContaining(["--resource", COGNITIVE_SERVICES_RESOURCE]),
+    );
+    expect(execFileMock.mock.calls[1]?.[1]).toEqual(
+      expect.arrayContaining(["--scope", FOUNDRY_ANTHROPIC_SCOPE]),
+    );
   });
 
   it("retries Entra token refresh after a failed attempt", async () => {

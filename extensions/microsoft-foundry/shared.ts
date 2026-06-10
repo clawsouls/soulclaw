@@ -16,6 +16,7 @@ export const PROVIDER_ID = "microsoft-foundry";
 export const DEFAULT_API = "openai-completions";
 export const DEFAULT_GPT5_API = "openai-responses";
 export const COGNITIVE_SERVICES_RESOURCE = "https://cognitiveservices.azure.com";
+export const FOUNDRY_ANTHROPIC_SCOPE = "https://ai.azure.com/.default";
 export const TOKEN_REFRESH_MARGIN_MS = 5 * 60 * 1000;
 export const MAI_IMAGE_MODELS = [
   "MAI-Image-2.5-Flash",

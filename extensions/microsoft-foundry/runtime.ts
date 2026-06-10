@@ -10,7 +10,9 @@ import { ensureAuthProfileStore } from "openclaw/plugin-sdk/provider-auth";
 import { normalizeOptionalString } from "openclaw/plugin-sdk/string-coerce-runtime";
 import { getAccessTokenResultAsync } from "./cli.js";
 import {
+  ANTHROPIC_MESSAGES_API,
   type CachedTokenEntry,
+  FOUNDRY_ANTHROPIC_SCOPE,
   TOKEN_REFRESH_MARGIN_MS,
   buildFoundryProviderBaseUrl,
   extractFoundryEndpoint,
@@ -29,6 +31,7 @@ export function resetFoundryRuntimeAuthCaches(): void {
 }
 
 async function refreshEntraToken(params?: {
+  scope?: string;
   subscriptionId?: string;
   tenantId?: string;
 }): Promise<{ apiKey: string; expiresAt: number }> {
@@ -78,10 +81,13 @@ export async function prepareFoundryRuntimeAuth(ctx: ProviderPrepareRuntimeAuthC
     const endpoint =
       extractFoundryEndpoint(ctx.model.baseUrl ?? "") ??
       normalizeOptionalString(metadata?.endpoint);
+    const tokenScope =
+      configuredApi === ANTHROPIC_MESSAGES_API ? FOUNDRY_ANTHROPIC_SCOPE : undefined;
     const baseUrl = endpoint
       ? buildFoundryProviderBaseUrl(endpoint, modelId, modelNameHint, configuredApi)
       : undefined;
     const cacheKey = getFoundryTokenCacheKey({
+      scope: tokenScope,
       subscriptionId: metadata?.subscriptionId,
       tenantId: metadata?.tenantId,
     });
@@ -101,6 +107,7 @@ export async function prepareFoundryRuntimeAuth(ctx: ProviderPrepareRuntimeAuthC
     let refreshPromise = refreshPromises.get(cacheKey);
     if (!refreshPromise) {
       refreshPromise = refreshEntraToken({
+        scope: tokenScope,
         subscriptionId: metadata?.subscriptionId,
         tenantId: metadata?.tenantId,
       }).finally(() => {
