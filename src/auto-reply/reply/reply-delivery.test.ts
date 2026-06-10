@@ -2,6 +2,7 @@
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { getReplyPayloadMetadata, setReplyPayloadMetadata } from "../reply-payload.js";
+import type { ReplyPayload } from "../types.js";
 import { createBlockReplyContentKey } from "./block-reply-pipeline.js";
 import {
   createBlockReplyDeliveryHandler,
