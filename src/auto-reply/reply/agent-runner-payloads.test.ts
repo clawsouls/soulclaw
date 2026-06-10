@@ -801,7 +801,7 @@ describe("buildReplyPayloads media filter integration", () => {
     const { replyPayloads } = await buildReplyPayloads({
       ...baseParams,
       directlySentBlockKeys,
-      directlySentBlockTextFragments: ["response"],
+      directlySentBlockPayloads: [{ text: "response" }],
       payloads: [{ text: "response\n\nMEDIA:/tmp/generated.png" }],
     });
 
@@ -823,7 +823,7 @@ describe("buildReplyPayloads media filter integration", () => {
       ...baseParams,
       blockStreamingEnabled: true,
       directlySentBlockKeys,
-      directlySentBlockTextFragments: ["response"],
+      directlySentBlockPayloads: [{ text: "response" }],
       payloads: [{ text: "response\n\nMEDIA:/tmp/generated.png" }],
     });
 
@@ -863,7 +863,7 @@ describe("buildReplyPayloads media filter integration", () => {
       ...baseParams,
       blockStreamingEnabled: true,
       directlySentBlockKeys,
-      directlySentBlockTextFragments: ["Preview", "below"],
+      directlySentBlockPayloads: [{ text: "Preview" }, { text: "below" }],
       payloads: [{ text: "Preview below\n\nMEDIA:/tmp/generated.png" }],
     });
 
@@ -883,7 +883,7 @@ describe("buildReplyPayloads media filter integration", () => {
       ...baseParams,
       blockStreamingEnabled: true,
       directlySentBlockKeys,
-      directlySentBlockTextFragments: ["ha", "ha"],
+      directlySentBlockPayloads: [{ text: "ha" }, { text: "ha" }],
       payloads: [{ text: "haha\n\nMEDIA:/tmp/generated.png" }],
     });
 
@@ -905,8 +905,7 @@ describe("buildReplyPayloads media filter integration", () => {
       ...baseParams,
       blockStreamingEnabled: true,
       directlySentBlockKeys,
-      directlySentBlockTextFragments: ["response"],
-      directlySentBlockMediaUrls: ["/tmp/already.png"],
+      directlySentBlockPayloads: [{ text: "response", mediaUrl: "/tmp/already.png" }],
       payloads: [
         {
           text: "response",
@@ -921,6 +920,53 @@ describe("buildReplyPayloads media filter integration", () => {
       mediaUrl: undefined,
       mediaUrls: ["/tmp/new.png"],
     });
+  });
+
+  it("ignores direct status notices when matching final text", async () => {
+    const { createBlockReplyContentKey } = await import("./block-reply-pipeline.js");
+    const directlySentBlockKeys = new Set<string>([
+      createBlockReplyContentKey({ text: "Compacting", isStatusNotice: true }),
+      createBlockReplyContentKey({ text: "response" }),
+    ]);
+
+    const { replyPayloads } = await buildReplyPayloads({
+      ...baseParams,
+      blockStreamingEnabled: true,
+      directlySentBlockKeys,
+      directlySentBlockPayloads: [{ text: "response" }],
+      payloads: [{ text: "response\n\nMEDIA:/tmp/generated.png" }],
+    });
+
+    expectFields(replyPayloads[0], {
+      text: undefined,
+      mediaUrls: ["/tmp/generated.png"],
+    });
+  });
+
+  it("matches direct fragments within each assistant message", async () => {
+    const firstDirect = setReplyPayloadMetadata({ text: "alpha" }, { assistantMessageIndex: 1 });
+    const secondDirect = setReplyPayloadMetadata({ text: "beta" }, { assistantMessageIndex: 2 });
+    const firstFinal = setReplyPayloadMetadata(
+      { text: "alpha\n\nMEDIA:/tmp/a.png" },
+      { assistantMessageIndex: 1 },
+    );
+    const secondFinal = setReplyPayloadMetadata(
+      { text: "beta\n\nMEDIA:/tmp/b.png" },
+      { assistantMessageIndex: 2 },
+    );
+
+    const { replyPayloads } = await buildReplyPayloads({
+      ...baseParams,
+      blockStreamingEnabled: true,
+      directlySentBlockPayloads: [firstDirect, secondDirect],
+      payloads: [firstFinal, secondFinal],
+    });
+
+    expect(replyPayloads.map((payload) => payload.text)).toEqual([undefined, undefined]);
+    expect(replyPayloads.map((payload) => payload.mediaUrls)).toEqual([
+      ["/tmp/a.png"],
+      ["/tmp/b.png"],
+    ]);
   });
 
   it("does not suppress same-target replies when accountId differs", async () => {

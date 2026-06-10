@@ -302,10 +302,8 @@ export type AgentRunLoopResult =
       autoCompactionCount: number;
       /** Payload keys sent directly (not via pipeline) during tool flush. */
       directlySentBlockKeys?: Set<string>;
-      /** Ordered text fragments successfully sent directly during tool flush. */
-      directlySentBlockTextFragments?: string[];
-      /** Media URLs successfully sent directly during tool flush. */
-      directlySentBlockMediaUrls?: string[];
+      /** Payloads successfully sent directly during tool flush. */
+      directlySentBlockPayloads?: ReplyPayload[];
     }
   | { kind: "final"; payload: ReplyPayload };
 
@@ -1510,8 +1508,7 @@ export async function runAgentTurnWithFallback(params: {
   let autoCompactionCount = 0;
   // Track payloads sent directly (not via pipeline) during tool flush to avoid duplicates.
   const directlySentBlockKeys = new Set<string>();
-  const directlySentBlockTextFragments: string[] = [];
-  const directlySentBlockMediaUrls: string[] = [];
+  const directlySentBlockPayloads: ReplyPayload[] = [];
   const runnableRun = resolveRunAfterAutoFallbackPrimaryProbeRecheck({
     run: params.followupRun.run,
     entry: params.activeSessionStore?.[params.sessionKey ?? ""] ?? params.getActiveSessionEntry(),
@@ -1940,8 +1937,7 @@ export async function runAgentTurnWithFallback(params: {
             blockStreamingEnabled: params.blockStreamingEnabled,
             blockReplyPipeline,
             directlySentBlockKeys,
-            directlySentBlockTextFragments,
-            directlySentBlockMediaUrls,
+            directlySentBlockPayloads,
           })
         : undefined;
       let messageToolOnlyDeliveryCompleted = false;
@@ -3035,9 +3031,7 @@ export async function runAgentTurnWithFallback(params: {
     didLogHeartbeatStrip,
     autoCompactionCount,
     directlySentBlockKeys: directlySentBlockKeys.size > 0 ? directlySentBlockKeys : undefined,
-    directlySentBlockTextFragments:
-      directlySentBlockTextFragments.length > 0 ? directlySentBlockTextFragments : undefined,
-    directlySentBlockMediaUrls:
-      directlySentBlockMediaUrls.length > 0 ? directlySentBlockMediaUrls : undefined,
+    directlySentBlockPayloads:
+      directlySentBlockPayloads.length > 0 ? directlySentBlockPayloads : undefined,
   };
 }

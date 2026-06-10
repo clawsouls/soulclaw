@@ -167,10 +167,8 @@ export async function buildReplyPayloads(params: {
   blockReplyPipeline: BlockReplyPipeline | null;
   /** Payload keys sent directly (not via pipeline) during tool flush. */
   directlySentBlockKeys?: Set<string>;
-  /** Ordered text fragments successfully sent directly during tool flush. */
-  directlySentBlockTextFragments?: string[];
-  /** Media URLs successfully sent directly during tool flush. */
-  directlySentBlockMediaUrls?: string[];
+  /** Payloads successfully sent directly during tool flush. */
+  directlySentBlockPayloads?: ReplyPayload[];
   replyToMode: ReplyToMode;
   replyToChannel?: OriginatingChannelType;
   currentMessageId?: string;
@@ -341,11 +339,19 @@ export async function buildReplyPayloads(params: {
       return true;
     }
     const text = resolveSendableOutboundReplyParts(payload).trimmedText;
-    if (!text || !params.directlySentBlockTextFragments?.length) {
+    if (!text || !params.directlySentBlockPayloads?.length) {
       return false;
     }
+    const assistantMessageIndex = getReplyPayloadMetadata(payload)?.assistantMessageIndex;
+    const fragments = params.directlySentBlockPayloads.flatMap((sentPayload) => {
+      if (getReplyPayloadMetadata(sentPayload)?.assistantMessageIndex !== assistantMessageIndex) {
+        return [];
+      }
+      const sentText = resolveSendableOutboundReplyParts(sentPayload).trimmedText;
+      return sentText ? [sentText] : [];
+    });
     const normalize = (value: string) => value.replace(/\s+/g, "");
-    return normalize(params.directlySentBlockTextFragments.join("")) === normalize(text);
+    return normalize(fragments.join("")) === normalize(text);
   };
   const preserveUnsentMediaAfterBlockSend = (payload: ReplyPayload): ReplyPayload | null => {
     if (payload.isError || payload.isFallbackNotice) {
@@ -430,7 +436,9 @@ export async function buildReplyPayloads(params: {
       ...(params.blockStreamingEnabled
         ? (params.blockReplyPipeline?.getSentMediaUrls() ?? [])
         : []),
-      ...(params.directlySentBlockMediaUrls ?? []),
+      ...(params.directlySentBlockPayloads ?? []).flatMap(
+        (payload) => resolveSendableOutboundReplyParts(payload).mediaUrls,
+      ),
     ],
     normalizeMediaPaths: params.normalizeMediaPaths,
   });
