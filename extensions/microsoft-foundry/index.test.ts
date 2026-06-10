@@ -1365,6 +1365,50 @@ describe("microsoft-foundry plugin", () => {
     expect(model?.compat).toBeUndefined();
   });
 
+  it("resolves Claude thinking profiles from configured Foundry model names", () => {
+    const provider = registerProvider();
+
+    expect(
+      provider.resolveThinkingProfile?.({
+        provider: "microsoft-foundry",
+        modelId: "prod-fable",
+        modelName: "claude-fable-5",
+      } as never),
+    ).toMatchObject({
+      defaultLevel: "adaptive",
+      levels: [
+        { id: "minimal" },
+        { id: "low" },
+        { id: "medium" },
+        { id: "high" },
+        { id: "xhigh" },
+        { id: "adaptive" },
+        { id: "max" },
+      ],
+    });
+    expect(
+      provider.resolveThinkingProfile?.({
+        provider: "microsoft-foundry",
+        modelId: "prod-opaque",
+      } as never),
+    ).toBeUndefined();
+  });
+
+  it("records max-only thinking maps for Foundry Mythos Preview deployments", () => {
+    const result = buildFoundryAuthResult({
+      profileId: "microsoft-foundry:entra",
+      apiKey: "__entra_id_dynamic__",
+      endpoint: "https://example.services.ai.azure.com",
+      modelId: "prod-mythos-preview",
+      modelNameHint: "claude-mythos-preview",
+      api: "anthropic-messages",
+      authMethod: "entra-id",
+    });
+
+    const model = result.configPatch?.models?.providers?.["microsoft-foundry"]?.models[0];
+    expect(model?.thinkingLevelMap).toEqual({ max: "max" });
+  });
+
   it("keeps Foundry chat reasoning_effort enabled for GPT-5 reasoning deployments", () => {
     const result = buildFoundryAuthResult({
       profileId: "microsoft-foundry:default",
@@ -1525,7 +1569,6 @@ describe("microsoft-foundry plugin", () => {
               {
                 id: "prod-primary",
                 name: "production alias",
-                api: "openai-responses",
                 reasoning: false,
                 input: ["text"],
                 cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },

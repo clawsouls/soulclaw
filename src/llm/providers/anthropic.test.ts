@@ -501,6 +501,35 @@ describe("Anthropic provider", () => {
     expect(capturedPayload).not.toHaveProperty("temperature");
   });
 
+  it("preserves native max effort for Claude Mythos Preview", async () => {
+    let capturedPayload: unknown;
+    const stream = streamSimpleAnthropic(
+      makeAnthropicModel({
+        id: "claude-mythos-preview",
+        name: "Claude Mythos Preview",
+        maxTokens: 128_000,
+        thinkingLevelMap: { max: "max" },
+      }),
+      {
+        messages: [{ role: "user", content: "hello", timestamp: 0 }],
+      },
+      {
+        apiKey: "sk-ant-provider",
+        reasoning: "max",
+        onPayload: (payload) => {
+          capturedPayload = payload;
+          throw new Error("stop before network");
+        },
+      },
+    );
+
+    await stream.result();
+
+    expect((capturedPayload as { output_config?: unknown }).output_config).toEqual({
+      effort: "max",
+    });
+  });
+
   it.each([
     {
       id: "prod-primary",

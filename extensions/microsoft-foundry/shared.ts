@@ -9,6 +9,7 @@ import {
 import {
   isClaudeMandatoryAdaptiveThinkingModelId,
   supportsClaudeAdaptiveThinking,
+  supportsClaudeNativeMaxEffort,
   supportsClaudeNativeXhighEffort,
   type ModelApi,
   type ModelProviderConfig,
@@ -416,6 +417,7 @@ export function resolveFoundryModelCapabilities(
   const supportedReasoningEfforts = resolveFoundryReasoningEfforts(modelName);
   const isAnthropic = api === ANTHROPIC_MESSAGES_API || isAnthropicFoundryDeployment(modelName);
   const supportsClaudeThinking = isAnthropic && supportsClaudeAdaptiveThinking(modelName);
+  const supportsClaudeMaxThinking = isAnthropic && supportsClaudeNativeMaxEffort(modelName);
   const supportsClaudeXhighThinking = isAnthropic && supportsClaudeNativeXhighEffort(modelName);
   const tokenLimits = resolveFoundryModelTokenLimits(modelName);
   return {
@@ -427,9 +429,11 @@ export function resolveFoundryModelCapabilities(
       supportsFoundryReasoningContent(modelName),
     ...(supportsClaudeXhighThinking
       ? { thinkingLevelMap: { xhigh: "xhigh", max: "max" } }
-      : supportedReasoningEfforts
-        ? { thinkingLevelMap: buildFoundryThinkingLevelMap(supportedReasoningEfforts) }
-        : {}),
+      : supportsClaudeMaxThinking
+        ? { thinkingLevelMap: { max: "max" } }
+        : supportedReasoningEfforts
+          ? { thinkingLevelMap: buildFoundryThinkingLevelMap(supportedReasoningEfforts) }
+          : {}),
     input:
       normalizedInput.includes("image") || supportsFoundryImageInput(modelName)
         ? ["text", "image"]
