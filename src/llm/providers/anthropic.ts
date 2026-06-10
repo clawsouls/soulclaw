@@ -945,7 +945,11 @@ function createClient(
     return { client, isOAuthToken: false };
   }
 
-  if (model.provider === "microsoft-foundry" && model.authHeader === true) {
+  const foundryAuthHeader =
+    model.provider === "microsoft-foundry"
+      ? (model as Model<"anthropic-messages"> & { authHeader?: unknown }).authHeader
+      : undefined;
+  if (foundryAuthHeader === true) {
     const client = new Anthropic({
       apiKey: null,
       authToken: apiKey,
