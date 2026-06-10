@@ -166,6 +166,70 @@ describe("bedrock discovery", () => {
     });
   });
 
+  it("marks known Fable inference profile fallbacks as reasoning capable", async () => {
+    sendMock
+      .mockResolvedValueOnce({
+        modelSummaries: [],
+      })
+      .mockResolvedValueOnce({
+        inferenceProfileSummaries: [
+          {
+            inferenceProfileId: "us.anthropic.claude-fable-5",
+            inferenceProfileName: "US Claude Fable 5",
+            status: "ACTIVE",
+            type: "SYSTEM_DEFINED",
+            models: [
+              {
+                modelArn: "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-fable-5",
+              },
+            ],
+          },
+        ],
+      });
+
+    const models = await discoverBedrockModels({ region: "us-east-1", clientFactory });
+
+    expect(models).toHaveLength(1);
+    expectModelFields(models[0], {
+      id: "us.anthropic.claude-fable-5",
+      reasoning: true,
+      contextWindow: 1_000_000,
+      thinkingLevelMap: { xhigh: "xhigh", max: "max" },
+    });
+  });
+
+  it("marks known Mythos Preview inference profile fallbacks as reasoning capable", async () => {
+    sendMock
+      .mockResolvedValueOnce({
+        modelSummaries: [],
+      })
+      .mockResolvedValueOnce({
+        inferenceProfileSummaries: [
+          {
+            inferenceProfileId: "us.anthropic.claude-mythos-preview",
+            inferenceProfileName: "US Claude Mythos Preview",
+            status: "ACTIVE",
+            type: "SYSTEM_DEFINED",
+            models: [
+              {
+                modelArn:
+                  "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-mythos-preview",
+              },
+            ],
+          },
+        ],
+      });
+
+    const models = await discoverBedrockModels({ region: "us-east-1", clientFactory });
+    const model = models[0] as Record<string, unknown> | undefined;
+
+    expectModelFields(model, {
+      id: "us.anthropic.claude-mythos-preview",
+      reasoning: true,
+    });
+    expect(model).not.toHaveProperty("thinkingLevelMap");
+  });
+
   it("normalizes region-prefixed versioned model ids when resolving context windows", async () => {
     sendMock
       .mockResolvedValueOnce({

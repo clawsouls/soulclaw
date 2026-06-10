@@ -157,6 +157,13 @@ function resolveKnownContextWindow(modelId: string): number | undefined {
   return undefined;
 }
 
+function isKnownClaudeMythosPreviewModelId(modelId: string): boolean {
+  const stripped = modelId.replace(/^(?:us|eu|ap|apac|au|jp|global)\./, "");
+  return [modelId, stripped].some((candidate) =>
+    /(?:^|[/.:])anthropic\.claude-mythos-preview(?:$|[-.:/])/i.test(candidate),
+  );
+}
+
 function resolveKnownThinkingLevelMap(
   modelId: string,
 ): ModelDefinitionConfig["thinkingLevelMap"] | undefined {
@@ -275,7 +282,10 @@ function mapInputModalities(summary: BedrockModelSummary): Array<"text" | "image
 }
 
 function inferReasoningSupport(summary: BedrockModelSummary): boolean {
-  if (supportsClaudeAdaptiveThinking({ id: summary.modelId })) {
+  if (
+    supportsClaudeAdaptiveThinking({ id: summary.modelId }) ||
+    isKnownClaudeMythosPreviewModelId(summary.modelId ?? "")
+  ) {
     return true;
   }
   const haystack = normalizeLowercaseStringOrEmpty(
@@ -467,7 +477,8 @@ function resolveInferenceProfiles(
       name: profile.inferenceProfileName?.trim() || profile.inferenceProfileId,
       reasoning:
         baseModel?.reasoning ??
-        supportsClaudeAdaptiveThinking({ id: baseModelId ?? profile.inferenceProfileId }),
+        (supportsClaudeAdaptiveThinking({ id: baseModelId ?? profile.inferenceProfileId }) ||
+          isKnownClaudeMythosPreviewModelId(baseModelId ?? profile.inferenceProfileId)),
       input: baseModel?.input ?? ["text"],
       cost: baseModel?.cost ?? DEFAULT_COST,
       contextWindow:
