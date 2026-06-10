@@ -83,6 +83,31 @@ describe("Anthropic provider", () => {
     expect(config.defaultHeaders?.["cf-aig-authorization"]).toBe("Bearer gateway-token");
   });
 
+  it("uses bearer auth for Microsoft Foundry Anthropic requests", async () => {
+    const model = makeAnthropicModel({
+      provider: "microsoft-foundry",
+      baseUrl: "https://example.services.ai.azure.com/anthropic",
+    });
+    const context = {
+      messages: [{ role: "user", content: "hello", timestamp: 1 }],
+    } satisfies Context;
+
+    streamAnthropic(model, context, {
+      apiKey: "entra-access-token",
+    });
+
+    await vi.waitFor(() => expect(anthropicMockState.configs).toHaveLength(1));
+    const config = anthropicMockState.configs[0] as {
+      apiKey?: string | null;
+      authToken?: string | null;
+      defaultHeaders?: Record<string, string | null>;
+    };
+
+    expect(config.apiKey).toBeNull();
+    expect(config.authToken).toBe("entra-access-token");
+    expect(config.defaultHeaders?.["x-api-key"]).toBeUndefined();
+  });
+
   it("preserves provider-signed Anthropic thinking and drops reasoning_content placeholders", async () => {
     const highSurrogate = String.fromCharCode(0xd83d);
     const signedThinking = `keep${highSurrogate}signed`;

@@ -945,6 +945,27 @@ function createClient(
     return { client, isOAuthToken: false };
   }
 
+  if (model.provider === "microsoft-foundry") {
+    const client = new Anthropic({
+      apiKey: null,
+      authToken: apiKey,
+      baseURL: model.baseUrl,
+      dangerouslyAllowBrowser: true,
+      defaultHeaders: mergeHeaders(
+        {
+          accept: "application/json",
+          "anthropic-dangerous-direct-browser-access": "true",
+          ...(betaFeatures.length > 0 ? { "anthropic-beta": betaFeatures.join(",") } : {}),
+        },
+        model.headers,
+        dynamicHeaders,
+        optionsHeaders,
+      ),
+    });
+
+    return { client, isOAuthToken: false };
+  }
+
   // OAuth: Bearer auth, Claude Code identity headers
   if (isOAuthToken(apiKey)) {
     const client = new Anthropic({

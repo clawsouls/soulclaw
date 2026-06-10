@@ -377,6 +377,16 @@ describe("microsoft-foundry plugin", () => {
     );
   });
 
+  it("requests scoped Azure CLI tokens for Foundry Anthropic probes", async () => {
+    mockAzureCliTokenRaw(JSON.stringify({ accessToken: "scoped-token" }));
+
+    await getAccessTokenResultAsync({ scope: FOUNDRY_ANTHROPIC_SCOPE });
+
+    expect(execFileMock.mock.calls[0]?.[1]).toEqual(
+      expect.arrayContaining(["--scope", FOUNDRY_ANTHROPIC_SCOPE]),
+    );
+  });
+
   it("fails clearly when the selected Azure subscription is not in the enabled list", async () => {
     const provider = registerProvider();
     execFileSyncMock.mockImplementation((_file: string, args: string[]) => {
@@ -742,6 +752,23 @@ describe("microsoft-foundry plugin", () => {
     expect(model?.id).toBe("gpt-5.4");
     expect(model?.reasoning).toBe(true);
     expect(model?.compat?.supportsReasoningEffort).toBe(true);
+  });
+
+  it("preserves Fable limits when adding a newly selected Foundry deployment", async () => {
+    const provider = registerProvider();
+    const config = buildFoundryConfig({ models: [] });
+
+    await provider.onModelSelected?.({
+      config,
+      model: "microsoft-foundry/claude-fable-5",
+      prompter: {} as never,
+      agentDir: "/tmp/test-agent",
+    });
+
+    const model = config.models?.providers?.["microsoft-foundry"]?.models[0];
+    expect(model?.id).toBe("claude-fable-5");
+    expect(model?.contextWindow).toBe(1_000_000);
+    expect(model?.maxTokens).toBe(128_000);
   });
 
   it("accepts tenant domains as valid tenant identifiers", () => {

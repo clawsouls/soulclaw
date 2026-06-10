@@ -26,6 +26,7 @@ import {
   requiresFoundryMaxCompletionTokens,
   DEFAULT_API,
   DEFAULT_GPT5_API,
+  FOUNDRY_ANTHROPIC_SCOPE,
   usesFoundryResponsesByDefault,
 } from "./shared.js";
 
@@ -529,6 +530,7 @@ export async function testFoundryConnection(params: {
 }): Promise<void> {
   try {
     const { accessToken } = getAccessTokenResult({
+      scope: params.api === ANTHROPIC_MESSAGES_API ? FOUNDRY_ANTHROPIC_SCOPE : undefined,
       subscriptionId: params.subscriptionId,
       tenantId: params.tenantId,
     });
