@@ -72,14 +72,16 @@ export function normalizeReplyPayloadDirectives(params: {
 async function sendDirectBlockReply(params: {
   onBlockReply: (payload: ReplyPayload, context?: BlockReplyContext) => Promise<void> | void;
   directlySentBlockKeys: Set<string>;
-  directlySentBlockPayloads: ReplyPayload[];
+  directlySentBlockPayloads: Array<ReplyPayload | undefined>;
   trackingPayload: ReplyPayload;
   payload: ReplyPayload;
 }) {
+  const deliveryIndex = params.directlySentBlockPayloads.length;
+  params.directlySentBlockPayloads.push(undefined);
   await params.onBlockReply(params.payload);
   params.directlySentBlockKeys.add(createBlockReplyContentKey(params.trackingPayload));
   if (!isReplyPayloadStatusNotice(params.trackingPayload)) {
-    params.directlySentBlockPayloads.push(params.trackingPayload);
+    params.directlySentBlockPayloads[deliveryIndex] = params.trackingPayload;
   }
 }
 
@@ -95,7 +97,7 @@ export function createBlockReplyDeliveryHandler(params: {
   blockStreamingEnabled: boolean;
   blockReplyPipeline: BlockReplyPipeline | null;
   directlySentBlockKeys: Set<string>;
-  directlySentBlockPayloads: ReplyPayload[];
+  directlySentBlockPayloads: Array<ReplyPayload | undefined>;
 }): (payload: ReplyPayload) => Promise<void> {
   return async (payload) => {
     const { text, skip } = params.normalizeStreamingText(payload);
