@@ -123,9 +123,16 @@ function seedLegacySessionMetadata(stateDir) {
       lastTo: "CUPGRADE",
     },
   });
-  write(path.join(legacySessionsDir, `${LEGACY_SESSION_MAIN_ID}.jsonl`), '{"type":"main"}\n');
-  write(path.join(legacySessionsDir, `${LEGACY_SESSION_DIRECT_ID}.jsonl`), '{"type":"direct"}\n');
-  write(path.join(legacySessionsDir, `${LEGACY_SESSION_GROUP_ID}.jsonl`), '{"type":"group"}\n');
+  for (const sessionId of [
+    LEGACY_SESSION_MAIN_ID,
+    LEGACY_SESSION_DIRECT_ID,
+    LEGACY_SESSION_GROUP_ID,
+  ]) {
+    write(
+      path.join(legacySessionsDir, `${sessionId}.jsonl`),
+      `${JSON.stringify({ type: "session", id: sessionId })}\n`,
+    );
+  }
 }
 
 function getScenario() {
