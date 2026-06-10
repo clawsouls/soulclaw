@@ -124,7 +124,7 @@ export const entraIdAuthMethod: ProviderAuthMethod = {
       | Array<{
           name: string;
           modelName?: string;
-          api?: "openai-completions" | "openai-responses";
+          api?: FoundryProviderApi;
         }>
       | undefined;
     if (selectedSub) {

@@ -33,9 +33,7 @@ function createSseResponse(events: Record<string, unknown>[] = []): Response {
   });
 }
 
-function makeAnthropicModel(
-  overrides: Partial<Model<"anthropic-messages">> & { authHeader?: boolean } = {},
-) {
+function makeAnthropicModel(overrides: Partial<Model<"anthropic-messages">> = {}) {
   return {
     id: "claude-sonnet-4-6",
     name: "Claude Sonnet 4.6",
@@ -48,7 +46,7 @@ function makeAnthropicModel(
     contextWindow: 200_000,
     maxTokens: 4096,
     ...overrides,
-  } satisfies Model<"anthropic-messages"> & { authHeader?: boolean };
+  } satisfies Model<"anthropic-messages">;
 }
 
 describe("Anthropic provider", () => {
@@ -89,7 +87,10 @@ describe("Anthropic provider", () => {
     const model = makeAnthropicModel({
       provider: "microsoft-foundry",
       baseUrl: "https://example.services.ai.azure.com/anthropic",
-      authHeader: true,
+      headers: {
+        Authorization: "Bearer entra-access-token",
+        "x-api-key": "stale-resource-key",
+      },
     });
     const context = {
       messages: [{ role: "user", content: "hello", timestamp: 1 }],
@@ -108,6 +109,7 @@ describe("Anthropic provider", () => {
 
     expect(config.apiKey).toBeNull();
     expect(config.authToken).toBe("entra-access-token");
+    expect(config.defaultHeaders?.Authorization).toBeUndefined();
     expect(config.defaultHeaders?.["x-api-key"]).toBeUndefined();
   });
 
@@ -115,7 +117,7 @@ describe("Anthropic provider", () => {
     const model = makeAnthropicModel({
       provider: "microsoft-foundry",
       baseUrl: "https://example.services.ai.azure.com/anthropic",
-      authHeader: false,
+      headers: { "api-key": "foundry-resource-key" },
     });
     const context = {
       messages: [{ role: "user", content: "hello", timestamp: 1 }],
