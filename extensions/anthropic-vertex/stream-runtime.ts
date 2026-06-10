@@ -180,9 +180,12 @@ export function createAnthropicVertexStreamFn(
     });
     const contractModelId = resolveClaudeModelIdentity(model);
     const fable5 = isClaudeFable5Model(contractModelId);
-    const reasoning = options?.reasoning as ModelThinkingLevel | undefined;
+    const mandatoryAdaptiveThinking = fable5 || isClaudeMythos5Model(contractModelId);
+    const reasoning =
+      (options?.reasoning as ModelThinkingLevel | undefined) ??
+      (mandatoryAdaptiveThinking ? "high" : undefined);
     const adaptiveThinking =
-      fable5 || Boolean(reasoning && supportsAdaptiveThinking(contractModelId));
+      mandatoryAdaptiveThinking || Boolean(reasoning && supportsAdaptiveThinking(contractModelId));
     const temperature =
       adaptiveThinking ||
       isClaudeOpus47OrNewerModel(contractModelId) ||
