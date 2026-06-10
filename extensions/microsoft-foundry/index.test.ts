@@ -988,7 +988,7 @@ describe("microsoft-foundry plugin", () => {
       .fn()
       .mockResolvedValueOnce("other-chat")
       .mockResolvedValueOnce("openai-completions");
-    const apiKeyAuth = provider.auth.find((method) => method.id === "api-key");
+    const apiKeyAuth = provider.auth.find((method: { id: string }) => method.id === "api-key");
 
     const result = await apiKeyAuth?.run({
       config: {},
