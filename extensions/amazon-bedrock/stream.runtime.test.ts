@@ -182,6 +182,21 @@ describe("Bedrock thinking effort mapping", () => {
     });
   });
 
+  it("forces adaptive thinking for Bedrock Mythos Preview when callers omit reasoning", () => {
+    const model = bedrockModel({
+      id: "us.anthropic.claude-mythos-preview",
+      name: "US Claude Mythos Preview",
+      reasoning: true,
+    });
+    const options = testing.resolveSimpleBedrockOptions(model, {});
+
+    expect(options.reasoning).toBe("high");
+    expect(testing.buildAdditionalModelRequestFields(model, options)).toEqual({
+      thinking: { type: "adaptive", display: "summarized" },
+      output_config: { effort: "high" },
+    });
+  });
+
   it("clamps max effort for Claude models without native max support", () => {
     expect(
       testing.mapThinkingLevelToEffort(

@@ -535,6 +535,36 @@ describe("Anthropic provider", () => {
     });
   });
 
+  it("uses adaptive thinking for Foundry Mythos Preview without native max metadata", async () => {
+    let capturedPayload: unknown;
+    const stream = streamSimpleAnthropic(
+      makeAnthropicModel({
+        id: "prod-mythos-preview",
+        name: "claude-mythos-preview",
+        provider: "microsoft-foundry",
+        reasoning: true,
+      }),
+      {
+        messages: [{ role: "user", content: "hello", timestamp: 0 }],
+      },
+      {
+        apiKey: "sk-ant-provider",
+        reasoning: "high",
+        onPayload: (payload) => {
+          capturedPayload = payload;
+          throw new Error("stop before network");
+        },
+      },
+    );
+
+    await stream.result();
+
+    expect(capturedPayload).toMatchObject({
+      thinking: { type: "adaptive" },
+      output_config: { effort: "high" },
+    });
+  });
+
   it.each([
     {
       id: "prod-primary",

@@ -563,15 +563,29 @@ function resolveClaudeProfileNameModelId(modelName?: string): string | undefined
   if (!normalized.includes("claude")) {
     return undefined;
   }
-  const family = /(?:fable-5|opus-4-(?:6|7|8)|sonnet-4-6)(?:$|-)/.exec(normalized)?.[0];
+  const family = /(?:fable-5|mythos-preview|opus-4-(?:6|7|8)|sonnet-4-6)(?:$|-)/.exec(
+    normalized,
+  )?.[0];
   return family ? `claude-${family.replace(/-$/, "")}` : undefined;
+}
+
+function isClaudeMythosPreviewModelId(modelId?: string): boolean {
+  return /(?:^|-)claude-mythos-preview(?=$|[^a-z0-9])/.test(
+    modelId
+      ?.trim()
+      .toLowerCase()
+      .replace(/[\s_.:]+/g, "-") ?? "",
+  );
 }
 
 /** Check canonical metadata and profile names for adaptive Claude support. */
 function supportsAdaptiveThinking(model: Model<"bedrock-converse-stream">): boolean {
   const profileModelId = resolveClaudeProfileNameModelId(model.name);
   return (
-    supportsClaudeAdaptiveThinking(model) || supportsClaudeAdaptiveThinking({ id: profileModelId })
+    supportsClaudeAdaptiveThinking(model) ||
+    supportsClaudeAdaptiveThinking({ id: profileModelId }) ||
+    isClaudeMythosPreviewModelId(resolveClaudeModelIdentity(model)) ||
+    isClaudeMythosPreviewModelId(profileModelId)
   );
 }
 
@@ -579,7 +593,9 @@ function requiresMandatoryAdaptiveThinking(model: Model<"bedrock-converse-stream
   const profileModelId = resolveClaudeProfileNameModelId(model.name);
   return (
     isClaudeAdaptiveThinkingDefaultModelId(resolveClaudeModelIdentity(model)) ||
-    (profileModelId ? isClaudeAdaptiveThinkingDefaultModelId(profileModelId) : false)
+    (profileModelId ? isClaudeAdaptiveThinkingDefaultModelId(profileModelId) : false) ||
+    isClaudeMythosPreviewModelId(resolveClaudeModelIdentity(model)) ||
+    isClaudeMythosPreviewModelId(profileModelId)
   );
 }
 
