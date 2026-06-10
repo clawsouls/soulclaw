@@ -479,15 +479,9 @@ function assertSessionMetadataMigrated(stateDir) {
   const main = store["agent:main:main"];
   const direct = store["agent:main:+15551234567"];
   const group = store["agent:main:slack:channel:cupgrade"];
-  assert(main?.sessionId === LEGACY_SESSION_MAIN_ID, "main legacy session row missing from SQLite");
-  assert(
-    direct?.sessionId === LEGACY_SESSION_DIRECT_ID,
-    "direct legacy session row missing from SQLite",
-  );
-  assert(
-    group?.sessionId === LEGACY_SESSION_GROUP_ID,
-    "channel legacy session row missing from SQLite",
-  );
+  assert(main?.sessionId === LEGACY_SESSION_MAIN_ID, "main legacy session row missing");
+  assert(direct?.sessionId === LEGACY_SESSION_DIRECT_ID, "direct legacy session row missing");
+  assert(group?.sessionId === LEGACY_SESSION_GROUP_ID, "channel legacy session row missing");
   assert(
     main?.sessionFile === path.join(agentSessionsDir, `${LEGACY_SESSION_MAIN_ID}.jsonl`),
     "main legacy session row still points at the old sessions directory",
@@ -506,7 +500,7 @@ function assertSessionMetadataMigrated(stateDir) {
   );
   assert(
     main.skillsSnapshot?.resolvedSkills === undefined,
-    "heavy resolvedSkills cache was persisted into SQLite session metadata",
+    "heavy resolvedSkills cache was persisted into migrated session metadata",
   );
 }
 
