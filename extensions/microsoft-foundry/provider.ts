@@ -78,7 +78,7 @@ export function buildMicrosoftFoundryProvider(): ProviderPlugin {
       const selectedModelCapabilities = resolveFoundryModelCapabilities(
         selectedModelId,
         existingModel?.name,
-        isFoundryProviderApi(existingModel?.api) ? existingModel.api : providerConfig.api,
+        isFoundryProviderApi(existingModel?.api) ? existingModel.api : undefined,
         existingModel?.input,
       );
       const providerEndpoint = normalizeFoundryEndpoint(providerConfig.baseUrl ?? "");

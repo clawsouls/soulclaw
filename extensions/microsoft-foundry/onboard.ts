@@ -24,6 +24,7 @@ import {
   extractFoundryEndpoint,
   requiresFoundryMaxCompletionTokens,
   requiresFoundryEntraIdClaudeAuth,
+  requiresFoundryMandatoryAdaptiveClaudeThinking,
   ANTHROPIC_MESSAGES_API,
   DEFAULT_API,
   DEFAULT_GPT5_API,
@@ -445,6 +446,9 @@ export function buildFoundryConnectionTest(params: {
         model: params.modelId,
         messages: [{ role: "user", content: "hi" }],
         max_tokens: 1,
+        ...(requiresFoundryMandatoryAdaptiveClaudeThinking(params.modelNameHint ?? params.modelId)
+          ? { thinking: { type: "adaptive" } }
+          : {}),
       },
     };
   }

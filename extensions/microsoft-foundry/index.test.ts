@@ -768,8 +768,45 @@ describe("microsoft-foundry plugin", () => {
 
     const model = config.models?.providers?.["microsoft-foundry"]?.models[0];
     expect(model?.id).toBe("claude-fable-5");
+    expect(model?.api).toBe("anthropic-messages");
+    expect(model?.baseUrl).toBe("https://example.services.ai.azure.com/anthropic");
     expect(model?.contextWindow).toBe(1_000_000);
     expect(model?.maxTokens).toBe(128_000);
+    expect(config.models?.providers?.["microsoft-foundry"]?.api).toBe("anthropic-messages");
+    expect(config.models?.providers?.["microsoft-foundry"]?.baseUrl).toBe(
+      "https://example.services.ai.azure.com/anthropic",
+    );
+  });
+
+  it("infers OpenAI routing when adding a GPT deployment from a Claude-configured provider", async () => {
+    const provider = registerProvider();
+    const config: OpenClawConfig = {
+      models: {
+        providers: {
+          "microsoft-foundry": {
+            baseUrl: "https://example.services.ai.azure.com/anthropic",
+            api: "anthropic-messages",
+            models: [],
+          },
+        },
+      },
+    };
+
+    await provider.onModelSelected?.({
+      config,
+      model: "microsoft-foundry/gpt-5.4",
+      prompter: {} as never,
+      agentDir: "/tmp/test-agent",
+    });
+
+    const model = config.models?.providers?.["microsoft-foundry"]?.models[0];
+    expect(model?.id).toBe("gpt-5.4");
+    expect(model?.api).toBe("openai-responses");
+    expect(model?.baseUrl).toBe("https://example.services.ai.azure.com/openai/v1");
+    expect(config.models?.providers?.["microsoft-foundry"]?.api).toBe("openai-responses");
+    expect(config.models?.providers?.["microsoft-foundry"]?.baseUrl).toBe(
+      "https://example.services.ai.azure.com/openai/v1",
+    );
   });
 
   it("accepts tenant domains as valid tenant identifiers", () => {
@@ -1558,6 +1595,7 @@ describe("microsoft-foundry plugin", () => {
       model: "prod-fable",
       messages: [{ role: "user", content: "hi" }],
       max_tokens: 1,
+      thinking: { type: "adaptive" },
     });
   });
 

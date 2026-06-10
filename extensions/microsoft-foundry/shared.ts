@@ -207,6 +207,11 @@ export function requiresFoundryEntraIdClaudeAuth(value?: string | null): boolean
     : false;
 }
 
+export function requiresFoundryMandatoryAdaptiveClaudeThinking(value?: string | null): boolean {
+  const normalized = normalizeFoundryModelName(value);
+  return normalized ? isClaudeMandatoryAdaptiveThinkingModelId(normalized) : false;
+}
+
 function resolveFoundryModelTokenLimits(value?: string | null): {
   contextWindow: number;
   maxTokens: number;
