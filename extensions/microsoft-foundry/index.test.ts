@@ -1443,6 +1443,26 @@ describe("microsoft-foundry plugin", () => {
         { id: "max" },
       ],
     });
+    for (const modelName of ["claude-opus-4-6", "claude-sonnet-4-6"]) {
+      expect(
+        provider.resolveThinkingProfile?.({
+          provider: "microsoft-foundry",
+          modelId: `prod-${modelName}`,
+          params: { canonicalModelId: modelName },
+        }),
+      ).toMatchObject({
+        defaultLevel: "adaptive",
+        levels: [
+          { id: "off" },
+          { id: "minimal" },
+          { id: "low" },
+          { id: "medium" },
+          { id: "high" },
+          { id: "adaptive" },
+          { id: "max" },
+        ],
+      });
+    }
     expect(
       provider.resolveThinkingProfile?.({
         provider: "microsoft-foundry",

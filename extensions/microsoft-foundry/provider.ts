@@ -2,6 +2,7 @@
 import type { ProviderNormalizeResolvedModelContext } from "openclaw/plugin-sdk/core";
 import {
   resolveClaudeThinkingProfile,
+  supportsClaudeNativeMaxEffort,
   type ModelProviderConfig,
   type ProviderPlugin,
 } from "openclaw/plugin-sdk/provider-model-shared";
@@ -190,7 +191,9 @@ export function buildMicrosoftFoundryProvider(): ProviderPlugin {
       if (!capabilities.reasoning || capabilities.api !== "anthropic-messages") {
         return undefined;
       }
-      const profile = resolveClaudeThinkingProfile(capabilities.modelName);
+      const profile = resolveClaudeThinkingProfile(capabilities.modelName, undefined, {
+        includeNativeMax: supportsClaudeNativeMaxEffort({ id: capabilities.modelName }),
+      });
       if (!isFoundryClaudeMythosPreview(capabilities.modelName)) {
         return profile;
       }
