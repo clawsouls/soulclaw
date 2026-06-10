@@ -266,6 +266,13 @@ function hasBearerAuthorizationHeader(headers?: Record<string, string>): boolean
   );
 }
 
+function usesFoundryBearerAuth(model: Model<"anthropic-messages">): boolean {
+  return (
+    model.provider === "microsoft-foundry" &&
+    (model.authHeader === true || hasBearerAuthorizationHeader(model.headers))
+  );
+}
+
 function omitFoundryBearerCredentialHeaders(
   headers?: Record<string, string>,
 ): Record<string, string> | undefined {
@@ -988,7 +995,7 @@ function createClient(
     return { client, isOAuthToken: false };
   }
 
-  if (model.provider === "microsoft-foundry" && hasBearerAuthorizationHeader(model.headers)) {
+  if (usesFoundryBearerAuth(model)) {
     const client = new Anthropic({
       apiKey: null,
       authToken: apiKey,

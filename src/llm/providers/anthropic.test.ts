@@ -87,8 +87,8 @@ describe("Anthropic provider", () => {
     const model = makeAnthropicModel({
       provider: "microsoft-foundry",
       baseUrl: "https://example.services.ai.azure.com/anthropic",
+      authHeader: true,
       headers: {
-        Authorization: "Bearer entra-access-token",
         "x-api-key": "stale-resource-key",
       },
     });
