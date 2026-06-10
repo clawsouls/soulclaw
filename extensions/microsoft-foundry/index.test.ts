@@ -115,7 +115,7 @@ function buildFoundryModel(
     provider: string;
     id: string;
     name: string;
-    api: "openai-responses" | "openai-completions";
+    api: "openai-responses" | "openai-completions" | "anthropic-messages";
     baseUrl: string;
     reasoning: boolean;
     input: Array<"text" | "image">;
@@ -177,6 +177,7 @@ function buildFoundryConfig(params?: {
 
 function buildEntraProfileStore(
   overrides: Partial<{
+    api: "openai-responses" | "openai-completions" | "anthropic-messages";
     endpoint: string;
     modelId: string;
     modelName: string;
@@ -193,6 +194,7 @@ function buildEntraProfileStore(
           endpoint: "https://example.services.ai.azure.com",
           modelId: "custom-deployment",
           modelName: defaultFoundryModelId,
+          api: "openai-responses",
           tenantId: "tenant-id",
           ...overrides,
         },
@@ -436,6 +438,36 @@ describe("microsoft-foundry plugin", () => {
     expect(prepared.baseUrl).toBe("https://example.services.ai.azure.com/openai/v1");
   });
 
+  it("uses active model routing when Entra metadata points at another deployment", async () => {
+    const provider = registerProvider();
+    const prepareRuntimeAuth = requirePrepareRuntimeAuth(provider);
+    mockAzureCliToken({ accessToken: "test-token", expiresInMs: 60_000 });
+    ensureAuthProfileStoreMock.mockReturnValueOnce(
+      buildEntraProfileStore({
+        endpoint: "https://example.services.ai.azure.com",
+        modelId: "deployment-gpt5",
+        modelName: "gpt-5.4",
+        api: "openai-responses",
+      }),
+    );
+
+    const prepared = requireRuntimeAuthResult(
+      await prepareRuntimeAuth(
+        buildFoundryRuntimeAuthContext({
+          modelId: "deployment-fable",
+          model: buildFoundryModel({
+            id: "deployment-fable",
+            name: "claude-fable-5",
+            api: "anthropic-messages",
+            baseUrl: "https://example.services.ai.azure.com/anthropic",
+          }),
+        }),
+      ),
+    );
+
+    expect(prepared.baseUrl).toBe("https://example.services.ai.azure.com/anthropic");
+  });
+
   it("retries Entra token refresh after a failed attempt", async () => {
     const provider = registerProvider();
     const prepareRuntimeAuth = requirePrepareRuntimeAuth(provider);
@@ -604,6 +636,35 @@ describe("microsoft-foundry plugin", () => {
       "text",
       "image",
     ]);
+  });
+
+  it("preserves an explicit per-model Foundry endpoint when switching models", async () => {
+    const provider = registerProvider();
+    const config = buildFoundryConfig({
+      models: [
+        buildFoundryModel({
+          id: "prod-fable",
+          name: "claude-fable-5",
+          api: "anthropic-messages",
+          baseUrl: "https://claude-resource.services.ai.azure.com/anthropic",
+          reasoning: true,
+          input: ["text", "image"],
+        }),
+      ],
+    });
+
+    await provider.onModelSelected?.({
+      config,
+      model: "microsoft-foundry/prod-fable",
+      prompter: {} as never,
+      agentDir: "/tmp/test-agent",
+    });
+
+    const providerConfig = config.models?.providers?.["microsoft-foundry"];
+    expect(providerConfig?.baseUrl).toBe("https://claude-resource.services.ai.azure.com/anthropic");
+    expect(providerConfig?.models[0]?.baseUrl).toBe(
+      "https://claude-resource.services.ai.azure.com/anthropic",
+    );
   });
 
   it("marks newly selected Foundry reasoning deployments as reasoning-capable", async () => {
@@ -1308,6 +1369,7 @@ describe("microsoft-foundry plugin", () => {
       deployments: [
         { name: "deployment-gpt5", modelName: "gpt-5.4", api: "openai-responses" },
         { name: "deployment-gpt4o", modelName: "gpt-4o", api: "openai-responses" },
+        { name: "deployment-fable", modelName: "claude-fable-5", api: "anthropic-messages" },
       ],
     });
 
@@ -1315,6 +1377,12 @@ describe("microsoft-foundry plugin", () => {
     expect(provider?.models.map((model) => model.id)).toEqual([
       "deployment-gpt5",
       "deployment-gpt4o",
+      "deployment-fable",
+    ]);
+    expect(provider?.models.map((model) => [model.id, model.baseUrl])).toEqual([
+      ["deployment-gpt5", "https://example.services.ai.azure.com/openai/v1"],
+      ["deployment-gpt4o", "https://example.services.ai.azure.com/openai/v1"],
+      ["deployment-fable", "https://example.services.ai.azure.com/anthropic"],
     ]);
     expect(result.defaultModel).toBe("microsoft-foundry/deployment-gpt5");
   });

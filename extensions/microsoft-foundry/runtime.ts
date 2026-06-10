@@ -60,20 +60,24 @@ export async function prepareFoundryRuntimeAuth(ctx: ProviderPrepareRuntimeAuthC
       normalizeOptionalString(ctx.modelId) ??
       normalizeOptionalString(metadata?.modelId) ??
       ctx.modelId;
-    const activeModelNameHint = ctx.modelId === metadata?.modelId ? metadata?.modelName : undefined;
+    const requestedModelId = normalizeOptionalString(ctx.modelId);
+    const metadataModelId = normalizeOptionalString(metadata?.modelId);
+    const activeModelUsesMetadata = !requestedModelId || requestedModelId === metadataModelId;
+    const activeModelNameHint = activeModelUsesMetadata ? metadata?.modelName : undefined;
     const modelNameHint = resolveConfiguredModelNameHint(
       modelId,
       ctx.model.name ?? activeModelNameHint,
     );
-    const configuredApi =
-      typeof metadata?.api === "string" && isFoundryProviderApi(metadata.api)
+    const configuredApi = isFoundryProviderApi(ctx.model.api)
+      ? ctx.model.api
+      : activeModelUsesMetadata &&
+          typeof metadata?.api === "string" &&
+          isFoundryProviderApi(metadata.api)
         ? metadata.api
-        : isFoundryProviderApi(ctx.model.api)
-          ? ctx.model.api
-          : undefined;
+        : undefined;
     const endpoint =
-      normalizeOptionalString(metadata?.endpoint) ??
-      extractFoundryEndpoint(ctx.model.baseUrl ?? "");
+      extractFoundryEndpoint(ctx.model.baseUrl ?? "") ??
+      normalizeOptionalString(metadata?.endpoint);
     const baseUrl = endpoint
       ? buildFoundryProviderBaseUrl(endpoint, modelId, modelNameHint, configuredApi)
       : undefined;

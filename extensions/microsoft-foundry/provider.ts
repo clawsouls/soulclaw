@@ -82,18 +82,23 @@ export function buildMicrosoftFoundryProvider(): ProviderPlugin {
         existingModel?.input,
       );
       const providerEndpoint = normalizeFoundryEndpoint(providerConfig.baseUrl ?? "");
-      // Prefer the persisted per-model API choice from onboarding/discovery so arbitrary
-      // deployment aliases (for example prod-primary) do not fall back to name heuristics.
-      const selectedModelApi = isFoundryProviderApi(existingModel?.api)
-        ? existingModel.api
-        : providerConfig.api;
+      const selectedProviderEndpoint =
+        extractFoundryEndpoint(existingModel?.baseUrl) ?? providerEndpoint;
       const nextModels = configuredModels.map((model) => {
         if (model.id !== selectedModelId) {
           return model;
         }
+        const selectedModelEndpoint = extractFoundryEndpoint(model.baseUrl) ?? providerEndpoint;
+        const selectedModelBaseUrl = buildFoundryProviderBaseUrl(
+          selectedModelEndpoint,
+          selectedModelId,
+          selectedModelCapabilities.modelName,
+          selectedModelCapabilities.api,
+        );
         const nextModel = Object.assign({}, model, {
           name: selectedModelCapabilities.modelName,
           api: selectedModelCapabilities.api,
+          baseUrl: selectedModelBaseUrl,
           reasoning: selectedModelCapabilities.reasoning || model.reasoning,
           thinkingLevelMap: selectedModelCapabilities.thinkingLevelMap ?? model.thinkingLevelMap,
           input: selectedModelCapabilities.input,
@@ -131,6 +136,12 @@ export function buildMicrosoftFoundryProvider(): ProviderPlugin {
           id: selectedModelId,
           name: selectedModelCapabilities.modelName,
           api: selectedModelCapabilities.api,
+          baseUrl: buildFoundryProviderBaseUrl(
+            providerEndpoint,
+            selectedModelId,
+            selectedModelCapabilities.modelName,
+            selectedModelCapabilities.api,
+          ),
           reasoning: selectedModelCapabilities.reasoning,
           ...(selectedModelCapabilities.thinkingLevelMap
             ? { thinkingLevelMap: selectedModelCapabilities.thinkingLevelMap }
@@ -145,10 +156,10 @@ export function buildMicrosoftFoundryProvider(): ProviderPlugin {
       const nextProviderConfig: ModelProviderConfig = {
         ...providerConfig,
         baseUrl: buildFoundryProviderBaseUrl(
-          providerEndpoint,
+          selectedProviderEndpoint,
           selectedModelId,
           selectedModelCapabilities.modelName,
-          selectedModelApi,
+          selectedModelCapabilities.api,
         ),
         api: selectedModelCapabilities.api,
         models: nextModels,

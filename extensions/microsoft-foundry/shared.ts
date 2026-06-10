@@ -446,11 +446,18 @@ function buildFoundryProviderConfig(
         deployment.modelName,
         deployment.api ?? resolvedApi,
       );
+      const modelBaseUrl = buildFoundryProviderBaseUrl(
+        endpoint,
+        deployment.name,
+        capabilities.modelName,
+        capabilities.api,
+      );
       return Object.assign(
         {
           id: deployment.name,
           name: capabilities.modelName,
           api: capabilities.api,
+          baseUrl: modelBaseUrl,
           reasoning: capabilities.reasoning,
           ...(capabilities.thinkingLevelMap
             ? { thinkingLevelMap: capabilities.thinkingLevelMap }

@@ -180,7 +180,7 @@ describe("createAnthropicVertexStreamFn", () => {
     expect(streamTransportOptions(streamAnthropicMock).maxTokens).toBe(128000);
   });
 
-  it.each(["claude-opus-4-8", "claude-opus-4-7"])(
+  it.each(["claude-opus-4-8", "claude-opus-4-7", "claude-fable-5", "claude-mythos-5"])(
     "omits unsupported temperature for %s",
     (modelId) => {
       const { deps, streamAnthropicMock } = createStreamDeps();
