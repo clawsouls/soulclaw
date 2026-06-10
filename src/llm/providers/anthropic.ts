@@ -282,7 +282,7 @@ function omitFoundryBearerCredentialHeaders(
   const next: Record<string, string> = {};
   for (const [key, value] of Object.entries(headers)) {
     const lower = key.toLowerCase();
-    if (lower === "authorization" || lower === "x-api-key") {
+    if (lower === "authorization" || lower === "x-api-key" || lower === "api-key") {
       continue;
     }
     next[key] = value;

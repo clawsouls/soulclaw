@@ -143,6 +143,7 @@ function makeAnthropicTransportModel(
     maxTokens?: number;
     thinkingLevelMap?: AnthropicMessagesModel["thinkingLevelMap"];
     headers?: Record<string, string>;
+    authHeader?: boolean;
     requestTransport?: RequestTransportConfig;
   } = {},
 ): AnthropicMessagesModel {
@@ -161,6 +162,7 @@ function makeAnthropicTransportModel(
       maxTokens: params.maxTokens ?? 8192,
       ...(params.thinkingLevelMap ? { thinkingLevelMap: params.thinkingLevelMap } : {}),
       ...(params.headers ? { headers: params.headers } : {}),
+      ...(params.authHeader !== undefined ? { authHeader: params.authHeader } : {}),
     } satisfies AnthropicMessagesModel,
     params.requestTransport ?? {
       proxy: {
@@ -233,6 +235,35 @@ describe("anthropic transport stream", () => {
     expect(latestAnthropicRequestHeaders().get("anthropic-beta")).toBe(
       "fine-grained-tool-streaming-2025-05-14",
     );
+  });
+
+  it("uses bearer auth for Microsoft Foundry Anthropic transport requests", async () => {
+    const model = makeAnthropicTransportModel({
+      provider: "microsoft-foundry",
+      baseUrl: "https://example.services.ai.azure.com/anthropic",
+      authHeader: true,
+      headers: {
+        "api-key": "stale-foundry-key",
+        "x-api-key": "stale-resource-key",
+        "X-Provider": "foundry",
+      },
+    });
+
+    await runTransportStream(
+      model,
+      {
+        messages: [{ role: "user", content: "hello" }],
+      } as AnthropicStreamContext,
+      {
+        apiKey: "entra-access-token",
+      } as AnthropicStreamOptions,
+    );
+
+    const headers = latestAnthropicRequestHeaders();
+    expect(headers.get("authorization")).toBe("Bearer entra-access-token");
+    expect(headers.get("api-key")).toBeNull();
+    expect(headers.get("x-api-key")).toBeNull();
+    expect(headers.get("X-Provider")).toBe("foundry");
   });
 
   it("honors ANTHROPIC_BASE_URL when model base URL is blank", async () => {

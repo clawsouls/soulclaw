@@ -239,6 +239,39 @@ function isAnthropicOAuthToken(apiKey: string): boolean {
   return apiKey.includes("sk-ant-oat");
 }
 
+function hasBearerAuthorizationHeader(headers?: Record<string, string>): boolean {
+  if (!headers) {
+    return false;
+  }
+  return Object.entries(headers).some(
+    ([key, value]) => key.toLowerCase() === "authorization" && /^bearer\s+\S+/i.test(value.trim()),
+  );
+}
+
+function usesFoundryBearerAuth(model: AnthropicTransportModel): boolean {
+  return (
+    model.provider === "microsoft-foundry" &&
+    (model.authHeader === true || hasBearerAuthorizationHeader(model.headers))
+  );
+}
+
+function omitFoundryBearerCredentialHeaders(
+  headers?: Record<string, string>,
+): Record<string, string> | undefined {
+  if (!headers) {
+    return undefined;
+  }
+  const next: Record<string, string> = {};
+  for (const [key, value] of Object.entries(headers)) {
+    const lower = key.toLowerCase();
+    if (lower === "authorization" || lower === "x-api-key" || lower === "api-key") {
+      continue;
+    }
+    next[key] = value;
+  }
+  return Object.keys(next).length > 0 ? next : undefined;
+}
+
 function isDirectAnthropicModel(model: Pick<AnthropicTransportModel, "provider" | "baseUrl">) {
   if (normalizeLowercaseStringOrEmpty(model.provider) !== "anthropic") {
     return false;
@@ -784,6 +817,27 @@ function createAnthropicTransportClient(params: {
             messages: context.messages,
             hasImages: hasCopilotVisionInput(context.messages),
           }),
+          options?.headers,
+        ),
+        fetch,
+      }),
+      isOAuthToken: false,
+    };
+  }
+  if (usesFoundryBearerAuth(model)) {
+    const betaFeatures = needsInterleavedBeta ? ["interleaved-thinking-2025-05-14"] : [];
+    return {
+      client: createAnthropicMessagesClient({
+        apiKey: null,
+        authToken: apiKey,
+        baseURL: model.baseUrl,
+        defaultHeaders: mergeTransportHeaders(
+          {
+            accept: "application/json",
+            "anthropic-dangerous-direct-browser-access": "true",
+            ...(betaFeatures.length > 0 ? { "anthropic-beta": betaFeatures.join(",") } : {}),
+          },
+          omitFoundryBearerCredentialHeaders(model.headers),
           options?.headers,
         ),
         fetch,

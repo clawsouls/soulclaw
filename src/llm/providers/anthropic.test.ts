@@ -89,6 +89,7 @@ describe("Anthropic provider", () => {
       baseUrl: "https://example.services.ai.azure.com/anthropic",
       authHeader: true,
       headers: {
+        "api-key": "stale-foundry-key",
         "x-api-key": "stale-resource-key",
       },
     });
@@ -110,6 +111,7 @@ describe("Anthropic provider", () => {
     expect(config.apiKey).toBeNull();
     expect(config.authToken).toBe("entra-access-token");
     expect(config.defaultHeaders?.Authorization).toBeUndefined();
+    expect(config.defaultHeaders?.["api-key"]).toBeUndefined();
     expect(config.defaultHeaders?.["x-api-key"]).toBeUndefined();
   });
 
