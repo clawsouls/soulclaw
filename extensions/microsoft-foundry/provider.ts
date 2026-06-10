@@ -16,6 +16,7 @@ import {
   extractFoundryEndpoint,
   isFoundryClaudeMythosPreview,
   isFoundryProviderApi,
+  mergeFoundryCanonicalModelParams,
   normalizeFoundryEndpoint,
   resolveFoundryModelCapabilities,
   resolveFoundryTargetProfileId,
@@ -108,6 +109,10 @@ export function buildMicrosoftFoundryProvider(): ProviderPlugin {
           baseUrl: selectedModelBaseUrl,
           reasoning: selectedModelCapabilities.reasoning || model.reasoning,
           thinkingLevelMap: selectedModelCapabilities.thinkingLevelMap ?? model.thinkingLevelMap,
+          params: mergeFoundryCanonicalModelParams(
+            model.params,
+            selectedModelCapabilities.modelName,
+          ),
           input: selectedModelCapabilities.input,
         });
         if (selectedModelCapabilities.compat) {
@@ -153,6 +158,7 @@ export function buildMicrosoftFoundryProvider(): ProviderPlugin {
           ...(selectedModelCapabilities.thinkingLevelMap
             ? { thinkingLevelMap: selectedModelCapabilities.thinkingLevelMap }
             : {}),
+          params: mergeFoundryCanonicalModelParams(undefined, selectedModelCapabilities.modelName),
           input: selectedModelCapabilities.input,
           cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
           contextWindow: selectedModelCapabilities.contextWindow,
@@ -177,7 +183,9 @@ export function buildMicrosoftFoundryProvider(): ProviderPlugin {
       }
       applyFoundryProviderConfig(ctx.config, nextProviderConfig);
     },
-    resolveThinkingProfile: ({ modelId, modelName }) => {
+    resolveThinkingProfile: ({ modelId, params }) => {
+      const modelName =
+        typeof params?.canonicalModelId === "string" ? params.canonicalModelId : undefined;
       const capabilities = resolveFoundryModelCapabilities(modelId, modelName);
       if (!capabilities.reasoning || capabilities.api !== "anthropic-messages") {
         return undefined;
@@ -232,6 +240,7 @@ export function buildMicrosoftFoundryProvider(): ProviderPlugin {
         api: capabilities.api,
         reasoning: capabilities.reasoning || model.reasoning,
         thinkingLevelMap: capabilities.thinkingLevelMap ?? model.thinkingLevelMap,
+        params: mergeFoundryCanonicalModelParams(model.params, capabilities.modelName),
         input: capabilities.input,
         baseUrl: buildFoundryProviderBaseUrl(
           endpoint,

@@ -455,6 +455,16 @@ export function resolveFoundryModelCapabilities(
   };
 }
 
+export function mergeFoundryCanonicalModelParams(
+  params: Record<string, unknown> | undefined,
+  modelName: string,
+): Record<string, unknown> {
+  return {
+    ...params,
+    canonicalModelId: modelName,
+  };
+}
+
 export function resolveConfiguredModelNameHint(
   modelId: string,
   modelNameHint?: string | null,
@@ -520,6 +530,7 @@ function buildFoundryProviderConfig(
           ...(capabilities.thinkingLevelMap
             ? { thinkingLevelMap: capabilities.thinkingLevelMap }
             : {}),
+          params: mergeFoundryCanonicalModelParams(undefined, capabilities.modelName),
           input: capabilities.input,
           cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
           contextWindow: capabilities.contextWindow,

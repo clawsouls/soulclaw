@@ -1417,8 +1417,8 @@ describe("microsoft-foundry plugin", () => {
       provider.resolveThinkingProfile?.({
         provider: "microsoft-foundry",
         modelId: "prod-fable",
-        modelName: "claude-fable-5",
-      } as never),
+        params: { canonicalModelId: "claude-fable-5" },
+      }),
     ).toMatchObject({
       defaultLevel: "high",
       levels: [
@@ -1436,14 +1436,14 @@ describe("microsoft-foundry plugin", () => {
       provider.resolveThinkingProfile?.({
         provider: "microsoft-foundry",
         modelId: "prod-opaque",
-      } as never),
+      }),
     ).toBeUndefined();
     expect(
       provider.resolveThinkingProfile?.({
         provider: "microsoft-foundry",
         modelId: "prod-mythos-preview",
-        modelName: "claude-mythos-preview",
-      } as never),
+        params: { canonicalModelId: "claude-mythos-preview" },
+      }),
     ).toMatchObject({
       defaultLevel: "adaptive",
       levels: [
@@ -1469,6 +1469,7 @@ describe("microsoft-foundry plugin", () => {
 
     const model = result.configPatch?.models?.providers?.["microsoft-foundry"]?.models[0];
     expect(model?.thinkingLevelMap).toBeUndefined();
+    expect(model?.params).toMatchObject({ canonicalModelId: "claude-mythos-preview" });
   });
 
   it("keeps Foundry chat reasoning_effort enabled for GPT-5 reasoning deployments", () => {
