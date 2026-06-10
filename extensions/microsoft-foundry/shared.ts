@@ -9,7 +9,6 @@ import {
 import {
   isClaudeMandatoryAdaptiveThinkingModelId,
   supportsClaudeAdaptiveThinking,
-  supportsClaudeNativeMaxEffort,
   supportsClaudeNativeXhighEffort,
   type ModelApi,
   type ModelProviderConfig,
@@ -155,6 +154,10 @@ function normalizeFoundryModelName(value?: string | null): string | undefined {
 export function isAnthropicFoundryDeployment(modelName?: string | null): boolean {
   const normalized = normalizeFoundryModelName(modelName);
   return normalized ? normalized.startsWith("claude") : false;
+}
+
+export function isFoundryClaudeMythosPreview(value?: string | null): boolean {
+  return normalizeFoundryModelName(value) === "claude-mythos-preview";
 }
 
 export function usesFoundryResponsesByDefault(value?: string | null): boolean {
@@ -417,7 +420,6 @@ export function resolveFoundryModelCapabilities(
   const supportedReasoningEfforts = resolveFoundryReasoningEfforts(modelName);
   const isAnthropic = api === ANTHROPIC_MESSAGES_API || isAnthropicFoundryDeployment(modelName);
   const supportsClaudeThinking = isAnthropic && supportsClaudeAdaptiveThinking(modelName);
-  const supportsClaudeMaxThinking = isAnthropic && supportsClaudeNativeMaxEffort(modelName);
   const supportsClaudeXhighThinking = isAnthropic && supportsClaudeNativeXhighEffort(modelName);
   const tokenLimits = resolveFoundryModelTokenLimits(modelName);
   return {
@@ -429,11 +431,9 @@ export function resolveFoundryModelCapabilities(
       supportsFoundryReasoningContent(modelName),
     ...(supportsClaudeXhighThinking
       ? { thinkingLevelMap: { xhigh: "xhigh", max: "max" } }
-      : supportsClaudeMaxThinking
-        ? { thinkingLevelMap: { max: "max" } }
-        : supportedReasoningEfforts
-          ? { thinkingLevelMap: buildFoundryThinkingLevelMap(supportedReasoningEfforts) }
-          : {}),
+      : supportedReasoningEfforts
+        ? { thinkingLevelMap: buildFoundryThinkingLevelMap(supportedReasoningEfforts) }
+        : {}),
     input:
       normalizedInput.includes("image") || supportsFoundryImageInput(modelName)
         ? ["text", "image"]

@@ -1437,9 +1437,25 @@ describe("microsoft-foundry plugin", () => {
         modelId: "prod-opaque",
       } as never),
     ).toBeUndefined();
+    expect(
+      provider.resolveThinkingProfile?.({
+        provider: "microsoft-foundry",
+        modelId: "prod-mythos-preview",
+        modelName: "claude-mythos-preview",
+      } as never),
+    ).toMatchObject({
+      defaultLevel: "adaptive",
+      levels: [
+        { id: "minimal" },
+        { id: "low" },
+        { id: "medium" },
+        { id: "high" },
+        { id: "adaptive" },
+      ],
+    });
   });
 
-  it("records max-only thinking maps for Foundry Mythos Preview deployments", () => {
+  it("does not record native max thinking maps for Foundry Mythos Preview deployments", () => {
     const result = buildFoundryAuthResult({
       profileId: "microsoft-foundry:entra",
       apiKey: "__entra_id_dynamic__",
@@ -1451,7 +1467,7 @@ describe("microsoft-foundry plugin", () => {
     });
 
     const model = result.configPatch?.models?.providers?.["microsoft-foundry"]?.models[0];
-    expect(model?.thinkingLevelMap).toEqual({ max: "max" });
+    expect(model?.thinkingLevelMap).toBeUndefined();
   });
 
   it("keeps Foundry chat reasoning_effort enabled for GPT-5 reasoning deployments", () => {

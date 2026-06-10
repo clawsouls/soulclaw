@@ -1,8 +1,9 @@
 // Microsoft Foundry provider module implements model/runtime integration.
 import type { ProviderNormalizeResolvedModelContext } from "openclaw/plugin-sdk/core";
-import type {
-  ModelProviderConfig,
-  ProviderPlugin,
+import {
+  resolveClaudeThinkingProfile,
+  type ModelProviderConfig,
+  type ProviderPlugin,
 } from "openclaw/plugin-sdk/provider-model-shared";
 import { OPENAI_RESPONSES_STREAM_HOOKS } from "openclaw/plugin-sdk/provider-stream-family";
 import { apiKeyAuthMethod, entraIdAuthMethod } from "./auth.js";
@@ -13,6 +14,7 @@ import {
   applyFoundryProviderConfig,
   buildFoundryProviderBaseUrl,
   extractFoundryEndpoint,
+  isFoundryClaudeMythosPreview,
   isFoundryProviderApi,
   normalizeFoundryEndpoint,
   resolveFoundryModelCapabilities,
@@ -174,6 +176,19 @@ export function buildMicrosoftFoundryProvider(): ProviderPlugin {
         applyFoundryProfileBinding(ctx.config, targetProfileId);
       }
       applyFoundryProviderConfig(ctx.config, nextProviderConfig);
+    },
+    resolveThinkingProfile: ({ modelId, modelName }) => {
+      const capabilities = resolveFoundryModelCapabilities(modelId, modelName);
+      if (!capabilities.reasoning || capabilities.api !== "anthropic-messages") {
+        return undefined;
+      }
+      const profile = resolveClaudeThinkingProfile(capabilities.modelName);
+      return isFoundryClaudeMythosPreview(capabilities.modelName)
+        ? {
+            ...profile,
+            levels: profile.levels.filter((level) => level.id !== "xhigh" && level.id !== "max"),
+          }
+        : profile;
     },
     normalizeResolvedModel: ({ modelId, model }: ProviderNormalizeResolvedModelContext) => {
       const endpoint = extractFoundryEndpoint(model.baseUrl ?? "");
