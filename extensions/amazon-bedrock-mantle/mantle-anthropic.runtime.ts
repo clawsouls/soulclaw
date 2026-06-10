@@ -148,7 +148,7 @@ export function createMantleAnthropicStreamFn(deps?: {
       base.maxTokens || 0,
       model.maxTokens,
       reasoning,
-      options.thinkingBudgets,
+      options?.thinkingBudgets,
     );
     return streamFn(model as Model<"anthropic-messages">, context, {
       ...base,
