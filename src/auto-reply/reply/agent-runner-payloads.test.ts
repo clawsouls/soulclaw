@@ -812,6 +812,27 @@ describe("buildReplyPayloads media filter integration", () => {
     });
   });
 
+  it("keeps only final media after a direct block without a streaming pipeline", async () => {
+    const { createBlockReplyContentKey } = await import("./block-reply-pipeline.js");
+    const directlySentBlockKeys = new Set<string>([
+      createBlockReplyContentKey({ text: "response" }),
+    ]);
+
+    const { replyPayloads } = await buildReplyPayloads({
+      ...baseParams,
+      blockStreamingEnabled: true,
+      directlySentBlockKeys,
+      payloads: [{ text: "response\n\nMEDIA:/tmp/generated.png" }],
+    });
+
+    expect(replyPayloads).toHaveLength(1);
+    expectFields(replyPayloads[0], {
+      text: undefined,
+      mediaUrl: "/tmp/generated.png",
+      mediaUrls: ["/tmp/generated.png"],
+    });
+  });
+
   it("does not suppress same-target replies when accountId differs", async () => {
     const { replyPayloads } = await buildReplyPayloads({
       ...baseParams,

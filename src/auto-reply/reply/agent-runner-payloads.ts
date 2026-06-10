@@ -380,7 +380,10 @@ export async function buildReplyPayloads(params: {
               !params.blockReplyPipeline?.hasSentPayload(payload) &&
               !isDirectlySentBlockPayload(payload)
             ) {
-              unsent.push(payload);
+              const next = preserveUnsentMediaAfterBlockSend(payload);
+              if (next) {
+                unsent.push(next);
+              }
             }
           }
           return unsent;
