@@ -111,6 +111,7 @@ describe("resolvePnpmRunner", () => {
       expect(
         resolvePnpmRunner({
           npmExecPath,
+          env: { PATH: "" },
           pnpmArgs: ["exec", "vitest", "run"],
           platform: "linux",
         }),
@@ -209,6 +210,7 @@ describe("resolvePnpmRunner", () => {
     expect(
       resolvePnpmRunner({
         npmExecPath: "",
+        env: { PATH: "" },
         pnpmArgs: ["exec", "vitest", "run"],
         platform: "linux",
       }),
@@ -219,11 +221,63 @@ describe("resolvePnpmRunner", () => {
     });
   });
 
+  posixIt("uses Corepack when pnpm is not directly available on PATH", () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "pnpm-runner-corepack-"));
+    const corepackPath = path.join(tempDir, "corepack");
+    writeFileSync(corepackPath, "#!/bin/sh\nexit 0\n");
+    chmodSync(corepackPath, 0o755);
+
+    try {
+      expect(
+        resolvePnpmRunner({
+          npmExecPath: "",
+          env: { PATH: tempDir },
+          pnpmArgs: ["exec", "tsdown"],
+          platform: "darwin",
+        }),
+      ).toEqual({
+        command: corepackPath,
+        args: ["pnpm", "exec", "tsdown"],
+        shell: false,
+      });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  posixIt("prefers a direct pnpm executable over Corepack", () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "pnpm-runner-path-"));
+    const pnpmPath = path.join(tempDir, "pnpm");
+    const corepackPath = path.join(tempDir, "corepack");
+    writeFileSync(pnpmPath, "#!/bin/sh\nexit 0\n");
+    writeFileSync(corepackPath, "#!/bin/sh\nexit 0\n");
+    chmodSync(pnpmPath, 0o755);
+    chmodSync(corepackPath, 0o755);
+
+    try {
+      expect(
+        resolvePnpmRunner({
+          npmExecPath: "",
+          env: { PATH: tempDir },
+          pnpmArgs: ["exec", "tsdown"],
+          platform: "darwin",
+        }),
+      ).toEqual({
+        command: pnpmPath,
+        args: ["exec", "tsdown"],
+        shell: false,
+      });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("wraps pnpm.cmd via cmd.exe on Windows when npm_execpath is unavailable", () => {
     expect(
       resolvePnpmRunner({
         comSpec: "C:\\Windows\\System32\\cmd.exe",
         npmExecPath: "",
+        env: { PATH: "" },
         pnpmArgs: ["exec", "vitest", "run", "-t", "path with spaces"],
         platform: "win32",
       }),

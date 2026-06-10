@@ -55,6 +55,22 @@ function isFile(value) {
   }
 }
 
+function findExecutableOnPath(command, envPath) {
+  if (typeof envPath !== "string" || envPath.length === 0) {
+    return null;
+  }
+  for (const directory of envPath.split(path.delimiter)) {
+    if (!directory) {
+      continue;
+    }
+    const candidate = path.join(directory, command);
+    if (isExecutableFile(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 function isNodeRunnablePnpmExecPath(value) {
   if (!isPnpmExecPath(value)) {
     return false;
@@ -79,6 +95,7 @@ export function resolvePnpmRunner(params = {}) {
   const nodeExecPath = params.nodeExecPath ?? process.execPath;
   const platform = params.platform ?? process.platform;
   const comSpec = params.comSpec ?? process.env.ComSpec ?? "cmd.exe";
+  const envPath = params.env?.PATH ?? process.env.PATH;
 
   if (typeof npmExecPath === "string" && npmExecPath.length > 0 && isPnpmExecPath(npmExecPath)) {
     if (isNodeRunnablePnpmExecPath(npmExecPath)) {
@@ -123,6 +140,23 @@ export function resolvePnpmRunner(params = {}) {
     };
   }
 
+  const pnpmPath = findExecutableOnPath("pnpm", envPath);
+  if (pnpmPath) {
+    return {
+      command: pnpmPath,
+      args: pnpmArgs,
+      shell: false,
+    };
+  }
+  const corepackPath = findExecutableOnPath("corepack", envPath);
+  if (corepackPath) {
+    return {
+      command: corepackPath,
+      args: ["pnpm", ...pnpmArgs],
+      shell: false,
+    };
+  }
+
   return {
     command: "pnpm",
     args: pnpmArgs,
@@ -134,7 +168,8 @@ export function resolvePnpmRunner(params = {}) {
  * Creates a spawn-ready pnpm invocation with standard options.
  */
 export function createPnpmRunnerSpawnSpec(params = {}) {
-  const runner = resolvePnpmRunner(params);
+  const env = params.env ?? process.env;
+  const runner = resolvePnpmRunner({ ...params, env });
   return {
     command: runner.command,
     args: runner.args,
