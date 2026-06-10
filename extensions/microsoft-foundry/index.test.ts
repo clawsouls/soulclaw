@@ -1315,13 +1315,13 @@ describe("microsoft-foundry plugin", () => {
   });
 
   it.each([
-    "claude-mythos-preview",
-    "claude-fable-5",
-    "claude-opus-4.8",
-    "claude-opus-4.7",
-    "claude-opus-4.6",
-    "claude-sonnet-4.6",
-  ])("preserves Foundry Claude 1M token limits for %s", (modelNameHint) => {
+    ["claude-mythos-preview", 128_000],
+    ["claude-fable-5", 128_000],
+    ["claude-opus-4.8", 128_000],
+    ["claude-opus-4.7", 128_000],
+    ["claude-opus-4.6", 128_000],
+    ["claude-sonnet-4.6", 64_000],
+  ] as const)("preserves Foundry Claude token limits for %s", (modelNameHint, maxTokens) => {
     const result = buildFoundryAuthResult({
       profileId: "microsoft-foundry:entra",
       apiKey: "__entra_id_dynamic__",
@@ -1336,7 +1336,7 @@ describe("microsoft-foundry plugin", () => {
       name: modelNameHint,
       api: "anthropic-messages",
       contextWindow: 1_000_000,
-      maxTokens: 128_000,
+      maxTokens,
     });
   });
 
