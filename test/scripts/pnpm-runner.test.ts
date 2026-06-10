@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { createPnpmRunnerSpawnSpec, resolvePnpmRunner } from "../../scripts/pnpm-runner.mjs";
+import { buildCmdExeCommandLine } from "../../scripts/windows-cmd-helpers.mjs";
 
 describe("resolvePnpmRunner", () => {
   const posixIt = process.platform === "win32" ? it.skip : it;
@@ -171,6 +172,7 @@ describe("resolvePnpmRunner", () => {
     expect(
       resolvePnpmRunner({
         comSpec: "C:\\Windows\\System32\\cmd.exe",
+        env: { PATH: "" },
         npmExecPath:
           "C:\\Users\\test\\AppData\\Local\\Temp\\cache\\corepack\\v1\\pnpm\\10.32.1\\bin\\pnpm.mjs",
         nodeExecPath: "C:\\Program Files\\nodejs\\node.exe",
@@ -219,6 +221,43 @@ describe("resolvePnpmRunner", () => {
       args: ["exec", "vitest", "run"],
       shell: false,
     });
+  });
+
+  posixIt("does not resolve executables from the parent PATH for an explicit empty env", () => {
+    expect(
+      resolvePnpmRunner({
+        npmExecPath: "",
+        env: {},
+        pnpmArgs: ["exec", "vitest", "run"],
+        platform: "linux",
+      }),
+    ).toEqual({
+      command: "pnpm",
+      args: ["exec", "vitest", "run"],
+      shell: false,
+    });
+  });
+
+  posixIt("resolves relative PATH entries from the child working directory", () => {
+    const childDir = mkdtempSync(path.join(os.tmpdir(), "pnpm-runner-child-"));
+
+    try {
+      expect(
+        resolvePnpmRunner({
+          cwd: childDir,
+          npmExecPath: "",
+          env: { PATH: "node_modules/.bin" },
+          pnpmArgs: ["exec", "vitest", "run"],
+          platform: "linux",
+        }),
+      ).toEqual({
+        command: "pnpm",
+        args: ["exec", "vitest", "run"],
+        shell: false,
+      });
+    } finally {
+      rmSync(childDir, { recursive: true, force: true });
+    }
   });
 
   posixIt("uses Corepack when pnpm is not directly available on PATH", () => {
@@ -276,8 +315,8 @@ describe("resolvePnpmRunner", () => {
     expect(
       resolvePnpmRunner({
         comSpec: "C:\\Windows\\System32\\cmd.exe",
-        npmExecPath: "",
         env: { PATH: "" },
+        npmExecPath: "",
         pnpmArgs: ["exec", "vitest", "run", "-t", "path with spaces"],
         platform: "win32",
       }),
@@ -289,10 +328,41 @@ describe("resolvePnpmRunner", () => {
     });
   });
 
+  it("uses Corepack on Windows when no pnpm shim is available", () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "pnpm-runner-corepack-"));
+    const corepackPath = path.join(tempDir, "corepack.cmd");
+    writeFileSync(corepackPath, "@exit /b 0\r\n");
+
+    try {
+      expect(
+        resolvePnpmRunner({
+          comSpec: "C:\\Windows\\System32\\cmd.exe",
+          npmExecPath: "",
+          env: { Path: tempDir, PATHEXT: ".CMD;.EXE" },
+          pnpmArgs: ["exec", "vitest", "run"],
+          platform: "win32",
+        }),
+      ).toEqual({
+        command: "C:\\Windows\\System32\\cmd.exe",
+        args: [
+          "/d",
+          "/s",
+          "/c",
+          buildCmdExeCommandLine(corepackPath, ["pnpm", "exec", "vitest", "run"]),
+        ],
+        shell: false,
+        windowsVerbatimArguments: true,
+      });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("escapes caret arguments for Windows cmd.exe", () => {
     expect(
       resolvePnpmRunner({
         comSpec: "C:\\Windows\\System32\\cmd.exe",
+        env: { PATH: "" },
         npmExecPath: "",
         pnpmArgs: ["exec", "vitest", "-t", "@scope/pkg@^1.2.3"],
         platform: "win32",

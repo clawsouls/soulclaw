@@ -67,7 +67,9 @@ export function resolveSpawnCall(cmd, args, envOverride, params = {}) {
 export function resolvePnpmSpawnCall(pnpmArgs, envOverride, params = {}) {
   const env = envOverride ?? process.env;
   const platform = params.platform ?? process.platform;
+  const cwd = params.cwd ?? uiDir;
   const runner = resolvePnpmRunner({
+    cwd,
     env,
     pnpmArgs,
     nodeExecPath: params.nodeExecPath ?? process.execPath,
@@ -79,7 +81,7 @@ export function resolvePnpmSpawnCall(pnpmArgs, envOverride, params = {}) {
     command: runner.command,
     args: runner.args,
     options: {
-      cwd: params.cwd ?? uiDir,
+      cwd,
       stdio: "inherit",
       env,
       shell: runner.shell,
