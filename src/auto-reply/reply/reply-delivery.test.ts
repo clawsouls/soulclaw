@@ -423,4 +423,33 @@ describe("createBlockReplyDeliveryHandler", () => {
       assistantMessageIndex: 7,
     });
   });
+
+  it("records concurrent direct block deliveries in emission order", async () => {
+    const resolvers: Array<() => void> = [];
+    const directlySentBlockPayloads: Array<ReplyPayload | undefined> = [];
+    const handler = createBlockReplyDeliveryHandler({
+      onBlockReply: () =>
+        new Promise<void>((resolve) => {
+          resolvers.push(resolve);
+        }),
+      normalizeStreamingText: (payload) => ({ text: payload.text, skip: false }),
+      applyReplyToMode: (payload) => payload,
+      typingSignals: {
+        signalTextDelta: vi.fn(async () => {}),
+      } as unknown as TypingSignaler,
+      blockStreamingEnabled: true,
+      blockReplyPipeline: null,
+      directlySentBlockKeys: new Set(),
+      directlySentBlockPayloads,
+    });
+
+    const first = handler({ text: "first" });
+    const second = handler({ text: "second" });
+    resolvers[1]?.();
+    await second;
+    resolvers[0]?.();
+    await first;
+
+    expect(directlySentBlockPayloads.map((payload) => payload?.text)).toEqual(["first", "second"]);
+  });
 });
