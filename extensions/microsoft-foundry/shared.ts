@@ -110,6 +110,11 @@ type FoundryModelCapabilities = {
   compat?: FoundryModelCompat;
 };
 
+type FoundryProviderConfigPatch = Omit<ModelProviderConfig, "apiKey" | "headers"> & {
+  apiKey?: SecretInput | null;
+  headers?: Record<string, SecretInput> | null;
+};
+
 function normalizeModelInput(input?: unknown): Array<"text" | "image"> {
   const normalized = Array.isArray(input)
     ? input.filter((item): item is "text" | "image" => item === "text" || item === "image")
@@ -456,7 +461,7 @@ function buildFoundryProviderConfig(
     apiKey?: SecretInput;
     deployments?: FoundryDeploymentConfigInput[];
   },
-): ModelProviderConfig {
+): FoundryProviderConfigPatch {
   const runtimeApiKey = options?.authMethod === "api-key" ? options.apiKey : undefined;
   const isApiKeyAuth = options?.authMethod === "api-key";
   const isEntraIdAuth = options?.authMethod === "entra-id";
@@ -475,7 +480,7 @@ function buildFoundryProviderConfig(
             : {}),
         }
       : isEntraIdAuth
-        ? { authHeader: true }
+        ? { authHeader: true, apiKey: null, headers: null }
         : {}),
     models: deployments.map((deployment) => {
       const capabilities = resolveFoundryModelCapabilities(
@@ -687,7 +692,7 @@ export function buildFoundryAuthResult(params: {
               apiKey: params.apiKey,
               deployments: params.deployments,
             },
-          ),
+          ) as unknown as ModelProviderConfig,
         },
       },
       ...buildPluginsAllowPatch(params.currentPluginsAllow),

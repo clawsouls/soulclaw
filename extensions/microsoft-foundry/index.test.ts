@@ -1293,6 +1293,27 @@ describe("microsoft-foundry plugin", () => {
     expect(provider?.models[0]?.compat).toBeUndefined();
   });
 
+  it("clears stale API-key credentials when writing Entra provider patches", () => {
+    const result = buildFoundryAuthResult({
+      profileId: "microsoft-foundry:entra",
+      apiKey: "__entra_id_dynamic__",
+      endpoint: "https://example.services.ai.azure.com/openai/v1",
+      modelId: "prod-fable",
+      modelNameHint: "claude-fable-5",
+      api: "anthropic-messages",
+      authMethod: "entra-id",
+    });
+
+    const provider = result.configPatch?.models?.providers?.["microsoft-foundry"] as
+      | Record<string, unknown>
+      | undefined;
+    expect(provider).toMatchObject({
+      authHeader: true,
+      apiKey: null,
+      headers: null,
+    });
+  });
+
   it.each([
     "claude-mythos-preview",
     "claude-fable-5",
