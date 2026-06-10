@@ -95,7 +95,7 @@ function isCurrentSessionSubmittedProgress(
     item.sessionKey === sessionKey &&
     !item.pendingRunId &&
     (item.sendState === "sending" || item.sendState === "waiting-model") &&
-    (!hasTerminalRunStatus(status) || item.sendRunId !== status.runId)
+    (status == null || item.sendRunId !== status.runId)
   );
 }
 
