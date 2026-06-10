@@ -53,6 +53,7 @@ import {
   type ToolResultMessage,
 } from "openclaw/plugin-sdk/llm";
 import {
+  isClaudeAdaptiveThinkingDefaultModelId,
   resolveClaudeFable5ModelIdentity,
   resolveClaudeModelIdentity,
   supportsClaudeAdaptiveThinking,
@@ -351,29 +352,38 @@ export const streamSimpleBedrock: StreamFunction<"bedrock-converse-stream", Simp
   model: Model<"bedrock-converse-stream">,
   context: Context,
   options?: SimpleStreamOptions,
-) => {
+) => streamBedrock(model, context, resolveSimpleBedrockOptions(model, options));
+
+function resolveSimpleBedrockOptions(
+  model: Model<"bedrock-converse-stream">,
+  options?: SimpleStreamOptions,
+): BedrockOptions {
   const base = buildBaseOptions(model, options, undefined);
   if (usesClaudeFable5BedrockContract(model)) {
-    return streamBedrock(model, context, {
+    return {
       ...base,
       reasoning: options?.reasoning ?? "high",
       thinkingBudgets: options?.thinkingBudgets,
-    } satisfies BedrockOptions);
+    } satisfies BedrockOptions;
   }
   if (!options?.reasoning) {
-    return streamBedrock(model, context, {
+    const reasoning =
+      isAnthropicClaudeModel(model) && requiresMandatoryAdaptiveThinking(model)
+        ? "high"
+        : undefined;
+    return {
       ...base,
-      reasoning: undefined,
-    } satisfies BedrockOptions);
+      reasoning,
+    } satisfies BedrockOptions;
   }
 
   if (isAnthropicClaudeModel(model)) {
     if (supportsAdaptiveThinking(model)) {
-      return streamBedrock(model, context, {
+      return {
         ...base,
         reasoning: options.reasoning,
         thinkingBudgets: options.thinkingBudgets,
-      } satisfies BedrockOptions);
+      } satisfies BedrockOptions;
     }
 
     // Undefined means the caller did not request an output cap; let the helper use the model cap.
@@ -385,7 +395,7 @@ export const streamSimpleBedrock: StreamFunction<"bedrock-converse-stream", Simp
       options.thinkingBudgets,
     );
 
-    return streamBedrock(model, context, {
+    return {
       ...base,
       maxTokens: adjusted.maxTokens,
       reasoning: options.reasoning,
@@ -393,15 +403,15 @@ export const streamSimpleBedrock: StreamFunction<"bedrock-converse-stream", Simp
         ...options.thinkingBudgets,
         [clampReasoning(options.reasoning)!]: adjusted.thinkingBudget,
       },
-    } satisfies BedrockOptions);
+    } satisfies BedrockOptions;
   }
 
-  return streamBedrock(model, context, {
+  return {
     ...base,
     reasoning: options.reasoning,
     thinkingBudgets: options.thinkingBudgets,
-  } satisfies BedrockOptions);
-};
+  } satisfies BedrockOptions;
+}
 
 function handleContentBlockStart(
   event: ContentBlockStartEvent,
@@ -562,6 +572,14 @@ function supportsAdaptiveThinking(model: Model<"bedrock-converse-stream">): bool
   const profileModelId = resolveClaudeProfileNameModelId(model.name);
   return (
     supportsClaudeAdaptiveThinking(model) || supportsClaudeAdaptiveThinking({ id: profileModelId })
+  );
+}
+
+function requiresMandatoryAdaptiveThinking(model: Model<"bedrock-converse-stream">): boolean {
+  const profileModelId = resolveClaudeProfileNameModelId(model.name);
+  return (
+    isClaudeAdaptiveThinkingDefaultModelId(resolveClaudeModelIdentity(model)) ||
+    (profileModelId ? isClaudeAdaptiveThinkingDefaultModelId(profileModelId) : false)
   );
 }
 
@@ -1071,9 +1089,11 @@ function createImageBlock(mimeType: string, data: string) {
 
 /** Test-only hooks for Bedrock runtime conversion and endpoint policy. */
 export const testing = {
+  buildAdditionalModelRequestFields,
   convertMessages,
   getConfiguredBedrockRegion,
   hasConfiguredBedrockProfile,
   mapThinkingLevelToEffort,
+  resolveSimpleBedrockOptions,
   shouldUseExplicitBedrockEndpoint,
 };

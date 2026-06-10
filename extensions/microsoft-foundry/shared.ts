@@ -111,8 +111,8 @@ type FoundryModelCapabilities = {
 };
 
 type FoundryProviderConfigPatch = Omit<ModelProviderConfig, "apiKey" | "headers"> & {
-  apiKey?: SecretInput | null;
-  headers?: Record<string, SecretInput> | null;
+  apiKey?: SecretInput | undefined;
+  headers?: Record<string, SecretInput> | undefined;
 };
 
 function normalizeModelInput(input?: unknown): Array<"text" | "image"> {
@@ -481,7 +481,7 @@ function buildFoundryProviderConfig(
             : {}),
         }
       : isEntraIdAuth
-        ? { authHeader: true, apiKey: null, headers: null }
+        ? { authHeader: true, apiKey: undefined, headers: undefined }
         : {}),
     models: deployments.map((deployment) => {
       const capabilities = resolveFoundryModelCapabilities(

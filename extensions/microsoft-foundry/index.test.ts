@@ -1307,11 +1307,11 @@ describe("microsoft-foundry plugin", () => {
     const provider = result.configPatch?.models?.providers?.["microsoft-foundry"] as
       | Record<string, unknown>
       | undefined;
-    expect(provider).toMatchObject({
-      authHeader: true,
-      apiKey: null,
-      headers: null,
-    });
+    expect(provider?.authHeader).toBe(true);
+    expect(Object.hasOwn(provider ?? {}, "apiKey")).toBe(true);
+    expect(Object.hasOwn(provider ?? {}, "headers")).toBe(true);
+    expect(provider?.apiKey).toBeUndefined();
+    expect(provider?.headers).toBeUndefined();
   });
 
   it.each([

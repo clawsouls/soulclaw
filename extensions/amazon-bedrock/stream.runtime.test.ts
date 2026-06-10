@@ -167,7 +167,22 @@ describe("Bedrock profile endpoint resolution", () => {
 });
 
 describe("Bedrock thinking effort mapping", () => {
-  it("caps max effort at high for Claude Sonnet 4.6", () => {
+  it("forces adaptive thinking for mandatory Claude models when callers omit reasoning", () => {
+    const model = bedrockModel({
+      id: "anthropic.claude-sonnet-4-6-v1:0",
+      name: "Claude Sonnet 4.6",
+      reasoning: true,
+    });
+    const options = testing.resolveSimpleBedrockOptions(model, {});
+
+    expect(options.reasoning).toBe("high");
+    expect(testing.buildAdditionalModelRequestFields(model, options)).toEqual({
+      thinking: { type: "adaptive", display: "summarized" },
+      output_config: { effort: "high" },
+    });
+  });
+
+  it("clamps max effort for Claude models without native max support", () => {
     expect(
       testing.mapThinkingLevelToEffort(
         bedrockModel({
