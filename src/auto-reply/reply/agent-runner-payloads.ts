@@ -342,16 +342,22 @@ export async function buildReplyPayloads(params: {
     if (!text || !params.directlySentBlockPayloads?.length) {
       return false;
     }
-    const assistantMessageIndex = getReplyPayloadMetadata(payload)?.assistantMessageIndex;
-    const fragments = params.directlySentBlockPayloads.flatMap((sentPayload) => {
-      if (getReplyPayloadMetadata(sentPayload)?.assistantMessageIndex !== assistantMessageIndex) {
-        return [];
-      }
+    const fragmentsByAssistantMessage = new Map<number | undefined, string[]>();
+    for (const sentPayload of params.directlySentBlockPayloads) {
       const sentText = resolveSendableOutboundReplyParts(sentPayload).trimmedText;
-      return sentText ? [sentText] : [];
-    });
+      if (!sentText) {
+        continue;
+      }
+      const assistantMessageIndex = getReplyPayloadMetadata(sentPayload)?.assistantMessageIndex;
+      const fragments = fragmentsByAssistantMessage.get(assistantMessageIndex) ?? [];
+      fragments.push(sentText);
+      fragmentsByAssistantMessage.set(assistantMessageIndex, fragments);
+    }
     const normalize = (value: string) => value.replace(/\s+/g, "");
-    return normalize(fragments.join("")) === normalize(text);
+    const normalizedText = normalize(text);
+    return Array.from(fragmentsByAssistantMessage.values()).some(
+      (fragments) => normalize(fragments.join("")) === normalizedText,
+    );
   };
   const preserveUnsentMediaAfterBlockSend = (payload: ReplyPayload): ReplyPayload | null => {
     if (payload.isError || payload.isFallbackNotice) {
