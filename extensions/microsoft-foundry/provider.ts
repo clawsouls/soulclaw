@@ -194,10 +194,13 @@ export function buildMicrosoftFoundryProvider(): ProviderPlugin {
       if (!isFoundryClaudeMythosPreview(capabilities.modelName)) {
         return profile;
       }
+      const levels = profile.levels.filter((level) => level.id !== "off");
       return {
         ...profile,
         defaultLevel: "adaptive",
-        levels: [...profile.levels.filter((level) => level.id !== "off"), { id: "adaptive" }],
+        levels: levels.some((level) => level.id === "adaptive")
+          ? levels
+          : [...levels, { id: "adaptive" }],
       };
     },
     normalizeResolvedModel: ({ modelId, model }: ProviderNormalizeResolvedModelContext) => {

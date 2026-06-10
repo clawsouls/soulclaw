@@ -230,12 +230,23 @@ function resolveFoundryModelTokenLimits(value?: string | null): {
   maxTokens: number;
 } {
   const normalized = normalizeFoundryModelName(value);
+  const normalizedVersion = normalized?.replace(/\./g, "-");
   if (
     normalized &&
     (supportsClaudeAdaptiveThinking({ id: normalized }) ||
       requiresFoundryMandatoryAdaptiveClaudeThinking(normalized))
   ) {
     return { contextWindow: 1_000_000, maxTokens: 128_000 };
+  }
+  if (
+    normalizedVersion === "claude-opus-4-5" ||
+    normalizedVersion === "claude-sonnet-4-5" ||
+    normalizedVersion === "claude-haiku-4-5"
+  ) {
+    return { contextWindow: 200_000, maxTokens: 64_000 };
+  }
+  if (normalizedVersion === "claude-opus-4-1") {
+    return { contextWindow: 200_000, maxTokens: 32_000 };
   }
   if (normalized === "mai-ds-r1") {
     return { contextWindow: 163_840, maxTokens: 163_840 };

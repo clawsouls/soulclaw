@@ -542,8 +542,9 @@ describe("Anthropic provider", () => {
     const stream = streamSimpleAnthropic(
       makeAnthropicModel({
         id: "prod-mythos-preview",
-        name: "claude-mythos-preview",
+        name: "Production Claude",
         provider: "microsoft-foundry",
+        params: { canonicalModelId: "claude-mythos-preview" },
         reasoning: true,
       }),
       {
@@ -565,6 +566,37 @@ describe("Anthropic provider", () => {
       thinking: { type: "adaptive" },
       output_config: { effort: "high" },
     });
+  });
+
+  it("does not infer adaptive thinking from forward-compatible effort maps", async () => {
+    let capturedPayload: unknown;
+    const stream = streamSimpleAnthropic(
+      makeAnthropicModel({
+        id: "claude-future",
+        name: "Future Claude",
+        provider: "github-copilot",
+        reasoning: true,
+        thinkingLevelMap: { xhigh: null, max: "max" },
+      }),
+      {
+        messages: [{ role: "user", content: "hello", timestamp: 0 }],
+      },
+      {
+        apiKey: "copilot-token",
+        reasoning: "max",
+        onPayload: (payload) => {
+          capturedPayload = payload;
+          throw new Error("stop before network");
+        },
+      },
+    );
+
+    await stream.result();
+
+    expect(capturedPayload).toMatchObject({
+      thinking: { type: "enabled" },
+    });
+    expect((capturedPayload as { output_config?: unknown }).output_config).toBeUndefined();
   });
 
   it.each([

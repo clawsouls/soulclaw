@@ -814,24 +814,7 @@ function normalizeAnthropicToolChoice(
  * Check if a model supports adaptive thinking (Fable 5, Opus 4.6+, Sonnet 4.6).
  */
 function supportsAdaptiveThinking(model: Model<"anthropic-messages">): boolean {
-  return (
-    supportsClaudeAdaptiveThinking(model) ||
-    model.thinkingLevelMap?.max === "max" ||
-    isClaudeMythosPreviewModel(model)
-  );
-}
-
-function isClaudeMythosPreviewModel(model: Model<"anthropic-messages">): boolean {
-  return [model.id, model.name, model.params?.canonicalModelId]
-    .filter((value): value is string => typeof value === "string")
-    .some((value) =>
-      /(?:^|-)claude-mythos-preview(?=$|[^a-z0-9])/.test(
-        value
-          .trim()
-          .toLowerCase()
-          .replace(/[\s_.:]+/g, "-"),
-      ),
-    );
+  return supportsClaudeAdaptiveThinking(model);
 }
 
 function supportsNativeXhighEffort(model: Model<"anthropic-messages">): boolean {

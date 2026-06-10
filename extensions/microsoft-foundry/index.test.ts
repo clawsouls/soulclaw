@@ -1366,6 +1366,10 @@ describe("microsoft-foundry plugin", () => {
     ["claude-opus-4.7", 128_000],
     ["claude-opus-4.6", 128_000],
     ["claude-sonnet-4.6", 128_000],
+    ["claude-opus-4.5", 64_000],
+    ["claude-sonnet-4.5", 64_000],
+    ["claude-haiku-4.5", 64_000],
+    ["claude-opus-4.1", 32_000],
   ] as const)("preserves Foundry Claude token limits for %s", (modelNameHint, maxTokens) => {
     const result = buildFoundryAuthResult({
       profileId: "microsoft-foundry:entra",
@@ -1380,7 +1384,7 @@ describe("microsoft-foundry plugin", () => {
     expect(result.configPatch?.models?.providers?.["microsoft-foundry"]?.models[0]).toMatchObject({
       name: modelNameHint,
       api: "anthropic-messages",
-      contextWindow: 1_000_000,
+      contextWindow: maxTokens === 128_000 ? 1_000_000 : 200_000,
       maxTokens,
     });
   });
