@@ -361,6 +361,13 @@ export async function buildReplyPayloads(params: {
       audioAsVoice: payload.audioAsVoice || undefined,
     });
   };
+  const preserveDirectlyUnsentPayload = (payload: ReplyPayload): ReplyPayload | null => {
+    const reply = resolveSendableOutboundReplyParts(payload);
+    if (!reply.hasMedia || !reply.trimmedText) {
+      return payload;
+    }
+    return preserveUnsentMediaAfterBlockSend(payload);
+  };
   const contentSuppressedPayloads = shouldDropFinalPayloads
     ? (() => {
         const preserved: ReplyPayload[] = [];
@@ -380,7 +387,7 @@ export async function buildReplyPayloads(params: {
               !params.blockReplyPipeline?.hasSentPayload(payload) &&
               !isDirectlySentBlockPayload(payload)
             ) {
-              const next = preserveUnsentMediaAfterBlockSend(payload);
+              const next = preserveDirectlyUnsentPayload(payload);
               if (next) {
                 unsent.push(next);
               }
@@ -395,7 +402,7 @@ export async function buildReplyPayloads(params: {
               if (params.directlySentBlockKeys.has(createBlockReplyContentKey(payload))) {
                 continue;
               }
-              const next = preserveUnsentMediaAfterBlockSend(payload);
+              const next = preserveDirectlyUnsentPayload(payload);
               if (next) {
                 unsent.push(next);
               }

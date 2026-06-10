@@ -833,6 +833,22 @@ describe("buildReplyPayloads media filter integration", () => {
     });
   });
 
+  it("keeps unmatched text finals when unrelated direct blocks were sent", async () => {
+    const { createBlockReplyContentKey } = await import("./block-reply-pipeline.js");
+    const directlySentBlockKeys = new Set<string>([
+      createBlockReplyContentKey({ mediaUrl: "/tmp/other.png" }),
+    ]);
+
+    const { replyPayloads } = await buildReplyPayloads({
+      ...baseParams,
+      blockStreamingEnabled: true,
+      directlySentBlockKeys,
+      payloads: [{ text: "new final response" }],
+    });
+
+    expect(replyPayloads).toEqual([{ text: "new final response" }]);
+  });
+
   it("does not suppress same-target replies when accountId differs", async () => {
     const { replyPayloads } = await buildReplyPayloads({
       ...baseParams,
