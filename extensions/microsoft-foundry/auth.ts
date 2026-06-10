@@ -26,6 +26,7 @@ import {
 } from "./onboard.js";
 import {
   buildFoundryAuthResult,
+  formatFoundryApiLabel,
   type FoundryProviderApi,
   isFoundryMaiImageModel,
   listConfiguredFoundryProfileIds,
@@ -154,7 +155,7 @@ export const entraIdAuthMethod: ProviderAuthMethod = {
             `Endpoint: ${endpoint}`,
             `Deployment: ${modelId}`,
             selectedDeployment.modelName ? `Model: ${selectedDeployment.modelName}` : undefined,
-            `API: ${api === "openai-responses" ? "Responses" : "Chat Completions"}`,
+            `API: ${formatFoundryApiLabel(api)}`,
           ]
             .filter(Boolean)
             .join("\n"),

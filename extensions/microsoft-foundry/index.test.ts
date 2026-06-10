@@ -18,6 +18,7 @@ import {
   COGNITIVE_SERVICES_RESOURCE,
   FOUNDRY_ANTHROPIC_SCOPE,
   buildFoundryAuthResult,
+  formatFoundryApiLabel,
   isAnthropicFoundryDeployment,
   isFoundryMaiImageModel,
   normalizeFoundryEndpoint,
@@ -839,6 +840,12 @@ describe("microsoft-foundry plugin", () => {
     expect(isFoundryMaiImageModel("MAI-Image-2.5-Flash")).toBe(true);
     expect(isFoundryMaiImageModel("MAI-Image-2e")).toBe(true);
     expect(isFoundryMaiImageModel("MAI-DS-R1")).toBe(false);
+  });
+
+  it("labels all Foundry API surfaces for onboarding summaries", () => {
+    expect(formatFoundryApiLabel("openai-completions")).toBe("Chat Completions");
+    expect(formatFoundryApiLabel("openai-responses")).toBe("Responses");
+    expect(formatFoundryApiLabel("anthropic-messages")).toBe("Anthropic Messages");
   });
 
   it("records MAI chat deployments with reasoning-content token limits", () => {
