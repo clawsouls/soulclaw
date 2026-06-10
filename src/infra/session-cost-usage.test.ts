@@ -1453,7 +1453,7 @@ describe("session cost usage", () => {
           ([, dest]) => dest === cachePath,
         ).length;
 
-        // Without throttling this would be ~sessionCount + 1 writes (601).
+        // Without throttling this cold refresh would rewrite once per file plus a final flush.
         // With checkpointing it must be far fewer than the file count.
         expect(cacheRenamesAfterCold).toBeGreaterThan(0);
         expect(cacheRenamesAfterCold).toBeLessThan(sessionCount / 4);
