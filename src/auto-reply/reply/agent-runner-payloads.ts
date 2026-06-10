@@ -344,7 +344,8 @@ export async function buildReplyPayloads(params: {
     }
     const fragmentsByAssistantMessage = new Map<number | undefined, string[]>();
     for (const sentPayload of params.directlySentBlockPayloads) {
-      const sentText = resolveSendableOutboundReplyParts(sentPayload).trimmedText;
+      const sentText =
+        sentPayload.text ?? resolveSendableOutboundReplyParts(sentPayload).trimmedText;
       if (!sentText) {
         continue;
       }
