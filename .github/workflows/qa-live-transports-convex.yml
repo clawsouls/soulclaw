@@ -186,7 +186,7 @@ jobs:
 
       - name: Build private QA runtime
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
+          NODE_OPTIONS: --max-old-space-size=12288
         run: pnpm build
 
       - name: Run OpenAI candidate lane
@@ -267,7 +267,7 @@ jobs:
 
       - name: Build private QA runtime
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
+          NODE_OPTIONS: --max-old-space-size=12288
         run: pnpm build
 
       - name: Run live runtime parity lane
@@ -352,7 +352,7 @@ jobs:
 
       - name: Build private QA runtime
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
+          NODE_OPTIONS: --max-old-space-size=12288
         run: pnpm build
 
       - name: Run Matrix live lane
@@ -437,7 +437,7 @@ jobs:
 
       - name: Build private QA runtime
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
+          NODE_OPTIONS: --max-old-space-size=12288
         run: pnpm build
 
       - name: Run Matrix live lane shard
@@ -520,7 +520,7 @@ jobs:
 
       - name: Build private QA runtime
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
+          NODE_OPTIONS: --max-old-space-size=12288
         run: pnpm build
 
       - name: Run Telegram live lane
@@ -615,7 +615,7 @@ jobs:
 
       - name: Build private QA runtime
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
+          NODE_OPTIONS: --max-old-space-size=12288
         run: pnpm build
 
       - name: Run Discord live lane
@@ -712,7 +712,7 @@ jobs:
 
       - name: Build private QA runtime
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
+          NODE_OPTIONS: --max-old-space-size=12288
         run: pnpm build
 
       - name: Run WhatsApp live lane
@@ -806,7 +806,7 @@ jobs:
 
       - name: Build private QA runtime
         env:
-          NODE_OPTIONS: --max-old-space-size=8192
+          NODE_OPTIONS: --max-old-space-size=12288
         run: pnpm build
 
       - name: Run Slack live lane
