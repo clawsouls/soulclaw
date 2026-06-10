@@ -332,7 +332,7 @@ export async function buildReplyPayloads(params: {
     : mediaFilteredPayloads;
   const isDirectlySentBlockPayload = (payload: ReplyPayload) =>
     Boolean(params.directlySentBlockKeys?.has(createBlockReplyContentKey(payload)));
-  const preserveUnsentMediaAfterBlockStream = (payload: ReplyPayload): ReplyPayload | null => {
+  const preserveUnsentMediaAfterBlockSend = (payload: ReplyPayload): ReplyPayload | null => {
     if (payload.isError || payload.isFallbackNotice) {
       return payload;
     }
@@ -349,7 +349,10 @@ export async function buildReplyPayloads(params: {
       mediaUrls: undefined,
       audioAsVoice: undefined,
     });
-    if (!params.blockReplyPipeline?.hasSentPayload(textOnlyPayload)) {
+    const textWasSent = params.blockReplyPipeline?.hasSentPayload(textOnlyPayload)
+      ? true
+      : Boolean(params.directlySentBlockKeys?.has(createBlockReplyContentKey(textOnlyPayload)));
+    if (!textWasSent) {
       return payload;
     }
     return copyReplyPayloadMetadata(payload, {
@@ -362,7 +365,7 @@ export async function buildReplyPayloads(params: {
     ? (() => {
         const preserved: ReplyPayload[] = [];
         for (const payload of dedupedPayloads) {
-          const next = preserveUnsentMediaAfterBlockStream(payload);
+          const next = preserveUnsentMediaAfterBlockSend(payload);
           if (next) {
             preserved.push(next);
           }
@@ -386,8 +389,12 @@ export async function buildReplyPayloads(params: {
         ? (() => {
             const unsent: ReplyPayload[] = [];
             for (const payload of dedupedPayloads) {
-              if (!params.directlySentBlockKeys.has(createBlockReplyContentKey(payload))) {
-                unsent.push(payload);
+              if (params.directlySentBlockKeys.has(createBlockReplyContentKey(payload))) {
+                continue;
+              }
+              const next = preserveUnsentMediaAfterBlockSend(payload);
+              if (next) {
+                unsent.push(next);
               }
             }
             return unsent;
