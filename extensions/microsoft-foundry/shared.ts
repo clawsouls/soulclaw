@@ -333,14 +333,11 @@ export function isFoundryProviderApi(value?: string | null): value is FoundryPro
 }
 
 export function formatFoundryApiLabel(api: FoundryProviderApi): string {
-  switch (api) {
-    case DEFAULT_GPT5_API:
-      return "Responses";
-    case ANTHROPIC_MESSAGES_API:
-      return "Anthropic Messages";
-    case DEFAULT_API:
-      return "Chat Completions";
-  }
+  return api === DEFAULT_GPT5_API
+    ? "Responses"
+    : api === ANTHROPIC_MESSAGES_API
+      ? "Anthropic Messages"
+      : "Chat Completions";
 }
 
 export function normalizeFoundryEndpoint(endpoint: string): string {
