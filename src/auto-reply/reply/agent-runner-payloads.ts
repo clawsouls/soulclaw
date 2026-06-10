@@ -355,11 +355,8 @@ export async function buildReplyPayloads(params: {
     }
     const normalize = (value: string) => value.replace(/\s+/g, "");
     const normalizedText = normalize(text);
-    const indexedGroups = Array.from(fragmentsByAssistantMessage.entries()).filter(
-      (entry): entry is [number, string[]] => entry[0] !== undefined,
-    );
-    const latestIndexedGroup = indexedGroups.sort(([left], [right]) => right - left)[0]?.[1];
-    const applicableFragments = latestIndexedGroup ?? fragmentsByAssistantMessage.get(undefined);
+    const assistantMessageIndex = getReplyPayloadMetadata(payload)?.assistantMessageIndex;
+    const applicableFragments = fragmentsByAssistantMessage.get(assistantMessageIndex);
     return applicableFragments ? normalize(applicableFragments.join("")) === normalizedText : false;
   };
   const preserveUnsentMediaAfterBlockSend = (payload: ReplyPayload): ReplyPayload | null => {

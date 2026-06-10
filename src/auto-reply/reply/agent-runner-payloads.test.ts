@@ -946,8 +946,14 @@ describe("buildReplyPayloads media filter integration", () => {
   it("matches direct fragments within each assistant message", async () => {
     const firstDirect = setReplyPayloadMetadata({ text: "alpha" }, { assistantMessageIndex: 1 });
     const secondDirect = setReplyPayloadMetadata({ text: "beta" }, { assistantMessageIndex: 2 });
-    const firstFinal = { text: "alpha\n\nMEDIA:/tmp/a.png" };
-    const secondFinal = { text: "beta\n\nMEDIA:/tmp/b.png" };
+    const firstFinal = setReplyPayloadMetadata(
+      { text: "alpha\n\nMEDIA:/tmp/a.png" },
+      { assistantMessageIndex: 1 },
+    );
+    const secondFinal = setReplyPayloadMetadata(
+      { text: "beta\n\nMEDIA:/tmp/b.png" },
+      { assistantMessageIndex: 2 },
+    );
 
     const { replyPayloads } = await buildReplyPayloads({
       ...baseParams,
@@ -956,7 +962,7 @@ describe("buildReplyPayloads media filter integration", () => {
       payloads: [firstFinal, secondFinal],
     });
 
-    expect(replyPayloads.map((payload) => payload.text)).toEqual(["alpha", undefined]);
+    expect(replyPayloads.map((payload) => payload.text)).toEqual([undefined, undefined]);
     expect(replyPayloads.map((payload) => payload.mediaUrls)).toEqual([
       ["/tmp/a.png"],
       ["/tmp/b.png"],
