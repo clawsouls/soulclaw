@@ -863,7 +863,7 @@ describe("buildReplyPayloads media filter integration", () => {
       ...baseParams,
       blockStreamingEnabled: true,
       directlySentBlockKeys,
-      directlySentBlockPayloads: [{ text: "Preview" }, { text: "below" }],
+      directlySentBlockPayloads: [{ text: "Preview" }, { text: " below" }],
       payloads: [{ text: "Preview below\n\nMEDIA:/tmp/generated.png" }],
     });
 
@@ -891,6 +891,28 @@ describe("buildReplyPayloads media filter integration", () => {
     expectFields(replyPayloads[0], {
       text: undefined,
       mediaUrl: "/tmp/generated.png",
+      mediaUrls: ["/tmp/generated.png"],
+    });
+  });
+
+  it("preserves final text when internal whitespace changed", async () => {
+    const directlySentBlockPayloads = [
+      setReplyPayloadMetadata({ text: "constx=1" }, { assistantMessageIndex: 1 }),
+    ];
+    const finalPayload = setReplyPayloadMetadata(
+      { text: "const x = 1\n\nMEDIA:/tmp/generated.png" },
+      { assistantMessageIndex: 1 },
+    );
+
+    const { replyPayloads } = await buildReplyPayloads({
+      ...baseParams,
+      blockStreamingEnabled: true,
+      directlySentBlockPayloads,
+      payloads: [finalPayload],
+    });
+
+    expectFields(replyPayloads[0], {
+      text: "const x = 1",
       mediaUrls: ["/tmp/generated.png"],
     });
   });

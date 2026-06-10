@@ -353,11 +353,10 @@ export async function buildReplyPayloads(params: {
       fragments.push(sentText);
       fragmentsByAssistantMessage.set(assistantMessageIndex, fragments);
     }
-    const normalize = (value: string) => value.replace(/\s+/g, "");
-    const normalizedText = normalize(text);
+    const normalizedText = text.trim();
     const assistantMessageIndex = getReplyPayloadMetadata(payload)?.assistantMessageIndex;
     const applicableFragments = fragmentsByAssistantMessage.get(assistantMessageIndex);
-    return applicableFragments ? normalize(applicableFragments.join("")) === normalizedText : false;
+    return applicableFragments ? applicableFragments.join("").trim() === normalizedText : false;
   };
   const preserveUnsentMediaAfterBlockSend = (payload: ReplyPayload): ReplyPayload | null => {
     if (payload.isError || payload.isFallbackNotice) {
