@@ -42,7 +42,8 @@ Choose your preferred auth method and follow the setup steps.
         Claude Fable 5 and Claude Mythos-class Bedrock models require the Mantle Data Retention API mode `provider_data_share` before invocation. This opt-in allows Bedrock to share prompts and completions with Anthropic and retain them for up to 30 days for trust and safety review.
 
         ```bash
-        curl -X PUT https://bedrock-mantle.us-east-1.api.aws/v1/data_retention \
+        AWS_REGION="${AWS_REGION:-us-east-1}"
+        curl -X PUT "https://bedrock-mantle.${AWS_REGION}.api.aws/v1/data_retention" \
           -H "Authorization: Bearer $AWS_BEARER_TOKEN_BEDROCK" \
           -H "Content-Type: application/json" \
           -d '{ "mode": "provider_data_share" }'

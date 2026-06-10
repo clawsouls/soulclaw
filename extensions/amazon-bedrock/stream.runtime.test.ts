@@ -167,7 +167,7 @@ describe("Bedrock profile endpoint resolution", () => {
 });
 
 describe("Bedrock thinking effort mapping", () => {
-  it("forces adaptive thinking for mandatory Claude models when callers omit reasoning", () => {
+  it("does not force adaptive thinking for optional Claude models when callers omit reasoning", () => {
     const model = bedrockModel({
       id: "anthropic.claude-sonnet-4-6-v1:0",
       name: "Claude Sonnet 4.6",
@@ -175,11 +175,8 @@ describe("Bedrock thinking effort mapping", () => {
     });
     const options = testing.resolveSimpleBedrockOptions(model, {});
 
-    expect(options.reasoning).toBe("high");
-    expect(testing.buildAdditionalModelRequestFields(model, options)).toEqual({
-      thinking: { type: "adaptive", display: "summarized" },
-      output_config: { effort: "high" },
-    });
+    expect(options.reasoning).toBeUndefined();
+    expect(testing.buildAdditionalModelRequestFields(model, options)).toBeUndefined();
   });
 
   it("forces adaptive thinking for Bedrock Mythos Preview when callers omit reasoning", () => {

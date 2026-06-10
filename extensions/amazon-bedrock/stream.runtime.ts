@@ -53,7 +53,6 @@ import {
   type ToolResultMessage,
 } from "openclaw/plugin-sdk/llm";
 import {
-  isClaudeAdaptiveThinkingDefaultModelId,
   resolveClaudeFable5ModelIdentity,
   resolveClaudeModelIdentity,
   supportsClaudeAdaptiveThinking,
@@ -592,8 +591,6 @@ function supportsAdaptiveThinking(model: Model<"bedrock-converse-stream">): bool
 function requiresMandatoryAdaptiveThinking(model: Model<"bedrock-converse-stream">): boolean {
   const profileModelId = resolveClaudeProfileNameModelId(model.name);
   return (
-    isClaudeAdaptiveThinkingDefaultModelId(resolveClaudeModelIdentity(model)) ||
-    (profileModelId ? isClaudeAdaptiveThinkingDefaultModelId(profileModelId) : false) ||
     isClaudeMythosPreviewModelId(resolveClaudeModelIdentity(model)) ||
     isClaudeMythosPreviewModelId(profileModelId)
   );
