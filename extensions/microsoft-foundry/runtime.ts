@@ -1,5 +1,8 @@
 // Microsoft Foundry plugin module implements runtime behavior.
-import type { ProviderPrepareRuntimeAuthContext } from "openclaw/plugin-sdk/core";
+import type {
+  ProviderPreparedRuntimeAuth,
+  ProviderPrepareRuntimeAuthContext,
+} from "openclaw/plugin-sdk/core";
 import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
 import {
   asDateTimestampMs,
@@ -49,7 +52,9 @@ async function refreshEntraToken(params?: {
   return { apiKey: result.accessToken, expiresAt };
 }
 
-export async function prepareFoundryRuntimeAuth(ctx: ProviderPrepareRuntimeAuthContext) {
+export async function prepareFoundryRuntimeAuth(
+  ctx: ProviderPrepareRuntimeAuthContext,
+): Promise<ProviderPreparedRuntimeAuth> {
   if (ctx.apiKey !== "__entra_id_dynamic__") {
     return {
       apiKey: ctx.apiKey,
