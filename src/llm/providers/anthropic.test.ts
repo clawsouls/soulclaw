@@ -87,6 +87,7 @@ describe("Anthropic provider", () => {
     const model = makeAnthropicModel({
       provider: "microsoft-foundry",
       baseUrl: "https://example.services.ai.azure.com/anthropic",
+      authHeader: true,
     });
     const context = {
       messages: [{ role: "user", content: "hello", timestamp: 1 }],
@@ -106,6 +107,30 @@ describe("Anthropic provider", () => {
     expect(config.apiKey).toBeNull();
     expect(config.authToken).toBe("entra-access-token");
     expect(config.defaultHeaders?.["x-api-key"]).toBeUndefined();
+  });
+
+  it("keeps Microsoft Foundry API-key profiles on Anthropic API key auth", async () => {
+    const model = makeAnthropicModel({
+      provider: "microsoft-foundry",
+      baseUrl: "https://example.services.ai.azure.com/anthropic",
+      authHeader: false,
+    });
+    const context = {
+      messages: [{ role: "user", content: "hello", timestamp: 1 }],
+    } satisfies Context;
+
+    streamAnthropic(model, context, {
+      apiKey: "foundry-resource-key",
+    });
+
+    await vi.waitFor(() => expect(anthropicMockState.configs).toHaveLength(1));
+    const config = anthropicMockState.configs[0] as {
+      apiKey?: string | null;
+      authToken?: string | null;
+    };
+
+    expect(config.apiKey).toBe("foundry-resource-key");
+    expect(config.authToken).toBeNull();
   });
 
   it("preserves provider-signed Anthropic thinking and drops reasoning_content placeholders", async () => {

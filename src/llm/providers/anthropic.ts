@@ -945,7 +945,7 @@ function createClient(
     return { client, isOAuthToken: false };
   }
 
-  if (model.provider === "microsoft-foundry") {
+  if (model.provider === "microsoft-foundry" && model.authHeader === true) {
     const client = new Anthropic({
       apiKey: null,
       authToken: apiKey,

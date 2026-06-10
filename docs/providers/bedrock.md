@@ -38,6 +38,18 @@ Choose your preferred auth method and follow the setup steps.
         export AWS_BEARER_TOKEN_BEDROCK="..."
         ```
       </Step>
+      <Step title="Opt in to provider data sharing for Claude Fable 5">
+        Claude Fable 5 and Claude Mythos-class Bedrock models require the Bedrock Data Retention API mode `provider_data_share` before invocation. This opt-in allows Bedrock to share prompts and completions with Anthropic and retain them for up to 30 days for trust and safety review.
+
+        ```bash
+        curl -X PUT https://bedrock-mantle.us-east-1.api.aws/v1/data_retention \
+          -H "x-api-key: $BEDROCK_API_KEY" \
+          -H "Content-Type: application/json" \
+          -d '{ "mode": "provider_data_share" }'
+        ```
+
+        Use another Bedrock model in the config if you cannot accept that retention mode.
+      </Step>
       <Step title="Add a Bedrock provider and model to your config">
         No `apiKey` is required. Configure the provider with `auth: "aws-sdk"`:
 
