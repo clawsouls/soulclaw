@@ -91,7 +91,18 @@ function requirePrepareRuntimeAuth(
 }
 
 function requireRuntimeAuthResult(
-  result: { apiKey?: string; baseUrl?: string; expiresAt?: number } | undefined,
+  result:
+    | {
+        apiKey?: string;
+        baseUrl?: string;
+        expiresAt?: number;
+        request?: {
+          auth?:
+            | { mode: "authorization-bearer"; token: string }
+            | { mode: "header"; headerName: string; value: string };
+        };
+      }
+    | undefined,
 ) {
   if (!result) {
     throw new Error("expected Microsoft Foundry runtime auth result");
@@ -450,9 +461,39 @@ describe("microsoft-foundry plugin", () => {
     );
 
     expect(prepared.baseUrl).toBe("https://example.services.ai.azure.com/openai/v1");
+    expect(prepared.request?.auth).toEqual({
+      mode: "authorization-bearer",
+      token: "test-token",
+    });
     expect(execFileMock.mock.calls[0]?.[1]).toEqual(
       expect.arrayContaining(["--resource", COGNITIVE_SERVICES_RESOURCE]),
     );
+  });
+
+  it.each([
+    ["openai-responses", "api-key"],
+    ["anthropic-messages", "x-api-key"],
+  ] as const)("binds %s API-key auth to the active profile", async (api, headerName) => {
+    const provider = registerProvider();
+    const prepareRuntimeAuth = requirePrepareRuntimeAuth(provider);
+
+    const prepared = requireRuntimeAuthResult(
+      await prepareRuntimeAuth(
+        buildFoundryRuntimeAuthContext({
+          apiKey: "profile-api-key",
+          profileId: "microsoft-foundry:default",
+          model: buildFoundryModel({ api }),
+        }),
+      ),
+    );
+
+    expect(prepared).toEqual({
+      apiKey: "profile-api-key",
+      request: {
+        auth: { mode: "header", headerName, value: "profile-api-key" },
+      },
+    });
+    expect(execFileMock).not.toHaveBeenCalled();
   });
 
   it("uses active model routing when Entra metadata points at another deployment", async () => {
@@ -1201,7 +1242,7 @@ describe("microsoft-foundry plugin", () => {
     expect(normalized?.compat?.supportsReasoningEffort).toBe(false);
   });
 
-  it("writes Azure API key header overrides for API-key auth configs", () => {
+  it("keeps API-key credentials scoped to auth profiles", () => {
     const result = buildFoundryAuthResult({
       profileId: "microsoft-foundry:default",
       apiKey: "test-api-key",
@@ -1212,9 +1253,9 @@ describe("microsoft-foundry plugin", () => {
     });
 
     const provider = requireFoundryProviderPatch(result);
-    expect(provider.apiKey).toBe("test-api-key");
-    expect(provider.authHeader).toBe(false);
-    expect(provider.headers).toEqual({ "api-key": "test-api-key" });
+    expect(provider.apiKey).toBeUndefined();
+    expect(provider.authHeader).toBeUndefined();
+    expect(provider.headers).toBeUndefined();
   });
 
   it("uses the minimum supported response token count for GPT-5 connection tests", () => {
@@ -1331,7 +1372,7 @@ describe("microsoft-foundry plugin", () => {
     const provider = result.configPatch?.models?.providers?.["microsoft-foundry"];
     expect(provider?.baseUrl).toBe("https://example.services.ai.azure.com/anthropic");
     expect(provider?.api).toBe("anthropic-messages");
-    expect(provider?.authHeader).toBe(true);
+    expect(provider?.authHeader).toBeUndefined();
     expect(provider?.models[0]).toMatchObject({
       id: "prod-fable",
       name: "claude-fable-5",
@@ -1345,7 +1386,7 @@ describe("microsoft-foundry plugin", () => {
     expect(provider?.models[0]?.compat).toBeUndefined();
   });
 
-  it("clears stale API-key credentials when writing Entra provider patches", () => {
+  it("keeps Entra credentials scoped to auth profiles", () => {
     const result = buildFoundryAuthResult({
       profileId: "microsoft-foundry:entra",
       apiKey: "__entra_id_dynamic__",
@@ -1359,9 +1400,9 @@ describe("microsoft-foundry plugin", () => {
     const provider = result.configPatch?.models?.providers?.["microsoft-foundry"] as
       | Record<string, unknown>
       | undefined;
-    expect(provider?.authHeader).toBe(true);
-    expect(Object.hasOwn(provider ?? {}, "apiKey")).toBe(true);
-    expect(Object.hasOwn(provider ?? {}, "headers")).toBe(true);
+    expect(provider?.authHeader).toBeUndefined();
+    expect(Object.hasOwn(provider ?? {}, "apiKey")).toBe(false);
+    expect(Object.hasOwn(provider ?? {}, "headers")).toBe(false);
     expect(provider?.apiKey).toBeUndefined();
     expect(provider?.headers).toBeUndefined();
   });
@@ -1460,6 +1501,28 @@ describe("microsoft-foundry plugin", () => {
           { id: "high" },
           { id: "adaptive" },
           { id: "max" },
+        ],
+      });
+    }
+    for (const modelName of [
+      "claude-opus-4-1",
+      "claude-opus-4-5",
+      "claude-sonnet-4-5",
+      "claude-haiku-4-5",
+    ]) {
+      expect(
+        provider.resolveThinkingProfile?.({
+          provider: "microsoft-foundry",
+          modelId: `prod-${modelName}`,
+          params: { canonicalModelId: modelName },
+        }),
+      ).toMatchObject({
+        levels: [
+          { id: "off" },
+          { id: "minimal" },
+          { id: "low" },
+          { id: "medium" },
+          { id: "high" },
         ],
       });
     }
@@ -1763,7 +1826,7 @@ describe("microsoft-foundry plugin", () => {
     await expect(getAccessTokenResultAsync()).rejects.toThrow("Azure CLI is not logged in");
   });
 
-  it("keeps Azure API key header overrides when API-key auth uses a secret ref", () => {
+  it("keeps API-key secret refs scoped to auth profiles", () => {
     const secretRef = {
       source: "env" as const,
       provider: "default",
@@ -1779,9 +1842,9 @@ describe("microsoft-foundry plugin", () => {
     });
 
     const provider = requireFoundryProviderPatch(result);
-    expect(provider.apiKey).toBe(secretRef);
-    expect(provider.authHeader).toBe(false);
-    expect(provider.headers).toEqual({ "api-key": secretRef });
+    expect(provider.apiKey).toBeUndefined();
+    expect(provider.authHeader).toBeUndefined();
+    expect(provider.headers).toBeUndefined();
   });
 
   it("moves the selected Foundry auth profile to the front of auth.order", () => {

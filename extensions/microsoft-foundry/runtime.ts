@@ -51,7 +51,16 @@ async function refreshEntraToken(params?: {
 
 export async function prepareFoundryRuntimeAuth(ctx: ProviderPrepareRuntimeAuthContext) {
   if (ctx.apiKey !== "__entra_id_dynamic__") {
-    return null;
+    return {
+      apiKey: ctx.apiKey,
+      request: {
+        auth: {
+          mode: "header" as const,
+          headerName: ctx.model.api === ANTHROPIC_MESSAGES_API ? "x-api-key" : "api-key",
+          value: ctx.apiKey,
+        },
+      },
+    };
   }
   try {
     const authStore = ensureAuthProfileStore(ctx.agentDir, {
@@ -102,6 +111,9 @@ export async function prepareFoundryRuntimeAuth(ctx: ProviderPrepareRuntimeAuthC
         apiKey: cachedToken.token,
         expiresAt: cachedToken.expiresAt,
         ...(baseUrl ? { baseUrl } : {}),
+        request: {
+          auth: { mode: "authorization-bearer" as const, token: cachedToken.token },
+        },
       };
     }
     let refreshPromise = refreshPromises.get(cacheKey);
@@ -119,6 +131,9 @@ export async function prepareFoundryRuntimeAuth(ctx: ProviderPrepareRuntimeAuthC
     return {
       ...token,
       ...(baseUrl ? { baseUrl } : {}),
+      request: {
+        auth: { mode: "authorization-bearer" as const, token: token.apiKey },
+      },
     };
   } catch (err) {
     const details = formatErrorMessage(err);

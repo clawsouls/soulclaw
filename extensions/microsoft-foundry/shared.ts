@@ -225,6 +225,13 @@ export function requiresFoundryMandatoryAdaptiveClaudeThinking(value?: string | 
     : false;
 }
 
+function supportsFoundryManualClaudeThinking(value?: string | null): boolean {
+  const normalized = normalizeFoundryModelName(value)?.replace(/\./g, "-");
+  return normalized
+    ? /(?:^|-)claude-(?:opus-4-(?:1|5)|sonnet-4-5|haiku-4-5)(?=$|[^a-z0-9])/.test(normalized)
+    : false;
+}
+
 function resolveFoundryModelTokenLimits(value?: string | null): {
   contextWindow: number;
   maxTokens: number;
@@ -448,6 +455,7 @@ export function resolveFoundryModelCapabilities(
   const supportsClaudeThinking =
     isAnthropic &&
     (supportsClaudeAdaptiveThinking({ id: modelName }) ||
+      supportsFoundryManualClaudeThinking(modelName) ||
       requiresFoundryMandatoryAdaptiveClaudeThinking(modelName));
   const supportsClaudeXhighThinking =
     isAnthropic && supportsClaudeNativeXhighEffort({ id: modelName });
@@ -502,14 +510,9 @@ function buildFoundryProviderConfig(
   modelNameHint?: string | null,
   options?: {
     api?: FoundryProviderApi;
-    authMethod?: "api-key" | "entra-id";
-    apiKey?: SecretInput;
     deployments?: FoundryDeploymentConfigInput[];
   },
 ): FoundryProviderConfigPatch {
-  const runtimeApiKey = options?.authMethod === "api-key" ? options.apiKey : undefined;
-  const isApiKeyAuth = options?.authMethod === "api-key";
-  const isEntraIdAuth = options?.authMethod === "entra-id";
   const resolvedApi = resolveFoundryApi(modelId, modelNameHint, options?.api);
   const deployments = options?.deployments?.length
     ? options.deployments
@@ -517,16 +520,6 @@ function buildFoundryProviderConfig(
   return {
     baseUrl: buildFoundryProviderBaseUrl(endpoint, modelId, modelNameHint, resolvedApi),
     api: resolvedApi,
-    ...(isApiKeyAuth
-      ? {
-          authHeader: false,
-          ...(runtimeApiKey !== undefined
-            ? { apiKey: runtimeApiKey, headers: { "api-key": runtimeApiKey } }
-            : {}),
-        }
-      : isEntraIdAuth
-        ? { authHeader: true, apiKey: undefined, headers: undefined }
-        : {}),
     models: deployments.map((deployment) => {
       const capabilities = resolveFoundryModelCapabilities(
         deployment.name,
@@ -734,8 +727,6 @@ export function buildFoundryAuthResult(params: {
             params.modelNameHint,
             {
               api: params.api,
-              authMethod: params.authMethod,
-              apiKey: params.apiKey,
               deployments: params.deployments,
             },
           ) as unknown as ModelProviderConfig,
