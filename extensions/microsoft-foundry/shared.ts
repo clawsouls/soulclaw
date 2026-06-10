@@ -7,7 +7,7 @@ import {
   type SecretInput,
 } from "openclaw/plugin-sdk/provider-auth";
 import {
-  isClaudeMandatoryAdaptiveThinkingModelId,
+  resolveClaudeFable5ModelIdentity,
   supportsClaudeAdaptiveThinking,
   supportsClaudeNativeXhighEffort,
   type ModelApi,
@@ -218,7 +218,11 @@ export function requiresFoundryEntraIdClaudeAuth(value?: string | null): boolean
 
 export function requiresFoundryMandatoryAdaptiveClaudeThinking(value?: string | null): boolean {
   const normalized = normalizeFoundryModelName(value);
-  return normalized ? isClaudeMandatoryAdaptiveThinkingModelId(normalized) : false;
+  return normalized
+    ? resolveClaudeFable5ModelIdentity({ id: normalized }) !== undefined ||
+        normalized === "claude-mythos-preview" ||
+        normalized.startsWith("claude-mythos-")
+    : false;
 }
 
 function resolveFoundryModelTokenLimits(value?: string | null): {
@@ -226,7 +230,11 @@ function resolveFoundryModelTokenLimits(value?: string | null): {
   maxTokens: number;
 } {
   const normalized = normalizeFoundryModelName(value);
-  if (normalized && supportsClaudeAdaptiveThinking(normalized)) {
+  if (
+    normalized &&
+    (supportsClaudeAdaptiveThinking({ id: normalized }) ||
+      requiresFoundryMandatoryAdaptiveClaudeThinking(normalized))
+  ) {
     return { contextWindow: 1_000_000, maxTokens: 128_000 };
   }
   if (normalized === "mai-ds-r1") {
@@ -418,8 +426,12 @@ export function resolveFoundryModelCapabilities(
   const normalizedInput = normalizeModelInput(existingInput);
   const supportedReasoningEfforts = resolveFoundryReasoningEfforts(modelName);
   const isAnthropic = api === ANTHROPIC_MESSAGES_API || isAnthropicFoundryDeployment(modelName);
-  const supportsClaudeThinking = isAnthropic && supportsClaudeAdaptiveThinking(modelName);
-  const supportsClaudeXhighThinking = isAnthropic && supportsClaudeNativeXhighEffort(modelName);
+  const supportsClaudeThinking =
+    isAnthropic &&
+    (supportsClaudeAdaptiveThinking({ id: modelName }) ||
+      requiresFoundryMandatoryAdaptiveClaudeThinking(modelName));
+  const supportsClaudeXhighThinking =
+    isAnthropic && supportsClaudeNativeXhighEffort({ id: modelName });
   const tokenLimits = resolveFoundryModelTokenLimits(modelName);
   return {
     modelName,

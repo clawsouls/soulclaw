@@ -1420,8 +1420,9 @@ describe("microsoft-foundry plugin", () => {
         modelName: "claude-fable-5",
       } as never),
     ).toMatchObject({
-      defaultLevel: "adaptive",
+      defaultLevel: "high",
       levels: [
+        { id: "off" },
         { id: "minimal" },
         { id: "low" },
         { id: "medium" },

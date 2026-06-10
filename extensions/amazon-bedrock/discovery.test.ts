@@ -194,7 +194,7 @@ describe("bedrock discovery", () => {
       id: "us.anthropic.claude-fable-5",
       reasoning: true,
       contextWindow: 1_000_000,
-      thinkingLevelMap: { xhigh: "xhigh", max: "max" },
+      thinkingLevelMap: { off: "low", minimal: "low", xhigh: "xhigh", max: "max" },
     });
   });
 

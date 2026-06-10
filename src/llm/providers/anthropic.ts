@@ -781,7 +781,7 @@ function normalizeAnthropicToolChoice(
  * Check if a model supports adaptive thinking (Fable 5, Opus 4.6+, Sonnet 4.6).
  */
 function supportsAdaptiveThinking(model: Model<"anthropic-messages">): boolean {
-  return supportsClaudeAdaptiveThinking(model);
+  return supportsClaudeAdaptiveThinking(model) || model.thinkingLevelMap?.max === "max";
 }
 
 function supportsNativeXhighEffort(model: Model<"anthropic-messages">): boolean {

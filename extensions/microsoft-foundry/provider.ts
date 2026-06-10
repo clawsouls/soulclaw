@@ -183,12 +183,14 @@ export function buildMicrosoftFoundryProvider(): ProviderPlugin {
         return undefined;
       }
       const profile = resolveClaudeThinkingProfile(capabilities.modelName);
-      return isFoundryClaudeMythosPreview(capabilities.modelName)
-        ? {
-            ...profile,
-            levels: profile.levels.filter((level) => level.id !== "xhigh" && level.id !== "max"),
-          }
-        : profile;
+      if (!isFoundryClaudeMythosPreview(capabilities.modelName)) {
+        return profile;
+      }
+      return {
+        ...profile,
+        defaultLevel: "adaptive",
+        levels: [...profile.levels.filter((level) => level.id !== "off"), { id: "adaptive" }],
+      };
     },
     normalizeResolvedModel: ({ modelId, model }: ProviderNormalizeResolvedModelContext) => {
       const endpoint = extractFoundryEndpoint(model.baseUrl ?? "");

@@ -509,6 +509,7 @@ describe("Anthropic provider", () => {
       makeAnthropicModel({
         id: "claude-mythos-preview",
         name: "Claude Mythos Preview",
+        reasoning: true,
         maxTokens: 128_000,
         thinkingLevelMap: { max: "max" },
       }),

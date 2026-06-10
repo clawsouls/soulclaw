@@ -11,6 +11,7 @@ import {
   resolveClaudeFable5ModelIdentity,
   resolveClaudeThinkingProfile,
   supportsClaudeAdaptiveThinking,
+  supportsClaudeNativeMaxEffort,
   supportsClaudeNativeXhighEffort,
 } from "./provider-model-shared.js";
 
@@ -319,8 +320,8 @@ describe("resolveClaudeThinkingProfile", () => {
   it("does not match longer unrelated Claude ids by prefix only", () => {
     expect(resolveClaudeThinkingProfile("vendor/claude-fable-500").defaultLevel).toBeUndefined();
     expect(resolveClaudeThinkingProfile("anthropic/claude-opus-4-60").defaultLevel).toBeUndefined();
-    expect(supportsClaudeNativeMaxEffort("vendor/claude-fable-500")).toBe(false);
-    expect(supportsClaudeNativeXhighEffort("anthropic/claude-opus-4-70")).toBe(false);
+    expect(supportsClaudeNativeMaxEffort({ id: "vendor/claude-fable-500" })).toBe(false);
+    expect(supportsClaudeNativeXhighEffort({ id: "anthropic/claude-opus-4-70" })).toBe(false);
   });
 
   it("leaves Opus 4.8 thinking off by default with xhigh/adaptive/max options", () => {
