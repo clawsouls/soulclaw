@@ -33,7 +33,9 @@ function createSseResponse(events: Record<string, unknown>[] = []): Response {
   });
 }
 
-function makeAnthropicModel(overrides: Partial<Model<"anthropic-messages">> = {}) {
+function makeAnthropicModel(
+  overrides: Partial<Model<"anthropic-messages">> & { authHeader?: boolean } = {},
+) {
   return {
     id: "claude-sonnet-4-6",
     name: "Claude Sonnet 4.6",
@@ -46,7 +48,7 @@ function makeAnthropicModel(overrides: Partial<Model<"anthropic-messages">> = {}
     contextWindow: 200_000,
     maxTokens: 4096,
     ...overrides,
-  } satisfies Model<"anthropic-messages">;
+  } satisfies Model<"anthropic-messages"> & { authHeader?: boolean };
 }
 
 describe("Anthropic provider", () => {
