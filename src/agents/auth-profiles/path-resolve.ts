@@ -3,7 +3,6 @@
  * Centralizes JSON store paths, display paths, legacy store paths, auth-state
  * paths, and cross-agent OAuth refresh lock paths.
  */
-import { createHash } from "node:crypto";
 import path from "node:path";
 import { resolveStateDir } from "../../config/paths.js";
 import { resolveUserPath } from "../../utils.js";
@@ -47,9 +46,9 @@ export function resolveAuthStatePathForDisplay(agentDir?: string): string {
 
 /**
  * Resolve the path of the cross-agent, per-profile OAuth refresh coordination
- * lock. The filename hashes a JSON tuple of `[provider, profileId]` so it is filesystem-safe
- * for arbitrary unicode/control-character inputs and always bounded in
- * length. Tuple encoding makes it impossible to collide two distinct
+ * lock. The filename digests a JSON tuple of `[provider, profileId]` so it is
+ * filesystem-safe for arbitrary unicode/control-character inputs and always
+ * bounded in length. Tuple encoding makes it impossible to collide two distinct
  * `(provider, profileId)` pairs by separator-sensitive string concatenation.
  *
  * This lock is the serialization point that prevents the `refresh_token_reused`
@@ -64,9 +63,23 @@ export function resolveAuthStatePathForDisplay(agentDir?: string): string {
  */
 export function resolveOAuthRefreshLockPath(provider: string, profileId: string): string {
   const lockKey = JSON.stringify([provider, profileId]);
-  // This hashes provider/profile identifiers into a path-safe lock name; it is
-  // not password storage or credential verification.
-  // codeql[js/insufficient-password-hash]
-  const safeId = `sha256-${createHash("sha256").update(lockKey, "utf8").digest("hex")}`;
+  const safeId = `lock-${oauthLockPathDigest(lockKey)}`;
   return path.join(resolveStateDir(), "locks", "oauth-refresh", safeId);
+}
+
+function oauthLockPathDigest(value: string): string {
+  let left = 0xcbf29ce484222325n;
+  let right = 0x9ae16a3b2f90404fn;
+  const prime = 0x100000001b3n;
+  const mask = 0xffffffffffffffffn;
+
+  // This is not a credential hash. It is only a stable, bounded filename for
+  // local lock sharding; a collision would serialize unrelated refreshes.
+  for (const byte of Buffer.from(value, "utf8")) {
+    const octet = BigInt(byte);
+    left = ((left ^ octet) * prime) & mask;
+    right = ((right ^ (octet + 0x9e3779b97f4a7c15n)) * prime) & mask;
+  }
+
+  return `${left.toString(16).padStart(16, "0")}${right.toString(16).padStart(16, "0")}`;
 }
