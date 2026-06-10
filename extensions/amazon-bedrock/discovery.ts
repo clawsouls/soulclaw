@@ -282,10 +282,7 @@ function mapInputModalities(summary: BedrockModelSummary): Array<"text" | "image
 }
 
 function inferReasoningSupport(summary: BedrockModelSummary): boolean {
-  if (
-    supportsClaudeAdaptiveThinking({ id: summary.modelId }) ||
-    isKnownClaudeMythosPreviewModelId(summary.modelId ?? "")
-  ) {
+  if (supportsClaudeAdaptiveThinking({ id: summary.modelId })) {
     return true;
   }
   const haystack = normalizeLowercaseStringOrEmpty(
@@ -330,6 +327,9 @@ function shouldIncludeSummary(summary: BedrockModelSummary, filter: string[]): b
     return false;
   }
   if (summary.responseStreamingSupported !== true) {
+    return false;
+  }
+  if (isKnownClaudeMythosPreviewModelId(summary.modelId)) {
     return false;
   }
   if (!includesTextModalities(summary.outputModalities)) {
@@ -464,6 +464,9 @@ function resolveInferenceProfiles(
 
     // Look up the underlying foundation model to inherit its capabilities.
     const baseModelId = resolveBaseModelId(profile);
+    if (isKnownClaudeMythosPreviewModelId(baseModelId ?? profile.inferenceProfileId)) {
+      continue;
+    }
     const baseModel = baseModelId
       ? foundationModels.get(normalizeLowercaseStringOrEmpty(baseModelId))
       : undefined;
@@ -477,8 +480,7 @@ function resolveInferenceProfiles(
       name: profile.inferenceProfileName?.trim() || profile.inferenceProfileId,
       reasoning:
         baseModel?.reasoning ??
-        (supportsClaudeAdaptiveThinking({ id: baseModelId ?? profile.inferenceProfileId }) ||
-          isKnownClaudeMythosPreviewModelId(baseModelId ?? profile.inferenceProfileId)),
+        supportsClaudeAdaptiveThinking({ id: baseModelId ?? profile.inferenceProfileId }),
       input: baseModel?.input ?? ["text"],
       cost: baseModel?.cost ?? DEFAULT_COST,
       contextWindow:

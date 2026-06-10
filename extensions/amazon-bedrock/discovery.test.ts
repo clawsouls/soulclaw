@@ -198,7 +198,7 @@ describe("bedrock discovery", () => {
     });
   });
 
-  it("marks known Mythos Preview inference profile fallbacks as reasoning capable", async () => {
+  it("skips Mythos Preview inference profiles because Mantle owns that route", async () => {
     sendMock
       .mockResolvedValueOnce({
         modelSummaries: [],
@@ -221,13 +221,8 @@ describe("bedrock discovery", () => {
       });
 
     const models = await discoverBedrockModels({ region: "us-east-1", clientFactory });
-    const model = models[0] as Record<string, unknown> | undefined;
 
-    expectModelFields(model, {
-      id: "us.anthropic.claude-mythos-preview",
-      reasoning: true,
-    });
-    expect(model).not.toHaveProperty("thinkingLevelMap");
+    expect(models).toEqual([]);
   });
 
   it("normalizes region-prefixed versioned model ids when resolving context windows", async () => {

@@ -537,7 +537,7 @@ describe("Anthropic provider", () => {
     });
   });
 
-  it("uses adaptive thinking for Foundry Mythos Preview without native max metadata", async () => {
+  it("uses adaptive high effort for Foundry Mythos Preview without native max metadata", async () => {
     let capturedPayload: unknown;
     const stream = streamSimpleAnthropic(
       makeAnthropicModel({
@@ -552,7 +552,7 @@ describe("Anthropic provider", () => {
       },
       {
         apiKey: "sk-ant-provider",
-        reasoning: "high",
+        reasoning: "max",
         onPayload: (payload) => {
           capturedPayload = payload;
           throw new Error("stop before network");
