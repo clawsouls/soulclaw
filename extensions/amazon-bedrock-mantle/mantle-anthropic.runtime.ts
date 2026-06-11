@@ -48,9 +48,13 @@ function resolveMantleReasoning(
     return undefined;
   }
   const reasoning = options?.reasoning ?? (isClaudeMythosPreviewModel(model) ? "high" : undefined);
-  return isClaudeMythosPreviewModel(model) && (reasoning === "xhigh" || reasoning === "max")
-    ? "high"
-    : reasoning;
+  if (!isClaudeMythosPreviewModel(model)) {
+    return reasoning;
+  }
+  if (reasoning === "minimal") {
+    return "low";
+  }
+  return reasoning === "xhigh" || reasoning === "max" ? "high" : reasoning;
 }
 
 function mergeHeaders(

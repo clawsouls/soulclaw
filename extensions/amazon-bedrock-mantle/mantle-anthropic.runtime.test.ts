@@ -156,6 +156,26 @@ describe("createMantleAnthropicStreamFn", () => {
     expect(streamOptions.effort).toBe("high");
   });
 
+  it("maps Mythos Preview minimal reasoning to low effort", () => {
+    const model = createTestModel({
+      id: "anthropic.claude-mythos-preview",
+      name: "Claude Mythos Preview",
+      reasoning: true,
+      params: { canonicalModelId: "claude-mythos-preview" },
+    });
+    const deps = createTestDeps();
+    deps.stream.mockReturnValue({ kind: "anthropic-stream" } as never);
+
+    void createMantleAnthropicStreamFn(deps)(model, { messages: [] }, {
+      apiKey: "bedrock-bearer-token",
+      reasoning: "minimal",
+    });
+
+    const streamOptions = firstStreamOptions(deps);
+    expect(streamOptions.thinkingEnabled).toBe(true);
+    expect(streamOptions.effort).toBe("low");
+  });
+
   it("normalizes Mantle provider URLs to the Anthropic endpoint", () => {
     expect(resolveMantleAnthropicBaseUrl("https://bedrock-mantle.us-east-1.api.aws/v1")).toBe(
       "https://bedrock-mantle.us-east-1.api.aws/anthropic",
