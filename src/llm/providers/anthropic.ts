@@ -14,6 +14,7 @@ import {
 } from "../../agents/system-prompt-cache-boundary.js";
 import {
   resolveClaudeNativeThinkingLevelMap,
+  requiresClaudeAdaptiveThinking,
   supportsClaudeAdaptiveThinking,
   supportsClaudeNativeMaxEffort,
   supportsClaudeNativeXhighEffort,
@@ -802,7 +803,7 @@ function normalizeAnthropicToolChoice(
   toolChoice: AnthropicOptions["toolChoice"],
 ) {
   if (
-    usesClaudeFable5MessagesContract(model) &&
+    requiresClaudeAdaptiveThinking(model) &&
     (toolChoice === "any" || (typeof toolChoice === "object" && toolChoice.type === "tool"))
   ) {
     return { type: "auto" as const };
@@ -875,11 +876,11 @@ export const streamSimpleAnthropic: StreamFunction<"anthropic-messages", SimpleS
 
   const base = buildBaseOptions(model, options, apiKey);
   if (!options?.reasoning) {
-    const fable5 = usesClaudeFable5MessagesContract(model);
+    const mandatoryAdaptiveThinking = requiresClaudeAdaptiveThinking(model);
     return streamAnthropic(model, context, {
       ...base,
-      thinkingEnabled: fable5,
-      ...(fable5 ? { effort: "high" as const } : {}),
+      thinkingEnabled: mandatoryAdaptiveThinking,
+      ...(mandatoryAdaptiveThinking ? { effort: "high" as const } : {}),
     } satisfies AnthropicOptions);
   }
 

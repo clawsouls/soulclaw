@@ -17,6 +17,7 @@ import type {
 import { parseStreamingJson } from "../llm/utils/json-parse.js";
 import {
   resolveClaudeNativeThinkingLevelMap,
+  requiresClaudeAdaptiveThinking,
   supportsClaudeAdaptiveThinking,
   supportsClaudeNativeMaxEffort,
   supportsClaudeNativeXhighEffort,
@@ -141,7 +142,7 @@ function normalizeAnthropicToolChoice(
   toolChoice: AnthropicTransportOptions["toolChoice"],
 ) {
   if (
-    usesClaudeFable5MessagesContract(model) &&
+    requiresClaudeAdaptiveThinking(model) &&
     (toolChoice === "any" || (typeof toolChoice === "object" && toolChoice.type === "tool"))
   ) {
     return { type: "auto" as const };
@@ -1025,7 +1026,7 @@ function resolveAnthropicTransportOptions(
     reasoning: options?.reasoning,
   };
   if (!options?.reasoning) {
-    resolved.thinkingEnabled = usesClaudeFable5MessagesContract(model);
+    resolved.thinkingEnabled = requiresClaudeAdaptiveThinking(model);
     if (resolved.thinkingEnabled) {
       resolved.effort = "high";
     }

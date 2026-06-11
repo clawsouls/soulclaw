@@ -308,6 +308,7 @@ describe("anthropic transport stream", () => {
       } as AnthropicStreamContext,
       {
         apiKey: "sk-ant-api",
+        toolChoice: { type: "tool", name: "read_file" },
       } as AnthropicStreamOptions,
     );
 
@@ -2121,6 +2122,7 @@ describe("anthropic transport stream", () => {
     const payload = latestAnthropicRequest().payload;
     expect(payload.thinking).toEqual({ type: "adaptive" });
     expect(payload.output_config).toEqual({ effort: "high" });
+    expect(payload.tool_choice).toEqual({ type: "auto" });
   });
 
   it("does not infer adaptive thinking from forward-compatible effort maps", async () => {
@@ -2294,6 +2296,33 @@ describe("anthropic transport stream", () => {
       {
         apiKey: "sk-ant-api",
         reasoning: "high",
+      } as AnthropicStreamOptions,
+    );
+
+    const payload = latestAnthropicRequest().payload;
+    expect(payload.thinking).toEqual({ type: "adaptive" });
+    expect(payload.output_config).toEqual({ effort: "high" });
+  });
+
+  it("uses mandatory adaptive thinking for canonical Claude Mythos Preview transport aliases", async () => {
+    const model = makeAnthropicTransportModel({
+      id: "prod-mythos-preview",
+      name: "Production Claude",
+      provider: "microsoft-foundry",
+      params: { canonicalModelId: "claude-mythos-preview" },
+      reasoning: false,
+      baseUrl: "https://example.services.ai.azure.com/anthropic",
+      maxTokens: 128_000,
+    });
+
+    guardedFetchMock.mockResolvedValueOnce(createSseResponse());
+    await runTransportStream(
+      model,
+      {
+        messages: [{ role: "user", content: "Think." }],
+      } as AnthropicStreamContext,
+      {
+        apiKey: "sk-ant-api",
       } as AnthropicStreamOptions,
     );
 
