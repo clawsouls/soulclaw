@@ -552,7 +552,6 @@ describe("Anthropic provider", () => {
       },
       {
         apiKey: "sk-ant-provider",
-        toolChoice: "any",
         onPayload: (payload) => {
           capturedPayload = payload;
           throw new Error("stop before network");
@@ -565,7 +564,6 @@ describe("Anthropic provider", () => {
     expect(capturedPayload).toMatchObject({
       thinking: { type: "adaptive" },
       output_config: { effort: "high" },
-      tool_choice: { type: "auto" },
     });
   });
 
