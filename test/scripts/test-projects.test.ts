@@ -2271,6 +2271,7 @@ describe("scripts/test-projects full-suite sharding", () => {
       "test/vitest/vitest.unit-support.config.ts",
       "test/vitest/vitest.boundary.config.ts",
       "test/vitest/vitest.tooling.config.ts",
+      "test/vitest/vitest.tooling-docker.config.ts",
       "test/vitest/vitest.tooling-isolated.config.ts",
       "test/vitest/vitest.contracts-channel-surface.config.ts",
       "test/vitest/vitest.contracts-channel-config.config.ts",
