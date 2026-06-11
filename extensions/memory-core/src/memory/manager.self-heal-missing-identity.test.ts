@@ -31,6 +31,13 @@ describe("memory manager self-heal missing identity with FTS-only chunks", () =>
   let indexPath = "";
   let manager: MemoryIndexManager | null = null;
 
+  function indexIdentityStatus(memoryManager: MemoryIndexManager): string | undefined {
+    const identity = memoryManager.status().custom?.indexIdentity as
+      | { status?: string }
+      | undefined;
+    return identity?.status;
+  }
+
   beforeAll(async () => {
     fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-mem-self-heal-91167-"));
   });
@@ -124,14 +131,13 @@ describe("memory manager self-heal missing identity with FTS-only chunks", () =>
     await seedChunksWithNoMeta();
     const memoryManager = await createManager({ vectorEnabled: false });
 
-    const statusBefore = memoryManager.status();
-    expect(statusBefore.custom?.indexIdentity?.status).toBe("missing");
+    expect(indexIdentityStatus(memoryManager)).toBe("missing");
 
     // Non-forced sync simulates the gateway's periodic sync loop
     await memoryManager.sync();
 
     const statusAfter = memoryManager.status();
-    expect(statusAfter.custom?.indexIdentity?.status).toBe("valid");
+    expect(indexIdentityStatus(memoryManager)).toBe("valid");
     expect(statusAfter.chunks).toBeGreaterThan(0);
     expect(statusAfter.dirty).toBe(false);
   });
@@ -143,7 +149,7 @@ describe("memory manager self-heal missing identity with FTS-only chunks", () =>
     await memoryManager.sync();
 
     const statusAfter = memoryManager.status();
-    expect(statusAfter.custom?.indexIdentity?.status).toBe("missing");
+    expect(indexIdentityStatus(memoryManager)).toBe("missing");
     expect(statusAfter.chunks).toBe(1);
     expect(statusAfter.dirty).toBe(true);
   });
