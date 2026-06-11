@@ -24,6 +24,7 @@ import {
   type ResolvedProviderAuth,
 } from "./model-auth.js";
 import { splitTrailingAuthProfile } from "./model-ref-profile.js";
+import { applyPreparedRuntimeAuthToModel } from "./provider-request-config.js";
 import {
   buildModelAliasIndex,
   resolveDefaultModelForAgent,
@@ -38,7 +39,7 @@ type SimpleCompletionAuthStorage = {
 
 type CompletionRuntimeCredential = {
   apiKey: string;
-  baseUrl?: string;
+  model: Model;
 };
 
 type AllowedMissingApiKeyMode = ResolvedProviderAuth["mode"];
@@ -158,7 +159,7 @@ async function setRuntimeApiKeyForCompletion(params: {
     params.authStorage.setRuntimeApiKey(params.model.provider, copilotToken.token);
     return {
       apiKey: copilotToken.token,
-      baseUrl: copilotToken.baseUrl,
+      model: { ...params.model, baseUrl: copilotToken.baseUrl },
     };
   }
   const preparedAuth = await prepareProviderRuntimeAuth({
@@ -182,7 +183,7 @@ async function setRuntimeApiKeyForCompletion(params: {
   params.authStorage.setRuntimeApiKey(params.model.provider, runtimeApiKey);
   return {
     apiKey: runtimeApiKey,
-    baseUrl: preparedAuth?.baseUrl,
+    model: applyPreparedRuntimeAuthToModel(params.model, preparedAuth),
   };
 }
 
@@ -271,13 +272,7 @@ export async function prepareSimpleCompletionModel(params: {
       profileId: auth.profileId,
     });
     resolvedApiKey = runtimeCredential.apiKey;
-    const runtimeBaseUrl = runtimeCredential.baseUrl?.trim();
-    if (runtimeBaseUrl) {
-      resolvedModel = {
-        ...resolvedModel,
-        baseUrl: runtimeBaseUrl,
-      };
-    }
+    resolvedModel = runtimeCredential.model;
   }
 
   const resolvedAuth: ResolvedProviderAuth = {

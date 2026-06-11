@@ -1242,7 +1242,7 @@ describe("microsoft-foundry plugin", () => {
     expect(normalized?.compat?.supportsReasoningEffort).toBe(false);
   });
 
-  it("keeps API-key credentials scoped to auth profiles", () => {
+  it("deletes legacy provider-level credentials for API-key profiles", () => {
     const result = buildFoundryAuthResult({
       profileId: "microsoft-foundry:default",
       apiKey: "test-api-key",
@@ -1256,6 +1256,9 @@ describe("microsoft-foundry plugin", () => {
     expect(provider.apiKey).toBeUndefined();
     expect(provider.authHeader).toBeUndefined();
     expect(provider.headers).toBeUndefined();
+    expect(Object.hasOwn(provider, "apiKey")).toBe(true);
+    expect(Object.hasOwn(provider, "authHeader")).toBe(true);
+    expect(Object.hasOwn(provider, "headers")).toBe(true);
   });
 
   it("uses the minimum supported response token count for GPT-5 connection tests", () => {
@@ -1386,7 +1389,7 @@ describe("microsoft-foundry plugin", () => {
     expect(provider?.models[0]?.compat).toBeUndefined();
   });
 
-  it("keeps Entra credentials scoped to auth profiles", () => {
+  it("deletes legacy provider-level credentials for Entra profiles", () => {
     const result = buildFoundryAuthResult({
       profileId: "microsoft-foundry:entra",
       apiKey: "__entra_id_dynamic__",
@@ -1401,8 +1404,9 @@ describe("microsoft-foundry plugin", () => {
       | Record<string, unknown>
       | undefined;
     expect(provider?.authHeader).toBeUndefined();
-    expect(Object.hasOwn(provider ?? {}, "apiKey")).toBe(false);
-    expect(Object.hasOwn(provider ?? {}, "headers")).toBe(false);
+    expect(Object.hasOwn(provider ?? {}, "apiKey")).toBe(true);
+    expect(Object.hasOwn(provider ?? {}, "authHeader")).toBe(true);
+    expect(Object.hasOwn(provider ?? {}, "headers")).toBe(true);
     expect(provider?.apiKey).toBeUndefined();
     expect(provider?.headers).toBeUndefined();
   });
@@ -1826,7 +1830,7 @@ describe("microsoft-foundry plugin", () => {
     await expect(getAccessTokenResultAsync()).rejects.toThrow("Azure CLI is not logged in");
   });
 
-  it("keeps API-key secret refs scoped to auth profiles", () => {
+  it("deletes legacy provider-level secret refs", () => {
     const secretRef = {
       source: "env" as const,
       provider: "default",
@@ -1845,6 +1849,9 @@ describe("microsoft-foundry plugin", () => {
     expect(provider.apiKey).toBeUndefined();
     expect(provider.authHeader).toBeUndefined();
     expect(provider.headers).toBeUndefined();
+    expect(Object.hasOwn(provider, "apiKey")).toBe(true);
+    expect(Object.hasOwn(provider, "authHeader")).toBe(true);
+    expect(Object.hasOwn(provider, "headers")).toBe(true);
   });
 
   it("moves the selected Foundry auth profile to the front of auth.order", () => {

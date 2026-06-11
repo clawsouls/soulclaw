@@ -520,6 +520,9 @@ function buildFoundryProviderConfig(
   return {
     baseUrl: buildFoundryProviderBaseUrl(endpoint, modelId, modelNameHint, resolvedApi),
     api: resolvedApi,
+    authHeader: undefined,
+    apiKey: undefined,
+    headers: undefined,
     models: deployments.map((deployment) => {
       const capabilities = resolveFoundryModelCapabilities(
         deployment.name,
