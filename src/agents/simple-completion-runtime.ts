@@ -24,13 +24,13 @@ import {
   type ResolvedProviderAuth,
 } from "./model-auth.js";
 import { splitTrailingAuthProfile } from "./model-ref-profile.js";
-import { applyPreparedRuntimeAuthToModel } from "./provider-request-config.js";
 import {
   buildModelAliasIndex,
   resolveDefaultModelForAgent,
   resolveModelRefFromString,
 } from "./model-selection.js";
 import { OPENAI_PROVIDER_ID, isOpenAIProvider } from "./openai-routing.js";
+import { applyPreparedRuntimeAuthToModel } from "./provider-request-config.js";
 import { prepareModelForSimpleCompletion } from "./simple-completion-transport.js";
 
 type SimpleCompletionAuthStorage = {
@@ -203,28 +203,30 @@ export async function prepareSimpleCompletionModel(params: {
   preferredProfile?: string;
   allowMissingApiKeyModes?: ReadonlyArray<AllowedMissingApiKeyMode>;
   allowBundledStaticCatalogFallback?: boolean;
+  useAsyncModelResolution?: boolean;
   skipAgentDiscovery?: boolean;
   modelResolver?: typeof resolveModelAsync;
 }): Promise<PreparedSimpleCompletionModel> {
-  const resolved = params.skipAgentDiscovery
-    ? await (params.modelResolver ?? resolveModelAsync)(
-        params.provider,
-        params.modelId,
-        params.agentDir,
-        params.cfg,
-        {
-          ...(params.allowBundledStaticCatalogFallback !== undefined
-            ? { allowBundledStaticCatalogFallback: params.allowBundledStaticCatalogFallback }
-            : {}),
-          skipAgentDiscovery: true,
+  const resolved =
+    params.useAsyncModelResolution || params.skipAgentDiscovery
+      ? await (params.modelResolver ?? resolveModelAsync)(
+          params.provider,
+          params.modelId,
+          params.agentDir,
+          params.cfg,
+          {
+            ...(params.allowBundledStaticCatalogFallback !== undefined
+              ? { allowBundledStaticCatalogFallback: params.allowBundledStaticCatalogFallback }
+              : {}),
+            ...(params.skipAgentDiscovery ? { skipAgentDiscovery: true } : {}),
+            authProfileId: params.profileId,
+            preferredProfile: params.preferredProfile,
+          },
+        )
+      : resolveModel(params.provider, params.modelId, params.agentDir, params.cfg, {
           authProfileId: params.profileId,
           preferredProfile: params.preferredProfile,
-        },
-      )
-    : resolveModel(params.provider, params.modelId, params.agentDir, params.cfg, {
-        authProfileId: params.profileId,
-        preferredProfile: params.preferredProfile,
-      });
+        });
   if (!resolved.model) {
     return {
       error: resolved.error ?? `Unknown model: ${params.provider}/${params.modelId}`,
@@ -293,6 +295,7 @@ export async function prepareSimpleCompletionModelForAgent(params: {
   preferredProfile?: string;
   allowMissingApiKeyModes?: ReadonlyArray<AllowedMissingApiKeyMode>;
   allowBundledStaticCatalogFallback?: boolean;
+  useAsyncModelResolution?: boolean;
   skipAgentDiscovery?: boolean;
   modelResolver?: typeof resolveModelAsync;
 }): Promise<PreparedSimpleCompletionModelForAgent> {
@@ -317,6 +320,7 @@ export async function prepareSimpleCompletionModelForAgent(params: {
     ...(params.allowBundledStaticCatalogFallback !== undefined
       ? { allowBundledStaticCatalogFallback: params.allowBundledStaticCatalogFallback }
       : {}),
+    useAsyncModelResolution: params.useAsyncModelResolution,
     skipAgentDiscovery: params.skipAgentDiscovery,
     modelResolver: params.modelResolver,
   });

@@ -906,6 +906,7 @@ export function describeTtsSummarizationContract() {
         cfg,
         provider: "openai",
         modelId: "gpt-4.1-mini",
+        useAsyncModelResolution: true,
       });
     });
 

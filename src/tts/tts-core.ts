@@ -91,10 +91,13 @@ export async function summarizeText(
 
   const startTime = Date.now();
   const { ref } = resolveSummaryModelRef(cfg, config);
+  // Dynamic model discovery precedes the request timeout, matching the established
+  // summarization contract. The timeout below bounds only the completion request.
   const prepared = await deps.prepareSimpleCompletionModel({
     cfg,
     provider: ref.provider,
     modelId: ref.model,
+    useAsyncModelResolution: true,
   });
   if ("error" in prepared) {
     throw new Error(prepared.error);
