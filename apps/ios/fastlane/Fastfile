@@ -5,6 +5,12 @@ require "json"
 default_platform(:ios)
 
 BETA_APP_IDENTIFIER = "ai.openclawfoundation.app"
+DEFAULT_SNAPSHOT_DEVICES = ["iPhone 16 Pro Max", "iPad Pro 13-inch (M4)"].freeze
+SNAPSHOT_STATUS_BAR_ARGUMENTS = "--time 09:41 --dataNetwork wifi --wifiMode active --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100".freeze
+REQUIRED_SCREENSHOT_FAMILIES = {
+  "iPhone" => /iPhone/,
+  "13-inch iPad" => /iPad (Air|Pro) 13-inch/
+}.freeze
 
 def load_env_file(path)
   return unless File.exist?(path)
@@ -35,6 +41,22 @@ end
 
 def screenshot_paths
   Dir[File.join(__dir__, "screenshots", "**", "*.png")]
+end
+
+def validate_required_screenshots!(paths)
+  missing_families = REQUIRED_SCREENSHOT_FAMILIES.filter_map do |name, pattern|
+    name unless paths.any? { |path| File.basename(path).match?(pattern) }
+  end
+  return if missing_families.empty?
+
+  UI.user_error!("DELIVER_SCREENSHOTS=1 but screenshots are missing for: #{missing_families.join(', ')}.")
+end
+
+def snapshot_devices
+  raw = ENV["OPENCLAW_SNAPSHOT_DEVICES"].to_s.strip
+  return DEFAULT_SNAPSHOT_DEVICES if raw.empty?
+
+  raw.split(",").map(&:strip).reject(&:empty?)
 end
 
 def maybe_decode_hex_keychain_secret(value)
@@ -330,8 +352,12 @@ platform :ios do
     app_identifier = nil unless env_present?(app_identifier)
     app_id = nil unless env_present?(app_id)
 
-    if screenshot_upload_requested? && screenshot_paths.empty?
-      UI.user_error!("DELIVER_SCREENSHOTS=1 but no PNG screenshots were found under apps/ios/fastlane/screenshots.")
+    if screenshot_upload_requested?
+      paths = screenshot_paths
+      if paths.empty?
+        UI.user_error!("DELIVER_SCREENSHOTS=1 but no PNG screenshots were found under apps/ios/fastlane/screenshots.")
+      end
+      validate_required_screenshots!(paths)
     end
 
     deliver_options = {
@@ -355,6 +381,30 @@ platform :ios do
     end
 
     deliver(**deliver_options)
+  end
+
+  desc "Generate deterministic iOS screenshots for App Store metadata"
+  lane :screenshots do
+    sh(shell_join(["bash", File.join(repo_root, "scripts", "ios-configure-signing.sh")]))
+    sh(shell_join(["bash", File.join(repo_root, "scripts", "ios-write-version-xcconfig.sh")]))
+    sh(shell_join(["xcodegen", "generate", "--spec", File.join(ios_root, "project.yml"), "--project", ios_root]))
+
+    capture_ios_screenshots(
+      project: File.join(ios_root, "OpenClaw.xcodeproj"),
+      scheme: "OpenClawUITests",
+      configuration: "Debug",
+      devices: snapshot_devices,
+      languages: ["en-US"],
+      launch_arguments: ["--openclaw-screenshot-mode"],
+      output_directory: File.join(ios_root, "fastlane", "screenshots"),
+      clear_previous_screenshots: true,
+      reinstall_app: true,
+      concurrent_simulators: false,
+      override_status_bar: true,
+      override_status_bar_arguments: SNAPSHOT_STATUS_BAR_ARGUMENTS,
+      skip_open_summary: true,
+      xcargs: "-allowProvisioningUpdates"
+    )
   end
 
   desc "Validate App Store Connect API auth"
