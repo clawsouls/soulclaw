@@ -37,12 +37,23 @@ const MESSAGE_TOOL_READ_ONLY_ACTIONS = new Set([
 const MESSAGE_TOOL_MUTATION_ACTIONS = new Set<string>(
   CHANNEL_MESSAGE_ACTION_NAMES.filter((action) => !MESSAGE_TOOL_READ_ONLY_ACTIONS.has(action)),
 );
-const MESSAGE_TOOL_MUTATION_ALIASES = new Set(["threadCreate", "createForumTopic"]);
+const MESSAGE_TOOL_CONVERSATION_CREATE_ACTIONS = new Set([
+  "thread-create",
+  "topic-create",
+  "threadcreate",
+  "createforumtopic",
+]);
 
 /** Return true when a message action sends or uploads user-visible content. */
 export function isMessageToolSendActionName(action: unknown): boolean {
   const normalized = normalizeOptionalString(action) ?? "";
   return MESSAGE_TOOL_SEND_ACTIONS.has(normalized);
+}
+
+/** Return true when a message action creates a visible destination conversation. */
+export function isMessageToolConversationCreateActionName(action: unknown): boolean {
+  const normalized = normalizeOptionalString(action)?.toLowerCase() ?? "";
+  return MESSAGE_TOOL_CONVERSATION_CREATE_ACTIONS.has(normalized);
 }
 
 // Provider docking: any plugin with `actions` opts into messaging tool handling.
@@ -80,7 +91,10 @@ export function isMessagingToolTargetEvidenceAction(
 ): boolean {
   if (toolName === "message") {
     const action = normalizeOptionalString(args.action) ?? "";
-    return shouldApplyCrossContextMarker(action as ChannelMessageActionName);
+    return (
+      shouldApplyCrossContextMarker(action as ChannelMessageActionName) ||
+      isMessageToolConversationCreateActionName(action)
+    );
   }
   return isMessagingToolSendAction(toolName, args);
 }
@@ -92,7 +106,9 @@ export function isMessagingToolDeliveryAction(
 ): boolean {
   if (toolName === "message") {
     const action = normalizeOptionalString(args.action) ?? "";
-    return MESSAGE_TOOL_MUTATION_ACTIONS.has(action) || MESSAGE_TOOL_MUTATION_ALIASES.has(action);
+    return (
+      MESSAGE_TOOL_MUTATION_ACTIONS.has(action) || isMessageToolConversationCreateActionName(action)
+    );
   }
   const providerId = normalizeChannelId(toolName);
   if (providerId && getChannelPlugin(providerId)?.actions?.isToolDeliveryAction?.({ args })) {

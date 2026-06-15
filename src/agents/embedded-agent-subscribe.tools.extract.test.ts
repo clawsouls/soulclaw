@@ -48,7 +48,10 @@ describe("extractMessagingToolSend", () => {
             messaging: { normalizeTarget: (raw: string) => raw.trim().toLowerCase() },
             actions: {
               messageActionTargetAliases: {
-                reply: { aliases: ["chatGuid"] },
+                reply: {
+                  aliases: ["chatGuid", "messageId"],
+                  deliveryTargetAliases: ["chatGuid"],
+                },
               },
               extractToolSend: (params: { args: Record<string, unknown> }) => {
                 const { args } = params;
@@ -326,6 +329,33 @@ describe("extractMessagingToolSend", () => {
       provider: "slack",
       to: "channel:c1",
     });
+  });
+
+  it("does not treat provider message-id aliases as delivery targets", () => {
+    const result = extractMessagingToolSend(
+      "message",
+      {
+        action: "reply",
+        provider: "slack",
+        messageId: "message-1",
+      },
+      {
+        currentMessagingTarget: "user:u123",
+      },
+    );
+
+    expect(result).toMatchObject({
+      tool: "message",
+      provider: "slack",
+      to: "user:u123",
+    });
+    expect(
+      extractMessagingToolSend("message", {
+        action: "reply",
+        provider: "slack",
+        messageId: "message-1",
+      }),
+    ).toBeUndefined();
   });
 
   it("recognizes attachment-style message tool sends", () => {
