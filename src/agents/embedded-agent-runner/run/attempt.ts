@@ -19,6 +19,7 @@ import {
 } from "../../../config/sessions/store.js";
 import {
   bindOwnedSessionTranscriptWrites,
+  type OwnedSessionTranscriptCacheSnapshot,
   withOwnedSessionTranscriptWrites,
 } from "../../../config/sessions/transcript-write-context.js";
 import {
@@ -185,7 +186,10 @@ import {
 import type { AgentMessage } from "../../runtime/index.js";
 import { resolveSandboxContext } from "../../sandbox.js";
 import { resolveSandboxRuntimeStatus } from "../../sandbox/runtime-status.js";
-import { repairSessionFileIfNeeded } from "../../session-file-repair.js";
+import {
+  invalidateSessionFileRepairCache,
+  repairSessionFileIfNeeded,
+} from "../../session-file-repair.js";
 import { guardSessionManager } from "../../session-tool-result-guard-wrapper.js";
 import { sanitizeToolUseResultPairing } from "../../session-transcript-repair.js";
 import { acquireSessionWriteLock } from "../../session-write-lock.js";
@@ -2082,6 +2086,22 @@ export async function runEmbeddedAttempt(
       },
     });
     releaseRetainedSessionLock = () => sessionLockController.dispose();
+    const ownedTranscriptWriteContext = {
+      sessionFile: params.sessionFile,
+      sessionKey: params.sessionKey,
+      canAdvanceSessionEntryCache: (snapshot: OwnedSessionTranscriptCacheSnapshot) =>
+        sessionLockController.canAdvanceSessionEntryCache(snapshot),
+      publishSessionFileSnapshot: (snapshot: OwnedSessionTranscriptCacheSnapshot) =>
+        sessionLockController.publishOwnedSessionFileSnapshot(snapshot),
+      withSessionWriteLock: <T>(
+        operation: () => Promise<T> | T,
+        options?: { publishOwnedWrite?: boolean },
+      ) => sessionLockController.withSessionWriteLock(operation, options),
+    };
+    const withOwnedSessionWriteLock = <T>(operation: () => Promise<T> | T): Promise<T> =>
+      withOwnedSessionTranscriptWrites(ownedTranscriptWriteContext, async () =>
+        sessionLockController.withSessionWriteLock(operation),
+      );
     armExternalAbortSignal();
 
     let sessionManager: ReturnType<typeof guardSessionManager> | undefined;
@@ -2093,11 +2113,20 @@ export async function runEmbeddedAttempt(
     let cleanupYieldAborted = false;
     let repairedRejectedThinkingReplay = false;
     try {
-      await repairSessionFileIfNeeded({
+      const trustedSessionFileSnapshot =
+        await sessionLockController.readTrustedCurrentSessionFileSnapshot();
+      const repairReport = await repairSessionFileIfNeeded({
         sessionFile: params.sessionFile,
+        trustedSnapshot: trustedSessionFileSnapshot,
         debug: (message) => log.debug(message),
         warn: (message) => log.warn(message),
       });
+      if (
+        repairReport.validatedSnapshot &&
+        !sessionLockController.publishValidatedSessionFileSnapshot(repairReport.validatedSnapshot)
+      ) {
+        invalidateSessionFileRepairCache(params.sessionFile);
+      }
       const hadSessionFile = await fs
         .stat(params.sessionFile)
         .then(() => true)
@@ -2151,43 +2180,45 @@ export async function runEmbeddedAttempt(
       });
       trackSessionManagerAccess(params.sessionFile);
 
-      await runAttemptContextEngineBootstrap({
-        hadSessionFile,
-        contextEngine: activeContextEngine,
-        sessionId: params.sessionId,
-        sessionKey: params.sessionKey,
-        sessionFile: params.sessionFile,
-        sessionManager,
-        runtimeContext: buildAfterTurnRuntimeContext({
-          attempt: params,
-          workspaceDir: effectiveWorkspace,
-          cwd: effectiveCwd,
-          agentDir,
-          tokenBudget: params.contextTokenBudget,
-          activeAgentId: sessionAgentId,
-          contextEnginePluginId: resolveActiveContextEnginePluginId(),
-        }),
-        runMaintenance: async (contextParams) =>
-          await runContextEngineMaintenance({
-            contextEngine: contextParams.contextEngine as never,
-            sessionId: contextParams.sessionId,
-            sessionKey: contextParams.sessionKey,
-            sessionFile: contextParams.sessionFile,
-            reason: contextParams.reason,
-            sessionManager: contextParams.sessionManager as never,
-            runtimeContext: contextParams.runtimeContext,
-            config: params.config,
-            agentId: sessionAgentId,
+      await withOwnedSessionWriteLock(async () => {
+        await runAttemptContextEngineBootstrap({
+          hadSessionFile,
+          contextEngine: activeContextEngine,
+          sessionId: params.sessionId,
+          sessionKey: params.sessionKey,
+          sessionFile: params.sessionFile,
+          sessionManager,
+          runtimeContext: buildAfterTurnRuntimeContext({
+            attempt: params,
+            workspaceDir: effectiveWorkspace,
+            cwd: effectiveCwd,
+            agentDir,
+            tokenBudget: params.contextTokenBudget,
+            activeAgentId: sessionAgentId,
+            contextEnginePluginId: resolveActiveContextEnginePluginId(),
           }),
-        warn: (message) => log.warn(message),
-      });
+          runMaintenance: async (contextParams) =>
+            await runContextEngineMaintenance({
+              contextEngine: contextParams.contextEngine as never,
+              sessionId: contextParams.sessionId,
+              sessionKey: contextParams.sessionKey,
+              sessionFile: contextParams.sessionFile,
+              reason: contextParams.reason,
+              sessionManager: contextParams.sessionManager as never,
+              runtimeContext: contextParams.runtimeContext,
+              config: params.config,
+              agentId: sessionAgentId,
+            }),
+          warn: (message) => log.warn(message),
+        });
 
-      await prepareSessionManagerForRun({
-        sessionManager,
-        sessionFile: params.sessionFile,
-        hadSessionFile,
-        sessionId: params.sessionId,
-        cwd: effectiveCwd,
+        await prepareSessionManagerForRun({
+          sessionManager,
+          sessionFile: params.sessionFile,
+          hadSessionFile,
+          sessionId: params.sessionId,
+          cwd: effectiveCwd,
+        });
       });
 
       const settingsManager = createPreparedEmbeddedAgentSettingsManager({
@@ -3314,14 +3345,6 @@ export async function runEmbeddedAttempt(
       };
       const abortable = <T>(promise: Promise<T>): Promise<T> =>
         abortableWithSignal(runAbortController.signal, promise);
-      const ownedTranscriptWriteContext = {
-        sessionFile: params.sessionFile,
-        sessionKey: params.sessionKey,
-        withSessionWriteLock: <T>(
-          operation: () => Promise<T> | T,
-          options?: { publishOwnedWrite?: boolean },
-        ) => sessionLockController.withSessionWriteLock(operation, options),
-      };
       const promptActiveSession = (
         prompt: string,
         options?: Parameters<typeof activeSession.prompt>[1],
@@ -4172,10 +4195,12 @@ export async function runEmbeddedAttempt(
               },
             };
             try {
-              activeSessionManager.appendMessage(
-                redactedUserMessage as Parameters<typeof activeSessionManager.appendMessage>[0],
-              );
-              flushSessionManagerFile(activeSessionManager);
+              await withOwnedSessionWriteLock(() => {
+                activeSessionManager.appendMessage(
+                  redactedUserMessage as Parameters<typeof activeSessionManager.appendMessage>[0],
+                );
+                flushSessionManagerFile(activeSessionManager);
+              });
               activeSession.agent.state.messages =
                 activeSessionManager.buildSessionContext().messages;
               return true;
@@ -4259,7 +4284,7 @@ export async function runEmbeddedAttempt(
               provider: params.provider,
               sessionManager: {
                 appendCustomEntry: async (customType, data) => {
-                  await sessionLockController.withSessionWriteLock(() => {
+                  await withOwnedSessionWriteLock(() => {
                     activeSessionManager.appendCustomEntry(customType, data);
                   });
                 },
@@ -4282,6 +4307,10 @@ export async function runEmbeddedAttempt(
               sessionFile: params.sessionFile,
               withSessionWriteLock: (run, options) =>
                 sessionLockController.withSessionWriteLock(run, options),
+              canAdvanceSessionEntryCache: (snapshot: OwnedSessionTranscriptCacheSnapshot) =>
+                sessionLockController.canAdvanceSessionEntryCache(snapshot),
+              publishSessionFileSnapshot: (snapshot: OwnedSessionTranscriptCacheSnapshot) =>
+                sessionLockController.publishOwnedSessionFileSnapshot(snapshot),
             });
           }
 
@@ -4521,15 +4550,17 @@ export async function runEmbeddedAttempt(
               cfg: params.config,
               agentId: sessionAgentId,
             });
-            const truncationResult = truncateOversizedToolResultsInSessionManager({
-              sessionManager,
-              contextWindowTokens: contextTokenBudget,
-              maxCharsOverride: toolResultMaxChars,
-              sessionFile: params.sessionFile,
-              sessionId: params.sessionId,
-              sessionKey: params.sessionKey,
-              agentId: sessionAgentId,
-            });
+            const truncationResult = await withOwnedSessionWriteLock(() =>
+              truncateOversizedToolResultsInSessionManager({
+                sessionManager: activeSessionManager,
+                contextWindowTokens: contextTokenBudget,
+                maxCharsOverride: toolResultMaxChars,
+                sessionFile: params.sessionFile,
+                sessionId: params.sessionId,
+                sessionKey: params.sessionKey,
+                agentId: sessionAgentId,
+              }),
+            );
             if (truncationResult.truncated) {
               preflightRecovery = {
                 route: "truncate_tool_results_only",
@@ -4699,7 +4730,7 @@ export async function runEmbeddedAttempt(
             });
             await sessionLockController.releaseHeldLockForAbort();
             await sessionLockController.waitForSessionEvents(activeSession);
-            await sessionLockController.withSessionWriteLock(async () => {
+            await withOwnedSessionWriteLock(async () => {
               stripSessionsYieldArtifacts(activeSession);
               if (yieldMessage) {
                 await persistSessionsYieldContextMessage(activeSession, yieldMessage);
@@ -4707,7 +4738,7 @@ export async function runEmbeddedAttempt(
             });
           } else if (isMidTurnPrecheckSignal(err)) {
             await sessionLockController.waitForSessionEvents(activeSession);
-            await sessionLockController.withSessionWriteLock(() => {
+            await withOwnedSessionWriteLock(() => {
               handleMidTurnPrecheckRequest(err.request);
             });
           } else {
@@ -4724,7 +4755,7 @@ export async function runEmbeddedAttempt(
           const request = pendingMidTurnPrecheckRequest;
           pendingMidTurnPrecheckRequest = null;
           await sessionLockController.waitForSessionEvents(activeSession);
-          await sessionLockController.withSessionWriteLock(() => {
+          await withOwnedSessionWriteLock(() => {
             removeTrailingMidTurnPrecheckAssistantError({
               activeSession,
               sessionManager: activeSessionManager,
@@ -4857,7 +4888,7 @@ export async function runEmbeddedAttempt(
         }
 
         await sessionLockController.waitForSessionEvents(activeSession);
-        await sessionLockController.withSessionWriteLock(async () => {
+        await withOwnedSessionWriteLock(async () => {
           // Check if ANY compaction occurred during the entire attempt (prompt + retry).
           // Using a cumulative count (> 0) instead of a delta check avoids missing
           // compactions that complete during activeSession.prompt() before the delta
@@ -5005,7 +5036,7 @@ export async function runEmbeddedAttempt(
                 reason: contextParams.reason,
                 sessionManager: contextParams.sessionManager as never,
                 withSessionManagerRewriteLock: async (operation) =>
-                  await sessionLockController.withSessionWriteLock(operation),
+                  await withOwnedSessionWriteLock(operation),
                 runtimeContext: contextParams.runtimeContext,
                 config: params.config,
                 agentId: sessionAgentId,
@@ -5019,7 +5050,7 @@ export async function runEmbeddedAttempt(
 
         if (!beforeAgentFinalizeRevisionReason) {
           await sessionLockController.waitForSessionEvents(activeSession);
-          await sessionLockController.withSessionWriteLock(async () => {
+          await withOwnedSessionWriteLock(async () => {
             if (
               shouldPersistCompletedBootstrapTurn({
                 shouldRecordCompletedBootstrapTurn,
