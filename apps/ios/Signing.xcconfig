@@ -17,6 +17,9 @@ OPENCLAW_APNS_ENTITLEMENT_ENVIRONMENT = development
 
 OPENCLAW_APP_PROFILE = ai.openclawfoundation.app Development
 OPENCLAW_SHARE_PROFILE = ai.openclawfoundation.app.share Development
+OPENCLAW_ACTIVITY_WIDGET_PROFILE =
+OPENCLAW_WATCH_APP_PROFILE =
+OPENCLAW_WATCH_EXTENSION_PROFILE =
 
 // Keep local includes after defaults: xcconfig is evaluated top-to-bottom,
 // so later assignments in local files override the defaults above.

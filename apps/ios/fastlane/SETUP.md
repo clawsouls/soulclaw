@@ -55,6 +55,25 @@ IOS_DEVELOPMENT_TEAM=YOUR_TEAM_ID
 
 Tip: run `scripts/ios-team-id.sh --require-canonical` from repo root to verify the canonical OpenClaw iOS team (`FWJYW4S8P8`) is available locally. Fastlane uses the same canonical-only path when `IOS_DEVELOPMENT_TEAM` is missing, and rejects non-canonical teams for release archives.
 
+App Store release signing is manual and profile-pinned. The canonical manifest is `apps/ios/Config/AppStoreSigning.json`.
+
+One-time or rotation setup:
+
+```bash
+pnpm ios:release:signing:plan
+pnpm ios:release:signing:check
+pnpm ios:release:signing:setup
+```
+
+Shared encrypted signing storage:
+
+```bash
+ASC_MATCH_PASSWORD=... pnpm ios:release:signing:sync:push
+ASC_MATCH_PASSWORD=... pnpm ios:release:signing:sync:pull
+```
+
+The signing repo is private and encrypted. Store `ASC_MATCH_PASSWORD` in the release-owner vault, not in this product repo. `sync:pull` writes decrypted assets under `apps/ios/build/signing/`; import the distribution certificate/private key into Keychain before archiving.
+
 For local/manual iOS builds that stay on direct APNs, configure the gateway host separately with `OPENCLAW_APNS_TEAM_ID`, `OPENCLAW_APNS_KEY_ID`, and either `OPENCLAW_APNS_PRIVATE_KEY_P8` or `OPENCLAW_APNS_PRIVATE_KEY_PATH`. Those gateway runtime env vars are separate from Fastlane's `.env`.
 
 Validate auth:
@@ -88,14 +107,14 @@ The screenshot lane runs the app with `--openclaw-screenshot-mode`, which enters
 Upload to App Store Connect:
 
 ```bash
-pnpm ios:release
+pnpm ios:release:upload
 ```
 
 Direct Fastlane entry point:
 
 ```bash
 cd apps/ios
-fastlane ios app_store
+fastlane ios release_upload
 ```
 
 Maintainer recovery path for a fresh clone on the same Mac:
@@ -132,7 +151,7 @@ export OPENCLAW_PUSH_RELAY_BASE_URL=https://relay.example.com
 6. Upload:
 
 ```bash
-pnpm ios:release
+pnpm ios:release:upload
 ```
 
 Quick verification after upload:
@@ -153,5 +172,6 @@ Versioning rules:
 - Run `pnpm ios:version:sync` after changing `apps/ios/version.json` or `apps/ios/CHANGELOG.md`
 - `pnpm ios:version:check` validates that checked-in iOS version artifacts are in sync
 - The release flow regenerates `apps/ios/OpenClaw.xcodeproj` from `apps/ios/project.yml` before archiving
-- Local App Store signing uses a temporary generated xcconfig and leaves local development signing overrides untouched
+- Local App Store signing uses a temporary generated xcconfig with profile names from `apps/ios/Config/AppStoreSigning.json` and leaves local development signing overrides untouched
+- `pnpm ios:release:upload` generates and uploads screenshots and release notes before archiving, then uploads the IPA without submitting it for App Review
 - See `apps/ios/VERSIONING.md` for the detailed workflow

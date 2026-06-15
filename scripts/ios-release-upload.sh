@@ -4,9 +4,11 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/ios-release-archive.sh [--build-number 7]
+  scripts/ios-release-upload.sh [--build-number 7]
 
-Archives and exports an App Store distribution IPA locally without uploading.
+Generates App Store screenshots, updates release metadata, archives, and uploads
+an App Store distribution build to App Store Connect. This does not submit the
+build for App Review.
 EOF
 }
 
@@ -37,5 +39,5 @@ done
 
 (
   cd "${ROOT_DIR}/apps/ios"
-  IOS_RELEASE_BUILD_NUMBER="${BUILD_NUMBER}" run_ios_fastlane ios app_store_archive
+  IOS_RELEASE_BUILD_NUMBER="${BUILD_NUMBER}" run_ios_fastlane ios release_upload
 )

@@ -66,6 +66,7 @@ describe.sequential("scripts/ios-configure-signing.sh", () => {
     expect(generated).toContain("OPENCLAW_DEVELOPMENT_TEAM = FWJYW4S8P8");
     expect(generated).toContain("OPENCLAW_APP_BUNDLE_ID = ai.openclawfoundation.app");
     expect(generated).toContain("OPENCLAW_SHARE_BUNDLE_ID = ai.openclawfoundation.app.share");
+    expect(generated).toContain("OPENCLAW_ACTIVITY_WIDGET_PROFILE = ");
   });
 
   it("keeps unique local bundle IDs for non-canonical fallback teams", () => {

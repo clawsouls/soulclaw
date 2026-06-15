@@ -56,7 +56,8 @@ Prereqs:
 - `xcodegen`
 - `fastlane`
 - Apple account signed into Xcode for the canonical OpenClaw team (`FWJYW4S8P8`)
-- Xcode account permissions to create Apple Distribution certificates, App IDs, and App Store provisioning profiles
+- `asc` CLI authenticated for the canonical OpenClaw team
+- Release-owner access to the encrypted signing repo password (`ASC_MATCH_PASSWORD`)
 - App Store Connect app already created for `ai.openclawfoundation.app`
 - App Store Connect API key set up in Keychain via `scripts/ios-asc-keychain-setup.sh` when auto-resolving a build number or uploading to App Store Connect
 
@@ -64,9 +65,12 @@ Release behavior:
 
 - Local development uses the canonical `ai.openclawfoundation.app*` bundle IDs when the OpenClaw team is available, and unique `ai.openclawfoundation.app.test.*` bundle IDs only for non-canonical fallback teams.
 - App Store release uses canonical `ai.openclawfoundation.app*` bundle IDs through a temporary generated xcconfig in `apps/ios/build/AppStoreRelease.xcconfig`.
-- App Store release uses automatic signing with `Apple Distribution` and `-allowProvisioningUpdates`, so Xcode can create missing distribution certificates/profiles for the canonical team when the signed-in account has permission.
+- App Store release uses manual `Apple Distribution` signing with profile names pinned in `apps/ios/Config/AppStoreSigning.json`.
+- `asc` owns one-time Developer Portal setup and encrypted signing sync. Fastlane owns release handling after those assets exist.
 - App Store release also switches the app to `OpenClawPushTransport=relay`, `OpenClawPushDistribution=official`, `OpenClawPushAPNsEnvironment=production`, and a production `aps-environment` entitlement.
-- App Store screenshots use `pnpm ios:screenshots`, which drives Fastlane Snapshot through a deterministic connected screenshot fixture instead of a live gateway.
+- `pnpm ios:release:upload` generates App Store screenshots and uploads release notes before archiving and uploading the IPA.
+- `pnpm ios:release` remains a compatibility alias for `pnpm ios:release:upload`; prefer the explicit upload command in new release docs and automation.
+- App Review submission is manual in App Store Connect. The release lane uploads a build and metadata, but does not submit for review.
 - The release flow does not modify `apps/ios/.local-signing.xcconfig` or `apps/ios/LocalSigning.xcconfig`.
 - `apps/ios/version.json` is the pinned iOS release version source.
 - `apps/ios/CHANGELOG.md` is the iOS-only changelog and release-note source.
@@ -79,9 +83,26 @@ Release behavior:
 
 Relay behavior for App Store builds:
 
-- Beta builds default to `https://ios-push-relay.openclaw.ai`.
+- Release builds default to `https://ios-push-relay.openclaw.ai`.
 - Optional custom relay override: `OPENCLAW_PUSH_RELAY_BASE_URL=https://relay.example.com`
   This must be a plain `https://host[:port][/path]` base URL without whitespace, query params, fragments, or xcconfig metacharacters.
+
+Signing setup commands:
+
+```bash
+pnpm ios:release:signing:plan
+pnpm ios:release:signing:check
+pnpm ios:release:signing:setup
+ASC_MATCH_PASSWORD=... pnpm ios:release:signing:sync:push
+ASC_MATCH_PASSWORD=... pnpm ios:release:signing:sync:pull
+```
+
+Release-owner secrets:
+
+- App Store Connect API auth uses Keychain for private key material plus non-secret `apps/ios/fastlane/.env` variables.
+- The encrypted signing repo password lives outside this repo in the release-owner vault and is exposed locally as `ASC_MATCH_PASSWORD`.
+- Apple Distribution private keys, certificates, provisioning profiles, and decrypted signing sync output stay under `apps/ios/build/` or Keychain and are gitignored.
+- Rotating release signing means revoking/replacing the Developer Portal certificate or profile with `asc`, then pushing a fresh encrypted sync state.
 
 Prepare the generated release xcconfig/project without archiving:
 
@@ -98,13 +119,13 @@ pnpm ios:release:archive
 Archive and upload to App Store Connect:
 
 ```bash
-pnpm ios:release
+pnpm ios:release:upload
 ```
 
 If you need to force a specific build number:
 
 ```bash
-pnpm ios:release -- --build-number 7
+pnpm ios:release:upload -- --build-number 7
 ```
 
 ### Maintainer Quick Release Checklist
@@ -136,6 +157,8 @@ This should create `apps/ios/fastlane/.env` with the non-secret ASC variables wh
    - `ai.openclawfoundation.app.watchkitapp`
    - `ai.openclawfoundation.app.watchkitapp.extension`
 
+   Use `pnpm ios:release:signing:setup` for the initial portal setup, then `ASC_MATCH_PASSWORD=... pnpm ios:release:signing:sync:push` to publish encrypted signing assets to the shared private repo.
+
 4. Optional: set a custom official relay URL for the build. If unset, the release flow uses `https://ios-push-relay.openclaw.ai`.
 
 ```bash
@@ -151,16 +174,19 @@ pnpm ios:version:pin -- --from-gateway
 6. Upload the build:
 
 ```bash
-pnpm ios:release
+pnpm ios:release:upload
 ```
 
 7. Expected behavior:
    - Fastlane reads `apps/ios/version.json`
    - verifies synced iOS versioning artifacts
    - resolves the next App Store Connect build number for that short version
+   - generates deterministic App Store screenshots
+   - uploads release notes and screenshots to the editable App Store version
    - generates `apps/ios/build/AppStoreRelease.xcconfig`
    - archives `OpenClaw`
    - uploads the IPA to App Store Connect for TestFlight/App Review use
+   - leaves App Review submission for a maintainer to complete manually
 
 8. Expected outputs after a successful run:
    - `apps/ios/build/app-store/OpenClaw-<version>.ipa`
@@ -193,7 +219,7 @@ Recommended flow:
 1. Keep `apps/ios/version.json` pinned to the current train version.
 2. Update `apps/ios/CHANGELOG.md`, usually under `## Unreleased` while iterating.
 3. Run `pnpm ios:version:sync` after changelog changes.
-4. Upload more TestFlight builds with `pnpm ios:release`.
+4. Upload more TestFlight builds with `pnpm ios:release:upload`.
 5. Let Fastlane bump only the numeric build number.
 
 ### Starting the next production release train
