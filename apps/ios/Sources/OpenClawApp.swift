@@ -628,9 +628,21 @@ struct OpenClawApp: App {
         Self.installUncaughtExceptionLogger()
         GatewaySettingsStore.bootstrapPersistence()
         let appModel = NodeAppModel()
+        #if DEBUG
+        if Self.screenshotModeEnabled {
+            UIView.setAnimationsEnabled(false)
+            UserDefaults.standard.set(true, forKey: "gateway.onboardingComplete")
+            UserDefaults.standard.set(true, forKey: "gateway.hasConnectedOnce")
+            UserDefaults.standard.set(true, forKey: "onboarding.quickSetupDismissed")
+            appModel.enterScreenshotFixtureMode()
+        }
+        #endif
         OpenClawAppModelRegistry.appModel = appModel
         _appModel = State(initialValue: appModel)
-        _gatewayController = State(initialValue: GatewayConnectionController(appModel: appModel))
+        _gatewayController = State(
+            initialValue: GatewayConnectionController(
+                appModel: appModel,
+                startDiscovery: !Self.screenshotModeEnabled))
     }
 
     var body: some Scene {
@@ -664,6 +676,14 @@ struct OpenClawApp: App {
         AppAppearancePreference.launchArgumentPreference
             ?? AppAppearancePreference(rawValue: self.appearancePreferenceRaw)
             ?? .system
+    }
+
+    private static var screenshotModeEnabled: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("--openclaw-screenshot-mode")
+        #else
+        false
+        #endif
     }
 
     @MainActor

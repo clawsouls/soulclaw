@@ -220,6 +220,34 @@ final class TalkModeManager: NSObject {
         }
     }
 
+    func enterScreenshotFixtureMode() {
+        self.updateGatewayConnected(true)
+        self.isEnabled = false
+        self.isListening = false
+        self.isSpeaking = false
+        self.isUserSpeechDetected = false
+        self.statusText = "Ready"
+        self.gatewayTalkConfigLoaded = true
+        self.gatewayTalkApiKeyConfigured = true
+        self.gatewayTalkDefaultModelId = "gpt-realtime-2"
+        self.gatewayTalkDefaultVoiceId = "marin"
+        self.gatewayTalkProviderLabel = "OpenAI"
+        self.gatewayTalkTransportLabel = "Gateway Relay"
+        self.gatewayTalkUsesRealtime = true
+        self.gatewayTalkUsesRealtimeRelay = true
+        self.gatewayTalkRealtimeProviderLabel = "OpenAI"
+        self.gatewayTalkRealtimeModelId = "gpt-realtime-2"
+        self.gatewayTalkRealtimeVoiceId = "marin"
+        self.gatewayTalkVoiceModeTitle = "Realtime Voice"
+        self.gatewayTalkVoiceModeSubtitle = "Gateway relay ready"
+        self.gatewayTalkVoiceModeAccessibilityValue = "Realtime Voice, Gateway relay ready"
+        self.gatewayTalkActiveModeTitle = "Ready"
+        self.gatewayTalkActiveModeSubtitle = "Listening starts from this phone"
+        self.gatewayTalkLastIssueText = nil
+        self.gatewayTalkCurrentFallbackIssue = nil
+        self.gatewayTalkPermissionState = .ready
+    }
+
     func setEnabled(_ enabled: Bool) {
         self.isEnabled = enabled
         if enabled {

@@ -557,7 +557,7 @@ extension AgentProTab {
     }
 
     var liveGatewayConnected: Bool {
-        !self.appModel.isAppleReviewDemoModeEnabled &&
+        !self.appModel.isLocalGatewayFixtureEnabled &&
             self.gatewayConnected &&
             self.appModel.isOperatorGatewayConnected
     }
