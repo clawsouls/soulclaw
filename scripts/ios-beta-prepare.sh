@@ -26,6 +26,7 @@ TEAM_HELPER="${ROOT_DIR}/scripts/ios-team-id.sh"
 VERSION_HELPER="${ROOT_DIR}/scripts/ios-write-version-xcconfig.sh"
 IOS_VERSION_HELPER="${ROOT_DIR}/scripts/ios-version.ts"
 VERSION_SYNC_HELPER="${ROOT_DIR}/scripts/ios-sync-versioning.ts"
+CANONICAL_TEAM_ID="FWJYW4S8P8"
 
 BUILD_NUMBER=""
 TEAM_ID="${IOS_DEVELOPMENT_TEAM:-}"
@@ -114,11 +115,16 @@ if [[ -z "${BUILD_NUMBER}" ]]; then
 fi
 
 if [[ -z "${TEAM_ID}" ]]; then
-  TEAM_ID="$(IOS_ALLOW_KEYCHAIN_TEAM_FALLBACK=1 bash "${TEAM_HELPER}")"
+  TEAM_ID="$(IOS_ALLOW_KEYCHAIN_TEAM_FALLBACK=1 bash "${TEAM_HELPER}" --require-canonical)"
 fi
 
 if [[ -z "${TEAM_ID}" ]]; then
   echo "Could not resolve Apple Team ID. Set IOS_DEVELOPMENT_TEAM or sign into Xcode." >&2
+  exit 1
+fi
+
+if [[ "${TEAM_ID}" != "${CANONICAL_TEAM_ID}" ]]; then
+  echo "iOS beta release must use canonical OpenClaw Team ID ${CANONICAL_TEAM_ID}; got ${TEAM_ID}." >&2
   exit 1
 fi
 

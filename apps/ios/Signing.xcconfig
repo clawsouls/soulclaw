@@ -5,7 +5,7 @@
 #include "Config/Version.xcconfig"
 
 OPENCLAW_CODE_SIGN_STYLE = Manual
-OPENCLAW_DEVELOPMENT_TEAM = Y5PE65HELJ
+OPENCLAW_DEVELOPMENT_TEAM = FWJYW4S8P8
 
 OPENCLAW_APP_BUNDLE_ID = ai.openclawfoundation.app
 OPENCLAW_SHARE_BUNDLE_ID = ai.openclawfoundation.app.share
