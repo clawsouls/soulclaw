@@ -24,6 +24,7 @@ const RESULT_ENVELOPE_KEYS = [
   "sendResult",
   "toolResult",
 ];
+const BROADCAST_SEND_ENVELOPE_KEYS = ["payload", "result", "sendResult", "toolResult"];
 const PARTIAL_DELIVERY_ENVELOPE_KEYS = [...RESULT_ENVELOPE_KEYS, "error", "cause"];
 const SESSIONS_SEND_DELIVERY_STATUSES = new Set(["accepted", "ok"]);
 const CONVERSATION_CREATE_ACTIONS = new Set([
@@ -233,6 +234,20 @@ function deliveryEnvelopeIndicatesNoOp(value: unknown, depth = 0): boolean {
   return RESULT_ENVELOPE_KEYS.some((key) => deliveryEnvelopeIndicatesNoOp(record[key], depth + 1));
 }
 
+function broadcastEntryHasSuccessfulBareOkSend(
+  record: Record<string, unknown>,
+  depth: number,
+): boolean {
+  return BROADCAST_SEND_ENVELOPE_KEYS.some((key) => {
+    const value = record[key];
+    return (
+      deliveryEnvelopeIndicatesOk(value, depth + 1) &&
+      !deliveryEnvelopeIndicatesNonDelivery(value, depth + 1) &&
+      !deliveryEnvelopeIndicatesNoOp(value, depth + 1)
+    );
+  });
+}
+
 function deliveryEnvelopeIndicatesSuccessfulBroadcast(value: unknown, depth = 0): boolean {
   if (!value || typeof value !== "object" || depth > 4) {
     return false;
@@ -246,7 +261,8 @@ function deliveryEnvelopeIndicatesSuccessfulBroadcast(value: unknown, depth = 0)
         (item as Record<string, unknown>).ok === true &&
         !deliveryEnvelopeIndicatesNonDelivery(item) &&
         !deliveryEnvelopeIndicatesNoOp(item) &&
-        deliveryEnvelopeIndicatesDelivered(item, depth + 1),
+        (deliveryEnvelopeIndicatesDelivered(item, depth + 1) ||
+          broadcastEntryHasSuccessfulBareOkSend(item as Record<string, unknown>, depth + 1)),
     );
   }
   const record = value as Record<string, unknown>;

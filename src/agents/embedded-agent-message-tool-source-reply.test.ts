@@ -205,6 +205,21 @@ describe("isDeliveredMessagingToolResult", () => {
         result: { results: [{ channel: "googlechat", to: "space-1", ok: true }] },
       }),
     ).toBe(false);
+    expect(
+      isDeliveredMessagingToolResult({
+        args: { action: "broadcast" },
+        result: {
+          results: [
+            {
+              channel: "googlechat",
+              to: "space-1",
+              ok: true,
+              payload: { ok: true, to: "spaces/AAA" },
+            },
+          ],
+        },
+      }),
+    ).toBe(true);
   });
 
   it("rejects successful broadcast wrappers around suppressed sends", () => {
@@ -220,6 +235,15 @@ describe("isDeliveredMessagingToolResult", () => {
         toolName: "message",
         args: { action: "broadcast" },
         result: { results: [{ ok: true, result: { deliveryStatus: "suppressed" } }] },
+      }),
+    ).toBe(false);
+    expect(
+      isDeliveredMessagingToolResult({
+        toolName: "message",
+        args: { action: "broadcast" },
+        result: {
+          results: [{ ok: true, payload: { ok: true, deliveryStatus: "suppressed" } }],
+        },
       }),
     ).toBe(false);
   });
