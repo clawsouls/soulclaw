@@ -77,6 +77,14 @@ Archive locally without upload:
 pnpm ios:beta:archive
 ```
 
+Generate deterministic App Store screenshots:
+
+```bash
+pnpm ios:screenshots
+```
+
+The screenshot lane runs the app with `--openclaw-screenshot-mode`, which enters the built-in connected screenshot fixture instead of pairing with a live gateway. By default it captures the tab set on `iPhone 16 Pro Max` and `iPad Pro 13-inch (M4)`; override devices with a comma-separated `OPENCLAW_SNAPSHOT_DEVICES` value when the requested simulators exist locally.
+
 Upload to TestFlight:
 
 ```bash

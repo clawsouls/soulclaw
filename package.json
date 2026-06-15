@@ -1557,6 +1557,7 @@
     "ios:gen": "bash -lc './scripts/ios-configure-signing.sh && ./scripts/ios-write-version-xcconfig.sh && cd apps/ios && xcodegen generate'",
     "ios:open": "bash -lc './scripts/ios-configure-signing.sh && ./scripts/ios-write-version-xcconfig.sh && cd apps/ios && xcodegen generate && open OpenClaw.xcodeproj'",
     "ios:run": "bash scripts/ios-run.sh",
+    "ios:screenshots": "bash scripts/ios-screenshots.sh",
     "ios:version": "node --import tsx scripts/ios-version.ts --json",
     "ios:version:check": "node --import tsx scripts/ios-sync-versioning.ts --check",
     "ios:version:pin": "node --import tsx scripts/ios-pin-version.ts",

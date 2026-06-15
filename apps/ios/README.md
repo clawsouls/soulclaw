@@ -63,6 +63,7 @@ Release behavior:
 - Local development uses the canonical `ai.openclawfoundation.app*` bundle IDs when the OpenClaw team is available, and unique `ai.openclawfoundation.app.test.*` bundle IDs only for non-canonical fallback teams.
 - Beta release uses canonical `ai.openclawfoundation.app*` bundle IDs through a temporary generated xcconfig in `apps/ios/build/BetaRelease.xcconfig`.
 - Beta release also switches the app to `OpenClawPushTransport=relay`, `OpenClawPushDistribution=official`, and `OpenClawPushAPNsEnvironment=production`.
+- App Store screenshots use `pnpm ios:screenshots`, which drives Fastlane Snapshot through a deterministic connected screenshot fixture instead of a live gateway.
 - The beta flow does not modify `apps/ios/.local-signing.xcconfig` or `apps/ios/LocalSigning.xcconfig`.
 - `apps/ios/version.json` is the pinned iOS release version source.
 - `apps/ios/CHANGELOG.md` is the iOS-only changelog and release-note source.
