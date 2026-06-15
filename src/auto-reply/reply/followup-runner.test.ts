@@ -2090,6 +2090,8 @@ describe("createFollowupRunner progress forwarding", () => {
         await args.onAgentEvent?.({
           stream: "tool",
           data: {
+            itemId: "tool:queued-progress",
+            toolCallId: "queued-progress",
             phase: "start",
             name: "exec",
             args: { command: "echo queued-progress" },
@@ -2111,6 +2113,8 @@ describe("createFollowupRunner progress forwarding", () => {
     await runner(queued);
 
     expect(onToolStart).toHaveBeenCalledWith({
+      itemId: "tool:queued-progress",
+      toolCallId: "queued-progress",
       name: "exec",
       phase: "start",
       args: { command: "echo queued-progress" },
@@ -2189,6 +2193,7 @@ describe("createFollowupRunner progress forwarding", () => {
 
   it("preserves queued verbose progress when default tool progress is suppressed", async () => {
     const onToolStart = vi.fn(async () => {});
+    const onItemEvent = vi.fn(async () => {});
     const onCommandOutput = vi.fn(async () => {});
     const queued = createQueuedRun({
       originatingChannel: "discord",
@@ -2220,6 +2225,18 @@ describe("createFollowupRunner progress forwarding", () => {
           },
         });
         await args.onAgentEvent?.({
+          stream: "item",
+          data: {
+            itemId: "command:queued-suppressed-preview",
+            toolCallId: "queued-suppressed-preview",
+            kind: "command",
+            name: "exec",
+            phase: "update",
+            status: "running",
+            progressText: "queued output",
+          },
+        });
+        await args.onAgentEvent?.({
           stream: "command_output",
           data: { phase: "chunk", output: "queued output" },
         });
@@ -2229,7 +2246,12 @@ describe("createFollowupRunner progress forwarding", () => {
     );
 
     const runner = createFollowupRunner({
-      opts: { suppressDefaultToolProgressMessages: true, onToolStart, onCommandOutput },
+      opts: {
+        suppressDefaultToolProgressMessages: true,
+        onToolStart,
+        onItemEvent,
+        onCommandOutput,
+      },
       typing: createMockTypingController(),
       typingMode: "instant",
       defaultModel: "claude",
@@ -2244,6 +2266,15 @@ describe("createFollowupRunner progress forwarding", () => {
       args: { command: "echo queued-suppressed-preview" },
       detailMode: "raw",
     });
+    expect(onItemEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        itemId: "command:queued-suppressed-preview",
+        toolCallId: "queued-suppressed-preview",
+        kind: "command",
+        name: "exec",
+        phase: "update",
+      }),
+    );
     expect(onCommandOutput).toHaveBeenCalledWith(
       expect.objectContaining({ phase: "chunk", output: "queued output" }),
     );
@@ -2256,6 +2287,179 @@ describe("createFollowupRunner progress forwarding", () => {
         threadId: "thread-1",
         mirror: false,
         payload: expect.objectContaining({ text: "🛠️ Exec: echo queued-suppressed-preview" }),
+      }),
+    );
+  });
+
+  it("forwards queued Codex command tool results as command output completion", async () => {
+    const onCommandOutput = vi.fn(async () => {});
+    const queued = createQueuedRun({
+      originatingChannel: "discord",
+      originatingTo: "channel:C1",
+      originatingAccountId: "acct-1",
+      originatingThreadId: "thread-1",
+      run: {
+        messageProvider: "discord",
+        verboseLevel: "on",
+      },
+    });
+
+    runEmbeddedAgentMock.mockImplementationOnce(
+      async (args: {
+        onAgentEvent?: (evt: { stream: string; data: Record<string, unknown> }) => Promise<void>;
+      }) => {
+        await args.onAgentEvent?.({
+          stream: "tool",
+          data: {
+            phase: "result",
+            itemId: "command:queued-exec",
+            toolCallId: "queued-exec",
+            name: "exec",
+            status: "completed",
+            result: {
+              exitCode: 0,
+              durationMs: 24,
+            },
+          },
+        });
+        return { payloads: [{ text: "final reply" }], meta: { agentMeta: {} } };
+      },
+    );
+
+    const runner = createFollowupRunner({
+      opts: { onCommandOutput },
+      typing: createMockTypingController(),
+      typingMode: "instant",
+      defaultModel: "claude",
+    });
+
+    await runner(queued);
+
+    expect(onCommandOutput).toHaveBeenCalledWith({
+      itemId: "command:queued-exec",
+      phase: "end",
+      title: undefined,
+      toolCallId: "queued-exec",
+      name: "exec",
+      output: undefined,
+      status: "completed",
+      exitCode: 0,
+      durationMs: 24,
+      cwd: undefined,
+    });
+  });
+
+  it("marks queued Codex command tool result errors as failed command output", async () => {
+    const onCommandOutput = vi.fn(async () => {});
+    const queued = createQueuedRun({
+      originatingChannel: "discord",
+      originatingTo: "channel:C1",
+      originatingAccountId: "acct-1",
+      originatingThreadId: "thread-1",
+      run: {
+        messageProvider: "discord",
+        verboseLevel: "on",
+      },
+    });
+
+    runEmbeddedAgentMock.mockImplementationOnce(
+      async (args: {
+        onAgentEvent?: (evt: { stream: string; data: Record<string, unknown> }) => Promise<void>;
+      }) => {
+        await args.onAgentEvent?.({
+          stream: "tool",
+          data: {
+            phase: "result",
+            itemId: "command:queued-exec",
+            toolCallId: "queued-exec",
+            name: "exec",
+            isError: true,
+            result: {
+              content: [{ type: "text", text: "command failed" }],
+            },
+          },
+        });
+        return { payloads: [{ text: "final reply" }], meta: { agentMeta: {} } };
+      },
+    );
+
+    const runner = createFollowupRunner({
+      opts: { onCommandOutput },
+      typing: createMockTypingController(),
+      typingMode: "instant",
+      defaultModel: "claude",
+    });
+
+    await runner(queued);
+
+    expect(onCommandOutput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        itemId: "command:queued-exec",
+        phase: "end",
+        toolCallId: "queued-exec",
+        name: "exec",
+        status: "failed",
+      }),
+    );
+  });
+
+  it("does not synthesize queued command output from bare exec tool results", async () => {
+    const onCommandOutput = vi.fn(async () => {});
+    const queued = createQueuedRun({
+      originatingChannel: "discord",
+      originatingTo: "channel:C1",
+      originatingAccountId: "acct-1",
+      originatingThreadId: "thread-1",
+      run: {
+        messageProvider: "discord",
+        verboseLevel: "on",
+      },
+    });
+
+    runEmbeddedAgentMock.mockImplementationOnce(
+      async (args: {
+        onAgentEvent?: (evt: { stream: string; data: Record<string, unknown> }) => Promise<void>;
+      }) => {
+        await args.onAgentEvent?.({
+          stream: "tool",
+          data: {
+            phase: "result",
+            name: "exec",
+            toolCallId: "queued-exec",
+            isError: false,
+          },
+        });
+        await args.onAgentEvent?.({
+          stream: "command_output",
+          data: {
+            itemId: "command:queued-exec",
+            phase: "end",
+            title: "command ls",
+            toolCallId: "queued-exec",
+            name: "exec",
+            status: "completed",
+            exitCode: 0,
+          },
+        });
+        return { payloads: [{ text: "final reply" }], meta: { agentMeta: {} } };
+      },
+    );
+
+    const runner = createFollowupRunner({
+      opts: { onCommandOutput },
+      typing: createMockTypingController(),
+      typingMode: "instant",
+      defaultModel: "claude",
+    });
+
+    await runner(queued);
+
+    expect(onCommandOutput).toHaveBeenCalledTimes(1);
+    expect(onCommandOutput).toHaveBeenCalledWith(
+      expect.objectContaining({
+        itemId: "command:queued-exec",
+        phase: "end",
+        status: "completed",
       }),
     );
   });
