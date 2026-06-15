@@ -311,6 +311,56 @@ function collectAllowedValuesFromBundledChannelSchemaPath(
 function formatRawChannelConfigIssueMessage(message: string): string {
   return `invalid config: ${message}`;
 }
+
+function hasWildcardAllowFrom(value: unknown): boolean {
+  return Array.isArray(value) && value.some((entry) => String(entry).trim() === "*");
+}
+
+function collectMattermostOpenDmAllowFromIssues(
+  value: unknown,
+  pathPrefix: string,
+): ConfigValidationIssue[] {
+  if (!isRecord(value)) {
+    return [];
+  }
+  const issues: ConfigValidationIssue[] = [];
+  if (value.dmPolicy === "open" && !hasWildcardAllowFrom(value.allowFrom)) {
+    issues.push({
+      path: `${pathPrefix}.allowFrom`,
+      message: formatRawChannelConfigIssueMessage(
+        `${pathPrefix}.dmPolicy="open" requires ${pathPrefix}.allowFrom to include "*"`,
+      ),
+    });
+  }
+  if (isRecord(value.accounts)) {
+    for (const [accountId, accountConfig] of Object.entries(value.accounts)) {
+      if (!isRecord(accountConfig)) {
+        continue;
+      }
+      const accountPath = `${pathPrefix}.accounts.${accountId}`;
+      if (accountConfig.dmPolicy === "open" && !hasWildcardAllowFrom(accountConfig.allowFrom)) {
+        issues.push({
+          path: `${accountPath}.allowFrom`,
+          message: formatRawChannelConfigIssueMessage(
+            `${accountPath}.dmPolicy="open" requires ${accountPath}.allowFrom to include "*"`,
+          ),
+        });
+      }
+    }
+  }
+  return issues;
+}
+
+function collectBundledChannelConfigDependencyIssues(
+  channelId: string,
+  value: unknown,
+): ConfigValidationIssue[] {
+  if (channelId === "mattermost") {
+    return collectMattermostOpenDmAllowFromIssues(value, "channels.mattermost");
+  }
+  return [];
+}
+
 function collectRawBundledChannelConfigIssues(config: OpenClawConfig): ConfigValidationIssue[] {
   if (!config.channels || !isRecord(config.channels)) {
     return [];
@@ -320,6 +370,9 @@ function collectRawBundledChannelConfigIssues(config: OpenClawConfig): ConfigVal
     if (!Object.hasOwn(config.channels, channelId)) {
       continue;
     }
+    issues.push(
+      ...collectBundledChannelConfigDependencyIssues(channelId, config.channels[channelId]),
+    );
     const result = validateJsonSchemaValue({
       schema: schema as Record<string, unknown>,
       cacheKey: `raw-channel:${channelId}`,
@@ -1569,6 +1622,7 @@ function validateConfigObjectWithPluginsBase(
         }
         continue;
       }
+      issues.push(...collectBundledChannelConfigDependencyIssues(trimmed, result.value));
       replaceChannelConfig(trimmed, result.value);
     }
   }

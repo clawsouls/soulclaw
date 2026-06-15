@@ -284,6 +284,60 @@ describe("validateConfigObjectWithPlugins channel metadata (applyDefaults: true)
       expect(result.config.channels?.discord?.accounts?.work?.agentComponents?.ttlMs).toBe(60_000);
     }
   });
+
+  it('rejects Mattermost dmPolicy="open" without wildcard allowFrom', () => {
+    const result = validateConfigObjectWithPlugins({
+      channels: {
+        mattermost: {
+          enabled: true,
+          baseUrl: "https://chat.example.com",
+          botToken: "test-token",
+          dmPolicy: "open",
+        },
+      },
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          path: "channels.mattermost.allowFrom",
+          message: expect.stringContaining(
+            'channels.mattermost.dmPolicy="open" requires channels.mattermost.allowFrom to include "*"',
+          ),
+        }),
+      );
+    }
+  });
+
+  it('rejects account-scoped Mattermost dmPolicy="open" without wildcard allowFrom', () => {
+    const result = validateConfigObjectWithPlugins({
+      channels: {
+        mattermost: {
+          accounts: {
+            work: {
+              enabled: true,
+              baseUrl: "https://chat.example.com",
+              botToken: "test-token",
+              dmPolicy: "open",
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toContainEqual(
+        expect.objectContaining({
+          path: "channels.mattermost.accounts.work.allowFrom",
+          message: expect.stringContaining(
+            'channels.mattermost.accounts.work.dmPolicy="open" requires channels.mattermost.accounts.work.allowFrom to include "*"',
+          ),
+        }),
+      );
+    }
+  });
 });
 
 describe("validateConfigObjectRawWithPlugins channel metadata", () => {
