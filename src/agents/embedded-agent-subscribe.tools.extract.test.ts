@@ -47,6 +47,9 @@ describe("extractMessagingToolSend", () => {
             ...createChannelTestPluginBase({ id: "slack" }),
             messaging: { normalizeTarget: (raw: string) => raw.trim().toLowerCase() },
             actions: {
+              messageActionTargetAliases: {
+                reply: { aliases: ["chatGuid"] },
+              },
               extractToolSend: (params: { args: Record<string, unknown> }) => {
                 const { args } = params;
                 if (
@@ -290,6 +293,40 @@ describe("extractMessagingToolSend", () => {
       });
     },
   );
+
+  it("extracts implicit current-target evidence for visible reply actions", () => {
+    const result = extractMessagingToolSend(
+      "message",
+      {
+        action: "reply",
+        provider: "slack",
+      },
+      {
+        currentChannelId: "channel:c1",
+        currentMessagingTarget: "user:u123",
+      },
+    );
+
+    expect(result).toMatchObject({
+      tool: "message",
+      provider: "slack",
+      to: "user:u123",
+    });
+  });
+
+  it("extracts provider-declared target aliases for visible reply actions", () => {
+    const result = extractMessagingToolSend("message", {
+      action: "reply",
+      provider: "slack",
+      chatGuid: "Channel:C1",
+    });
+
+    expect(result).toMatchObject({
+      tool: "message",
+      provider: "slack",
+      to: "channel:c1",
+    });
+  });
 
   it("recognizes attachment-style message tool sends", () => {
     const upload = extractMessagingToolSend("message", {
