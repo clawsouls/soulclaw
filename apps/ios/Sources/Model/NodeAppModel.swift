@@ -88,14 +88,14 @@ final class NodeAppModel {
         var pendingApprovalIDs: [String]?
     }
 
-    private let deepLinkLogger = Logger(subsystem: "ai.openclaw.ios", category: "DeepLink")
-    private let pushWakeLogger = Logger(subsystem: "ai.openclaw.ios", category: "PushWake")
-    private let pendingActionLogger = Logger(subsystem: "ai.openclaw.ios", category: "PendingAction")
-    private let locationWakeLogger = Logger(subsystem: "ai.openclaw.ios", category: "LocationWake")
-    private let watchReplyLogger = Logger(subsystem: "ai.openclaw.ios", category: "WatchReply")
-    private let watchExecApprovalLogger = Logger(subsystem: "ai.openclaw.ios", category: "WatchExecApproval")
+    private let deepLinkLogger = Logger(subsystem: "ai.openclawfoundation.app", category: "DeepLink")
+    private let pushWakeLogger = Logger(subsystem: "ai.openclawfoundation.app", category: "PushWake")
+    private let pendingActionLogger = Logger(subsystem: "ai.openclawfoundation.app", category: "PendingAction")
+    private let locationWakeLogger = Logger(subsystem: "ai.openclawfoundation.app", category: "LocationWake")
+    private let watchReplyLogger = Logger(subsystem: "ai.openclawfoundation.app", category: "WatchReply")
+    private let watchExecApprovalLogger = Logger(subsystem: "ai.openclawfoundation.app", category: "WatchExecApproval")
     private let execApprovalNotificationLogger = Logger(
-        subsystem: "ai.openclaw.ios",
+        subsystem: "ai.openclawfoundation.app",
         category: "ExecApprovalNotification")
     enum CameraHUDKind {
         case photo
