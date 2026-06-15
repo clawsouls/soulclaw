@@ -274,6 +274,23 @@ describe("extractMessagingToolSend", () => {
     expect(result?.to).toBe("telegram:123");
   });
 
+  it.each(["poll", "reply", "sticker"] as const)(
+    "extracts target evidence for visible %s actions",
+    (action) => {
+      const result = extractMessagingToolSend("message", {
+        action,
+        provider: "slack",
+        target: "Channel:C1",
+      });
+
+      expect(result).toMatchObject({
+        tool: "message",
+        provider: "slack",
+        to: "channel:c1",
+      });
+    },
+  );
+
   it("recognizes attachment-style message tool sends", () => {
     const upload = extractMessagingToolSend("message", {
       action: "upload-file",

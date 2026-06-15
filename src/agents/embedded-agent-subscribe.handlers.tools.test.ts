@@ -986,6 +986,46 @@ describe("handleToolExecutionEnd mutating failure recovery", () => {
     ]);
   });
 
+  it("records reply target evidence without treating it as terminal send evidence", async () => {
+    const { ctx } = createTestContext();
+    const toolCallId = "tool-message-reply-target";
+
+    await handleToolExecutionStart(
+      ctx as never,
+      {
+        type: "tool_execution_start",
+        toolName: "message",
+        toolCallId,
+        args: {
+          action: "reply",
+          provider: "telegram",
+          target: "chat-reply",
+          message: "visible reply",
+        },
+      } as never,
+    );
+    await handleToolExecutionEnd(
+      ctx as never,
+      {
+        type: "tool_execution_end",
+        toolName: "message",
+        toolCallId,
+        isError: false,
+        result: { ok: true },
+      } as never,
+    );
+
+    expect(ctx.state.messagingToolSentTexts).toEqual([]);
+    expect(ctx.state.messagingToolSentMediaUrls).toEqual([]);
+    expect(ctx.state.messagingToolSentTargets).toEqual([
+      expect.objectContaining({
+        tool: "message",
+        provider: "telegram",
+        to: "chat-reply",
+      }),
+    ]);
+  });
+
   it("does not treat text or media arguments on non-messaging tools as delivery", async () => {
     const { ctx } = createTestContext();
 

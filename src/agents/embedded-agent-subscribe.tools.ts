@@ -16,7 +16,7 @@ import { normalizeInteractiveReply, normalizeMessagePresentation } from "../inte
 import { redactSensitiveFieldValue, redactToolPayloadText } from "../logging/redact.js";
 import { truncateUtf16Safe } from "../utils.js";
 import { collectTextContentBlocks } from "./content-blocks.js";
-import { isMessageToolSendActionName } from "./embedded-agent-messaging.js";
+import { isMessagingToolTargetEvidenceAction } from "./embedded-agent-messaging.js";
 import type {
   MessagingToolSend,
   MessagingToolSourceReplyPayload,
@@ -831,7 +831,7 @@ export function extractMessagingToolSend(
   const action = normalizeOptionalString(args.action) ?? "";
   const accountId = normalizeOptionalString(args.accountId);
   if (toolName === "message") {
-    if (!isMessageToolSendActionName(action)) {
+    if (!isMessagingToolTargetEvidenceAction(toolName, args)) {
       return undefined;
     }
     const toRaw = resolveMessageToolTarget(args);

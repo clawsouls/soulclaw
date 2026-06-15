@@ -3,7 +3,11 @@
  */
 import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
 import { getChannelPlugin, normalizeChannelId } from "../channels/plugins/index.js";
-import { CHANNEL_MESSAGE_ACTION_NAMES } from "../channels/plugins/types.public.js";
+import {
+  CHANNEL_MESSAGE_ACTION_NAMES,
+  type ChannelMessageActionName,
+} from "../channels/plugins/types.public.js";
+import { shouldApplyCrossContextMarker } from "../infra/outbound/outbound-policy.js";
 
 const CORE_MESSAGING_TOOLS = new Set(["sessions_send", "message"]);
 const MESSAGE_TOOL_SEND_ACTIONS = new Set([
@@ -67,6 +71,18 @@ export function isMessagingToolSendAction(
   return Boolean(
     providerId && getChannelPlugin(providerId)?.actions?.extractToolSend?.({ args })?.to,
   );
+}
+
+/** Return true when a visible delivery has one target worth recording as evidence. */
+export function isMessagingToolTargetEvidenceAction(
+  toolName: string,
+  args: Record<string, unknown>,
+): boolean {
+  if (toolName === "message") {
+    const action = normalizeOptionalString(args.action) ?? "";
+    return shouldApplyCrossContextMarker(action as ChannelMessageActionName);
+  }
+  return isMessagingToolSendAction(toolName, args);
 }
 
 /** Return true when a messaging invocation can create visible outbound delivery. */
