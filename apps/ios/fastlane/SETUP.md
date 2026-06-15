@@ -34,7 +34,7 @@ Important: `apps/ios/fastlane/.env` is only for Fastlane/App Store Connect auth 
 Optional app targeting variables (helpful if Fastlane cannot auto-resolve app by bundle):
 
 ```bash
-ASC_APP_IDENTIFIER=ai.openclaw.client
+ASC_APP_IDENTIFIER=ai.openclawfoundation.app
 # or
 ASC_APP_ID=YOUR_APP_STORE_CONNECT_APP_ID
 ```

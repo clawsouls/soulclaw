@@ -170,7 +170,7 @@ final class TalkModeManager: NSObject {
     private var incrementalSpeechPrefetch: IncrementalSpeechPrefetchState?
     private var incrementalSpeechPrefetchMonitorTask: Task<Void, Never>?
 
-    private let logger = Logger(subsystem: "ai.openclaw", category: "TalkMode")
+    private let logger = Logger(subsystem: "ai.openclawfoundation.app", category: "TalkMode")
 
     private static func nowSeconds() -> TimeInterval {
         ProcessInfo.processInfo.systemUptime

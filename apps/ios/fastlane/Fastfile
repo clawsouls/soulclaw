@@ -4,7 +4,7 @@ require "json"
 
 default_platform(:ios)
 
-BETA_APP_IDENTIFIER = "ai.openclaw.client"
+BETA_APP_IDENTIFIER = "ai.openclawfoundation.app"
 
 def load_env_file(path)
   return unless File.exist?(path)
