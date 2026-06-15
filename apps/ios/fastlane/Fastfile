@@ -4,7 +4,7 @@ require "json"
 
 default_platform(:ios)
 
-BETA_APP_IDENTIFIER = "ai.openclawfoundation.app"
+APP_STORE_APP_IDENTIFIER = "ai.openclawfoundation.app"
 DEFAULT_SNAPSHOT_DEVICES = ["iPhone 16 Pro Max", "iPad Pro 13-inch (M4)"].freeze
 SNAPSHOT_STATUS_BAR_ARGUMENTS = "--time 09:41 --dataNetwork wifi --wifiMode active --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100".freeze
 REQUIRED_SCREENSHOT_FAMILIES = {
@@ -178,45 +178,45 @@ def shell_join(parts)
   Shellwords.join(parts.compact)
 end
 
-def resolve_beta_build_number(api_key:, short_version:)
-  explicit = ENV["IOS_BETA_BUILD_NUMBER"]
+def resolve_release_build_number(api_key:, short_version:)
+  explicit = ENV["IOS_RELEASE_BUILD_NUMBER"]
   if env_present?(explicit)
-    UI.user_error!("Invalid IOS_BETA_BUILD_NUMBER '#{explicit}'. Expected digits only.") unless explicit.match?(/\A\d+\z/)
-    UI.message("Using explicit iOS beta build number #{explicit}.")
+    UI.user_error!("Invalid iOS release build number '#{explicit}'. Expected digits only.") unless explicit.match?(/\A\d+\z/)
+    UI.message("Using explicit iOS release build number #{explicit}.")
     return explicit
   end
 
   latest_build = latest_testflight_build_number(
     api_key: api_key,
-    app_identifier: BETA_APP_IDENTIFIER,
+    app_identifier: APP_STORE_APP_IDENTIFIER,
     version: short_version,
     initial_build_number: 0
   )
   next_build = latest_build.to_i + 1
-  UI.message("Resolved iOS beta build number #{next_build} for #{short_version} (latest TestFlight build: #{latest_build}).")
+  UI.message("Resolved iOS release build number #{next_build} for #{short_version} (latest App Store Connect build: #{latest_build}).")
   next_build.to_s
 end
 
-def beta_build_number_needs_asc_auth?
-  explicit = ENV["IOS_BETA_BUILD_NUMBER"]
+def release_build_number_needs_asc_auth?
+  explicit = ENV["IOS_RELEASE_BUILD_NUMBER"]
   !env_present?(explicit)
 end
 
-def prepare_beta_release!(version:, build_number:)
-  script_path = File.join(repo_root, "scripts", "ios-beta-prepare.sh")
-  UI.message("Preparing iOS beta release #{version} (build #{build_number}).")
+def prepare_app_store_release!(version:, build_number:)
+  script_path = File.join(repo_root, "scripts", "ios-release-prepare.sh")
+  UI.message("Preparing iOS App Store release #{version} (build #{build_number}).")
   sh(shell_join(["bash", script_path, "--build-number", build_number]))
 
-  beta_xcconfig = File.join(ios_root, "build", "BetaRelease.xcconfig")
-  UI.user_error!("Missing beta xcconfig at #{beta_xcconfig}.") unless File.exist?(beta_xcconfig)
+  release_xcconfig = File.join(ios_root, "build", "AppStoreRelease.xcconfig")
+  UI.user_error!("Missing App Store release xcconfig at #{release_xcconfig}.") unless File.exist?(release_xcconfig)
 
-  ENV["XCODE_XCCONFIG_FILE"] = beta_xcconfig
-  beta_xcconfig
+  ENV["XCODE_XCCONFIG_FILE"] = release_xcconfig
+  release_xcconfig
 end
 
-def build_beta_release(context)
+def build_app_store_release(context)
   version = context[:version]
-  output_directory = File.join("build", "beta")
+  output_directory = File.join("build", "app-store")
   archive_path = File.join(output_directory, "OpenClaw-#{version}.xcarchive")
 
   build_app(
@@ -294,40 +294,40 @@ platform :ios do
     api_key
   end
 
-  private_lane :prepare_beta_context do |options|
+  private_lane :prepare_app_store_context do |options|
     require_api_key = options[:require_api_key] == true
-    needs_api_key = require_api_key || beta_build_number_needs_asc_auth?
+    needs_api_key = require_api_key || release_build_number_needs_asc_auth?
     api_key = needs_api_key ? asc_api_key : nil
     sync_ios_versioning!
     version_metadata = read_ios_version_metadata
     version = version_metadata[:version]
     short_version = version_metadata[:short_version]
-    build_number = resolve_beta_build_number(api_key: api_key, short_version: short_version)
-    beta_xcconfig = prepare_beta_release!(version: version, build_number: build_number)
+    build_number = resolve_release_build_number(api_key: api_key, short_version: short_version)
+    release_xcconfig = prepare_app_store_release!(version: version, build_number: build_number)
 
     {
       api_key: api_key,
-      beta_xcconfig: beta_xcconfig,
       build_number: build_number,
+      release_xcconfig: release_xcconfig,
       short_version: short_version,
       version: version
     }
   end
 
-  desc "Build a beta archive locally without uploading"
-  lane :beta_archive do
-    context = prepare_beta_context(require_api_key: false)
-    build = build_beta_release(context)
-    UI.success("Built iOS beta archive: version=#{build[:version]} short=#{build[:short_version]} build=#{build[:build_number]}")
+  desc "Build an App Store distribution archive locally without uploading"
+  lane :app_store_archive do
+    context = prepare_app_store_context(require_api_key: false)
+    build = build_app_store_release(context)
+    UI.success("Built iOS App Store archive: version=#{build[:version]} short=#{build[:short_version]} build=#{build[:build_number]}")
     build
   ensure
     ENV.delete("XCODE_XCCONFIG_FILE")
   end
 
-  desc "Build + upload a beta to TestFlight"
-  lane :beta do
-    context = prepare_beta_context(require_api_key: true)
-    build = build_beta_release(context)
+  desc "Build + upload an App Store distribution build to App Store Connect"
+  lane :app_store do
+    context = prepare_app_store_context(require_api_key: true)
+    build = build_app_store_release(context)
 
     upload_to_testflight(
       api_key: context[:api_key],
@@ -336,7 +336,7 @@ platform :ios do
       uses_non_exempt_encryption: false
     )
 
-    UI.success("Uploaded iOS beta: version=#{build[:version]} short=#{build[:short_version]} build=#{build[:build_number]}")
+    UI.success("Uploaded iOS App Store build: version=#{build[:version]} short=#{build[:short_version]} build=#{build[:build_number]}")
   ensure
     ENV.delete("XCODE_XCCONFIG_FILE")
   end

@@ -2,6 +2,7 @@
 // This file is only an example and should stay committed.
 
 OPENCLAW_CODE_SIGN_STYLE = Automatic
+OPENCLAW_CODE_SIGN_IDENTITY = Apple Development
 OPENCLAW_DEVELOPMENT_TEAM = YOUR_TEAM_ID
 
 OPENCLAW_APP_BUNDLE_ID = ai.openclawfoundation.app

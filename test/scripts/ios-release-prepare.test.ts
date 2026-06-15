@@ -1,9 +1,9 @@
-// iOS beta prepare tests cover release-signing guardrails.
+// iOS release prepare tests cover release-signing guardrails.
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const SCRIPT = path.join(process.cwd(), "scripts", "ios-beta-prepare.sh");
+const SCRIPT = path.join(process.cwd(), "scripts", "ios-release-prepare.sh");
 const BASH_BIN = process.platform === "win32" ? "bash" : "/bin/bash";
 const BASH_ARGS = process.platform === "win32" ? [SCRIPT] : ["--noprofile", "--norc", SCRIPT];
 
@@ -36,13 +36,13 @@ function runPrepare(extraArgs: string[]): { ok: boolean; stdout: string; stderr:
   }
 }
 
-describe("scripts/ios-beta-prepare.sh", () => {
-  it("rejects non-canonical beta signing teams before generating release inputs", () => {
+describe("scripts/ios-release-prepare.sh", () => {
+  it("rejects non-canonical signing teams before generating release inputs", () => {
     const result = runPrepare(["--build-number", "7"]);
 
     expect(result.ok).toBe(false);
     expect(result.stderr).toContain(
-      "iOS beta release must use canonical OpenClaw Team ID FWJYW4S8P8",
+      "iOS App Store release must use canonical OpenClaw Team ID FWJYW4S8P8",
     );
     expect(result.stderr).toContain("got Y3YUZP442G");
   });

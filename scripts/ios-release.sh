@@ -4,13 +4,13 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/ios-beta-release.sh [--build-number 7]
+  scripts/ios-release.sh [--build-number 7]
 
-Archives and uploads a beta-release IPA to TestFlight locally.
+Archives and uploads an App Store distribution build to App Store Connect.
 EOF
 }
 
-BUILD_NUMBER="${IOS_BETA_BUILD_NUMBER:-}"
+BUILD_NUMBER="${IOS_RELEASE_BUILD_NUMBER:-}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 while [[ $# -gt 0 ]]; do
@@ -36,5 +36,5 @@ done
 
 (
   cd "${ROOT_DIR}/apps/ios"
-  IOS_BETA_BUILD_NUMBER="${BUILD_NUMBER}" fastlane ios beta
+  IOS_RELEASE_BUILD_NUMBER="${BUILD_NUMBER}" fastlane ios app_store
 )

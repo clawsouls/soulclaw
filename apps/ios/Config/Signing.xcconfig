@@ -5,6 +5,7 @@ OPENCLAW_IOS_DEFAULT_TEAM = FWJYW4S8P8
 OPENCLAW_IOS_SELECTED_TEAM = $(OPENCLAW_IOS_DEFAULT_TEAM)
 OPENCLAW_DEVELOPMENT_TEAM = $(OPENCLAW_IOS_SELECTED_TEAM)
 OPENCLAW_CODE_SIGN_STYLE = Automatic
+OPENCLAW_CODE_SIGN_IDENTITY = Apple Development
 OPENCLAW_APP_BUNDLE_ID = ai.openclawfoundation.app
 OPENCLAW_WATCH_APP_BUNDLE_ID = ai.openclawfoundation.app.watchkitapp
 OPENCLAW_WATCH_EXTENSION_BUNDLE_ID = ai.openclawfoundation.app.watchkitapp.extension
@@ -18,7 +19,7 @@ OPENCLAW_WATCH_EXTENSION_PROFILE =
 #include? "../LocalSigning.xcconfig"
 
 CODE_SIGN_STYLE = $(OPENCLAW_CODE_SIGN_STYLE)
-CODE_SIGN_IDENTITY = Apple Development
+CODE_SIGN_IDENTITY = $(OPENCLAW_CODE_SIGN_IDENTITY)
 DEVELOPMENT_TEAM = $(OPENCLAW_DEVELOPMENT_TEAM)
 
 // Let Xcode manage provisioning for the selected local team unless a local override pins one.
