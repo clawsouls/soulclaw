@@ -6,7 +6,7 @@ This directory is used by `fastlane deliver` for App Store Connect text metadata
 
 ```bash
 cd apps/ios
-ASC_APP_ID=YOUR_APP_STORE_CONNECT_APP_ID \
+APP_STORE_CONNECT_APP_ID=YOUR_APP_STORE_CONNECT_APP_ID \
 DELIVER_METADATA=1 fastlane ios metadata
 ```
 
@@ -31,14 +31,14 @@ DELIVER_METADATA=1 DELIVER_SCREENSHOTS=1 fastlane ios metadata
 The `ios metadata` lane uses App Store Connect API key auth from `apps/ios/fastlane/.env`:
 
 - Keychain-backed (recommended on macOS):
-  - `ASC_KEY_ID`
-  - `ASC_ISSUER_ID`
-  - `ASC_KEYCHAIN_SERVICE` (default: `openclaw-asc-key`)
-  - `ASC_KEYCHAIN_ACCOUNT` (default: current user)
+  - `APP_STORE_CONNECT_KEY_ID`
+  - `APP_STORE_CONNECT_ISSUER_ID`
+  - `APP_STORE_CONNECT_KEYCHAIN_SERVICE` (default: `openclaw-app-store-connect-key`)
+  - `APP_STORE_CONNECT_KEYCHAIN_ACCOUNT` (default: current user)
 - File/path fallback:
-  - `ASC_KEY_ID`
-  - `ASC_ISSUER_ID`
-  - `ASC_KEY_PATH`
+  - `APP_STORE_CONNECT_KEY_ID`
+  - `APP_STORE_CONNECT_ISSUER_ID`
+  - `APP_STORE_CONNECT_KEY_PATH`
 
 Or set `APP_STORE_CONNECT_API_KEY_PATH`.
 
@@ -51,8 +51,8 @@ Or set `APP_STORE_CONNECT_API_KEY_PATH`.
 - The release upload flow uploads release notes and screenshots before the IPA, and never submits for App Review.
 - `privacy_url.txt` is set to `https://openclaw.ai/privacy`.
 - If app lookup fails in `deliver`, set one of:
-  - `ASC_APP_IDENTIFIER` (bundle ID)
-  - `ASC_APP_ID` (numeric App Store Connect app ID, e.g. from `/apps/<id>/...` URL)
+  - `APP_STORE_CONNECT_APP_IDENTIFIER` (bundle ID)
+  - `APP_STORE_CONNECT_APP_ID` (numeric App Store Connect app ID, e.g. from `/apps/<id>/...` URL)
 - For first app versions, include review contact files under `metadata/review_information/`:
   - `first_name.txt`
   - `last_name.txt`
