@@ -1678,6 +1678,9 @@ async function samplePosixProcessWithDescendants(pid, run) {
       timeoutMs: 5000,
     });
     const rows = parsePosixProcessRows(stdout);
+    if (!rows) {
+      return null;
+    }
     const selected = rows.find((row) => row.processId === safePid);
     if (!selected) {
       return null;
@@ -1698,6 +1701,9 @@ async function samplePosixProcessTree(pid, run, commandLineNeedles) {
       timeoutMs: 5000,
     });
     const rows = parsePosixProcessRows(stdout);
+    if (!rows) {
+      return null;
+    }
     const descendants = collectPosixProcessTree(rows, safePid).filter(
       (row) => row.processId !== safePid,
     );
@@ -1729,34 +1735,36 @@ async function samplePosixProcessTree(pid, run, commandLineNeedles) {
 }
 
 function parsePosixProcessRows(stdout) {
-  return stdout
-    .split(/\r?\n/u)
-    .map((line) => {
-      const match = line.match(/^\s*(\d+)\s+(\d+)\s+(\d+)\s+([0-9.]+)\s+(.*)$/u);
-      if (!match) {
-        return null;
-      }
-      const [, pidRaw, ppidRaw, rssKbRaw, cpuRaw, command] = match;
-      const processId = Number.parseInt(pidRaw, 10);
-      const parentProcessId = Number.parseInt(ppidRaw, 10);
-      const rssKb = Number.parseInt(rssKbRaw, 10);
-      const cpuPercent = parseStrictNonNegativeDecimal(cpuRaw);
-      if (
-        !Number.isInteger(processId) ||
-        !Number.isInteger(parentProcessId) ||
-        !Number.isFinite(rssKb)
-      ) {
-        return null;
-      }
-      return {
-        processId,
-        parentProcessId,
-        rssKb,
-        cpuPercent,
-        command: command ?? "",
-      };
-    })
-    .filter(Boolean);
+  const rows = [];
+  for (const line of stdout.split(/\r?\n/u)) {
+    const match = line.match(/^\s*(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(.*)$/u);
+    if (!match) {
+      continue;
+    }
+    const [, pidRaw, ppidRaw, rssKbRaw, cpuRaw, command] = match;
+    if (!/^\d/u.test(pidRaw) && !/^\d/u.test(ppidRaw)) {
+      continue;
+    }
+    const processId = parseStrictPositiveInteger(pidRaw);
+    const parentProcessId = parseStrictUnsignedInteger(ppidRaw);
+    const rssKb = parseStrictPositiveInteger(rssKbRaw);
+    const cpuPercent = parseStrictNonNegativeDecimal(cpuRaw);
+    if (
+      !Number.isInteger(processId) ||
+      !Number.isInteger(parentProcessId) ||
+      !Number.isInteger(rssKb)
+    ) {
+      return null;
+    }
+    rows.push({
+      processId,
+      parentProcessId,
+      rssKb,
+      cpuPercent,
+      command: command ?? "",
+    });
+  }
+  return rows;
 }
 
 function parseStrictNonNegativeDecimal(raw) {
@@ -1775,6 +1783,11 @@ function parseStrictUnsignedInteger(raw) {
   }
   const parsed = Number(text);
   return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+function parseStrictPositiveInteger(raw) {
+  const parsed = parseStrictUnsignedInteger(raw);
+  return parsed && parsed > 0 ? parsed : null;
 }
 
 function parseTasklistMemoryKiB(raw) {
