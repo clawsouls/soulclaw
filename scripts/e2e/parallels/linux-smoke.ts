@@ -53,6 +53,10 @@ import {
 
 // Older published baselines predate this warning, but still need update coverage.
 const BAD_PLUGIN_DIAGNOSTIC_MIN_VERSION = "2026.5.7";
+// Restored Ubuntu snapshots may immediately run unattended-upgrades. Let that
+// legitimate maintenance finish instead of racing or disabling the OS service.
+const APT_LOCK_TIMEOUT_SECONDS = 900;
+const BOOTSTRAP_TIMEOUT_SECONDS = 1200;
 
 function parseOpenClawPackageVersion(value: string): string | null {
   return value.match(/\b(\d{4}\.\d{1,2}\.\d{1,2}(?:-[A-Za-z0-9.]+)?)\b/u)?.[1] ?? null;
@@ -316,7 +320,9 @@ class LinuxSmoke extends SmokeRunController<LinuxOptions> {
 
   protected async runFreshLane(): Promise<void> {
     await this.phase("fresh.restore-snapshot", 180, () => this.restoreSnapshot());
-    await this.phase("fresh.bootstrap-guest", 600, () => this.bootstrapGuest());
+    await this.phase("fresh.bootstrap-guest", BOOTSTRAP_TIMEOUT_SECONDS, () =>
+      this.bootstrapGuest(),
+    );
     await this.phase("fresh.preflight", 90, () => this.logGuestPreflight());
     await this.phase("fresh.install-latest-bootstrap", 420, () => this.installLatestRelease());
     await this.phase("fresh.install-main", 420, () =>
@@ -342,7 +348,9 @@ class LinuxSmoke extends SmokeRunController<LinuxOptions> {
 
   protected async runUpgradeLane(): Promise<void> {
     await this.phase("upgrade.restore-snapshot", 180, () => this.restoreSnapshot());
-    await this.phase("upgrade.bootstrap-guest", 600, () => this.bootstrapGuest());
+    await this.phase("upgrade.bootstrap-guest", BOOTSTRAP_TIMEOUT_SECONDS, () =>
+      this.bootstrapGuest(),
+    );
     await this.phase("upgrade.preflight", 90, () => this.logGuestPreflight());
     await this.phase("upgrade.install-latest", 420, () => this.installLatestRelease());
     this.status.latestInstalledVersion = await this.extractLastVersion("upgrade.install-latest");
@@ -442,13 +450,13 @@ printf 'preflight.npmRoot=%s\n' "$(npm root -g 2>/dev/null || true)"`);
       "-o",
       "Acquire::Check-Date=false",
       "-o",
-      "DPkg::Lock::Timeout=300",
+      `DPkg::Lock::Timeout=${APT_LOCK_TIMEOUT_SECONDS}`,
       "update",
     ]);
     this.guestExec([
       "apt-get",
       "-o",
-      "DPkg::Lock::Timeout=300",
+      `DPkg::Lock::Timeout=${APT_LOCK_TIMEOUT_SECONDS}`,
       "install",
       "-y",
       "curl",
