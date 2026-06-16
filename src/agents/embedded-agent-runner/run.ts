@@ -2142,6 +2142,9 @@ async function runEmbeddedAgentInternal(
                 sessionKey: resolvedSessionKey ?? params.sessionId,
                 provider: activeErrorContext.provider,
                 model: activeErrorContext.model,
+                authMode: lastProfileId
+                  ? attemptAuthProfileStore.profiles?.[lastProfileId]?.type
+                  : undefined,
               })
             : undefined;
           const assistantErrorText =
@@ -2766,10 +2769,14 @@ async function runEmbeddedAgentInternal(
             // promptErrorSource === "compaction" means the model call already completed and the
             // abort happened only while waiting for compaction/retry cleanup. Retrying from here
             // would replay that completed tool turn as a fresh prompt attempt.
+            const promptAuthMode = lastProfileId
+              ? attemptAuthProfileStore.profiles?.[lastProfileId]?.type
+              : undefined;
             const normalizedPromptFailover = coerceToFailoverError(promptError, {
               provider: activeErrorContext.provider,
               model: activeErrorContext.model,
               profileId: lastProfileId,
+              authMode: promptAuthMode,
               sessionId: sessionIdUsed,
               lane: globalLane,
             });
@@ -2999,6 +3006,7 @@ async function runEmbeddedAgentInternal(
                   provider,
                   model: modelId,
                   profileId: lastProfileId,
+                  authMode: promptAuthMode,
                   sessionId: sessionIdUsed,
                   lane: globalLane,
                   status,
@@ -3185,6 +3193,9 @@ async function runEmbeddedAgentInternal(
             authFailure,
             rateLimitFailure,
             billingFailure,
+            authMode: lastProfileId
+              ? attemptAuthProfileStore.profiles?.[lastProfileId]?.type
+              : undefined,
             cloudCodeAssistFormatError,
             isProbeSession,
             overloadProfileRotations,
@@ -3300,6 +3311,9 @@ async function runEmbeddedAgentInternal(
             sessionKey: params.sessionKey ?? params.sessionId,
             provider: activeErrorContext.provider,
             model: activeErrorContext.model,
+            authMode: lastProfileId
+              ? attemptAuthProfileStore.profiles?.[lastProfileId]?.type
+              : undefined,
             verboseLevel: params.verboseLevel,
             reasoningLevel: params.reasoningLevel,
             thinkingLevel: params.thinkLevel,
