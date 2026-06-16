@@ -757,9 +757,15 @@ if (isPrlctl) {
   it("waits for apt locks during Linux snapshot bootstrap", () => {
     const script = readFileSync(TS_PATHS.linux, "utf8");
 
-    expect(script).toContain("APT_LOCK_TIMEOUT_SECONDS = 900");
+    expect(script).toContain("APT_LOCK_RETRY_SECONDS = 900");
     expect(script).toContain("BOOTSTRAP_TIMEOUT_SECONDS = 1200");
-    expect(script).toContain("DPkg::Lock::Timeout=${APT_LOCK_TIMEOUT_SECONDS}");
+    expect(script).toContain("command -v wget");
+    expect(script).toContain("run_apt_with_lock_retry");
+    expect(script).toContain('"Could not get lock"');
+    expect(script).toContain('"Unable to acquire the dpkg frontend lock"');
+    expect(script).toContain('"Unable to lock directory"');
+    expect(script).toContain("downloadGuestFile");
+    expect(script).toContain("this.downloadGuestFile(tgzUrl");
   });
 
   it("keeps Linux bad-plugin diagnostics gated for historical update baselines", () => {
