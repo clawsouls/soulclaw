@@ -362,12 +362,14 @@ function hasConfiguredDmAllowFrom(
 ): boolean {
   const dm = isRecord(record.dm) ? record.dm : null;
   if (mode === "nestedOnly") {
-    return Boolean(
-      (dm && hasDefinedConfigValue(dm, "allowFrom")) || hasDefinedConfigValue(record, "allowFrom"),
+    return (
+      (dm !== null && hasDefinedConfigValue(dm, "allowFrom")) ||
+      hasDefinedConfigValue(record, "allowFrom")
     );
   }
-  return Boolean(
-    hasDefinedConfigValue(record, "allowFrom") || (dm && hasDefinedConfigValue(dm, "allowFrom")),
+  return (
+    hasDefinedConfigValue(record, "allowFrom") ||
+    (dm !== null && hasDefinedConfigValue(dm, "allowFrom"))
   );
 }
 
