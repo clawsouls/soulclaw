@@ -1344,6 +1344,7 @@ export const pt_BR: TranslationMap = {
       placeholderWithAttachments: "Add a message or paste more images...",
       placeholderDisconnected: "Connect to the gateway to start chatting...",
       attachFile: "Attach file",
+      dismissTalkError: "Dismiss Talk error",
       startTalk: "Start Talk",
       stillListening: "Ainda ouvindo",
       talkTranscript: "Transcrição da fala",

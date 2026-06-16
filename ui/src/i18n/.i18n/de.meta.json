@@ -1,5 +1,6 @@
 {
   "fallbackKeys": [
+    "chat.composer.dismissTalkError",
     "chat.workspaceFiles.actions",
     "chat.workspaceFiles.artifactCount",
     "chat.workspaceFiles.artifacts",
@@ -68,8 +69,8 @@
   "locale": "de",
   "model": "claude-opus-4-8",
   "provider": "anthropic",
-  "sourceHash": "cea79b090b14fca4ad1e3e07dc5dcd7f964b1f199fd028938e41054dc5167457",
-  "totalKeys": 1377,
+  "sourceHash": "bfdd6339c3aba583ed162882d2b8b63ad910e66c5a66737c1b5dcfce89190597",
+  "totalKeys": 1378,
   "translatedKeys": 1314,
   "workflow": 1
 }

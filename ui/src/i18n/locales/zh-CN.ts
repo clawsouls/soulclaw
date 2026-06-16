@@ -1308,6 +1308,7 @@ export const zh_CN: TranslationMap = {
       placeholderWithAttachments: "添加消息或继续粘贴图片...",
       placeholderDisconnected: "连接到 Gateway 后开始聊天...",
       attachFile: "附加文件",
+      dismissTalkError: "Dismiss Talk error",
       startTalk: "开始 Talk",
       stillListening: "仍在聆听",
       talkTranscript: "语音转写",

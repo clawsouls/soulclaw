@@ -1310,6 +1310,7 @@ export const zh_TW: TranslationMap = {
       placeholderWithAttachments: "Add a message or paste more images...",
       placeholderDisconnected: "Connect to the gateway to start chatting...",
       attachFile: "Attach file",
+      dismissTalkError: "Dismiss Talk error",
       startTalk: "Start Talk",
       stillListening: "仍在聆聽",
       talkTranscript: "語音逐字稿",
