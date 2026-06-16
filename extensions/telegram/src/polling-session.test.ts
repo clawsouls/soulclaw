@@ -1857,7 +1857,7 @@ describe("TelegramPollingSession", () => {
           createWorker,
           drainIntervalMs: 100,
           spooledUpdateHandlerTimeoutMs: 100,
-          spooledUpdateHandlerAbortGraceMs: 5_000,
+          spooledUpdateHandlerAbortGraceMs: 100,
         },
       });
       const firstRunPromise = firstSession.runUntilAbort();
@@ -1875,17 +1875,19 @@ describe("TelegramPollingSession", () => {
           createWorker,
           drainIntervalMs: 100,
           spooledUpdateHandlerTimeoutMs: 100,
-          spooledUpdateHandlerAbortGraceMs: 5_000,
+          spooledUpdateHandlerAbortGraceMs: 100,
         },
       });
       const secondRunPromise = secondSession.runUntilAbort();
 
       await vi.advanceTimersByTimeAsync(1_000);
       await vi.waitFor(async () => expect(await failedUpdateIds(tempDir)).toEqual([42]));
-      expect(log.mock.calls).toEqual(
-        expect.arrayContaining([
-          [expect.stringContaining("timed out spooled update 42 did not stop")],
-        ]),
+      await vi.waitFor(() =>
+        expect(
+          log.mock.calls.some(([line]) =>
+            String(line).includes("timed out spooled update 42 did not stop"),
+          ),
+        ).toBe(true),
       );
       expect(handleUpdate).toHaveBeenCalledTimes(1);
 
