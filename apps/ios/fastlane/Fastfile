@@ -285,7 +285,7 @@ def capture_watch_screenshot
   device_name = device.fetch("name")
   udid = device.fetch("udid")
   output_dir = File.join(ios_root, "fastlane", "screenshots", "en-US")
-  output_path = File.join(output_dir, "#{device_name}-01-quick-reply.png")
+  output_path = File.join(output_dir, "#{device_name}-01-now-face.png")
   derived_data_path = File.join(ios_root, "build", "WatchScreenshotDerivedData")
   app_path = File.join(derived_data_path, "Build", "Products", "Debug-watchsimulator", "OpenClawWatchApp.app")
 
