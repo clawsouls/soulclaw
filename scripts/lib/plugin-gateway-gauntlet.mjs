@@ -148,6 +148,7 @@ function buildPluginMatrixEntry(params) {
     skills: normalizeStringArray(manifest.skills),
     authMethods: collectAuthMethods(manifest),
     onboardingScopes: collectOnboardingScopes(manifest),
+    requiredPlugins: normalizeStringArray(manifest.requiresPlugins),
     hasConfigSchema: isPlainObject(manifest.configSchema),
     hasRequiredConfigFields: schemaHasRequiredFields(manifest.configSchema),
     commandAliases,
@@ -204,6 +205,52 @@ function selectPluginEntries(entries, options = {}) {
     selected = selected.slice(0, options.limit);
   }
   return selected;
+}
+
+function collectRequiredPluginEntries(entries, plugins) {
+  const byId = new Map(entries.map((entry) => [entry.id, entry]));
+  const selectedIds = new Set(plugins.map((entry) => entry.id));
+  const required = new Map();
+  const visit = (requiredId, ownerId, trail) => {
+    const entry = byId.get(requiredId);
+    if (!entry) {
+      throw new Error(
+        `Bundled plugin "${ownerId}" requires unknown bundled plugin "${requiredId}"`,
+      );
+    }
+    const cycleIndex = trail.indexOf(requiredId);
+    if (cycleIndex !== -1) {
+      const cycle = [...trail.slice(cycleIndex), requiredId].join(" -> ");
+      throw new Error(`Bundled plugin dependency cycle detected: ${cycle}`);
+    }
+    if (required.has(requiredId)) {
+      return;
+    }
+    const nextTrail = [...trail, requiredId];
+    for (const transitiveRequiredId of entry.requiredPlugins ?? []) {
+      visit(transitiveRequiredId, ownerId, nextTrail);
+    }
+    if (!selectedIds.has(requiredId)) {
+      required.set(requiredId, entry);
+    }
+  };
+  for (const plugin of plugins) {
+    for (const requiredId of plugin.requiredPlugins ?? []) {
+      visit(requiredId, plugin.id, [plugin.id]);
+    }
+  }
+  return [...required.values()];
+}
+
+function collectPluginsWithRequiredEntries(entries, plugins) {
+  const combined = new Map();
+  for (const plugin of collectRequiredPluginEntries(entries, plugins)) {
+    combined.set(plugin.id, plugin);
+  }
+  for (const plugin of plugins) {
+    combined.set(plugin.id, plugin);
+  }
+  return [...combined.values()];
 }
 
 function median(values) {
@@ -578,6 +625,8 @@ function isNonNegativeInteger(value) {
 
 export {
   collectQaBaselineRegressionObservations,
+  collectPluginsWithRequiredEntries,
+  collectRequiredPluginEntries,
   collectGatewayCpuObservations,
   collectMetricObservations,
   buildGauntletPrebuildEnv,
