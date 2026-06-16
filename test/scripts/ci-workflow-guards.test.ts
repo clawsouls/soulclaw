@@ -61,13 +61,13 @@ describe("ci workflow guards", () => {
     for (const workflowPath of workflowPaths) {
       const workflow = readFileSync(workflowPath, "utf8");
       const fetchTimeouts = workflow.match(
-        /timeout --signal=TERM[^\n]* 30s git(?: -C "(?:\$workdir|\$GITHUB_WORKSPACE|clawhub-source)")?/g,
+        /timeout --signal=TERM[^\n]* (?:30s|120s) git(?: -C "(?:\$workdir|\$GITHUB_WORKSPACE|clawhub-source)")?/g,
       );
 
       expect(fetchTimeouts?.length, workflowPath).toBeGreaterThan(0);
       expect(
         fetchTimeouts?.every((line) =>
-          line.startsWith("timeout --signal=TERM --kill-after=10s 30s git"),
+          /^timeout --signal=TERM --kill-after=10s (?:30s|120s) git/.test(line),
         ),
         workflowPath,
       ).toBe(true);
@@ -90,7 +90,7 @@ describe("ci workflow guards", () => {
       const checkoutStep = workflow.jobs[jobName].steps.find((step) => step.name === "Checkout");
 
       expect(checkoutStep.run, jobName).toContain(
-        'timeout --signal=TERM --kill-after=10s 30s git -C "$GITHUB_WORKSPACE"',
+        'timeout --signal=TERM --kill-after=10s 120s git -C "$GITHUB_WORKSPACE"',
       );
       expect(checkoutStep.run, jobName).toContain("for attempt in 1 2 3");
       expect(checkoutStep.run, jobName).toContain("timed out on attempt $attempt; retrying");
