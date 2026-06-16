@@ -1740,7 +1740,7 @@ function parsePosixProcessRows(stdout) {
       const processId = Number.parseInt(pidRaw, 10);
       const parentProcessId = Number.parseInt(ppidRaw, 10);
       const rssKb = Number.parseInt(rssKbRaw, 10);
-      const cpuPercent = Number.parseFloat(cpuRaw);
+      const cpuPercent = parsePosixCpuPercent(cpuRaw);
       if (
         !Number.isInteger(processId) ||
         !Number.isInteger(parentProcessId) ||
@@ -1752,11 +1752,20 @@ function parsePosixProcessRows(stdout) {
         processId,
         parentProcessId,
         rssKb,
-        cpuPercent: Number.isFinite(cpuPercent) ? cpuPercent : null,
+        cpuPercent,
         command: command ?? "",
       };
     })
     .filter(Boolean);
+}
+
+function parsePosixCpuPercent(raw) {
+  const text = String(raw ?? "").trim();
+  if (!/^(?:0|[1-9]\d*)(?:\.\d+)?$/u.test(text)) {
+    return null;
+  }
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function collectPosixProcessTree(rows, rootPid) {

@@ -1412,6 +1412,23 @@ describe("kitchen-sink RPC process sampling", () => {
     });
   });
 
+  it("does not truncate malformed POSIX CPU samples", async () => {
+    const sample = await sampleProcess(4321, {
+      platform: "linux",
+      runCommand: async () => ({
+        stdout: " 4321     1  262144  12.5.6 node dist/index.js gateway --port 19080",
+        stderr: "",
+      }),
+    });
+
+    expect(sample).toEqual({
+      aggregateRssMiB: 256,
+      cpuPercent: null,
+      processId: 4321,
+      rssMiB: 256,
+    });
+  });
+
   it("samples the POSIX gateway child instead of the pnpm launcher", async () => {
     const sample = await sampleProcess(4321, {
       platform: "linux",
