@@ -267,6 +267,25 @@ describe("memory manager reindex recovery", () => {
     expect(harness.db.prepare("SELECT 1 AS ok").get()).toEqual({ ok: 1 });
   });
 
+  it("releases the live database guard after constructor schema failure", async () => {
+    const storePath = path.join(workspaceDir, "index-incompatible-schema.sqlite");
+    const db = new DatabaseSync(storePath);
+    db.exec("CREATE TABLE chunks (id TEXT PRIMARY KEY)");
+    db.close();
+
+    const { getMemorySearchManager } = await import("./index.js");
+    const result = await getMemorySearchManager({
+      cfg: createCfg({ storePath, provider: "none", sources: ["memory"] }),
+      agentId: "main",
+    });
+
+    expect(result.manager).toBeNull();
+    expect(result.error).toMatch(/no such column: path/);
+    const exclusiveLock = tryAcquireMemoryReindexSwapLock(storePath);
+    expect(exclusiveLock).toBeDefined();
+    exclusiveLock?.release();
+  });
+
   it("full-reindexes sessions-only retry state when metadata is mismatched", async () => {
     const storePath = path.join(workspaceDir, "index-full-session-identity-retry.sqlite");
     const memoryManager = await openManager(
