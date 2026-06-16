@@ -484,6 +484,13 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps CI workflow edits on workflow guard tests", () => {
+    expect(resolveChangedTestTargetPlan([".github/workflows/ci.yml"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/ci-workflow-guards.test.ts"],
+    });
+  });
+
   it("keeps Crabbox and Testbox workflow edits on workflow regression tests", () => {
     for (const workflowPath of [
       ".github/workflows/ci-check-testbox.yml",
