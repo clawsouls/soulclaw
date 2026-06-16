@@ -348,7 +348,11 @@ async function postClickClackInbound() {
 
 async function waitClickClackSocket() {
   const baseUrl = process.argv[3];
-  const timeoutSeconds = Number(process.argv[4] ?? 30);
+  const timeoutSeconds = readPositiveInt(
+    process.argv[4],
+    30,
+    "ClickClack websocket timeout seconds",
+  );
   const deadline = Date.now() + timeoutSeconds * 1000;
   while (Date.now() < deadline) {
     const remainingMs = Math.max(1, deadline - Date.now());
@@ -387,7 +391,7 @@ function assertClickClackState() {
 async function waitClickClackReply() {
   const statePath = process.argv[3];
   const marker = process.argv[4];
-  const timeoutSeconds = Number(process.argv[5] ?? 30);
+  const timeoutSeconds = readPositiveInt(process.argv[5], 30, "ClickClack reply timeout seconds");
   const deadline = Date.now() + timeoutSeconds * 1000;
   while (Date.now() < deadline) {
     if (fs.existsSync(statePath)) {

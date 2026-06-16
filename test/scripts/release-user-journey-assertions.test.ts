@@ -316,7 +316,7 @@ describe("release user journey assertions", () => {
         withEnv({ HOME: home, OPENCLAW_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS: "100" }, () =>
           runReleaseUserJourneyAssertion("wait-clickclack-socket", [
             `http://127.0.0.1:${server.port}`,
-            "0.2",
+            "1",
           ]),
         ),
       ).rejects.toThrow("Timed out waiting for ClickClack websocket connection");
@@ -339,7 +339,7 @@ describe("release user journey assertions", () => {
         withEnv({ HOME: home, OPENCLAW_RELEASE_USER_JOURNEY_HTTP_TIMEOUT_MS: "100ms" }, () =>
           runReleaseUserJourneyAssertion("wait-clickclack-socket", [
             `http://127.0.0.1:${server.port}`,
-            "0.2",
+            "1",
           ]),
         ),
       ).rejects.toThrow(
@@ -347,6 +347,33 @@ describe("release user journey assertions", () => {
       );
     } finally {
       await server.stop();
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("rejects loose ClickClack wait timeout args instead of parsing prefixes", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "openclaw-release-user-assertions-"));
+    const home = path.join(root, "home");
+    const statePath = path.join(root, "state.json");
+
+    try {
+      await expect(
+        withEnv({ HOME: home }, () =>
+          runReleaseUserJourneyAssertion("wait-clickclack-socket", ["http://127.0.0.1:9", "1e3"]),
+        ),
+      ).rejects.toThrow(
+        'ClickClack websocket timeout seconds must be a positive integer. Got: "1e3"',
+      );
+      await expect(
+        withEnv({ HOME: home }, () =>
+          runReleaseUserJourneyAssertion("wait-clickclack-reply", [
+            statePath,
+            "OPENCLAW_E2E_OK",
+            "30s",
+          ]),
+        ),
+      ).rejects.toThrow('ClickClack reply timeout seconds must be a positive integer. Got: "30s"');
+    } finally {
       rmSync(root, { force: true, recursive: true });
     }
   });
