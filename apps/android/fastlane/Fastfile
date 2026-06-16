@@ -191,7 +191,7 @@ def upload_play_store_metadata!(version_metadata)
     skip_upload_apk: true,
     skip_upload_aab: true,
     skip_upload_metadata: !play_metadata_upload_requested?,
-    skip_upload_changelogs: true,
+    skip_upload_changelogs: false,
     skip_upload_images: !play_image_upload_requested?,
     skip_upload_screenshots: !play_screenshot_upload_requested?,
     validate_only: play_validate_only?
