@@ -53,8 +53,4 @@ Or set `APP_STORE_CONNECT_API_KEY_PATH`.
 - If app lookup fails in `deliver`, set one of:
   - `APP_STORE_CONNECT_APP_IDENTIFIER` (bundle ID)
   - `APP_STORE_CONNECT_APP_ID` (numeric App Store Connect app ID, e.g. from `/apps/<id>/...` URL)
-- For first app versions, include review contact files under `metadata/review_information/`:
-  - `first_name.txt`
-  - `last_name.txt`
-  - `email_address.txt`
-  - `phone_number.txt` (E.164-ish, e.g. `+1 415 555 0100`)
+- App Review submission is manual. Keep review contact, demo account, and reviewer notes outside this repo and enter them directly in App Store Connect when submitting for review.

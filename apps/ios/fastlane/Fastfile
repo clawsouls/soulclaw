@@ -19,6 +19,17 @@ REQUIRED_SCREENSHOT_FAMILIES = {
   "iPhone" => /iPhone/,
   "13-inch iPad" => /iPad (Air|Pro) 13-inch/
 }.freeze
+PUBLIC_METADATA_FILENAMES = [
+  "description.txt",
+  "keywords.txt",
+  "marketing_url.txt",
+  "name.txt",
+  "privacy_url.txt",
+  "promotional_text.txt",
+  "release_notes.txt",
+  "subtitle.txt",
+  "support_url.txt"
+].freeze
 
 def load_env_file(path)
   return unless File.exist?(path)
@@ -601,6 +612,19 @@ def release_notes_metadata_path
   temp_root
 end
 
+def public_metadata_path
+  source = File.join(__dir__, "metadata")
+  temp_root = Dir.mktmpdir("openclaw-app-store-metadata")
+  Dir.children(source).each do |entry|
+    source_entry = File.join(source, entry)
+    next unless File.directory?(source_entry)
+    next unless PUBLIC_METADATA_FILENAMES.any? { |filename| File.exist?(File.join(source_entry, filename)) }
+
+    FileUtils.cp_r(source_entry, File.join(temp_root, entry))
+  end
+  temp_root
+end
+
 def read_ios_version_metadata
   script_path = File.join(repo_root, "scripts", "ios-version.ts")
   stdout, stderr, status = Open3.capture3(
@@ -926,7 +950,7 @@ platform :ios do
       validate_required_screenshots!(paths)
     end
 
-    metadata_path = File.join(__dir__, "metadata")
+    metadata_path = public_metadata_path
     skip_metadata = ENV["DELIVER_METADATA"] != "1"
     if release_notes_upload_requested? && skip_metadata
       metadata_path = release_notes_metadata_path
