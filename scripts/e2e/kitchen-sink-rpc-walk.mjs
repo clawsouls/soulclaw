@@ -1740,7 +1740,7 @@ function parsePosixProcessRows(stdout) {
       const processId = Number.parseInt(pidRaw, 10);
       const parentProcessId = Number.parseInt(ppidRaw, 10);
       const rssKb = Number.parseInt(rssKbRaw, 10);
-      const cpuPercent = parsePosixCpuPercent(cpuRaw);
+      const cpuPercent = parseStrictNonNegativeDecimal(cpuRaw);
       if (
         !Number.isInteger(processId) ||
         !Number.isInteger(parentProcessId) ||
@@ -1759,13 +1759,22 @@ function parsePosixProcessRows(stdout) {
     .filter(Boolean);
 }
 
-function parsePosixCpuPercent(raw) {
+function parseStrictNonNegativeDecimal(raw) {
   const text = String(raw ?? "").trim();
   if (!/^(?:0|[1-9]\d*)(?:\.\d+)?$/u.test(text)) {
     return null;
   }
   const parsed = Number(text);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseStrictUnsignedInteger(raw) {
+  const text = String(raw ?? "").trim();
+  if (!/^(?:0|[1-9]\d*)$/u.test(text)) {
+    return null;
+  }
+  const parsed = Number(text);
+  return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
 function collectPosixProcessTree(rows, rootPid) {
@@ -1949,24 +1958,24 @@ async function sampleWindowsProcess(pid, run, commandLineNeedles = []) {
       const [workingSetBytesRaw, cpuSecondsRaw, processIdRaw, aggregateWorkingSetBytesRaw] = stdout
         .trim()
         .split(/\s+/u);
-      const workingSetBytes = Number.parseInt(workingSetBytesRaw ?? "", 10);
-      const aggregateWorkingSetBytes = Number.parseInt(
+      const workingSetBytes = parseStrictUnsignedInteger(workingSetBytesRaw);
+      const aggregateWorkingSetBytes = parseStrictUnsignedInteger(
         aggregateWorkingSetBytesRaw ?? workingSetBytesRaw ?? "",
-        10,
       );
-      const cpuSeconds = Number.parseFloat(cpuSecondsRaw ?? "");
-      const processId = Number.parseInt(processIdRaw ?? "", 10);
-      if (!Number.isFinite(workingSetBytes)) {
+      const cpuSeconds = parseStrictNonNegativeDecimal(cpuSecondsRaw);
+      const processId = parseStrictUnsignedInteger(processIdRaw);
+      if (workingSetBytes === null) {
         return null;
       }
       return {
         rssMiB: Math.round((workingSetBytes / 1024 / 1024) * 10) / 10,
-        aggregateRssMiB: Number.isFinite(aggregateWorkingSetBytes)
-          ? Math.round((aggregateWorkingSetBytes / 1024 / 1024) * 10) / 10
-          : Math.round((workingSetBytes / 1024 / 1024) * 10) / 10,
+        aggregateRssMiB:
+          aggregateWorkingSetBytes !== null
+            ? Math.round((aggregateWorkingSetBytes / 1024 / 1024) * 10) / 10
+            : Math.round((workingSetBytes / 1024 / 1024) * 10) / 10,
         cpuPercent: null,
-        cpuSeconds: Number.isFinite(cpuSeconds) ? cpuSeconds : null,
-        processId: Number.isFinite(processId) ? processId : safePid,
+        cpuSeconds,
+        processId: processId ?? safePid,
       };
     } catch {
       // Try the next Windows PowerShell command name.

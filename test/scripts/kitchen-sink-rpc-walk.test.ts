@@ -1349,6 +1349,36 @@ describe("kitchen-sink RPC process sampling", () => {
     expect(sample?.aggregateRssMiB).toBe(96);
   });
 
+  it("does not truncate malformed Windows PowerShell CPU or id samples", async () => {
+    const sample = await sampleProcess(1234, {
+      platform: "win32",
+      runCommand: async () => ({
+        stdout: `${256 * 1024 * 1024} 2.25oops 6789x ${512 * 1024 * 1024}oops`,
+        stderr: "",
+      }),
+    });
+
+    expect(sample).toEqual({
+      aggregateRssMiB: 256,
+      cpuPercent: null,
+      cpuSeconds: null,
+      processId: 1234,
+      rssMiB: 256,
+    });
+  });
+
+  it("rejects malformed Windows PowerShell RSS samples", async () => {
+    const sample = await sampleProcess(1234, {
+      platform: "win32",
+      runCommand: async () => ({
+        stdout: `${256 * 1024 * 1024}oops 2.25 6789 ${512 * 1024 * 1024}`,
+        stderr: "",
+      }),
+    });
+
+    expect(sample).toBeNull();
+  });
+
   it("samples the Windows gateway process by listening port", async () => {
     const calls: Array<{ command: string; args: string[] }> = [];
     const sample = await sampleWindowsProcessByPort(19675, {
