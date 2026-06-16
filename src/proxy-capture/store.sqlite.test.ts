@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { listOpenFileDescriptorsForPath } from "../infra/open-file-descriptors.test-support.js";
+import { resolveSqliteDatabaseFilePaths } from "../infra/sqlite-files.js";
 import {
   acquireDebugProxyCaptureStore,
   closeDebugProxyCaptureStore,
@@ -29,6 +30,10 @@ function makeStore() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-proxy-capture-"));
   cleanupDirs.push(root);
   return new DebugProxyCaptureStore(path.join(root, "capture.sqlite"), path.join(root, "blobs"));
+}
+
+function readMode(target: string): number {
+  return fs.statSync(target).mode & 0o777;
 }
 
 describe("DebugProxyCaptureStore", () => {
@@ -110,6 +115,32 @@ describe("DebugProxyCaptureStore", () => {
     } finally {
       store.close();
     }
+  });
+
+  it.runIf(process.platform !== "win32")("keeps capture databases and blobs private", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-proxy-capture-permissions-"));
+    cleanupDirs.push(root);
+    const dbDir = path.join(root, "db");
+    const dbPath = path.join(dbDir, "capture.sqlite");
+    const blobDir = path.join(root, "blobs");
+    const store = new DebugProxyCaptureStore(dbPath, blobDir);
+    const blob = store.persistPayload(Buffer.from("authorization: Bearer secret"));
+
+    expect(readMode(dbDir)).toBe(0o700);
+    expect(readMode(blobDir)).toBe(0o700);
+    for (const databaseFile of resolveSqliteDatabaseFilePaths(dbPath).filter(fs.existsSync)) {
+      expect(readMode(databaseFile)).toBe(0o600);
+    }
+    expect(readMode(blob.path)).toBe(0o600);
+
+    store.close();
+    fs.chmodSync(dbPath, 0o644);
+    fs.chmodSync(blob.path, 0o644);
+    const reopened = new DebugProxyCaptureStore(dbPath, blobDir);
+    reopened.persistPayload(Buffer.from("authorization: Bearer secret"));
+    expect(readMode(dbPath)).toBe(0o600);
+    expect(readMode(blob.path)).toBe(0o600);
+    reopened.close();
   });
 
   it("ignores duplicate close calls", () => {

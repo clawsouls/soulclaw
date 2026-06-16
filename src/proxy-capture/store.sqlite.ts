@@ -5,6 +5,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { normalizeNullableString as normalizeObservedValue } from "@openclaw/normalization-core/string-coerce";
 import { normalizeUniqueStringEntries } from "@openclaw/normalization-core/string-normalization";
 import { requireNodeSqlite } from "../infra/node-sqlite.js";
+import { resolveSqliteDatabaseFilePaths } from "../infra/sqlite-files.js";
 import {
   configureSqliteConnectionPragmas,
   type SqliteWalMaintenance,
@@ -23,8 +24,19 @@ import type {
 
 // SQLite-backed debug proxy store. Metadata stays in SQLite; large payloads are
 // compressed into the blob directory and referenced by hash.
+const DEBUG_PROXY_CAPTURE_DIR_MODE = 0o700;
+const DEBUG_PROXY_CAPTURE_FILE_MODE = 0o600;
+
 function ensureParentDir(filePath: string) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: DEBUG_PROXY_CAPTURE_DIR_MODE });
+}
+
+function hardenDatabaseFiles(dbPath: string): void {
+  for (const candidate of resolveSqliteDatabaseFilePaths(dbPath)) {
+    if (fs.existsSync(candidate)) {
+      fs.chmodSync(candidate, DEBUG_PROXY_CAPTURE_FILE_MODE);
+    }
+  }
 }
 
 type OpenedDatabase = {
@@ -38,6 +50,7 @@ function openDatabase(dbPath: string): OpenedDatabase {
   const db = new DatabaseSync(dbPath);
   let walMaintenance: SqliteWalMaintenance | undefined;
   try {
+    fs.chmodSync(dbPath, DEBUG_PROXY_CAPTURE_FILE_MODE);
     walMaintenance = configureSqliteConnectionPragmas(db, {
       busyTimeoutMs: 5000,
       databaseLabel: "debug-proxy-capture",
@@ -81,6 +94,7 @@ function openDatabase(dbPath: string): OpenedDatabase {
       CREATE INDEX IF NOT EXISTS capture_events_session_ts_idx ON capture_events(session_id, ts);
       CREATE INDEX IF NOT EXISTS capture_events_flow_idx ON capture_events(flow_id, ts);
     `);
+    hardenDatabaseFiles(dbPath);
     return { db, walMaintenance };
   } catch (err) {
     walMaintenance?.close();

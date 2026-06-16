@@ -7,8 +7,11 @@ import type { CaptureBlobRecord } from "./types.js";
 
 // Capture blobs store request/response bodies by content hash, gzip-compressed
 // on disk, so repeated payloads can share one file across events.
+const DEBUG_PROXY_CAPTURE_DIR_MODE = 0o700;
+const DEBUG_PROXY_CAPTURE_FILE_MODE = 0o600;
+
 function ensureDir(dir: string) {
-  fs.mkdirSync(dir, { recursive: true });
+  fs.mkdirSync(dir, { recursive: true, mode: DEBUG_PROXY_CAPTURE_DIR_MODE });
 }
 
 export function writeCaptureBlob(params: {
@@ -21,8 +24,9 @@ export function writeCaptureBlob(params: {
   const blobId = sha256.slice(0, 24);
   const outputPath = path.join(params.blobDir, `${blobId}.bin.gz`);
   if (!fs.existsSync(outputPath)) {
-    fs.writeFileSync(outputPath, gzipSync(params.data));
+    fs.writeFileSync(outputPath, gzipSync(params.data), { mode: DEBUG_PROXY_CAPTURE_FILE_MODE });
   }
+  fs.chmodSync(outputPath, DEBUG_PROXY_CAPTURE_FILE_MODE);
   return {
     blobId,
     path: outputPath,
