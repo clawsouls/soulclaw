@@ -9,6 +9,7 @@ import {
   getNodeSqliteKysely,
 } from "../infra/kysely-sync.js";
 import { requireNodeSqlite } from "../infra/node-sqlite.js";
+import { resolveSqliteDatabaseFilePaths } from "../infra/sqlite-files.js";
 import { runSqliteImmediateTransactionSync } from "../infra/sqlite-transaction.js";
 import {
   configureSqliteConnectionPragmas,
@@ -34,7 +35,6 @@ const OPENCLAW_STATE_SCHEMA_VERSION = 1;
 export const OPENCLAW_SQLITE_BUSY_TIMEOUT_MS = 30_000;
 const OPENCLAW_STATE_DIR_MODE = 0o700;
 const OPENCLAW_STATE_FILE_MODE = 0o600;
-const OPENCLAW_STATE_SIDECAR_SUFFIXES = ["", "-shm", "-wal"] as const;
 
 /** Open shared SQLite database handle plus WAL maintenance lifecycle. */
 export type OpenClawStateDatabase = {
@@ -199,8 +199,7 @@ function ensureOpenClawStatePermissions(pathname: string, env: NodeJS.ProcessEnv
   if (isDefaultStateDatabase || !dirExisted) {
     bestEffortChmodSync(dir, OPENCLAW_STATE_DIR_MODE);
   }
-  for (const suffix of OPENCLAW_STATE_SIDECAR_SUFFIXES) {
-    const candidate = `${pathname}${suffix}`;
+  for (const candidate of resolveSqliteDatabaseFilePaths(pathname)) {
     if (existsSync(candidate)) {
       bestEffortChmodSync(candidate, OPENCLAW_STATE_FILE_MODE);
     }
