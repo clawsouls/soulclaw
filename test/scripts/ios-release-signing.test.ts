@@ -37,7 +37,7 @@ describe("scripts/ios-release-signing.mjs", () => {
     const output = runSigning("plan");
 
     expect(output).toContain("Team ID: FWJYW4S8P8");
-    expect(output).toContain("Signing repo: git@github.com:openclaw/ios-signing.git");
+    expect(output).toContain("Signing repo: git@github.com:openclaw/apps-signing.git");
     expect(output).toContain("Signing branch: main");
     expect(output).toContain("Signing setup and sync: Fastlane match");
     expect(output).toContain(
