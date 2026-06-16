@@ -104,7 +104,9 @@ def read_android_version_metadata
     "--import",
     "tsx",
     File.join(repo_root, "scripts", "android-version.ts"),
-    "--json"
+    "--json",
+    "--root",
+    repo_root
   )
   unless status.success?
     detail = stderr.to_s.strip
@@ -123,7 +125,7 @@ rescue JSON::ParserError => e
 end
 
 def sync_android_versioning!
-  sh(shell_join(["node", "--import", "tsx", File.join(repo_root, "scripts", "android-sync-versioning.ts"), "--check"]))
+  sh(shell_join(["node", "--import", "tsx", File.join(repo_root, "scripts", "android-sync-versioning.ts"), "--check", "--root", repo_root]))
 end
 
 def android_release_notes_path

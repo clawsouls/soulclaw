@@ -52,9 +52,11 @@ class MainActivity : ComponentActivity() {
     pendingIntent = intent
     WindowCompat.setDecorFitsSystemWindows(window, false)
     permissionRequester = PermissionRequester(this)
-    parseAndroidScreenshotModeIntent(intent)?.let { scene ->
-      enterScreenshotMode(scene)
-      return
+    if (BuildConfig.DEBUG) {
+      parseAndroidScreenshotModeIntent(intent)?.let { scene ->
+        enterScreenshotMode(scene)
+        return
+      }
     }
 
     setContent {
