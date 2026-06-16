@@ -7,7 +7,10 @@ import {
   assertOpenAiRequestLogUsed,
 } from "../agent-turn-output.mjs";
 import { readBoundedResponseText as readBoundedResponseTextWithLimit } from "../bounded-response-text.mjs";
-import { applyMockOpenAiModelConfig } from "../fixtures/mock-openai-config.mjs";
+import {
+  applyMockOpenAiModelConfig,
+  parseMockOpenAiPort,
+} from "../fixtures/mock-openai-config.mjs";
 import { readPluginInstallRecords } from "../plugin-index-sqlite.mjs";
 import { readTextFileTail } from "../text-file-utils.mjs";
 
@@ -192,7 +195,7 @@ function assertOnboard() {
 }
 
 function configureMockModel() {
-  const mockPort = Number(process.argv[3]);
+  const mockPort = parseMockOpenAiPort(process.argv[3]);
   const cfg = readJson(configPath());
   applyMockOpenAiModelConfig(cfg, { mockPort });
   writeConfig(cfg);
