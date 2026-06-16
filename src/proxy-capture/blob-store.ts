@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { gzipSync, gunzipSync } from "node:zlib";
+import { applyPrivateModeSync } from "../infra/private-mode.js";
 import type { CaptureBlobRecord } from "./types.js";
 
 // Capture blobs store request/response bodies by content hash, gzip-compressed
@@ -26,7 +27,7 @@ export function writeCaptureBlob(params: {
   if (!fs.existsSync(outputPath)) {
     fs.writeFileSync(outputPath, gzipSync(params.data), { mode: DEBUG_PROXY_CAPTURE_FILE_MODE });
   }
-  fs.chmodSync(outputPath, DEBUG_PROXY_CAPTURE_FILE_MODE);
+  applyPrivateModeSync(outputPath, DEBUG_PROXY_CAPTURE_FILE_MODE);
   return {
     blobId,
     path: outputPath,

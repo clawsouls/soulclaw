@@ -5,6 +5,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { normalizeNullableString as normalizeObservedValue } from "@openclaw/normalization-core/string-coerce";
 import { normalizeUniqueStringEntries } from "@openclaw/normalization-core/string-normalization";
 import { requireNodeSqlite } from "../infra/node-sqlite.js";
+import { applyPrivateModeSync } from "../infra/private-mode.js";
 import { resolveSqliteDatabaseFilePaths } from "../infra/sqlite-files.js";
 import {
   configureSqliteConnectionPragmas,
@@ -34,7 +35,7 @@ function ensureParentDir(filePath: string) {
 function hardenDatabaseFiles(dbPath: string): void {
   for (const candidate of resolveSqliteDatabaseFilePaths(dbPath)) {
     if (fs.existsSync(candidate)) {
-      fs.chmodSync(candidate, DEBUG_PROXY_CAPTURE_FILE_MODE);
+      applyPrivateModeSync(candidate, DEBUG_PROXY_CAPTURE_FILE_MODE);
     }
   }
 }
@@ -46,11 +47,14 @@ type OpenedDatabase = {
 
 function openDatabase(dbPath: string): OpenedDatabase {
   ensureParentDir(dbPath);
+  if (!fs.existsSync(dbPath)) {
+    fs.closeSync(fs.openSync(dbPath, "a", DEBUG_PROXY_CAPTURE_FILE_MODE));
+  }
   const { DatabaseSync } = requireNodeSqlite();
   const db = new DatabaseSync(dbPath);
   let walMaintenance: SqliteWalMaintenance | undefined;
   try {
-    fs.chmodSync(dbPath, DEBUG_PROXY_CAPTURE_FILE_MODE);
+    applyPrivateModeSync(dbPath, DEBUG_PROXY_CAPTURE_FILE_MODE);
     walMaintenance = configureSqliteConnectionPragmas(db, {
       busyTimeoutMs: 5000,
       databaseLabel: "debug-proxy-capture",
