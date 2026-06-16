@@ -6,9 +6,17 @@ import {
   NON_PACKAGED_BUNDLED_PLUGIN_DIRS,
   collectBundledPluginBuildEntries,
 } from "./bundled-plugin-build-entries.mjs";
+import { parsePositiveInt } from "./numeric-options.mjs";
 
 const MANIFEST_NAMES = ["openclaw.plugin.json", "openclaw.plugin.json5"];
 const ANSI_PATTERN = new RegExp(String.raw`\u001B\[[0-9;]*m`, "gu");
+const QA_SUMMARY_MAX_BYTES_ENV = "OPENCLAW_PLUGIN_GATEWAY_GAUNTLET_QA_SUMMARY_MAX_BYTES";
+const DEFAULT_QA_SUMMARY_MAX_BYTES = 2 * 1024 * 1024;
+
+function readPositiveIntEnv(name, fallback) {
+  const raw = process.env[name];
+  return raw === undefined || raw === "" ? fallback : parsePositiveInt(raw, name);
+}
 
 function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -452,7 +460,7 @@ function readQaSuiteSummary(summaryPath) {
     };
   }
   try {
-    const summary = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+    const summary = JSON.parse(readQaSuiteSummaryText(summaryPath));
     const invalidReason = validateQaSuiteSummary(summary);
     if (invalidReason) {
       return {
@@ -480,6 +488,25 @@ function readQaSuiteSummary(summaryPath) {
       summary: null,
     };
   }
+}
+
+function readQaSuiteSummaryText(summaryPath) {
+  const maxBytes = readPositiveIntEnv(QA_SUMMARY_MAX_BYTES_ENV, DEFAULT_QA_SUMMARY_MAX_BYTES);
+  const stat = fs.statSync(summaryPath);
+  if (!stat.isFile()) {
+    throw new Error(`QA suite summary is not a file: ${summaryPath}`);
+  }
+  if (stat.size > maxBytes) {
+    throw new Error(
+      `QA suite summary exceeded ${maxBytes} bytes: ${summaryPath} (${stat.size} bytes)`,
+    );
+  }
+  const text = fs.readFileSync(summaryPath, "utf8");
+  const bytes = Buffer.byteLength(text, "utf8");
+  if (bytes > maxBytes) {
+    throw new Error(`QA suite summary exceeded ${maxBytes} bytes: ${summaryPath} (${bytes} bytes)`);
+  }
+  return text;
 }
 
 function validateQaSuiteSummary(summary) {
