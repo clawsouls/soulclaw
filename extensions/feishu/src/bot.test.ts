@@ -236,7 +236,7 @@ const readSessionUpdatedAtMock: PluginRuntime["channel"]["session"]["readSession
 const resolveStorePathMock: PluginRuntime["channel"]["session"]["resolveStorePath"] = (params) =>
   mockResolveStorePath(params);
 const resolveEnvelopeFormatOptionsMock = () => ({});
-const finalizeInboundContextMock = (ctx: Record<string, unknown>) => ctx;
+const finalizeInboundContextMock = vi.fn((ctx: Record<string, unknown>) => ctx);
 const withReplyDispatcherMock = async ({
   run,
 }: Parameters<PluginRuntime["channel"]["reply"]["withReplyDispatcher"]>[0]) => await run();
