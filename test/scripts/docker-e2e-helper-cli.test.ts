@@ -122,6 +122,26 @@ describe("Docker E2E helper CLIs", () => {
     );
   });
 
+  it("rejects oversized rerun JSON artifacts without a Node stack trace", () => {
+    const root = mkdtempSync(`${tmpdir()}/openclaw-docker-e2e-rerun-`);
+    try {
+      const file = path.join(root, "summary.json");
+      writeFileSync(file, `${JSON.stringify({ filler: "x".repeat(128) })}\n`, "utf8");
+
+      const result = runHelper("scripts/docker-e2e-rerun.mjs", file, "--ref", "abc123", {
+        OPENCLAW_DOCKER_E2E_JSON_ARTIFACT_MAX_BYTES: "64",
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("JSON artifact exceeded 64 bytes");
+      expect(result.stderr).not.toContain("Error:");
+      expect(result.stderr).not.toContain("at file:");
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it.each(["summary.json", "failures.json"])(
     "prints local cleanup reruns without synthesizing Docker lane reruns from %s",
     (fileName) => {
