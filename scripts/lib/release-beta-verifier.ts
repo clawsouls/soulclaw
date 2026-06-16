@@ -99,7 +99,10 @@ export async function runNpmViewWithRetry(
   const attempts = options.attempts ?? NPM_VIEW_ATTEMPTS;
   const delay =
     options.delay ??
-    ((delayMs: number) => new Promise((resolveDelay) => setTimeout(resolveDelay, delayMs)));
+    ((delayMs: number) =>
+      new Promise((resolveDelay) => {
+        setTimeout(resolveDelay, delayMs);
+      }));
   const run = options.run ?? ((npmArgs: string[]) => runCommand("npm", npmArgs));
   let lastError: unknown;
 
