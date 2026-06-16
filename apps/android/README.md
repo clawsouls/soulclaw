@@ -60,6 +60,8 @@ pnpm android:version:pin -- --version 2026.6.5 --version-code 2026060501
 
 `pnpm android:bundle:release` is an alias for the same archive helper.
 
+See `apps/android/VERSIONING.md` and `apps/android/fastlane/SETUP.md` for the release workflow.
+
 Flavor-specific direct Gradle tasks:
 
 ```bash
