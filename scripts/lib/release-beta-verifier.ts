@@ -664,7 +664,7 @@ export async function verifyBetaRelease(
         label: "NPM Telegram Beta E2E",
         repo: args.repo,
         expectedWorkflowName: "NPM Telegram Beta E2E",
-        expectedHeadBranch: args.workflowRef,
+        allowedHeadBranches: ["main", args.workflowRef],
         rerunFailed: false,
       }),
     );
