@@ -185,7 +185,7 @@ def upload_play_store_metadata!(version_metadata)
     skip_upload_apk: true,
     skip_upload_aab: true,
     skip_upload_metadata: !play_metadata_upload_requested?,
-    skip_upload_changelogs: false,
+    skip_upload_changelogs: true,
     skip_upload_images: !play_image_upload_requested?,
     skip_upload_screenshots: !play_screenshot_upload_requested?,
     validate_only: play_validate_only?
@@ -193,6 +193,7 @@ def upload_play_store_metadata!(version_metadata)
 end
 
 def upload_play_store_build!(version_metadata)
+  sync_android_changelog!(version_metadata.fetch(:version_code))
   artifact_path = release_artifact_path(version_metadata.fetch(:version))
   UI.user_error!("Missing Play release artifact at #{artifact_path}. Run pnpm android:release:archive first.") unless File.exist?(artifact_path)
 
