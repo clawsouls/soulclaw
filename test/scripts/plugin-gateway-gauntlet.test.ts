@@ -788,6 +788,33 @@ setInterval(() => {}, 1000);
     ]);
   });
 
+  it("does not promote setup and first cold-start observations to guard failures", () => {
+    const observations = [
+      { kind: "phase-rss-high", phase: "prebuild", maxRssMb: 2214 },
+      {
+        kind: "phase-wall-anomaly",
+        phase: "lifecycle:install",
+        pluginId: "acpx",
+        wallMs: 17_148,
+        coldStart: true,
+      },
+      {
+        kind: "phase-wall-anomaly",
+        phase: "lifecycle:install",
+        pluginId: "steady-plugin",
+        wallMs: 17_148,
+      },
+    ];
+
+    expect(buildObservationGuardFailures(observations, true)).toEqual([
+      {
+        kind: "observation:phase-wall-anomaly",
+        message: "Gauntlet observation threshold exceeded: phase-wall-anomaly",
+        observation: observations[2],
+      },
+    ]);
+  });
+
   it("cleans the isolated run root after an explicitly empty dry run", async () => {
     const outputDir = path.join(repoRoot, "artifacts");
     const result = spawnSync(

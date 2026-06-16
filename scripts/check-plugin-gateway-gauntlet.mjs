@@ -236,15 +236,23 @@ function readOptionalNonNegativeIntEnv(name) {
   return raw ? parseNonNegativeInt(raw, name) : undefined;
 }
 
+function shouldPromoteObservationGuardFailure(observation) {
+  // Setup and the first cold work command are still reported, but they are not
+  // stable enough to fail the gauntlet's steady-state regression guard.
+  return observation?.phase !== "prebuild" && observation?.coldStart !== true;
+}
+
 export function buildObservationGuardFailures(observations, enabled = false) {
   if (!enabled) {
     return [];
   }
-  return observations.map((observation) => ({
-    kind: `observation:${observation.kind ?? "unknown"}`,
-    message: `Gauntlet observation threshold exceeded: ${observation.kind ?? "unknown"}`,
-    observation,
-  }));
+  return observations
+    .filter((observation) => shouldPromoteObservationGuardFailure(observation))
+    .map((observation) => ({
+      kind: `observation:${observation.kind ?? "unknown"}`,
+      message: `Gauntlet observation threshold exceeded: ${observation.kind ?? "unknown"}`,
+      observation,
+    }));
 }
 
 /**
