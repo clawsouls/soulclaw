@@ -1777,6 +1777,16 @@ function parseStrictUnsignedInteger(raw) {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
+function parseTasklistMemoryKiB(raw) {
+  const text = String(raw ?? "").trim();
+  const match = text.match(/^((?:0|[1-9]\d*)|(?:[1-9]\d{0,2}(?:,\d{3})+))\s*K$/iu);
+  if (!match) {
+    return null;
+  }
+  const parsed = Number(match[1].replaceAll(",", ""));
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
 function collectPosixProcessTree(rows, rootPid) {
   const byParent = new Map();
   for (const row of rows) {
@@ -1865,16 +1875,16 @@ async function sampleWindowsPidWithTasklist(pid, run) {
     const tasklistFields = parseTasklistCsvLine(line);
     const processIdRaw = tasklistFields[1];
     const memoryRaw = tasklistFields[4];
-    const processId = Number.parseInt(processIdRaw ?? "", 10);
-    const memoryKiB = Number.parseInt((memoryRaw ?? "").replace(/[^\d]/gu, ""), 10);
-    if (!Number.isFinite(memoryKiB)) {
+    const processId = parseStrictUnsignedInteger(processIdRaw);
+    const memoryKiB = parseTasklistMemoryKiB(memoryRaw);
+    if (memoryKiB === null) {
       return null;
     }
     return {
       rssMiB: Math.round((memoryKiB / 1024) * 10) / 10,
       cpuPercent: null,
       cpuSeconds: null,
-      processId: Number.isFinite(processId) ? processId : safePid,
+      processId: processId ?? safePid,
     };
   } catch {
     return null;
