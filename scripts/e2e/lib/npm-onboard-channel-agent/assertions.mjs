@@ -7,11 +7,51 @@ import {
   assertOpenAiRequestLogUsed,
 } from "../agent-turn-output.mjs";
 import { assertOpenAiEnvAuthProfileStore } from "../auth-profile-store-assertions.mjs";
+import { readPositiveIntEnv } from "../env-limits.mjs";
 import { applyMockOpenAiModelConfig } from "../fixtures/mock-openai-config.mjs";
+import { readTextFileTail } from "../text-file-utils.mjs";
 
 const command = process.argv[2];
-const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
+const ERROR_DETAIL_TAIL_BYTES = 16 * 1024;
+const JSON_ARTIFACT_MAX_BYTES = readPositiveIntEnv(
+  "OPENCLAW_NPM_ONBOARD_JSON_ARTIFACT_MAX_BYTES",
+  1024 * 1024,
+);
+const STATUS_TEXT_MAX_BYTES = readPositiveIntEnv(
+  "OPENCLAW_NPM_ONBOARD_STATUS_TEXT_MAX_BYTES",
+  1024 * 1024,
+);
 const ansiEscapePattern = new RegExp(String.raw`\u001b\[[0-?]*[ -/]*[@-~]`, "g");
+
+function readTextFileBounded(file, label, maxBytes) {
+  const stat = fs.statSync(file);
+  if (!stat.isFile()) {
+    throw new Error(`${label} is not a file: ${file}`);
+  }
+  if (stat.size > maxBytes) {
+    throw new Error(
+      `${label} exceeded ${maxBytes} bytes: ${file} (${stat.size} bytes). Tail: ${readTextFileTail(
+        file,
+        ERROR_DETAIL_TAIL_BYTES,
+      )}`,
+    );
+  }
+  const text = fs.readFileSync(file, "utf8");
+  const bytes = Buffer.byteLength(text, "utf8");
+  if (bytes > maxBytes) {
+    throw new Error(
+      `${label} exceeded ${maxBytes} bytes: ${file} (${bytes} bytes). Tail: ${readTextFileTail(
+        file,
+        ERROR_DETAIL_TAIL_BYTES,
+      )}`,
+    );
+  }
+  return text;
+}
+
+function readJson(file) {
+  return JSON.parse(readTextFileBounded(file, "JSON artifact", JSON_ARTIFACT_MAX_BYTES));
+}
 
 function stripAnsi(text) {
   return text.replace(ansiEscapePattern, "");
@@ -198,6 +238,12 @@ function assertStatusSurfaces() {
   const channelsStatusPath = process.argv[4];
   const statusTextPath = process.argv[5];
   const channelsStatus = readJson(channelsStatusPath);
+  const statusText = readTextFileBounded(
+    statusTextPath,
+    "plain status output",
+    STATUS_TEXT_MAX_BYTES,
+  );
+  const statusTail = readTextFileTail(statusTextPath, ERROR_DETAIL_TAIL_BYTES);
   const configuredChannels = Array.isArray(channelsStatus.configuredChannels)
     ? channelsStatus.configuredChannels
     : [];
@@ -206,17 +252,20 @@ function assertStatusSurfaces() {
       `channels status did not list configured channel ${channel}. Payload: ${JSON.stringify(channelsStatus)}`,
     );
   }
-  const statusText = fs.readFileSync(statusTextPath, "utf8");
   if (!/channels/i.test(statusText)) {
-    throw new Error(`plain status output did not render a Channels section. Output: ${statusText}`);
+    throw new Error(
+      `plain status output did not render a Channels section. Output tail: ${statusTail}`,
+    );
   }
   const channelsSection = extractStatusSection(statusText, "channels");
   if (!channelsSection) {
-    throw new Error(`plain status output did not render a Channels section. Output: ${statusText}`);
+    throw new Error(
+      `plain status output did not render a Channels section. Output tail: ${statusTail}`,
+    );
   }
   if (!channelsSection.toLowerCase().includes(channel.toLowerCase())) {
     throw new Error(
-      `plain status output did not mention ${channel} in the Channels section. Output: ${statusText}`,
+      `plain status output did not mention ${channel} in the Channels section. Output tail: ${statusTail}`,
     );
   }
 }
