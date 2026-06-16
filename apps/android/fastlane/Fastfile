@@ -2,7 +2,7 @@ require "fileutils"
 require "json"
 require "open3"
 require "shellwords"
-require "tempfile"
+require "supply/client"
 
 default_platform(:android)
 
@@ -84,17 +84,21 @@ def play_auth_options
   UI.user_error!("Missing Google Play API credentials. Set GOOGLE_PLAY_JSON_KEY or GOOGLE_PLAY_JSON_KEY_DATA.")
 end
 
-def with_play_json_key_file
-  auth = play_auth_options
-  if auth[:json_key]
-    yield auth[:json_key]
-    return
-  end
-
-  Tempfile.create(["openclaw-google-play", ".json"]) do |file|
-    file.write(auth.fetch(:json_key_data))
-    file.flush
-    yield file.path
+def validate_play_auth!
+  client = nil
+  begin
+    client = Supply::Client.make_from_config(params: play_auth_options)
+    client.begin_edit(package_name: play_package_name)
+  rescue => e
+    UI.user_error!("Google Play API credentials are invalid for #{play_package_name}: #{e.message}")
+  ensure
+    if client&.current_edit
+      begin
+        client.abort_current_edit
+      rescue => e
+        UI.user_error!("Google Play API credentials opened a validation edit but could not close it: #{e.message}")
+      end
+    end
   end
 end
 
@@ -181,6 +185,8 @@ def upload_play_store_metadata!(version_metadata)
   upload_to_play_store(
     **play_auth_options,
     package_name: play_package_name,
+    track: play_track,
+    version_code: version_metadata.fetch(:version_code),
     metadata_path: play_metadata_path,
     skip_upload_apk: true,
     skip_upload_aab: true,
@@ -192,7 +198,9 @@ def upload_play_store_metadata!(version_metadata)
   )
 end
 
-def upload_play_store_build!(version_metadata)
+def upload_play_store_build!(version_metadata, upload_metadata: false, upload_images: false, upload_screenshots: false)
+  ENV["SUPPLY_UPLOAD_SCREENSHOTS"] = "1" if upload_screenshots
+  validate_android_screenshots!
   sync_android_changelog!(version_metadata.fetch(:version_code))
   artifact_path = release_artifact_path(version_metadata.fetch(:version))
   UI.user_error!("Missing Play release artifact at #{artifact_path}. Run pnpm android:release:archive first.") unless File.exist?(artifact_path)
@@ -205,10 +213,10 @@ def upload_play_store_build!(version_metadata)
     release_status: play_release_status,
     metadata_path: play_metadata_path,
     skip_upload_apk: true,
-    skip_upload_metadata: true,
+    skip_upload_metadata: !upload_metadata,
     skip_upload_changelogs: false,
-    skip_upload_images: true,
-    skip_upload_screenshots: true,
+    skip_upload_images: !upload_images,
+    skip_upload_screenshots: !upload_screenshots,
     validate_only: play_validate_only?
   )
 end
@@ -218,9 +226,7 @@ load_env_file(File.join(__dir__, ".env"))
 platform :android do
   desc "Validate Google Play API credentials"
   lane :auth_check do
-    with_play_json_key_file do |json_key_path|
-      validate_play_store_json_key(json_key: json_key_path)
-    end
+    validate_play_auth!
     UI.success("Google Play API credentials are valid.")
   end
 
@@ -260,9 +266,8 @@ platform :android do
     screenshots
     ENV["SUPPLY_UPLOAD_METADATA"] = "1"
     ENV["SUPPLY_UPLOAD_SCREENSHOTS"] = "1"
-    upload_play_store_metadata!(version_metadata)
     build_release_artifacts!
-    upload_play_store_build!(version_metadata)
+    upload_play_store_build!(version_metadata, upload_metadata: true, upload_screenshots: true)
     UI.success("Uploaded Android Play build to #{play_track}: version=#{version_metadata[:version]} code=#{version_metadata[:version_code]}")
     UI.important("Production promotion remains manual in Google Play Console.")
   end
