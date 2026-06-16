@@ -985,6 +985,8 @@ describe("handleFeishuMessage ACP routing", () => {
       },
       channelRuntime: partialChannelRuntime,
     });
+
+    expect(finalizeInboundContextMock).toHaveBeenCalledTimes(1);
   });
 });
 
