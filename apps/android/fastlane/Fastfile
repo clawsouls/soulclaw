@@ -168,6 +168,10 @@ def build_release_artifacts!
   sh(shell_join(["bun", File.join(android_root, "scripts", "build-release-artifacts.ts")]))
 end
 
+def capture_android_screenshots!
+  sh(shell_join(["bash", File.join(repo_root, "scripts", "android-screenshots.sh")]))
+end
+
 def upload_play_store_metadata!(version_metadata)
   validate_android_screenshots!
   sync_android_changelog!(version_metadata.fetch(:version_code))
@@ -232,6 +236,11 @@ platform :android do
     build_release_artifacts!
   end
 
+  desc "Generate deterministic Android screenshots for Google Play metadata"
+  lane :screenshots do
+    capture_android_screenshots!
+  end
+
   desc "Upload the signed Play AAB to Google Play"
   lane :play_store do
     sync_android_versioning!
@@ -245,7 +254,9 @@ platform :android do
     auth_check
     sync_android_versioning!
     version_metadata = read_android_version_metadata
+    screenshots
     ENV["SUPPLY_UPLOAD_METADATA"] = "1"
+    ENV["SUPPLY_UPLOAD_SCREENSHOTS"] = "1"
     upload_play_store_metadata!(version_metadata)
     build_release_artifacts!
     upload_play_store_build!(version_metadata)

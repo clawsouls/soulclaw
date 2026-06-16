@@ -53,6 +53,12 @@ pnpm android:version:pin -- --from-gateway
 pnpm android:version:pin -- --version 2026.6.5 --version-code 2026060501
 ```
 
+Generate raw Google Play screenshots:
+
+```bash
+pnpm android:screenshots
+```
+
 `pnpm android:release:archive` builds signed release artifacts into `apps/android/build/release-artifacts/` and writes `.sha256` checksum files:
 
 - Play build: `openclaw-<version>-play-release.aab`

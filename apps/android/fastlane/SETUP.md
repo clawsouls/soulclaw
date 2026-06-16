@@ -33,6 +33,12 @@ Archive locally without upload:
 pnpm android:release:archive
 ```
 
+Generate deterministic Google Play screenshots:
+
+```bash
+pnpm android:screenshots
+```
+
 Upload metadata, release notes, and the Play AAB to the internal testing track:
 
 ```bash
@@ -56,12 +62,13 @@ Release rules:
 - `pnpm android:version:pin -- --version 2026.6.5 --version-code 2026060502` increments another build on the same Android release train.
 - `pnpm android:version:sync` updates generated version artifacts.
 - `pnpm android:version:check` validates checked-in Android version artifacts.
+- `pnpm android:screenshots` builds and installs the Play debug app, launches deterministic screenshot scenes, and captures raw PNGs.
 - `pnpm android:release:archive` builds the signed Play AAB and third-party APK into `apps/android/build/release-artifacts/`.
 - `pnpm android:release:upload` uploads the Play AAB to the configured Google Play track. The default track is `internal`.
 - Production promotion remains manual in Google Play Console.
 
 Screenshots:
 
-- Android metadata can upload raw Play screenshots when PNGs exist under `apps/android/fastlane/metadata/android/<locale>/images/`.
+- Android screenshot capture writes raw Play screenshots under `apps/android/fastlane/metadata/android/<locale>/images/phoneScreenshots/`.
 - Set `SUPPLY_UPLOAD_SCREENSHOTS=1` to include those screenshots in `fastlane android metadata`.
 - Do not commit generated screenshot captures unless they become intentional store metadata assets.

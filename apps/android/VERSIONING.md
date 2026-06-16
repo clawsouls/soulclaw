@@ -30,8 +30,9 @@ pnpm android:version:pin -- --version 2026.6.5 --version-code 2026060501
 1. Pin Android to the intended release version.
 2. Run `pnpm android:version:sync`.
 3. Update `apps/android/fastlane/metadata/android/en-US/release_notes.txt`.
-4. Run `pnpm android:release:archive` to produce the signed Play AAB and third-party APK.
-5. Run `pnpm android:release:upload` to upload metadata and the Play AAB to Google Play internal testing.
-6. Promote to production manually in Google Play Console.
+4. Run `pnpm android:screenshots` to refresh raw Google Play screenshots.
+5. Run `pnpm android:release:archive` to produce the signed Play AAB and third-party APK.
+6. Run `pnpm android:release:upload` to upload metadata, screenshots, and the Play AAB to Google Play internal testing.
+7. Promote to production manually in Google Play Console.
 
 The third-party flavor is archived as a signed APK for non-Play distribution. It is not uploaded by the Play release lane.
