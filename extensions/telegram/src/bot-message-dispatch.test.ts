@@ -2089,6 +2089,25 @@ describe("dispatchTelegramMessage draft streaming", () => {
     expect(deliverReplies).not.toHaveBeenCalled();
   });
 
+  it("does not leak inline reply directives into block draft previews", async () => {
+    const { answerDraftStream } = setupDraftStreams({ answerMessageId: 2001 });
+    dispatchReplyWithBufferedBlockDispatcher.mockImplementation(
+      async ({ dispatcherOptions, replyOptions }) => {
+        const payload = { text: "[[reply_to: 123]] Visible chunk." };
+        await replyOptions?.onBlockReplyQueued?.(payload, { assistantMessageIndex: 0 });
+        await dispatcherOptions.deliver(payload, { kind: "block", assistantMessageIndex: 0 });
+        return { queuedFinal: true };
+      },
+    );
+
+    await dispatchWithContext({ context: createContext() });
+
+    expect(answerDraftStream.update).toHaveBeenCalledTimes(1);
+    expect(answerDraftStream.update).toHaveBeenCalledWith("Visible chunk.");
+    expect(answerDraftStream.update).not.toHaveBeenCalledWith("[[reply_to: 123]] Visible chunk.");
+    expect(deliverReplies).not.toHaveBeenCalled();
+  });
+
   it("rotates answer previews when queued block assistant index changes", async () => {
     const { answerDraftStream } = setupDraftStreams({ answerMessageId: 2001 });
     dispatchReplyWithBufferedBlockDispatcher.mockImplementation(

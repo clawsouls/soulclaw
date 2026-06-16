@@ -1994,8 +1994,18 @@ export const dispatchTelegramMessage = async ({
                       return;
                     }
                     const telegramButtons = resolvePayloadTelegramInlineButtons(effectivePayload);
+                    const lanePayload =
+                      info.kind === "block" &&
+                      typeof payload.text === "string" &&
+                      typeof effectivePayload.text === "string" &&
+                      payload.text !== effectivePayload.text &&
+                      payload.text.trimEnd() === effectivePayload.text &&
+                      !effectivePayload.mediaUrl &&
+                      !effectivePayload.mediaUrls?.length
+                        ? { ...effectivePayload, text: payload.text }
+                        : effectivePayload;
                     const split = splitTextIntoLaneSegments(
-                      { text: effectivePayload.text },
+                      { text: lanePayload.text },
                       payload.isReasoning,
                     );
                     const segments = split.segments;
@@ -2012,8 +2022,7 @@ export const dispatchTelegramMessage = async ({
                     const isToolPayloadAfterFinal =
                       info.kind === "tool" && (finalAnswerDeliveryStarted || finalAnswerDelivered);
                     const isNonTerminalWarningAfterDeliveredFinal =
-                      isReplyPayloadNonTerminalToolErrorWarning(effectivePayload) &&
-                      finalAnswerDelivered;
+                      isReplyPayloadNonTerminalToolErrorWarning(payload) && finalAnswerDelivered;
                     if (
                       (isToolPayloadAfterFinal || isNonTerminalWarningAfterDeliveredFinal) &&
                       !reply.hasMedia &&
@@ -2126,7 +2135,7 @@ export const dispatchTelegramMessage = async ({
                         (entry) =>
                           queuedAnswerBlockRotationMatchesDelivery(
                             entry,
-                            effectivePayload,
+                            lanePayload,
                             info.assistantMessageIndex,
                           ),
                       );
@@ -2158,7 +2167,7 @@ export const dispatchTelegramMessage = async ({
                       if (segment.lane === "answer" && info.kind === "block") {
                         const preparedAnswerLane = await prepareAnswerLaneForText();
                         const shouldRotateQueuedBlock = takeQueuedAnswerBlockRotation(
-                          effectivePayload,
+                          lanePayload,
                           info.assistantMessageIndex,
                         );
                         if (shouldRotateQueuedBlock && !preparedAnswerLane) {
@@ -2178,7 +2187,7 @@ export const dispatchTelegramMessage = async ({
                           : await deliverLaneText({
                               laneName: segment.lane,
                               text: segment.update.text,
-                              payload: effectivePayload,
+                              payload: lanePayload,
                               infoKind: info.kind,
                               buttons: telegramButtons,
                             });
@@ -2192,7 +2201,7 @@ export const dispatchTelegramMessage = async ({
                           result.kind === "preview-finalized" ||
                           result.kind === "preview-retained")
                       ) {
-                        lastAnswerBlockPayload = effectivePayload;
+                        lastAnswerBlockPayload = lanePayload;
                         lastAnswerBlockText = segment.update.text;
                         lastAnswerBlockButtons = telegramButtons;
                       }
