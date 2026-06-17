@@ -42,8 +42,6 @@ type SessionRepairFileSnapshot = {
   ctimeNs: bigint;
 };
 
-export type TrustedSessionRepairSnapshot = SessionRepairFileSnapshot;
-
 type SessionRepairCacheEntry = {
   snapshot: SessionRepairFileSnapshot;
   toolResultIds: Set<string>;
@@ -595,7 +593,7 @@ async function tryIncrementalSessionRepair(params: {
   sessionFile: string;
   currentSnapshot: SessionRepairFileSnapshot;
   cached: SessionRepairCacheEntry;
-  trustedSnapshot: TrustedSessionRepairSnapshot | undefined;
+  trustedSnapshot: SessionRepairFileSnapshot | undefined;
 }): Promise<RepairReport | undefined> {
   if (isSameSessionRepairSnapshot(params.cached.snapshot, params.currentSnapshot)) {
     return {
@@ -657,7 +655,7 @@ async function tryIncrementalSessionRepair(params: {
 /** Repair a persisted session JSONL file in place when replay-breaking corruption is found. */
 export async function repairSessionFileIfNeeded(params: {
   sessionFile: string;
-  trustedSnapshot?: TrustedSessionRepairSnapshot;
+  trustedSnapshot?: SessionRepairFileSnapshot;
   debug?: (message: string) => void;
   warn?: (message: string) => void;
 }): Promise<RepairReport> {
