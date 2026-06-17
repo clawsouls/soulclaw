@@ -456,8 +456,25 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
             if (manuallyStopped.has(rKey)) {
               return;
             }
-            recoveryStartRequested.add(rKey);
-            setRuntime(channelId, id, { accountId: id, restartPending: true });
+            // When a previous stop timed out and the health monitor is
+            // requesting recovery again, clean up the stuck task so the
+            // channel can actually restart instead of staying in limbo.
+            if (recoveryStartRequested.has(rKey)) {
+              recoveryStopTimedOut.delete(rKey);
+              recoveryStartRequested.delete(rKey);
+              restartAttempts.delete(rKey);
+              store.aborts.delete(id);
+              store.tasks.delete(id);
+              setRuntime(channelId, id, {
+                accountId: id,
+                restartPending: false,
+                reconnectAttempts: 0,
+              });
+            } else {
+              recoveryStartRequested.add(rKey);
+              setRuntime(channelId, id, { accountId: id, restartPending: true });
+              return;
+            }
           }
           return;
         }
