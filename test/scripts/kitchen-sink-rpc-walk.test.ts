@@ -761,6 +761,51 @@ describe("kitchen-sink RPC caller loading", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  posixIt("kills descendants when timed commands exit cleanly after SIGTERM", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "openclaw-kitchen-rpc-timeout-clean-parent-"));
+    const scriptPath = path.join(root, "term-zero-grandchild.mjs");
+    const grandchildPidPath = path.join(root, "grandchild.pid");
+    let grandchildPid = 0;
+
+    writeFileSync(
+      scriptPath,
+      `
+import { spawn } from "node:child_process";
+import fs from "node:fs";
+
+const grandchild = spawn(process.execPath, [
+  "-e",
+  "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);",
+], { stdio: "ignore" });
+fs.writeFileSync(process.argv[2], String(grandchild.pid));
+process.on("SIGTERM", () => process.exit(0));
+setInterval(() => {}, 1000);
+`,
+      "utf8",
+    );
+
+    const runPromise = runCommand(process.execPath, [scriptPath, grandchildPidPath], {
+      timeoutKillGraceMs: 2_000,
+      timeoutMs: 100,
+    });
+
+    try {
+      await waitFor(() => existsSync(grandchildPidPath));
+      grandchildPid = Number.parseInt(readText(grandchildPidPath), 10);
+      expect(Number.isInteger(grandchildPid)).toBe(true);
+      expect(isProcessAlive(grandchildPid)).toBe(true);
+
+      await expect(runPromise).rejects.toThrow("timed out after 100ms");
+      await waitFor(() => !isProcessAlive(grandchildPid), 5_000);
+    } finally {
+      await runPromise.catch(() => {});
+      if (grandchildPid && isProcessAlive(grandchildPid)) {
+        process.kill(grandchildPid, "SIGKILL");
+      }
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("kitchen-sink RPC payload unwrapping", () => {
