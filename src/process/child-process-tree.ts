@@ -5,13 +5,20 @@ export function shouldDetachChildForProcessTree(): boolean {
   return process.platform !== "win32";
 }
 
-export function forceKillChildProcessTree(child: Pick<ChildProcess, "kill" | "pid">): void {
+export function signalChildProcessTree(
+  child: Pick<ChildProcess, "kill" | "pid">,
+  signal: "SIGTERM" | "SIGKILL",
+): void {
   if (typeof child.pid === "number" && child.pid > 0) {
-    signalProcessTree(child.pid, "SIGKILL", {
+    signalProcessTree(child.pid, signal, {
       detached: shouldDetachChildForProcessTree(),
     });
     return;
   }
 
-  child.kill("SIGKILL");
+  child.kill(signal);
+}
+
+export function forceKillChildProcessTree(child: Pick<ChildProcess, "kill" | "pid">): void {
+  signalChildProcessTree(child, "SIGKILL");
 }
