@@ -298,6 +298,49 @@ describe("plugin-sdk qa-runtime", () => {
     expect(sleepImpl).toHaveBeenCalledTimes(1);
   });
 
+  it("normalizes multiline Docker compose service lookup output", async () => {
+    const module = await import("./qa-runtime.js");
+    const runtime = module.createQaDockerRuntime({ auditContext: "qa-test" });
+    const runCommand = vi.fn(async (command: string, args: string[], cwd: string) => {
+      expect(command).toBe("docker");
+      expect(cwd).toBe("/repo");
+
+      if (args.includes("ps") && args.includes("-q")) {
+        return {
+          stdout: "\nqa-gateway-one\nqa-gateway-two\n",
+          stderr: "",
+        };
+      }
+
+      if (args[0] === "inspect") {
+        expect(args.at(-1)).toBe("qa-gateway-one");
+        return {
+          stdout: "\n172.18.0.4\n172.19.0.4\n",
+          stderr: "",
+        };
+      }
+
+      throw new Error(`unexpected docker args: ${args.join(" ")}`);
+    });
+    const fetchImpl = vi.fn(async (url: string) => ({
+      ok: url === "http://172.18.0.4:18789/healthz",
+    }));
+
+    await expect(
+      runtime.resolveComposeServiceUrl(
+        "gateway",
+        18789,
+        "/tmp/docker-compose.yml",
+        "/repo",
+        runCommand,
+        fetchImpl,
+      ),
+    ).resolves.toBe("http://172.18.0.4:18789/");
+
+    expect(runCommand).toHaveBeenCalledTimes(2);
+    expect(fetchImpl).toHaveBeenCalledWith("http://172.18.0.4:18789/healthz");
+  });
+
   it("resolves an unpinned QA Docker host port away from an occupied loopback default", async () => {
     const module = await import("./qa-runtime.js");
     const reservation = await occupyLoopbackPort();
