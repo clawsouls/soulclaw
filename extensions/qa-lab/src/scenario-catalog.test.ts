@@ -51,8 +51,15 @@ describe("qa scenario catalog", () => {
     expect(
       pack.scenarios
         .filter((scenario) => scenario.execution?.kind !== "flow")
-        .map((scenario) => scenario.id),
-    ).toStrictEqual(["control-ui-chat-flow-playwright"]);
+        .map((scenario) => scenario.id)
+        .toSorted(),
+    ).toStrictEqual(
+      [
+        "control-ui-chat-flow-playwright",
+        "package-openclaw-for-docker",
+        "plugin-lifecycle-probe",
+      ].toSorted(),
+    );
     expect(
       pack.scenarios
         .filter((scenario) => scenario.execution.kind === "flow")

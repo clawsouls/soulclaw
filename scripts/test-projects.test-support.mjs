@@ -592,7 +592,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/package-changelog.mjs", ["test/scripts/package-changelog.test.ts"]],
   ["scripts/package-mac-app.sh", ["test/scripts/package-mac-app.test.ts"]],
   ["scripts/package-mac-dist.sh", ["test/scripts/package-mac-dist.test.ts"]],
-  ["scripts/package-openclaw-for-docker.mjs", ["test/scripts/package-openclaw-for-docker.test.ts"]],
+  [
+    "scripts/package-openclaw-for-docker.mjs",
+    ["test/e2e/qa-lab/runtime/package-openclaw-for-docker.e2e.test.ts"],
+  ],
   ["scripts/postinstall-bundled-plugins.mjs", ["test/scripts/postinstall-bundled-plugins.test.ts"]],
   ["scripts/prepare-git-hooks.mjs", ["test/scripts/prepare-git-hooks.test.ts"]],
   [
@@ -647,14 +650,6 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   [
     "scripts/e2e/lib/plugin-lifecycle-matrix/measure.mjs",
     ["test/scripts/plugin-lifecycle-measure.test.ts"],
-  ],
-  [
-    "scripts/e2e/lib/plugin-lifecycle-matrix/probe.mjs",
-    ["test/scripts/plugin-lifecycle-probe.test.ts"],
-  ],
-  [
-    "scripts/e2e/lib/plugin-lifecycle-matrix/sweep.sh",
-    ["test/scripts/plugin-lifecycle-probe.test.ts"],
   ],
   [
     "scripts/e2e/release-media-memory-docker.sh",

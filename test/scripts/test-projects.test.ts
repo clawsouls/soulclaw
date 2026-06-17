@@ -608,7 +608,7 @@ describe("scripts/test-projects changed-target routing", () => {
       ["scripts/generate-npm-shrinkwrap.mjs", ["test/scripts/generate-npm-shrinkwrap.test.ts"]],
       [
         "scripts/package-openclaw-for-docker.mjs",
-        ["test/scripts/package-openclaw-for-docker.test.ts"],
+        ["test/e2e/qa-lab/runtime/package-openclaw-for-docker.e2e.test.ts"],
       ],
       ["scripts/ios-run.sh", ["test/scripts/ios-run.test.ts"]],
       ["scripts/create-dmg.sh", ["test/scripts/create-dmg.test.ts"]],
