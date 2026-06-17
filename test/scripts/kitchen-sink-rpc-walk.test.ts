@@ -57,6 +57,7 @@ import {
   usesBuiltOpenClawEntry,
   waitForGatewayReady,
 } from "../../scripts/e2e/kitchen-sink-rpc-walk.mjs";
+import { cleanupTempDirs, makeTempDir } from "../helpers/temp-dir.js";
 
 const posixIt = process.platform === "win32" ? it.skip : it;
 
@@ -763,7 +764,8 @@ describe("kitchen-sink RPC caller loading", () => {
   });
 
   posixIt("kills descendants when timed commands exit cleanly after SIGTERM", async () => {
-    const root = mkdtempSync(path.join(tmpdir(), "openclaw-kitchen-rpc-timeout-clean-parent-"));
+    const tempDirs: string[] = [];
+    const root = makeTempDir(tempDirs, "openclaw-kitchen-rpc-timeout-clean-parent-");
     const scriptPath = path.join(root, "term-zero-grandchild.mjs");
     const grandchildPidPath = path.join(root, "grandchild.pid");
     let grandchildPid = 0;
@@ -803,7 +805,7 @@ setInterval(() => {}, 1000);
       if (grandchildPid && isProcessAlive(grandchildPid)) {
         process.kill(grandchildPid, "SIGKILL");
       }
-      rmSync(root, { recursive: true, force: true });
+      cleanupTempDirs(tempDirs);
     }
   });
 });
