@@ -14,6 +14,7 @@ import {
   buildFullSuiteVitestRunPlans,
   buildVitestArgs,
   buildVitestRunPlans,
+  createVitestRunSpecs,
   findUnmatchedExplicitTestTargets,
   formatFailedShardDigest,
   listFullExtensionVitestProjectConfigs,
@@ -1713,6 +1714,20 @@ describe("scripts/test-projects changed-target routing", () => {
         watchMode: false,
       },
     ]);
+  });
+
+  it("uses collision-resistant include-file names for scoped Vitest specs", () => {
+    const tempDir = path.join("tmp", "openclaw-vitest-specs");
+    const [spec] = createVitestRunSpecs(["src/plugin-sdk/temp-path.test.ts"], {
+      baseEnv: {},
+      tempDir,
+    });
+
+    expect(path.dirname(spec?.includeFilePath ?? "")).toBe(tempDir);
+    expect(path.basename(spec?.includeFilePath ?? "")).toMatch(
+      /^openclaw-vitest-include-[0-9a-f-]{36}-0\.json$/u,
+    );
+    expect(spec?.includeFilePath).not.toMatch(new RegExp(`${process.pid}-\\d+-0\\.json$`, "u"));
   });
 
   it("routes explicit commands light tests to the lighter commands lane", () => {
