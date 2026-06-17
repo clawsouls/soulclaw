@@ -1120,6 +1120,8 @@ if (isPrlctl) {
     expect(orchestrator).toContain("macosUpdateScript");
     expect(orchestrator).toContain("windowsUpdateScript");
     expect(orchestrator).toContain("linuxUpdateScript");
+    expect(orchestrator).toContain('import { randomUUID } from "node:crypto"');
+    expect(orchestrator).not.toContain("process.pid}-${Date.now()");
     expect(orchestrator).not.toContain("Remove-FuturePluginEntries");
     expect(updateScripts).toContain("Remove-FuturePluginEntries");
     expect(updateScripts).toContain("scrub_future_plugin_entries");
