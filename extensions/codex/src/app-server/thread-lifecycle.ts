@@ -402,6 +402,7 @@ export async function startOrResumeThread(params: {
     params.nativeCodeModeEnabled === false &&
     binding?.webSearchThreadConfigFingerprint === undefined &&
     !persistentWebSearchRestriction;
+  let preserveForTransientWebSearchRestriction = false;
   if (
     binding?.threadId &&
     webSearchBindingChanged &&
@@ -409,13 +410,9 @@ export async function startOrResumeThread(params: {
   ) {
     const transientWebSearchRestriction = isTransientWebSearchRestriction(params);
     if (transientWebSearchRestriction) {
-      embeddedAgentLog.debug(
-        "codex app-server web search restricted for turn; starting transient thread",
-        {
-          threadId: binding.threadId,
-        },
-      );
-      preserveExistingBinding = true;
+      // Defer one-turn search restrictions until hard binding invalidations run;
+      // otherwise MCP/context/env/plugin/tool changes can keep a stale thread.
+      preserveForTransientWebSearchRestriction = true;
     } else {
       // Codex can ignore resume overrides for a loaded thread, so persistent
       // search-policy changes and legacy bindings without metadata rotate first.
@@ -575,6 +572,15 @@ export async function startOrResumeThread(params: {
         );
         await clearCodexAppServerBinding(params.params.sessionFile);
       }
+    } else if (preserveForTransientWebSearchRestriction) {
+      embeddedAgentLog.debug(
+        "codex app-server web search restricted for turn; starting transient thread",
+        {
+          threadId: binding.threadId,
+        },
+      );
+      preserveExistingBinding = true;
+      binding = undefined;
     } else if (
       params.nativeCodeModeEnabled === false &&
       !persistentWebSearchRestriction &&
