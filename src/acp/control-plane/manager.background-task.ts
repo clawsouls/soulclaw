@@ -27,7 +27,7 @@ type BackgroundTaskContext = {
 };
 
 /** Produces the bounded task label shown for a child ACP background run. */
-export function summarizeBackgroundTaskText(text: string): string {
+function summarizeBackgroundTaskText(text: string): string {
   const normalized = normalizeText(text) ?? "ACP background task";
   if (normalized.length <= ACP_BACKGROUND_TASK_TEXT_MAX_LENGTH) {
     return normalized;
