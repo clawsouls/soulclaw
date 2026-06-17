@@ -199,6 +199,15 @@ describe("qa scenario catalog", () => {
         required: true,
       },
     });
+    expect(webSearch.plugins).toEqual(["qa-lab"]);
+    expect(webSearch.gatewayConfigPatch?.tools).toEqual({
+      web: {
+        search: {
+          enabled: true,
+          provider: "qa-lab-search",
+        },
+      },
+    });
     expect(readQaScenarioExecutionConfig(webSearch.id)).not.toHaveProperty("knownHarnessGap");
     expect(readQaScenarioExecutionConfig(imageGenerate.id)).toMatchObject({
       toolName: "image_generate",
