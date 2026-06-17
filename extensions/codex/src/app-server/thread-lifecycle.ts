@@ -426,20 +426,6 @@ export async function startOrResumeThread(params: {
     }
     binding = undefined;
   }
-  if (
-    binding?.threadId &&
-    params.nativeCodeModeEnabled === false &&
-    !persistentWebSearchRestriction
-  ) {
-    embeddedAgentLog.debug(
-      "codex app-server native tool surface disabled for turn; starting transient thread",
-      {
-        threadId: binding.threadId,
-      },
-    );
-    preserveExistingBinding = true;
-    binding = undefined;
-  }
   if (binding?.threadId && (binding.contextEngine || contextEngineBinding)) {
     if (
       !contextEngineBinding ||
@@ -589,12 +575,25 @@ export async function startOrResumeThread(params: {
         );
         await clearCodexAppServerBinding(params.params.sessionFile);
       }
+    } else if (
+      params.nativeCodeModeEnabled === false &&
+      !persistentWebSearchRestriction &&
+      binding.dynamicToolsFingerprint !== EMPTY_DYNAMIC_TOOLS_FINGERPRINT
+    ) {
+      embeddedAgentLog.debug(
+        "codex app-server native tool surface disabled for turn; starting transient thread",
+        {
+          threadId: binding.threadId,
+        },
+      );
+      preserveExistingBinding = true;
     } else {
+      const resumeBinding = binding;
       try {
-        const authProfileId = params.params.authProfileId ?? binding.authProfileId;
+        const authProfileId = params.params.authProfileId ?? resumeBinding.authProfileId;
         const finalConfigPatch = params.buildFinalConfigPatch?.({
           action: "resume",
-          binding,
+          binding: resumeBinding,
         }) ?? {
           configPatch: params.finalConfigPatch,
           nativeHookRelayGeneration: params.nativeHookRelayGeneration,
@@ -606,7 +605,7 @@ export async function startOrResumeThread(params: {
         );
         const resumeParams = lifecycleTiming.measureSync("thread-resume-params", () =>
           buildThreadResumeParams(params.params, {
-            threadId: binding.threadId,
+            threadId: resumeBinding.threadId,
             authProfileId,
             model: startModelSelection.model,
             modelProvider: startModelProvider,
@@ -634,7 +633,7 @@ export async function startOrResumeThread(params: {
         const nextMcpServersFingerprint =
           params.mcpServersFingerprintEvaluated === true
             ? params.mcpServersFingerprint
-            : binding.mcpServersFingerprint;
+            : resumeBinding.mcpServersFingerprint;
         await lifecycleTiming.measure("thread-resume-write-binding", () =>
           writeCodexAppServerBinding(
             params.params.sessionFile,
@@ -650,13 +649,14 @@ export async function startOrResumeThread(params: {
               userMcpServersFingerprint,
               mcpServersFingerprint: nextMcpServersFingerprint,
               nativeHookRelayGeneration:
-                finalConfigPatch.nativeHookRelayGeneration ?? binding.nativeHookRelayGeneration,
-              pluginAppsFingerprint: binding.pluginAppsFingerprint,
-              pluginAppsInputFingerprint: binding.pluginAppsInputFingerprint,
-              pluginAppPolicyContext: binding.pluginAppPolicyContext,
+                finalConfigPatch.nativeHookRelayGeneration ??
+                resumeBinding.nativeHookRelayGeneration,
+              pluginAppsFingerprint: resumeBinding.pluginAppsFingerprint,
+              pluginAppsInputFingerprint: resumeBinding.pluginAppsInputFingerprint,
+              pluginAppPolicyContext: resumeBinding.pluginAppPolicyContext,
               contextEngine: contextEngineBinding,
               environmentSelectionFingerprint,
-              createdAt: binding.createdAt,
+              createdAt: resumeBinding.createdAt,
             },
             {
               authProfileStore: params.params.authProfileStore,
@@ -686,7 +686,7 @@ export async function startOrResumeThread(params: {
         });
         const activeTurnIds = readActiveCodexTurnIds(response.thread);
         return {
-          ...binding,
+          ...resumeBinding,
           threadId: response.thread.id,
           cwd: params.cwd,
           authProfileId: boundAuthProfileId,
@@ -698,10 +698,10 @@ export async function startOrResumeThread(params: {
           userMcpServersFingerprint,
           mcpServersFingerprint: nextMcpServersFingerprint,
           nativeHookRelayGeneration:
-            finalConfigPatch.nativeHookRelayGeneration ?? binding.nativeHookRelayGeneration,
-          pluginAppsFingerprint: binding.pluginAppsFingerprint,
-          pluginAppsInputFingerprint: binding.pluginAppsInputFingerprint,
-          pluginAppPolicyContext: binding.pluginAppPolicyContext,
+            finalConfigPatch.nativeHookRelayGeneration ?? resumeBinding.nativeHookRelayGeneration,
+          pluginAppsFingerprint: resumeBinding.pluginAppsFingerprint,
+          pluginAppsInputFingerprint: resumeBinding.pluginAppsInputFingerprint,
+          pluginAppPolicyContext: resumeBinding.pluginAppPolicyContext,
           contextEngine: contextEngineBinding,
           environmentSelectionFingerprint,
           lifecycle: {
