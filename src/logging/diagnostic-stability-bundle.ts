@@ -112,12 +112,12 @@ export type DiagnosticStabilityBundle = {
   snapshot: DiagnosticStabilitySnapshot;
 };
 
-export type WriteDiagnosticStabilityBundleResult =
+type WriteDiagnosticStabilityBundleResult =
   | { status: "written"; path: string; bundle: DiagnosticStabilityBundle }
   | { status: "skipped"; reason: "empty" }
   | { status: "failed"; error: unknown };
 
-export type WriteDiagnosticStabilityBundleOptions = {
+type WriteDiagnosticStabilityBundleOptions = {
   reason: string;
   error?: unknown;
   includeEmpty?: boolean;
@@ -129,7 +129,7 @@ export type WriteDiagnosticStabilityBundleOptions = {
   evidence?: DiagnosticStabilityBundleEvidence;
 };
 
-export type DiagnosticStabilityBundleLocationOptions = {
+type DiagnosticStabilityBundleLocationOptions = {
   env?: NodeJS.ProcessEnv;
   stateDir?: string;
 };
