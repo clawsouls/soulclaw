@@ -131,7 +131,14 @@ export function parseArgs(argv) {
       throw new Error(`unknown argument: ${arg}`);
     }
   }
+  validateOutputName(options.outputName);
   return options;
+}
+
+function validateOutputName(value) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*\.t(?:ar\.)?gz$/u.test(value)) {
+    throw new Error(`--output-name must be a tarball filename, not a path: ${value}`);
+  }
 }
 
 export function validateOpenClawPackageSpec(spec) {

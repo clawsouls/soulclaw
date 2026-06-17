@@ -78,6 +78,12 @@ function readEqualsOptionValue(value, optionName) {
   return value;
 }
 
+function validateOutputName(value) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*\.t(?:ar\.)?gz$/u.test(value)) {
+    throw new Error(`--output-name must be a tarball filename, not a path: ${value}`);
+  }
+}
+
 export function parseArgs(argv) {
   const options = {
     outputDir: "",
@@ -110,6 +116,9 @@ export function parseArgs(argv) {
     } else {
       throw new Error(`unknown argument: ${arg}`);
     }
+  }
+  if (options.outputName) {
+    validateOutputName(options.outputName);
   }
   return options;
 }

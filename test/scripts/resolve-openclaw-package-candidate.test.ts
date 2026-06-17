@@ -165,6 +165,23 @@ describe("resolve-openclaw-package-candidate", () => {
     });
   });
 
+  it("rejects package candidate output names that escape the output directory", () => {
+    for (const outputName of [
+      "../openclaw-current.tgz",
+      "nested/openclaw-current.tgz",
+      "openclaw-current.zip",
+      ".openclaw-current.tgz",
+    ]) {
+      expect(() => parseArgs(["--output-name", outputName])).toThrow(
+        `--output-name must be a tarball filename, not a path: ${outputName}`,
+      );
+    }
+
+    expect(parseArgs(["--output-name", "openclaw-current.tar.gz"]).outputName).toBe(
+      "openclaw-current.tar.gz",
+    );
+  });
+
   it("resolves npm package candidates through the Windows npm.cmd toolchain shim", () => {
     const execPath = "C:\\nodejs\\node.exe";
     const npmCmdPath = path.win32.resolve(path.win32.dirname(execPath), "npm.cmd");
