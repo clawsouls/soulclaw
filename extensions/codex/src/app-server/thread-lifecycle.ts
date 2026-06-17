@@ -580,7 +580,6 @@ export async function startOrResumeThread(params: {
         },
       );
       preserveExistingBinding = true;
-      binding = undefined;
     } else if (
       params.nativeCodeModeEnabled === false &&
       !persistentWebSearchRestriction &&
