@@ -128,7 +128,7 @@ export type QueueEvent =
     };
 
 /** Claude channel permission notification payload before it is assigned an event cursor. */
-export type ClaudePermissionRequest = {
+type ClaudePermissionRequest = {
   toolName: string;
   description: string;
   inputPreview: string;
