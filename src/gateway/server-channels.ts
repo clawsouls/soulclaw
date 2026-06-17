@@ -570,8 +570,6 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
             return;
           }
 
-          let trackedPromise: Promise<unknown>;
-          const isCurrentTask = () => store.tasks.get(id) === trackedPromise;
           scopedChannelRuntime = await measureStartup(`channels.${channelId}.runtime`, async () =>
             createTaskScopedChannelRuntime({
               channelRuntime: await getChannelRuntime(),
@@ -648,7 +646,7 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
           });
           // Recovery can replace a timed-out task before the old promise settles.
           // Only the task that still owns the store slot may write lifecycle state.
-          trackedPromise = task
+          const trackedPromise = task
             .then(() => {
               if (abort.signal.aborted || manuallyStopped.has(rKey) || !isCurrentTask()) {
                 return;
@@ -768,6 +766,9 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
                 store.aborts.delete(id);
               }
             });
+          function isCurrentTask() {
+            return store.tasks.get(id) === trackedPromise;
+          }
           handedOffTask = true;
           store.tasks.set(id, trackedPromise);
         } catch (error) {
