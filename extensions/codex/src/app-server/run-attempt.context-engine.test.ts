@@ -264,23 +264,6 @@ function createContextEngine(overrides: Partial<ContextEngine> = {}): ContextEng
   return engine;
 }
 
-const DISABLED_CODEX_WEB_SEARCH_THREAD_CONFIG_FINGERPRINT = JSON.stringify({
-  "features.standalone_web_search": false,
-  web_search: "disabled",
-});
-
-function writeCodexAppServerBinding(...args: Parameters<typeof writeRawCodexAppServerBinding>) {
-  const [sessionFile, binding, lookup] = args;
-  return writeRawCodexAppServerBinding(
-    sessionFile,
-    {
-      webSearchThreadConfigFingerprint: DISABLED_CODEX_WEB_SEARCH_THREAD_CONFIG_FINGERPRINT,
-      ...binding,
-    },
-    lookup,
-  );
-}
-
 type MockCallReader = { mock: { calls: unknown[][] } };
 
 function requireRecord(value: unknown, label: string): Record<string, unknown> {
