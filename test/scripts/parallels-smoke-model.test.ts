@@ -1045,6 +1045,7 @@ if (isPrlctl) {
     expect(guestTransports).toContain("guestScriptName");
     expect(guestTransports).not.toContain("Date.now()}.sh");
     expect(guestTransports).not.toContain("Date.now()}.ps1");
+    expect(guestTransports).not.toContain("Math.random()");
   });
 
   it("hardens restored macOS install lanes", () => {

@@ -70,7 +70,7 @@ export async function runWindowsBackgroundPowerShell(
   const pollIntervalMs = Math.max(1, Math.floor(options.pollIntervalMs ?? 5_000));
   const runCommand = options.runCommand ?? run;
   const safeLabel = options.label.replaceAll(/[^A-Za-z0-9_-]/g, "-");
-  const nonce = `${safeLabel}-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  const nonce = `${safeLabel}-${randomUUID()}`;
   const fileBase = `openclaw-parallels-${nonce}`;
   const pathsScript = `$base = Join-Path $env:TEMP ${psSingleQuote(fileBase)}
 $scriptPath = "$base.ps1"
