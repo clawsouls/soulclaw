@@ -1375,7 +1375,7 @@ describe("skills-clawhub", () => {
         const lock = JSON.parse(await fs.readFile(lockPath, "utf8")) as {
           skills: Record<string, { ownerHandle?: string }>;
         };
-        lock.skills.weather!.ownerHandle = "other-owner";
+        lock.skills.weather.ownerHandle = "other-owner";
         await fs.writeFile(lockPath, `${JSON.stringify(lock, null, 2)}\n`, "utf8");
 
         const result = await resolveClawHubSkillVerificationTarget({
