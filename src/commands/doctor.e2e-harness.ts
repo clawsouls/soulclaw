@@ -124,7 +124,7 @@ const resolveGatewayAuthTokenForService = vi
 const resolveGatewayProgramArguments = vi.fn().mockResolvedValue({
   programArguments: ["node", "cli", "gateway", "--port", "18789"],
 }) as unknown as MockFn;
-export const serviceInstall = vi.fn().mockResolvedValue(undefined) as unknown as MockFn;
+const serviceInstall = vi.fn().mockResolvedValue(undefined) as unknown as MockFn;
 export const serviceIsLoaded = vi.fn().mockResolvedValue(false) as unknown as MockFn;
 const serviceStop = vi.fn().mockResolvedValue(undefined) as unknown as MockFn;
 export const serviceRestart = vi.fn().mockResolvedValue(undefined) as unknown as MockFn;
