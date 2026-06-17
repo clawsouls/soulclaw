@@ -395,6 +395,39 @@ export async function startOrResumeThread(params: {
     binding.webSearchThreadConfigFingerprint !== webSearchThreadConfigFingerprint;
   const persistentWebSearchRestriction =
     params.webSearchAllowed === false && params.persistentWebSearchAllowed === false;
+  const transientNativeToolRestriction =
+    params.nativeCodeModeEnabled === false && !persistentWebSearchRestriction;
+  const transientWebSearchRestriction = isTransientWebSearchRestriction(params);
+  const explicitTransientWebSearchRestriction =
+    params.webSearchAllowed === false &&
+    params.persistentWebSearchAllowed !== false &&
+    transientWebSearchRestriction;
+  const unknownProviderWebSearchSupport = params.nativeProviderWebSearchSupport === "unknown";
+  if (
+    binding?.threadId &&
+    params.mcpServersFingerprintEvaluated === true &&
+    binding.mcpServersFingerprint !== params.mcpServersFingerprint
+  ) {
+    if (
+      transientNativeToolRestriction ||
+      (webSearchBindingChanged &&
+        (explicitTransientWebSearchRestriction || unknownProviderWebSearchSupport))
+    ) {
+      embeddedAgentLog.debug(
+        "codex app-server MCP config changed during transient restricted turn; starting transient thread",
+        {
+          threadId: binding.threadId,
+        },
+      );
+      preserveExistingBinding = true;
+    } else {
+      embeddedAgentLog.debug("codex app-server MCP config changed; starting a new thread", {
+        threadId: binding.threadId,
+      });
+      await clearCodexAppServerBinding(params.params.sessionFile);
+    }
+    binding = undefined;
+  }
   // A transient native-tool restriction must not replace a legacy binding just
   // because that binding predates search fingerprints. Explicit persistent
   // search denial still rotates first so the restricted thread can persist.
@@ -402,17 +435,19 @@ export async function startOrResumeThread(params: {
     params.nativeCodeModeEnabled === false &&
     binding?.webSearchThreadConfigFingerprint === undefined &&
     !persistentWebSearchRestriction;
-  let preserveForTransientWebSearchRestriction = false;
   if (
     binding?.threadId &&
     webSearchBindingChanged &&
     !deferLegacyWebSearchRotationToTransientNativeSurface
   ) {
-    const transientWebSearchRestriction = isTransientWebSearchRestriction(params);
     if (transientWebSearchRestriction) {
-      // Defer one-turn search restrictions until hard binding invalidations run;
-      // otherwise MCP/context/env/plugin/tool changes can keep a stale thread.
-      preserveForTransientWebSearchRestriction = true;
+      embeddedAgentLog.debug(
+        "codex app-server web search restricted for turn; starting transient thread",
+        {
+          threadId: binding.threadId,
+        },
+      );
+      preserveExistingBinding = true;
     } else {
       // Codex can ignore resume overrides for a loaded thread, so persistent
       // search-policy changes and legacy bindings without metadata rotate first.
@@ -421,6 +456,19 @@ export async function startOrResumeThread(params: {
       });
       await clearCodexAppServerBinding(params.params.sessionFile);
     }
+    binding = undefined;
+  }
+  if (
+    binding?.threadId &&
+    transientNativeToolRestriction
+  ) {
+    embeddedAgentLog.debug(
+      "codex app-server native tool surface disabled for turn; starting transient thread",
+      {
+        threadId: binding.threadId,
+      },
+    );
+    preserveExistingBinding = true;
     binding = undefined;
   }
   if (binding?.threadId && (binding.contextEngine || contextEngineBinding)) {
@@ -467,17 +515,6 @@ export async function startOrResumeThread(params: {
     await clearCodexAppServerBinding(params.params.sessionFile);
     binding = undefined;
   }
-  if (
-    binding?.threadId &&
-    params.mcpServersFingerprintEvaluated === true &&
-    binding.mcpServersFingerprint !== params.mcpServersFingerprint
-  ) {
-    embeddedAgentLog.debug("codex app-server MCP config changed; starting a new thread", {
-      threadId: binding.threadId,
-    });
-    await clearCodexAppServerBinding(params.params.sessionFile);
-    binding = undefined;
-  }
   if (binding?.threadId) {
     let pluginBindingStale = isCodexPluginThreadBindingStale({
       codexPluginsEnabled: params.pluginThreadConfig?.enabled ?? false,
@@ -513,17 +550,6 @@ export async function startOrResumeThread(params: {
       await clearCodexAppServerBinding(params.params.sessionFile);
       binding = undefined;
     }
-  }
-  if (
-    binding?.threadId &&
-    params.mcpServersFingerprintEvaluated === true &&
-    binding.mcpServersFingerprint !== params.mcpServersFingerprint
-  ) {
-    embeddedAgentLog.debug("codex app-server MCP config changed; starting a new thread", {
-      threadId: binding.threadId,
-    });
-    await clearCodexAppServerBinding(params.params.sessionFile);
-    binding = undefined;
   }
   if (binding?.threadId) {
     if (
@@ -572,26 +598,6 @@ export async function startOrResumeThread(params: {
         );
         await clearCodexAppServerBinding(params.params.sessionFile);
       }
-    } else if (preserveForTransientWebSearchRestriction) {
-      embeddedAgentLog.debug(
-        "codex app-server web search restricted for turn; starting transient thread",
-        {
-          threadId: binding.threadId,
-        },
-      );
-      preserveExistingBinding = true;
-    } else if (
-      params.nativeCodeModeEnabled === false &&
-      !persistentWebSearchRestriction &&
-      binding.dynamicToolsFingerprint !== EMPTY_DYNAMIC_TOOLS_FINGERPRINT
-    ) {
-      embeddedAgentLog.debug(
-        "codex app-server native tool surface disabled for turn; starting transient thread",
-        {
-          threadId: binding.threadId,
-        },
-      );
-      preserveExistingBinding = true;
     } else {
       const resumeBinding = binding;
       try {
