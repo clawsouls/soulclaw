@@ -528,7 +528,6 @@ export async function loadCompactHooksHarness(): Promise<{
   vi.doMock("../agent-settings.js", () => ({
     applyAgentAutoCompactionGuard: vi.fn(() => ({ supported: true, disabled: false })),
     applyAgentCompactionSettingsFromConfig: applyAgentCompactionSettingsFromConfigMock,
-    ensureAgentCompactionReserveTokens: vi.fn(),
     isSilentOverflowProneModel: vi.fn(() => false),
     resolveCompactionReserveTokensFloor: vi.fn(() => 0),
   }));
