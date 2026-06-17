@@ -1,13 +1,17 @@
 // Qa Lab tests cover model catalog plugin behavior.
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   loadQaRunnerModelOptions,
   parseQaRunnerModelOptionsOutput,
   selectQaRunnerModelOptions,
 } from "./model-catalog.runtime.js";
+import { createTempDirHarness } from "./temp-dir.test-helper.js";
+
+const { cleanup, makeTempDir } = createTempDirHarness();
+
+afterEach(cleanup);
 
 async function waitForFile(filePath: string, timeoutMs: number): Promise<void> {
   const deadlineAt = Date.now() + timeoutMs;
@@ -103,7 +107,7 @@ describe("qa runner model catalog", () => {
   it.runIf(process.platform !== "win32")(
     "kills aborted catalog process groups when the catalog child exits first",
     async () => {
-      const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-qa-model-catalog-"));
+      const repoRoot = await makeTempDir("openclaw-qa-model-catalog-");
       const pidPath = path.join(repoRoot, "descendant.pid");
       let descendantPid: number | undefined;
       const controller = new AbortController();
