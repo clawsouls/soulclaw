@@ -38,6 +38,8 @@ const CODEX_ON_DEMAND_DOCKER_E2E_PATH = "scripts/e2e/codex-on-demand-docker.sh";
 const MCP_CODE_MODE_GATEWAY_DOCKER_E2E_PATH = "scripts/e2e/mcp-code-mode-gateway-docker.sh";
 const MCP_CODE_MODE_GATEWAY_LIVE_DOCKER_E2E_PATH =
   "scripts/e2e/mcp-code-mode-gateway-live-docker.sh";
+const CODEX_MEDIA_PATH_DOCKER_E2E_PATH = "scripts/e2e/codex-media-path-docker.sh";
+const OPENAI_CHAT_TOOLS_DOCKER_E2E_PATH = "scripts/e2e/openai-chat-tools-docker.sh";
 const CODEX_MEDIA_PATH_SCENARIO_PATH = "scripts/e2e/lib/codex-media-path/scenario.sh";
 const OPENAI_CHAT_TOOLS_SCENARIO_PATH = "scripts/e2e/lib/openai-chat-tools/scenario.sh";
 const CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH = "scripts/e2e/codex-npm-plugin-live-docker.sh";
@@ -2803,8 +2805,8 @@ output="$(cat "$sampler_log")"
     expect(runner).toContain(
       'validate_positive_int OPENCLAW_OPENWEBUI_FETCH_TIMEOUT_MS "$PROBE_FETCH_TIMEOUT_MS"',
     );
-    expect(runner).toContain('validate_tcp_port OPENCLAW_OPENWEBUI_GATEWAY_PORT "$PORT"');
-    expect(runner).toContain('validate_tcp_port OPENCLAW_OPENWEBUI_PORT "$WEBUI_PORT"');
+    expect(runner).toContain("docker_e2e_read_tcp_port_env OPENCLAW_OPENWEBUI_GATEWAY_PORT 18789");
+    expect(runner).toContain("docker_e2e_read_tcp_port_env OPENCLAW_OPENWEBUI_PORT 8080");
     expect(runner).toContain("OPENCLAW_OPENWEBUI_MAX_MEMORY_MIB");
     expect(runner).toContain("OPENCLAW_OPENWEBUI_MAX_CPU_PERCENT");
     expect(runner).toContain('STATS_LOG="$(mktemp');
@@ -2889,22 +2891,21 @@ output="$(cat "$sampler_log")"
     [MCP_CODE_MODE_GATEWAY_DOCKER_E2E_PATH, "OPENCLAW_MCP_CODE_MODE_GATEWAY_PORT", "1e3"],
     [MCP_CODE_MODE_GATEWAY_DOCKER_E2E_PATH, "OPENCLAW_MCP_CODE_MODE_MOCK_PORT", "65536"],
     [MCP_CODE_MODE_GATEWAY_LIVE_DOCKER_E2E_PATH, "OPENCLAW_MCP_CODE_MODE_LIVE_GATEWAY_PORT", "0"],
-  ])(
-    "rejects invalid MCP code-mode Docker ports before Docker setup",
-    (scriptPath, envName, value) => {
-      const result = spawnSync("bash", [scriptPath], {
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          [envName]: value,
-        },
-      });
+    [CODEX_MEDIA_PATH_DOCKER_E2E_PATH, "OPENCLAW_CODEX_MEDIA_PATH_PORT", "18790tcp"],
+    [OPENAI_CHAT_TOOLS_DOCKER_E2E_PATH, "OPENCLAW_OPENAI_CHAT_TOOLS_PORT", "0"],
+  ])("rejects invalid Docker E2E ports before setup", (scriptPath, envName, value) => {
+    const result = spawnSync("bash", [scriptPath], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        [envName]: value,
+      },
+    });
 
-      expect(result.status).toBe(2);
-      expect(result.stderr).toContain(`invalid ${envName}: ${value}`);
-      expect(result.stderr).not.toContain("OPENAI_API_KEY was not available");
-    },
-  );
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain(`invalid ${envName}: ${value}`);
+    expect(result.stderr).not.toContain("OPENAI_API_KEY was not available");
+  });
 
   it("forwards every kitchen-sink RPC runtime env knob into Docker", () => {
     const runner = readFileSync(KITCHEN_SINK_RPC_DOCKER_E2E_PATH, "utf8");
