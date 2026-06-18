@@ -342,8 +342,28 @@ describe("scripts/test-projects changed-target routing", () => {
   it("routes nested e2e shell helpers through their sourced owner tests", () => {
     const expectedTargets = new Map([
       [
+        "scripts/e2e/lib/bundled-plugin-install-uninstall/runtime-smoke.mjs",
+        ["test/scripts/bundled-plugin-install-uninstall-probe.test.ts"],
+      ],
+      [
+        "scripts/e2e/lib/bundled-plugin-install-uninstall/sweep.sh",
+        ["test/scripts/bundled-plugin-install-uninstall-probe.test.ts"],
+      ],
+      [
         "scripts/e2e/lib/kitchen-sink-plugin/sweep.sh",
         ["test/scripts/kitchen-sink-plugin-assertions.test.ts"],
+      ],
+      [
+        "scripts/e2e/lib/plugin-update/corrupt-update-scenario.sh",
+        ["test/scripts/plugin-update-unchanged-docker.test.ts"],
+      ],
+      [
+        "scripts/e2e/lib/plugin-update/probe.mjs",
+        ["test/scripts/plugin-update-unchanged-docker.test.ts"],
+      ],
+      [
+        "scripts/e2e/lib/plugin-update/unchanged-scenario.sh",
+        ["test/scripts/plugin-update-unchanged-docker.test.ts"],
       ],
       ["scripts/e2e/lib/plugins/clawhub.sh", ["test/scripts/plugins-assertions.test.ts"]],
       ["scripts/e2e/lib/plugins/fixtures.sh", ["test/scripts/plugins-assertions.test.ts"]],
