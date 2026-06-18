@@ -451,6 +451,70 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/mcp-code-mode-gateway-client.test.ts"],
       ],
       [
+        "scripts/e2e/crestodian-first-run-docker.sh",
+        [
+          "test/scripts/docker-build-helper.test.ts",
+          "test/scripts/docker-e2e-plan.test.ts",
+          "test/scripts/docker-e2e-crestodian.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/crestodian-first-run-docker-client.ts",
+        [
+          "test/scripts/docker-e2e-crestodian.test.ts",
+          "src/cli/run-main.test.ts",
+          "src/cli/run-main.exit.test.ts",
+          "src/crestodian/crestodian.test.ts",
+          "src/crestodian/operations.test.ts",
+          "src/crestodian/overview.test.ts",
+          "src/crestodian/audit.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/crestodian-first-run-spec.json",
+        [
+          "test/scripts/docker-e2e-crestodian.test.ts",
+          "src/crestodian/operations.test.ts",
+          "src/crestodian/audit.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/crestodian-planner-docker.sh",
+        [
+          "test/scripts/docker-build-helper.test.ts",
+          "test/scripts/docker-e2e-plan.test.ts",
+          "test/scripts/docker-e2e-crestodian.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/crestodian-planner-docker-client.mjs",
+        [
+          "test/scripts/docker-e2e-crestodian.test.ts",
+          "src/crestodian/assistant.test.ts",
+          "src/crestodian/crestodian.test.ts",
+          "src/crestodian/operations.test.ts",
+          "src/crestodian/audit.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/crestodian-rescue-docker.sh",
+        [
+          "test/scripts/docker-build-helper.test.ts",
+          "test/scripts/docker-e2e-plan.test.ts",
+          "test/scripts/docker-e2e-crestodian.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/crestodian-rescue-docker-client.ts",
+        [
+          "test/scripts/docker-e2e-crestodian.test.ts",
+          "src/crestodian/rescue-policy.test.ts",
+          "src/crestodian/rescue-message.test.ts",
+          "src/crestodian/operations.test.ts",
+          "src/crestodian/audit.test.ts",
+        ],
+      ],
+      [
         "scripts/e2e/commitments-safety-docker-client.ts",
         [
           "test/scripts/docker-e2e-clients.test.ts",
@@ -1171,6 +1235,37 @@ describe("scripts/test-projects changed-target routing", () => {
         "test/scripts/session-log-mentions.test.ts",
         "src/agents/agent-bundle-mcp-runtime.test.ts",
         "src/agents/agent-bundle-mcp-tools.materialize.test.ts",
+      ],
+    });
+  });
+
+  it("routes Crestodian Docker E2E script targets instead of skipping changed tests", () => {
+    const targets = [
+      "scripts/e2e/crestodian-first-run-docker.sh",
+      "scripts/e2e/crestodian-first-run-docker-client.ts",
+      "scripts/e2e/crestodian-first-run-spec.json",
+      "scripts/e2e/crestodian-planner-docker.sh",
+      "scripts/e2e/crestodian-planner-docker-client.mjs",
+      "scripts/e2e/crestodian-rescue-docker.sh",
+      "scripts/e2e/crestodian-rescue-docker-client.ts",
+    ];
+
+    expect(findUnmatchedExplicitTestTargets(targets)).toEqual([]);
+    expect(resolveChangedTestTargetPlan(targets)).toEqual({
+      mode: "targets",
+      targets: [
+        "test/scripts/docker-build-helper.test.ts",
+        "test/scripts/docker-e2e-plan.test.ts",
+        "test/scripts/docker-e2e-crestodian.test.ts",
+        "src/cli/run-main.test.ts",
+        "src/cli/run-main.exit.test.ts",
+        "src/crestodian/crestodian.test.ts",
+        "src/crestodian/operations.test.ts",
+        "src/crestodian/overview.test.ts",
+        "src/crestodian/audit.test.ts",
+        "src/crestodian/assistant.test.ts",
+        "src/crestodian/rescue-policy.test.ts",
+        "src/crestodian/rescue-message.test.ts",
       ],
     });
   });
