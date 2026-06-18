@@ -258,6 +258,7 @@ async function writeLiveGatewayConfig(params: {
 async function requestAgentTextWithEvents(params: {
   client: GatewayClient;
   eventPrefix?: string;
+  eventPrefixes?: string[];
   includeAllSessions?: boolean;
   message: string;
   sessionKey: string;
@@ -265,10 +266,13 @@ async function requestAgentTextWithEvents(params: {
   const { extractPayloadText } = await import("./test-helpers.agent-results.js");
   const { onAgentEvent } = await import("../infra/agent-events.js");
   const events: CapturedAgentEvent[] = [];
-  const eventPrefix = params.eventPrefix ?? "codex_app_server.guardian";
+  const eventPrefixes = params.eventPrefixes ?? [
+    params.eventPrefix ?? "codex_app_server.guardian",
+    "approval",
+  ];
   const unsubscribe = onAgentEvent((event) => {
     if (
-      !event.stream.startsWith(eventPrefix) ||
+      !eventPrefixes.some((prefix) => event.stream.startsWith(prefix)) ||
       (!params.includeAllSessions && event.sessionKey && event.sessionKey !== params.sessionKey)
     ) {
       return;
@@ -643,6 +647,22 @@ function findGuardianReviewStatus(events: CapturedAgentEvent[]): "approved" | "d
   return status === "approved" || status === "denied" ? status : undefined;
 }
 
+function findAppServerApprovalStatus(
+  events: CapturedAgentEvent[],
+): "approved" | "denied" | undefined {
+  const status = events.findLast(
+    (event) =>
+      event.stream === "approval" &&
+      event.data?.phase === "resolved" &&
+      event.data?.kind === "exec",
+  )?.data?.status;
+  return status === "approved" || status === "denied" ? status : undefined;
+}
+
+function hasGuardianReviewEvents(events: CapturedAgentEvent[]): boolean {
+  return events.some((event) => event.stream === "codex_app_server.guardian");
+}
+
 function assertGuardianReviewCompleted(params: {
   events: CapturedAgentEvent[];
   label: string;
@@ -662,6 +682,27 @@ function assertGuardianReviewCompleted(params: {
     )}`,
   ).toBeGreaterThan(0);
   return completedEvents.at(-1);
+}
+
+function assertAppServerApprovalResolved(params: {
+  events: CapturedAgentEvent[];
+  expectedStatus: "approved" | "denied";
+  label: string;
+}): CapturedAgentEvent {
+  const approvalEvent = params.events.findLast(
+    (event) =>
+      event.stream === "approval" &&
+      event.data?.phase === "resolved" &&
+      event.data?.kind === "exec",
+  );
+  expect(
+    approvalEvent,
+    `${params.label} expected an OpenClaw app-server approval resolution; events=${JSON.stringify(
+      params.events,
+    )}`,
+  ).toBeDefined();
+  expect(approvalEvent?.data?.status).toBe(params.expectedStatus);
+  return approvalEvent as CapturedAgentEvent;
 }
 
 async function verifyCodexGuardianProbe(params: {
@@ -687,6 +728,7 @@ async function verifyCodexGuardianProbe(params: {
   const allowReview = assertGuardianReviewCompleted({
     events: allowResult.events,
     label: "allow probe",
+    requireEvents: false,
   });
   const allowStatus = findGuardianReviewStatus(allowResult.events);
   if (allowStatus === "denied") {
@@ -696,8 +738,21 @@ async function verifyCodexGuardianProbe(params: {
     expect(allowResult.text.toLowerCase()).toMatch(/approv|permission|guardian|reject|denied/);
     expect(allowReview?.data?.status).toBe("denied");
   } else {
+    if (!allowReview) {
+      expect(
+        hasGuardianReviewEvents(allowResult.events),
+        `allow probe emitted Guardian review events without a completed event; events=${JSON.stringify(
+          allowResult.events,
+        )}`,
+      ).toBe(false);
+      assertAppServerApprovalResolved({
+        events: allowResult.events,
+        expectedStatus: "approved",
+        label: "allow probe",
+      });
+    }
     expect(allowResult.text).toContain(allowToken);
-    expect(allowStatus ?? "approved").toBe("approved");
+    expect(allowStatus ?? findAppServerApprovalStatus(allowResult.events)).toBe("approved");
   }
 
   const askBackToken = `OPENCLAW-GUARDIAN-ASK-BACK-${randomBytes(3).toString("hex").toUpperCase()}`;
@@ -1064,11 +1119,7 @@ describeLive("gateway live (Codex harness)", () => {
         }
         resolvedGuardianPluginApprovalIds.add(approvalId);
         void approvalClient
-          .request(
-            "plugin.approval.resolve",
-            { id: approvalId, decision },
-            { timeoutMs: 30_000 },
-          )
+          .request("plugin.approval.resolve", { id: approvalId, decision }, { timeoutMs: 30_000 })
           .then(() => {
             logCodexLiveStep("guardian-plugin-approval:resolved", { approvalId, decision });
           })
