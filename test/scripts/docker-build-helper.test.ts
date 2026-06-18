@@ -2625,6 +2625,67 @@ output="$(run_logged_print_heartbeat plugins-run 30 bash -c 'printf "DO_NOT_PRIN
     }
   });
 
+  it.each([
+    ["printed log bytes", "OPENCLAW_DOCKER_E2E_LOG_PRINT_BYTES", "64kb"],
+    ["heartbeat termination grace", "OPENCLAW_DOCKER_E2E_HEARTBEAT_TERM_GRACE_SECONDS", "soon"],
+  ])("rejects invalid Docker E2E %s before setup", (_label, envName, value) => {
+    const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-e2e-log-invalid-"));
+
+    try {
+      const rootDir = process.cwd();
+      const script = `
+set -euo pipefail
+ROOT_DIR=${shellQuote(rootDir)}
+TMPDIR=${shellQuote(workDir)}
+export ROOT_DIR TMPDIR
+export ${envName}=${shellQuote(value)}
+
+source "$ROOT_DIR/scripts/lib/docker-e2e-logs.sh"
+
+run_logged_print_heartbeat plugins-run 30 bash -c 'printf "should not print\\\\n"'
+`;
+
+      const result = spawnSync("bash", ["-lc", script], { encoding: "utf8" });
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain(`invalid ${envName}: ${value}`);
+      expect(result.stdout).toBe("");
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects invalid Docker E2E log heartbeat env before harness setup", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-e2e-log-heartbeat-invalid-"));
+
+    try {
+      const rootDir = process.cwd();
+      const script = `
+set -euo pipefail
+ROOT_DIR=${shellQuote(rootDir)}
+TMPDIR=${shellQuote(workDir)}
+export ROOT_DIR TMPDIR
+export OPENCLAW_DOCKER_E2E_LOG_HEARTBEAT_SECONDS=1e3
+
+source "$ROOT_DIR/scripts/lib/docker-e2e-package.sh"
+
+docker_e2e_run_with_harness() {
+  echo "should not run"
+}
+
+docker_e2e_run_logged_print_with_harness plugins-run image-name
+`;
+
+      const result = spawnSync("bash", ["-lc", script], { encoding: "utf8" });
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain("invalid OPENCLAW_DOCKER_E2E_LOG_HEARTBEAT_SECONDS: 1e3");
+      expect(result.stdout).toBe("");
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
   it("prints heartbeat progress for long successful Docker E2E log captures", () => {
     const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-e2e-log-heartbeat-"));
 
