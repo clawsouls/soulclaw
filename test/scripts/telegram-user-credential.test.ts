@@ -133,6 +133,26 @@ describe("telegram user credential IO", () => {
     );
   });
 
+  it("rejects loose and unsafe credential timeout env values", async () => {
+    const previous = process.env.OPENCLAW_TELEGRAM_USER_CREDENTIAL_COMMAND_TIMEOUT_MS;
+    try {
+      for (const value of ["1e3", String(Number.MAX_SAFE_INTEGER + 1)]) {
+        process.env.OPENCLAW_TELEGRAM_USER_CREDENTIAL_COMMAND_TIMEOUT_MS = value;
+        await expect(
+          import(
+            `${new URL("../../scripts/e2e/telegram-user-credential.ts", import.meta.url).href}?case=loose-timeout-${value}-${Date.now()}`
+          ),
+        ).rejects.toThrow(`Expected positive integer, got ${value}.`);
+      }
+    } finally {
+      if (previous === undefined) {
+        delete process.env.OPENCLAW_TELEGRAM_USER_CREDENTIAL_COMMAND_TIMEOUT_MS;
+      } else {
+        process.env.OPENCLAW_TELEGRAM_USER_CREDENTIAL_COMMAND_TIMEOUT_MS = previous;
+      }
+    }
+  });
+
   it("rejects oversized chunked lease payload markers before hydration", async () => {
     const credentialModule = (await import(
       `${new URL("../../scripts/e2e/telegram-user-credential.ts", import.meta.url).href}?case=chunk-marker-${Date.now()}`

@@ -160,8 +160,11 @@ function optionalPositiveInteger(value: string | undefined, fallback: number) {
   if (!value) {
     return fallback;
   }
+  if (!/^\d+$/u.test(value)) {
+    throw new Error(`Expected positive integer, got ${value}.`);
+  }
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 1) {
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
     throw new Error(`Expected positive integer, got ${value}.`);
   }
   return parsed;
