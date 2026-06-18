@@ -53,6 +53,17 @@ function shellTestEnv(overrides: Record<string, string | undefined>): NodeJS.Pro
   return env;
 }
 
+function runSourcedHelper(
+  script: string,
+  overrides: Record<string, string | undefined> = {},
+): ReturnType<typeof spawnSync> {
+  return spawnSync(
+    "bash",
+    ["-lc", ["set -euo pipefail", `source ${shellQuote(helperPath)}`, script].join("; ")],
+    { encoding: "utf8", env: shellTestEnv(overrides) },
+  );
+}
+
 function expectShellSuccess(result: ReturnType<typeof spawnSync>) {
   expect(result.status, result.stderr || result.stdout || result.error?.message).toBe(0);
 }
@@ -147,6 +158,27 @@ describe("scripts/lib/openclaw-e2e-instance.sh", () => {
     expect(result.status).not.toBe(0);
     expect(result.stdout).not.toContain("value=");
     expect(result.stderr).toContain("decoded to an empty script");
+  });
+
+  it("reads positive integer env values without treating decimal input as durations", () => {
+    const fallback = runSourcedHelper(
+      'printf "%s" "$(openclaw_e2e_read_positive_int_env OPENCLAW_E2E_SAMPLE_SECONDS 180)"',
+    );
+    const leadingZero = runSourcedHelper(
+      'printf "%s" "$(openclaw_e2e_read_positive_int_env OPENCLAW_E2E_SAMPLE_SECONDS 180)"',
+      { OPENCLAW_E2E_SAMPLE_SECONDS: "008" },
+    );
+    const duration = runSourcedHelper(
+      "openclaw_e2e_read_positive_int_env OPENCLAW_E2E_SAMPLE_SECONDS 180",
+      { OPENCLAW_E2E_SAMPLE_SECONDS: "30s" },
+    );
+
+    expectShellSuccess(fallback);
+    expect(fallback.stdout).toBe("180");
+    expectShellSuccess(leadingZero);
+    expect(leadingZero.stdout).toBe("008");
+    expect(duration.status).toBe(2);
+    expect(duration.stderr).toContain("invalid OPENCLAW_E2E_SAMPLE_SECONDS: 30s");
   });
 
   it("requires /readyz after the gateway ready log", () => {
