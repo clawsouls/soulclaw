@@ -31,6 +31,12 @@ out of this repo. If a score needs private evidence, use the redacted
 - `taxonomy.yaml` is the hand-edited source of truth for surfaces, levels,
   QA profiles, categories, feature coverage IDs, docs refs, LTS overrides, and
   completeness-instruction paths.
+- Feature `coverageIds` are ANDed proof targets, not aliases. A feature may
+  list multiple IDs when each ID proves part of one capability.
+- Keep categories and feature names unique, product-shaped, and broader than raw
+  coverage IDs. Do not promote generic IDs into standalone feature names.
+- Avoid duplicate coverage-ID bundles under different feature names in one
+  category.
 - `docs/maturity-scores.yaml` is the aggregate score source committed in this
   repo. It is the only committed score data; do not add generated inventory
   directories.
