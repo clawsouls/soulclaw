@@ -246,6 +246,19 @@ docker_build_transient_failure "$LOG_PATH"
     expect(cleanupRun).not.toContain("cat /tmp/openclaw-cleanup-");
   });
 
+  it("gives cleanup-smoke builds enough Node heap while preserving explicit callers", () => {
+    const cleanupRun = readFileSync(CLEANUP_SMOKE_RUN_PATH, "utf8");
+
+    expect(cleanupRun).toContain("ensure_cleanup_smoke_node_options()");
+    expect(cleanupRun).toContain("export NODE_OPTIONS=\"$current\"");
+    expect(cleanupRun).toContain("--max-old-space-size=8192");
+    expect(cleanupRun).toContain("*\" --max-old-space-size=\"*");
+    expect(cleanupRun).toContain("*\" --max_old_space_size=\"*");
+    expect(cleanupRun.indexOf("ensure_cleanup_smoke_node_options")).toBeLessThan(
+      cleanupRun.indexOf("pnpm build >/tmp/openclaw-cleanup-build.log"),
+    );
+  });
+
   it("rejects invalid cleanup-smoke log byte limits", () => {
     const workDir = mkdtempSync(join(tmpdir(), "openclaw-cleanup-smoke-log-invalid-"));
 
