@@ -609,6 +609,46 @@ describe("scripts/test-projects changed-target routing", () => {
       ],
       ["scripts/e2e/lib/package-compat.mjs", ["test/scripts/docker-build-helper.test.ts"]],
       [
+        "scripts/e2e/multi-node-update-docker.sh",
+        ["test/scripts/docker-build-helper.test.ts", "test/scripts/docker-e2e-plan.test.ts"],
+      ],
+      [
+        "scripts/e2e/doctor-install-switch-docker.sh",
+        [
+          "test/scripts/docker-build-helper.test.ts",
+          "test/scripts/docker-e2e-plan.test.ts",
+          "test/scripts/package-acceptance-workflow.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/update-channel-switch-docker.sh",
+        [
+          "test/scripts/docker-build-helper.test.ts",
+          "test/scripts/docker-e2e-plan.test.ts",
+          "test/scripts/package-acceptance-workflow.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/skill-install-docker.sh",
+        [
+          "test/scripts/docker-build-helper.test.ts",
+          "test/scripts/docker-e2e-plan.test.ts",
+          "test/scripts/package-acceptance-workflow.test.ts",
+          "test/scripts/e2e-shell-tempfiles.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/upgrade-survivor-docker.sh",
+        [
+          "test/scripts/docker-build-helper.test.ts",
+          "test/scripts/docker-e2e-plan.test.ts",
+          "test/scripts/package-acceptance-workflow.test.ts",
+          "test/scripts/upgrade-survivor-probe-gateway.test.ts",
+          "test/scripts/upgrade-survivor-assertions.test.ts",
+          "test/scripts/openclaw-test-state.test.ts",
+        ],
+      ],
+      [
         "scripts/e2e/bundled-plugin-install-uninstall-docker.sh",
         [
           "test/scripts/docker-build-helper.test.ts",
