@@ -35,7 +35,7 @@ async function listen(server: Server): Promise<number> {
 }
 
 function runClient(
-  port: number,
+  port: number | string,
   env: Record<string, string> = {},
   timeout = 5_000,
 ): Promise<ClientResult> {
@@ -220,6 +220,13 @@ describe("scripts/e2e/lib/openai-chat-tools/client.mjs", () => {
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("invalid OPENCLAW_OPENAI_CHAT_TOOLS_MAX_BODY_BYTES: 64bytes");
+  });
+
+  it("rejects out-of-range client gateway ports", async () => {
+    const result = await runClient("65536");
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("invalid PORT: 65536");
   });
 
   it("rejects loose write-config timeout env values", () => {
