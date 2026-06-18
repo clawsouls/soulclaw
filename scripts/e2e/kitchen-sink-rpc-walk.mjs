@@ -955,9 +955,9 @@ export async function readBoundedResponseText(
   byteLimit = resolveKitchenSinkRpcConfig().fetchBodyMaxBytes,
 ) {
   const contentLength = response.headers?.get?.("content-length");
-  if (contentLength) {
+  if (contentLength && /^\d+$/u.test(contentLength)) {
     const parsedContentLength = Number(contentLength);
-    if (Number.isFinite(parsedContentLength) && parsedContentLength > byteLimit) {
+    if (Number.isSafeInteger(parsedContentLength) && parsedContentLength > byteLimit) {
       await response.body?.cancel?.().catch(() => undefined);
       throw createFetchBodyTooLargeError(byteLimit);
     }
