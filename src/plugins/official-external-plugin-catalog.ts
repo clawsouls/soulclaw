@@ -137,16 +137,17 @@ function resolveOfficialExternalPluginLookupIds(
   entry: OfficialExternalPluginCatalogEntry,
 ): string[] {
   const manifest = getOfficialExternalPluginCatalogManifest(entry);
-  return uniqueStrings(
-    [
-      normalizeOptionalString(manifest?.plugin?.id),
-      normalizeOptionalString(manifest?.channel?.id),
-      ...(manifest?.providers ?? []).flatMap((provider) => [
-        normalizeOptionalString(provider.id),
-        ...(provider.aliases ?? []).map((alias) => normalizeOptionalString(alias)),
-      ]),
-    ].filter((value): value is string => Boolean(value)),
-  );
+  const lookupIds = [
+    normalizeOptionalString(manifest?.plugin?.id),
+    normalizeOptionalString(manifest?.channel?.id),
+  ];
+  for (const provider of manifest?.providers ?? []) {
+    lookupIds.push(normalizeOptionalString(provider.id));
+    for (const alias of provider.aliases ?? []) {
+      lookupIds.push(normalizeOptionalString(alias));
+    }
+  }
+  return uniqueStrings(lookupIds.filter((value): value is string => Boolean(value)));
 }
 
 export function resolveOfficialExternalPluginLabel(
