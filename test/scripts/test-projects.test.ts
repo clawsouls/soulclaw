@@ -451,6 +451,11 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/mcp-code-mode-gateway-client.test.ts"],
       ],
       [
+        "scripts/e2e/mcp-code-mode-gateway-seed.ts",
+        ["test/scripts/docker-e2e-seeds.test.ts"],
+      ],
+      ["scripts/e2e/cron-mcp-cleanup-seed.ts", ["test/scripts/docker-e2e-seeds.test.ts"]],
+      [
         "scripts/e2e/lib/onboard/scenario.sh",
         ["test/scripts/e2e-shell-tempfiles.test.ts", "test/scripts/openclaw-test-state.test.ts"],
       ],
@@ -1127,6 +1132,7 @@ describe("scripts/test-projects changed-target routing", () => {
       "scripts/e2e/mcp-channels-docker-client.ts",
       "scripts/e2e/mcp-code-mode-gateway-docker.sh",
       "scripts/e2e/mcp-code-mode-gateway-live-docker.sh",
+      "scripts/e2e/mcp-code-mode-gateway-seed.ts",
       "scripts/e2e/agent-bundle-mcp-tools-docker.sh",
       "scripts/e2e/agent-bundle-mcp-tools-docker-client.ts",
       "scripts/mcp-code-mode-gateway-e2e.ts",
@@ -1142,6 +1148,7 @@ describe("scripts/test-projects changed-target routing", () => {
         "test/scripts/plugin-prerelease-test-plan.test.ts",
         "test/scripts/mcp-code-mode-gateway-client.test.ts",
         "test/scripts/session-log-mentions.test.ts",
+        "test/scripts/docker-e2e-seeds.test.ts",
         "src/agents/agent-bundle-mcp-runtime.test.ts",
         "src/agents/agent-bundle-mcp-tools.materialize.test.ts",
       ],
