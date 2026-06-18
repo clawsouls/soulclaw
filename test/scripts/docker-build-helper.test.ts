@@ -2663,6 +2663,12 @@ grep -Fxq preserved "$TMPDIR/caller-fd"
     expect(readFileSync("scripts/lib/docker-e2e-logs.sh", "utf8")).toContain(
       "OPENCLAW_DOCKER_E2E_LOG_PRINT_BYTES",
     );
+    expect(runner).toContain(
+      "docker_e2e_read_positive_int_env OPENCLAW_DOCKER_E2E_LOG_PRINT_BYTES 65536",
+    );
+    expect(runner).toContain(
+      '-e "OPENCLAW_DOCKER_E2E_LOG_PRINT_BYTES=$OPENCLAW_DOCKER_E2E_LOG_PRINT_BYTES"',
+    );
     expect(runner).toContain("docker_e2e_run_logged_print_with_harness \\");
     expect(runner).not.toContain("docker_e2e_run_logged_with_harness plugins-run");
   });
@@ -3225,6 +3231,12 @@ output="$(cat "$sampler_log")"
 
     expect(runner).toContain(
       'KITCHEN_SINK_CLI_TIMEOUT="${OPENCLAW_KITCHEN_SINK_PLUGIN_CLI_TIMEOUT:-${KITCHEN_SINK_CLI_TIMEOUT:-180s}}"',
+    );
+    expect(runner).toContain(
+      "docker_e2e_read_positive_int_env OPENCLAW_DOCKER_E2E_LOG_PRINT_BYTES 65536",
+    );
+    expect(runner).toContain(
+      '-e "OPENCLAW_DOCKER_E2E_LOG_PRINT_BYTES=$OPENCLAW_DOCKER_E2E_LOG_PRINT_BYTES"',
     );
     expect(runner).toContain('-e "KITCHEN_SINK_CLI_TIMEOUT=$KITCHEN_SINK_CLI_TIMEOUT"');
     expect(sweep).toContain('KITCHEN_SINK_CLI_TIMEOUT="${KITCHEN_SINK_CLI_TIMEOUT:-180s}"');
