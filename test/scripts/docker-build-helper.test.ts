@@ -3188,6 +3188,21 @@ output="$(cat "$sampler_log")"
     expect(result.stderr).not.toContain("OPENAI_API_KEY was not available");
   });
 
+  it("rejects invalid Codex media path Docker timeouts before Docker setup", () => {
+    const result = spawnSync("bash", [CODEX_MEDIA_PATH_DOCKER_E2E_PATH], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        OPENCLAW_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: "180s",
+        OPENCLAW_SKIP_DOCKER_BUILD: "1",
+      },
+    });
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("invalid OPENCLAW_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: 180s");
+    expect(result.stderr).not.toContain("Docker image not found");
+  });
+
   it("forwards every kitchen-sink RPC runtime env knob into Docker", () => {
     const runner = readFileSync(KITCHEN_SINK_RPC_DOCKER_E2E_PATH, "utf8");
     const walk = readFileSync("scripts/e2e/kitchen-sink-rpc-walk.mjs", "utf8");
