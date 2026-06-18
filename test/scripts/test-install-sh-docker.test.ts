@@ -615,6 +615,9 @@ describe("bun global install smoke", () => {
     expect(script).toContain("OPENCLAW_BUN_GLOBAL_SMOKE_DIST_IMAGE");
     expect(script).toContain('source "$ROOT_DIR/scripts/lib/docker-e2e-container.sh"');
     expect(script).toContain(
+      'COMMAND_TIMEOUT_MS="$(read_positive_int_env OPENCLAW_BUN_GLOBAL_SMOKE_TIMEOUT_MS 180000)"',
+    );
+    expect(script).toContain(
       'DOCKER_COMMAND_TIMEOUT="${DOCKER_COMMAND_TIMEOUT:-${OPENCLAW_BUN_GLOBAL_SMOKE_DOCKER_COMMAND_TIMEOUT:-600s}}"',
     );
     expect(script).toContain('container_id="$(docker_e2e_docker_cmd create "$image")"');
@@ -633,6 +636,20 @@ describe("bun global install smoke", () => {
     expect(script).not.toContain('container_id="$(docker create "$image")"');
     expect(script).not.toContain('docker cp "${container_id}:/app/dist" "$ROOT_DIR/dist"');
     expect(script).not.toContain('\n  rm -rf "$ROOT_DIR/dist"\n');
+  });
+
+  it("rejects invalid Bun global install command timeouts before Bun setup", () => {
+    const result = spawnSync("bash", [BUN_GLOBAL_SMOKE_PATH], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        OPENCLAW_BUN_GLOBAL_SMOKE_TIMEOUT_MS: "180000ms",
+      },
+    });
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("invalid OPENCLAW_BUN_GLOBAL_SMOKE_TIMEOUT_MS: 180000ms");
+    expect(result.stderr).not.toContain("Bun is required");
   });
 
   it("keeps npm pack tarball paths inside the Bun smoke pack directory", () => {
