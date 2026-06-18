@@ -177,7 +177,7 @@ describe("applyNonInteractivePluginProviderChoice", () => {
         npmSpec: "@openclaw/groq-provider",
         defaultChoice: "npm",
       },
-    });
+    } as never);
     ensureOnboardingPluginInstalled.mockResolvedValue({
       cfg: {
         plugins: {
