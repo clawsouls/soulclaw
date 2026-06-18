@@ -43,7 +43,9 @@ vi.mock("../../../plugins/provider-auth-choices.js", () => ({
   resolveManifestProviderAuthChoice,
 }));
 const resolveProviderInstallCatalogEntry = vi.hoisted(() => vi.fn(() => undefined));
+const resolveDeprecatedProviderInstallCatalogEntry = vi.hoisted(() => vi.fn(() => undefined));
 vi.mock("../../../plugins/provider-install-catalog.js", () => ({
+  resolveDeprecatedProviderInstallCatalogEntry,
   resolveProviderInstallCatalogEntry,
 }));
 const ensureOnboardingPluginInstalled = vi.hoisted(() => vi.fn());
@@ -66,6 +68,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   resolvePreferredProviderForAuthChoice.mockResolvedValue(undefined);
   resolveManifestProviderAuthChoice.mockReturnValue(undefined);
+  resolveDeprecatedProviderInstallCatalogEntry.mockReturnValue(undefined);
   resolveProviderInstallCatalogEntry.mockReturnValue(undefined);
   ensureOnboardingPluginInstalled.mockResolvedValue(undefined);
   resolveOwningPluginIdsForProvider.mockReturnValue(undefined as never);
@@ -241,6 +244,32 @@ describe("applyNonInteractivePluginProviderChoice", () => {
         },
       },
     });
+  });
+
+  it("guides deprecated official auth choices before their plugin is installed", async () => {
+    const runtime = createRuntime();
+    resolveDeprecatedProviderInstallCatalogEntry.mockReturnValue({
+      choiceId: "qwen-api-key",
+    } as never);
+
+    const result = await applyNonInteractivePluginProviderChoice({
+      nextConfig: { agents: { defaults: {} } } as OpenClawConfig,
+      authChoice: "modelstudio-api-key",
+      opts: {} as never,
+      runtime: runtime as never,
+      baseConfig: { agents: { defaults: {} } } as OpenClawConfig,
+      resolveApiKey: vi.fn(),
+      toApiKeyCredential: vi.fn(),
+    });
+
+    expect(result).toBeNull();
+    expectRuntimeErrorIncludes(
+      runtime,
+      '"modelstudio-api-key" is no longer supported. Use --auth-choice "qwen-api-key" instead.',
+    );
+    expect(runtime.exit).toHaveBeenCalledWith(1);
+    expect(ensureOnboardingPluginInstalled).not.toHaveBeenCalled();
+    expect(resolveProviderInstallCatalogEntry).not.toHaveBeenCalled();
   });
 
   it("fails explicitly when a provider-plugin auth choice resolves to no trusted setup provider", async () => {

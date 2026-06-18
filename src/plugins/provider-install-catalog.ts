@@ -439,3 +439,17 @@ export function resolveProviderInstallCatalogEntry(
     (entry) => entry.choiceId === normalizedChoiceId,
   );
 }
+
+/** Resolves an uninstalled provider's deprecated setup choice to its replacement entry. */
+export function resolveDeprecatedProviderInstallCatalogEntry(
+  choiceId: string,
+  params?: ProviderInstallCatalogParams,
+): ProviderInstallCatalogEntry | undefined {
+  const normalizedChoiceId = choiceId.trim();
+  if (!normalizedChoiceId) {
+    return undefined;
+  }
+  return resolveProviderInstallCatalogEntries(params).find((entry) =>
+    entry.deprecatedChoiceIds?.includes(normalizedChoiceId),
+  );
+}

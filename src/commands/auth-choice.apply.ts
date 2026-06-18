@@ -58,13 +58,13 @@ async function formatDeprecatedProviderChoiceError(
   if (deprecatedChoice) {
     return `Auth choice ${JSON.stringify(authChoice)} is no longer supported. Use ${JSON.stringify(deprecatedChoice.choiceId)} instead, or run ${formatCliCommand("openclaw onboard")} to choose interactively.`;
   }
-  const { resolveProviderInstallCatalogEntries } =
+  const { resolveDeprecatedProviderInstallCatalogEntry } =
     await import("../plugins/provider-install-catalog.js");
-  const externalDeprecatedChoice = resolveProviderInstallCatalogEntries({
+  const externalDeprecatedChoice = resolveDeprecatedProviderInstallCatalogEntry(authChoice, {
     config: params.config,
     env: params.env,
     includeUntrustedWorkspacePlugins: false,
-  }).find((entry) => entry.deprecatedChoiceIds?.includes(authChoice));
+  });
   if (!externalDeprecatedChoice) {
     return undefined;
   }

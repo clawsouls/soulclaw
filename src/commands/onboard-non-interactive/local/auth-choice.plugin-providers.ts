@@ -16,7 +16,10 @@ import type { OpenClawConfig } from "../../../config/types.openclaw.js";
 import { enablePluginInConfig } from "../../../plugins/enable.js";
 import { resolvePreferredProviderForAuthChoice } from "../../../plugins/provider-auth-choice-preference.js";
 import { resolveManifestProviderAuthChoice } from "../../../plugins/provider-auth-choices.js";
-import { resolveProviderInstallCatalogEntry } from "../../../plugins/provider-install-catalog.js";
+import {
+  resolveDeprecatedProviderInstallCatalogEntry,
+  resolveProviderInstallCatalogEntry,
+} from "../../../plugins/provider-install-catalog.js";
 import type {
   ProviderAuthOptionBag,
   ProviderNonInteractiveApiKeyCredentialParams,
@@ -137,11 +140,26 @@ export async function applyNonInteractivePluginProviderChoice(params: {
       params.runtime.exit(1);
       return null;
     }
-    const installCatalogEntry = resolveProviderInstallCatalogEntry(params.authChoice, {
+    const installCatalogParams = {
       config: nextConfig,
       workspaceDir,
       includeUntrustedWorkspacePlugins: false,
-    });
+    };
+    const deprecatedInstallCatalogEntry = resolveDeprecatedProviderInstallCatalogEntry(
+      params.authChoice,
+      installCatalogParams,
+    );
+    if (deprecatedInstallCatalogEntry) {
+      params.runtime.error(
+        `${JSON.stringify(params.authChoice)} is no longer supported. Use --auth-choice ${JSON.stringify(deprecatedInstallCatalogEntry.choiceId)} instead.`,
+      );
+      params.runtime.exit(1);
+      return null;
+    }
+    const installCatalogEntry = resolveProviderInstallCatalogEntry(
+      params.authChoice,
+      installCatalogParams,
+    );
     if (!installCatalogEntry) {
       return undefined;
     }
