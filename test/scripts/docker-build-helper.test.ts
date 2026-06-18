@@ -1826,6 +1826,75 @@ grep -qx -- "OPENCLAW_E2E_COMMAND_TIMEOUT=23s" "$TMPDIR/package-args"
     );
   });
 
+  it("reuses the shared bare image for multi-node update targeted runs", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "openclaw-multi-node-shared-image-"));
+
+    try {
+      const rootDir = process.cwd();
+      mkdirSync(join(workDir, "bin"));
+      writeFileSync(join(workDir, "openclaw-current.tgz"), "fake package");
+      writeFileSync(
+        join(workDir, "bin", "docker"),
+        `#!/usr/bin/env bash
+printf "%s\\n" "$*" >>"$TMPDIR/docker-seen"
+case "$1 $2" in
+  "image inspect")
+    exit 0
+    ;;
+  "run "*)
+    exit 0
+    ;;
+esac
+exit 9
+`,
+      );
+      writeFileSync(
+        join(workDir, "bin", "timeout"),
+        `#!/usr/bin/env bash
+case "\${1:-}" in
+  --kill-after=1s)
+    exit 0
+    ;;
+  --kill-after=30s)
+    shift 2
+    ;;
+  *)
+    shift
+    ;;
+esac
+exec "$@"
+`,
+      );
+      chmodSync(join(workDir, "bin", "docker"), 0o755);
+      chmodSync(join(workDir, "bin", "timeout"), 0o755);
+
+      const script = `
+set -euo pipefail
+ROOT_DIR=${shellQuote(rootDir)}
+TMPDIR=${shellQuote(workDir)}
+export ROOT_DIR TMPDIR
+export PATH="$TMPDIR/bin:$PATH"
+export OPENCLAW_SKIP_DOCKER_BUILD=1
+export OPENCLAW_DOCKER_E2E_IMAGE=shared-bare
+export OPENCLAW_CURRENT_PACKAGE_TGZ="$TMPDIR/openclaw-current.tgz"
+export OPENCLAW_MULTI_NODE_ARTIFACT_DIR="$TMPDIR/artifacts"
+
+bash "$ROOT_DIR/scripts/e2e/multi-node-update-docker.sh"
+
+grep -q '^image inspect shared-bare$' "$TMPDIR/docker-seen"
+grep -Fq ' shared-bare ' "$TMPDIR/docker-seen"
+if grep -Fq 'openclaw-multi-node-update-e2e' "$TMPDIR/docker-seen"; then
+  echo "multi-node update lane ignored the shared targeted image" >&2
+  exit 1
+fi
+`;
+
+      execFileSync("bash", ["-lc", script], { encoding: "utf8" });
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
   it("bounds upgrade survivor foreground OpenClaw CLI calls", () => {
     const runner = readFileSync(UPGRADE_SURVIVOR_DOCKER_E2E_PATH, "utf8");
     const publishedRunner = readFileSync(UPGRADE_SURVIVOR_RUN_SCRIPT, "utf8");
