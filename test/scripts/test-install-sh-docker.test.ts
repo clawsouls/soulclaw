@@ -473,11 +473,12 @@ describe("install-sh smoke runner", () => {
     const script = readFileSync(SMOKE_RUNNER_PATH, "utf8");
 
     expect(script).toContain(
-      'HEARTBEAT_INTERVAL="${OPENCLAW_INSTALL_SMOKE_HEARTBEAT_INTERVAL:-60}"',
+      'HEARTBEAT_INTERVAL="$(read_nonnegative_int_env OPENCLAW_INSTALL_SMOKE_HEARTBEAT_INTERVAL 60)"',
     );
     expect(script).toContain(
-      'INSTALL_COMMAND_TIMEOUT="${OPENCLAW_INSTALL_SMOKE_COMMAND_TIMEOUT:-900}"',
+      'INSTALL_COMMAND_TIMEOUT="$(read_positive_int_env OPENCLAW_INSTALL_SMOKE_COMMAND_TIMEOUT 900)"',
     );
+    expect(script).toContain('if [[ "$interval" == "0" ]]; then');
     expect(script).toContain("run_with_heartbeat");
     expect(script).toContain("npm_install_global");
     expect(script).toContain('timeout --kill-after=30s "${INSTALL_COMMAND_TIMEOUT}s"');
@@ -489,6 +490,23 @@ describe("install-sh smoke runner", () => {
     expect(script).toContain("legacy updater process exited after self-swap");
     expect(script).toContain("parseFirstJsonObject");
     expect(script).toContain("unterminated update JSON object");
+  });
+
+  it.each([
+    ["command timeout", "OPENCLAW_INSTALL_SMOKE_COMMAND_TIMEOUT", "900s"],
+    ["heartbeat interval", "OPENCLAW_INSTALL_SMOKE_HEARTBEAT_INTERVAL", "60s"],
+  ])("rejects invalid install smoke %s before running npm", (_label, envName, value) => {
+    const result = spawnSync("bash", [SMOKE_RUNNER_PATH], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        [envName]: value,
+      },
+    });
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain(`invalid ${envName}: ${value}`);
+    expect(result.stderr).not.toContain("unsupported OPENCLAW_INSTALL_SMOKE_MODE");
   });
 
   it("covers plain npm global installs and npm-driven updates", () => {
