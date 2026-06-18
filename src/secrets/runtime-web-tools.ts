@@ -447,7 +447,9 @@ async function resolveBundledWebFetchProviders(params: {
   return resolvePluginWebFetchProviders({
     config: params.sourceConfig,
     env,
-    origin: "bundled",
+    // Runtime credential resolution may load only bundled providers or verified
+    // official installs. Arbitrary external providers must not gain SecretRef access.
+    sandboxed: true,
   });
 }
 

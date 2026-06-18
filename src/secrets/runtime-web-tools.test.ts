@@ -1434,33 +1434,56 @@ describe("runtime web tools resolution", () => {
     expect(resolvePluginWebFetchProvidersMock).not.toHaveBeenCalled();
   });
 
-  it("uses runtime web fetch discovery when the managed plugin index install records is populated", async () => {
+  it("resolves SecretRefs for verified installed Firecrawl fetch config", async () => {
     loadInstalledPluginIndexInstallRecordsSyncMock.mockReturnValue({
-      "external-fetch": {
+      firecrawl: {
         source: "npm",
-        spec: "@openclaw/external-fetch",
+        spec: "@openclaw/firecrawl-plugin",
       },
     });
+    resolveManifestContractOwnerPluginIdMock.mockReturnValueOnce(undefined);
 
-    const { metadata } = await runRuntimeWebTools({
+    const { metadata, resolvedConfig } = await runRuntimeWebTools({
       config: asConfig({
+        tools: {
+          web: {
+            fetch: {
+              provider: "firecrawl",
+            },
+          },
+        },
         plugins: {
           entries: {
             firecrawl: {
               config: {
                 webFetch: {
-                  apiKey: "firecrawl-config-key",
+                  apiKey: {
+                    source: "env",
+                    provider: "default",
+                    id: "FIRECRAWL_API_KEY",
+                  },
                 },
               },
             },
           },
         },
       }),
+      env: {
+        FIRECRAWL_API_KEY: "firecrawl-config-key",
+      },
     });
 
     expect(metadata.fetch.selectedProvider).toBe("firecrawl");
+    expect(metadata.fetch.selectedProviderKeySource).toBe("secretRef");
+    expect(
+      (
+        resolvedConfig.plugins?.entries?.firecrawl?.config as
+          | { webFetch?: { apiKey?: unknown } }
+          | undefined
+      )?.webFetch?.apiKey,
+    ).toBe("firecrawl-config-key");
     expect(resolveBundledWebFetchProvidersFromPublicArtifactsMock).not.toHaveBeenCalled();
-    expect(firstMockArg(resolvePluginWebFetchProvidersMock).origin).toBe("bundled");
+    expect(firstMockArg(resolvePluginWebFetchProvidersMock).sandboxed).toBe(true);
   });
 
   it("uses env fallback for unresolved web fetch provider SecretRef when active", async () => {

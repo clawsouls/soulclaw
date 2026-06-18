@@ -304,7 +304,7 @@ describe("web fetch runtime", () => {
     expect(requireResolvedWebFetch(resolved).provider.id).toBe("firecrawl");
   });
 
-  it("keeps sandboxed web fetch on bundled providers even when runtime providers are preferred", () => {
+  it("keeps sandboxed web fetch on trusted providers even when runtime providers are preferred", () => {
     const bundled = createFirecrawlProvider({
       getConfiguredCredentialValue: () => "bundled-key",
     });
@@ -319,6 +319,11 @@ describe("web fetch runtime", () => {
     });
 
     expect(requireResolvedWebFetch(resolved).provider.id).toBe("firecrawl");
+    expect(resolvePluginWebFetchProvidersMock).toHaveBeenCalledWith({
+      config: {},
+      sandboxed: true,
+    });
+    expect(resolveRuntimeWebFetchProvidersMock).not.toHaveBeenCalled();
   });
 
   it("uses runtime providers for non-sandboxed web fetch when runtime providers are preferred", () => {

@@ -193,7 +193,7 @@ export function resolveWebFetchDefinition(
     options?.sandboxed
       ? resolvePluginWebFetchProviders({
           config: options?.config,
-          origin: "bundled",
+          sandboxed: true,
         })
       : options?.preferRuntimeProviders
         ? resolveRuntimeWebFetchProviders({

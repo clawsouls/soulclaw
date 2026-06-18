@@ -367,6 +367,9 @@ function resolveOfficialExternalProviderInstallCatalogEntries(params: {
             cliDescription: choice.cliDescription,
             onboardingScopes: normalizeProviderAuthChoiceScopes(choice.onboardingScopes),
           }),
+          ...(choice.deprecatedChoiceIds?.length
+            ? { deprecatedChoiceIds: [...choice.deprecatedChoiceIds] }
+            : {}),
           label,
           origin: "bundled",
           install,
