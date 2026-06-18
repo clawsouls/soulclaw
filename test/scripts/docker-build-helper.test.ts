@@ -614,6 +614,82 @@ source "$ROOT_DIR/scripts/lib/docker-build.sh"
     execFileSync("bash", ["-lc", script], { encoding: "utf8" });
   });
 
+  it("normalizes zero-padded centralized Docker build retry counts", () => {
+    const rootDir = process.cwd();
+    const script = `
+set -euo pipefail
+ROOT_DIR=${shellQuote(rootDir)}
+export ROOT_DIR
+export OPENCLAW_DOCKER_BUILD_RETRIES=08
+
+source "$ROOT_DIR/scripts/lib/docker-build.sh"
+
+[[ "$(docker_build_retry_count)" = "8" ]]
+`;
+
+    execFileSync("bash", ["-lc", script], { encoding: "utf8" });
+  });
+
+  it.each([
+    [
+      "retry count",
+      "OPENCLAW_DOCKER_BUILD_RETRIES",
+      "2x",
+      "invalid OPENCLAW_DOCKER_BUILD_RETRIES: 2x",
+    ],
+    [
+      "heartbeat interval",
+      "OPENCLAW_DOCKER_BUILD_HEARTBEAT_SECONDS",
+      "soon",
+      "invalid OPENCLAW_DOCKER_BUILD_HEARTBEAT_SECONDS: soon",
+    ],
+  ])(
+    "rejects invalid centralized Docker build %s before invoking docker",
+    (_label, envName, value, expectedError) => {
+      const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-build-config-"));
+
+      try {
+        const binDir = join(workDir, "bin");
+        const markerPath = join(workDir, "docker-invoked");
+        mkdirSync(binDir);
+        writeFileSync(
+          join(binDir, "docker"),
+          `#!/bin/bash
+printf invoked >${shellQuote(markerPath)}
+exit 0
+`,
+        );
+        chmodSync(join(binDir, "docker"), 0o755);
+        const rootDir = process.cwd();
+        const script = `
+set -euo pipefail
+ROOT_DIR=${shellQuote(rootDir)}
+TMPDIR=${shellQuote(workDir)}
+export ROOT_DIR TMPDIR
+export PATH="$TMPDIR/bin:$PATH"
+
+source "$ROOT_DIR/scripts/lib/docker-build.sh"
+
+docker_build_run e2e-build -t demo-image .
+`;
+
+        const result = spawnSync("bash", ["-lc", script], {
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            [envName]: value,
+          },
+        });
+
+        expect(result.status).toBe(2);
+        expect(result.stderr).toContain(expectedError);
+        expect(existsSync(markerPath)).toBe(false);
+      } finally {
+        rmSync(workDir, { recursive: true, force: true });
+      }
+    },
+  );
+
   it("fails centralized Docker builds fast when timeout is unavailable", () => {
     const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-build-timeout-required-"));
 
