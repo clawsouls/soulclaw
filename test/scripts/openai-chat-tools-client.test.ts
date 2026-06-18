@@ -336,4 +336,26 @@ describe("scripts/e2e/lib/openai-chat-tools/client.mjs", () => {
       server.close();
     }
   });
+
+  it("rejects declared oversized chat completion bodies before waiting on the stream", async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200, {
+        "content-length": "65",
+        "content-type": "application/json",
+      });
+      response.flushHeaders();
+    });
+    const port = await listen(server);
+    try {
+      const startedAt = Date.now();
+      const result = await runClient(port, { OPENCLAW_OPENAI_CHAT_TOOLS_MAX_BODY_BYTES: "64" });
+
+      expect(result.error).toBeUndefined();
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("chat completions response body exceeded 64 bytes");
+      expect(Date.now() - startedAt).toBeLessThan(3_500);
+    } finally {
+      server.close();
+    }
+  });
 });
