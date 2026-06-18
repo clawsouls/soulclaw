@@ -120,6 +120,16 @@ describe("collectClawHubPublishablePluginPackages", () => {
 describe("OpenClaw dual-published plugin metadata", () => {
   const dualPublishedPlugins = [
     {
+      extensionId: "cohere",
+      packageName: "@openclaw/cohere-provider",
+      install: {
+        clawhubSpec: "clawhub:@openclaw/cohere-provider",
+        defaultChoice: "npm",
+        minHostVersion: ">=2026.6.8",
+        npmSpec: "@openclaw/cohere-provider",
+      },
+    },
+    {
       extensionId: "diagnostics-otel",
       packageName: "@openclaw/diagnostics-otel",
       install: {
@@ -151,7 +161,7 @@ describe("OpenClaw dual-published plugin metadata", () => {
     },
   ] as const;
 
-  it("keeps diagnostics plugins selectable through both ClawHub and npm release paths", () => {
+  it("keeps dual-published plugins selectable through both ClawHub and npm release paths", () => {
     const packageNames = dualPublishedPlugins.map((plugin) => plugin.packageName);
     const clawHubPublishable = collectClawHubPublishablePluginPackages(undefined, {
       packageNames,
@@ -171,6 +181,7 @@ describe("OpenClaw dual-published plugin metadata", () => {
           install?: {
             clawhubSpec?: string;
             defaultChoice?: string;
+            minHostVersion?: string;
             npmSpec?: string;
           };
           release?: {

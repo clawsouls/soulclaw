@@ -67,6 +67,18 @@ describe("official external plugin catalog", () => {
     });
   });
 
+  it("lists Cohere as an official external provider", () => {
+    const cohere = expectCatalogEntry("cohere");
+
+    expect(resolveOfficialExternalPluginId(cohere)).toBe("cohere");
+    expect(resolveOfficialExternalPluginInstall(cohere)).toEqual({
+      clawhubSpec: "clawhub:@openclaw/cohere-provider",
+      npmSpec: "@openclaw/cohere-provider",
+      defaultChoice: "npm",
+      minHostVersion: ">=2026.6.8",
+    });
+  });
+
   it("allows invalid-config recovery for externalized stock plugins", () => {
     expect(resolveOfficialExternalPluginInstall(expectCatalogEntry("brave"))).toMatchObject({
       npmSpec: "@openclaw/brave-plugin",
