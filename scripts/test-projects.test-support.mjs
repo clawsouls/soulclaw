@@ -899,6 +899,31 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ],
   ],
   [
+    "scripts/e2e/openai-chat-tools-docker.sh",
+    [
+      "test/scripts/openai-chat-tools-client.test.ts",
+      "test/scripts/docker-e2e-plan.test.ts",
+    ],
+  ],
+  [
+    "scripts/e2e/openai-web-search-minimal-docker.sh",
+    [
+      "test/scripts/docker-build-helper.test.ts",
+      "test/scripts/docker-e2e-plan.test.ts",
+      "test/scripts/openai-web-search-minimal-client.test.ts",
+      "test/scripts/openai-web-search-minimal-assertions.test.ts",
+    ],
+  ],
+  [
+    "scripts/e2e/openwebui-docker.sh",
+    [
+      "test/scripts/docker-build-helper.test.ts",
+      "test/scripts/docker-e2e-plan.test.ts",
+      "test/scripts/openwebui-probe.test.ts",
+      "test/scripts/fixture-config.test.ts",
+    ],
+  ],
+  [
     "scripts/e2e/plugin-binding-command-escape-docker.sh",
     [
       "test/scripts/docker-build-helper.test.ts",
