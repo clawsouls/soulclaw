@@ -8,6 +8,9 @@ IMAGE_NAME="$(docker_e2e_resolve_image "openclaw-openai-chat-tools-e2e" OPENCLAW
 SKIP_BUILD="${OPENCLAW_OPENAI_CHAT_TOOLS_E2E_SKIP_BUILD:-0}"
 PORT="$(docker_e2e_read_tcp_port_env OPENCLAW_OPENAI_CHAT_TOOLS_PORT 18789)"
 TIMEOUT_SECONDS="$(docker_e2e_read_positive_int_env OPENCLAW_OPENAI_CHAT_TOOLS_TIMEOUT_SECONDS 180)"
+MAX_BODY_BYTES="$(
+  docker_e2e_read_positive_int_env OPENCLAW_OPENAI_CHAT_TOOLS_MAX_BODY_BYTES 1048576
+)"
 TOKEN="openai-chat-tools-e2e-$$"
 PROFILE_FILE="${OPENCLAW_OPENAI_CHAT_TOOLS_PROFILE_FILE:-${OPENCLAW_TESTBOX_PROFILE_FILE:-$HOME/.openclaw-testbox-live.profile}}"
 if [ ! -f "$PROFILE_FILE" ] && [ -f "$HOME/.profile" ]; then
@@ -65,6 +68,7 @@ docker_e2e_run_logged_with_harness openai-chat-tools \
   -e "OPENCLAW_GATEWAY_TOKEN=$TOKEN" \
   -e "OPENCLAW_OPENAI_CHAT_TOOLS_MODEL=${OPENCLAW_OPENAI_CHAT_TOOLS_MODEL:-openai/gpt-5.4-mini}" \
   -e "OPENCLAW_OPENAI_CHAT_TOOLS_TIMEOUT_SECONDS=$TIMEOUT_SECONDS" \
+  -e "OPENCLAW_OPENAI_CHAT_TOOLS_MAX_BODY_BYTES=$MAX_BODY_BYTES" \
   -e "OPENCLAW_TEST_STATE_SCRIPT_B64=$OPENCLAW_TEST_STATE_SCRIPT_B64" \
   -e "PORT=$PORT" \
   "${PROFILE_MOUNT[@]}" \
