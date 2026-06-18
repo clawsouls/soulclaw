@@ -2271,11 +2271,18 @@ grep -Fxq preserved "$TMPDIR/caller-fd"
   it("threads the live plugin tool output cap into the Docker harness", () => {
     const runner = readFileSync(LIVE_PLUGIN_TOOL_DOCKER_E2E_PATH, "utf8");
 
+    expect(runner).toContain('source "$ROOT_DIR/scripts/lib/openclaw-e2e-instance.sh"');
     expect(runner).toContain(
-      'AGENT_OUTPUT_MAX_BYTES="${OPENCLAW_LIVE_PLUGIN_TOOL_AGENT_OUTPUT_MAX_BYTES:-1048576}"',
+      'AGENT_TURN_TIMEOUT_SECONDS="$(openclaw_e2e_read_positive_int_env OPENCLAW_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS 300)"',
+    );
+    expect(runner).toContain(
+      'AGENT_OUTPUT_MAX_BYTES="$(openclaw_e2e_read_positive_int_env OPENCLAW_LIVE_PLUGIN_TOOL_AGENT_OUTPUT_MAX_BYTES 1048576)"',
     );
     expect(runner).toContain(
       '-e "OPENCLAW_LIVE_PLUGIN_TOOL_AGENT_OUTPUT_MAX_BYTES=$AGENT_OUTPUT_MAX_BYTES"',
+    );
+    expect(runner).not.toContain(
+      'AGENT_OUTPUT_MAX_BYTES="${OPENCLAW_LIVE_PLUGIN_TOOL_AGENT_OUTPUT_MAX_BYTES:-1048576}"',
     );
     expect(runner).toContain("OPENCLAW_LIVE_PLUGIN_TOOL_AGENT_OUTPUT_DUMP_BYTES");
     expect(runner).toContain('tail -c "$agent_output_dump_bytes" /tmp/openclaw-agent.json');
@@ -2283,6 +2290,28 @@ grep -Fxq preserved "$TMPDIR/caller-fd"
     const dumpLogsEnd = runner.indexOf("\n}", dumpLogsStart);
     expect(runner.slice(dumpLogsStart, dumpLogsEnd)).not.toContain("/tmp/openclaw-agent.json");
   });
+
+  it.each([
+    ["timeout", "OPENCLAW_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS", "1e3"],
+    ["output cap", "OPENCLAW_LIVE_PLUGIN_TOOL_AGENT_OUTPUT_MAX_BYTES", "64kb"],
+  ])(
+    "rejects invalid live plugin tool Docker %s values before Docker setup",
+    (_label, envName, value) => {
+      const result = spawnSync("bash", [LIVE_PLUGIN_TOOL_DOCKER_E2E_PATH], {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          OPENCLAW_LIVE_PLUGIN_TOOL_HOST_BUILD: "0",
+          OPENCLAW_SKIP_DOCKER_BUILD: "1",
+          [envName]: value,
+        },
+      });
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain(`invalid ${envName}: ${value}`);
+      expect(result.stderr).not.toContain("Docker image not found");
+    },
+  );
 
   it("keeps live plugin tool npm pack tarball paths inside the fixture directory", () => {
     const runner = readFileSync(LIVE_PLUGIN_TOOL_DOCKER_E2E_PATH, "utf8");
