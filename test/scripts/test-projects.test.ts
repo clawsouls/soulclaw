@@ -450,6 +450,22 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/e2e/lib/mcp-code-mode-validation.ts",
         ["test/scripts/mcp-code-mode-gateway-client.test.ts"],
       ],
+      [
+        "scripts/e2e/commitments-safety-docker-client.ts",
+        [
+          "test/scripts/docker-e2e-clients.test.ts",
+          "src/commitments/runtime.test.ts",
+          "src/commitments/store.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/session-runtime-context-docker-client.ts",
+        [
+          "test/scripts/docker-e2e-clients.test.ts",
+          "src/agents/embedded-agent-runner/run/runtime-context-prompt.test.ts",
+          "src/agents/embedded-agent-runner/transcript-rewrite.test.ts",
+        ],
+      ],
       ["scripts/e2e/mcp-channels-seed.ts", ["test/scripts/docker-e2e-seeds.test.ts"]],
       ["scripts/e2e/docker-openai-seed.ts", ["test/scripts/docker-e2e-seeds.test.ts"]],
       [
