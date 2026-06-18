@@ -142,7 +142,9 @@ describe("telegram user credential IO", () => {
           import(
             `${new URL("../../scripts/e2e/telegram-user-credential.ts", import.meta.url).href}?case=loose-timeout-${value}-${Date.now()}`
           ),
-        ).rejects.toThrow(`Expected positive integer, got ${value}.`);
+        ).rejects.toThrow(
+          `OPENCLAW_TELEGRAM_USER_CREDENTIAL_COMMAND_TIMEOUT_MS must be a positive integer. Got: ${JSON.stringify(value)}.`,
+        );
       }
     } finally {
       if (previous === undefined) {
@@ -174,6 +176,33 @@ describe("telegram user credential IO", () => {
         chunkCount: 1,
       }),
     ).toThrow("Chunked payload marker exceeds 67108864 bytes.");
+  });
+
+  it("rejects loose numeric credential limits instead of parsing prefixes", async () => {
+    const credentialModule = (await import(
+      `${new URL("../../scripts/e2e/telegram-user-credential.ts", import.meta.url).href}?case=limits-${Date.now()}`
+    )) as {
+      optionalPositiveInteger(value: string | undefined, fallback: number, label?: string): number;
+    };
+
+    expect(credentialModule.optionalPositiveInteger(undefined, 30_000)).toBe(30_000);
+    expect(credentialModule.optionalPositiveInteger(" 120000 ", 30_000)).toBe(120_000);
+    expect(() =>
+      credentialModule.optionalPositiveInteger(
+        "1e3",
+        30_000,
+        "OPENCLAW_QA_CREDENTIAL_LEASE_TTL_MS",
+      ),
+    ).toThrow('OPENCLAW_QA_CREDENTIAL_LEASE_TTL_MS must be a positive integer. Got: "1e3".');
+    expect(() =>
+      credentialModule.optionalPositiveInteger(
+        "9007199254740992",
+        30_000,
+        "OPENCLAW_QA_CREDENTIAL_PAYLOAD_MAX_BYTES",
+      ),
+    ).toThrow(
+      'OPENCLAW_QA_CREDENTIAL_PAYLOAD_MAX_BYTES must be a positive integer. Got: "9007199254740992".',
+    );
   });
 
   it("fails hung child processes instead of waiting for the outer proof timeout", async () => {
