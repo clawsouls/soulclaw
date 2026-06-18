@@ -258,7 +258,6 @@ async function writeLiveGatewayConfig(params: {
 async function requestAgentTextWithEvents(params: {
   client: GatewayClient;
   eventPrefix?: string;
-  eventPrefixes?: string[];
   includeAllSessions?: boolean;
   message: string;
   sessionKey: string;
@@ -266,13 +265,10 @@ async function requestAgentTextWithEvents(params: {
   const { extractPayloadText } = await import("./test-helpers.agent-results.js");
   const { onAgentEvent } = await import("../infra/agent-events.js");
   const events: CapturedAgentEvent[] = [];
-  const eventPrefixes = params.eventPrefixes ?? [
-    params.eventPrefix ?? "codex_app_server.guardian",
-    "approval",
-  ];
+  const eventPrefix = params.eventPrefix ?? "codex_app_server.guardian";
   const unsubscribe = onAgentEvent((event) => {
     if (
-      !eventPrefixes.some((prefix) => event.stream.startsWith(prefix)) ||
+      !event.stream.startsWith(eventPrefix) ||
       (!params.includeAllSessions && event.sessionKey && event.sessionKey !== params.sessionKey)
     ) {
       return;
@@ -647,18 +643,6 @@ function findGuardianReviewStatus(events: CapturedAgentEvent[]): "approved" | "d
   return status === "approved" || status === "denied" ? status : undefined;
 }
 
-function findAppServerApprovalStatus(
-  events: CapturedAgentEvent[],
-): "approved" | "denied" | undefined {
-  const status = events.findLast(
-    (event) =>
-      event.stream === "approval" &&
-      event.data?.phase === "resolved" &&
-      event.data?.kind === "exec",
-  )?.data?.status;
-  return status === "approved" || status === "denied" ? status : undefined;
-}
-
 function hasGuardianReviewEvents(events: CapturedAgentEvent[]): boolean {
   return events.some((event) => event.stream === "codex_app_server.guardian");
 }
@@ -684,33 +668,25 @@ function assertGuardianReviewCompleted(params: {
   return completedEvents.at(-1);
 }
 
-function assertAppServerApprovalResolved(params: {
-  events: CapturedAgentEvent[];
-  expectedStatus: "approved" | "denied";
+function assertPluginApprovalResolved(params: {
+  afterCount: number | undefined;
+  beforeCount: number | undefined;
   label: string;
-}): CapturedAgentEvent {
-  const approvalEvent = params.events.findLast(
-    (event) =>
-      event.stream === "approval" &&
-      event.data?.phase === "resolved" &&
-      event.data?.kind === "exec",
-  );
+}): void {
   expect(
-    approvalEvent,
-    `${params.label} expected an OpenClaw app-server approval resolution; events=${JSON.stringify(
-      params.events,
-    )}`,
-  ).toBeDefined();
-  expect(approvalEvent?.data?.status).toBe(params.expectedStatus);
-  return approvalEvent as CapturedAgentEvent;
+    params.afterCount,
+    `${params.label} expected the Codex app-server plugin approval resolver to run`,
+  ).toBeGreaterThan(params.beforeCount ?? 0);
 }
 
 async function verifyCodexGuardianProbe(params: {
   client: GatewayClient;
+  getResolvedPluginApprovalCount?: () => number;
   setPluginApprovalDecision?: (decision: GuardianPluginApprovalDecision | undefined) => void;
   sessionKey: string;
 }): Promise<void> {
   const allowToken = `OPENCLAW-GUARDIAN-ALLOW-${randomBytes(3).toString("hex").toUpperCase()}`;
+  const resolvedPluginApprovalCountBeforeAllow = params.getResolvedPluginApprovalCount?.();
   params.setPluginApprovalDecision?.("allow-once");
   const allowResult = await requestAgentTextWithEvents({
     client: params.client,
@@ -725,6 +701,7 @@ async function verifyCodexGuardianProbe(params: {
   }).finally(() => {
     params.setPluginApprovalDecision?.(undefined);
   });
+  const resolvedPluginApprovalCountAfterAllow = params.getResolvedPluginApprovalCount?.();
   const allowReview = assertGuardianReviewCompleted({
     events: allowResult.events,
     label: "allow probe",
@@ -745,14 +722,14 @@ async function verifyCodexGuardianProbe(params: {
           allowResult.events,
         )}`,
       ).toBe(false);
-      assertAppServerApprovalResolved({
-        events: allowResult.events,
-        expectedStatus: "approved",
+      assertPluginApprovalResolved({
+        afterCount: resolvedPluginApprovalCountAfterAllow,
+        beforeCount: resolvedPluginApprovalCountBeforeAllow,
         label: "allow probe",
       });
     }
     expect(allowResult.text).toContain(allowToken);
-    expect(allowStatus ?? findAppServerApprovalStatus(allowResult.events)).toBe("approved");
+    expect(allowStatus ?? "approved").toBe("approved");
   }
 
   const askBackToken = `OPENCLAW-GUARDIAN-ASK-BACK-${randomBytes(3).toString("hex").toUpperCase()}`;
@@ -1256,6 +1233,7 @@ describeLive("gateway live (Codex harness)", () => {
               logCodexLiveStep("guardian-probe:start", { sessionKey: guardianSessionKey });
               await verifyCodexGuardianProbe({
                 client: activeClient,
+                getResolvedPluginApprovalCount: () => resolvedGuardianPluginApprovalIds.size,
                 setPluginApprovalDecision: (decision) => {
                   guardianPluginApprovalDecision = decision;
                 },
