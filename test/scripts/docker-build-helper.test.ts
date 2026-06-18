@@ -2688,6 +2688,12 @@ output="$(cat "$sampler_log")"
   it("keeps Open WebUI Docker E2E resource-guarded", () => {
     const runner = readFileSync(OPENWEBUI_DOCKER_E2E_PATH, "utf8");
 
+    expect(runner).toContain(
+      'validate_positive_int OPENCLAW_OPENWEBUI_PROVIDER_TIMEOUT_SECONDS "$PROVIDER_TIMEOUT_SECONDS"',
+    );
+    expect(runner).toContain(
+      'validate_positive_int OPENCLAW_OPENWEBUI_FETCH_TIMEOUT_MS "$PROBE_FETCH_TIMEOUT_MS"',
+    );
     expect(runner).toContain('validate_tcp_port OPENCLAW_OPENWEBUI_GATEWAY_PORT "$PORT"');
     expect(runner).toContain('validate_tcp_port OPENCLAW_OPENWEBUI_PORT "$WEBUI_PORT"');
     expect(runner).toContain("OPENCLAW_OPENWEBUI_MAX_MEMORY_MIB");
@@ -2731,6 +2737,43 @@ output="$(cat "$sampler_log")"
     expect(result.status).toBe(2);
     expect(result.stderr).toContain(`invalid ${envName}: ${value}`);
     expect(result.stderr).not.toContain("OPENAI_API_KEY is required");
+  });
+
+  it.each([
+    ["provider", "OPENCLAW_OPENWEBUI_PROVIDER_TIMEOUT_SECONDS", "300s"],
+    ["fetch", "OPENCLAW_OPENWEBUI_FETCH_TIMEOUT_MS", "8000ms"],
+  ])(
+    "rejects invalid Open WebUI Docker %s timeouts before Docker setup",
+    (_label, envName, value) => {
+      const result = spawnSync("bash", [OPENWEBUI_DOCKER_E2E_PATH], {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          [envName]: value,
+        },
+      });
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain(`invalid ${envName}: ${value}`);
+      expect(result.stderr).not.toContain("OPENAI_API_KEY is required");
+    },
+  );
+
+  it("accepts decimal Open WebUI Docker numeric inputs with leading zeroes", () => {
+    const result = spawnSync("bash", [OPENWEBUI_DOCKER_E2E_PATH], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        OPENCLAW_OPENWEBUI_FETCH_TIMEOUT_MS: "09000",
+        OPENCLAW_OPENWEBUI_GATEWAY_PORT: "018789",
+        OPENCLAW_OPENWEBUI_PORT: "08080",
+        OPENCLAW_OPENWEBUI_PROVIDER_TIMEOUT_SECONDS: "08",
+      },
+    });
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("OPENAI_API_KEY is required");
+    expect(result.stderr).not.toContain("value too great for base");
   });
 
   it.each([
