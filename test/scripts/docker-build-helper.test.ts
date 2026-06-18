@@ -3232,6 +3232,21 @@ output="$(cat "$sampler_log")"
     expect(result.stderr).not.toContain("Docker image not found");
   });
 
+  it("rejects invalid OpenAI chat tools Docker timeouts before auth setup", () => {
+    const result = spawnSync("bash", [OPENAI_CHAT_TOOLS_DOCKER_E2E_PATH], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        OPENAI_API_KEY: "",
+        OPENCLAW_OPENAI_CHAT_TOOLS_TIMEOUT_SECONDS: "180s",
+      },
+    });
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("invalid OPENCLAW_OPENAI_CHAT_TOOLS_TIMEOUT_SECONDS: 180s");
+    expect(result.stderr).not.toContain("OPENAI_API_KEY was not available");
+  });
+
   it("forwards every kitchen-sink RPC runtime env knob into Docker", () => {
     const runner = readFileSync(KITCHEN_SINK_RPC_DOCKER_E2E_PATH, "utf8");
     const walk = readFileSync("scripts/e2e/kitchen-sink-rpc-walk.mjs", "utf8");
