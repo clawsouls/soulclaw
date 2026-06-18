@@ -659,10 +659,34 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     "scripts/e2e/lib/bundled-plugin-install-uninstall/sweep.sh",
     ["test/scripts/bundled-plugin-install-uninstall-probe.test.ts"],
   ],
+  ["scripts/e2e/lib/bun-global-install/assertions.mjs", ["test/scripts/test-install-sh-docker.test.ts"]],
+  [
+    "scripts/e2e/lib/codex-npm-plugin-live/assertions.mjs",
+    ["test/scripts/docker-build-helper.test.ts"],
+  ],
+  ["scripts/e2e/lib/config-reload/assert-log.mjs", ["test/scripts/e2e-mock-config-limits.test.ts"]],
+  [
+    "scripts/e2e/lib/docker-stats/assert-resource-ceiling.mjs",
+    ["test/scripts/docker-stats-resource-ceiling.test.ts"],
+  ],
+  ["scripts/e2e/lib/doctor-install-switch/scenario.sh", ["test/scripts/docker-build-helper.test.ts"]],
+  [
+    "scripts/e2e/lib/fixture.mjs",
+    ["test/scripts/fixture-config.test.ts", "test/scripts/fixtures-workspace.test.ts"],
+  ],
   [
     "scripts/e2e/lib/kitchen-sink-plugin/sweep.sh",
     ["test/scripts/kitchen-sink-plugin-assertions.test.ts"],
   ],
+  [
+    "scripts/e2e/lib/mcp-code-mode-validation.ts",
+    ["test/scripts/mcp-code-mode-gateway-client.test.ts"],
+  ],
+  [
+    "scripts/e2e/lib/onboard/scenario.sh",
+    ["test/scripts/e2e-shell-tempfiles.test.ts", "test/scripts/openclaw-test-state.test.ts"],
+  ],
+  ["scripts/e2e/lib/package-compat.mjs", ["test/scripts/docker-build-helper.test.ts"]],
   [
     "scripts/e2e/lib/plugin-update/corrupt-update-scenario.sh",
     ["test/scripts/plugin-update-unchanged-docker.test.ts"],
@@ -679,6 +703,17 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/e2e/lib/plugins/fixtures.sh", ["test/scripts/plugins-assertions.test.ts"]],
   ["scripts/e2e/lib/plugins/marketplace.sh", ["test/scripts/plugins-assertions.test.ts"]],
   ["scripts/e2e/lib/plugins/sweep.sh", ["test/scripts/plugins-assertions.test.ts"]],
+  ["scripts/e2e/lib/release-plugin-marketplace/scenario.sh", ["test/scripts/docker-build-helper.test.ts"]],
+  ["scripts/e2e/lib/release-typed-onboarding/scenario.sh", ["test/scripts/docker-build-helper.test.ts"]],
+  [
+    "scripts/e2e/lib/release-upgrade-user-journey/scenario.sh",
+    ["test/scripts/docker-build-helper.test.ts"],
+  ],
+  ["scripts/e2e/lib/skills/clawhub-install-proof.sh", ["test/scripts/e2e-shell-tempfiles.test.ts"]],
+  [
+    "scripts/e2e/lib/update-channel-switch/assertions.mjs",
+    ["test/scripts/docker-build-helper.test.ts"],
+  ],
   [
     "scripts/e2e/release-media-memory-docker.sh",
     ["test/scripts/docker-e2e-plan.test.ts", "test/scripts/release-media-memory-scenario.test.ts"],
