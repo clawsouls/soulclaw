@@ -1918,6 +1918,32 @@ describe("kitchen-sink RPC process sampling", () => {
     );
   });
 
+  it("cancels stalled HTTP probe response streams when the timeout wins", async () => {
+    let canceled = false;
+    const timeoutError = Object.assign(new Error("fetch probe timed out"), {
+      code: "ETIMEDOUT",
+    });
+    const response = new Response(
+      new ReadableStream({
+        pull() {
+          return new Promise(() => {});
+        },
+        cancel() {
+          canceled = true;
+        },
+      }),
+      { headers: new Headers() },
+    );
+
+    await expect(
+      readBoundedResponseText(response, 1024, Promise.reject(timeoutError)),
+    ).rejects.toMatchObject({
+      code: "ETIMEDOUT",
+      message: "fetch probe timed out",
+    });
+    expect(canceled).toBe(true);
+  });
+
   it("times out stalled HTTP probe response bodies", async () => {
     vi.useFakeTimers();
     const fetchImpl = vi.fn().mockResolvedValue({
