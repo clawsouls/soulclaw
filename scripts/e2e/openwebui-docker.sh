@@ -8,8 +8,8 @@ source "$ROOT_DIR/scripts/lib/docker-e2e-image.sh"
 
 IMAGE_NAME="$(docker_e2e_resolve_image "openclaw-openwebui-e2e" OPENCLAW_OPENWEBUI_E2E_IMAGE)"
 OPENWEBUI_IMAGE="${OPENWEBUI_IMAGE:-ghcr.io/open-webui/open-webui:v0.8.10}"
-MAX_MEMORY_MIB="${OPENCLAW_OPENWEBUI_MAX_MEMORY_MIB:-8192}"
-MAX_CPU_PERCENT="${OPENCLAW_OPENWEBUI_MAX_CPU_PERCENT:-1600}"
+MAX_MEMORY_MIB="$(docker_e2e_read_nonnegative_decimal_env OPENCLAW_OPENWEBUI_MAX_MEMORY_MIB 8192)"
+MAX_CPU_PERCENT="$(docker_e2e_read_nonnegative_decimal_env OPENCLAW_OPENWEBUI_MAX_CPU_PERCENT 1600)"
 # Keep the default on the preferred GPT-5 OpenAI model for Open WebUI
 # compatibility smoke. Callers can still override this explicitly.
 MODEL="${OPENCLAW_OPENWEBUI_MODEL:-openai/gpt-5.5}"

@@ -300,6 +300,43 @@ docker_build_transient_failure "$LOG_PATH"
     );
   });
 
+  it("rejects malformed Docker E2E resource limits before a suite starts", () => {
+    const helper = readFileSync(DOCKER_E2E_IMAGE_HELPER_PATH, "utf8");
+    const scripts = [
+      readFileSync(ONBOARD_DOCKER_E2E_PATH, "utf8"),
+      readFileSync(KITCHEN_SINK_PLUGIN_DOCKER_E2E_PATH, "utf8"),
+      readFileSync(KITCHEN_SINK_RPC_DOCKER_E2E_PATH, "utf8"),
+      readFileSync(OPENWEBUI_DOCKER_E2E_PATH, "utf8"),
+    ];
+
+    expect(helper).toContain("docker_e2e_read_nonnegative_decimal_env()");
+    for (const script of scripts) {
+      expect(script).toContain("docker_e2e_read_nonnegative_decimal_env");
+    }
+
+    const runProbe = (value: string) => {
+      const script = [
+        "source scripts/lib/docker-e2e-image.sh",
+        "docker_e2e_read_nonnegative_decimal_env OPENCLAW_SAMPLE_RESOURCE_LIMIT 2048",
+      ].join("\n");
+      return spawnSync("bash", ["-c", script], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          OPENCLAW_SAMPLE_RESOURCE_LIMIT: value,
+        },
+      });
+    };
+
+    const invalid = runProbe("12mb");
+    const decimal = runProbe("12.5");
+    expect(invalid.status).toBe(2);
+    expect(invalid.stderr).toContain("invalid OPENCLAW_SAMPLE_RESOURCE_LIMIT: 12mb");
+    expect(decimal.status).toBe(0);
+    expect(decimal.stdout.trimEnd()).toBe("12.5");
+  });
+
   it("keeps Testbox image-build fallback before isolating live MCP code-mode runtime flags", () => {
     const script = readFileSync(MCP_CODE_MODE_GATEWAY_LIVE_DOCKER_E2E_PATH, "utf8");
     const buildIndex = script.indexOf('docker_e2e_build_or_reuse "$IMAGE_NAME"');
@@ -3003,10 +3040,10 @@ output="$(cat "$sampler_log")"
     const wrapper = readFileSync("scripts/test-install-sh-e2e-docker.sh", "utf8");
 
     expect(runner).toContain(
-      "AGENT_TURNS_PARALLEL=\"$(read_boolean_env OPENCLAW_INSTALL_E2E_AGENT_TURNS_PARALLEL 1)\"",
+      'AGENT_TURNS_PARALLEL="$(read_boolean_env OPENCLAW_INSTALL_E2E_AGENT_TURNS_PARALLEL 1)"',
     );
     expect(runner).toContain(
-      "AGENT_TOOL_SMOKE=\"$(read_boolean_env OPENCLAW_INSTALL_E2E_AGENT_TOOL_SMOKE 1)\"",
+      'AGENT_TOOL_SMOKE="$(read_boolean_env OPENCLAW_INSTALL_E2E_AGENT_TOOL_SMOKE 1)"',
     );
     expect(runner).toContain("time_phase");
     expect(runner).toContain("phase_mark_start");
@@ -3033,7 +3070,7 @@ output="$(cat "$sampler_log")"
     expect(runner).toContain("OPENCLAW_INSTALL_E2E_OPENAI_MODEL");
     expect(runner).toContain("OPENCLAW_INSTALL_E2E_OPENAI_PROVIDER_TIMEOUT_SECONDS");
     expect(runner).toContain(
-      "AGENT_TURN_TIMEOUT_SECONDS=\"$(read_positive_int_env OPENCLAW_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS 300)\"",
+      'AGENT_TURN_TIMEOUT_SECONDS="$(read_positive_int_env OPENCLAW_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS 300)"',
     );
   });
 
