@@ -759,6 +759,94 @@ grep -q '^pull openclaw-reuse-image$' "$TMPDIR/docker-seen"
     }
   });
 
+  it("derives the browser CDP image from the shared functional image", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "openclaw-browser-cdp-shared-image-"));
+
+    try {
+      const rootDir = process.cwd();
+      mkdirSync(join(workDir, "bin"));
+      writeFileSync(
+        join(workDir, "bin", "docker"),
+        `#!/usr/bin/env bash
+printf "%s\\n" "$*" >>"$TMPDIR/docker-seen"
+case "$1 $2" in
+  "image inspect")
+    exit 0
+    ;;
+  "inspect -f")
+    printf "true\\n"
+    exit 0
+    ;;
+  "rm -f")
+    exit 0
+    ;;
+  "run "*)
+    printf "container-id\\n"
+    exit 0
+    ;;
+  "exec "*)
+    exit 0
+    ;;
+esac
+case "$1" in
+  build)
+    exit 0
+    ;;
+esac
+exit 9
+`,
+      );
+      writeFileSync(
+        join(workDir, "bin", "node"),
+        `#!/usr/bin/env bash
+printf "echo state\\n"
+`,
+      );
+      writeFileSync(
+        join(workDir, "bin", "timeout"),
+        `#!/usr/bin/env bash
+case "\${1:-}" in
+  --kill-after=1s | --kill-after=30s)
+    shift 2
+    ;;
+  *)
+    shift
+    ;;
+esac
+exec "$@"
+`,
+      );
+      chmodSync(join(workDir, "bin", "docker"), 0o755);
+      chmodSync(join(workDir, "bin", "node"), 0o755);
+      chmodSync(join(workDir, "bin", "timeout"), 0o755);
+
+      const script = `
+set -euo pipefail
+ROOT_DIR=${shellQuote(rootDir)}
+TMPDIR=${shellQuote(workDir)}
+export ROOT_DIR TMPDIR
+export PATH="$TMPDIR/bin:$PATH"
+export OPENCLAW_SKIP_DOCKER_BUILD=1
+export OPENCLAW_DOCKER_E2E_IMAGE=shared-functional
+export OPENCLAW_DOCKER_ALL_LANE_NAME=browser-cdp-snapshot
+
+bash "$ROOT_DIR/scripts/e2e/browser-cdp-snapshot-docker.sh"
+
+grep -q '^image inspect shared-functional$' "$TMPDIR/docker-seen"
+grep -Fq 'build -t openclaw-browser-cdp-snapshot-e2e:browser-cdp-snapshot' "$TMPDIR/docker-seen"
+grep -Fq ' openclaw-browser-cdp-snapshot-e2e:browser-cdp-snapshot ' "$TMPDIR/docker-seen"
+if grep -Fq ' shared-functional ' "$TMPDIR/docker-seen"; then
+  echo "browser CDP lane reused the shared image without Chromium" >&2
+  exit 1
+fi
+`;
+
+      execFileSync("bash", ["-lc", script], { encoding: "utf8" });
+    } finally {
+      rmSync(workDir, { recursive: true, force: true });
+    }
+  });
+
   it("fails Docker commands fast when timeout is unavailable", () => {
     const workDir = mkdtempSync(join(tmpdir(), "openclaw-docker-timeout-required-"));
 
