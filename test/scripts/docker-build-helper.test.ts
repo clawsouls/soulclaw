@@ -3003,7 +3003,10 @@ output="$(cat "$sampler_log")"
     const wrapper = readFileSync("scripts/test-install-sh-e2e-docker.sh", "utf8");
 
     expect(runner).toContain(
-      'AGENT_TURNS_PARALLEL="${OPENCLAW_INSTALL_E2E_AGENT_TURNS_PARALLEL:-1}"',
+      "AGENT_TURNS_PARALLEL=\"$(read_boolean_env OPENCLAW_INSTALL_E2E_AGENT_TURNS_PARALLEL 1)\"",
+    );
+    expect(runner).toContain(
+      "AGENT_TOOL_SMOKE=\"$(read_boolean_env OPENCLAW_INSTALL_E2E_AGENT_TOOL_SMOKE 1)\"",
     );
     expect(runner).toContain("time_phase");
     expect(runner).toContain("phase_mark_start");
@@ -3030,7 +3033,7 @@ output="$(cat "$sampler_log")"
     expect(runner).toContain("OPENCLAW_INSTALL_E2E_OPENAI_MODEL");
     expect(runner).toContain("OPENCLAW_INSTALL_E2E_OPENAI_PROVIDER_TIMEOUT_SECONDS");
     expect(runner).toContain(
-      'AGENT_TURN_TIMEOUT_SECONDS="${OPENCLAW_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS:-300}"',
+      "AGENT_TURN_TIMEOUT_SECONDS=\"$(read_positive_int_env OPENCLAW_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS 300)\"",
     );
   });
 
