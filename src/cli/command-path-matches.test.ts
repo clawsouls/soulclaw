@@ -1,7 +1,6 @@
 // Command path match tests cover CLI command path matching and normalization.
 import { describe, expect, it } from "vitest";
 import {
-  matchesAnyCommandPath,
   matchesCommandPath,
   matchesCommandPathRule,
 } from "./command-path-matches.js";
@@ -38,18 +37,4 @@ describe("command-path-matches", () => {
     ).toBe(true);
   });
 
-  it("matches any command path from a rule set", () => {
-    expect(
-      matchesAnyCommandPath(
-        ["config", "schema"],
-        [["backup"], { pattern: ["config", "schema"], exact: true }],
-      ),
-    ).toBe(true);
-    expect(
-      matchesAnyCommandPath(
-        ["message", "send"],
-        [["status"], { pattern: ["config", "schema"], exact: true }],
-      ),
-    ).toBe(false);
-  });
 });

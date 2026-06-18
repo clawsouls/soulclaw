@@ -43,11 +43,3 @@ export function matchesCommandPathRule(commandPath: string[], rule: CommandPathM
     exact: normalizedRule.exact,
   });
 }
-
-/** Returns whether any configured command-path rule matches the parsed command path. */
-export function matchesAnyCommandPath(
-  commandPath: string[],
-  rules: readonly CommandPathMatchRule[],
-): boolean {
-  return rules.some((rule) => matchesCommandPathRule(commandPath, rule));
-}
