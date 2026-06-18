@@ -236,6 +236,18 @@ describe("scripts/e2e/lib/openai-chat-tools/client.mjs", () => {
     }
   });
 
+  it("rejects out-of-range write-config gateway ports", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "openclaw-openai-chat-tools-"));
+    try {
+      const result = runWriteConfig(root, { PORT: "65536" });
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("invalid PORT: 65536");
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it("writes strict positive timeout and port values into generated config", () => {
     const root = mkdtempSync(path.join(tmpdir(), "openclaw-openai-chat-tools-"));
     try {

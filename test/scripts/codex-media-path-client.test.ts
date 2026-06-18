@@ -129,6 +129,14 @@ describe("codex media path limits", () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("invalid OPENCLAW_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: 1e3");
   });
+
+  it("rejects out-of-range write-config gateway ports", () => {
+    const root = makeTempRoot();
+    const result = runWriteConfig(root, { PORT: "65536" });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("invalid PORT: 65536");
+  });
 });
 
 describe("codex media path fake app-server", () => {
