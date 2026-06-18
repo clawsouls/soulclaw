@@ -1795,6 +1795,16 @@ function resolveConventionalToolingTestTargets(changedPath, cwd = process.cwd())
   const dashedStem = stem.replaceAll("/", "-");
   const e2eLibStem = stem.startsWith("e2e/lib/") ? stem.slice("e2e/lib/".length) : null;
   const e2eLibDashedStem = e2eLibStem?.replaceAll("/", "-");
+  const e2eLibParts = e2eLibStem?.split("/") ?? [];
+  const e2eLibFamily = e2eLibParts.length > 1 ? e2eLibParts[0] : null;
+  const e2eLibFamilyCandidates = e2eLibFamily
+    ? [
+        `test/scripts/${e2eLibFamily}.test.ts`,
+        `test/scripts/${e2eLibFamily}-client.test.ts`,
+        `test/scripts/${e2eLibFamily}-assertions.test.ts`,
+        `test/scripts/${e2eLibFamily}-probe.test.ts`,
+      ]
+    : [];
   const candidates = [
     `test/scripts/${stem}.test.ts`,
     `test/scripts/${dashedStem}.test.ts`,
@@ -1802,6 +1812,7 @@ function resolveConventionalToolingTestTargets(changedPath, cwd = process.cwd())
     ...(e2eLibDashedStem
       ? [`test/scripts/${e2eLibDashedStem}.test.ts`, `test/scripts/e2e-${e2eLibDashedStem}.test.ts`]
       : []),
+    ...e2eLibFamilyCandidates,
     `src/scripts/${stem}.test.ts`,
     `src/scripts/${dashedStem}.test.ts`,
     `src/scripts/${basename}.test.ts`,
