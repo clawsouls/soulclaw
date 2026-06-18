@@ -536,6 +536,27 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/e2e/mcp-code-mode-gateway-seed.ts",
         ["test/scripts/docker-e2e-seeds.test.ts"],
       ],
+      [
+        "scripts/e2e/cron-mcp-cleanup-docker.sh",
+        [
+          "test/scripts/docker-build-helper.test.ts",
+          "test/scripts/docker-e2e-observability.test.ts",
+          "test/scripts/docker-e2e-plan.test.ts",
+          "test/scripts/plugin-prerelease-test-plan.test.ts",
+          "test/scripts/cron-mcp-cleanup-docker-client.test.ts",
+          "test/scripts/docker-e2e-seeds.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/cron-mcp-cleanup-docker-client.ts",
+        [
+          "test/scripts/cron-mcp-cleanup-docker-client.test.ts",
+          "src/gateway/server.cron.test.ts",
+          "src/gateway/server-methods/agent.test.ts",
+          "src/cron/isolated-agent/run.fast-mode.test.ts",
+          "src/cron/active-jobs-manual-run.test.ts",
+        ],
+      ],
       ["scripts/e2e/cron-mcp-cleanup-seed.ts", ["test/scripts/docker-e2e-seeds.test.ts"]],
       [
         "scripts/e2e/lib/onboard/scenario.sh",
@@ -577,6 +598,23 @@ describe("scripts/test-projects changed-target routing", () => {
       [
         "scripts/e2e/lib/update-channel-switch/assertions.mjs",
         ["test/scripts/docker-build-helper.test.ts"],
+      ],
+      [
+        "scripts/e2e/openai-image-auth-docker.sh",
+        [
+          "test/scripts/docker-build-helper.test.ts",
+          "test/scripts/docker-e2e-plan.test.ts",
+          "test/scripts/openai-image-auth-docker-client.test.ts",
+          "extensions/openai/image-generation-provider.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/openai-image-auth-docker-client.ts",
+        [
+          "test/scripts/openai-image-auth-docker-client.test.ts",
+          "extensions/openai/image-generation-provider.test.ts",
+          "src/image-generation/openai-compatible-image-provider.test.ts",
+        ],
       ],
     ]);
 
@@ -1220,6 +1258,9 @@ describe("scripts/test-projects changed-target routing", () => {
       "scripts/e2e/agent-bundle-mcp-tools-docker.sh",
       "scripts/e2e/agent-bundle-mcp-tools-docker-client.ts",
       "scripts/mcp-code-mode-gateway-e2e.ts",
+      "scripts/e2e/cron-mcp-cleanup-docker.sh",
+      "scripts/e2e/cron-mcp-cleanup-docker-client.ts",
+      "scripts/e2e/cron-mcp-cleanup-seed.ts",
     ];
 
     expect(findUnmatchedExplicitTestTargets(targets)).toEqual([]);
@@ -1235,6 +1276,30 @@ describe("scripts/test-projects changed-target routing", () => {
         "test/scripts/session-log-mentions.test.ts",
         "src/agents/agent-bundle-mcp-runtime.test.ts",
         "src/agents/agent-bundle-mcp-tools.materialize.test.ts",
+        "test/scripts/cron-mcp-cleanup-docker-client.test.ts",
+        "src/gateway/server.cron.test.ts",
+        "src/gateway/server-methods/agent.test.ts",
+        "src/cron/isolated-agent/run.fast-mode.test.ts",
+        "src/cron/active-jobs-manual-run.test.ts",
+      ],
+    });
+  });
+
+  it("routes OpenAI image auth Docker E2E script targets instead of skipping changed tests", () => {
+    const targets = [
+      "scripts/e2e/openai-image-auth-docker.sh",
+      "scripts/e2e/openai-image-auth-docker-client.ts",
+    ];
+
+    expect(findUnmatchedExplicitTestTargets(targets)).toEqual([]);
+    expect(resolveChangedTestTargetPlan(targets)).toEqual({
+      mode: "targets",
+      targets: [
+        "test/scripts/docker-build-helper.test.ts",
+        "test/scripts/docker-e2e-plan.test.ts",
+        "test/scripts/openai-image-auth-docker-client.test.ts",
+        "extensions/openai/image-generation-provider.test.ts",
+        "src/image-generation/openai-compatible-image-provider.test.ts",
       ],
     });
   });
