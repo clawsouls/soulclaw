@@ -908,6 +908,39 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     "scripts/e2e/lib/release-upgrade-user-journey/scenario.sh",
     ["test/scripts/docker-build-helper.test.ts"],
   ],
+  [
+    "scripts/e2e/release-plugin-marketplace-docker.sh",
+    [
+      "test/scripts/docker-build-helper.test.ts",
+      "test/scripts/docker-e2e-plan.test.ts",
+      "test/scripts/package-acceptance-workflow.test.ts",
+    ],
+  ],
+  [
+    "scripts/e2e/release-typed-onboarding-docker.sh",
+    [
+      "test/scripts/docker-build-helper.test.ts",
+      "test/scripts/docker-e2e-plan.test.ts",
+      "test/scripts/package-acceptance-workflow.test.ts",
+    ],
+  ],
+  [
+    "scripts/e2e/release-upgrade-user-journey-docker.sh",
+    [
+      "test/scripts/docker-build-helper.test.ts",
+      "test/scripts/docker-e2e-plan.test.ts",
+      "test/scripts/package-acceptance-workflow.test.ts",
+    ],
+  ],
+  [
+    "scripts/e2e/release-user-journey-docker.sh",
+    [
+      "test/scripts/docker-build-helper.test.ts",
+      "test/scripts/docker-e2e-plan.test.ts",
+      "test/scripts/package-acceptance-workflow.test.ts",
+      "test/scripts/release-user-journey-assertions.test.ts",
+    ],
+  ],
   ["scripts/e2e/lib/skills/clawhub-install-proof.sh", ["test/scripts/e2e-shell-tempfiles.test.ts"]],
   [
     "scripts/e2e/lib/update-channel-switch/assertions.mjs",
