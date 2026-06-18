@@ -70,11 +70,3 @@ export const parsePassthroughArgs = (args = []) => {
 
   return { fileFilters, optionArgs };
 };
-
-export const countExplicitEntryFilters = (entryArgs) => {
-  const { fileFilters } = parsePassthroughArgs(entryArgs.slice(2));
-  return fileFilters.length > 0 ? fileFilters.length : null;
-};
-
-export const getExplicitEntryFilters = (entryArgs) =>
-  parsePassthroughArgs(entryArgs.slice(2)).fileFilters;
