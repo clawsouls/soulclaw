@@ -492,6 +492,9 @@ def produce_services_for_target(target)
   if target.fetch("capabilities").include?("PUSH_NOTIFICATIONS")
     services[:push_notification] = "on"
   end
+  if target.fetch("capabilities").include?("APP_GROUPS")
+    services[:app_group] = "on"
+  end
   services
 end
 
@@ -567,6 +570,15 @@ def profile_plist_value(profile_path, key_path)
   end
 end
 
+def profile_plist_array_values(profile_path, key_path)
+  raw = profile_plist_value(profile_path, key_path)
+  return [] unless raw
+
+  raw.lines.map(&:strip).reject do |line|
+    line.empty? || line == "Array {" || line == "}"
+  end
+end
+
 def validate_match_profile_capabilities!(target)
   capabilities = target.fetch("capabilities")
   return if capabilities.empty?
@@ -579,6 +591,17 @@ def validate_match_profile_capabilities!(target)
     if aps_environment != "production"
       UI.user_error!(
         "Provisioning profile #{target.fetch("profileName")} for #{target.fetch("bundleId")} is missing production push entitlement; expected aps-environment=production, got #{aps_environment || "missing"}."
+      )
+    end
+  end
+
+  if capabilities.include?("APP_GROUPS")
+    expected_app_groups = target.fetch("appGroups")
+    actual_app_groups = profile_plist_array_values(profile_path, "Entitlements:com.apple.security.application-groups")
+    missing = expected_app_groups - actual_app_groups
+    unless missing.empty?
+      UI.user_error!(
+        "Provisioning profile #{target.fetch("profileName")} for #{target.fetch("bundleId")} is missing App Groups #{missing.join(", ")}; actual groups: #{actual_app_groups.empty? ? "missing" : actual_app_groups.join(", ")}."
       )
     end
   end

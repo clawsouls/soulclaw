@@ -142,6 +142,7 @@ targets:
               - openclaw
         CFBundleShortVersionString: "$(OPENCLAW_MARKETING_VERSION)"
         OpenClawCanonicalVersion: "$(OPENCLAW_IOS_VERSION)"
+        OpenClawAppGroupIdentifier: "$(OPENCLAW_APP_GROUP_ID)"
         CFBundleVersion: "$(OPENCLAW_BUILD_VERSION)"
         UILaunchScreen: {}
         UIApplicationSceneManifest:
@@ -194,6 +195,7 @@ targets:
     settings:
       base:
         CODE_SIGN_IDENTITY: "$(OPENCLAW_CODE_SIGN_IDENTITY)"
+        CODE_SIGN_ENTITLEMENTS: ShareExtension/OpenClawShareExtension.entitlements
         CODE_SIGN_STYLE: "$(OPENCLAW_CODE_SIGN_STYLE)"
         DEVELOPMENT_TEAM: "$(OPENCLAW_DEVELOPMENT_TEAM)"
         ENABLE_APPINTENTS_METADATA: NO
@@ -208,6 +210,7 @@ targets:
       properties:
         CFBundleDisplayName: OpenClaw Share
         CFBundleShortVersionString: "$(OPENCLAW_MARKETING_VERSION)"
+        OpenClawAppGroupIdentifier: "$(OPENCLAW_APP_GROUP_ID)"
         CFBundleVersion: "$(OPENCLAW_BUILD_VERSION)"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
