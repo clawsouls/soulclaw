@@ -332,7 +332,7 @@ const TELEGRAM_QA_SCENARIOS: TelegramQaScenarioDefinition[] = [
         {
           expectReply: true,
           input: `/commands@${sutUsername}`,
-          expectedTextIncludes: ["Commands (1/", "/session", "/verbose"],
+          expectedTextIncludes: ["Commands (1/", "/session", "/stop"],
         },
       ] satisfies TelegramQaScenarioStep[];
       return { steps };
