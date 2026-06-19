@@ -250,10 +250,10 @@ docker_build_transient_failure "$LOG_PATH"
     const cleanupRun = readFileSync(CLEANUP_SMOKE_RUN_PATH, "utf8");
 
     expect(cleanupRun).toContain("ensure_cleanup_smoke_node_options()");
-    expect(cleanupRun).toContain("export NODE_OPTIONS=\"$current\"");
+    expect(cleanupRun).toContain('export NODE_OPTIONS="$current"');
     expect(cleanupRun).toContain("--max-old-space-size=8192");
-    expect(cleanupRun).toContain("*\" --max-old-space-size=\"*");
-    expect(cleanupRun).toContain("*\" --max_old_space_size=\"*");
+    expect(cleanupRun).toContain('*" --max-old-space-size="*');
+    expect(cleanupRun).toContain('*" --max_old_space_size="*');
     expect(cleanupRun.indexOf("ensure_cleanup_smoke_node_options")).toBeLessThan(
       cleanupRun.indexOf("pnpm build >/tmp/openclaw-cleanup-build.log"),
     );
@@ -3232,19 +3232,41 @@ output="$(cat "$sampler_log")"
     expect(result.stderr).not.toContain("Docker image not found");
   });
 
-  it("rejects invalid OpenAI chat tools Docker timeouts before auth setup", () => {
+  it.each([
+    ["timeout", "OPENCLAW_OPENAI_CHAT_TOOLS_TIMEOUT_SECONDS", "180s"],
+    ["body cap", "OPENCLAW_OPENAI_CHAT_TOOLS_MAX_BODY_BYTES", "64kb"],
+  ])("rejects invalid OpenAI chat tools Docker %s before auth setup", (_label, envName, value) => {
     const result = spawnSync("bash", [OPENAI_CHAT_TOOLS_DOCKER_E2E_PATH], {
       encoding: "utf8",
       env: {
         ...process.env,
         OPENAI_API_KEY: "",
-        OPENCLAW_OPENAI_CHAT_TOOLS_TIMEOUT_SECONDS: "180s",
+        [envName]: value,
       },
     });
 
     expect(result.status).toBe(2);
-    expect(result.stderr).toContain("invalid OPENCLAW_OPENAI_CHAT_TOOLS_TIMEOUT_SECONDS: 180s");
+    expect(result.stderr).toContain(`invalid ${envName}: ${value}`);
     expect(result.stderr).not.toContain("OPENAI_API_KEY was not available");
+  });
+
+  it("forwards every OpenAI chat tools runtime env knob into Docker", () => {
+    const runner = readFileSync(OPENAI_CHAT_TOOLS_DOCKER_E2E_PATH, "utf8");
+    const client = readFileSync("scripts/e2e/lib/openai-chat-tools/client.mjs", "utf8");
+    const writer = readFileSync("scripts/e2e/lib/openai-chat-tools/write-config.mjs", "utf8");
+    const consumed = new Set(
+      [...`${client}\n${writer}`.matchAll(/["`](OPENCLAW_OPENAI_CHAT_TOOLS_[A-Z0-9_]+)["`]/gu)].map(
+        (match) => match[1],
+      ),
+    );
+    const forwarded = new Set(
+      [...runner.matchAll(/-e\s+"(OPENCLAW_OPENAI_CHAT_TOOLS_[A-Z0-9_]+)=/gu)].map(
+        (match) => match[1],
+      ),
+    );
+    const missing = [...consumed].filter((envName) => !forwarded.has(envName)).toSorted();
+
+    expect(missing).toEqual([]);
   });
 
   it("forwards every kitchen-sink RPC runtime env knob into Docker", () => {
