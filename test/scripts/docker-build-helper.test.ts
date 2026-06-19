@@ -3374,19 +3374,33 @@ output="$(cat "$sampler_log")"
     expect(result.stderr).not.toContain("OPENAI_API_KEY was not available");
   });
 
-  it("rejects invalid Codex media path Docker timeouts before Docker setup", () => {
+  it.each([
+    ["timeout", "OPENCLAW_CODEX_MEDIA_PATH_TIMEOUT_SECONDS", "180s"],
+    ["log tail cap", "OPENCLAW_CODEX_MEDIA_PATH_LOG_TAIL_MAX_BYTES", "64kb"],
+  ])("rejects invalid Codex media path Docker %s before Docker setup", (_label, envName, value) => {
     const result = spawnSync("bash", [CODEX_MEDIA_PATH_DOCKER_E2E_PATH], {
       encoding: "utf8",
       env: {
         ...process.env,
-        OPENCLAW_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: "180s",
+        [envName]: value,
         OPENCLAW_SKIP_DOCKER_BUILD: "1",
       },
     });
 
     expect(result.status).toBe(2);
-    expect(result.stderr).toContain("invalid OPENCLAW_CODEX_MEDIA_PATH_TIMEOUT_SECONDS: 180s");
+    expect(result.stderr).toContain(`invalid ${envName}: ${value}`);
     expect(result.stderr).not.toContain("Docker image not found");
+  });
+
+  it("forwards Codex media path client limits into Docker", () => {
+    const runner = readFileSync(CODEX_MEDIA_PATH_DOCKER_E2E_PATH, "utf8");
+
+    expect(runner).toContain(
+      'LOG_TAIL_MAX_BYTES="$(docker_e2e_read_positive_int_env OPENCLAW_CODEX_MEDIA_PATH_LOG_TAIL_MAX_BYTES 2097152)"',
+    );
+    expect(runner).toContain(
+      '-e "OPENCLAW_CODEX_MEDIA_PATH_LOG_TAIL_MAX_BYTES=$LOG_TAIL_MAX_BYTES"',
+    );
   });
 
   it.each([
