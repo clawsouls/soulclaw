@@ -2635,16 +2635,26 @@ grep -Fxq preserved "$TMPDIR/caller-fd"
     expect(runner).not.toContain("cat /tmp/openclaw-codex-plugin-pack.log");
     expect(runner).toContain("tail -n 120 /tmp/openclaw-codex-agent-after-uninstall.err");
     expect(runner).not.toContain("cat /tmp/openclaw-codex-agent-after-uninstall.err");
-    const profileSourceIndex = runner.indexOf('source "$PROFILE_FILE"');
-    const agentTimeoutEnvIndex = runner.indexOf(
+    const earlyAgentTimeoutEnvIndex = runner.indexOf(
       "docker_e2e_read_positive_int_env OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS 420",
     );
+    const profileSourceIndex = runner.indexOf('source "$PROFILE_FILE"');
+    const finalAgentTimeoutEnvIndex = runner.lastIndexOf(
+      "docker_e2e_read_positive_int_env OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS",
+    );
     const dockerBuildIndex = runner.indexOf("docker_e2e_build_or_reuse");
+    const preparePluginSpecIndex = runner.indexOf("\nprepare_codex_plugin_spec\n");
+    expect(earlyAgentTimeoutEnvIndex).toBeGreaterThanOrEqual(0);
+    expect(dockerBuildIndex).toBeGreaterThan(earlyAgentTimeoutEnvIndex);
+    expect(preparePluginSpecIndex).toBeGreaterThan(dockerBuildIndex);
     expect(profileSourceIndex).toBeGreaterThanOrEqual(0);
-    expect(agentTimeoutEnvIndex).toBeGreaterThan(profileSourceIndex);
-    expect(dockerBuildIndex).toBeGreaterThan(agentTimeoutEnvIndex);
+    expect(profileSourceIndex).toBeGreaterThan(preparePluginSpecIndex);
+    expect(finalAgentTimeoutEnvIndex).toBeGreaterThan(profileSourceIndex);
     expect(runner).toContain(
       "docker_e2e_read_positive_int_env OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS 420",
+    );
+    expect(runner).toContain(
+      'docker_e2e_read_positive_int_env OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS "$AGENT_TURN_TIMEOUT_SECONDS"',
     );
     expect(runner).toContain(
       'COMMAND_TIMEOUT="${OPENCLAW_E2E_COMMAND_TIMEOUT:-$((10#$AGENT_TURN_TIMEOUT_SECONDS + 60))s}"',

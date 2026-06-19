@@ -17,16 +17,6 @@ DOCKER_TARGET="${OPENCLAW_CODEX_NPM_PLUGIN_DOCKER_TARGET:-bare}"
 HOST_BUILD="${OPENCLAW_CODEX_NPM_PLUGIN_HOST_BUILD:-1}"
 PACKAGE_TGZ="${OPENCLAW_CURRENT_PACKAGE_TGZ:-}"
 PROFILE_FILE="${OPENCLAW_CODEX_NPM_PLUGIN_PROFILE_FILE:-${OPENCLAW_TESTBOX_PROFILE_FILE:-$HOME/.openclaw-testbox-live.profile}}"
-PROFILE_MOUNT=()
-PROFILE_STATUS="none"
-if [ -f "$PROFILE_FILE" ] && [ -r "$PROFILE_FILE" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  source "$PROFILE_FILE"
-  set +a
-  PROFILE_MOUNT=(-v "$PROFILE_FILE":/home/appuser/.profile:ro)
-  PROFILE_STATUS="$PROFILE_FILE"
-fi
 CODEX_PLUGIN_SPEC="${OPENCLAW_CODEX_NPM_PLUGIN_SPEC:-}"
 CODEX_PLUGIN_MOUNT=()
 CODEX_PLUGIN_PACK_DIR=""
@@ -48,7 +38,6 @@ ASSERT_MAX_TRANSCRIPT_SCAN_BYTES="$(
 AGENT_TURN_TIMEOUT_SECONDS="$(
   docker_e2e_read_positive_int_env OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS 420
 )"
-COMMAND_TIMEOUT="${OPENCLAW_E2E_COMMAND_TIMEOUT:-$((10#$AGENT_TURN_TIMEOUT_SECONDS + 60))s}"
 run_log=""
 
 cleanup() {
@@ -128,6 +117,21 @@ prepare_codex_plugin_spec() {
 }
 
 prepare_codex_plugin_spec
+
+PROFILE_MOUNT=()
+PROFILE_STATUS="none"
+if [ -f "$PROFILE_FILE" ] && [ -r "$PROFILE_FILE" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$PROFILE_FILE"
+  set +a
+  PROFILE_MOUNT=(-v "$PROFILE_FILE":/home/appuser/.profile:ro)
+  PROFILE_STATUS="$PROFILE_FILE"
+fi
+AGENT_TURN_TIMEOUT_SECONDS="$(
+  docker_e2e_read_positive_int_env OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS "$AGENT_TURN_TIMEOUT_SECONDS"
+)"
+COMMAND_TIMEOUT="${OPENCLAW_E2E_COMMAND_TIMEOUT:-$((10#$AGENT_TURN_TIMEOUT_SECONDS + 60))s}"
 
 docker_e2e_package_mount_args "$PACKAGE_TGZ"
 run_log="$(docker_e2e_run_log codex-npm-plugin-live)"
