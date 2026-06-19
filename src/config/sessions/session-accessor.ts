@@ -1148,6 +1148,7 @@ async function replaceTranscriptForManualCompact(
     throw err;
   }
   emitSessionTranscriptUpdate({ sessionFile: archived });
+  emitSessionTranscriptUpdate({ sessionFile: filePath });
   return archived;
 }
 
