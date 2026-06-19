@@ -32,6 +32,7 @@ const legacyWriterNames = new Set([
 const legacyTranscriptWriterNames = new Set([
   "appendSessionTranscriptMessage",
   "emitSessionTranscriptUpdate",
+  "rewriteTranscriptEntriesInSessionFile",
 ]);
 const sessionCreateLifecycleWriterNames = new Set([
   "applySessionStoreEntryPatch",
