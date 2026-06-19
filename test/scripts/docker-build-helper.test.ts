@@ -2647,7 +2647,7 @@ grep -Fxq preserved "$TMPDIR/caller-fd"
       "docker_e2e_read_positive_int_env OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS 420",
     );
     expect(runner).toContain(
-      'COMMAND_TIMEOUT="${OPENCLAW_E2E_COMMAND_TIMEOUT:-$((AGENT_TURN_TIMEOUT_SECONDS + 60))s}"',
+      'COMMAND_TIMEOUT="${OPENCLAW_E2E_COMMAND_TIMEOUT:-$((10#$AGENT_TURN_TIMEOUT_SECONDS + 60))s}"',
     );
     expect(runner).toContain(
       '-e "OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS=$AGENT_TURN_TIMEOUT_SECONDS"',
@@ -2777,8 +2777,27 @@ grep -Fxq preserved "$TMPDIR/caller-fd"
     const runner = readFileSync(LIVE_PLUGIN_TOOL_DOCKER_E2E_PATH, "utf8");
 
     expect(runner).toContain('source "$ROOT_DIR/scripts/lib/openclaw-e2e-instance.sh"');
+    const earlyTimeoutEnvIndex = runner.indexOf(
+      "openclaw_e2e_read_positive_int_env OPENCLAW_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS 300",
+    );
+    const profileSourceIndex = runner.indexOf('source "$PROFILE_FILE"');
+    const finalTimeoutEnvIndex = runner.lastIndexOf(
+      "openclaw_e2e_read_positive_int_env OPENCLAW_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS",
+    );
+    const dockerBuildIndex = runner.indexOf("docker_e2e_build_or_reuse");
+    expect(earlyTimeoutEnvIndex).toBeGreaterThanOrEqual(0);
+    expect(dockerBuildIndex).toBeGreaterThan(earlyTimeoutEnvIndex);
+    expect(profileSourceIndex).toBeGreaterThanOrEqual(0);
+    expect(profileSourceIndex).toBeGreaterThan(dockerBuildIndex);
+    expect(finalTimeoutEnvIndex).toBeGreaterThan(profileSourceIndex);
     expect(runner).toContain(
       'AGENT_TURN_TIMEOUT_SECONDS="$(openclaw_e2e_read_positive_int_env OPENCLAW_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS 300)"',
+    );
+    expect(runner).toContain(
+      'AGENT_TURN_TIMEOUT_SECONDS="$(openclaw_e2e_read_positive_int_env OPENCLAW_LIVE_PLUGIN_TOOL_TIMEOUT_SECONDS "$AGENT_TURN_TIMEOUT_SECONDS")"',
+    );
+    expect(runner).toContain(
+      'COMMAND_TIMEOUT="${OPENCLAW_E2E_COMMAND_TIMEOUT:-$((10#$AGENT_TURN_TIMEOUT_SECONDS + 60))s}"',
     );
     expect(runner).toContain(
       'AGENT_OUTPUT_MAX_BYTES="$(openclaw_e2e_read_positive_int_env OPENCLAW_LIVE_PLUGIN_TOOL_AGENT_OUTPUT_MAX_BYTES 1048576)"',
@@ -2798,6 +2817,7 @@ grep -Fxq preserved "$TMPDIR/caller-fd"
     expect(runner).toContain(
       '-e "OPENCLAW_LIVE_PLUGIN_TOOL_SESSION_SCAN_MAX_ENTRIES=$SESSION_SCAN_MAX_ENTRIES"',
     );
+    expect(runner).toContain('-e "OPENCLAW_E2E_COMMAND_TIMEOUT=$COMMAND_TIMEOUT"');
     expect(runner).not.toContain(
       'AGENT_OUTPUT_MAX_BYTES="${OPENCLAW_LIVE_PLUGIN_TOOL_AGENT_OUTPUT_MAX_BYTES:-1048576}"',
     );
