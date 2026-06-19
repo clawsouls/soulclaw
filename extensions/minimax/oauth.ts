@@ -173,9 +173,7 @@ async function pollOAuthToken(params: {
 }
 
 async function parseMiniMaxOAuthTokenResponse(response: Response): Promise<TokenResult> {
-  const text = response.ok
-    ? await response.text()
-    : await readResponseTextLimited(response, MINIMAX_OAUTH_ERROR_BODY_LIMIT_BYTES);
+  const text = await readResponseTextLimited(response, MINIMAX_OAUTH_ERROR_BODY_LIMIT_BYTES);
   let payload:
     | {
         status?: string;

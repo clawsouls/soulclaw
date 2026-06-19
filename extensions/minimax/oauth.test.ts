@@ -122,6 +122,46 @@ describe("loginMiniMaxPortalOAuth", () => {
     expect(textSpy).not.toHaveBeenCalled();
   });
 
+  it("bounds HTTP 200 token bodies before app-level parsing", async () => {
+    const tracked = cancelTrackedResponse(`${'{"status":"error","detail":"'.repeat(512)}tail`, {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+    const textSpy = vi.spyOn(tracked.response, "text").mockRejectedValue(new Error("unbounded"));
+    let callCount = 0;
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      callCount += 1;
+      const body =
+        init?.body instanceof URLSearchParams
+          ? init.body
+          : new URLSearchParams(typeof init?.body === "string" ? init.body : "");
+      if (callCount === 1) {
+        return new Response(
+          JSON.stringify({
+            user_code: "CODE",
+            verification_uri: "https://example.com/device",
+            expired_in: Date.now() + 10_000,
+            state: body.get("state"),
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return tracked.response;
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const error = await loginMiniMaxPortalOAuth({
+      openUrl: vi.fn(async () => undefined),
+      note: vi.fn(async () => undefined),
+      progress: { update: vi.fn(), stop: vi.fn() },
+    }).catch((cause: unknown) => cause);
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("MiniMax OAuth failed to parse response.");
+    expect(tracked.wasCanceled()).toBe(true);
+    expect(textSpy).not.toHaveBeenCalled();
+  });
+
   it("uses MiniMax account OAuth endpoints directly for global and CN login", async () => {
     for (const [region, expectedHosts] of [
       [
