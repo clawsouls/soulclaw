@@ -3839,11 +3839,29 @@ output="$(cat "$sampler_log")"
     const sweep = readFileSync(BUNDLED_PLUGIN_INSTALL_UNINSTALL_SWEEP_PATH, "utf8");
     const probe = readFileSync(BUNDLED_PLUGIN_INSTALL_UNINSTALL_PROBE_PATH, "utf8");
     const runtimeSmoke = readFileSync(BUNDLED_PLUGIN_INSTALL_UNINSTALL_RUNTIME_SMOKE_PATH, "utf8");
+    const forwardedRuntimeEnv = [
+      "OPENCLAW_BUNDLED_PLUGIN_LIST_TIMEOUT_MS",
+      "OPENCLAW_BUNDLED_PLUGIN_LIST_MAX_BUFFER_BYTES",
+      "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_OUTPUT_CHARS",
+      "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_LOG_SCAN_BYTES",
+      "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_GATEWAY_LOG_BYTES",
+      "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_READY_MS",
+      "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_RPC_MS",
+      "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_RPC_READY_MS",
+      "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_COMMAND_MS",
+      "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_HTTP_MS",
+      "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_TEARDOWN_GRACE_MS",
+      "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_TEARDOWN_KILL_GRACE_MS",
+      "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_WATCHDOG_MS",
+    ] as const;
 
     expect(runner).toContain("OPENCLAW_BUNDLED_PLUGIN_SWEEP_TOTAL");
     expect(runner).toContain("OPENCLAW_BUNDLED_PLUGIN_SWEEP_INDEX");
     expect(runner).toContain("OPENCLAW_BUNDLED_PLUGIN_SWEEP_COMMAND_TIMEOUT");
-    expect(runner).toContain("OPENCLAW_BUNDLED_PLUGIN_RUNTIME_READY_MS");
+    for (const envName of forwardedRuntimeEnv) {
+      expect(runner, `${envName} forwarded by Docker wrapper`).toContain(envName);
+      expect(probe + runtimeSmoke, `${envName} consumed by probe/runtime smoke`).toContain(envName);
+    }
     expect(runner).toContain("OPENCLAW_PLUGIN_LIFECYCLE_TRACE");
     expect(runner).toContain("scripts/e2e/lib/bundled-plugin-install-uninstall/sweep.sh");
     expect(runner).toContain('tee "$RUN_LOG"');
