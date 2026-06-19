@@ -137,7 +137,6 @@ import {
   buildTelegramNonInterruptingReplyFenceKey,
   buildTelegramReplyFenceLaneKey,
   endTelegramReplyFence,
-  getTelegramReplyFenceSizeForTests,
   isTelegramReplyFenceSuperseded,
   releaseTelegramReplyFenceAbortController,
   resetTelegramReplyFenceForTests,
@@ -146,7 +145,7 @@ import {
   supersedeTelegramReplyFence,
 } from "./telegram-reply-fence.js";
 
-export { getTelegramReplyFenceSizeForTests, resetTelegramReplyFenceForTests };
+export { resetTelegramReplyFenceForTests };
 
 const EMPTY_RESPONSE_FALLBACK = "No response generated. Please try again.";
 const silentReplyDispatchLogger = createSubsystemLogger("telegram/silent-reply-dispatch");
