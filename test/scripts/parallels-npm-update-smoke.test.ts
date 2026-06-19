@@ -2,7 +2,7 @@
 import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { runWindowsBackgroundPowerShell } from "../../scripts/e2e/parallels/guest-transports.ts";
 import { run as hostCommandRun } from "../../scripts/e2e/parallels/host-command.ts";
 import {
@@ -65,6 +65,7 @@ function decodePowerShellFromArgs(args: string[]): string {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   for (const dir of tempDirs.splice(0)) {
     rmSync(dir, { force: true, recursive: true });
   }
@@ -372,6 +373,41 @@ exit 1
     expect(existsSync(descendantPidPath)).toBe(true);
     const descendantPid = Number(readFileSync(descendantPidPath, "utf8"));
     await waitForDead(descendantPid, 2000);
+  });
+
+  it("clears update stream timers when spawning the guest command fails", async () => {
+    vi.useFakeTimers();
+    const smoke = withEnv(
+      { OPENAI_API_KEY: "test-key" },
+      () =>
+        new NpmUpdateSmoke({
+          ...TEST_AUTH,
+          json: false,
+          packageSpec: "openclaw@latest",
+          platforms: new Set<Platform>(["linux"]),
+          provider: "openai",
+          updateTarget: "local-main",
+        }),
+    );
+    const runStreamingToJobLog = Reflect.get(smoke, "runStreamingToJobLog") as (
+      command: string,
+      args: string[],
+      timeoutMs: number,
+      ctx: {
+        append(chunk: string | Uint8Array): void;
+        logPath: string;
+        signal: AbortSignal;
+      },
+    ) => Promise<number>;
+
+    await expect(
+      runStreamingToJobLog.call(smoke, "openclaw-definitely-missing-command", [], 60 * 60 * 1000, {
+        append: () => undefined,
+        logPath: "",
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("runs Windows updates through a detached done-file runner", () => {

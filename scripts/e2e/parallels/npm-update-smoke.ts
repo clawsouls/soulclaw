@@ -1190,6 +1190,7 @@ export class NpmUpdateSmoke {
 
       child.on("error", (error) => {
         ctx.signal.removeEventListener("abort", abort);
+        clearTimeout(timer);
         if (killTimer) {
           clearTimeout(killTimer);
         }
