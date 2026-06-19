@@ -10,6 +10,8 @@ import {
   providerContractPluginIds,
 } from "./registry.js";
 
+const ACTIVATION_SCOPED_WEB_SEARCH_PLUGIN_IDS = ["codex", "qa-lab"] as const;
+
 describe("plugin contract registry", () => {
   function expectUniqueIds(ids: readonly string[]) {
     expect(ids).toEqual([...new Set(ids)]);
@@ -242,21 +244,24 @@ describe("plugin contract registry", () => {
   });
 
   it("covers every bundled web search plugin from the shared resolver", () => {
-    const snapshotPluginIds = new Set(
-      BUNDLED_PLUGIN_CONTRACT_SNAPSHOTS.map((entry) => entry.pluginId),
-    );
     const bundledWebSearchPluginIds = resolveManifestContractPluginIds({
       contract: "webSearchProviders",
       origin: "bundled",
-    }).filter((pluginId) => snapshotPluginIds.has(pluginId));
+    });
+    const expectedPluginIds = uniqueSortedStrings([
+      ...bundledWebSearchPluginIds,
+      ...ACTIVATION_SCOPED_WEB_SEARCH_PLUGIN_IDS,
+    ]);
+    const actualPluginIds = uniqueSortedStrings(
+      pluginRegistrationContractRegistry
+        .filter((entry) => entry.webSearchProviderIds.length > 0)
+        .map((entry) => entry.pluginId),
+    );
 
+    expect(actualPluginIds).toEqual(expectedPluginIds);
     expect(
-      uniqueSortedStrings(
-        pluginRegistrationContractRegistry
-          .filter((entry) => entry.webSearchProviderIds.length > 0)
-          .map((entry) => entry.pluginId),
-      ),
-    ).toEqual(bundledWebSearchPluginIds);
+      actualPluginIds.filter((pluginId) => !bundledWebSearchPluginIds.includes(pluginId)),
+    ).toEqual([...ACTIVATION_SCOPED_WEB_SEARCH_PLUGIN_IDS]);
   });
 
   it("covers every bundled migration provider plugin discovered from manifests", () => {
