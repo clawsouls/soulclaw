@@ -552,8 +552,8 @@ function clawHubRetryDelayMs(response: Response, attempt: number): number {
 }
 
 async function delay(ms: number): Promise<void> {
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, ms);
+  await new Promise<void>((resolveDelay) => {
+    setTimeout(resolveDelay, ms);
   });
 }
 
