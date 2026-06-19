@@ -25,7 +25,7 @@ struct DeviceIdentityStoreTests {
     }
 
     @Test
-    func `migrates legacy identity state into shared app group storage`() throws {
+    func `shared app group storage wins over legacy app support storage`() throws {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
@@ -33,34 +33,10 @@ struct DeviceIdentityStoreTests {
         let sharedURL = tempDir.appendingPathComponent("shared", isDirectory: true)
         let legacyIdentityURL = legacyURL.appendingPathComponent("identity", isDirectory: true)
         let legacyDeviceURL = legacyIdentityURL.appendingPathComponent("device.json", isDirectory: false)
-        let legacyAuthURL = legacyIdentityURL.appendingPathComponent("device-auth.json", isDirectory: false)
         let sharedIdentityURL = sharedURL.appendingPathComponent("identity", isDirectory: true)
         let sharedDeviceURL = sharedIdentityURL.appendingPathComponent("device.json", isDirectory: false)
-        let sharedAuthURL = sharedIdentityURL.appendingPathComponent("device-auth.json", isDirectory: false)
-        let storedIdentity = try Self.identityJSON(
-            publicKeyPem: Self.pem(
-                label: "PUBLIC KEY",
-                body: "MCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg="),
-            privateKeyPem: Self.pem(
-                label: "PRIVATE KEY",
-                body: "MC4CAQAwBQYDK2VwBCIEIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f"))
-        let storedAuth = """
-        {
-          "version": 1,
-          "deviceId": "legacy-device",
-          "tokens": {
-            "node": {
-              "token": "legacy-node-token",
-              "role": "node",
-              "scopes": [],
-              "updatedAtMs": 1700000000000
-            }
-          }
-        }
-        """
         try FileManager.default.createDirectory(at: legacyIdentityURL, withIntermediateDirectories: true)
-        try storedIdentity.write(to: legacyDeviceURL, atomically: true, encoding: .utf8)
-        try storedAuth.write(to: legacyAuthURL, atomically: true, encoding: .utf8)
+        try "legacy-device\n".write(to: legacyDeviceURL, atomically: true, encoding: .utf8)
 
         let selected = DeviceIdentityPaths.stateDirURL(
             overrideURL: nil,
@@ -69,82 +45,7 @@ struct DeviceIdentityStoreTests {
             temporaryDirectory: tempDir)
 
         #expect(selected == sharedURL)
-        #expect(try String(contentsOf: sharedDeviceURL, encoding: .utf8) == storedIdentity)
-        #expect(try String(contentsOf: sharedAuthURL, encoding: .utf8) == storedAuth)
-        let markerURL = sharedIdentityURL
-            .appendingPathComponent(DeviceIdentityPaths.legacyMigrationMarkerFileName, isDirectory: false)
-        #expect(FileManager.default.fileExists(atPath: markerURL.path))
-    }
-
-    @Test
-    func `legacy app identity replaces extension-created app group identity before migration is marked`() throws {
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        defer { try? FileManager.default.removeItem(at: tempDir) }
-        let legacyURL = tempDir.appendingPathComponent("legacy", isDirectory: true)
-        let sharedURL = tempDir.appendingPathComponent("shared", isDirectory: true)
-        let legacyIdentityURL = legacyURL.appendingPathComponent("identity", isDirectory: true)
-        let sharedIdentityURL = sharedURL.appendingPathComponent("identity", isDirectory: true)
-        let legacyDeviceURL = legacyIdentityURL.appendingPathComponent("device.json", isDirectory: false)
-        let sharedDeviceURL = sharedIdentityURL.appendingPathComponent("device.json", isDirectory: false)
-        let legacyAuthURL = legacyIdentityURL.appendingPathComponent("device-auth.json", isDirectory: false)
-        let sharedAuthURL = sharedIdentityURL.appendingPathComponent("device-auth.json", isDirectory: false)
-        let legacyDevice = "legacy-device\n"
-        let legacyAuth = "legacy-auth\n"
-        let extensionDevice = "extension-device\n"
-        let extensionAuth = "extension-auth\n"
-        try FileManager.default.createDirectory(at: legacyIdentityURL, withIntermediateDirectories: true)
-        try FileManager.default.createDirectory(at: sharedIdentityURL, withIntermediateDirectories: true)
-        try legacyDevice.write(to: legacyDeviceURL, atomically: true, encoding: .utf8)
-        try legacyAuth.write(to: legacyAuthURL, atomically: true, encoding: .utf8)
-        try extensionDevice.write(to: sharedDeviceURL, atomically: true, encoding: .utf8)
-        try extensionAuth.write(to: sharedAuthURL, atomically: true, encoding: .utf8)
-
-        let selected = DeviceIdentityPaths.stateDirURL(
-            overrideURL: nil,
-            legacyStateDirURL: legacyURL,
-            appGroupStateDirURL: sharedURL,
-            temporaryDirectory: tempDir)
-
-        #expect(selected == sharedURL)
-        #expect(try String(contentsOf: sharedDeviceURL, encoding: .utf8) == legacyDevice)
-        #expect(try String(contentsOf: sharedAuthURL, encoding: .utf8) == legacyAuth)
-        let markerURL = sharedIdentityURL
-            .appendingPathComponent(DeviceIdentityPaths.legacyMigrationMarkerFileName, isDirectory: false)
-        #expect(FileManager.default.fileExists(atPath: markerURL.path))
-    }
-
-    @Test
-    func `does not replace marked shared app group identity state`() throws {
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        defer { try? FileManager.default.removeItem(at: tempDir) }
-        let legacyURL = tempDir.appendingPathComponent("legacy", isDirectory: true)
-        let sharedURL = tempDir.appendingPathComponent("shared", isDirectory: true)
-        let legacyIdentityURL = legacyURL.appendingPathComponent("identity", isDirectory: true)
-        let sharedIdentityURL = sharedURL.appendingPathComponent("identity", isDirectory: true)
-        let legacyDeviceURL = legacyIdentityURL.appendingPathComponent("device.json", isDirectory: false)
-        let sharedDeviceURL = sharedIdentityURL.appendingPathComponent("device.json", isDirectory: false)
-        let markerURL = sharedIdentityURL
-            .appendingPathComponent(DeviceIdentityPaths.legacyMigrationMarkerFileName, isDirectory: false)
-        let sharedDevice = "shared-device\n"
-        let legacyDevice = "legacy-device\n"
-        try FileManager.default.createDirectory(at: legacyIdentityURL, withIntermediateDirectories: true)
-        try FileManager.default.createDirectory(at: sharedIdentityURL, withIntermediateDirectories: true)
-        try legacyDevice.write(to: legacyDeviceURL, atomically: true, encoding: .utf8)
-        try sharedDevice.write(to: sharedDeviceURL, atomically: true, encoding: .utf8)
-        try Data("1\n".utf8).write(to: markerURL, options: [.atomic])
-
-        let selected = DeviceIdentityPaths.stateDirURL(
-            overrideURL: nil,
-            legacyStateDirURL: legacyURL,
-            appGroupStateDirURL: sharedURL,
-            temporaryDirectory: tempDir)
-
-        #expect(selected == sharedURL)
-        #expect(try String(contentsOf: sharedDeviceURL, encoding: .utf8) == sharedDevice)
-        let sharedAuthURL = sharedIdentityURL.appendingPathComponent("device-auth.json", isDirectory: false)
-        #expect(!FileManager.default.fileExists(atPath: sharedAuthURL.path))
+        #expect(!FileManager.default.fileExists(atPath: sharedDeviceURL.path))
     }
 
     @Test
