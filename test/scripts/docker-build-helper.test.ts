@@ -2261,6 +2261,32 @@ fi
     expect(runner).toContain(
       'openclaw gateway --port "$PORT" --bind loopback --allow-unconfigured',
     );
+    expect(runner).toContain(
+      'PROBE_TIMEOUT_MS="$(openclaw_e2e_read_nonnegative_int_env OPENCLAW_UPGRADE_SURVIVOR_PROBE_TIMEOUT_MS 60000)"',
+    );
+    expect(runner).toContain(
+      "openclaw_e2e_read_positive_int_env OPENCLAW_UPGRADE_SURVIVOR_PROBE_ATTEMPT_TIMEOUT_MS 5000",
+    );
+    expect(runner).toContain(
+      "openclaw_e2e_read_positive_int_env OPENCLAW_UPGRADE_SURVIVOR_PROBE_MAX_BODY_BYTES 1048576",
+    );
+    expect(runner).toContain('-e OPENCLAW_UPGRADE_SURVIVOR_PROBE_TIMEOUT_MS="$PROBE_TIMEOUT_MS"');
+    expect(runner).toContain(
+      '-e OPENCLAW_UPGRADE_SURVIVOR_PROBE_ATTEMPT_TIMEOUT_MS="$PROBE_ATTEMPT_TIMEOUT_MS"',
+    );
+    expect(runner).toContain(
+      '-e OPENCLAW_UPGRADE_SURVIVOR_PROBE_MAX_BODY_BYTES="$PROBE_MAX_BODY_BYTES"',
+    );
+    expect(runner).toContain("readyz_probe_args=(");
+    expect(runner).toContain(
+      'readyz_probe_args+=(--allow-failing "$OPENCLAW_UPGRADE_SURVIVOR_READYZ_ALLOW_FAILING")',
+    );
+    expect(runner).toContain("readyz_probe_args+=(--allow-degraded-ready)");
+    expect(runner).toContain(
+      'node scripts/e2e/lib/upgrade-survivor/probe-gateway.mjs "${readyz_probe_args[@]}"',
+    );
+    expect(runner).toContain("OPENCLAW_UPGRADE_SURVIVOR_READYZ_ALLOW_FAILING");
+    expect(runner).toContain("OPENCLAW_UPGRADE_SURVIVOR_READYZ_ALLOW_DEGRADED");
 
     expect(publishedRunner).toContain(
       'COMMAND_TIMEOUT="${OPENCLAW_UPGRADE_SURVIVOR_COMMAND_TIMEOUT:-900s}"',
@@ -2316,6 +2342,9 @@ fi
   it.each([
     ["start budget", "OPENCLAW_UPGRADE_SURVIVOR_START_BUDGET_SECONDS", "90s"],
     ["status budget", "OPENCLAW_UPGRADE_SURVIVOR_STATUS_BUDGET_SECONDS", "30s"],
+    ["probe timeout", "OPENCLAW_UPGRADE_SURVIVOR_PROBE_TIMEOUT_MS", "soon"],
+    ["probe attempt timeout", "OPENCLAW_UPGRADE_SURVIVOR_PROBE_ATTEMPT_TIMEOUT_MS", "0"],
+    ["probe body cap", "OPENCLAW_UPGRADE_SURVIVOR_PROBE_MAX_BODY_BYTES", "64bytes"],
   ])("rejects invalid upgrade survivor Docker %s before Docker setup", (_label, envName, value) => {
     const result = spawnSync("bash", [UPGRADE_SURVIVOR_DOCKER_E2E_PATH], {
       encoding: "utf8",
@@ -3863,6 +3892,30 @@ output="$(cat "$sampler_log")"
       expect(probe + runtimeSmoke, `${envName} consumed by probe/runtime smoke`).toContain(envName);
     }
     expect(runner).toContain("OPENCLAW_PLUGIN_LIFECYCLE_TRACE");
+    for (const [envName, fallback] of [
+      ["OPENCLAW_BUNDLED_PLUGIN_LIST_TIMEOUT_MS", "30000"],
+      ["OPENCLAW_BUNDLED_PLUGIN_LIST_MAX_BUFFER_BYTES", "4194304"],
+      ["OPENCLAW_BUNDLED_PLUGIN_RUNTIME_OUTPUT_CHARS", "1048576"],
+      ["OPENCLAW_BUNDLED_PLUGIN_RUNTIME_LOG_SCAN_BYTES", "262144"],
+      ["OPENCLAW_BUNDLED_PLUGIN_RUNTIME_GATEWAY_LOG_BYTES", "16777216"],
+      ["OPENCLAW_BUNDLED_PLUGIN_RUNTIME_READY_MS", "900000"],
+      ["OPENCLAW_BUNDLED_PLUGIN_RUNTIME_RPC_MS", "60000"],
+      ["OPENCLAW_BUNDLED_PLUGIN_RUNTIME_RPC_READY_MS", "210000"],
+      ["OPENCLAW_BUNDLED_PLUGIN_RUNTIME_WATCHDOG_MS", "1000"],
+      ["OPENCLAW_BUNDLED_PLUGIN_RUNTIME_COMMAND_MS", "120000"],
+      ["OPENCLAW_BUNDLED_PLUGIN_RUNTIME_HTTP_MS", "5000"],
+      ["OPENCLAW_BUNDLED_PLUGIN_RUNTIME_TEARDOWN_GRACE_MS", "10000"],
+      ["OPENCLAW_BUNDLED_PLUGIN_RUNTIME_TEARDOWN_KILL_GRACE_MS", "1000"],
+    ] as const) {
+      expect(runner, `${envName} host validation`).toContain(
+        `docker_e2e_read_positive_int_env ${envName} ${fallback}`,
+      );
+      expect(runner, `${envName} Docker forwarding`).toContain(`-e "${envName}=`);
+    }
+    expect(runner).toContain(
+      "docker_e2e_read_tcp_port_env OPENCLAW_BUNDLED_PLUGIN_RUNTIME_PORT_BASE 19000",
+    );
+    expect(runner).toContain('-e "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_PORT_BASE=$RUNTIME_PORT_BASE"');
     expect(runner).toContain("scripts/e2e/lib/bundled-plugin-install-uninstall/sweep.sh");
     expect(runner).toContain('tee "$RUN_LOG"');
     expect(runner).not.toContain('cat "$RUN_LOG"');
@@ -3882,6 +3935,30 @@ output="$(cat "$sampler_log")"
     expect(sweep).toContain("assert-installed");
     expect(sweep).toContain("assert-uninstalled");
   });
+
+  it.each([
+    ["list timeout", "OPENCLAW_BUNDLED_PLUGIN_LIST_TIMEOUT_MS", "100ms"],
+    ["runtime port base", "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_PORT_BASE", "99999"],
+    ["runtime log scan", "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_LOG_SCAN_BYTES", "64bytes"],
+    ["runtime command timeout", "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_COMMAND_MS", "soon"],
+    ["runtime teardown grace", "OPENCLAW_BUNDLED_PLUGIN_RUNTIME_TEARDOWN_GRACE_MS", "0"],
+  ])(
+    "rejects invalid bundled plugin Docker %s values before Docker setup",
+    (_label, envName, value) => {
+      const result = spawnSync("bash", [BUNDLED_PLUGIN_INSTALL_UNINSTALL_E2E_PATH], {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          OPENCLAW_SKIP_DOCKER_BUILD: "1",
+          [envName]: value,
+        },
+      });
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain(`invalid ${envName}: ${value}`);
+      expect(result.stderr).not.toContain("Docker image not found");
+    },
+  );
 
   it("passes installer tag env to bash, not curl", () => {
     const runner = readFileSync(INSTALL_E2E_RUNNER_PATH, "utf8");
