@@ -432,7 +432,7 @@ function resetTaskRegistryMemoryForTest(opts?: { persist?: boolean }) {
 }
 
 async function withTaskRegistryTempDir<T>(
-  run: () => Promise<T>,
+  run: (root: string) => Promise<T>,
   options?: { durableStore?: boolean },
 ): Promise<T> {
   return await withTempDir({ prefix: "openclaw-task-registry-" }, async (root) => {
@@ -443,7 +443,7 @@ async function withTaskRegistryTempDir<T>(
         configureInMemoryTaskStoresForTests();
       }
       try {
-        return await run();
+        return await run(root);
       } finally {
         // Close both sqlite-backed registries before Windows temp-dir cleanup tries to remove them.
         resetTaskRegistryForTests({ persist: false });
