@@ -68,6 +68,7 @@ type ChildAssistantMessages = {
   texts: Map<string, string>;
   order: string[];
   commentaryIds: Set<string>;
+  finalMessageIds: Set<string>;
 };
 
 type TranscriptCompletion = CodexNativeSubagentCompletion & {
@@ -336,7 +337,7 @@ export class CodexNativeSubagentMonitor {
       }
       return;
     }
-    if (notification.method !== "item/completed") {
+    if (notification.method !== "item/started" && notification.method !== "item/completed") {
       return;
     }
     const turnId = readString(params, "turnId");
@@ -360,6 +361,8 @@ export class CodexNativeSubagentMonitor {
     const phase = readString(item, "phase");
     if (phase === "commentary") {
       assistantMessages.commentaryIds.add(itemId);
+    } else {
+      assistantMessages.finalMessageIds.add(itemId);
     }
     const text = readString(item, "text");
     if (text) {
@@ -408,6 +411,7 @@ export class CodexNativeSubagentMonitor {
       texts: new Map<string, string>(),
       order: [],
       commentaryIds: new Set<string>(),
+      finalMessageIds: new Set<string>(),
     };
     childState.assistantMessagesByTurn.set(turnId, assistantMessages);
     return assistantMessages;
@@ -1058,7 +1062,10 @@ function lastChildAssistantMessage(childState: ChildState, turnId: string): stri
   }
   for (let index = assistantMessages.order.length - 1; index >= 0; index -= 1) {
     const itemId = assistantMessages.order[index];
-    if (!assistantMessages.commentaryIds.has(itemId)) {
+    if (
+      assistantMessages.finalMessageIds.has(itemId) &&
+      !assistantMessages.commentaryIds.has(itemId)
+    ) {
       const text = normalizeOptionalString(assistantMessages.texts.get(itemId));
       if (text) {
         return text;

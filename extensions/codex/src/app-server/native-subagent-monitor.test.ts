@@ -348,6 +348,19 @@ describe("CodexNativeSubagentMonitor", () => {
 
     await notifyChildStarted(client);
     await client.notify({
+      method: "item/started",
+      params: {
+        threadId: "child-thread",
+        turnId: "child-turn",
+        item: {
+          type: "agentMessage",
+          id: "msg-child-final",
+          phase: "final_answer",
+          text: "",
+        },
+      },
+    });
+    await client.notify({
       method: "item/agentMessage/delta",
       params: {
         threadId: "child-thread",
@@ -392,6 +405,52 @@ describe("CodexNativeSubagentMonitor", () => {
         status: "succeeded",
         statusLabel: "turn_completed",
         result: "child final result",
+      }),
+    );
+
+    client.close();
+  });
+
+  it("does not deliver a commentary delta when the completion snapshot is absent", async () => {
+    const client = createClient();
+    const runtime = createRuntime();
+    const monitor = new CodexNativeSubagentMonitor(client, runtime);
+    monitor.registerParent({
+      parentThreadId: "parent-thread",
+      requesterSessionKey: "agent:main:discord:channel:C123",
+      taskRuntimeScope: createTaskScope(),
+      agentId: "main",
+    });
+
+    await notifyChildStarted(client);
+    await client.notify({
+      method: "item/started",
+      params: {
+        threadId: "child-thread",
+        turnId: "child-turn",
+        item: {
+          type: "agentMessage",
+          id: "msg-child-commentary",
+          phase: "commentary",
+          text: "",
+        },
+      },
+    });
+    await client.notify({
+      method: "item/agentMessage/delta",
+      params: {
+        threadId: "child-thread",
+        turnId: "child-turn",
+        itemId: "msg-child-commentary",
+        delta: "checking now",
+      },
+    });
+    await client.notify(childTurnCompletedNotification({ status: "completed" }));
+
+    expect(runtime.deliverAgentHarnessTaskCompletion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        childSessionId: "child-thread",
+        result: "Codex native subagent completed without a final assistant message.",
       }),
     );
 
