@@ -1,5 +1,5 @@
 // Parallels Npm Update Smoke tests cover parallels npm update smoke script behavior.
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -119,6 +119,71 @@ describe("parallels npm update smoke", () => {
     });
 
     expect(stopCalls).toBe(1);
+  });
+
+  it("removes uploaded guest update scripts when chmod fails", () => {
+    const root = makeTempDir();
+    const logPath = path.join(root, "prlctl.log");
+    const prlctlPath = path.join(root, "prlctl");
+    writeFileSync(
+      prlctlPath,
+      `#!/usr/bin/env bash
+set -euo pipefail
+log_path=${JSON.stringify(logPath)}
+printf '%s\\n' "$*" >>"$log_path"
+args=" $* "
+if [[ "$args" == *" /usr/bin/tee /tmp/openclaw-parallels-npm-update-linux-"* ]]; then
+  cat >/dev/null
+  exit 0
+fi
+if [[ "$args" == *" /bin/chmod 755 /tmp/openclaw-parallels-npm-update-linux-"* ]]; then
+  echo "chmod denied" >&2
+  exit 7
+fi
+if [[ "$args" == *" /bin/rm -f /tmp/openclaw-parallels-npm-update-linux-"* ]]; then
+  printf 'cleanup\\n' >>"$log_path"
+  exit 0
+fi
+exit 1
+`,
+    );
+    chmodSync(prlctlPath, 0o755);
+
+    withEnv(
+      {
+        OPENAI_API_KEY: "test-key",
+        PATH: `${root}${path.delimiter}${process.env.PATH ?? ""}`,
+      },
+      () => {
+        const smoke = new NpmUpdateSmoke({
+          ...TEST_AUTH,
+          json: false,
+          packageSpec: "openclaw@latest",
+          platforms: new Set<Platform>(["linux"]),
+          provider: "openai",
+          updateTarget: "local-main",
+        });
+        const writeGuestScript = Reflect.get(smoke, "writeGuestScript") as (
+          vm: string,
+          script: string,
+          prefix: string,
+        ) => string;
+
+        expect(() =>
+          writeGuestScript.call(
+            smoke,
+            "Linux VM",
+            "echo update",
+            "openclaw-parallels-npm-update-linux",
+          ),
+        ).toThrow("failed to chmod guest script");
+      },
+    );
+
+    const log = readFileSync(logPath, "utf8");
+    expect(log).toContain("/bin/chmod 755 /tmp/openclaw-parallels-npm-update-linux-");
+    expect(log).toContain("/bin/rm -f /tmp/openclaw-parallels-npm-update-linux-");
+    expect(log.match(/^cleanup$/gm)).toHaveLength(1);
   });
 
   it("has a one-command beta validation mode with fresh target coverage", () => {
