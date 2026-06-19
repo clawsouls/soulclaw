@@ -271,7 +271,9 @@ describe("viewerState initialization", () => {
 
     await hydrateViewer();
 
-    const preloadArg = (preloadHighlighterMock.mock.calls as unknown[][])[0]?.[0] as { langs: string[]; themes: string[] } | undefined;
+    const preloadArg = (preloadHighlighterMock.mock.calls as unknown[][])[0]?.[0] as
+      | { langs: string[]; themes: string[] }
+      | undefined;
     expect(preloadArg).toBeDefined();
     expect(preloadArg!.langs).toContain("typescript");
     expect(preloadArg!.langs).toContain("python");
@@ -302,7 +304,9 @@ describe("toolbar button toggles", () => {
 
     expect(fileDiffRerenderMock).toHaveBeenCalled();
 
-    const opts2 = fileDiffSetOptionsMock.mock.calls[fileDiffSetOptionsMock.mock.calls.length - 1]?.[0] as Record<string, unknown>;
+    const opts2 = fileDiffSetOptionsMock.mock.calls[
+      fileDiffSetOptionsMock.mock.calls.length - 1
+    ]?.[0] as Record<string, unknown>;
     expect(opts2.diffStyle).toBe("split");
   });
 
@@ -320,7 +324,9 @@ describe("toolbar button toggles", () => {
 
     buttons[3].click();
 
-    const lastOpts = fileDiffSetOptionsMock.mock.calls[fileDiffSetOptionsMock.mock.calls.length - 1]?.[0] as Record<string, unknown>;
+    const lastOpts = fileDiffSetOptionsMock.mock.calls[
+      fileDiffSetOptionsMock.mock.calls.length - 1
+    ]?.[0] as Record<string, unknown>;
     expect(lastOpts.themeType).toBe("light");
     expect(document.body.dataset.theme).toBe("light");
   });
@@ -339,7 +345,9 @@ describe("toolbar button toggles", () => {
 
     buttons[1].click();
 
-    const lastOpts = fileDiffSetOptionsMock.mock.calls[fileDiffSetOptionsMock.mock.calls.length - 1]?.[0] as Record<string, unknown>;
+    const lastOpts = fileDiffSetOptionsMock.mock.calls[
+      fileDiffSetOptionsMock.mock.calls.length - 1
+    ]?.[0] as Record<string, unknown>;
     expect(lastOpts.overflow).toBe("scroll");
   });
 
@@ -357,7 +365,9 @@ describe("toolbar button toggles", () => {
 
     buttons[2].click();
 
-    const lastOpts = fileDiffSetOptionsMock.mock.calls[fileDiffSetOptionsMock.mock.calls.length - 1]?.[0] as Record<string, unknown>;
+    const lastOpts = fileDiffSetOptionsMock.mock.calls[
+      fileDiffSetOptionsMock.mock.calls.length - 1
+    ]?.[0] as Record<string, unknown>;
     expect(lastOpts.disableBackground).toBe(true);
   });
 });
@@ -459,5 +469,4 @@ describe("getHydrateProps branching", () => {
     expect(hydrateArg.oldFile).toEqual({ name: "a.ts", lang: "text", contents: "old" });
     expect(hydrateArg.newFile).toEqual({ name: "a.ts", lang: "text", contents: "new" });
   });
-
 });
