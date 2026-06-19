@@ -2616,6 +2616,12 @@ grep -Fxq preserved "$TMPDIR/caller-fd"
     expect(assertions).toContain("OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_TRANSCRIPT_FILES");
     expect(assertions).toContain("OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_TRANSCRIPT_WALK_ENTRIES");
     expect(assertions).toContain("OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_TRANSCRIPT_SCAN_BYTES");
+    expect(assertions).toContain("const AGENT_TURN_TIMEOUT_SECONDS = readPositiveIntEnv(");
+    expect(assertions).toContain('"OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS"');
+    expect(assertions).toContain("requestTimeoutMs: AGENT_TURN_TIMEOUT_SECONDS * 1000");
+    expect(assertions).toContain("timeoutSeconds: AGENT_TURN_TIMEOUT_SECONDS");
+    expect(assertions).not.toContain("requestTimeoutMs: 420_000");
+    expect(assertions).not.toContain("timeoutSeconds: 420");
     expect(assertions).toContain("readTextFileBounded");
     expect(assertions).toContain("readTextFileTail");
     expect(assertions).toContain(
@@ -2628,6 +2634,29 @@ grep -Fxq preserved "$TMPDIR/caller-fd"
     expect(runner).not.toContain("cat /tmp/openclaw-codex-plugin-pack.log");
     expect(runner).toContain("tail -n 120 /tmp/openclaw-codex-agent-after-uninstall.err");
     expect(runner).not.toContain("cat /tmp/openclaw-codex-agent-after-uninstall.err");
+    const profileSourceIndex = runner.indexOf('source "$PROFILE_FILE"');
+    const agentTimeoutEnvIndex = runner.indexOf(
+      "docker_e2e_read_positive_int_env OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS 420",
+    );
+    const dockerBuildIndex = runner.indexOf("docker_e2e_build_or_reuse");
+    expect(profileSourceIndex).toBeGreaterThanOrEqual(0);
+    expect(agentTimeoutEnvIndex).toBeGreaterThan(profileSourceIndex);
+    expect(dockerBuildIndex).toBeGreaterThan(agentTimeoutEnvIndex);
+    expect(runner).toContain(
+      "docker_e2e_read_positive_int_env OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS 420",
+    );
+    expect(runner).toContain(
+      'COMMAND_TIMEOUT="${OPENCLAW_E2E_COMMAND_TIMEOUT:-$((AGENT_TURN_TIMEOUT_SECONDS + 60))s}"',
+    );
+    expect(runner).toContain(
+      '-e "OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS=$AGENT_TURN_TIMEOUT_SECONDS"',
+    );
+    expect(runner).toContain('-e "OPENCLAW_E2E_COMMAND_TIMEOUT=$COMMAND_TIMEOUT"');
+    expect(runner).toContain(
+      'AGENT_TURN_TIMEOUT_SECONDS="${OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS:-420}"',
+    );
+    expect(runner).toContain('--timeout "$AGENT_TURN_TIMEOUT_SECONDS"');
+    expect(runner).not.toContain("--timeout 420");
   });
 
   it.each([
@@ -2636,6 +2665,12 @@ grep -Fxq preserved "$TMPDIR/caller-fd"
       CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH,
       "OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_TEXT_FILE_BYTES",
       "64kb",
+    ],
+    [
+      "Codex npm plugin live agent timeout",
+      CODEX_NPM_PLUGIN_LIVE_DOCKER_E2E_PATH,
+      "OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS",
+      "420s",
     ],
     [
       "npm onboard channel-agent",
@@ -2683,6 +2718,7 @@ grep -Fxq preserved "$TMPDIR/caller-fd"
           ["OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_TRANSCRIPT_FILES", "64"],
           ["OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_TRANSCRIPT_WALK_ENTRIES", "4096"],
           ["OPENCLAW_CODEX_NPM_PLUGIN_ASSERT_MAX_TRANSCRIPT_SCAN_BYTES", "2097152"],
+          ["OPENCLAW_CODEX_NPM_PLUGIN_AGENT_TIMEOUT_SECONDS", "420"],
         ],
       ],
       [
