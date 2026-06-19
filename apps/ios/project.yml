@@ -65,6 +65,8 @@ targets:
         embed: true
       - target: OpenClawActivityWidget
         embed: true
+      # A companion watch application belongs in the standard Watch bundle location.
+      # PlugIns is for extension products and breaks paired watch installation.
       - target: OpenClawWatchApp
       - package: OpenClawKit
       - package: OpenClawKit
@@ -280,10 +282,6 @@ targets:
         PROVISIONING_PROFILE_SPECIFIER: "$(OPENCLAW_WATCH_APP_PROFILE)"
         SWIFT_STRICT_CONCURRENCY: complete
         SWIFT_VERSION: "6.0"
-      configs:
-        Debug:
-          ARCHS: "$(NATIVE_ARCH_ACTUAL)"
-          ONLY_ACTIVE_ARCH: YES
     info:
       path: WatchApp/Info.plist
       properties:
