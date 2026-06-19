@@ -799,34 +799,3 @@ export function expandQueryForFts(
 
   return { original, keywords, expanded };
 }
-
-/**
- * Type for an optional LLM-based query expander.
- * Can be provided to enhance keyword extraction with semantic understanding.
- */
-export type LlmQueryExpander = (query: string) => Promise<string[]>;
-
-/**
- * Expand query with optional LLM assistance.
- * Falls back to local extraction if LLM is unavailable or fails.
- */
-export async function expandQueryWithLlm(
-  query: string,
-  llmExpander?: LlmQueryExpander,
-  opts?: { ftsTokenizer?: "unicode61" | "trigram" },
-): Promise<string[]> {
-  // If LLM expander is provided, try it first
-  if (llmExpander) {
-    try {
-      const llmKeywords = await llmExpander(query);
-      if (llmKeywords.length > 0) {
-        return llmKeywords;
-      }
-    } catch {
-      // LLM failed, fall back to local extraction
-    }
-  }
-
-  // Fall back to local keyword extraction
-  return extractKeywords(query, opts);
-}
