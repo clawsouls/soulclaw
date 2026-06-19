@@ -92,9 +92,10 @@ const UPGRADE_SURVIVOR_RUN_SCRIPT = "scripts/e2e/lib/upgrade-survivor/run.sh";
 const UPGRADE_SURVIVOR_UPDATE_RESTART_AUTH_PATH =
   "scripts/e2e/lib/upgrade-survivor/update-restart-auth.sh";
 const GATEWAY_NETWORK_DOCKER_E2E_PATH = "scripts/e2e/gateway-network-docker.sh";
+const BROWSER_CDP_SNAPSHOT_DOCKER_E2E_PATH = "scripts/e2e/browser-cdp-snapshot-docker.sh";
 const CENTRALIZED_BUILD_SCRIPTS = [
   "scripts/docker/setup.sh",
-  "scripts/e2e/browser-cdp-snapshot-docker.sh",
+  BROWSER_CDP_SNAPSHOT_DOCKER_E2E_PATH,
   "scripts/e2e/qr-import-docker.sh",
   "scripts/lib/docker-e2e-image.sh",
   "scripts/sandbox-browser-setup.sh",
@@ -1054,6 +1055,29 @@ fi
     } finally {
       rmSync(workDir, { recursive: true, force: true });
     }
+  });
+
+  it("fails fast on invalid browser CDP snapshot byte limits", () => {
+    const result = spawnSync("bash", [BROWSER_CDP_SNAPSHOT_DOCKER_E2E_PATH], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        OPENCLAW_BROWSER_CDP_SNAPSHOT_MAX_BYTES: "64kb",
+        OPENCLAW_SKIP_DOCKER_BUILD: "1",
+      },
+    });
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain("invalid OPENCLAW_BROWSER_CDP_SNAPSHOT_MAX_BYTES: 64kb");
+  });
+
+  it("forwards browser CDP snapshot byte limits into the Docker runner", () => {
+    const runner = readFileSync(BROWSER_CDP_SNAPSHOT_DOCKER_E2E_PATH, "utf8");
+
+    expect(runner).toContain(
+      "docker_e2e_read_positive_int_env OPENCLAW_BROWSER_CDP_SNAPSHOT_MAX_BYTES 524288",
+    );
+    expect(runner).toContain('-e "OPENCLAW_BROWSER_CDP_SNAPSHOT_MAX_BYTES=$SNAPSHOT_MAX_BYTES"');
   });
 
   it("fails Docker commands fast when timeout is unavailable", () => {
