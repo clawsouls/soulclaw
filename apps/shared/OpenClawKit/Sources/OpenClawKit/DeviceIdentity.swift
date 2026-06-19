@@ -1,6 +1,29 @@
 import CryptoKit
 import Foundation
 
+public enum GatewayDeviceIdentityProfile: String, Sendable {
+    case primary
+    case shareExtension
+
+    var identityFileName: String {
+        switch self {
+        case .primary:
+            "device.json"
+        case .shareExtension:
+            "share-device.json"
+        }
+    }
+
+    var authFileName: String {
+        switch self {
+        case .primary:
+            "device-auth.json"
+        case .shareExtension:
+            "share-device-auth.json"
+        }
+    }
+}
+
 public struct DeviceIdentity: Codable, Sendable {
     public var deviceId: String
     public var publicKey: String
@@ -17,8 +40,40 @@ public struct DeviceIdentity: Codable, Sendable {
 
 enum DeviceIdentityPaths {
     private static let stateDirEnv = ["OPENCLAW_STATE_DIR"]
+    static let legacyMigrationMarkerFileName = ".legacy-migrated"
 
     static func stateDirURL() -> URL {
+        self.stateDirURL(
+            overrideURL: self.stateDirOverrideURL(),
+            legacyStateDirURL: self.legacyStateDirURL(),
+            appGroupStateDirURL: self.appGroupStateDirURL(),
+            temporaryDirectory: FileManager.default.temporaryDirectory)
+    }
+
+    static func stateDirURL(
+        overrideURL: URL?,
+        legacyStateDirURL: URL?,
+        appGroupStateDirURL: URL?,
+        temporaryDirectory: URL) -> URL
+    {
+        if let overrideURL {
+            return overrideURL
+        }
+        if let appGroupStateDirURL {
+            if let legacyStateDirURL {
+                self.migrateLegacyIdentityDirectoryIfNeeded(
+                    from: legacyStateDirURL,
+                    to: appGroupStateDirURL)
+            }
+            return appGroupStateDirURL
+        }
+        if let legacyStateDirURL {
+            return legacyStateDirURL
+        }
+        return temporaryDirectory.appendingPathComponent("openclaw", isDirectory: true)
+    }
+
+    private static func stateDirOverrideURL() -> URL? {
         for key in self.stateDirEnv {
             if let raw = getenv(key) {
                 let value = String(cString: raw).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -27,34 +82,93 @@ enum DeviceIdentityPaths {
                 }
             }
         }
+        return nil
+    }
 
+    private static func legacyStateDirURL() -> URL? {
         if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
             return appSupport.appendingPathComponent("OpenClaw", isDirectory: true)
         }
+        return nil
+    }
 
-        return FileManager.default.temporaryDirectory.appendingPathComponent("openclaw", isDirectory: true)
+    private static func appGroupStateDirURL() -> URL? {
+        guard
+            let containerURL = FileManager.default
+                .containerURL(forSecurityApplicationGroupIdentifier: OpenClawAppGroup.identifier)
+        else {
+            return nil
+        }
+        return containerURL.appendingPathComponent("OpenClaw", isDirectory: true)
+    }
+
+    private static func identityDirectoryURL(base: URL) -> URL {
+        base.appendingPathComponent("identity", isDirectory: true)
+    }
+
+    private static func migrateLegacyIdentityDirectoryIfNeeded(from legacyStateDirURL: URL, to sharedStateDirURL: URL) {
+        let fileManager = FileManager.default
+        let legacyIdentityURL = self.identityDirectoryURL(base: legacyStateDirURL)
+        let legacyDeviceURL = legacyIdentityURL.appendingPathComponent("device.json", isDirectory: false)
+        let sharedIdentityURL = self.identityDirectoryURL(base: sharedStateDirURL)
+        let sharedDeviceURL = sharedIdentityURL.appendingPathComponent("device.json", isDirectory: false)
+        let markerURL = sharedIdentityURL.appendingPathComponent(self.legacyMigrationMarkerFileName, isDirectory: false)
+        guard
+            !fileManager.fileExists(atPath: markerURL.path) || !fileManager.fileExists(atPath: sharedDeviceURL.path),
+            fileManager.fileExists(atPath: legacyDeviceURL.path)
+        else {
+            return
+        }
+
+        do {
+            // The share extension can create app-group identity before the app migrates.
+            // Until this marker exists, the app's legacy paired identity remains authoritative.
+            try fileManager.createDirectory(at: sharedIdentityURL, withIntermediateDirectories: true)
+            let entries = try fileManager.contentsOfDirectory(at: legacyIdentityURL, includingPropertiesForKeys: nil)
+            var copiedNames = Set<String>()
+            for entry in entries {
+                let destination = sharedIdentityURL.appendingPathComponent(entry.lastPathComponent, isDirectory: false)
+                if fileManager.fileExists(atPath: destination.path) {
+                    try fileManager.removeItem(at: destination)
+                }
+                try fileManager.copyItem(at: entry, to: destination)
+                copiedNames.insert(entry.lastPathComponent)
+            }
+            for staleName in ["device.json", "device-auth.json"] where !copiedNames.contains(staleName) {
+                let staleURL = sharedIdentityURL.appendingPathComponent(staleName, isDirectory: false)
+                if fileManager.fileExists(atPath: staleURL.path) {
+                    try fileManager.removeItem(at: staleURL)
+                }
+            }
+            try Data("1\n".utf8).write(to: markerURL, options: [.atomic])
+        } catch {
+            // Device identity migration is best-effort; callers will create fresh state if no readable identity exists.
+        }
     }
 }
 
 public enum DeviceIdentityStore {
-    private static let fileName = "device.json"
     private static let ed25519SPKIPrefix = Data([
-        0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65,
+        0x30, 0x2A, 0x30, 0x05, 0x06, 0x03, 0x2B, 0x65,
         0x70, 0x03, 0x21, 0x00,
     ])
     private static let ed25519PKCS8PrivatePrefix = Data([
-        0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06,
-        0x03, 0x2b, 0x65, 0x70, 0x04, 0x22, 0x04, 0x20,
+        0x30, 0x2E, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06,
+        0x03, 0x2B, 0x65, 0x70, 0x04, 0x22, 0x04, 0x20,
     ])
 
     public static func loadOrCreate() -> DeviceIdentity {
-        self.loadOrCreate(fileURL: self.fileURL())
+        self.loadOrCreate(profile: .primary)
+    }
+
+    public static func loadOrCreate(profile: GatewayDeviceIdentityProfile) -> DeviceIdentity {
+        self.loadOrCreate(fileURL: self.fileURL(profile: profile))
     }
 
     static func loadOrCreate(fileURL url: URL) -> DeviceIdentity {
         if let data = try? Data(contentsOf: url) {
             switch self.decodeStoredIdentity(data) {
-            case .identity(let decoded):
+            case let .identity(decoded):
                 return decoded
             case .recognizedInvalid:
                 return self.generate()
@@ -143,7 +257,7 @@ public enum DeviceIdentityStore {
               let privateKeyData = Data(base64Encoded: identity.privateKey)
         else { return nil }
 
-        guard publicKeyData.count == 32 && privateKeyData.count == 32,
+        guard publicKeyData.count == 32, privateKeyData.count == 32,
               self.keyPairMatches(publicKeyData: publicKeyData, privateKeyData: privateKeyData)
         else { return nil }
         return DeviceIdentity(
@@ -211,11 +325,11 @@ public enum DeviceIdentityStore {
         }
     }
 
-    private static func fileURL() -> URL {
+    private static func fileURL(profile: GatewayDeviceIdentityProfile) -> URL {
         let base = DeviceIdentityPaths.stateDirURL()
         return base
             .appendingPathComponent("identity", isDirectory: true)
-            .appendingPathComponent(self.fileName, isDirectory: false)
+            .appendingPathComponent(profile.identityFileName, isDirectory: false)
     }
 }
 
