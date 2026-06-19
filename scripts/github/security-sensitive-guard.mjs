@@ -9,7 +9,10 @@ import {
   GITHUB_RESPONSE_BODY_MAX_BYTES,
   createGitHubApi,
   createGuardApproverChecks,
+  createIssueMutationHelpers,
+  guardCommentHeadSha,
   guardTrustedActorCandidates,
+  isCommentNewerThan,
   readBoundedGitHubErrorText,
   readBoundedGitHubJson,
 } from "./guard-shared.mjs";
@@ -108,29 +111,8 @@ export async function findSecuritySensitiveOverrideCommandAsync(input) {
   return null;
 }
 
-function isCommentNewerThan(comment, newerThan) {
-  if (!newerThan) {
-    return false;
-  }
-  const commentTime = Date.parse(comment.created_at ?? "");
-  const barrierTime = Date.parse(newerThan);
-  return Number.isFinite(commentTime) && Number.isFinite(barrierTime) && commentTime > barrierTime;
-}
-
 export function securitySensitiveGuardCommentHeadSha(comment) {
-  const body = comment?.body ?? "";
-  const patterns = [
-    /Approved SHA:\s+`([a-f0-9]{40})`/iu,
-    /current head SHA\s+\(`([a-f0-9]{40})`\)/iu,
-    /Current SHA:\s+`([a-f0-9]{40})`/iu,
-  ];
-  for (const pattern of patterns) {
-    const match = body.match(pattern);
-    if (match?.[1]) {
-      return match[1];
-    }
-  }
-  return null;
+  return guardCommentHeadSha(comment);
 }
 
 export function securitySensitiveOverrideExpectedSha(existingGuardComment, currentHeadSha) {
@@ -339,24 +321,10 @@ export async function findTrustedSecuritySensitiveGuardActor({
 }
 
 export function githubApi(token, options = {}) {
-  const api = createGitHubApi(token, {
+  return createGitHubApi(token, {
     ...options,
     userAgent: "openclaw-security-sensitive-guard",
   });
-  return {
-    ...api,
-    paginate: async (path) => {
-      const items = [];
-      for (let page = 1; ; page += 1) {
-        const separator = path.includes("?") ? "&" : "?";
-        const pageItems = await api.request(`${path}${separator}per_page=100&page=${page}`);
-        items.push(...pageItems);
-        if (pageItems.length < 100) {
-          return items;
-        }
-      }
-    },
-  };
 }
 
 async function writeSummary(markdown) {
@@ -404,56 +372,13 @@ async function main() {
   );
   const labelNames = new Set(labels.map((label) => label.name));
 
-  const ignoreUnavailableWritePermission = (action) => (error) => {
-    if (error?.status === 403) {
-      console.warn(`Skipping ${action}; token does not have write permission.`);
-      return;
-    }
-    if (error?.status === 404 || error?.status === 422) {
-      console.warn(`${action} is unavailable.`);
-      return;
-    }
-    throw error;
-  };
-  const removeLabelIfPresent = async (label) => {
-    if (!labelNames.has(label)) {
-      return;
-    }
-    await api
-      .request(`${issuePath}/labels/${encodeURIComponent(label)}`, {
-        method: "DELETE",
-      })
-      .catch(ignoreUnavailableWritePermission(`label "${label}" removal`));
-    labelNames.delete(label);
-  };
-  const addLabelIfMissing = async (label) => {
-    if (labelNames.has(label)) {
-      return;
-    }
-    await api
-      .request(`${issuePath}/labels`, {
-        method: "POST",
-        body: JSON.stringify({ labels: [label] }),
-      })
-      .catch(ignoreUnavailableWritePermission(`label "${label}" update`));
-    labelNames.add(label);
-  };
-  const upsertComment = async (comment, body) => {
-    if (comment) {
-      return await api
-        .request(`/repos/${owner}/${repo}/issues/comments/${comment.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ body }),
-        })
-        .catch(ignoreUnavailableWritePermission("comment update"));
-    }
-    return await api
-      .request(`${issuePath}/comments`, {
-        method: "POST",
-        body: JSON.stringify({ body }),
-      })
-      .catch(ignoreUnavailableWritePermission("comment creation"));
-  };
+  const { removeLabelIfPresent, addLabelIfMissing, upsertComment } = createIssueMutationHelpers({
+    api,
+    issuePath,
+    owner,
+    repo,
+    labelNames,
+  });
 
   if (securitySensitiveChanges.length === 0) {
     await removeLabelIfPresent(securitySensitiveChangedLabel);
