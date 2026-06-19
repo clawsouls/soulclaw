@@ -90,6 +90,7 @@ const CLAWHUB_DEFAULT_REGISTRY = "https://clawhub.ai";
 const CLAWHUB_REQUEST_TIMEOUT_MS = 30_000;
 const CLAWHUB_RESPONSE_BODY_MAX_BYTES = 64 * 1024;
 const CLAWHUB_RATE_LIMIT_RETRY_DELAYS_MS = [1_000, 3_000, 10_000] as const;
+const CLAWHUB_MAX_RETRY_AFTER_MS = 60_000;
 const OPENCLAW_PLUGIN_CLAWHUB_REPOSITORY = "openclaw/openclaw";
 const OPENCLAW_PLUGIN_CLAWHUB_WORKFLOW_FILENAME = "plugin-clawhub-release.yml";
 const SAFE_EXTENSION_ID_RE = /^[a-z0-9][a-z0-9._-]*$/;
@@ -490,8 +491,10 @@ async function hasClawHubTrustedPublisher(
     });
     const { response } = request;
 
+    const retryRateLimit =
+      response.status === 429 && attempt < CLAWHUB_RATE_LIMIT_RETRY_DELAYS_MS.length;
     try {
-      if (response.status !== 429 || attempt >= CLAWHUB_RATE_LIMIT_RETRY_DELAYS_MS.length) {
+      if (!retryRateLimit) {
         if (!response.ok) {
           throw new Error(
             `Failed to query ClawHub trusted publisher for ${packageName}: ${response.status} ${response.statusText}`,
@@ -522,20 +525,27 @@ async function hasClawHubTrustedPublisher(
       request.clearTimeout();
     }
 
+    await response.body?.cancel().catch(() => undefined);
     await delay(clawHubRetryDelayMs(response, attempt));
   }
 }
 
 function clawHubRetryDelayMs(response: Response, attempt: number): number {
-  const retryAfter = response.headers.get("retry-after");
-  if (retryAfter !== null) {
+  const retryAfter = response.headers.get("retry-after")?.trim();
+  if (retryAfter) {
     const retryAfterSeconds = Number(retryAfter);
     if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds >= 0) {
-      return Math.round(retryAfterSeconds * 1_000);
+      const retryAfterMs = Math.round(retryAfterSeconds * 1_000);
+      if (retryAfterMs <= CLAWHUB_MAX_RETRY_AFTER_MS) {
+        return retryAfterMs;
+      }
     }
     const retryAfterAt = Date.parse(retryAfter);
     if (Number.isFinite(retryAfterAt)) {
-      return Math.max(0, retryAfterAt - Date.now());
+      const retryAfterMs = Math.max(0, retryAfterAt - Date.now());
+      if (retryAfterMs <= CLAWHUB_MAX_RETRY_AFTER_MS) {
+        return retryAfterMs;
+      }
     }
   }
   return CLAWHUB_RATE_LIMIT_RETRY_DELAYS_MS[attempt] ?? 0;
