@@ -1064,6 +1064,13 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps build stamp script edits on the build stamp regression test", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/build-stamp.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["src/infra/build-stamp.test.ts"],
+    });
+  });
+
   it("keeps CI workflow edits on workflow guard tests", () => {
     expect(resolveChangedTestTargetPlan([".github/workflows/ci.yml"])).toEqual({
       mode: "targets",
