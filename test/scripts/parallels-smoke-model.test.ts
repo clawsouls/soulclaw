@@ -5,6 +5,7 @@ import {
   chmodSync,
   copyFileSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -43,6 +44,7 @@ import { testing as hostServerTesting } from "../../scripts/e2e/parallels/host-s
 import { parseArgs as parseLinuxSmokeArgs } from "../../scripts/e2e/parallels/linux-smoke.ts";
 import { parseArgs as parseMacosSmokeArgs } from "../../scripts/e2e/parallels/macos-smoke.ts";
 import { parseArgs as parseNpmUpdateSmokeArgs } from "../../scripts/e2e/parallels/npm-update-smoke.ts";
+import { testing as packageArtifactTesting } from "../../scripts/e2e/parallels/package-artifact.ts";
 import { PhaseRunner } from "../../scripts/e2e/parallels/phase-runner.ts";
 import {
   posixCodexPlatformPackageRepairFunction,
@@ -430,6 +432,21 @@ describe("Parallels smoke model selection", () => {
       12,
     );
     expect(retained).toBe(`${"a".repeat(2)}${"b".repeat(10)}`);
+  });
+
+  it("reclaims package locks with malformed owner pids", async () => {
+    const lockDir = makeTempDir(tempDirs, "openclaw-parallels-package-lock-");
+    mkdirSync(lockDir, { recursive: true });
+    writeFileSync(join(lockDir, "owner.json"), '{"pid":-1,"token":"stale"}\n');
+
+    await expect(packageArtifactTesting.readLockOwner(lockDir)).resolves.toEqual({
+      pid: undefined,
+      token: "stale",
+    });
+
+    await packageArtifactTesting.removeStalePackageLock(lockDir, 2 * 60 * 60_000);
+
+    expect(existsSync(lockDir)).toBe(false);
   });
 
   it("keeps JSON-mode progress off stdout", async () => {
