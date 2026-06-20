@@ -114,6 +114,20 @@ function sanitizeGalleryPreview(
   return value === null ? null : sanitizeGalleryText(value, params);
 }
 
+function sanitizeGalleryStringArray(
+  values: Iterable<unknown>,
+  params: {
+    extraRoots?: readonly string[];
+    repoRoot: string;
+  },
+) {
+  return readOrderedStringArray(
+    Array.from(values)
+      .filter((value): value is string => typeof value === "string")
+      .map((value) => sanitizeGalleryText(value, params)),
+  );
+}
+
 async function realpathIfExists(filePath: string): Promise<string | null> {
   return fs.realpath(filePath).catch(() => null);
 }
@@ -422,11 +436,11 @@ async function buildArtifactView(params: {
         ? "Evidence artifact is not declared by this evidence summary."
         : "Evidence artifact not found.",
       href: null,
-      kind: params.artifact.kind,
+      kind: sanitizeGalleryText(params.artifact.kind, params),
       mediaKind,
       path: displayPath,
       preview: null,
-      source: params.artifact.source,
+      source: sanitizeGalleryText(params.artifact.source, params),
     };
   }
   const hrefArtifactPath =
@@ -437,7 +451,7 @@ async function buildArtifactView(params: {
     exists: true,
     error: null,
     href: artifactHref(params.hrefEvidencePath, hrefArtifactPath),
-    kind: params.artifact.kind,
+    kind: sanitizeGalleryText(params.artifact.kind, params),
     mediaKind,
     path: displayPath,
     preview: await readPreview(realFile, mediaKind)
@@ -453,7 +467,7 @@ async function buildArtifactView(params: {
           repoRoot: params.repoRoot,
         }),
       ),
-    source: params.artifact.source,
+    source: sanitizeGalleryText(params.artifact.source, params),
   };
 }
 
@@ -489,19 +503,26 @@ function readStringArray(values: Iterable<unknown>) {
   return readOrderedStringArray(values).toSorted();
 }
 
-function readMatrixDimensionIds(value: unknown, fallback: readonly string[]): string[] {
-  if (!Array.isArray(value)) {
-    return readOrderedStringArray(fallback);
+function readMatrixDimensionIds(params: {
+  extraRoots: readonly string[];
+  fallback: readonly string[];
+  repoRoot: string;
+  value: unknown;
+}): string[] {
+  if (!Array.isArray(params.value)) {
+    return sanitizeGalleryStringArray(params.fallback, params);
   }
-  const ids = readOrderedStringArray(
-    value.map((entry) => {
+  const ids = sanitizeGalleryStringArray(
+    params.value.map((entry) => {
       if (typeof entry === "string") {
         return entry;
       }
       return readString(readRecord(entry)?.id);
     }),
+    params,
   );
-  for (const fallbackId of fallback) {
+  for (const rawFallbackId of params.fallback) {
+    const fallbackId = sanitizeGalleryText(rawFallbackId, params);
     if (!ids.includes(fallbackId)) {
       ids.push(fallbackId);
     }
@@ -549,35 +570,41 @@ function readMatrixCells(params: {
     : [];
   const entriesByCell = buildUxMatrixEvidenceEntryIndex(params.summaryEntries);
   return rawCells.flatMap((cell): QaEvidenceMatrixCellView[] => {
-    const surface = readString(cell.surface);
-    const stage = readString(cell.stage);
-    const status = readString(cell.status) ?? "proof-gap";
-    if (!surface || !stage) {
+    const rawSurface = readString(cell.surface);
+    const rawStage = readString(cell.stage);
+    const rawStatus = readString(cell.status) ?? "proof-gap";
+    if (!rawSurface || !rawStage) {
       return [];
     }
     const entry =
-      status === "proof-gap" ? null : (entriesByCell.get(`${surface}:${stage}`) ?? null);
+      rawStatus === "proof-gap" ? null : (entriesByCell.get(`${rawSurface}:${rawStage}`) ?? null);
     const artifacts = entry?.execution?.artifacts ?? [];
     const runner = readRecord(cell.runner);
+    const sanitizeCellString = (value: string) =>
+      sanitizeGalleryText(value, {
+        extraRoots: params.extraRoots,
+        repoRoot: params.repoRoot,
+      });
     const readRunnerString = (value: unknown) => {
       const text = readString(value);
-      return text
-        ? sanitizeGalleryText(text, {
-            extraRoots: params.extraRoots,
-            repoRoot: params.repoRoot,
-          })
-        : null;
+      return text ? sanitizeCellString(text) : null;
     };
     return [
       {
-        artifactKinds: readStringArray(artifacts.map((artifact) => artifact.kind)),
+        artifactKinds: readStringArray(
+          artifacts.map((artifact) => sanitizeCellString(artifact.kind)),
+        ),
         artifactPaths: artifacts.map((artifact) =>
           displayGalleryPath(artifact.path, {
             extraRoots: params.extraRoots,
             repoRoot: params.repoRoot,
           }),
         ),
-        coverageIds: readStringArray(Array.isArray(cell.coverageIds) ? cell.coverageIds : []),
+        coverageIds: readStringArray(
+          (Array.isArray(cell.coverageIds) ? cell.coverageIds : []).map((coverageId) =>
+            typeof coverageId === "string" ? sanitizeCellString(coverageId) : coverageId,
+          ),
+        ),
         runner: runner
           ? {
               availability: readRunnerString(runner.availability),
@@ -586,11 +613,11 @@ function readMatrixCells(params: {
               workflow: readRunnerString(runner.workflow),
             }
           : null,
-        stage,
-        status,
-        surface,
-        testId: entry?.test.id ?? null,
-        title: entry?.test.title ?? null,
+        stage: sanitizeCellString(rawStage),
+        status: sanitizeCellString(rawStatus),
+        surface: sanitizeCellString(rawSurface),
+        testId: entry?.test.id ? sanitizeCellString(entry.test.id) : null,
+        title: entry?.test.title ? sanitizeCellString(entry.test.title) : null,
       },
     ];
   });
@@ -670,6 +697,9 @@ async function buildProducerContext(params: {
   const manifest = await readJsonIfExists(manifestPath, allowedRoots);
   const matrix = await readJsonIfExists(matrixPath, allowedRoots);
   const releaseLedger = await readJsonIfExists(releaseLedgerPath, allowedRoots);
+  const run = readRecord(manifest?.run);
+  const runId = readString(run?.runId);
+  const runStatus = readString(run?.status);
   const producerFiles = Object.fromEntries(
     await Promise.all(
       UX_MATRIX_PRODUCER_FILES.map(async (file) => [
@@ -702,8 +732,8 @@ async function buildProducerContext(params: {
       manifest && producerFiles.manifest
         ? {
             ...producerFiles.manifest,
-            runId: readString(readRecord(manifest.run)?.runId),
-            runStatus: readString(readRecord(manifest.run)?.status),
+            runId: runId ? sanitizeGalleryText(runId, params) : null,
+            runStatus: runStatus ? sanitizeGalleryText(runStatus, params) : null,
           }
         : null,
     matrix: matrix
@@ -711,14 +741,18 @@ async function buildProducerContext(params: {
           cells: matrixCells,
           counts: readCountRecord(matrix.counts),
           path: toRepoRelativePath(repoRoot, matrixPath),
-          stages: readMatrixDimensionIds(
-            matrix.stages,
-            matrixCells.map((cell) => cell.stage),
-          ),
-          surfaces: readMatrixDimensionIds(
-            matrix.surfaces,
-            matrixCells.map((cell) => cell.surface),
-          ),
+          stages: readMatrixDimensionIds({
+            extraRoots: params.extraRoots,
+            fallback: matrixCells.map((cell) => cell.stage),
+            repoRoot,
+            value: matrix.stages,
+          }),
+          surfaces: readMatrixDimensionIds({
+            extraRoots: params.extraRoots,
+            fallback: matrixCells.map((cell) => cell.surface),
+            repoRoot,
+            value: matrix.surfaces,
+          }),
         }
       : null,
     preflight: {
@@ -788,6 +822,11 @@ export async function buildQaEvidenceGalleryModel(params: {
   const entries = await Promise.all(
     summary.entries.map(async (entry): Promise<QaEvidenceGalleryEntryView> => {
       counts[entry.result.status] += 1;
+      const sanitizeEntryText = (value: string) =>
+        sanitizeGalleryText(value, {
+          extraRoots: [requestedRepoRoot],
+          repoRoot,
+        });
       return {
         artifacts: await Promise.all(
           (entry.execution?.artifacts ?? []).map((artifact) =>
@@ -803,15 +842,15 @@ export async function buildQaEvidenceGalleryModel(params: {
             ),
           ),
         ),
-        coverage: entry.coverage,
+        coverage: entry.coverage.map((coverage) => ({
+          id: sanitizeEntryText(coverage.id),
+          role: sanitizeEntryText(coverage.role),
+        })),
         failureReason: entry.result.failure?.reason
-          ? sanitizeGalleryText(entry.result.failure.reason, {
-              extraRoots: [requestedRepoRoot],
-              repoRoot,
-            })
+          ? sanitizeEntryText(entry.result.failure.reason)
           : null,
-        id: entry.test.id,
-        kind: entry.test.kind,
+        id: sanitizeEntryText(entry.test.id),
+        kind: sanitizeEntryText(entry.test.kind),
         sourcePath: entry.test.source?.path
           ? displayGalleryPath(entry.test.source.path, {
               extraRoots: [requestedRepoRoot],
@@ -819,7 +858,7 @@ export async function buildQaEvidenceGalleryModel(params: {
             })
           : null,
         status: entry.result.status,
-        title: entry.test.title,
+        title: sanitizeEntryText(entry.test.title),
       };
     }),
   );
@@ -829,7 +868,9 @@ export async function buildQaEvidenceGalleryModel(params: {
     evidenceMode: summary.evidenceMode,
     evidencePath: hrefEvidencePath,
     generatedAt: summary.generatedAt,
-    profile: summary.profile ?? null,
+    profile: summary.profile
+      ? sanitizeGalleryText(summary.profile, { extraRoots: [requestedRepoRoot], repoRoot })
+      : null,
     producerContext: await buildProducerContext({
       evidencePath,
       extraRoots: [requestedRepoRoot],
