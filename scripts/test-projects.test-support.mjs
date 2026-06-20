@@ -746,6 +746,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     "scripts/check-openclaw-package-tarball.mjs",
     ["test/scripts/check-openclaw-package-tarball.test.ts"],
   ],
+  ["scripts/check-package-dist-imports.mjs", ["test/scripts/check-package-dist-imports.test.ts"]],
   ["scripts/package-changelog.mjs", ["test/scripts/package-changelog.test.ts"]],
   ["scripts/package-mac-app.sh", ["test/scripts/package-mac-app.test.ts"]],
   ["scripts/package-mac-dist.sh", ["test/scripts/package-mac-dist.test.ts"]],
