@@ -98,7 +98,7 @@ function isNodeRunnablePnpmExecPath(value) {
   }
   const { extension } = inspectExecutablePath(value);
   if (NODE_RUNNABLE_EXTENSIONS.has(extension)) {
-    return true;
+    return isFile(value);
   }
   if (extension.length > 0) {
     return false;
