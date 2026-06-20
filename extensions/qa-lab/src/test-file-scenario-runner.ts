@@ -48,7 +48,7 @@ export type QaScenarioCommandExecution = {
   command: string;
   cwd: string;
   env: NodeJS.ProcessEnv;
-  timeoutMs: number;
+  timeoutMs?: number;
 };
 
 type QaScenarioCommandResult = {
@@ -199,6 +199,7 @@ function runQaScenarioCommand(
     });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
+    const timeoutMs = execution.timeoutMs;
     let forceKillTimer: NodeJS.Timeout | undefined;
     let forceSettleTimer: NodeJS.Timeout | undefined;
     let settled = false;
@@ -307,16 +308,19 @@ function runQaScenarioCommand(
         }, QA_TEST_FILE_COMMAND_TIMEOUT_FORCE_SETTLE_MS);
       }, QA_TEST_FILE_COMMAND_TIMEOUT_KILL_GRACE_MS);
     };
-    timeoutTimer = setTimeout(() => {
-      timeoutTimer = undefined;
-      timedOut = true;
-      signalChild("SIGTERM");
-      scheduleForcedCleanup({
-        exitCode: 1,
-        failureMessage: `${commandLabel()} timed out after ${execution.timeoutMs}ms`,
-        signal: null,
-      });
-    }, execution.timeoutMs);
+    timeoutTimer =
+      timeoutMs === undefined
+        ? undefined
+        : setTimeout(() => {
+            timeoutTimer = undefined;
+            timedOut = true;
+            signalChild("SIGTERM");
+            scheduleForcedCleanup({
+              exitCode: 1,
+              failureMessage: `${commandLabel()} timed out after ${timeoutMs}ms`,
+              signal: null,
+            });
+          }, timeoutMs);
     child.stdout?.on("data", (chunk: Buffer) => {
       stdout.push(chunk);
     });
@@ -340,9 +344,7 @@ function runQaScenarioCommand(
       const result = {
         exitCode: timedOut ? 1 : (exitCode ?? (signal ? 1 : 0)),
         signal,
-        ...(timedOut
-          ? { failureMessage: `${commandLabel()} timed out after ${execution.timeoutMs}ms` }
-          : {}),
+        ...(timedOut ? { failureMessage: `${commandLabel()} timed out after ${timeoutMs}ms` } : {}),
       };
       if (isProcessGroupRunning()) {
         if (!timedOut) {
@@ -384,12 +386,14 @@ async function runScenarioCommandSteps(params: {
   for (const step of params.steps) {
     logChunks.push(`$ ${formatCommand(step)}\n`);
     try {
+      const timeoutMs =
+        params.scenario.execution.kind === "script" ? params.commandTimeoutMs : undefined;
       const result = await params.runCommand({
         command: step.command,
         args: step.args,
         cwd: params.repoRoot,
         env: params.env,
-        timeoutMs: params.commandTimeoutMs,
+        ...(timeoutMs === undefined ? {} : { timeoutMs }),
       });
       if (result.stdout) {
         logChunks.push(result.stdout);

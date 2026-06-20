@@ -132,6 +132,7 @@ describe("qa test file scenario runner", () => {
         "--reporter=verbose",
       ],
     ]);
+    expect(commands.map((command) => command.timeoutMs)).toEqual([undefined, undefined]);
     const evidence = validateQaEvidenceSummaryJson(
       JSON.parse(await fs.readFile(result.evidencePath, "utf8")),
     );
@@ -208,6 +209,7 @@ describe("qa test file scenario runner", () => {
         "--reporter=verbose",
       ],
     ]);
+    expect(commands.map((command) => command.timeoutMs)).toEqual([undefined]);
     const evidence = validateQaEvidenceSummaryJson(
       JSON.parse(await fs.readFile(result.evidencePath, "utf8")),
     );
@@ -344,6 +346,7 @@ describe("qa test file scenario runner", () => {
         path.join(repoRoot, ".artifacts", "qa-e2e", "scenario-script", "scenario-script"),
       ],
     ]);
+    expect(commands.map((command) => command.timeoutMs)).toEqual([30 * 60_000]);
     const evidence = validateQaEvidenceSummaryJson(
       JSON.parse(await fs.readFile(result.evidencePath, "utf8")),
     );
