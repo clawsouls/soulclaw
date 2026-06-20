@@ -877,6 +877,9 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/lib/stable-release-closeout.mjs", ["test/stable-release-closeout.test.ts"]],
   ["scripts/lib/source-file-scan-cache.mjs", ["test/scripts/source-file-scan-cache.test.ts"]],
   ["scripts/lib/test-group-report.mjs", ["test/scripts/test-group-report.test.ts"]],
+  ["scripts/lib/ts-topology/analyze.ts", ["test/scripts/ts-topology.test.ts"]],
+  ["scripts/lib/ts-topology/reports.ts", ["test/scripts/ts-topology.test.ts"]],
+  ["scripts/lib/ts-topology/scope.ts", ["test/scripts/ts-topology.test.ts"]],
   ["scripts/lib/ts-guard-utils.mjs", ["test/scripts/ts-guard-utils.test.ts"]],
   [
     "scripts/lib/tsgo-sparse-guard.mjs",
