@@ -669,6 +669,56 @@ describe("resolve-openclaw-package-candidate", () => {
     ).rejects.toThrow("is not allowed by trusted package source enterprise-artifactory");
   });
 
+  it("does not forward trusted package auth headers to redirect hosts", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "openclaw-package-download-"));
+    tempDirs.push(dir);
+    const target = path.join(dir, "openclaw.tgz");
+    const previousToken = process.env.OPENCLAW_TRUSTED_PACKAGE_TOKEN;
+    process.env.OPENCLAW_TRUSTED_PACKAGE_TOKEN = "token-123";
+    const trustedSource = {
+      allowPrivateNetwork: true,
+      auth: { type: "bearer" },
+      hosts: ["packages.internal"],
+      id: "enterprise-artifactory",
+      pathPrefixes: ["/artifactory/openclaw/"],
+      ports: [8443],
+      redirectHosts: ["packages.internal", "mirror.internal"],
+    };
+    const requestHeaders: Array<Record<string, string> | undefined> = [];
+
+    try {
+      await downloadUrl("https://packages.internal:8443/artifactory/openclaw/openclaw.tgz", target, {
+        fetchImpl: async (_url: URL, init?: RequestInit) => {
+          requestHeaders.push(init?.headers as Record<string, string> | undefined);
+          if (requestHeaders.length === 1) {
+            return new Response(null, {
+              headers: {
+                location: "https://mirror.internal:8443/artifactory/openclaw/openclaw.tgz",
+              },
+              status: 302,
+            });
+          }
+          return new Response(new Uint8Array([4, 5, 6]), {
+            headers: { "content-length": "3" },
+            status: 200,
+          });
+        },
+        lookupHost: lookupAddresses([{ address: "10.0.0.8", family: 4 }]),
+        maxBytes: 3,
+        trustedSource,
+      });
+    } finally {
+      if (previousToken === undefined) {
+        delete process.env.OPENCLAW_TRUSTED_PACKAGE_TOKEN;
+      } else {
+        process.env.OPENCLAW_TRUSTED_PACKAGE_TOKEN = previousToken;
+      }
+    }
+
+    expect(requestHeaders).toEqual([{ authorization: "Bearer token-123" }, undefined]);
+    await expect(readFile(target)).resolves.toEqual(Buffer.from([4, 5, 6]));
+  });
+
   it("validates redirects for package_url downloads", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "openclaw-package-download-"));
     tempDirs.push(dir);
