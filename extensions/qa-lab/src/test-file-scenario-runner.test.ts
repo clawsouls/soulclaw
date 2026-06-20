@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { afterEach, describe, expect, it } from "vitest";
 import { validateQaEvidenceSummaryJson } from "./evidence-summary.js";
 import { readQaScenarioById, type QaSeedScenarioWithSource } from "./scenario-catalog.js";
@@ -10,6 +11,42 @@ import {
 } from "./test-file-scenario-runner.js";
 
 const tempRoots: string[] = [];
+
+function isProcessRunning(pid: number) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readPid(filePath: string, timeoutMs: number) {
+  const deadlineAt = Date.now() + timeoutMs;
+  while (Date.now() < deadlineAt) {
+    try {
+      const pid = Number(await fs.readFile(filePath, "utf8"));
+      if (Number.isInteger(pid) && pid > 0) {
+        return pid;
+      }
+    } catch {
+      // retry until the process writes its pid
+    }
+    await sleep(25);
+  }
+  throw new Error(`timeout waiting for pid in ${filePath}`);
+}
+
+async function waitForDead(pid: number, timeoutMs: number) {
+  const deadlineAt = Date.now() + timeoutMs;
+  while (Date.now() < deadlineAt) {
+    if (!isProcessRunning(pid)) {
+      return;
+    }
+    await sleep(25);
+  }
+  throw new Error(`process ${pid} still alive`);
+}
 
 function makeTestFileScenario(
   executionKind: "script" | "vitest" | "playwright",
@@ -333,6 +370,86 @@ describe("qa test file scenario runner", () => {
         status: "pass",
       },
     });
+  });
+
+  it("times out script scenarios and kills descendant process groups", async () => {
+    if (process.platform === "win32") {
+      return;
+    }
+
+    const repoRoot = process.cwd();
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "qa-script-timeout-"));
+    tempRoots.push(tempRoot);
+    const scriptPath = path.join(tempRoot, "hanging-producer.ts");
+    const descendantPidPath = path.join(tempRoot, "descendant.pid");
+    let descendantPid = 0;
+    try {
+      const descendantScript = [
+        "process.on('SIGTERM', () => {});",
+        "setInterval(() => {}, 1000);",
+      ].join("\n");
+      await fs.writeFile(
+        scriptPath,
+        [
+          "import { spawn } from 'node:child_process';",
+          "import { writeFileSync } from 'node:fs';",
+          `const descendant = spawn(process.execPath, ['-e', ${JSON.stringify(descendantScript)}], { stdio: 'ignore' });`,
+          `writeFileSync(${JSON.stringify(descendantPidPath)}, String(descendant.pid));`,
+          "process.stdout.write('script still running\\n');",
+          "process.on('SIGTERM', () => {});",
+          "setInterval(() => {}, 1000);",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const run = runQaTestFileScenarios({
+        repoRoot,
+        outputDir: path.join(tempRoot, "out"),
+        providerMode: "mock-openai",
+        primaryModel: "mock-openai/gpt-5.5",
+        scenarios: [makeTestFileScenario("script", scriptPath)],
+        commandTimeoutMs: 500,
+      });
+      descendantPid = await readPid(descendantPidPath, 2_000);
+
+      const result = await run;
+
+      expect(result.results[0]?.status).toBe("fail");
+      expect(result.results[0]?.failureMessage).toMatch(/timed out after 500ms/u);
+      await waitForDead(descendantPid, 2_000);
+    } finally {
+      if (descendantPid && isProcessRunning(descendantPid)) {
+        process.kill(descendantPid, "SIGKILL");
+      }
+    }
+  });
+
+  it("fails script scenarios that exit cleanly after timeout termination", async () => {
+    const repoRoot = process.cwd();
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "qa-script-timeout-clean-exit-"));
+    tempRoots.push(tempRoot);
+    const scriptPath = path.join(tempRoot, "clean-exit-after-timeout.ts");
+    await fs.writeFile(
+      scriptPath,
+      [
+        "process.stdout.write('waiting for timeout\\n');",
+        "process.on('SIGTERM', () => process.exit(0));",
+        "setInterval(() => {}, 1000);",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const result = await runQaTestFileScenarios({
+      repoRoot,
+      outputDir: path.join(tempRoot, "out"),
+      providerMode: "mock-openai",
+      primaryModel: "mock-openai/gpt-5.5",
+      scenarios: [makeTestFileScenario("script", scriptPath)],
+      commandTimeoutMs: 100,
+    });
+
+    expect(result.results[0]?.status).toBe("fail");
+    expect(result.results[0]?.failureMessage).toMatch(/timed out after 100ms/u);
   });
 
   it("imports producer QA evidence artifacts from failed script scenarios", async () => {
