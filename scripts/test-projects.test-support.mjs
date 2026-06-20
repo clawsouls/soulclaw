@@ -703,6 +703,14 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/lib/npm-verify-exec.ts", ["test/scripts/npm-verify-exec.test.ts"]],
   ["scripts/lib/openclaw-test-state.mjs", ["test/scripts/openclaw-test-state.test.ts"]],
   [
+    "scripts/lib/plistbuddy.sh",
+    [
+      "test/scripts/create-dmg.test.ts",
+      "test/scripts/package-mac-app.test.ts",
+      "test/scripts/package-mac-dist.test.ts",
+    ],
+  ],
+  [
     "scripts/lib/plugin-npm-runtime-build.mjs",
     ["test/scripts/plugin-npm-runtime-build-args.test.ts"],
   ],
@@ -749,6 +757,25 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/docker-e2e-rerun.mjs", ["test/scripts/docker-e2e-helper-cli.test.ts"]],
   ["scripts/docker-e2e-timings.mjs", ["test/scripts/docker-e2e-helper-cli.test.ts"]],
   ["scripts/generate-npm-shrinkwrap.mjs", ["test/scripts/generate-npm-shrinkwrap.test.ts"]],
+  [
+    "scripts/install.sh",
+    [
+      "test/scripts/install-sh.test.ts",
+      "test/scripts/test-install-sh-docker.test.ts",
+      "test/scripts/website-installer-sync-workflow.test.ts",
+      "test/scripts/openclaw-cross-os-release-checks.test.ts",
+      "src/scripts/ci-changed-scope.test.ts",
+    ],
+  ],
+  [
+    "scripts/install.ps1",
+    [
+      "test/scripts/install-ps1.test.ts",
+      "test/scripts/website-installer-sync-workflow.test.ts",
+      "test/scripts/openclaw-cross-os-release-checks.test.ts",
+      "src/scripts/ci-changed-scope.test.ts",
+    ],
+  ],
   ["scripts/ios-run.sh", ["test/scripts/ios-run.test.ts"]],
   ["scripts/create-dmg.sh", ["test/scripts/create-dmg.test.ts"]],
   ["scripts/kova-ci-summary.mjs", ["test/scripts/kova-ci-summary.test.ts"]],
@@ -769,6 +796,15 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/package-changelog.mjs", ["test/scripts/package-changelog.test.ts"]],
   ["scripts/package-mac-app.sh", ["test/scripts/package-mac-app.test.ts"]],
   ["scripts/package-mac-dist.sh", ["test/scripts/package-mac-dist.test.ts"]],
+  [
+    "scripts/sparkle-build.ts",
+    [
+      "test/appcast.test.ts",
+      "test/release-check.test.ts",
+      "test/scripts/package-mac-app.test.ts",
+      "test/scripts/package-mac-dist.test.ts",
+    ],
+  ],
   [
     "scripts/package-openclaw-for-docker.mjs",
     ["test/e2e/qa-lab/runtime/package-openclaw-for-docker.e2e.test.ts"],
