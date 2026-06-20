@@ -450,7 +450,16 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/check-dependency-pins.mjs", ["test/scripts/check-dependency-pins.test.ts"]],
   ["scripts/check-deadcode-unused-files.mjs", ["test/scripts/check-deadcode-unused-files.test.ts"]],
   ["scripts/check-dynamic-import-warts.mjs", ["test/scripts/check-dynamic-import-warts.test.ts"]],
+  ["scripts/check-extension-plugin-sdk-boundary.mjs", ["test/extension-import-boundaries.test.ts"]],
   ["scripts/check-no-conflict-markers.mjs", ["test/scripts/check-no-conflict-markers.test.ts"]],
+  [
+    "scripts/check-plugin-extension-import-boundary.mjs",
+    ["test/plugin-extension-import-boundary.test.ts"],
+  ],
+  [
+    "scripts/check-sdk-package-extension-import-boundary.mjs",
+    ["test/extension-import-boundaries.test.ts"],
+  ],
   [
     "scripts/check-workflows.mjs",
     [
@@ -717,6 +726,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ["test/scripts/bundled-plugin-source-utils.test.ts"],
   ],
   ["scripts/lib/dev-tooling-safety.ts", ["test/scripts/dev-tooling-safety.test.ts"]],
+  [
+    "scripts/lib/deprecated-plugin-sdk-usage.mjs",
+    ["test/scripts/check-deprecated-api-usage.test.ts"],
+  ],
   ["scripts/docker/cleanup-smoke/run.sh", ["test/scripts/docker-build-helper.test.ts"]],
   [
     "scripts/docker/install-sh-e2e/run.sh",
@@ -895,7 +908,15 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/tsdown-build.mjs", ["test/scripts/tsdown-build.test.ts"]],
   ["scripts/verify.mjs", ["test/scripts/verify.test.ts"]],
   ["scripts/verify-pr-hosted-gates.mjs", ["test/scripts/verify-pr-hosted-gates.test.ts"]],
+  [
+    "scripts/write-plugin-sdk-entry-dts.ts",
+    [
+      "test/scripts/build-all.test.ts",
+      "test/scripts/prepare-extension-package-boundary-artifacts.test.ts",
+    ],
+  ],
   ["scripts/zai-fallback-repro.ts", ["test/scripts/zai-fallback-repro.test.ts"]],
+  ["scripts/fixtures/packed-plugin-sdk-type-smoke.ts", ["test/release-check.test.ts"]],
   ["scripts/repro/code-mode-namespace-live.ts", ["test/scripts/code-mode-namespace-live.test.ts"]],
   [
     "scripts/repro/code-mode-namespace-live-docker.sh",

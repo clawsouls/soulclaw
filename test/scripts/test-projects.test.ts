@@ -1291,6 +1291,10 @@ describe("scripts/test-projects changed-target routing", () => {
       ["scripts/lib/managed-child-process.mjs", ["test/scripts/managed-child-process.test.ts"]],
       ["scripts/lib/source-file-scan-cache.mjs", ["test/scripts/source-file-scan-cache.test.ts"]],
       ["scripts/lib/dev-tooling-safety.ts", ["test/scripts/dev-tooling-safety.test.ts"]],
+      [
+        "scripts/lib/deprecated-plugin-sdk-usage.mjs",
+        ["test/scripts/check-deprecated-api-usage.test.ts"],
+      ],
       ["scripts/lib/npm-verify-exec.ts", ["test/scripts/npm-verify-exec.test.ts"]],
       ["scripts/lib/arg-utils.mjs", ["test/scripts/arg-utils.test.ts"]],
       ["scripts/docker/cleanup-smoke/run.sh", ["test/scripts/docker-build-helper.test.ts"]],
@@ -1358,6 +1362,38 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/lib/bundled-plugin-build-entries.mjs",
         ["test/scripts/bundled-plugin-build-entries.test.ts"],
       ],
+    ]);
+
+    for (const [source, targets] of expectedTargets) {
+      expect(resolveChangedTestTargetPlan([source]), source).toEqual({
+        mode: "targets",
+        targets,
+      });
+    }
+  });
+
+  it("keeps plugin SDK boundary tooling edits on owner tests", () => {
+    const expectedTargets = new Map([
+      [
+        "scripts/check-extension-plugin-sdk-boundary.mjs",
+        ["test/extension-import-boundaries.test.ts"],
+      ],
+      [
+        "scripts/check-sdk-package-extension-import-boundary.mjs",
+        ["test/extension-import-boundaries.test.ts"],
+      ],
+      [
+        "scripts/check-plugin-extension-import-boundary.mjs",
+        ["test/plugin-extension-import-boundary.test.ts"],
+      ],
+      [
+        "scripts/write-plugin-sdk-entry-dts.ts",
+        [
+          "test/scripts/build-all.test.ts",
+          "test/scripts/prepare-extension-package-boundary-artifacts.test.ts",
+        ],
+      ],
+      ["scripts/fixtures/packed-plugin-sdk-type-smoke.ts", ["test/release-check.test.ts"]],
     ]);
 
     for (const [source, targets] of expectedTargets) {
