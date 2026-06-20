@@ -725,6 +725,12 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/mantis/publish-pr-evidence.mjs", ["test/scripts/mantis-publish-pr-evidence.test.ts"]],
   ["scripts/qa-e2e.ts", ["test/scripts/qa-e2e.test.ts"]],
   ["scripts/qa-lab-up.ts", ["test/scripts/qa-lab-up.test.ts"]],
+  ["scripts/qa-coverage-report.ts", ["test/scripts/qa-report-cli.test.ts"]],
+  ["scripts/qa-parity-report.ts", ["test/scripts/qa-report-cli.test.ts"]],
+  [
+    "scripts/qa/ux-matrix-evidence-producer.ts",
+    ["test/scripts/qa-ux-matrix-evidence-producer.test.ts"],
+  ],
   [
     "scripts/run-vitest.mjs",
     [
@@ -818,6 +824,16 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ],
   ],
   ["scripts/measure-rpc-rtt.mjs", ["test/scripts/measure-rpc-rtt.test.ts"]],
+  [
+    "scripts/e2e/telegram-user-crabbox-proof.ts",
+    ["test/scripts/telegram-user-crabbox-proof.test.ts"],
+  ],
+  ["scripts/e2e/telegram-user-credential.ts", ["test/scripts/telegram-user-credential.test.ts"]],
+  ["scripts/e2e/telegram-user-credential-io.ts", ["test/scripts/telegram-user-credential.test.ts"]],
+  [
+    "scripts/e2e/telegram-user-credential-paths.ts",
+    ["test/scripts/telegram-user-credential.test.ts"],
+  ],
   [
     "scripts/e2e/onboard-docker.sh",
     ["test/scripts/docker-build-helper.test.ts", "test/scripts/openclaw-test-state.test.ts"],
@@ -1138,6 +1154,18 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/test-projects.test-support.mjs", ["test/scripts/test-projects.test.ts"]],
   ["scripts/tsdown-build.mjs", ["test/scripts/tsdown-build.test.ts"]],
   ["scripts/dev/gateway-smoke.ts", ["test/e2e/qa-lab/runtime/gateway-smoke.e2e.test.ts"]],
+  ["scripts/dev/test-device-pair-telegram.ts", ["test/scripts/test-device-pair-telegram.test.ts"]],
+  ["scripts/test-live-media.ts", ["test/scripts/test-live-media.test.ts"]],
+  ["scripts/profile-extension-memory.mjs", ["test/scripts/profile-extension-memory.test.ts"]],
+  [
+    "scripts/openclaw-performance-source-summary.mjs",
+    ["test/scripts/openclaw-performance-source-summary.test.ts"],
+  ],
+  ["scripts/check-gateway-cpu-scenarios.mjs", ["test/scripts/check-gateway-cpu-scenarios.test.ts"]],
+  [
+    "scripts/check-gateway-watch-regression.mjs",
+    ["test/scripts/check-gateway-watch-regression.test.ts"],
+  ],
   ["scripts/e2e/cron-mcp-cleanup-seed.ts", ["test/scripts/docker-e2e-seeds.test.ts"]],
   ["scripts/bundled-plugin-assets.mjs", ["test/scripts/bundled-plugin-assets.test.ts"]],
   ["scripts/bundle-a2ui.mjs", ["test/scripts/bundled-plugin-assets.test.ts"]],
