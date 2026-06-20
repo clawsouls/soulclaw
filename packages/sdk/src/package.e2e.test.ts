@@ -47,13 +47,14 @@ function runCommand(
     const stderr: string[] = [];
     const child = spawn(command, args, {
       cwd: options.cwd,
+      detached: process.platform !== "win32",
       env: options.env ?? createCommandEnv(),
       shell: options.shell,
       stdio: ["ignore", "pipe", "pipe"],
       windowsVerbatimArguments: options.windowsVerbatimArguments,
     });
     const timer = setTimeout(() => {
-      child.kill("SIGKILL");
+      signalCommandProcess(child, "SIGKILL");
       reject(
         new Error(
           `command timed out after ${options.timeoutMs ?? COMMAND_TIMEOUT_MS}ms: ${[
@@ -86,6 +87,20 @@ function runCommand(
       );
     });
   });
+}
+
+function signalCommandProcess(child: ReturnType<typeof spawn>, signal: NodeJS.Signals): void {
+  if (process.platform !== "win32" && typeof child.pid === "number") {
+    try {
+      process.kill(-child.pid, signal);
+      return;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ESRCH") {
+        return;
+      }
+    }
+  }
+  child.kill(signal);
 }
 
 function createCommandEnv(): NodeJS.ProcessEnv {
