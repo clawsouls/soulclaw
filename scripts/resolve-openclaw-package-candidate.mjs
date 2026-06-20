@@ -376,7 +376,7 @@ async function sha256(file) {
 }
 
 function assertSha256(value) {
-  if (!/^[a-f0-9]{64}$/u.test(value)) {
+  if (!/^[a-f0-9]{64}$/iu.test(value)) {
     throw new Error(`package_sha256 must be a lowercase or uppercase 64-character SHA-256 digest`);
   }
 }
@@ -392,6 +392,8 @@ async function assertExpectedSha256(file, expected) {
   }
   return actual;
 }
+
+export const assertExpectedSha256ForTest = assertExpectedSha256;
 
 async function findSingleTarball(dir) {
   const root = path.resolve(ROOT_DIR, dir);

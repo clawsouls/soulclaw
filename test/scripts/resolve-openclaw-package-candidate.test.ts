@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   ARTIFACT_TARBALL_SCAN_MAX_ENTRIES,
+  assertExpectedSha256ForTest,
   cleanupPackageSourceWorktreeForTest,
   cleanPackedOpenClawTarballsForTest,
   downloadUrl,
@@ -1018,6 +1019,16 @@ describe("resolve-openclaw-package-candidate", () => {
       packageTrustedReason: "repository-branch-history",
       sha256: "a".repeat(64),
     });
+  });
+
+  it("accepts uppercase package artifact SHA-256 metadata", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "openclaw-package-sha-"));
+    tempDirs.push(dir);
+    const file = path.join(dir, "openclaw.tgz");
+    await writeFile(file, "openclaw package bytes");
+    const digest = "ae0b98d18c80dbf9447fa48560a139195595db2d337ad33421ca2183b0dd3e99";
+
+    await expect(assertExpectedSha256ForTest(file, digest.toUpperCase())).resolves.toBe(digest);
   });
 
   it("rejects source artifact scans that exceed the filesystem entry limit", async () => {
