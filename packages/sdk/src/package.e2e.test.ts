@@ -1,10 +1,11 @@
 // OpenClaw SDK tests cover package behavior.
-import { spawn } from "node:child_process";
+import { spawn, type SpawnOptionsWithoutStdio } from "node:child_process";
 import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { createPnpmRunnerSpawnSpec } from "../../../scripts/pnpm-runner.mjs";
 import { afterEach, describe, expect, it } from "vitest";
 import { createNodeEvalArgs } from "../../../src/test-utils/node-process.js";
 
@@ -36,21 +37,20 @@ type PackedPackage = {
 function runCommand(
   command: string,
   args: string[],
-  options: { cwd: string; timeoutMs?: number },
+  options: { cwd: string; timeoutMs?: number } & Pick<
+    SpawnOptionsWithoutStdio,
+    "env" | "shell" | "windowsVerbatimArguments"
+  >,
 ): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
     const stdout: string[] = [];
     const stderr: string[] = [];
     const child = spawn(command, args, {
       cwd: options.cwd,
-      env: {
-        ...process.env,
-        CI: process.env.CI ?? "true",
-        npm_config_audit: "false",
-        npm_config_fund: "false",
-        PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "false",
-      },
+      env: options.env ?? createCommandEnv(),
+      shell: options.shell,
       stdio: ["ignore", "pipe", "pipe"],
+      windowsVerbatimArguments: options.windowsVerbatimArguments,
     });
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
@@ -85,6 +85,35 @@ function runCommand(
         ),
       );
     });
+  });
+}
+
+function createCommandEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    CI: process.env.CI ?? "true",
+    npm_config_audit: "false",
+    npm_config_fund: "false",
+    PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: "false",
+  };
+}
+
+function runPnpmCommand(
+  args: string[],
+  options: { cwd: string; timeoutMs?: number },
+): Promise<CommandResult> {
+  const spec = createPnpmRunnerSpawnSpec({
+    cwd: options.cwd,
+    env: createCommandEnv(),
+    pnpmArgs: args,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  return runCommand(spec.command, spec.args, {
+    cwd: spec.options.cwd ?? options.cwd,
+    env: spec.options.env,
+    shell: spec.options.shell,
+    timeoutMs: options.timeoutMs,
+    windowsVerbatimArguments: spec.options.windowsVerbatimArguments,
   });
 }
 
@@ -226,7 +255,7 @@ describe("OpenClaw SDK package e2e", () => {
     tempDirs.push(tempDir);
 
     for (const packageName of WORKSPACE_PACKAGE_NAMES) {
-      await runCommand("pnpm", ["--filter", packageName, "build"], {
+      await runPnpmCommand(["--filter", packageName, "build"], {
         cwd: repoRoot,
         timeoutMs: 180_000,
       });
