@@ -186,6 +186,27 @@ function formatCommand(step: QaScenarioCommandStep) {
   return [step.command, ...step.args].map(shellQuote).join(" ");
 }
 
+function killQaScenarioWindowsProcessTree(pid: number | undefined, signal: NodeJS.Signals) {
+  if (pid === undefined) {
+    return false;
+  }
+  const args = ["/pid", String(pid), "/T"];
+  if (signal === "SIGKILL") {
+    args.push("/F");
+  }
+  try {
+    const killer = spawn("taskkill", args, {
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    killer.on("error", () => undefined);
+    killer.unref();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function runQaScenarioCommand(
   execution: QaScenarioCommandExecution,
 ): Promise<QaScenarioCommandResult> {
@@ -234,6 +255,11 @@ function runQaScenarioCommand(
           return;
         } catch {
           // The process group may already be gone; fall back to the direct child.
+        }
+      }
+      if (!useProcessGroup && process.platform === "win32") {
+        if (killQaScenarioWindowsProcessTree(child.pid, signal)) {
+          return;
         }
       }
       child.kill(signal);
@@ -346,6 +372,9 @@ function runQaScenarioCommand(
         signal,
         ...(timedOut ? { failureMessage: `${commandLabel()} timed out after ${timeoutMs}ms` } : {}),
       };
+      if (timedOut && !useProcessGroup && (forceKillTimer || forceSettleTimer)) {
+        return;
+      }
       if (isProcessGroupRunning()) {
         if (!timedOut) {
           signalChild("SIGTERM");
