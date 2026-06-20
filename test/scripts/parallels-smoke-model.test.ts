@@ -1275,6 +1275,10 @@ if (isPrlctl) {
     expect(windowsGit.indexOf('"MinGit-2.53.0.2-64-bit.zip"')).toBeLessThan(
       windowsGit.indexOf('"MinGit-2.53.0.2-arm64.zip"'),
     );
+    expect(combined.match(/curl\.exe -fsSL --connect-timeout 10 --max-time 120 --retry 2/g))
+      .toHaveLength(2);
+    expect(script).toContain("Invoke-RestMethod -Uri");
+    expect(script).toContain("-TimeoutSec 120");
     expect(windowsGit).toContain('if "-64-bit." in name:');
     expect(windowsGit).toContain('elif "-arm64." in name:');
   });
