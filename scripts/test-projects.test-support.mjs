@@ -460,6 +460,11 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     "scripts/check-sdk-package-extension-import-boundary.mjs",
     ["test/extension-import-boundaries.test.ts"],
   ],
+  ["scripts/check-src-extension-import-boundary.mjs", ["test/extension-import-boundaries.test.ts"]],
+  [
+    "scripts/check-test-helper-extension-import-boundary.mjs",
+    ["test/test-helper-extension-import-boundary.test.ts"],
+  ],
   [
     "scripts/check-workflows.mjs",
     [

@@ -1387,6 +1387,14 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/plugin-extension-import-boundary.test.ts"],
       ],
       [
+        "scripts/check-src-extension-import-boundary.mjs",
+        ["test/extension-import-boundaries.test.ts"],
+      ],
+      [
+        "scripts/check-test-helper-extension-import-boundary.mjs",
+        ["test/test-helper-extension-import-boundary.test.ts"],
+      ],
+      [
         "scripts/write-plugin-sdk-entry-dts.ts",
         [
           "test/scripts/build-all.test.ts",
