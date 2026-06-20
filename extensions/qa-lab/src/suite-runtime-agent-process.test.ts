@@ -106,7 +106,7 @@ describe("qa suite runtime agent process helpers", () => {
 
     await waitForSpawnCount(1);
     child.stdout.emit("data", Buffer.from("ok\n"));
-    child.emit("exit", 0);
+    child.emit("close", 0);
 
     await expect(pending).resolves.toBe("ok");
     const spawnCall = firstSpawnCall();
@@ -142,7 +142,7 @@ describe("qa suite runtime agent process helpers", () => {
       await waitForSpawnCount(1);
       expect(timeoutSpy).toHaveBeenCalledWith(expect.any(Function), MAX_TIMER_TIMEOUT_MS);
       child.stdout.emit("data", Buffer.from("ok\n"));
-      child.emit("exit", 0);
+      child.emit("close", 0);
       await expect(pending).resolves.toBe("ok");
     } finally {
       timeoutSpy.mockRestore();
@@ -208,7 +208,7 @@ describe("qa suite runtime agent process helpers", () => {
 
     await waitForSpawnCount(1);
     child.stdout.emit("data", Buffer.from("ok\n"));
-    child.emit("exit", 0);
+    child.emit("close", 0);
 
     await expect(pending).resolves.toBe("ok");
     const spawnCall = firstSpawnCall();
@@ -246,7 +246,7 @@ describe("qa suite runtime agent process helpers", () => {
 
     await waitForSpawnCount(1);
     child.stdout.emit("data", Buffer.from('{"ok":true}\n'));
-    child.emit("exit", 0);
+    child.emit("close", 0);
 
     await expect(pending).resolves.toEqual({ ok: true });
   });
@@ -277,7 +277,7 @@ describe("qa suite runtime agent process helpers", () => {
         '\u001b[35m[plugins]\u001b[39m \u001b[36mcodex loaded plugin package metadata\u001b[39m\n{"results":[{"text":"ORBIT-10"}]}\n',
       ),
     );
-    child.emit("exit", 0);
+    child.emit("close", 0);
 
     await expect(pending).resolves.toEqual({ results: [{ text: "ORBIT-10" }] });
   });
@@ -308,9 +308,36 @@ describe("qa suite runtime agent process helpers", () => {
         '[plugins] memory-core loaded plugin package metadata\n{\n  "results": [\n    {\n      "text": "ORBIT-10"\n    }\n  ]\n}\n',
       ),
     );
-    child.emit("exit", 0);
+    child.emit("close", 0);
 
     await expect(pending).resolves.toEqual({ results: [{ text: "ORBIT-10" }] });
+  });
+
+  it("waits for stdio close before parsing qa cli stdout", async () => {
+    const child = createSpawnedProcess();
+    spawnMock.mockReturnValue(child);
+
+    const pending = runQaCli(
+      {
+        repoRoot: "/repo",
+        gateway: {
+          tempRoot: "/tmp/runtime",
+          runtimeEnv: {},
+        },
+        primaryModel: "openai/gpt-5.5",
+        alternateModel: "openai/gpt-5.5-mini",
+        providerMode: "mock-openai",
+      } as never,
+      ["memory", "search", "--json"],
+      { json: true },
+    );
+
+    await waitForSpawnCount(1);
+    child.emit("exit", 0);
+    child.stdout.emit("data", Buffer.from('{"results":[{"text":"LATE-STDOUT"}]}\n'));
+    child.emit("close", 0);
+
+    await expect(pending).resolves.toEqual({ results: [{ text: "LATE-STDOUT" }] });
   });
 
   it("rejects oversized qa cli stdout instead of parsing truncated output", async () => {
@@ -334,7 +361,7 @@ describe("qa suite runtime agent process helpers", () => {
 
     await waitForSpawnCount(1);
     child.stdout.emit("data", Buffer.alloc(QA_CHILD_STDOUT_MAX_BYTES + 1, "x"));
-    child.emit("exit", 0);
+    child.emit("close", 0);
 
     await expect(pending).rejects.toThrow(
       `qa cli stdout exceeded ${QA_CHILD_STDOUT_MAX_BYTES} bytes; refusing to parse truncated output`,
@@ -365,7 +392,7 @@ describe("qa suite runtime agent process helpers", () => {
       "data",
       Buffer.from(`head-marker\n${"x".repeat(QA_CHILD_STDERR_TAIL_BYTES)}\ntail-marker`),
     );
-    child.emit("exit", 1);
+    child.emit("close", 1);
 
     const error = await pending.catch((value: unknown) => value);
     expect(error).toBeInstanceOf(Error);

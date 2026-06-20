@@ -131,7 +131,7 @@ async function runQaCli(
       clearTimeout(timeout);
       reject(error);
     });
-    child.once("exit", (code) => {
+    child.once("close", (code) => {
       clearTimeout(timeout);
       if (code === 0) {
         if (stdout.exceeded) {
