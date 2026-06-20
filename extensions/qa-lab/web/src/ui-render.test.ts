@@ -84,6 +84,13 @@ function evidenceState(overrides: Partial<UiState> = {}): UiState {
 }
 
 describe("QA Lab UI evidence render", () => {
+  it("renders capture startup commands without personal home paths", () => {
+    const html = renderQaLabUi(evidenceState({ activeTab: "capture" }));
+
+    expect(html).toContain("$HOME/.openclaw/debug-proxy/certs/root-ca.pem");
+    expect(html).not.toContain("/Users/");
+  });
+
   it("maps blocked and skipped evidence statuses to styled tones", () => {
     const html = renderQaLabUi(
       evidenceState({
