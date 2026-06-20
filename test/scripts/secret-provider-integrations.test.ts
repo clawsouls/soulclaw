@@ -515,6 +515,62 @@ describe("secret provider integration proof harness", () => {
   });
 
   it.runIf(process.platform !== "win32")(
+    "preserves timeout kill grace for descendants after the leader exits",
+    async () => {
+      const root = makeTempDir();
+      const cleanupPath = path.join(root, "command-descendant-cleanup.txt");
+      const descendantPidPath = path.join(root, "command-descendant.pid");
+      const scriptPath = path.join(root, "spawn-cleaning-descendant.mjs");
+      const descendantScript = [
+        "import fs from 'node:fs';",
+        `fs.writeFileSync(${JSON.stringify(descendantPidPath)}, String(process.pid));`,
+        "process.on('SIGTERM', () => {",
+        `  setTimeout(() => { fs.writeFileSync(${JSON.stringify(
+          cleanupPath,
+        )}, "clean"); process.exit(0); }, 75);`,
+        "});",
+        "setInterval(() => {}, 1000);",
+      ].join("\n");
+      fs.writeFileSync(
+        scriptPath,
+        [
+          "import childProcess from 'node:child_process';",
+          "import { setTimeout as delay } from 'node:timers/promises';",
+          `childProcess.spawn(process.execPath, ["--input-type=module", "--eval", ${JSON.stringify(
+            descendantScript,
+          )}], { stdio: "ignore" });`,
+          "process.on('SIGTERM', () => process.exit(0));",
+          "await delay(60_000);",
+          "",
+        ].join("\n"),
+      );
+      const proof = await import(
+        `${pathToFileURL(proofScriptPath).href}?case=timeout-grace-${Date.now()}`
+      );
+      let descendantPid = 0;
+
+      try {
+        const command = proof.runCommand(process.execPath, [scriptPath], {
+          timeoutMs: 150,
+        });
+
+        await waitFor(() => fs.existsSync(descendantPidPath));
+        descendantPid = Number.parseInt(fs.readFileSync(descendantPidPath, "utf8"), 10);
+        expect(Number.isInteger(descendantPid)).toBe(true);
+        expect(isProcessAlive(descendantPid)).toBe(true);
+
+        await expect(command).rejects.toThrow(/command timed out/u);
+        expect(fs.readFileSync(cleanupPath, "utf8")).toBe("clean");
+        expect(isProcessAlive(descendantPid)).toBe(false);
+      } finally {
+        if (descendantPid && isProcessAlive(descendantPid)) {
+          process.kill(descendantPid, "SIGKILL");
+        }
+      }
+    },
+  );
+
+  it.runIf(process.platform !== "win32")(
     "aborts command process groups after the leader exits before stdio closes",
     async () => {
       const root = makeTempDir();
