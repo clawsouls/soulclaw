@@ -844,6 +844,54 @@ test -d "$OPENCLAW_PLUGINS_TMP_DIR"
     }
   });
 
+  it("rejects ClawHub install paths that resolve outside the managed extensions root", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "openclaw-plugins-clawhub-path-"));
+    const home = path.join(root, "home");
+    const scratchRoot = path.join(root, "scratch");
+    const extensionsRoot = path.join(home, ".openclaw", "extensions");
+    const escapedInstallPath = `${extensionsRoot}${path.sep}..${path.sep}escaped-clawhub`;
+    mkdirSync(extensionsRoot, { recursive: true });
+    mkdirSync(escapedInstallPath, { recursive: true });
+
+    try {
+      writeJson(path.join(scratchRoot, "plugins-clawhub-installed.json"), {
+        plugins: [{ id: "openclaw-kitchen-sink-fixture", status: "loaded" }],
+      });
+      writeJson(path.join(scratchRoot, "plugins-clawhub-inspect.json"), {
+        plugin: { id: "openclaw-kitchen-sink-fixture" },
+      });
+      writeJson(path.join(home, ".openclaw", "plugins", "installs.json"), {
+        installRecords: {
+          "openclaw-kitchen-sink-fixture": {
+            artifactFormat: "zip",
+            artifactKind: "legacy-zip",
+            clawhubFamily: "code-plugin",
+            clawhubPackage: "@openclaw/kitchen-sink",
+            installPath: escapedInstallPath,
+            source: "clawhub",
+            spec: "clawhub:@openclaw/kitchen-sink",
+          },
+        },
+      });
+
+      const result = spawnSync(process.execPath, [ASSERTIONS_SCRIPT, "clawhub-installed"], {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          CLAWHUB_PLUGIN_ID: "openclaw-kitchen-sink-fixture",
+          CLAWHUB_PLUGIN_SPEC: "clawhub:@openclaw/kitchen-sink",
+          HOME: home,
+          OPENCLAW_PLUGINS_TMP_DIR: scratchRoot,
+        },
+      });
+
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("ClawHub install path resolved outside");
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it("times out stalled ClawHub package metadata requests", async () => {
     const server = createServer((_request, _response) => {});
     await new Promise<void>((resolve) => {
