@@ -471,9 +471,9 @@ export function runNodeStepAsync(label, args, timeoutMs, params = {}) {
     abortSignal?.addEventListener("abort", abortListener, { once: true });
     const teardownProcessCleanup = installVitestProcessGroupCleanup({
       child,
+      forceSignal: "SIGKILL",
       onSignal: (signal) => {
         forwardedSignal ??= signal;
-        queueMicrotask(() => signalChild("SIGKILL"));
       },
     });
     const cleanup = () => {

@@ -69,6 +69,8 @@ export function installVitestProcessGroupCleanup(params) {
   const platform = params.platform ?? process.platform;
   const kill = params.kill ?? process.kill.bind(process);
   const cleanupSignal = params.cleanupSignal ?? "SIGTERM";
+  const forceSignal = params.forceSignal ?? null;
+  const forceSignalDelayMs = params.forceSignalDelayMs ?? 0;
   const forwardedSignals = params.forwardedSignals ?? ["SIGINT", "SIGTERM"];
   const child = params.child;
   const onSignal = params.onSignal;
@@ -92,6 +94,13 @@ export function installVitestProcessGroupCleanup(params) {
     const handler = () => {
       onSignal?.(signal);
       forward(signal);
+      if (forceSignal) {
+        if (forceSignalDelayMs > 0) {
+          setTimeout(() => forward(forceSignal), forceSignalDelayMs).unref?.();
+        } else {
+          queueMicrotask(() => forward(forceSignal));
+        }
+      }
     };
     signalHandlers.set(signal, handler);
     ensureProcessListenerCapacity(processObject, signal);
