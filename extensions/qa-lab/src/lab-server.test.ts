@@ -425,6 +425,19 @@ describe("qa-lab server", () => {
     };
     expect(startupStatus.status.gateway.url).toBe("https://gateway.example.test/?panel=chat");
 
+    lab.setControlUi({
+      controlUiUrl:
+        "/control-ui/?token=late-token&api_key=late-api-key&id_token=late-id-token&panel=chat#token=fragment-token",
+    });
+    const relativeBootstrap = (await (
+      await fetchWithRetry(`${lab.baseUrl}/api/bootstrap`)
+    ).json()) as {
+      controlUiUrl: string | null;
+      controlUiEmbeddedUrl: string | null;
+    };
+    expect(relativeBootstrap.controlUiUrl).toBe("/control-ui/?panel=chat");
+    expect(relativeBootstrap.controlUiEmbeddedUrl).toBe("/control-ui/?panel=chat");
+
     const messageResponse = await fetch(`${lab.baseUrl}/api/inbound/message`, {
       method: "POST",
       headers: {
