@@ -176,7 +176,7 @@ describe("evidence gallery", () => {
     expect(JSON.stringify(model)).not.toContain(repoRoot);
   });
 
-  it("normalizes absolute declared artifact paths for gallery links", async () => {
+  it("normalizes absolute source and declared artifact paths for gallery links", async () => {
     const repoRoot = await createTempRepo();
     const outputDir = path.join(repoRoot, ".artifacts", "qa-e2e", "vitest");
     const artifactPath = path.join(outputDir, "absolute.log");
@@ -187,6 +187,13 @@ describe("evidence gallery", () => {
       title: "Absolute artifact path",
       artifact: { kind: "log", path: artifactPath },
     });
+    evidence.entries[0] = {
+      ...evidence.entries[0],
+      test: {
+        ...evidence.entries[0].test,
+        source: { path: path.join(repoRoot, "extensions/qa-lab/src/absolute.test.ts") },
+      },
+    };
     await writeJson(path.join(outputDir, QA_EVIDENCE_FILENAME), evidence);
 
     const model = await buildQaEvidenceGalleryModel({
@@ -203,6 +210,7 @@ describe("evidence gallery", () => {
     expect(artifact?.href).toContain(
       "artifactPath=%3Crepo-root%3E%2F.artifacts%2Fqa-e2e%2Fvitest%2Fabsolute.log",
     );
+    expect(model.entries[0]?.sourcePath).toBe("extensions/qa-lab/src/absolute.test.ts");
     expect(JSON.stringify(model)).not.toContain(repoRoot);
     await expect(
       resolveQaEvidenceArtifactFile({

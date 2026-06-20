@@ -12,7 +12,7 @@ import type {
   QaEvidenceProducerContext,
   QaEvidenceProducerContextFile,
 } from "../shared/evidence-gallery-types.js";
-import { toRepoRelativePath } from "./cli-paths.js";
+import { toRepoPath, toRepoRelativePath } from "./cli-paths.js";
 import {
   QA_EVIDENCE_FILENAME,
   validateQaEvidenceSummaryJson,
@@ -83,6 +83,25 @@ function sanitizeGalleryText(
   return roots
     .toSorted((a, b) => b.from.length - a.from.length)
     .reduce((text, entry) => text.replaceAll(entry.from, entry.to), value);
+}
+
+function displayGalleryPath(
+  value: string,
+  params: {
+    extraRoots?: readonly string[];
+    repoRoot: string;
+  },
+) {
+  if (path.isAbsolute(value)) {
+    const absolute = path.resolve(value);
+    for (const root of [params.repoRoot, ...(params.extraRoots ?? [])]) {
+      const resolvedRoot = path.resolve(root);
+      if (isInside(resolvedRoot, absolute)) {
+        return toRepoPath(path.relative(resolvedRoot, absolute));
+      }
+    }
+  }
+  return sanitizeGalleryText(value, params);
 }
 
 async function realpathIfExists(filePath: string): Promise<string | null> {
@@ -745,7 +764,12 @@ export async function buildQaEvidenceGalleryModel(params: {
           : null,
         id: entry.test.id,
         kind: entry.test.kind,
-        sourcePath: entry.test.source?.path ?? null,
+        sourcePath: entry.test.source?.path
+          ? displayGalleryPath(entry.test.source.path, {
+              extraRoots: [requestedRepoRoot],
+              repoRoot,
+            })
+          : null,
         status: entry.result.status,
         title: entry.test.title,
       };
