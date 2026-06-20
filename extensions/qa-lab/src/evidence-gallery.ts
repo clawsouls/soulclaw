@@ -559,6 +559,15 @@ function readMatrixCells(params: {
       status === "proof-gap" ? null : (entriesByCell.get(`${surface}:${stage}`) ?? null);
     const artifacts = entry?.execution?.artifacts ?? [];
     const runner = readRecord(cell.runner);
+    const readRunnerString = (value: unknown) => {
+      const text = readString(value);
+      return text
+        ? sanitizeGalleryText(text, {
+            extraRoots: params.extraRoots,
+            repoRoot: params.repoRoot,
+          })
+        : null;
+    };
     return [
       {
         artifactKinds: readStringArray(artifacts.map((artifact) => artifact.kind)),
@@ -571,10 +580,10 @@ function readMatrixCells(params: {
         coverageIds: readStringArray(Array.isArray(cell.coverageIds) ? cell.coverageIds : []),
         runner: runner
           ? {
-              availability: readString(runner.availability),
-              command: readString(runner.command),
-              lane: readString(runner.lane),
-              workflow: readString(runner.workflow),
+              availability: readRunnerString(runner.availability),
+              command: readRunnerString(runner.command),
+              lane: readRunnerString(runner.lane),
+              workflow: readRunnerString(runner.workflow),
             }
           : null,
         stage,

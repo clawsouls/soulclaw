@@ -270,9 +270,9 @@ describe("evidence gallery", () => {
           coverageIds: ["ui.control"],
           runner: {
             availability: "local",
-            command: "pnpm openclaw qa suite --scenario ux-matrix-evidence-dashboard",
+            command: `${repoRoot}/openclaw.mjs qa suite --scenario ux-matrix-evidence-dashboard`,
             lane: "web-ui-playwright",
-            workflow: ".github/workflows/ux-matrix-qa.yml#ux-matrix-local",
+            workflow: `${repoRoot}/.github/workflows/ux-matrix-qa.yml#ux-matrix-local`,
           },
           stage: "first-run",
           status: "pass",
@@ -434,9 +434,9 @@ describe("evidence gallery", () => {
         coverageIds: ["ui.control"],
         runner: {
           availability: "local",
-          command: "pnpm openclaw qa suite --scenario ux-matrix-evidence-dashboard",
+          command: "<repo-root>/openclaw.mjs qa suite --scenario ux-matrix-evidence-dashboard",
           lane: "web-ui-playwright",
-          workflow: ".github/workflows/ux-matrix-qa.yml#ux-matrix-local",
+          workflow: "<repo-root>/.github/workflows/ux-matrix-qa.yml#ux-matrix-local",
         },
         stage: "first-run",
         status: "pass",
