@@ -1338,6 +1338,13 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/check-deprecated-api-usage.test.ts"],
       ],
       ["scripts/lib/npm-verify-exec.ts", ["test/scripts/npm-verify-exec.test.ts"]],
+      [
+        "scripts/lib/plugin-npm-runtime-build.mjs",
+        [
+          "test/scripts/plugin-npm-runtime-build-args.test.ts",
+          "test/plugin-npm-runtime-build.test.ts",
+        ],
+      ],
       ["scripts/lib/arg-utils.mjs", ["test/scripts/arg-utils.test.ts"]],
       ["scripts/docker/cleanup-smoke/run.sh", ["test/scripts/docker-build-helper.test.ts"]],
       [

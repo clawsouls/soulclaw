@@ -803,7 +803,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ],
   [
     "scripts/lib/plugin-npm-runtime-build.mjs",
-    ["test/scripts/plugin-npm-runtime-build-args.test.ts"],
+    ["test/scripts/plugin-npm-runtime-build-args.test.ts", "test/plugin-npm-runtime-build.test.ts"],
   ],
   [
     "scripts/lib/npm-publish-plan.mjs",
