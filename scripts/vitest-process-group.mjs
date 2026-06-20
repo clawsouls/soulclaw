@@ -41,6 +41,17 @@ export function forwardSignalToVitestProcessGroup(params) {
   }
 }
 
+/**
+ * Force-cleans any remaining processes in a Vitest child process group.
+ */
+export function forceKillVitestProcessGroup(child, kill = process.kill.bind(process)) {
+  return forwardSignalToVitestProcessGroup({
+    child,
+    kill,
+    signal: "SIGKILL",
+  });
+}
+
 function ensureProcessListenerCapacity(processObject, eventName, additionalListeners = 1) {
   if (
     typeof processObject.getMaxListeners !== "function" ||
