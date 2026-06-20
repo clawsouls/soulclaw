@@ -474,21 +474,45 @@ async function runDirectPrompt(prompt: string): Promise<PromptResult> {
         ANTHROPIC_API_KEY: "",
         ANTHROPIC_API_KEY_OLD: "",
       },
+      detached: process.platform !== "win32",
       stdio: ["ignore", "pipe", "pipe"],
     });
     child.stdout.on("data", (chunk) => stdout.push(String(chunk)));
     child.stderr.on("data", (chunk) => stderr.push(String(chunk)));
-    const exit = await withTimeout(
-      new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve, reject) => {
+    const exitPromise = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
+      (resolve, reject) => {
         child.once("error", reject);
         child.once("exit", (code, signal) => resolve({ code, signal }));
-      }),
-      TIMEOUT_MS,
-      () => {
-        child.kill("SIGKILL");
-        return { code: null, signal: "SIGKILL" as NodeJS.Signals };
       },
     );
+    const stopDirectChild = async (signal: NodeJS.Signals = "SIGKILL") => {
+      signalGatewayPromptChildTree(child, signal);
+      await waitForGatewayPromptChildTreeExit(
+        child,
+        exitPromise.then(() => undefined),
+        1_500,
+      );
+    };
+    const removeParentSignalHandlers = installGatewayPromptParentSignalHandlers(
+      child,
+      stopDirectChild,
+    );
+    let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
+    const exit = await Promise.race([
+      exitPromise,
+      new Promise<{ code: null; signal: NodeJS.Signals }>((resolve) => {
+        timeoutTimer = setTimeout(() => {
+          void stopDirectChild("SIGKILL").finally(() => {
+            resolve({ code: null, signal: "SIGKILL" });
+          });
+        }, TIMEOUT_MS);
+      }),
+    ]).finally(() => {
+      if (timeoutTimer) {
+        clearTimeout(timeoutTimer);
+      }
+      removeParentSignalHandlers();
+    });
     const joinedStdout = stdout.join("");
     const joinedStderr = stderr.join("");
     return {

@@ -46,6 +46,31 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
+async function writeFakePromptCli(root: string, descendantPidPath: string): Promise<string> {
+  const fakeCli = path.join(root, "fake-prompt-cli.mjs");
+  const descendantScript = [
+    "process.on('SIGINT', () => {});",
+    "process.on('SIGTERM', () => {});",
+    "setInterval(() => {}, 1000);",
+  ].join("");
+  await fs.writeFile(
+    fakeCli,
+    [
+      "#!/usr/bin/env node",
+      "import childProcess from 'node:child_process';",
+      "import fs from 'node:fs';",
+      "const descendant = childProcess.spawn(process.execPath, [",
+      "  '--input-type=module',",
+      `  '--eval', ${JSON.stringify(descendantScript)},`,
+      "], { stdio: 'ignore' });",
+      `fs.writeFileSync(${JSON.stringify(descendantPidPath)}, String(descendant.pid));`,
+      "setInterval(() => {}, 1000);",
+    ].join("\n"),
+    { mode: 0o755 },
+  );
+  return fakeCli;
+}
+
 async function waitForChildExit(
   child: ReturnType<typeof spawn>,
   timeoutMs = 8_000,
@@ -645,6 +670,94 @@ describe("script-specific dev tooling hardening", () => {
     await expect(fs.stat(keepRoot)).resolves.toBeTruthy();
     await fs.rm(keepRoot, { force: true, recursive: true });
   });
+
+  it.runIf(process.platform !== "win32")(
+    "cleans Anthropic direct prompt descendants after timeout",
+    async () => {
+      const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-direct-prompt-tree-"));
+      tempDirs.push(tempRoot);
+      const descendantPidPath = path.join(tempRoot, "descendant.pid");
+      let descendantPid = 0;
+      const fakeClaudeBin = await writeFakePromptCli(tempRoot, descendantPidPath);
+      const probe = spawn(
+        process.execPath,
+        ["--import", "tsx", "scripts/anthropic-prompt-probe.ts"],
+        {
+          cwd: process.cwd(),
+          env: {
+            ...process.env,
+            CLAUDE_BIN: fakeClaudeBin,
+            OPENCLAW_PROMPT_TEXT: "timeout cleanup proof",
+            OPENCLAW_PROMPT_TIMEOUT_MS: "1000",
+            OPENCLAW_PROMPT_TRANSPORT: "direct",
+          },
+          stdio: "ignore",
+        },
+      );
+
+      try {
+        await waitForCondition(() => existsSync(descendantPidPath));
+        descendantPid = Number.parseInt(await fs.readFile(descendantPidPath, "utf8"), 10);
+        expect(Number.isInteger(descendantPid)).toBe(true);
+        expect(isProcessAlive(descendantPid)).toBe(true);
+
+        await expect(waitForChildExit(probe)).resolves.toEqual({ status: 0, signal: null });
+        await waitForCondition(() => !isProcessAlive(descendantPid));
+      } finally {
+        if (probe.pid && isProcessAlive(probe.pid)) {
+          process.kill(probe.pid, "SIGKILL");
+        }
+        if (descendantPid && isProcessAlive(descendantPid)) {
+          process.kill(descendantPid, "SIGKILL");
+        }
+      }
+    },
+  );
+
+  it.runIf(process.platform !== "win32")(
+    "cleans Anthropic direct prompt descendants on parent signal",
+    async () => {
+      const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-direct-parent-signal-"));
+      tempDirs.push(tempRoot);
+      const descendantPidPath = path.join(tempRoot, "descendant.pid");
+      let descendantPid = 0;
+      const fakeClaudeBin = await writeFakePromptCli(tempRoot, descendantPidPath);
+      const probe = spawn(
+        process.execPath,
+        ["--import", "tsx", "scripts/anthropic-prompt-probe.ts"],
+        {
+          cwd: process.cwd(),
+          env: {
+            ...process.env,
+            CLAUDE_BIN: fakeClaudeBin,
+            OPENCLAW_PROMPT_TEXT: "parent signal cleanup proof",
+            OPENCLAW_PROMPT_TIMEOUT_MS: "10000",
+            OPENCLAW_PROMPT_TRANSPORT: "direct",
+          },
+          stdio: "ignore",
+        },
+      );
+
+      try {
+        await waitForCondition(() => existsSync(descendantPidPath));
+        descendantPid = Number.parseInt(await fs.readFile(descendantPidPath, "utf8"), 10);
+        expect(Number.isInteger(descendantPid)).toBe(true);
+        expect(isProcessAlive(descendantPid)).toBe(true);
+
+        const probeExit = waitForChildExit(probe);
+        process.kill(probe.pid!, "SIGTERM");
+        await expect(probeExit).resolves.toEqual({ status: 143, signal: null });
+        await waitForCondition(() => !isProcessAlive(descendantPid));
+      } finally {
+        if (probe.pid && isProcessAlive(probe.pid)) {
+          process.kill(probe.pid, "SIGKILL");
+        }
+        if (descendantPid && isProcessAlive(descendantPid)) {
+          process.kill(descendantPid, "SIGKILL");
+        }
+      }
+    },
+  );
 
   it("waits for the Anthropic prompt gateway child after SIGKILL cleanup", async () => {
     const events = new EventEmitter();
