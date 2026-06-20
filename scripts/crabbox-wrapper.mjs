@@ -1850,7 +1850,7 @@ function remoteAwsMacosJsBootstrap({ packageManager = false, bun = false } = {})
       'if [ ! -x "$bun_root/bin/bun" ] || [ ! -f "$bun_ready_marker" ]; then',
       'rm -rf "$bun_root" || { status=$?; release_bun_install_lock; return "$status"; };',
       'mkdir -p "$bun_root" || { status=$?; release_bun_install_lock; return "$status"; };',
-      'npm install --global --prefix "$bun_root" "bun@${bun_version}" || { status=$?; release_bun_install_lock; return "$status"; };',
+      'npm install --global --prefix "$bun_root" --fetch-timeout=120000 --fetch-retries=2 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=15000 "bun@${bun_version}" || { status=$?; release_bun_install_lock; return "$status"; };',
       'touch "$bun_ready_marker" || { status=$?; release_bun_install_lock; return "$status"; };',
       "fi;",
       "release_bun_install_lock;",

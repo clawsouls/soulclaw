@@ -1006,7 +1006,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     expect(remoteCommand).toContain("bun_version=1.3.14");
     expect(remoteCommand).toContain('bun_root="$tool_root/bun-v${bun_version}"');
     expect(remoteCommand).toContain(
-      'npm install --global --prefix "$bun_root" "bun@${bun_version}"',
+      'npm install --global --prefix "$bun_root" --fetch-timeout=120000 --fetch-retries=2 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=15000 "bun@${bun_version}"',
     );
     expect(remoteCommand).toContain("bun --version >&2 || return 1");
     expect(remoteCommand).not.toContain("corepack enable");
@@ -1474,7 +1474,7 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     expect(result.status).toBe(0);
     expect(output.scriptContent).toContain("bun_version=1.3.14");
     expect(output.scriptContent).toContain(
-      'npm install --global --prefix "$bun_root" "bun@${bun_version}"',
+      'npm install --global --prefix "$bun_root" --fetch-timeout=120000 --fetch-retries=2 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=15000 "bun@${bun_version}"',
     );
     expect(output.scriptContent).toContain("bun --version >&2 || return 1");
     expect(output.scriptContent).not.toContain("corepack enable");
