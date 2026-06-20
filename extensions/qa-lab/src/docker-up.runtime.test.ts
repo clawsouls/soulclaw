@@ -21,6 +21,10 @@ function createHealthyDockerDeps(calls: string[]): QaDockerUpDeps {
   };
 }
 
+function quoteForShell(value: string) {
+  return `'${value.replaceAll("'", `'"'"'`)}'`;
+}
+
 describe("runQaDockerUp", () => {
   it("builds the QA UI, writes the harness, starts compose, and waits for health", async () => {
     const calls: string[] = [];
@@ -68,9 +72,36 @@ describe("runQaDockerUp", () => {
       expect(result.qaLabUrl).toBe("http://127.0.0.1:43124");
       expect(result.gatewayUrl).toBe("http://127.0.0.1:18889/");
       expect(result.composeFile).toBe(composeFile);
-      expect(result.stopCommand).toBe(`docker compose -f ${composeFile} down`);
+      expect(result.stopCommand).toBe(`docker compose -f ${quoteForShell(composeFile)} down`);
     } finally {
       await rm(outputDir, { recursive: true, force: true });
+    }
+  });
+
+  it("quotes the printed stop command when the compose path is shell-sensitive", async () => {
+    const calls: string[] = [];
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "qa-docker-up-"));
+    const outputDir = path.join(tempRoot, "mac path's qa lab");
+    const repoRoot = path.resolve("/repo/openclaw");
+    const composeFile = path.join(outputDir, "docker-compose.qa.yml");
+
+    try {
+      const result = await runQaDockerUp(
+        {
+          repoRoot,
+          outputDir,
+          usePrebuiltImage: true,
+          skipUiBuild: true,
+        },
+        createHealthyDockerDeps(calls),
+      );
+
+      expect(result.stopCommand).toBe(`docker compose -f ${quoteForShell(composeFile)} down`);
+      expect(calls).toContain(
+        `docker compose -f ${composeFile} down --remove-orphans @${repoRoot}`,
+      );
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
     }
   });
 

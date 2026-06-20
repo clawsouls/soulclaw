@@ -25,6 +25,10 @@ function resolveDefaultQaDockerDir(repoRoot: string) {
   return path.resolve(repoRoot, ".artifacts/qa-docker");
 }
 
+function quoteForShell(value: string) {
+  return `'${value.replaceAll("'", `'"'"'`)}'`;
+}
+
 async function isQaLabDockerHealthReachable(url: string, fetchImpl: FetchLike) {
   let response: Awaited<ReturnType<FetchLike>> | undefined;
   try {
@@ -147,6 +151,6 @@ export async function runQaDockerUp(
     composeFile,
     qaLabUrl,
     gatewayUrl,
-    stopCommand: `docker compose -f ${composeFile} down`,
+    stopCommand: `docker compose -f ${quoteForShell(composeFile)} down`,
   };
 }
