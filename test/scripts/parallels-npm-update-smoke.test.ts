@@ -423,9 +423,13 @@ exit 1
 
   it("cleans timed-out Windows background work and reads bounded log chunks", async () => {
     const decodedCommands: string[] = [];
-    const fakeRun: typeof hostCommandRun = (_command, args) => {
+    const inputs: string[] = [];
+    const fakeRun: typeof hostCommandRun = (_command, args, options) => {
       const decoded = decodePowerShellFromArgs(args);
       decodedCommands.push(decoded);
+      if (options?.input) {
+        inputs.push(String(options.input));
+      }
       if (decoded.includes("Start-Process")) {
         return { status: 0, stderr: "", stdout: "started\n" };
       }
@@ -445,7 +449,13 @@ exit 1
     ).rejects.toThrow("windows background timeout timed out");
 
     const commands = decodedCommands.join("\n---\n");
+    const payloads = inputs.join("\n---\n");
     expect(commands).toContain("$pidPath");
+    expect(commands).toContain("function Write-OpenClawUtf8File");
+    expect(commands).toContain("[System.Text.UTF8Encoding]::new($false)");
+    expect(payloads).toContain("Write-OpenClawUtf8File $exitPath '0'");
+    expect(payloads).toContain("Write-OpenClawUtf8File $donePath 'done'");
+    expect(commands).toContain("Write-OpenClawUtf8File $pidPath ([string]$process.Id)");
     expect(commands).toContain("Start-Process -FilePath powershell.exe");
     expect(commands).toContain("-PassThru");
     expect(commands).toContain("[System.IO.File]::Open($logPath");
@@ -457,6 +467,9 @@ exit 1
     expect(commands).toContain(
       "Remove-Item -Path $scriptPath, $logPath, $donePath, $exitPath, $pidPath",
     );
+    expect(`${commands}\n${payloads}`).not.toContain("Set-Content -Path $exitPath");
+    expect(`${commands}\n${payloads}`).not.toContain("Set-Content -Path $donePath");
+    expect(commands).not.toContain("Set-Content -Path $pidPath");
     expect(commands).not.toContain("ReadAllBytes");
   });
 
