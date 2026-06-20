@@ -1445,7 +1445,7 @@ export async function runNodeMain(params = {}) {
     args: params.args ?? process.argv.slice(2),
     env: params.env ? { ...params.env } : { ...process.env },
     platform: params.platform ?? process.platform,
-    signalProcess: params.signalProcess ?? process.kill,
+    signalProcess: params.signalProcess ?? ((pid, signal) => process.kill(pid, signal)),
     runRuntimePostBuild: params.runRuntimePostBuild ?? runRuntimePostBuild,
   };
 
