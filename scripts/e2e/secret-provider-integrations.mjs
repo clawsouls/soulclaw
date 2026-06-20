@@ -297,6 +297,7 @@ function runCommand(command, args, options = {}) {
     const stderr = createOutputCapture("stderr");
     let timedOut = false;
     let aborted = false;
+    let parentSignalPending = null;
     let killTimer;
     let forceKillAt;
     const armForceKill = () => {
@@ -339,15 +340,33 @@ function runCommand(command, args, options = {}) {
       }
       parentSignalHandlers.clear();
     };
+    const finishTerminatedTree = async () => {
+      await finishTimedOutCommandProcessTree(child, {
+        forceKillAt,
+        timeoutKillGraceMs: COMMAND_TIMEOUT_KILL_GRACE_MS,
+      });
+      if (killTimer) {
+        clearTimeout(killTimer);
+      }
+      forceKillAt = undefined;
+    };
     if (process.platform !== "win32" && child.pid) {
       for (const signal of ["SIGHUP", "SIGINT", "SIGTERM"]) {
         const handler = () => {
+          if (parentSignalPending) {
+            terminateProcessTree(child, "SIGKILL");
+            return;
+          }
+          parentSignalPending = signal;
           terminateProcessTree(child, signal);
-          removeParentSignalHandlers();
-          process.kill(process.pid, signal);
+          armForceKill();
+          void finishTerminatedTree().finally(() => {
+            removeParentSignalHandlers();
+            process.kill(process.pid, signal);
+          });
         };
         parentSignalHandlers.set(signal, handler);
-        process.once(signal, handler);
+        process.on(signal, handler);
       }
     }
     child.on("error", (error) => {
@@ -363,24 +382,18 @@ function runCommand(command, args, options = {}) {
     child.on("close", (code, signal) => {
       clearTimeout(timer);
       abortSignal?.removeEventListener("abort", abort);
-      removeParentSignalHandlers();
       const result = { code, signal, stdout: stdout.text(), stderr: stderr.text() };
-      const finishTerminatedTree = async () => {
-        await finishTimedOutCommandProcessTree(child, {
-          forceKillAt,
-          timeoutKillGraceMs: COMMAND_TIMEOUT_KILL_GRACE_MS,
-        });
-        if (killTimer) {
-          clearTimeout(killTimer);
-        }
-        forceKillAt = undefined;
-      };
       if (aborted) {
+        removeParentSignalHandlers();
         void finishTerminatedTree().finally(() =>
           reject(new Error(scrub(`command aborted: ${command} ${args.join(" ")}`))),
         );
         return;
       }
+      if (parentSignalPending) {
+        return;
+      }
+      removeParentSignalHandlers();
       if (timedOut) {
         void finishTerminatedTree().finally(() =>
           reject(new Error(scrub(`command timed out: ${command} ${args.join(" ")}`))),
