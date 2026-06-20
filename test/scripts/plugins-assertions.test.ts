@@ -9,7 +9,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -140,6 +140,45 @@ function runPluginsSweepShell(script: string, env: NodeJS.ProcessEnv = {}) {
     cwd: process.cwd(),
     encoding: "utf8",
     env: { ...process.env, ...env },
+  });
+}
+
+async function waitForPortFile(portFile: string): Promise<number> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (existsSync(portFile)) {
+      const port = Number(readFileSync(portFile, "utf8"));
+      if (Number.isInteger(port) && port > 0) {
+        return port;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error(`timed out waiting for ${portFile}`);
+}
+
+function requestFixtureRegistry(
+  port: number,
+  requestPath: string,
+): Promise<{ body: string; statusCode: number | undefined }> {
+  return new Promise((resolve, reject) => {
+    const request = httpRequest(
+      { host: "127.0.0.1", method: "GET", path: requestPath, port },
+      (response) => {
+        let body = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk: string) => {
+          body += chunk;
+        });
+        response.on("end", () => {
+          resolve({ body, statusCode: response.statusCode });
+        });
+      },
+    );
+    request.setTimeout(2_000, () => {
+      request.destroy(new Error(`timed out requesting ${requestPath}`));
+    });
+    request.on("error", reject);
+    request.end();
   });
 }
 
@@ -507,6 +546,59 @@ test -d "$OPENCLAW_PLUGINS_TMP_DIR"
       expect(result.stdout).not.toContain("DO_NOT_DUMP_PLUGIN_FIXTURE_PREFIX");
     } finally {
       rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("keeps npm fixture registry alive after malformed package paths", async () => {
+    const tempDirs: string[] = [];
+    const root = makeTempDir(tempDirs, "openclaw-plugin-npm-fixture-request-");
+    const portFile = path.join(root, "port");
+    const tarballPath = path.join(root, "demo-plugin.tgz");
+    writeFileSync(tarballPath, "fixture package archive", "utf8");
+
+    const child = spawn(
+      process.execPath,
+      [
+        "scripts/e2e/lib/plugins/npm-registry-server.mjs",
+        portFile,
+        "@openclaw/demo-plugin-npm",
+        "1.0.0",
+        tarballPath,
+      ],
+      {
+        cwd: process.cwd(),
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+    const stderr = createBoundedChildOutput();
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => {
+      stderr.append(chunk);
+    });
+
+    try {
+      const port = await waitForPortFile(portFile);
+      const malformed = await requestFixtureRegistry(port, "/%");
+
+      expect(malformed.statusCode).toBe(404);
+      expect(malformed.body).toContain("not found");
+      expect(child.exitCode, stderr.text()).toBeNull();
+
+      const valid = await requestFixtureRegistry(port, "/@openclaw%2Fdemo-plugin-npm");
+
+      expect(valid.statusCode, stderr.text()).toBe(200);
+      expect(JSON.parse(valid.body)).toMatchObject({
+        name: "@openclaw/demo-plugin-npm",
+        "dist-tags": { latest: "1.0.0" },
+      });
+    } finally {
+      if (child.exitCode === null) {
+        child.kill();
+        await new Promise((resolve) => {
+          child.once("close", resolve);
+        });
+      }
+      cleanupTempDirs(tempDirs);
     }
   });
 
