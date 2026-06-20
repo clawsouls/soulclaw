@@ -457,6 +457,12 @@ describe("readClaudeCliFallbackSeed", () => {
     return readClaudeCliFallbackSeed({ cliSessionId, homeDir });
   }
 
+  function readFallbackSeedFromHome(
+    cliSessionId = SESSION_ID,
+  ): Promise<ReturnType<typeof readClaudeCliFallbackSeed>> {
+    return withEnvAsync({ HOME: homeDir }, async () => readClaudeCliFallbackSeed({ cliSessionId }));
+  }
+
   async function writeJsonl(lines: ReadonlyArray<Record<string, unknown>>): Promise<void> {
     const file = path.join(projectsDir, `${SESSION_ID}.jsonl`);
     await fs.writeFile(file, `${lines.map((line) => JSON.stringify(line)).join("\n")}\n`, "utf-8");
@@ -467,7 +473,7 @@ describe("readClaudeCliFallbackSeed", () => {
     expect(seed).toBeUndefined();
   });
 
-  it("collects user/assistant turns when the session has never been compacted", async () => {
+  it("collects user/assistant turns through the HOME-resolved session store", async () => {
     await writeJsonl([
       {
         type: "user",
@@ -490,7 +496,7 @@ describe("readClaudeCliFallbackSeed", () => {
       },
     ]);
 
-    const seed = readFallbackSeed();
+    const seed = await readFallbackSeedFromHome();
     const fallbackSeed = requireFallbackSeed(seed, "uncompacted session");
     expect(fallbackSeed.summaryText).toBeUndefined();
     expect(fallbackSeed.recentTurns).toHaveLength(3);
