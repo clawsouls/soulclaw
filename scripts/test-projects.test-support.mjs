@@ -738,6 +738,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/create-dmg.sh", ["test/scripts/create-dmg.test.ts"]],
   ["scripts/kova-ci-summary.mjs", ["test/scripts/kova-ci-summary.test.ts"]],
   ["scripts/make_appcast.sh", ["test/scripts/make-appcast.test.ts"]],
+  ["scripts/openclaw-npm-prepublish-verify.ts", ["test/openclaw-npm-prepublish-verify.test.ts"]],
   ["scripts/openclaw-npm-postpublish-verify.ts", ["test/openclaw-npm-postpublish-verify.test.ts"]],
   ["scripts/openclaw-npm-release-check.ts", ["test/openclaw-npm-release-check.test.ts"]],
   ["scripts/openclaw-prepack.ts", ["test/openclaw-prepack.test.ts"]],
