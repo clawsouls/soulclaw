@@ -716,6 +716,13 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ["test/scripts/bundled-plugin-source-utils.test.ts"],
   ],
   ["scripts/lib/dev-tooling-safety.ts", ["test/scripts/dev-tooling-safety.test.ts"]],
+  ["scripts/docker/cleanup-smoke/run.sh", ["test/scripts/docker-build-helper.test.ts"]],
+  [
+    "scripts/docker/install-sh-e2e/run.sh",
+    ["test/scripts/docker-build-helper.test.ts", "test/scripts/test-install-sh-docker.test.ts"],
+  ],
+  ["scripts/docker/install-sh-nonroot/run.sh", ["test/scripts/test-install-sh-docker.test.ts"]],
+  ["scripts/docker/install-sh-smoke/run.sh", ["test/scripts/test-install-sh-docker.test.ts"]],
   ["scripts/lib/docker-e2e-container.sh", ["test/scripts/docker-build-helper.test.ts"]],
   ["scripts/lib/docker-e2e-package.sh", ["test/scripts/docker-build-helper.test.ts"]],
   ["scripts/lib/format-generated-module.mjs", ["test/scripts/format-generated-module.test.ts"]],
@@ -760,6 +767,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
       "test/scripts/upgrade-survivor-baselines.test.ts",
       "test/scripts/upgrade-survivor-config-recipe.test.ts",
     ],
+  ],
+  [
+    "scripts/lib/npm-pack-budget.mjs",
+    ["test/release-check.test.ts", "test/scripts/test-install-sh-docker.test.ts"],
   ],
   ["scripts/lib/openclaw-release-clawhub-plan.ts", ["test/plugin-clawhub-release.test.ts"]],
   [
@@ -813,6 +824,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/docker-e2e.mjs", ["test/scripts/docker-e2e-helper-cli.test.ts"]],
   ["scripts/docker-e2e-rerun.mjs", ["test/scripts/docker-e2e-helper-cli.test.ts"]],
   ["scripts/docker-e2e-timings.mjs", ["test/scripts/docker-e2e-helper-cli.test.ts"]],
+  ["scripts/e2e/bun-global-install-smoke.sh", ["test/scripts/test-install-sh-docker.test.ts"]],
   ["scripts/generate-npm-shrinkwrap.mjs", ["test/scripts/generate-npm-shrinkwrap.test.ts"]],
   [
     "scripts/install.sh",
@@ -875,6 +887,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/test-extension-batch.mjs", ["test/scripts/test-extension.test.ts"]],
   ["scripts/test-force.ts", ["test/scripts/test-force.test.ts"]],
   ["scripts/test-live.mjs", ["test/scripts/test-live.test.ts"]],
+  [
+    "scripts/test-install-sh-e2e-docker.sh",
+    ["test/scripts/docker-build-helper.test.ts", "test/scripts/test-install-sh-docker.test.ts"],
+  ],
   ["scripts/tsdown-build.mjs", ["test/scripts/tsdown-build.test.ts"]],
   ["scripts/verify.mjs", ["test/scripts/verify.test.ts"]],
   ["scripts/verify-pr-hosted-gates.mjs", ["test/scripts/verify-pr-hosted-gates.test.ts"]],
@@ -1259,6 +1275,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     "scripts/check-gateway-watch-regression.mjs",
     ["test/scripts/check-gateway-watch-regression.test.ts"],
   ],
+  ["scripts/write-package-dist-inventory.ts", ["test/scripts/test-install-sh-docker.test.ts"]],
   ["scripts/e2e/cron-mcp-cleanup-seed.ts", ["test/scripts/docker-e2e-seeds.test.ts"]],
   ["scripts/bundled-plugin-assets.mjs", ["test/scripts/bundled-plugin-assets.test.ts"]],
   ["scripts/bundle-a2ui.mjs", ["test/scripts/bundled-plugin-assets.test.ts"]],

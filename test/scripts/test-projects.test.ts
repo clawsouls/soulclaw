@@ -1234,6 +1234,7 @@ describe("scripts/test-projects changed-target routing", () => {
       ["scripts/make_appcast.sh", ["test/scripts/make-appcast.test.ts"]],
       ["scripts/package-mac-app.sh", ["test/scripts/package-mac-app.test.ts"]],
       ["scripts/package-mac-dist.sh", ["test/scripts/package-mac-dist.test.ts"]],
+      ["scripts/e2e/bun-global-install-smoke.sh", ["test/scripts/test-install-sh-docker.test.ts"]],
       [
         "scripts/sparkle-build.ts",
         [
@@ -1244,6 +1245,10 @@ describe("scripts/test-projects changed-target routing", () => {
         ],
       ],
       ["scripts/package-changelog.mjs", ["test/scripts/package-changelog.test.ts"]],
+      [
+        "scripts/test-install-sh-e2e-docker.sh",
+        ["test/scripts/docker-build-helper.test.ts", "test/scripts/test-install-sh-docker.test.ts"],
+      ],
       ["scripts/openclaw-prepack.ts", ["test/openclaw-prepack.test.ts"]],
       ["scripts/openclaw-npm-release-check.ts", ["test/openclaw-npm-release-check.test.ts"]],
       [
@@ -1288,6 +1293,13 @@ describe("scripts/test-projects changed-target routing", () => {
       ["scripts/lib/dev-tooling-safety.ts", ["test/scripts/dev-tooling-safety.test.ts"]],
       ["scripts/lib/npm-verify-exec.ts", ["test/scripts/npm-verify-exec.test.ts"]],
       ["scripts/lib/arg-utils.mjs", ["test/scripts/arg-utils.test.ts"]],
+      ["scripts/docker/cleanup-smoke/run.sh", ["test/scripts/docker-build-helper.test.ts"]],
+      [
+        "scripts/docker/install-sh-e2e/run.sh",
+        ["test/scripts/docker-build-helper.test.ts", "test/scripts/test-install-sh-docker.test.ts"],
+      ],
+      ["scripts/docker/install-sh-nonroot/run.sh", ["test/scripts/test-install-sh-docker.test.ts"]],
+      ["scripts/docker/install-sh-smoke/run.sh", ["test/scripts/test-install-sh-docker.test.ts"]],
       [
         "scripts/lib/package-dist-imports.mjs",
         [
@@ -1320,6 +1332,10 @@ describe("scripts/test-projects changed-target routing", () => {
           "test/scripts/upgrade-survivor-config-recipe.test.ts",
         ],
       ],
+      [
+        "scripts/lib/npm-pack-budget.mjs",
+        ["test/release-check.test.ts", "test/scripts/test-install-sh-docker.test.ts"],
+      ],
       ["scripts/lib/openclaw-release-clawhub-plan.ts", ["test/plugin-clawhub-release.test.ts"]],
       [
         "scripts/lib/plugin-clawhub-release.ts",
@@ -1332,6 +1348,7 @@ describe("scripts/test-projects changed-target routing", () => {
       ["scripts/lib/test-group-report.mjs", ["test/scripts/test-group-report.test.ts"]],
       ["scripts/lib/stable-release-closeout.mjs", ["test/stable-release-closeout.test.ts"]],
       ["scripts/lib/ts-guard-utils.mjs", ["test/scripts/ts-guard-utils.test.ts"]],
+      ["scripts/write-package-dist-inventory.ts", ["test/scripts/test-install-sh-docker.test.ts"]],
       ["scripts/lib/format-generated-module.mjs", ["test/scripts/format-generated-module.test.ts"]],
       [
         "scripts/lib/bundled-plugin-source-utils.mjs",
