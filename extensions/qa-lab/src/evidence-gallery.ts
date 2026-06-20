@@ -31,6 +31,7 @@ export type {
 
 const TEXT_PREVIEW_BYTES = 12 * 1024;
 const ARTIFACT_VIEW_CONCURRENCY = 8;
+const REPO_ROOT_ARTIFACT_PATH_PREFIX = "<repo-root>/";
 
 const UX_MATRIX_PRODUCER_FILES = [
   { key: "commands", path: "commands.txt", previewKind: "text" },
@@ -171,6 +172,13 @@ function isExplicitRepoRootArtifactPath(raw: string): boolean {
   return normalized.startsWith(".artifacts/");
 }
 
+function repoRootTokenArtifactPath(raw: string): string | null {
+  const normalized = raw.split(/[\\/]+/u).join("/");
+  return normalized.startsWith(REPO_ROOT_ARTIFACT_PATH_PREFIX)
+    ? normalized.slice(REPO_ROOT_ARTIFACT_PATH_PREFIX.length)
+    : null;
+}
+
 // Resolve an artifact path against pre-resolved roots without re-reading the evidence file.
 // Returns null when the path is missing or escapes both roots; callers map that to an error.
 async function resolveArtifactFileWithinRoots(params: {
@@ -182,8 +190,13 @@ async function resolveArtifactFileWithinRoots(params: {
   if (!raw) {
     return null;
   }
-  const candidates = path.isAbsolute(raw) ? [raw] : [path.resolve(params.evidenceDir, raw)];
-  if (!path.isAbsolute(raw) && isExplicitRepoRootArtifactPath(raw)) {
+  const tokenPath = repoRootTokenArtifactPath(raw);
+  const candidates = tokenPath
+    ? [path.resolve(params.repoRoot, tokenPath)]
+    : path.isAbsolute(raw)
+      ? [raw]
+      : [path.resolve(params.evidenceDir, raw)];
+  if (!tokenPath && !path.isAbsolute(raw) && isExplicitRepoRootArtifactPath(raw)) {
     candidates.push(path.resolve(params.repoRoot, raw));
   }
   for (const candidate of candidates) {
@@ -345,6 +358,7 @@ async function buildArtifactView(params: {
   allowedArtifactFiles: ReadonlySet<string>;
   artifact: QaEvidenceArtifact;
   evidenceDir: string;
+  extraRoots: readonly string[];
   hrefEvidencePath: string;
   repoRoot: string;
 }): Promise<QaEvidenceArtifactView> {
@@ -354,6 +368,16 @@ async function buildArtifactView(params: {
     evidenceDir: params.evidenceDir,
     repoRoot: params.repoRoot,
   }).catch(() => null);
+  const realFileRepoPath =
+    realFile && isInside(params.repoRoot, realFile)
+      ? toRepoRelativePath(params.repoRoot, realFile)
+      : null;
+  const displayPath =
+    realFileRepoPath ??
+    sanitizeGalleryText(params.artifact.path, {
+      extraRoots: params.extraRoots,
+      repoRoot: params.repoRoot,
+    });
   if (!realFile || !params.allowedArtifactFiles.has(realFile)) {
     return {
       exists: false,
@@ -363,18 +387,22 @@ async function buildArtifactView(params: {
       href: null,
       kind: params.artifact.kind,
       mediaKind,
-      path: params.artifact.path,
+      path: displayPath,
       preview: null,
       source: params.artifact.source,
     };
   }
+  const hrefArtifactPath =
+    realFileRepoPath && path.isAbsolute(params.artifact.path)
+      ? `${REPO_ROOT_ARTIFACT_PATH_PREFIX}${realFileRepoPath}`
+      : params.artifact.path;
   return {
     exists: true,
     error: null,
-    href: artifactHref(params.hrefEvidencePath, params.artifact.path),
+    href: artifactHref(params.hrefEvidencePath, hrefArtifactPath),
     kind: params.artifact.kind,
     mediaKind,
-    path: params.artifact.path,
+    path: displayPath,
     preview: await readPreview(realFile, mediaKind).catch(
       (error: unknown) => `Preview unavailable: ${formatErrorMessage(error)}`,
     ),
@@ -701,6 +729,7 @@ export async function buildQaEvidenceGalleryModel(params: {
                 allowedArtifactFiles,
                 artifact,
                 evidenceDir,
+                extraRoots: [requestedRepoRoot],
                 hrefEvidencePath,
                 repoRoot,
               }),

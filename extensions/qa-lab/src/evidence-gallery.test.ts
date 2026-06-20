@@ -176,6 +176,43 @@ describe("evidence gallery", () => {
     expect(JSON.stringify(model)).not.toContain(repoRoot);
   });
 
+  it("normalizes absolute declared artifact paths for gallery links", async () => {
+    const repoRoot = await createTempRepo();
+    const outputDir = path.join(repoRoot, ".artifacts", "qa-e2e", "vitest");
+    const artifactPath = path.join(outputDir, "absolute.log");
+    await fs.mkdir(outputDir, { recursive: true });
+    await fs.writeFile(artifactPath, "absolute artifact\n", "utf8");
+    const evidence: QaEvidenceSummaryJson = vitestArtifactEvidence({
+      id: "qa-lab.absolute-artifact-path",
+      title: "Absolute artifact path",
+      artifact: { kind: "log", path: artifactPath },
+    });
+    await writeJson(path.join(outputDir, QA_EVIDENCE_FILENAME), evidence);
+
+    const model = await buildQaEvidenceGalleryModel({
+      evidencePath: outputDir,
+      repoRoot,
+    });
+
+    const artifact = model.entries[0]?.artifacts[0];
+    expect(artifact).toMatchObject({
+      exists: true,
+      path: ".artifacts/qa-e2e/vitest/absolute.log",
+      preview: "absolute artifact\n",
+    });
+    expect(artifact?.href).toContain(
+      "artifactPath=%3Crepo-root%3E%2F.artifacts%2Fqa-e2e%2Fvitest%2Fabsolute.log",
+    );
+    expect(JSON.stringify(model)).not.toContain(repoRoot);
+    await expect(
+      resolveQaEvidenceArtifactFile({
+        artifactPath: "<repo-root>/.artifacts/qa-e2e/vitest/absolute.log",
+        evidencePath: outputDir,
+        repoRoot,
+      }),
+    ).resolves.toBe(await fs.realpath(artifactPath));
+  });
+
   it("detects UX Matrix producer context from suite-level evidence artifacts", async () => {
     const repoRoot = await createTempRepo();
     const suiteDir = path.join(repoRoot, ".artifacts", "qa-e2e", "suite");
