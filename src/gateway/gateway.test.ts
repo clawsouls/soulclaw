@@ -266,7 +266,7 @@ describe("gateway e2e", () => {
       });
 
       const token = nextGatewayId("http-tools-token");
-      process.env.OPENCLAW_GATEWAY_TOKEN = token;
+      setTestEnvValue("OPENCLAW_GATEWAY_TOKEN", token);
       const registerCountPath = path.join(tempHome, "workspace-plugin-register-count.txt");
       await writeWorkspacePlugin({
         workspaceDir,
