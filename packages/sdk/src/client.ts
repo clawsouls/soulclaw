@@ -695,7 +695,14 @@ export class Session {
   async send(input: string | Omit<SessionSendParams, "key">): Promise<Run> {
     const params: SessionSendParams =
       typeof input === "string" ? { key: this.key, message: input } : { ...input, key: this.key };
-    const raw = await this.client.request("sessions.send", params, { expectFinal: true });
+    const timeoutMs = normalizeTimeoutMs(params.timeoutMs);
+    if (timeoutMs !== undefined) {
+      params.timeoutMs = timeoutMs;
+    }
+    const raw = await this.client.request("sessions.send", params, {
+      expectFinal: true,
+      ...(timeoutMs !== undefined ? { timeoutMs: timeoutMs === 0 ? null : timeoutMs } : {}),
+    });
     const record = asRecord(raw);
     const runId = readOptionalString(record.runId);
     if (!runId) {
