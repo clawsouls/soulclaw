@@ -24,6 +24,7 @@ export type {
   AgentsDeleteParams,
   AgentsUpdateParams,
   AgentRunParams,
+  ApprovalDecisionParams,
   ApprovalMode,
   ArtifactQuery,
   ArtifactSummary,
