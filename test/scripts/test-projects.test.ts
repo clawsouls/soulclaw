@@ -1440,7 +1440,7 @@ describe("scripts/test-projects changed-target routing", () => {
       ],
       [
         "scripts/lib/bundled-plugin-build-entries.mjs",
-        ["test/scripts/bundled-plugin-build-entries.test.ts"],
+        ["test/scripts/bundled-plugin-build-entries.test.ts", "test/release-check.test.ts"],
       ],
     ]);
 

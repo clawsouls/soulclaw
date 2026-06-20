@@ -733,7 +733,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ],
   [
     "scripts/lib/bundled-plugin-build-entries.mjs",
-    ["test/scripts/bundled-plugin-build-entries.test.ts"],
+    ["test/scripts/bundled-plugin-build-entries.test.ts", "test/release-check.test.ts"],
   ],
   [
     "scripts/lib/bundled-plugin-source-utils.mjs",
