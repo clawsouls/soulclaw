@@ -835,7 +835,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ],
   [
     "scripts/lib/plugin-npm-package-manifest.mjs",
-    ["test/scripts/plugin-npm-package-manifest-args.test.ts"],
+    [
+      "test/scripts/plugin-npm-package-manifest-args.test.ts",
+      "test/plugin-npm-package-manifest.test.ts",
+    ],
   ],
   [
     "scripts/lib/plugin-npm-runtime-assets.mjs",

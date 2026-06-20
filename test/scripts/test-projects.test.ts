@@ -1345,6 +1345,13 @@ describe("scripts/test-projects changed-target routing", () => {
           "test/plugin-npm-runtime-build.test.ts",
         ],
       ],
+      [
+        "scripts/lib/plugin-npm-package-manifest.mjs",
+        [
+          "test/scripts/plugin-npm-package-manifest-args.test.ts",
+          "test/plugin-npm-package-manifest.test.ts",
+        ],
+      ],
       ["scripts/lib/arg-utils.mjs", ["test/scripts/arg-utils.test.ts"]],
       ["scripts/docker/cleanup-smoke/run.sh", ["test/scripts/docker-build-helper.test.ts"]],
       [
