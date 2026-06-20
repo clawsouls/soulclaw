@@ -728,6 +728,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/docs-link-audit.mjs", ["src/scripts/docs-link-audit.test.ts"]],
   ["scripts/lib/arg-utils.mjs", ["test/scripts/arg-utils.test.ts"]],
   [
+    "scripts/lib/android-version.ts",
+    ["test/scripts/android-version.test.ts", "test/scripts/android-pin-version.test.ts"],
+  ],
+  [
     "scripts/lib/bundled-plugin-build-entries.mjs",
     ["test/scripts/bundled-plugin-build-entries.test.ts"],
   ],
@@ -750,6 +754,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/lib/docker-e2e-container.sh", ["test/scripts/docker-build-helper.test.ts"]],
   ["scripts/lib/docker-e2e-package.sh", ["test/scripts/docker-build-helper.test.ts"]],
   ["scripts/lib/format-generated-module.mjs", ["test/scripts/format-generated-module.test.ts"]],
+  [
+    "scripts/lib/ios-version.ts",
+    ["test/scripts/ios-version.test.ts", "test/scripts/ios-pin-version.test.ts"],
+  ],
   ["scripts/lib/live-docker-stage.sh", ["test/scripts/live-docker-stage.test.ts"]],
   ["scripts/lib/local-heavy-check-runtime.mjs", ["test/scripts/local-heavy-check-runtime.test.ts"]],
   ["scripts/lib/kova-report-gate.mjs", ["test/scripts/kova-report-gate.test.ts"]],
