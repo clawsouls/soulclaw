@@ -56,6 +56,7 @@ export type {
   TasksGetResult,
   TasksListParams,
   TasksListResult,
+  ToolsEffectiveParams,
   ToolInvokeParams,
   ToolInvokeResult,
   WorkspaceSelection,
