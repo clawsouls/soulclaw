@@ -1071,6 +1071,13 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps bundled plugin metadata copier edits on runtime owner tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/copy-bundled-plugin-metadata.mjs"])).toEqual({
+      mode: "targets",
+      targets: ["src/plugins/copy-bundled-plugin-metadata.test.ts", "src/infra/run-node.test.ts"],
+    });
+  });
+
   it("keeps CI workflow edits on workflow guard tests", () => {
     expect(resolveChangedTestTargetPlan([".github/workflows/ci.yml"])).toEqual({
       mode: "targets",
