@@ -445,7 +445,7 @@ describe("Parallels smoke model selection", () => {
     expect(retained).toBe(`${"a".repeat(2)}${"b".repeat(10)}`);
   });
 
-  it("reclaims package locks with malformed owner pids", async () => {
+  it("keeps fresh package locks with malformed owner pids", async () => {
     const lockDir = makeTempDir(tempDirs, "openclaw-parallels-package-lock-");
     mkdirSync(lockDir, { recursive: true });
     writeFileSync(join(lockDir, "owner.json"), '{"pid":-1,"token":"stale"}\n');
@@ -456,6 +456,16 @@ describe("Parallels smoke model selection", () => {
     });
 
     await packageArtifactTesting.removeStalePackageLock(lockDir, 2 * 60 * 60_000);
+
+    expect(existsSync(lockDir)).toBe(true);
+  });
+
+  it("reclaims stale package locks with malformed owner pids", async () => {
+    const lockDir = makeTempDir(tempDirs, "openclaw-parallels-package-lock-");
+    mkdirSync(lockDir, { recursive: true });
+    writeFileSync(join(lockDir, "owner.json"), '{"pid":-1,"token":"stale"}\n');
+
+    await packageArtifactTesting.removeStalePackageLock(lockDir, 0);
 
     expect(existsSync(lockDir)).toBe(false);
   });
