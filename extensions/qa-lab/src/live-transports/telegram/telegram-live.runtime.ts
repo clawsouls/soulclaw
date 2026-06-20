@@ -39,6 +39,7 @@ import {
   redactQaLiveLaneIssues,
 } from "../shared/live-artifacts.js";
 import { startQaLiveLaneGateway } from "../shared/live-gateway.runtime.js";
+import { assertLiveScenarioReply as assertTelegramScenarioReply } from "../shared/live-scenario-reply.js";
 import type { LiveTransportCheckResult } from "../shared/live-transport-result.js";
 import {
   normalizeLiveTransportRttOptions,
@@ -1440,22 +1441,6 @@ function matchesTelegramScenarioReply(params: {
     params.message.messageId > params.sentMessageId &&
     params.message.text.includes(params.matchText),
   );
-}
-
-function assertTelegramScenarioReply(params: {
-  expectedTextIncludes?: string[];
-  message: TelegramObservedMessage;
-}) {
-  if (!params.message.text.trim()) {
-    throw new Error(`reply message ${params.message.messageId} was empty`);
-  }
-  for (const expected of params.expectedTextIncludes ?? []) {
-    if (!params.message.text.includes(expected)) {
-      throw new Error(
-        `reply message ${params.message.messageId} missing expected text: ${expected}`,
-      );
-    }
-  }
 }
 
 function assertTelegramCanaryPresenceReply(message: TelegramObservedMessage) {
