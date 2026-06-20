@@ -283,9 +283,10 @@ async function cleanupEnv(root, options = {}) {
 function runCommand(command, args, options = {}) {
   const timeoutMs = options.timeoutMs ?? COMMAND_TIMEOUT_MS;
   return new Promise((resolve, reject) => {
+    const usesProcessGroup = options.detached ?? process.platform !== "win32";
     const child = childProcess.spawn(command, args, {
       cwd: options.cwd ?? process.cwd(),
-      detached: options.detached ?? process.platform !== "win32",
+      detached: usesProcessGroup,
       env: options.env ?? process.env,
       shell: options.shell,
       stdio: options.stdio ?? ["pipe", "pipe", "pipe"],
@@ -297,7 +298,7 @@ function runCommand(command, args, options = {}) {
     let aborted = false;
     let killTimer;
     const abort = () => {
-      if (childHasExited(child)) {
+      if (usesProcessGroup ? !processTreeIsAlive(child) : childHasExited(child)) {
         return;
       }
       aborted = true;
