@@ -1255,6 +1255,9 @@ if (isPrlctl) {
     expect(macos).toContain('rm -rf "$HOME/.npm/_cacache"');
     expect(macos.match(/\.onboard-ref", 420/g)).toHaveLength(2);
     expect(macos).toContain('echo "npm install attempt $attempt failed; retrying in 5s"');
+    expect(macos.match(/curl -fsSL --connect-timeout 10 --max-time 120 --retry 2/g)).toHaveLength(
+      2,
+    );
   });
 
   it("provisions portable Git before Windows dev update lanes", () => {
