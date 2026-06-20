@@ -128,7 +128,6 @@ const config = {
     "**/*.test-utils.ts",
     "test/helpers/live-image-probe.ts",
     "src/secrets/credential-matrix.ts",
-    "src/gateway/live-tool-probe-utils.ts",
     "src/shared/text/assistant-visible-text.ts",
     bundledPluginFile("telegram", "src/bot/reply-threading.ts"),
     bundledPluginFile("telegram", "src/draft-chunking.ts"),
