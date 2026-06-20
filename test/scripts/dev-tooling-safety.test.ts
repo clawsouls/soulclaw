@@ -716,6 +716,60 @@ describe("script-specific dev tooling hardening", () => {
     expect(claudeUsageTesting.CLAUDE_COOKIE_HOST_SQL).not.toContain("%claude.ai%");
   });
 
+  it("rejects malformed Claude usage args before reading auth or browser state", () => {
+    expect(claudeUsageTesting.parseArgs(["--agent", "work", "--session-key=abc"])).toEqual({
+      agentId: "work",
+      help: false,
+      reveal: false,
+      sessionKey: "abc",
+    });
+    expect(claudeUsageTesting.parseArgs(["--help"])).toEqual({
+      agentId: "main",
+      help: true,
+      reveal: false,
+      sessionKey: undefined,
+    });
+    expect(() => claudeUsageTesting.parseArgs(["--wat"])).toThrow("Unknown argument: --wat");
+    expect(() => claudeUsageTesting.parseArgs(["--agent"])).toThrow("--agent requires a value");
+    expect(() => claudeUsageTesting.parseArgs(["--agent="])).toThrow("--agent requires a value");
+    expect(() => claudeUsageTesting.parseArgs(["--session-key", "--reveal"])).toThrow(
+      "--session-key requires a value",
+    );
+    expect(() => claudeUsageTesting.parseArgs(["--session-key= "])).toThrow(
+      "--session-key requires a value",
+    );
+  });
+
+  it("prints Claude usage help without opening auth stores", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["--import", "tsx", "scripts/debug-claude-usage.ts", "--help"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Usage: node --import tsx scripts/debug-claude-usage.ts");
+    expect(result.stderr).toBe("");
+  });
+
+  it("fails missing Claude usage option values before defaulting to main auth", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["--import", "tsx", "scripts/debug-claude-usage.ts", "--agent"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("--agent requires a value");
+  });
+
   it("aborts stalled Claude usage fetches at the request timeout", async () => {
     let signal: AbortSignal | undefined;
     const request = claudeUsageTesting.fetchAnthropicOAuthUsage("test-token", {
