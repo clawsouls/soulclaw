@@ -1937,6 +1937,11 @@ const FULL_ARTIFACT_JSON_NAMES = new Set([
   "telegram-user-crabbox-session-summary.json",
 ]);
 const FULL_ARTIFACT_FILE_EXTENSIONS = new Set([".gif", ".log", ".md", ".mp4", ".png"]);
+const TIMESTAMPED_PROBE_ARTIFACT_JSON = /^probe-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.json$/u;
+
+function isFullArtifactJsonName(name: string) {
+  return FULL_ARTIFACT_JSON_NAMES.has(name) || TIMESTAMPED_PROBE_ARTIFACT_JSON.test(name);
+}
 
 export function stageFullSessionArtifacts(outputDir: string) {
   const publishDir = path.join(outputDir, "publish-full-artifacts");
@@ -1949,7 +1954,7 @@ export function stageFullSessionArtifacts(outputDir: string) {
     }
     const extension = path.extname(entry.name);
     const isPublishableArtifact =
-      FULL_ARTIFACT_FILE_EXTENSIONS.has(extension) || FULL_ARTIFACT_JSON_NAMES.has(entry.name);
+      FULL_ARTIFACT_FILE_EXTENSIONS.has(extension) || isFullArtifactJsonName(entry.name);
     if (!isPublishableArtifact) {
       continue;
     }
