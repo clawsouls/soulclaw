@@ -13,6 +13,9 @@ import {
   recordProbeVideo,
   REMOTE_SETUP_COMMAND_TIMEOUT_MS,
   renderLaunchDesktop,
+  renderRemoteProbe,
+  renderRemoteSetup,
+  renderSelectDesktopChat,
   runCommand,
   startLocalSut,
   waitForLog,
@@ -195,6 +198,54 @@ describe("telegram user Crabbox proof log polling", () => {
     expect(script).toContain('tail -c 262144 "$log_file"');
     expect(script).toContain("print_desktop_log_tail\n  exit 1");
     expect(script).not.toContain('cat "$root/telegram-desktop.log"');
+  });
+
+  it("shell-quotes generated remote setup and chat literals", () => {
+    const payload = "name $(touch /tmp/openclaw-proof-injected) `touch /tmp/also-injected`";
+
+    expect(renderRemoteSetup({ tdlibSha256: payload, tdlibUrl: payload })).toContain(
+      `tdlib_url='${payload}'`,
+    );
+    expect(renderSelectDesktopChat({ chatTitle: payload })).toContain(`chat_title='${payload}'`);
+  });
+
+  posixIt("does not expand generated remote probe arguments in the shell", () => {
+    const root = makeTempDir();
+    const fakePython = path.join(root, "python3");
+    const scriptPath = path.join(root, "remote-probe.sh");
+    const argvPath = path.join(root, "argv.json");
+    const injectedPath = path.join(root, "injected");
+    const payload = `literal ' $(touch ${injectedPath})`;
+    writeExecutable(
+      fakePython,
+      `#!/usr/bin/env node
+import fs from "node:fs";
+fs.writeFileSync(process.env.OPENCLAW_TEST_ARGV_PATH, JSON.stringify(process.argv.slice(1)));
+`,
+    );
+    writeExecutable(
+      scriptPath,
+      renderRemoteProbe({
+        expect: [payload],
+        sutUsername: payload,
+        text: payload,
+        timeoutMs: 1000,
+      }),
+    );
+
+    const result = spawnSync("bash", [scriptPath], {
+      cwd: root,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        OPENCLAW_TEST_ARGV_PATH: argvPath,
+        PATH: `${root}${path.delimiter}${process.env.PATH ?? ""}`,
+      },
+    });
+
+    expect(result.status).toBe(0);
+    expect(fs.existsSync(injectedPath)).toBe(false);
+    expect(JSON.parse(fs.readFileSync(argvPath, "utf8"))).toContain(payload);
   });
 
   posixIt("kills timed-out command process groups when the leader exits first", async () => {
