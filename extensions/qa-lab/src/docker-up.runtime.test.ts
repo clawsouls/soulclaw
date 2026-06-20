@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { runQaDockerUp } from "./docker-up.runtime.js";
+import { shellQuote } from "./shell-quote.js";
 
 type QaDockerUpDeps = NonNullable<Parameters<typeof runQaDockerUp>[1]>;
 
@@ -19,10 +20,6 @@ function createHealthyDockerDeps(calls: string[]): QaDockerUpDeps {
     fetchImpl: vi.fn(async () => ({ ok: true })),
     sleepImpl: vi.fn(async () => {}),
   };
-}
-
-function quoteForShell(value: string) {
-  return `'${value.replaceAll("'", `'"'"'`)}'`;
 }
 
 describe("runQaDockerUp", () => {
@@ -72,7 +69,7 @@ describe("runQaDockerUp", () => {
       expect(result.qaLabUrl).toBe("http://127.0.0.1:43124");
       expect(result.gatewayUrl).toBe("http://127.0.0.1:18889/");
       expect(result.composeFile).toBe(composeFile);
-      expect(result.stopCommand).toBe(`docker compose -f ${quoteForShell(composeFile)} down`);
+      expect(result.stopCommand).toBe(`docker compose -f ${shellQuote(composeFile)} down`);
     } finally {
       await rm(outputDir, { recursive: true, force: true });
     }
@@ -96,7 +93,7 @@ describe("runQaDockerUp", () => {
         createHealthyDockerDeps(calls),
       );
 
-      expect(result.stopCommand).toBe(`docker compose -f ${quoteForShell(composeFile)} down`);
+      expect(result.stopCommand).toBe(`docker compose -f ${shellQuote(composeFile)} down`);
       expect(calls).toContain(
         `docker compose -f ${composeFile} down --remove-orphans @${repoRoot}`,
       );

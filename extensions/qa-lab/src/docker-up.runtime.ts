@@ -12,6 +12,7 @@ import {
   type FetchLike,
   type RunCommand,
 } from "./docker-runtime.js";
+import { shellQuote } from "./shell-quote.js";
 
 type QaDockerUpResult = {
   outputDir: string;
@@ -23,10 +24,6 @@ type QaDockerUpResult = {
 
 function resolveDefaultQaDockerDir(repoRoot: string) {
   return path.resolve(repoRoot, ".artifacts/qa-docker");
-}
-
-function quoteForShell(value: string) {
-  return `'${value.replaceAll("'", `'"'"'`)}'`;
 }
 
 async function isQaLabDockerHealthReachable(url: string, fetchImpl: FetchLike) {
@@ -151,6 +148,6 @@ export async function runQaDockerUp(
     composeFile,
     qaLabUrl,
     gatewayUrl,
-    stopCommand: `docker compose -f ${quoteForShell(composeFile)} down`,
+    stopCommand: `docker compose -f ${shellQuote(composeFile)} down`,
   };
 }
