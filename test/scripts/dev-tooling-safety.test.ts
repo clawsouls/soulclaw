@@ -399,6 +399,44 @@ describe("script-specific dev tooling hardening", () => {
     );
   });
 
+  it("prints OpenAI realtime smoke help without launching live checks", () => {
+    expect(realtimeSmokeTesting.parseRealtimeSmokeArgs(["--help"])).toEqual({ help: true });
+
+    const result = spawnSync(
+      process.execPath,
+      ["--import", "tsx", "scripts/dev/realtime-talk-live-smoke.ts", "--help"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "Usage: node --import tsx scripts/dev/realtime-talk-live-smoke.ts",
+    );
+    expect(result.stderr).toBe("");
+  });
+
+  it("rejects unknown OpenAI realtime smoke args before launching live checks", () => {
+    expect(() => realtimeSmokeTesting.parseRealtimeSmokeArgs(["--wat"])).toThrow(
+      "Unknown argument: --wat",
+    );
+
+    const result = spawnSync(
+      process.execPath,
+      ["--import", "tsx", "scripts/dev/realtime-talk-live-smoke.ts", "--wat"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr.trim()).toBe("Unknown argument: --wat");
+  });
+
   it("bounds OpenAI realtime smoke response body reads by content-length", async () => {
     const maxBytes = realtimeSmokeTesting.OPENAI_HTTP_RESPONSE_MAX_BYTES;
     const response = new Response("{}", {
