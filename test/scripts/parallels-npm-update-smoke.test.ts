@@ -754,6 +754,52 @@ exit 1
     expect(script).toContain('"/usr/sbin/chown", sudoUser, scriptPath');
   });
 
+  it("selects macOS desktop users with homes on spaced mounted volumes", () => {
+    const root = makeTempDir();
+    const prlctlPath = path.join(root, "prlctl");
+    writeFileSync(
+      prlctlPath,
+      `#!/usr/bin/env bash
+set -euo pipefail
+args=" $* "
+if [[ "$args" == *" /usr/bin/stat -f %Su /dev/console"* ]]; then
+  printf '%s\\n' 'loginwindow'
+  exit 0
+fi
+if [[ "$args" == *" /usr/bin/dscl . -list /Users NFSHomeDirectory"* ]]; then
+  printf '%s\\n' '_daemon /var/root'
+  printf '%s\\n' 'clawuser /Volumes/Macintosh HD/Users/clawuser'
+  exit 0
+fi
+exit 7
+`,
+    );
+    chmodSync(prlctlPath, 0o755);
+
+    withEnv(
+      {
+        OPENAI_API_KEY: "test-key",
+        PATH: `${root}${path.delimiter}${process.env.PATH ?? ""}`,
+      },
+      () => {
+        const smoke = new NpmUpdateSmoke({
+          ...TEST_AUTH,
+          json: false,
+          packageSpec: "openclaw@latest",
+          platforms: new Set<Platform>(["macos"]),
+          provider: "openai",
+          updateTarget: "local-main",
+        });
+        const resolveMacosDesktopUser = Reflect.get(
+          smoke,
+          "resolveMacosDesktopUser",
+        ) as () => string;
+
+        expect(resolveMacosDesktopUser.call(smoke)).toBe("clawuser");
+      },
+    );
+  });
+
   it("keeps spaces in macOS sudo fallback desktop homes", () => {
     const root = makeTempDir();
     const prlctlPath = path.join(root, "prlctl");
