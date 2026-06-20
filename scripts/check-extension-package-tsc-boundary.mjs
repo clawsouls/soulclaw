@@ -473,6 +473,7 @@ export function runNodeStepAsync(label, args, timeoutMs, params = {}) {
       child,
       onSignal: (signal) => {
         forwardedSignal ??= signal;
+        queueMicrotask(() => signalChild("SIGKILL"));
       },
     });
     const cleanup = () => {
@@ -566,7 +567,10 @@ export function runNodeStepAsync(label, args, timeoutMs, params = {}) {
       cleanup();
       settled = true;
       if (forwardedSignal) {
-        process.kill(process.pid, forwardedSignal);
+        signalChild("SIGKILL");
+        void waitAfterForceKill().finally(() => {
+          process.kill(process.pid, forwardedSignal);
+        });
         return;
       }
       if (abortController?.signal.aborted) {
