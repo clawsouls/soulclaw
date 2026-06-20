@@ -13,6 +13,7 @@ import {
 import {
   freshLaneTimeoutMs,
   NpmUpdateSmoke,
+  parseRegistryPackageMetadata,
   parseArgs,
   spawnLoggedCommand,
 } from "../../scripts/e2e/parallels/npm-update-smoke.ts";
@@ -208,6 +209,35 @@ exit 1
     expect(script).toContain("this.updateTargetEffective = targetUrl");
     expect(script).toContain("this.freshTargetSpec = targetUrl");
     expect(script).toContain("this.updateExpectedNeedle = this.targetTarballVersion");
+  });
+
+  it("accepts keyed and nested npm metadata for published update targets", () => {
+    expect(
+      parseRegistryPackageMetadata(
+        JSON.stringify({
+          version: "2026.5.20-beta.1",
+          "dist.tarball": "https://registry.example/openclaw-keyed.tgz",
+          gitHead: "abcdef0123456789",
+        }),
+      ),
+    ).toEqual({
+      version: "2026.5.20-beta.1",
+      tarball: "https://registry.example/openclaw-keyed.tgz",
+      gitHead: "abcdef0123456789",
+    });
+
+    expect(
+      parseRegistryPackageMetadata(
+        JSON.stringify({
+          version: "2026.5.20-beta.1",
+          dist: { tarball: "https://registry.example/openclaw-nested.tgz" },
+        }),
+      ),
+    ).toEqual({
+      version: "2026.5.20-beta.1",
+      tarball: "https://registry.example/openclaw-nested.tgz",
+      gitHead: "",
+    });
   });
 
   it("guards beta validation against cross-version harness checkouts", () => {
