@@ -702,6 +702,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/lib/managed-child-process.mjs", ["test/scripts/managed-child-process.test.ts"]],
   ["scripts/lib/npm-verify-exec.ts", ["test/scripts/npm-verify-exec.test.ts"]],
   ["scripts/lib/openclaw-test-state.mjs", ["test/scripts/openclaw-test-state.test.ts"]],
+  [
+    "scripts/lib/plugin-npm-runtime-build.mjs",
+    ["test/scripts/plugin-npm-runtime-build-args.test.ts"],
+  ],
   ["scripts/lib/source-file-scan-cache.mjs", ["test/scripts/source-file-scan-cache.test.ts"]],
   ["scripts/lib/test-group-report.mjs", ["test/scripts/test-group-report.test.ts"]],
   ["scripts/lib/ts-guard-utils.mjs", ["test/scripts/ts-guard-utils.test.ts"]],
@@ -747,6 +751,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ["test/scripts/check-openclaw-package-tarball.test.ts"],
   ],
   ["scripts/check-package-dist-imports.mjs", ["test/scripts/check-package-dist-imports.test.ts"]],
+  [
+    "scripts/check-plugin-npm-runtime-builds.mjs",
+    ["test/scripts/plugin-npm-runtime-build-args.test.ts"],
+  ],
   ["scripts/package-changelog.mjs", ["test/scripts/package-changelog.test.ts"]],
   ["scripts/package-mac-app.sh", ["test/scripts/package-mac-app.test.ts"]],
   ["scripts/package-mac-dist.sh", ["test/scripts/package-mac-dist.test.ts"]],
