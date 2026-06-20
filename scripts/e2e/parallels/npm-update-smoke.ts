@@ -1116,8 +1116,8 @@ export class NpmUpdateSmoke {
       ["exec", this.macosVm, "/usr/bin/dscl", ".", "-read", `/Users/${user}`, "NFSHomeDirectory"],
       { check: false, quiet: true, timeoutMs: 30_000 },
     ).stdout.replaceAll("\r", "");
-    const match = /NFSHomeDirectory:\s*(\S+)/.exec(output);
-    return match?.[1] ?? `/Users/${user}`;
+    const match = /^NFSHomeDirectory:\s+(.+)$/m.exec(output);
+    return match?.[1]?.trim() || `/Users/${user}`;
   }
 
   private async guestWindows(

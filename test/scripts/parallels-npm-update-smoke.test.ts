@@ -689,6 +689,48 @@ exit 1
     expect(script).toContain('"/usr/sbin/chown", sudoUser, scriptPath');
   });
 
+  it("keeps spaces in macOS sudo fallback desktop homes", () => {
+    const root = makeTempDir();
+    const prlctlPath = path.join(root, "prlctl");
+    writeFileSync(
+      prlctlPath,
+      `#!/usr/bin/env bash
+set -euo pipefail
+args=" $* "
+if [[ "$args" == *" /usr/bin/dscl . -read /Users/clawuser NFSHomeDirectory"* ]]; then
+  printf '%s\\n' 'NFSHomeDirectory: /Volumes/Macintosh HD/Users/clawuser'
+  exit 0
+fi
+exit 7
+`,
+    );
+    chmodSync(prlctlPath, 0o755);
+
+    withEnv(
+      {
+        OPENAI_API_KEY: "test-key",
+        PATH: `${root}${path.delimiter}${process.env.PATH ?? ""}`,
+      },
+      () => {
+        const smoke = new NpmUpdateSmoke({
+          ...TEST_AUTH,
+          json: false,
+          packageSpec: "openclaw@latest",
+          platforms: new Set<Platform>(["macos"]),
+          provider: "openai",
+          updateTarget: "local-main",
+        });
+        const resolveMacosDesktopHome = Reflect.get(smoke, "resolveMacosDesktopHome") as (
+          user: string,
+        ) => string;
+
+        expect(resolveMacosDesktopHome.call(smoke, "clawuser")).toBe(
+          "/Volumes/Macintosh HD/Users/clawuser",
+        );
+      },
+    );
+  });
+
   it("scrubs future plugin entries before invoking old same-guest updaters", () => {
     const script = readFileSync(UPDATE_SCRIPTS_PATH, "utf8");
     const macosScript = macosUpdateScript({
