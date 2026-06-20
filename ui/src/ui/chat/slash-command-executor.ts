@@ -9,6 +9,7 @@ import {
 } from "../chat-model-ref.ts";
 import type { GatewayBrowserClient } from "../gateway.ts";
 import { DEFAULT_AGENT_ID, DEFAULT_MAIN_KEY, parseAgentSessionKey } from "../session-key.ts";
+import { sessionModelMatchesDefaults } from "../session-model-defaults.ts";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
@@ -592,16 +593,6 @@ function resolveThinkingLevelOptionsForSession(
     id: normalizeThinkLevel(label) ?? normalizeLowercaseStringOrEmpty(label),
     label,
   }));
-}
-
-function sessionModelMatchesDefaults(
-  session: GatewaySessionRow | undefined,
-  defaults: SessionsListResult["defaults"] | undefined,
-): boolean {
-  return (
-    (!session?.modelProvider || session.modelProvider === defaults?.modelProvider) &&
-    (!session?.model || session.model === defaults?.model)
-  );
 }
 
 async function loadCurrentSession(
