@@ -298,7 +298,11 @@ describe("scripts/test-projects changed-target routing", () => {
     });
     expect(resolveChangedTestTargetPlan(["scripts/lib/docker-e2e-plan.mjs"])).toEqual({
       mode: "targets",
-      targets: ["test/scripts/docker-e2e-plan.test.ts"],
+      targets: [
+        "test/scripts/docker-e2e-plan.test.ts",
+        "test/scripts/docker-all-scheduler.test.ts",
+        "test/scripts/plugin-prerelease-test-plan.test.ts",
+      ],
     });
     expect(resolveChangedTestTargetPlan(["scripts/github/real-behavior-proof-check.mjs"])).toEqual({
       mode: "targets",
