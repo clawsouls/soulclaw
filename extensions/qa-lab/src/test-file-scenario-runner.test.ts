@@ -5,12 +5,14 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { afterEach, describe, expect, it } from "vitest";
 import { validateQaEvidenceSummaryJson } from "./evidence-summary.js";
 import { readQaScenarioById, type QaSeedScenarioWithSource } from "./scenario-catalog.js";
+import { createTempDirHarness } from "./temp-dir.test-helper.js";
 import {
   runQaTestFileScenarios,
   type QaScenarioCommandExecution,
 } from "./test-file-scenario-runner.js";
 
 const tempRoots: string[] = [];
+const { cleanup: cleanupTempDirs, makeTempDir } = createTempDirHarness();
 
 function isProcessRunning(pid: number) {
   try {
@@ -88,9 +90,10 @@ async function makeTempRepo(prefix: string) {
 
 describe("qa test file scenario runner", () => {
   afterEach(async () => {
-    await Promise.all(
-      tempRoots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })),
-    );
+    await Promise.all([
+      cleanupTempDirs(),
+      ...tempRoots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })),
+    ]);
   });
 
   it("runs Playwright scenarios with the repo UI e2e command and writes Playwright evidence", async () => {
@@ -378,11 +381,10 @@ describe("qa test file scenario runner", () => {
     }
 
     const repoRoot = process.cwd();
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "qa-script-timeout-"));
-    tempRoots.push(tempRoot);
+    const tempRoot = await makeTempDir("qa-script-timeout-");
     const scriptPath = path.join(tempRoot, "hanging-producer.ts");
     const descendantPidPath = path.join(tempRoot, "descendant.pid");
-    let descendantPid = 0;
+    let descendantPid: number | undefined;
     try {
       const descendantScript = [
         "process.on('SIGTERM', () => {});",
@@ -418,7 +420,7 @@ describe("qa test file scenario runner", () => {
       expect(result.results[0]?.failureMessage).toMatch(/timed out after 500ms/u);
       await waitForDead(descendantPid, 2_000);
     } finally {
-      if (descendantPid && isProcessRunning(descendantPid)) {
+      if (descendantPid !== undefined && isProcessRunning(descendantPid)) {
         process.kill(descendantPid, "SIGKILL");
       }
     }
@@ -426,8 +428,7 @@ describe("qa test file scenario runner", () => {
 
   it("fails script scenarios that exit cleanly after timeout termination", async () => {
     const repoRoot = process.cwd();
-    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "qa-script-timeout-clean-exit-"));
-    tempRoots.push(tempRoot);
+    const tempRoot = await makeTempDir("qa-script-timeout-clean-exit-");
     const scriptPath = path.join(tempRoot, "clean-exit-after-timeout.ts");
     await fs.writeFile(
       scriptPath,
