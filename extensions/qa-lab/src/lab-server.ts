@@ -139,8 +139,11 @@ function createBootstrapDefaults(autoKickoffTarget?: string): QaLabBootstrapDefa
 
 const CONTROL_UI_CREDENTIAL_QUERY_KEYS = new Set([
   "access_token",
+  "api_key",
+  "apikey",
   "auth",
   "devicetoken",
+  "id_token",
   "password",
   "refresh_token",
   "token",
@@ -158,7 +161,7 @@ function stripSensitiveQueryParams(rawUrl: string): string {
   } catch {
     return rawUrl
       .replace(
-        /([?&])(?:access_token|auth|deviceToken|password|refresh_token|token)=[^&#\s]*&?/gi,
+        /([?&])(?:access_token|api_?key|auth|deviceToken|id_token|password|refresh_token|token)=[^&#\s]*&?/gi,
         (match: string, separator: string) => (match.endsWith("&") ? separator : ""),
       )
       .replace(/[?&]$/, "")
