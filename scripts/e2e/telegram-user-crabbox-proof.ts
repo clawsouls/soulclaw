@@ -869,6 +869,9 @@ function sleep(ms: number) {
 }
 
 function waitForChildExit(child: ChildProcess) {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return Promise.resolve(child.exitCode);
+  }
   return new Promise<number | null>((resolve, reject) => {
     child.once("error", reject);
     child.once("exit", resolve);

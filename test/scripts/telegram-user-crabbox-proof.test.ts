@@ -411,4 +411,43 @@ setInterval(() => {}, 1000);
     const recorderPid = Number.parseInt(fs.readFileSync(recorderPidPath, "utf8"), 10);
     await waitFor(() => !isProcessAlive(recorderPid));
   });
+
+  posixIt(
+    "does not wait forever when Crabbox recording exits before the probe returns",
+    async () => {
+      const root = makeTempDir();
+      const recorderPath = path.join(root, "fake-crabbox-recorder.mjs");
+      const recorderExitPath = path.join(root, "recorder.exit");
+      writeExecutable(
+        recorderPath,
+        `#!/usr/bin/env node
+import fs from "node:fs";
+
+fs.writeFileSync(${JSON.stringify(recorderExitPath)}, "exited");
+`,
+      );
+
+      await expect(
+        Promise.race([
+          recordProbeVideo({
+            crabboxBin: recorderPath,
+            cwd: root,
+            durationSeconds: 1,
+            leaseId: "cbx_test",
+            outputPath: path.join(root, "proof.mp4"),
+            provider: "aws",
+            runProbe: async () => {
+              await waitFor(() => fs.existsSync(recorderExitPath));
+              await delay(50);
+            },
+            startDelayMs: 0,
+            target: "linux",
+          }),
+          delay(2_000).then(() => {
+            throw new Error("recordProbeVideo hung after the recorder had already exited");
+          }),
+        ]),
+      ).resolves.toBeUndefined();
+    },
+  );
 });
