@@ -1577,11 +1577,15 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/e2e/parallels/linux-smoke.ts",
         "scripts/e2e/parallels/phase-runner.ts",
         "scripts/e2e/parallels/macos-smoke.ts",
+        "scripts/e2e/parallels-macos-smoke.sh",
+        "scripts/e2e/parallels-linux-smoke.sh",
+        "scripts/e2e/parallels-npm-update-smoke.sh",
         "scripts/e2e/parallels/npm-update-smoke.ts",
         "scripts/e2e/parallels/npm-update-scripts.ts",
         "scripts/e2e/parallels/smoke-common.ts",
         "scripts/e2e/parallels/update-job-timeout.ts",
         "scripts/e2e/parallels/windows-smoke.ts",
+        "scripts/e2e/parallels-windows-smoke.sh",
       ]),
     ).toEqual([
       {

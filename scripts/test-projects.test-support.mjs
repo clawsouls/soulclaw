@@ -2451,7 +2451,10 @@ function isToolingScriptPath(changedPath) {
 }
 
 function resolveParallelsToolingTestTargets(changedPath) {
-  if (!/^scripts\/e2e\/parallels\/[^/]+\.ts$/u.test(changedPath)) {
+  if (
+    !/^scripts\/e2e\/parallels\/[^/]+\.ts$/u.test(changedPath) &&
+    !/^scripts\/e2e\/parallels-(?:linux|macos|npm-update|windows)-smoke\.sh$/u.test(changedPath)
+  ) {
     return null;
   }
   const targets = ["test/scripts/parallels-smoke-model.test.ts"];
