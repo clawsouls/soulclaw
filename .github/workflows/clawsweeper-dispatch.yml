@@ -26,7 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     if: >-
       ${{
-        github.event_name == 'issue_comment' ||
+        (github.event_name != 'issue_comment' ||
+          (github.actor != 'clawsweeper[bot]' && github.actor != 'openclaw-clawsweeper[bot]')) &&
         !(
           endsWith(github.actor, '[bot]') &&
           (github.event.action == 'labeled' || github.event.action == 'unlabeled')
