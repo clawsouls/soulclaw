@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { createBoundedChildOutput } from "../helpers/bounded-child-output.js";
+import { cleanupTempDirs, makeTempDir } from "../helpers/temp-dir.js";
 
 const ASSERTIONS_SCRIPT = "scripts/e2e/lib/plugins/assertions.mjs";
 
@@ -845,7 +846,8 @@ test -d "$OPENCLAW_PLUGINS_TMP_DIR"
   });
 
   it("rejects ClawHub install paths that resolve outside the managed extensions root", () => {
-    const root = mkdtempSync(path.join(tmpdir(), "openclaw-plugins-clawhub-path-"));
+    const tempDirs: string[] = [];
+    const root = makeTempDir(tempDirs, "openclaw-plugins-clawhub-path-");
     const home = path.join(root, "home");
     const scratchRoot = path.join(root, "scratch");
     const extensionsRoot = path.join(home, ".openclaw", "extensions");
@@ -888,7 +890,7 @@ test -d "$OPENCLAW_PLUGINS_TMP_DIR"
       expect(result.status).not.toBe(0);
       expect(result.stderr).toContain("ClawHub install path resolved outside");
     } finally {
-      rmSync(root, { force: true, recursive: true });
+      cleanupTempDirs(tempDirs);
     }
   });
 
