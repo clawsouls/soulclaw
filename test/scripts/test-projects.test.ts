@@ -1366,6 +1366,10 @@ describe("scripts/test-projects changed-target routing", () => {
       ["scripts/lib/test-group-report.mjs", ["test/scripts/test-group-report.test.ts"]],
       ["scripts/lib/stable-release-closeout.mjs", ["test/stable-release-closeout.test.ts"]],
       ["scripts/lib/ts-guard-utils.mjs", ["test/scripts/ts-guard-utils.test.ts"]],
+      [
+        "scripts/lib/tsgo-sparse-guard.mjs",
+        ["test/scripts/run-tsgo.test.ts", "test/scripts/changed-lanes.test.ts"],
+      ],
       ["scripts/write-package-dist-inventory.ts", ["test/scripts/test-install-sh-docker.test.ts"]],
       ["scripts/lib/format-generated-module.mjs", ["test/scripts/format-generated-module.test.ts"]],
       [

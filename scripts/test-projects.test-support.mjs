@@ -813,6 +813,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/lib/source-file-scan-cache.mjs", ["test/scripts/source-file-scan-cache.test.ts"]],
   ["scripts/lib/test-group-report.mjs", ["test/scripts/test-group-report.test.ts"]],
   ["scripts/lib/ts-guard-utils.mjs", ["test/scripts/ts-guard-utils.test.ts"]],
+  [
+    "scripts/lib/tsgo-sparse-guard.mjs",
+    ["test/scripts/run-tsgo.test.ts", "test/scripts/changed-lanes.test.ts"],
+  ],
   ["scripts/lib/vitest-local-scheduling.mjs", ["test/scripts/vitest-local-scheduling.test.ts"]],
   [
     "scripts/mantis/build-telegram-evidence.mjs",
