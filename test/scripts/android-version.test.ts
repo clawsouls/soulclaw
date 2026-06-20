@@ -62,6 +62,20 @@ describe("resolveAndroidVersion", () => {
     expect(result.stderr).toBe("");
   });
 
+  it("rejects missing Android sync CLI root values before reading version files", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["--import", "tsx", "scripts/android-sync-versioning.ts", "--root", "--check"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe("Missing value for --root.\n");
+  });
+
   it("parses pinned release versions and Android version codes", () => {
     const rootDir = writeAndroidFixture({
       version: "2026.6.2",
