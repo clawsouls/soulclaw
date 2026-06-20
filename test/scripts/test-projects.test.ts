@@ -1152,9 +1152,37 @@ describe("scripts/test-projects changed-target routing", () => {
       targets: ["test/scripts/dependency-changes-report.test.ts"],
     });
 
+    expect(resolveChangedTestTargetPlan(["scripts/github/dependency-guard.mjs"])).toEqual({
+      mode: "targets",
+      targets: [
+        "test/scripts/dependency-guard-script.test.ts",
+        "test/scripts/dependency-guard-workflow.test.ts",
+      ],
+    });
+
+    expect(resolveChangedTestTargetPlan(["scripts/github/guard-shared.mjs"])).toEqual({
+      mode: "targets",
+      targets: [
+        "test/scripts/dependency-guard-script.test.ts",
+        "test/scripts/dependency-guard-workflow.test.ts",
+        "test/scripts/security-sensitive-guard-script.test.ts",
+        "test/scripts/security-sensitive-guard-workflow.test.ts",
+      ],
+    });
+
+    expect(
+      resolveChangedTestTargetPlan(["scripts/github/run-openclaw-cross-os-release-checks.sh"]),
+    ).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/openclaw-cross-os-release-workflow.test.ts"],
+    });
+
     expect(resolveChangedTestTargetPlan(["scripts/github/security-sensitive-guard.mjs"])).toEqual({
       mode: "targets",
-      targets: ["test/scripts/security-sensitive-guard-script.test.ts"],
+      targets: [
+        "test/scripts/security-sensitive-guard-script.test.ts",
+        "test/scripts/security-sensitive-guard-workflow.test.ts",
+      ],
     });
 
     expect(

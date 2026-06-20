@@ -667,8 +667,31 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ],
   ["scripts/dependency-changes-report.mjs", ["test/scripts/dependency-changes-report.test.ts"]],
   [
+    "scripts/github/dependency-guard.mjs",
+    [
+      "test/scripts/dependency-guard-script.test.ts",
+      "test/scripts/dependency-guard-workflow.test.ts",
+    ],
+  ],
+  [
+    "scripts/github/guard-shared.mjs",
+    [
+      "test/scripts/dependency-guard-script.test.ts",
+      "test/scripts/dependency-guard-workflow.test.ts",
+      "test/scripts/security-sensitive-guard-script.test.ts",
+      "test/scripts/security-sensitive-guard-workflow.test.ts",
+    ],
+  ],
+  [
+    "scripts/github/run-openclaw-cross-os-release-checks.sh",
+    ["test/scripts/openclaw-cross-os-release-workflow.test.ts"],
+  ],
+  [
     "scripts/github/security-sensitive-guard.mjs",
-    ["test/scripts/security-sensitive-guard-script.test.ts"],
+    [
+      "test/scripts/security-sensitive-guard-script.test.ts",
+      "test/scripts/security-sensitive-guard-workflow.test.ts",
+    ],
   ],
   [
     "scripts/dependency-ownership-surface-report.mjs",
