@@ -341,7 +341,14 @@ describe("evidence gallery", () => {
             artifacts: [
               {
                 kind: "screenshot",
-                path: ".artifacts/qa-e2e/suite/script/ux-matrix-evidence-dashboard/run-1/surfaces/web-ui/stages/first-run/screenshot.png",
+                path: path.join(
+                  runDir,
+                  "surfaces",
+                  "web-ui",
+                  "stages",
+                  "first-run",
+                  "screenshot.png",
+                ),
                 source: "ux-matrix:web-ui:first-run",
               },
             ],

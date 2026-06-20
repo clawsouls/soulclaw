@@ -537,7 +537,9 @@ function buildUxMatrixEvidenceEntryIndex(entries: readonly QaEvidenceSummaryEntr
 }
 
 function readMatrixCells(params: {
+  extraRoots: readonly string[];
   matrix: Record<string, unknown> | null;
+  repoRoot: string;
   summaryEntries: readonly QaEvidenceSummaryEntry[];
 }): QaEvidenceMatrixCellView[] {
   const rawCells = Array.isArray(params.matrix?.cells)
@@ -560,7 +562,12 @@ function readMatrixCells(params: {
     return [
       {
         artifactKinds: readStringArray(artifacts.map((artifact) => artifact.kind)),
-        artifactPaths: artifacts.map((artifact) => artifact.path),
+        artifactPaths: artifacts.map((artifact) =>
+          displayGalleryPath(artifact.path, {
+            extraRoots: params.extraRoots,
+            repoRoot: params.repoRoot,
+          }),
+        ),
         coverageIds: readStringArray(Array.isArray(cell.coverageIds) ? cell.coverageIds : []),
         runner: runner
           ? {
@@ -674,7 +681,9 @@ async function buildProducerContext(params: {
     QaEvidenceProducerContextFile | null
   >;
   const matrixCells = readMatrixCells({
+    extraRoots: params.extraRoots,
     matrix,
+    repoRoot,
     summaryEntries: params.summaryEntries,
   });
   return {
