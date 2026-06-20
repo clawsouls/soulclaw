@@ -148,6 +148,7 @@ export function startMatrixQaOpenClawCli(params: {
   let closed = false;
   let closeError: Error | undefined;
   let closeResult: MatrixQaCliRunResult | undefined;
+  let killRequested = false;
   let timedOut = false;
   let forceKillTimeout: NodeJS.Timeout | undefined;
   let forceSettleTimeout: NodeJS.Timeout | undefined;
@@ -187,6 +188,13 @@ export function startMatrixQaOpenClawCli(params: {
   const finishTimeout = (result: MatrixQaCliRunResult) => {
     finish(result, new Error(formatMatrixQaCliTimeoutError(result, params.timeoutMs)));
   };
+  const finishResult = (result: MatrixQaCliRunResult) => {
+    if (result.exitCode !== 0 && params.allowNonZero !== true) {
+      finish(result, new Error(formatMatrixQaCliExitError(result)));
+      return;
+    }
+    finish(result);
+  };
   const clearForcedTimeouts = () => {
     if (forceKillTimeout) {
       clearTimeout(forceKillTimeout);
@@ -197,16 +205,23 @@ export function startMatrixQaOpenClawCli(params: {
       forceSettleTimeout = undefined;
     }
   };
-
-  const timeout = setTimeout(() => {
-    timedOut = true;
-    killMatrixQaCliChild(child, "SIGTERM");
+  const finishForcedCleanup = (result: MatrixQaCliRunResult) => {
+    if (timedOut) {
+      finishTimeout(result);
+      return;
+    }
+    finishResult(result);
+  };
+  const scheduleForcedCleanup = () => {
+    if (forceKillTimeout || forceSettleTimeout) {
+      return;
+    }
     forceKillTimeout = setTimeout(() => {
       forceKillTimeout = undefined;
       killMatrixQaCliChild(child, "SIGKILL");
       forceSettleTimeout = setTimeout(() => {
         forceSettleTimeout = undefined;
-        finishTimeout(
+        finishForcedCleanup(
           buildMatrixQaCliResult({
             args: params.args,
             exitCode: 1,
@@ -215,6 +230,12 @@ export function startMatrixQaOpenClawCli(params: {
         );
       }, MATRIX_QA_CLI_TIMEOUT_FORCE_SETTLE_MS);
     }, MATRIX_QA_CLI_TIMEOUT_KILL_GRACE_MS);
+  };
+
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    killMatrixQaCliChild(child, "SIGTERM");
+    scheduleForcedCleanup();
   }, params.timeoutMs);
 
   child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
@@ -241,20 +262,17 @@ export function startMatrixQaOpenClawCli(params: {
       exitCode: exitCode ?? 1,
       output: readOutput(),
     });
-    if (timedOut) {
+    if (timedOut || killRequested) {
+      // A closed parent is not proof that detached, ignored-stdio descendants are gone.
       if (isMatrixQaCliChildProcessGroupRunning(child)) {
         return;
       }
       clearForcedTimeouts();
-      finishTimeout(result);
+      finishForcedCleanup(result);
       return;
     }
     clearForcedTimeouts();
-    if (result.exitCode !== 0 && params.allowNonZero !== true) {
-      finish(result, new Error(formatMatrixQaCliExitError(result)));
-      return;
-    }
-    finish(result);
+    finishResult(result);
   });
 
   return {
@@ -310,7 +328,10 @@ export function startMatrixQaOpenClawCli(params: {
     },
     kill: () => {
       if (!closed) {
+        clearTimeout(timeout);
+        killRequested = true;
         killMatrixQaCliChild(child, "SIGTERM");
+        scheduleForcedCleanup();
       }
     },
   };
