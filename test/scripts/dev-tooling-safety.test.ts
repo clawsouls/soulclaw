@@ -1,4 +1,5 @@
 // Dev Tooling Safety tests cover dev tooling safety script behavior.
+import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -203,6 +204,45 @@ describe("script-specific dev tooling hardening", () => {
       }),
     ).rejects.toThrow(/exceeded total timeout/u);
     expect(calls).toBe(1);
+  });
+
+  it("prints TUI PTY watch usage without launching the watcher", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["--import", "tsx", "scripts/dev/tui-pty-test-watch.ts", "--help"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Usage: node --import tsx scripts/dev/tui-pty-test-watch.ts");
+    expect(result.stderr).toBe("");
+  });
+
+  it("rejects unknown TUI PTY watch args before launching the watcher", () => {
+    expect(() => tuiPtyWatchTesting.parseOptions(["--wat"])).toThrow("Unknown argument: --wat");
+
+    const result = spawnSync(
+      process.execPath,
+      ["--import", "tsx", "scripts/dev/tui-pty-test-watch.ts", "--wat"],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr.trim()).toBe("Unknown argument: --wat");
+    expect(result.stdout).toBe("");
+  });
+
+  it("keeps TUI PTY watch vitest args behind the separator", () => {
+    expect(tuiPtyWatchTesting.parseOptions(["--mode", "all", "--", "--help"])).toMatchObject({
+      mode: "all",
+      vitestArgs: ["--help"],
+    });
   });
 
   it("escalates stalled TUI PTY watch children after interrupt cleanup", async () => {
