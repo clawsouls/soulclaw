@@ -55,6 +55,7 @@ import {
   tailFile,
   unwrapRpcPayload,
   usesBuiltOpenClawEntry,
+  validateCliArgs,
   waitForGatewayReady,
 } from "../../scripts/e2e/kitchen-sink-rpc-walk.mjs";
 import { cleanupTempDirs, makeTempDir } from "../helpers/temp-dir.js";
@@ -114,6 +115,23 @@ describe("kitchen-sink RPC isolated state", () => {
     expect(shouldPrintHelp(["--help"])).toBe(true);
     expect(shouldPrintHelp(["-h"])).toBe(true);
     expect(shouldPrintHelp([])).toBe(false);
+  });
+
+  it("rejects unknown CLI args before creating temp state", async () => {
+    expect(() => validateCliArgs(["--wat"])).toThrow("Unknown argument: --wat");
+
+    const error = await runCommand(process.execPath, [
+      "scripts/e2e/kitchen-sink-rpc-walk.mjs",
+      "--wat",
+    ]).then(
+      () => undefined,
+      (caught: unknown) => caught as Error & { stderr?: string; stdout?: string },
+    );
+
+    expect(error).toBeDefined();
+    expect(error?.stdout).toBe("");
+    expect(error?.stderr?.trim()).toBe("Unknown argument: --wat");
+    expect(error?.stderr).not.toContain("temp root preserved");
   });
 
   it("rejects loose numeric env values before they bypass runtime guardrails", () => {
