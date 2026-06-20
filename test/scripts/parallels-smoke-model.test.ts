@@ -40,7 +40,11 @@ import {
   validateSnapshotRestoreMode,
   withProgressOnStderr,
 } from "../../scripts/e2e/parallels/common.ts";
-import { LinuxGuest, MacosGuest } from "../../scripts/e2e/parallels/guest-transports.ts";
+import {
+  LinuxGuest,
+  MacosGuest,
+  runWindowsBackgroundPowerShell,
+} from "../../scripts/e2e/parallels/guest-transports.ts";
 import { resolveHostCommandInvocation } from "../../scripts/e2e/parallels/host-command.ts";
 import { testing as hostServerTesting } from "../../scripts/e2e/parallels/host-server.ts";
 import { parseArgs as parseLinuxSmokeArgs } from "../../scripts/e2e/parallels/linux-smoke.ts";
@@ -1379,6 +1383,27 @@ if (isPrlctl) {
     expect(transports).toContain("Start-Process -FilePath powershell.exe");
     expect(transports).toContain('launch.stdout.includes("started")');
     expect(transports).toContain("waitForWindowsBackgroundMaterialized");
+  });
+
+  it("paces ambiguous Windows background launch materialization probes", async () => {
+    let calls = 0;
+    const runCommand = vi.fn(() => {
+      calls++;
+      return { status: 0, stderr: "", stdout: "" };
+    });
+
+    await expect(
+      runWindowsBackgroundPowerShell({
+        label: "ambiguous launch",
+        pollIntervalMs: 20,
+        runCommand,
+        script: "Write-Output ok",
+        timeoutMs: 90,
+        vmName: "Windows 11",
+      }),
+    ).rejects.toThrow("ambiguous launch background launch failed");
+
+    expect(calls).toBeLessThan(20);
   });
 
   it("returns timed-out host command status when check is disabled", () => {
