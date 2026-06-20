@@ -371,6 +371,89 @@ process.exit(2);
     await waitFor(() => !isProcessAlive(mockPid));
   });
 
+  posixIt("cleans gateway descendants after a failed gateway leader exits", async () => {
+    const root = makeTempDir();
+    const outputDir = makeTempDir();
+    const mockScript = path.join(root, "scripts/e2e/mock-openai-server.mjs");
+    const gatewayScript = path.join(root, "gateway-leader-exits.mjs");
+    const gatewayGrandchildPidPath = path.join(root, "gateway-grandchild.pid");
+    let gatewayGrandchildPid = 0;
+    fs.mkdirSync(path.dirname(mockScript), { recursive: true });
+    writeExecutable(
+      mockScript,
+      `
+process.stdout.write("mock-openai listening\\n");
+process.on("SIGTERM", () => process.exit(0));
+setInterval(() => {}, 1000);
+`,
+    );
+    writeExecutable(
+      gatewayScript,
+      `
+import { spawn } from "node:child_process";
+import fs from "node:fs";
+
+const grandchild = spawn(process.execPath, [
+  "-e",
+  "process.on('SIGTERM', () => process.exit(0)); setInterval(() => {}, 1000);",
+], { stdio: "ignore" });
+fs.writeFileSync(${JSON.stringify(gatewayGrandchildPidPath)}, String(grandchild.pid));
+process.exit(2);
+`,
+    );
+
+    try {
+      await expect(
+        startLocalSut(
+          {
+            gatewayPort: 19042,
+            groupId: "group",
+            mockPort: 19043,
+            mockResponseText: "ok",
+            outputDir,
+            repoRoot: root,
+            sutToken: "token",
+            testerId: "tester",
+          },
+          {
+            createGatewaySpawnSpec: () => ({
+              args: [gatewayScript],
+              command: process.execPath,
+              options: { cwd: root, env: process.env },
+            }),
+            drainUpdates: async () => ({
+              drained: 0,
+              webhookUrlSet: false,
+            }),
+            waitForOutputReady: async (child, _pattern, output, label) => {
+              if (label === "mock-openai") {
+                await waitFor(() => output().includes("mock-openai listening"));
+                return;
+              }
+              await waitFor(() => fs.existsSync(gatewayGrandchildPidPath));
+              gatewayGrandchildPid = Number.parseInt(
+                fs.readFileSync(gatewayGrandchildPidPath, "utf8"),
+                10,
+              );
+              if (child.exitCode === null && child.signalCode === null) {
+                await new Promise<void>((resolve) => {
+                  child.once("exit", () => resolve());
+                });
+              }
+              throw new Error("gateway exited before ready");
+            },
+          },
+        ),
+      ).rejects.toThrow("gateway exited before ready");
+
+      await waitFor(() => !isProcessAlive(gatewayGrandchildPid));
+    } finally {
+      if (gatewayGrandchildPid && isProcessAlive(gatewayGrandchildPid)) {
+        process.kill(gatewayGrandchildPid, "SIGKILL");
+      }
+    }
+  });
+
   posixIt("stops Crabbox recording when the desktop probe fails", async () => {
     const root = makeTempDir();
     const recorderPath = path.join(root, "fake-crabbox-recorder.mjs");

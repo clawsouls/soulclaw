@@ -813,7 +813,7 @@ function waitForOutput(
 }
 
 function killTree(child: ChildProcess | undefined) {
-  if (!child || child.killed || child.exitCode !== null) {
+  if (!child) {
     return;
   }
   if (!child.pid) {
