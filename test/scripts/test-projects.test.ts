@@ -1443,6 +1443,7 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/lib/bundled-plugin-build-entries.mjs",
         ["test/scripts/bundled-plugin-build-entries.test.ts", "test/release-check.test.ts"],
       ],
+      ["scripts/lib/changed-extensions.mjs", ["test/scripts/test-extension.test.ts"]],
     ]);
 
     for (const [source, targets] of expectedTargets) {
