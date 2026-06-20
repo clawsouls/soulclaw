@@ -104,6 +104,16 @@ function displayGalleryPath(
   return sanitizeGalleryText(value, params);
 }
 
+function sanitizeGalleryPreview(
+  value: string | null,
+  params: {
+    extraRoots?: readonly string[];
+    repoRoot: string;
+  },
+) {
+  return value === null ? null : sanitizeGalleryText(value, params);
+}
+
 async function realpathIfExists(filePath: string): Promise<string | null> {
   return fs.realpath(filePath).catch(() => null);
 }
@@ -356,6 +366,7 @@ function artifactHref(evidencePath: string, artifactPath: string) {
 async function buildProducerContextFile(params: {
   allowedRoots: readonly string[];
   artifactPath: string;
+  extraRoots: readonly string[];
   filePath: string;
   hrefEvidencePath: string;
   previewKind: "json" | "text";
@@ -369,7 +380,14 @@ async function buildProducerContextFile(params: {
   return {
     href: artifactHref(params.hrefEvidencePath, params.artifactPath),
     path: repoPath,
-    preview: await readPreview(realFile, params.previewKind).catch(() => null),
+    preview: await readPreview(realFile, params.previewKind)
+      .then((preview) =>
+        sanitizeGalleryPreview(preview, {
+          extraRoots: params.extraRoots,
+          repoRoot: params.repoRoot,
+        }),
+      )
+      .catch(() => null),
   };
 }
 
@@ -422,9 +440,19 @@ async function buildArtifactView(params: {
     kind: params.artifact.kind,
     mediaKind,
     path: displayPath,
-    preview: await readPreview(realFile, mediaKind).catch(
-      (error: unknown) => `Preview unavailable: ${formatErrorMessage(error)}`,
-    ),
+    preview: await readPreview(realFile, mediaKind)
+      .then((preview) =>
+        sanitizeGalleryPreview(preview, {
+          extraRoots: params.extraRoots,
+          repoRoot: params.repoRoot,
+        }),
+      )
+      .catch((error: unknown) =>
+        sanitizeGalleryText(`Preview unavailable: ${formatErrorMessage(error)}`, {
+          extraRoots: params.extraRoots,
+          repoRoot: params.repoRoot,
+        }),
+      ),
     source: params.artifact.source,
   };
 }
@@ -603,6 +631,7 @@ async function findUxMatrixProducerRoot(params: {
 
 async function buildProducerContext(params: {
   evidencePath: string;
+  extraRoots: readonly string[];
   hrefEvidencePath: string;
   repoRoot: string;
   summaryEntries: readonly QaEvidenceSummaryEntry[];
@@ -632,6 +661,7 @@ async function buildProducerContext(params: {
         await buildProducerContextFile({
           allowedRoots,
           artifactPath: toRepoRelativePath(repoRoot, producerPaths[file.key]),
+          extraRoots: params.extraRoots,
           filePath: producerPaths[file.key],
           hrefEvidencePath: params.hrefEvidencePath,
           previewKind: file.previewKind,
@@ -784,6 +814,7 @@ export async function buildQaEvidenceGalleryModel(params: {
     profile: summary.profile ?? null,
     producerContext: await buildProducerContext({
       evidencePath,
+      extraRoots: [requestedRepoRoot],
       hrefEvidencePath,
       repoRoot,
       summaryEntries: summary.entries,

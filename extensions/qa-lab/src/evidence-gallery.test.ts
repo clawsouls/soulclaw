@@ -181,7 +181,11 @@ describe("evidence gallery", () => {
     const outputDir = path.join(repoRoot, ".artifacts", "qa-e2e", "vitest");
     const artifactPath = path.join(outputDir, "absolute.log");
     await fs.mkdir(outputDir, { recursive: true });
-    await fs.writeFile(artifactPath, "absolute artifact\n", "utf8");
+    await fs.writeFile(
+      artifactPath,
+      `absolute artifact ${repoRoot}\nfile://${repoRoot}/trace.log\n`,
+      "utf8",
+    );
     const evidence: QaEvidenceSummaryJson = vitestArtifactEvidence({
       id: "qa-lab.absolute-artifact-path",
       title: "Absolute artifact path",
@@ -205,7 +209,7 @@ describe("evidence gallery", () => {
     expect(artifact).toMatchObject({
       exists: true,
       path: ".artifacts/qa-e2e/vitest/absolute.log",
-      preview: "absolute artifact\n",
+      preview: "absolute artifact <repo-root>\nfile://<repo-root>/trace.log\n",
     });
     expect(artifact?.href).toContain(
       "artifactPath=%3Crepo-root%3E%2F.artifacts%2Fqa-e2e%2Fvitest%2Fabsolute.log",
