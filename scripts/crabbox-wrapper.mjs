@@ -2009,13 +2009,7 @@ function awsMacosScriptBootstrapRequirements(script) {
   const requirements = { packageManager: false, bun: false };
   const firstLine = script.match(/^[^\r\n]*/u)?.[0] ?? "";
   if (firstLine.startsWith("#!")) {
-    let words = firstLine.slice(2).trim().split(/\s+/u).filter(Boolean);
-    if ((words[0] ?? "").split("/").pop() === "env") {
-      words = words.slice(1);
-      while ((words[0] ?? "").startsWith("-")) {
-        words = words.slice(1);
-      }
-    }
+    const words = firstLine.slice(2).trim().split(/\s+/u).filter(Boolean);
     requirements.packageManager = commandWordsNeedEntrypoint(words, awsMacosCorepackEntrypoints);
     requirements.bun = commandWordsNeedEntrypoint(words, awsMacosBunEntrypoints);
     return requirements;
