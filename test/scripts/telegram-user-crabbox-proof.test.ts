@@ -1,9 +1,10 @@
 // Telegram User Crabbox Proof tests cover telegram user crabbox proof script behavior.
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   COMMAND_TIMEOUT_MS,
@@ -306,6 +307,84 @@ setInterval(() => {}, 1000);
       await runResult.catch(() => {});
       if (grandchildPid && isProcessAlive(grandchildPid)) {
         process.kill(grandchildPid, "SIGKILL");
+      }
+    }
+  });
+
+  posixIt("keeps closed command groups tracked for parent cleanup", async () => {
+    const root = makeTempDir();
+    const commandPath = path.join(root, "closed-command.mjs");
+    const runnerPath = path.join(root, "closed-command-runner.mjs");
+    const commandSettledPath = path.join(root, "command-settled");
+    const descendantPidPath = path.join(root, "closed-command-descendant.pid");
+    const descendantTermPath = path.join(root, "closed-command-descendant.term");
+    let descendantPid = 0;
+
+    fs.writeFileSync(
+      commandPath,
+      `
+import { spawn } from "node:child_process";
+import fs from "node:fs";
+
+const descendant = spawn(process.execPath, [
+  "-e",
+  ${JSON.stringify(
+    `const fs = require("node:fs");
+fs.writeFileSync(${JSON.stringify(descendantPidPath)}, String(process.pid));
+process.on("SIGTERM", () => {
+  fs.writeFileSync(${JSON.stringify(descendantTermPath)}, "terminated");
+  process.exit(0);
+});
+setInterval(() => {}, 1000);`,
+  )},
+], { stdio: "ignore" });
+descendant.unref();
+`,
+      "utf8",
+    );
+    fs.writeFileSync(
+      runnerPath,
+      `
+import fs from "node:fs";
+
+const proof = await import(${JSON.stringify(
+        pathToFileURL(path.resolve("scripts/e2e/telegram-user-crabbox-proof.ts")).href,
+      )});
+await proof.runCommand({
+  args: [${JSON.stringify(commandPath)}],
+  command: process.execPath,
+  cwd: ${JSON.stringify(root)},
+  timeoutMs: 30_000,
+});
+fs.writeFileSync(${JSON.stringify(commandSettledPath)}, "1");
+setInterval(() => {}, 1000);
+`,
+      "utf8",
+    );
+
+    const runner = spawn(process.execPath, ["--import", "tsx", runnerPath], {
+      cwd: process.cwd(),
+      stdio: "ignore",
+    });
+    try {
+      await waitFor(() => fs.existsSync(descendantPidPath));
+      descendantPid = Number.parseInt(fs.readFileSync(descendantPidPath, "utf8"), 10);
+      expect(isProcessAlive(descendantPid)).toBe(true);
+      await waitFor(() => fs.existsSync(commandSettledPath));
+      if (!runner.pid) {
+        throw new Error("runner did not start");
+      }
+
+      process.kill(runner.pid, "SIGTERM");
+
+      await waitFor(() => fs.existsSync(descendantTermPath));
+      await waitFor(() => !isProcessAlive(descendantPid));
+    } finally {
+      if (runner.pid && isProcessAlive(runner.pid)) {
+        process.kill(runner.pid, "SIGKILL");
+      }
+      if (descendantPid && isProcessAlive(descendantPid)) {
+        process.kill(descendantPid, "SIGKILL");
       }
     }
   });

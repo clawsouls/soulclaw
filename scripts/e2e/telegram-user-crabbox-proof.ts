@@ -596,6 +596,24 @@ function signalCommandTree(child: ChildProcess, signal: NodeJS.Signals) {
   child.kill(signal);
 }
 
+function commandProcessTreeAlive(child: ChildProcess) {
+  if (!child.pid || process.platform === "win32") {
+    return child.exitCode === null && child.signalCode === null;
+  }
+  try {
+    process.kill(-child.pid, 0);
+    return true;
+  } catch (error) {
+    return error && typeof error === "object" && "code" in error && error.code === "EPERM";
+  }
+}
+
+function untrackCommandChild(child: ChildProcess) {
+  if (!commandProcessTreeAlive(child)) {
+    activeCommandChildren.delete(child);
+  }
+}
+
 function signalActiveCommandChildren(signal: NodeJS.Signals) {
   for (const child of activeCommandChildren) {
     signalCommandTree(child, signal);
@@ -707,7 +725,7 @@ export function runCommand(params: {
         return;
       }
       settled = true;
-      activeCommandChildren.delete(child);
+      untrackCommandChild(child);
       clearTimers();
       reject(error);
     });
@@ -716,7 +734,7 @@ export function runCommand(params: {
         return;
       }
       settled = true;
-      activeCommandChildren.delete(child);
+      untrackCommandChild(child);
       if (timeoutError) {
         signalCommandTree(child, "SIGKILL");
         clearTimers();
