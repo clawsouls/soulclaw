@@ -1261,6 +1261,15 @@ describe("scripts/test-projects changed-target routing", () => {
       ["scripts/lib/npm-verify-exec.ts", ["test/scripts/npm-verify-exec.test.ts"]],
       ["scripts/lib/arg-utils.mjs", ["test/scripts/arg-utils.test.ts"]],
       [
+        "scripts/lib/package-dist-imports.mjs",
+        [
+          "test/scripts/check-package-dist-imports.test.ts",
+          "test/scripts/check-openclaw-package-tarball.test.ts",
+          "test/scripts/postinstall-bundled-plugins.test.ts",
+          "test/release-check.test.ts",
+        ],
+      ],
+      [
         "scripts/lib/plistbuddy.sh",
         [
           "test/scripts/create-dmg.test.ts",
@@ -1268,7 +1277,32 @@ describe("scripts/test-projects changed-target routing", () => {
           "test/scripts/package-mac-dist.test.ts",
         ],
       ],
+      [
+        "scripts/lib/npm-publish-plan.mjs",
+        [
+          "test/npm-publish-plan.test.ts",
+          "test/openclaw-npm-release-check.test.ts",
+          "test/openclaw-npm-postpublish-verify.test.ts",
+          "test/plugin-npm-release.test.ts",
+          "test/plugin-clawhub-release.test.ts",
+          "test/scripts/release-upgrade-baseline.test.ts",
+          "test/scripts/android-version.test.ts",
+          "test/scripts/ios-version.test.ts",
+          "test/scripts/upgrade-survivor-baselines.test.ts",
+          "test/scripts/upgrade-survivor-config-recipe.test.ts",
+        ],
+      ],
+      ["scripts/lib/openclaw-release-clawhub-plan.ts", ["test/plugin-clawhub-release.test.ts"]],
+      [
+        "scripts/lib/plugin-clawhub-release.ts",
+        ["test/plugin-clawhub-release.test.ts", "test/plugin-npm-release.test.ts"],
+      ],
+      [
+        "scripts/lib/plugin-npm-release.ts",
+        ["test/plugin-npm-release.test.ts", "test/plugin-clawhub-release.test.ts"],
+      ],
       ["scripts/lib/test-group-report.mjs", ["test/scripts/test-group-report.test.ts"]],
+      ["scripts/lib/stable-release-closeout.mjs", ["test/stable-release-closeout.test.ts"]],
       ["scripts/lib/ts-guard-utils.mjs", ["test/scripts/ts-guard-utils.test.ts"]],
       ["scripts/lib/format-generated-module.mjs", ["test/scripts/format-generated-module.test.ts"]],
       [
