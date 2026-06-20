@@ -978,6 +978,8 @@ if (isPrlctl) {
     expect(script).toContain('"Unable to lock directory"');
     expect(script).toContain("downloadGuestFile");
     expect(script).toContain("this.downloadGuestFile(tgzUrl");
+    expect(script).toContain("curl -fsSL --connect-timeout 10 --max-time 120 --retry 2");
+    expect(script).toContain("wget -q --timeout=10 --read-timeout=120 --tries=3");
   });
 
   it("keeps Linux bad-plugin diagnostics gated for historical update baselines", () => {
