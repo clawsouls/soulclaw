@@ -1041,6 +1041,12 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
     );
     expect(remoteCommand).toContain("openclaw_crabbox_bootstrap_macos_js");
     expect(remoteCommand).toContain("node-v${node_version}-darwin-${node_arch}.tar.gz");
+    expect(remoteCommand).toContain(
+      'curl -fsSL --connect-timeout 10 --max-time 300 --retry 2 --retry-delay 2 -o "$tmp_dir/$pkg"',
+    );
+    expect(remoteCommand).toContain(
+      'curl -fsSL --connect-timeout 10 --max-time 60 --retry 2 --retry-delay 2 -o "$tmp_dir/SHASUMS256.txt"',
+    );
     expect(remoteCommand).toContain("shasum -a 256 -c -");
     expect(remoteCommand).toContain('ready_marker="$node_dir/.openclaw-crabbox-node-ready"');
     expect(remoteCommand).toContain(
