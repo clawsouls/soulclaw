@@ -1405,6 +1405,10 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/lib/npm-pack-budget.mjs",
         ["test/release-check.test.ts", "test/scripts/test-install-sh-docker.test.ts"],
       ],
+      [
+        "scripts/lib/workspace-bootstrap-smoke.mjs",
+        ["test/release-check.test.ts", "test/openclaw-npm-release-check.test.ts"],
+      ],
       ["scripts/lib/openclaw-release-clawhub-plan.ts", ["test/plugin-clawhub-release.test.ts"]],
       [
         "scripts/lib/plugin-clawhub-release.ts",
