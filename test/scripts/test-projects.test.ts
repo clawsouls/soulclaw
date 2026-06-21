@@ -476,6 +476,14 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/docker-build-helper.test.ts"],
       ],
       [
+        "scripts/e2e/lib/doctor-install-switch/shims/loginctl",
+        ["test/scripts/docker-build-helper.test.ts"],
+      ],
+      [
+        "scripts/e2e/lib/doctor-install-switch/shims/systemctl",
+        ["test/scripts/docker-build-helper.test.ts"],
+      ],
+      [
         "scripts/e2e/lib/fixture.mjs",
         ["test/scripts/fixture-config.test.ts", "test/scripts/fixtures-workspace.test.ts"],
       ],
