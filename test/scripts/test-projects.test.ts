@@ -1495,6 +1495,10 @@ describe("scripts/test-projects changed-target routing", () => {
         ],
       ],
       [
+        "scripts/lib/deprecated-config-api-guard.mjs",
+        ["src/plugins/contracts/deprecated-internal-config-api.test.ts"],
+      ],
+      [
         "scripts/check-src-extension-import-boundary.mjs",
         ["test/extension-import-boundaries.test.ts"],
       ],

@@ -458,6 +458,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
       "src/plugins/contracts/deprecated-internal-config-api.test.ts",
     ],
   ],
+  [
+    "scripts/lib/deprecated-config-api-guard.mjs",
+    ["src/plugins/contracts/deprecated-internal-config-api.test.ts"],
+  ],
   ["scripts/check-extension-plugin-sdk-boundary.mjs", ["test/extension-import-boundaries.test.ts"]],
   ["scripts/check-no-conflict-markers.mjs", ["test/scripts/check-no-conflict-markers.test.ts"]],
   [
