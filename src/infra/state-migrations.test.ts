@@ -97,6 +97,7 @@ vi.mock("../channels/plugins/bundled.js", () => {
 const tempDirs = createTrackedTempDirs();
 
 type UpdateCheckStateDatabase = Pick<OpenClawStateKyselyDatabase, "update_check_state">;
+type PluginBindingApprovalsDatabase = Pick<OpenClawStateKyselyDatabase, "plugin_binding_approvals">;
 type CurrentConversationBindingsDatabase = Pick<
   OpenClawStateKyselyDatabase,
   "current_conversation_bindings"
@@ -168,6 +169,25 @@ function readCurrentConversationBindingRows(env: NodeJS.ProcessEnv): Array<{
   ).rows;
 }
 
+function readPluginBindingApprovalRows(env: NodeJS.ProcessEnv): Array<{
+  plugin_root: string;
+  channel: string;
+  account_id: string;
+  plugin_id: string;
+  plugin_name: string | null;
+  approved_at: number;
+}> {
+  const { db } = openOpenClawStateDatabase({ env });
+  const stateDb = getNodeSqliteKysely<PluginBindingApprovalsDatabase>(db);
+  return executeSqliteQuerySync(
+    db,
+    stateDb
+      .selectFrom("plugin_binding_approvals")
+      .select(["plugin_root", "channel", "account_id", "plugin_id", "plugin_name", "approved_at"])
+      .orderBy("plugin_root", "asc"),
+  ).rows;
+}
+
 function insertCurrentConversationBindingRow(
   env: NodeJS.ProcessEnv,
   params: {
@@ -229,6 +249,7 @@ function createConfig(): OpenClawConfig {
 function createEnv(stateDir: string): NodeJS.ProcessEnv {
   return {
     ...process.env,
+    HOME: path.dirname(stateDir),
     OPENCLAW_STATE_DIR: stateDir,
   };
 }
@@ -721,6 +742,104 @@ describe("state migrations", () => {
     });
     await expectMissingPath(sourcePath);
     await expect(fs.readFile(`${sourcePath}.migrated`, "utf8")).resolves.toContain("workspace-dm");
+  });
+
+  it("migrates legacy plugin binding approvals JSON into shared SQLite state", async () => {
+    const root = await createTempDir();
+    const stateDir = path.join(root, ".openclaw");
+    const env = createEnv(stateDir);
+    const cfg = createConfig();
+    const sourcePath = path.join(stateDir, "plugin-binding-approvals.json");
+    await fs.mkdir(stateDir, { recursive: true });
+    await fs.writeFile(
+      sourcePath,
+      JSON.stringify({
+        version: 1,
+        approvals: [
+          {
+            pluginRoot: "/plugins/codex-a",
+            pluginId: "codex",
+            pluginName: "Codex App Server",
+            channel: "Discord",
+            accountId: "default",
+            approvedAt: 1234,
+          },
+        ],
+      }),
+      "utf8",
+    );
+
+    const detected = await detectLegacyStateMigrations({ cfg, env, homedir: () => root });
+    expect(detected.pluginBindingApprovals.hasLegacy).toBe(true);
+    expect(detected.preview).toContain(
+      "- Plugin binding approvals: legacy JSON file → shared SQLite state",
+    );
+
+    const result = await runLegacyStateMigrations({ detected, config: cfg });
+
+    expect(result.warnings).toStrictEqual([]);
+    expect(result.changes).toContain("Migrated 1 plugin binding approval → shared SQLite state");
+    expect(readPluginBindingApprovalRows(env)).toEqual([
+      {
+        plugin_root: "/plugins/codex-a",
+        channel: "discord",
+        account_id: "default",
+        plugin_id: "codex",
+        plugin_name: "Codex App Server",
+        approved_at: 1234,
+      },
+    ]);
+    await expectMissingPath(sourcePath);
+    await expect(fs.readFile(`${sourcePath}.migrated`, "utf8")).resolves.toContain(
+      "Codex App Server",
+    );
+  });
+
+  it("migrates legacy plugin binding approvals from the home state dir when using a custom state dir", async () => {
+    const root = await createTempDir();
+    const stateDir = path.join(root, "custom-state");
+    const env = createEnv(stateDir);
+    const cfg = createConfig();
+    const sourcePath = path.join(root, ".openclaw", "plugin-binding-approvals.json");
+    await fs.mkdir(path.dirname(sourcePath), { recursive: true });
+    await fs.writeFile(
+      sourcePath,
+      JSON.stringify({
+        version: 1,
+        approvals: [
+          {
+            pluginRoot: "/plugins/codex-a",
+            pluginId: "codex",
+            channel: "telegram",
+            accountId: "default",
+            approvedAt: 2345,
+          },
+        ],
+      }),
+      "utf8",
+    );
+
+    const detected = await detectLegacyStateMigrations({ cfg, env, homedir: () => root });
+    expect(detected.pluginBindingApprovals).toMatchObject({
+      sourcePath,
+      hasLegacy: true,
+    });
+
+    const result = await runLegacyStateMigrations({ detected, config: cfg });
+
+    expect(result.warnings).toStrictEqual([]);
+    expect(result.changes).toContain("Migrated 1 plugin binding approval → shared SQLite state");
+    expect(readPluginBindingApprovalRows(env)).toEqual([
+      {
+        plugin_root: "/plugins/codex-a",
+        channel: "telegram",
+        account_id: "default",
+        plugin_id: "codex",
+        plugin_name: null,
+        approved_at: 2345,
+      },
+    ]);
+    await expectMissingPath(sourcePath);
   });
 
   it("imports non-conflicting legacy current-conversation bindings when SQLite has a conflict", async () => {
