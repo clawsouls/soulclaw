@@ -1805,6 +1805,7 @@ async function agentCommandInternal(
     const MAX_LIVE_SWITCH_RETRIES = 5;
     let liveSwitchRetries = 0;
     let autoFallbackPrimaryProbeInterruptedByLiveSwitch = false;
+    const fastModeStartedAtMs = Date.now();
     const fallbackTrajectoryRecorder = createTrajectoryRuntimeRecorder({
       cfg,
       runId,
@@ -1832,7 +1833,6 @@ async function agentCommandInternal(
 
         let fallbackAttemptIndex = 0;
         attemptLifecycleState.currentTurnUserMessagePersisted = false;
-        const fastModeStartedAtMs = Date.now();
         const fallbackResult = await runWithModelFallback<AgentAttemptResult>({
           cfg,
           provider,

@@ -5716,6 +5716,7 @@ describe("runCodexAppServerAttempt", () => {
     const harness = createStartedThreadHarness();
     const params = createParams(sessionFile, workspaceDir);
     params.verboseLevel = "full";
+    params.fastMode = "auto";
     params.fastModeStartedAtMs = 1_000;
     params.fastModeAutoOnSeconds = 30;
     params.onToolResult = onToolResult;
@@ -5796,6 +5797,41 @@ describe("runCodexAppServerAttempt", () => {
     ]);
   });
 
+  it("does not announce Codex fast auto progress for explicit fast mode", async () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(1_000);
+    const onToolResult = vi.fn();
+    const sessionFile = path.join(tempDir, "session.jsonl");
+    const workspaceDir = path.join(tempDir, "workspace");
+    const harness = createStartedThreadHarness();
+    const params = createParams(sessionFile, workspaceDir);
+    params.fastMode = "on";
+    params.fastModeStartedAtMs = 1_000;
+    params.fastModeAutoOnSeconds = 30;
+    params.onToolResult = onToolResult;
+
+    const run = runCodexAppServerAttempt(params);
+    await harness.waitForMethod("turn/start");
+    now.mockReturnValue(35_500);
+    await harness.notify({
+      method: "rawResponseItem/completed",
+      params: {
+        threadId: "thread-1",
+        turnId: "turn-1",
+        item: {
+          type: "function_call_output",
+          id: "call-raw-output",
+          call_id: "call-raw-output",
+          output: "tool output",
+        },
+      },
+    });
+    await harness.completeTurn({ threadId: "thread-1", turnId: "turn-1" });
+    await run;
+
+    const texts = onToolResult.mock.calls.map(([payload]) => payload.text ?? "");
+    expect(texts.filter((text) => text.startsWith("💨Fast:"))).toEqual([]);
+  });
+
   it("announces Codex app-server fast auto progress for snapshot-only tool results", async () => {
     const now = vi.spyOn(Date, "now").mockReturnValue(1_000);
     const onToolResult = vi.fn();
@@ -5805,6 +5841,7 @@ describe("runCodexAppServerAttempt", () => {
     const harness = createStartedThreadHarness();
     const params = createParams(sessionFile, workspaceDir);
     params.verboseLevel = "full";
+    params.fastMode = "auto";
     params.fastModeStartedAtMs = 1_000;
     params.fastModeAutoOnSeconds = 30;
     params.onToolResult = onToolResult;
@@ -5868,6 +5905,7 @@ describe("runCodexAppServerAttempt", () => {
     const harness = createStartedThreadHarness();
     const params = createParams(sessionFile, workspaceDir);
     params.verboseLevel = "full";
+    params.fastMode = "auto";
     params.fastModeStartedAtMs = 1_000;
     params.fastModeAutoOnSeconds = 30;
     params.onToolResult = onToolResult;
@@ -5919,6 +5957,7 @@ describe("runCodexAppServerAttempt", () => {
     const harness = createStartedThreadHarness();
     const params = createParams(sessionFile, workspaceDir);
     params.verboseLevel = "full";
+    params.fastMode = "auto";
     params.fastModeStartedAtMs = 1_000;
     params.fastModeAutoOnSeconds = 30;
     params.fastModeAutoProgressState = {
