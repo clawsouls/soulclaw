@@ -1575,6 +1575,26 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/package-acceptance-workflow.test.ts"],
       ],
       [
+        ".github/actions/detect-docs-changes/action.yml",
+        ["test/scripts/ci-workflow-guards.test.ts"],
+      ],
+      [
+        ".github/actions/docker-e2e-plan/action.yml",
+        ["test/scripts/package-acceptance-workflow.test.ts"],
+      ],
+      [
+        ".github/actions/ensure-base-commit/action.yml",
+        ["test/scripts/ci-workflow-guards.test.ts"],
+      ],
+      [
+        ".github/actions/setup-node-env/action.yml",
+        ["test/scripts/package-acceptance-workflow.test.ts"],
+      ],
+      [
+        ".github/actions/setup-pnpm-store-cache/action.yml",
+        ["test/scripts/package-acceptance-workflow.test.ts"],
+      ],
+      [
         ".github/workflows/live-media-runner-image.yml",
         ["test/scripts/package-acceptance-workflow.test.ts"],
       ],
