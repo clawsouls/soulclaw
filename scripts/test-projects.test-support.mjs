@@ -1075,6 +1075,14 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     "scripts/docker/install-sh-e2e/run.sh",
     ["test/scripts/docker-build-helper.test.ts", "test/scripts/test-install-sh-docker.test.ts"],
   ],
+  [
+    "scripts/docker/install-sh-common/cli-verify.sh",
+    ["test/scripts/test-install-sh-docker.test.ts"],
+  ],
+  [
+    "scripts/docker/install-sh-common/version-parse.sh",
+    ["test/scripts/test-install-sh-docker.test.ts"],
+  ],
   ["scripts/docker/install-sh-nonroot/Dockerfile", INSTALL_DOCKERFILE_TEST_TARGETS],
   ["scripts/docker/install-sh-nonroot/run.sh", ["test/scripts/test-install-sh-docker.test.ts"]],
   ["scripts/docker/install-sh-smoke/Dockerfile", INSTALL_DOCKERFILE_TEST_TARGETS],

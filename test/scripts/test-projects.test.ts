@@ -1824,6 +1824,14 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/docker-build-helper.test.ts", "test/scripts/test-install-sh-docker.test.ts"],
       ],
       [
+        "scripts/docker/install-sh-common/cli-verify.sh",
+        ["test/scripts/test-install-sh-docker.test.ts"],
+      ],
+      [
+        "scripts/docker/install-sh-common/version-parse.sh",
+        ["test/scripts/test-install-sh-docker.test.ts"],
+      ],
+      [
         "scripts/docker/install-sh-nonroot/Dockerfile",
         [
           "src/docker-build-cache.test.ts",
