@@ -478,6 +478,13 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/docker-build-helper.test.ts"],
       ],
       [
+        "scripts/e2e/lib/clawhub-fixture-server.cjs",
+        [
+          "test/scripts/clawhub-fixture-server.test.ts",
+          "test/scripts/plugin-prerelease-test-plan.test.ts",
+        ],
+      ],
+      [
         "scripts/e2e/lib/config-reload/assert-log.mjs",
         ["test/scripts/e2e-mock-config-limits.test.ts"],
       ],
@@ -938,10 +945,7 @@ describe("scripts/test-projects changed-target routing", () => {
   });
 
   it("routes unmatched script changes to the tooling suite instead of skipping tests", () => {
-    const targets = [
-      "scripts/check-no-raw-http2-imports.mjs",
-      "scripts/e2e/lib/clawhub-fixture-server.cjs",
-    ];
+    const targets = ["scripts/check-no-raw-http2-imports.mjs"];
 
     expect(resolveChangedTestTargetPlan(targets)).toEqual({
       mode: "targets",

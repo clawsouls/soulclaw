@@ -1540,6 +1540,13 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     "scripts/e2e/lib/codex-npm-plugin-live/assertions.mjs",
     ["test/scripts/docker-build-helper.test.ts"],
   ],
+  [
+    "scripts/e2e/lib/clawhub-fixture-server.cjs",
+    [
+      "test/scripts/clawhub-fixture-server.test.ts",
+      "test/scripts/plugin-prerelease-test-plan.test.ts",
+    ],
+  ],
   ["scripts/e2e/lib/config-reload/assert-log.mjs", ["test/scripts/e2e-mock-config-limits.test.ts"]],
   [
     "scripts/e2e/lib/config-reload/mutate-metadata.mjs",
