@@ -488,6 +488,10 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/docker-build-helper.test.ts"],
       ],
       [
+        "scripts/e2e/lib/doctor-install-switch/write-wrapper.mjs",
+        ["test/scripts/doctor-install-switch-wrapper.test.ts"],
+      ],
+      [
         "scripts/e2e/lib/doctor-install-switch/shims/loginctl",
         ["test/scripts/docker-build-helper.test.ts"],
       ],
