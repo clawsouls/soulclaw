@@ -11,7 +11,7 @@ vi.mock("../../infra/net/fetch-guard.js", () => ({
 }));
 
 vi.mock("node:child_process", async (importOriginal) => ({
-  ...((await importOriginal()) as typeof import("node:child_process")),
+  ...(await importOriginal<typeof import("node:child_process")>()),
   spawnSync: spawnSyncMock,
 }));
 
@@ -90,7 +90,7 @@ describe("ensureTool", () => {
 
   it("extracts Windows zip downloads with trusted System32 tools", async () => {
     vi.doMock("node:os", async (importOriginal) => ({
-      ...((await importOriginal()) as typeof import("node:os")),
+      ...(await importOriginal<typeof import("node:os")>()),
       arch: () => "x64",
       platform: () => "win32",
     }));
