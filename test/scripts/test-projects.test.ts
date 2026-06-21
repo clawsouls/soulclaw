@@ -493,13 +493,18 @@ describe("scripts/test-projects changed-target routing", () => {
       ],
       [
         "scripts/e2e/lib/fixture.mjs",
-        ["test/scripts/fixture-config.test.ts", "test/scripts/fixtures-workspace.test.ts"],
+        [
+          "test/scripts/fixture-config.test.ts",
+          "test/scripts/fixtures-workspace.test.ts",
+          "test/scripts/fixture-plugin-commands.test.ts",
+        ],
       ],
       ["scripts/e2e/lib/fixtures/config.mjs", ["test/scripts/fixture-config.test.ts"]],
       [
         "scripts/e2e/lib/fixtures/mock-openai-config.mjs",
         ["test/scripts/mock-openai-config.test.ts"],
       ],
+      ["scripts/e2e/lib/fixtures/plugins.mjs", ["test/scripts/fixture-plugin-commands.test.ts"]],
       [
         "scripts/e2e/lib/incremental-line-reader.mjs",
         [
