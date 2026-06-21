@@ -507,7 +507,13 @@ describe("truncateOversizedToolResultsInMessages", () => {
     ] as never;
     truncateOversizedToolResultsInMessages([source], 128_000, 12_000, 12_000, projectionState);
 
-    const providerMessage = { ...source, content: [{ type: "text", text: "x".repeat(15_000) }] };
+    const providerMessage = {
+      ...source,
+      content: [
+        { type: "text", text: "Image reading is disabled." },
+        { type: "text", text: "x".repeat(15_000) },
+      ],
+    };
     const result = truncateOversizedToolResultsInMessages(
       [providerMessage],
       128_000,
@@ -516,7 +522,13 @@ describe("truncateOversizedToolResultsInMessages", () => {
       projectionState,
     ).messages[0];
 
-    expect(result?.content).toEqual([{ type: "text", text: expect.stringContaining("truncated") }]);
+    expect(result?.content?.[0]).toEqual({
+      type: "text",
+      text: "Image reading is disabled.",
+    });
+    expect(
+      result?.content?.[1] && "text" in result.content[1] ? result.content[1].text.length : 0,
+    ).toBeLessThan(15_000);
   });
 });
 

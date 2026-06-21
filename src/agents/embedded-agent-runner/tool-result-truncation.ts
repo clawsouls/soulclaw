@@ -487,6 +487,13 @@ function mergeProjectedToolResultMessage(
       (block as { type?: unknown }).type === "text" &&
       typeof (block as { text?: unknown }).text === "string",
   );
+  const currentTextCount = currentContent.filter(
+    (block) =>
+      Boolean(block) && typeof block === "object" && (block as { type?: unknown }).type === "text",
+  ).length;
+  if (currentTextCount !== projectedText.length) {
+    return message;
+  }
   let textIndex = 0;
   const mergedContent = currentContent.map((block) => {
     if (!block || typeof block !== "object" || (block as { type?: unknown }).type !== "text") {
