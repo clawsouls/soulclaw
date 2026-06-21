@@ -247,6 +247,10 @@ function createLegacyStateMigrationDetectionResult(params?: {
       routingPath: "/tmp/state/settings/voicewake-routing.json",
       hasLegacy: false,
     },
+    updateCheck: {
+      sourcePath: "/tmp/state/update-check.json",
+      hasLegacy: false,
+    },
     execApprovals: {
       sourcePath: "/tmp/state/exec-approvals.legacy.json",
       targetPath: "/tmp/state/exec-approvals.json",

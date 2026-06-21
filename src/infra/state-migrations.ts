@@ -145,6 +145,10 @@ export type LegacyStateDetection = {
     routingPath: string;
     hasLegacy: boolean;
   };
+  updateCheck: {
+    sourcePath: string;
+    hasLegacy: boolean;
+  };
   execApprovals: {
     sourcePath: string;
     targetPath: string;
@@ -187,6 +191,7 @@ type LegacyVoiceWakeImportDatabase = Pick<
   OpenClawStateKyselyDatabase,
   "voicewake_routing_config" | "voicewake_routing_routes" | "voicewake_triggers"
 >;
+type LegacyUpdateCheckImportDatabase = Pick<OpenClawStateKyselyDatabase, "update_check_state">;
 type SqliteBindRow = Record<string, SQLInputValue>;
 
 type DetectedPluginDoctorStateMigrationPlan = {
@@ -1794,6 +1799,172 @@ function migrateLegacyVoiceWakeSettings(params: {
   return { changes, warnings };
 }
 
+const UPDATE_CHECK_STATE_KEY = "default";
+
+type LegacyUpdateCheckState = {
+  lastCheckedAt?: string;
+  lastNotifiedVersion?: string;
+  lastNotifiedTag?: string;
+  lastAvailableVersion?: string;
+  lastAvailableTag?: string;
+  autoInstallId?: string;
+  autoFirstSeenVersion?: string;
+  autoFirstSeenTag?: string;
+  autoFirstSeenAt?: string;
+  autoLastAttemptVersion?: string;
+  autoLastAttemptAt?: string;
+  autoLastSuccessVersion?: string;
+  autoLastSuccessAt?: string;
+};
+
+function resolveLegacyUpdateCheckPath(stateDir: string): string {
+  return path.join(stateDir, "update-check.json");
+}
+
+function optionalLegacyString(record: Record<string, unknown>, key: string): string | undefined {
+  const value = record[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+}
+
+function normalizeLegacyUpdateCheckState(input: unknown): LegacyUpdateCheckState {
+  const record = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+  return {
+    lastCheckedAt: optionalLegacyString(record, "lastCheckedAt"),
+    lastNotifiedVersion: optionalLegacyString(record, "lastNotifiedVersion"),
+    lastNotifiedTag: optionalLegacyString(record, "lastNotifiedTag"),
+    lastAvailableVersion: optionalLegacyString(record, "lastAvailableVersion"),
+    lastAvailableTag: optionalLegacyString(record, "lastAvailableTag"),
+    autoInstallId: optionalLegacyString(record, "autoInstallId"),
+    autoFirstSeenVersion: optionalLegacyString(record, "autoFirstSeenVersion"),
+    autoFirstSeenTag: optionalLegacyString(record, "autoFirstSeenTag"),
+    autoFirstSeenAt: optionalLegacyString(record, "autoFirstSeenAt"),
+    autoLastAttemptVersion: optionalLegacyString(record, "autoLastAttemptVersion"),
+    autoLastAttemptAt: optionalLegacyString(record, "autoLastAttemptAt"),
+    autoLastSuccessVersion: optionalLegacyString(record, "autoLastSuccessVersion"),
+    autoLastSuccessAt: optionalLegacyString(record, "autoLastSuccessAt"),
+  };
+}
+
+function legacyUpdateCheckStateMatches(
+  row: {
+    last_checked_at: string | null;
+    last_notified_version: string | null;
+    last_notified_tag: string | null;
+    last_available_version: string | null;
+    last_available_tag: string | null;
+    auto_install_id: string | null;
+    auto_first_seen_version: string | null;
+    auto_first_seen_tag: string | null;
+    auto_first_seen_at: string | null;
+    auto_last_attempt_version: string | null;
+    auto_last_attempt_at: string | null;
+    auto_last_success_version: string | null;
+    auto_last_success_at: string | null;
+  },
+  state: LegacyUpdateCheckState,
+): boolean {
+  return (
+    (state.lastCheckedAt ?? null) === row.last_checked_at &&
+    (state.lastNotifiedVersion ?? null) === row.last_notified_version &&
+    (state.lastNotifiedTag ?? null) === row.last_notified_tag &&
+    (state.lastAvailableVersion ?? null) === row.last_available_version &&
+    (state.lastAvailableTag ?? null) === row.last_available_tag &&
+    (state.autoInstallId ?? null) === row.auto_install_id &&
+    (state.autoFirstSeenVersion ?? null) === row.auto_first_seen_version &&
+    (state.autoFirstSeenTag ?? null) === row.auto_first_seen_tag &&
+    (state.autoFirstSeenAt ?? null) === row.auto_first_seen_at &&
+    (state.autoLastAttemptVersion ?? null) === row.auto_last_attempt_version &&
+    (state.autoLastAttemptAt ?? null) === row.auto_last_attempt_at &&
+    (state.autoLastSuccessVersion ?? null) === row.auto_last_success_version &&
+    (state.autoLastSuccessAt ?? null) === row.auto_last_success_at
+  );
+}
+
+function migrateLegacyUpdateCheckState(params: {
+  detected: LegacyStateDetection["updateCheck"];
+  stateDir: string;
+}): { changes: string[]; warnings: string[] } {
+  const changes: string[] = [];
+  const warnings: string[] = [];
+  if (!fileExists(params.detected.sourcePath)) {
+    return { changes, warnings };
+  }
+
+  let state: LegacyUpdateCheckState;
+  try {
+    state = normalizeLegacyUpdateCheckState(readLegacyJsonObject(params.detected.sourcePath));
+  } catch (err) {
+    warnings.push(
+      `Failed reading legacy update-check state ${params.detected.sourcePath}: ${String(err)}`,
+    );
+    return { changes, warnings };
+  }
+
+  let imported = false;
+  let shouldArchive = false;
+  try {
+    runOpenClawStateWriteTransaction(
+      ({ db }) => {
+        const stateDb = getNodeSqliteKysely<LegacyUpdateCheckImportDatabase>(db);
+        const existing = executeSqliteQueryTakeFirstSync(
+          db,
+          stateDb
+            .selectFrom("update_check_state")
+            .selectAll()
+            .where("state_key", "=", UPDATE_CHECK_STATE_KEY),
+        );
+        if (existing) {
+          if (legacyUpdateCheckStateMatches(existing, state)) {
+            shouldArchive = true;
+          } else {
+            warnings.push(
+              `Left legacy update-check state in place because shared SQLite state already differs: ${params.detected.sourcePath}`,
+            );
+          }
+          return;
+        }
+        executeSqliteQuerySync(
+          db,
+          stateDb.insertInto("update_check_state").values({
+            state_key: UPDATE_CHECK_STATE_KEY,
+            last_checked_at: state.lastCheckedAt ?? null,
+            last_notified_version: state.lastNotifiedVersion ?? null,
+            last_notified_tag: state.lastNotifiedTag ?? null,
+            last_available_version: state.lastAvailableVersion ?? null,
+            last_available_tag: state.lastAvailableTag ?? null,
+            auto_install_id: state.autoInstallId ?? null,
+            auto_first_seen_version: state.autoFirstSeenVersion ?? null,
+            auto_first_seen_tag: state.autoFirstSeenTag ?? null,
+            auto_first_seen_at: state.autoFirstSeenAt ?? null,
+            auto_last_attempt_version: state.autoLastAttemptVersion ?? null,
+            auto_last_attempt_at: state.autoLastAttemptAt ?? null,
+            auto_last_success_version: state.autoLastSuccessVersion ?? null,
+            auto_last_success_at: state.autoLastSuccessAt ?? null,
+            updated_at_ms: Date.now(),
+          }),
+        );
+        imported = true;
+        shouldArchive = true;
+      },
+      { env: { ...process.env, OPENCLAW_STATE_DIR: params.stateDir } },
+    );
+  } catch (err) {
+    warnings.push(`Failed migrating legacy update-check state: ${String(err)}`);
+  }
+  if (imported) {
+    changes.push("Migrated update-check state → shared SQLite state");
+  }
+  if (shouldArchive) {
+    archiveLegacyImportSource({
+      sourcePath: params.detected.sourcePath,
+      label: "update-check state",
+      changes,
+      warnings,
+    });
+  }
+  return { changes, warnings };
+}
+
 async function migrateLegacyPluginStateSidecar(params: {
   stateDir: string;
 }): Promise<{ changes: string[]; warnings: string[] }> {
@@ -3218,6 +3389,10 @@ export async function detectLegacyStateMigrations(params: {
     routingPath: resolveLegacyVoiceWakeRoutingPath(stateDir),
   };
   const hasVoiceWake = fileExists(voiceWake.triggersPath) || fileExists(voiceWake.routingPath);
+  const updateCheck = {
+    sourcePath: resolveLegacyUpdateCheckPath(stateDir),
+  };
+  const hasUpdateCheck = fileExists(updateCheck.sourcePath);
   const channelPlans = await collectChannelLegacyStateMigrationPlans({
     cfg: params.cfg,
     env,
@@ -3282,6 +3457,9 @@ export async function detectLegacyStateMigrations(params: {
   if (hasVoiceWake) {
     preview.push("- Voice Wake settings: legacy JSON files → shared SQLite state");
   }
+  if (hasUpdateCheck) {
+    preview.push("- Update-check state: legacy JSON file → shared SQLite state");
+  }
   if (execApprovals.hasLegacy) {
     preview.push(`- Exec approvals: ${execApprovals.sourcePath} → ${execApprovals.targetPath}`);
   }
@@ -3344,6 +3522,10 @@ export async function detectLegacyStateMigrations(params: {
     voiceWake: {
       ...voiceWake,
       hasLegacy: hasVoiceWake,
+    },
+    updateCheck: {
+      ...updateCheck,
+      hasLegacy: hasUpdateCheck,
     },
     execApprovals,
     preview,
@@ -3867,6 +4049,10 @@ export async function runLegacyStateMigrations(params: {
     detected: detected.voiceWake,
     stateDir: detected.stateDir,
   });
+  const updateCheck = migrateLegacyUpdateCheckState({
+    detected: detected.updateCheck,
+    stateDir: detected.stateDir,
+  });
   const execApprovals = migrateLegacyExecApprovals(detected.execApprovals);
   const preSessionChannelPlans = await runLegacyMigrationPlans(
     detected.channelPlans.plans.filter((plan) => plan.kind === "plugin-state-import"),
@@ -3898,6 +4084,7 @@ export async function runLegacyStateMigrations(params: {
       ...taskStateSidecars.changes,
       ...deliveryQueues.changes,
       ...voiceWake.changes,
+      ...updateCheck.changes,
       ...execApprovals.changes,
       ...preSessionChannelPlans.changes,
       ...pluginPlans.changes,
@@ -3914,6 +4101,7 @@ export async function runLegacyStateMigrations(params: {
       ...taskStateSidecars.warnings,
       ...deliveryQueues.warnings,
       ...voiceWake.warnings,
+      ...updateCheck.warnings,
       ...execApprovals.warnings,
       ...preSessionChannelPlans.warnings,
       ...pluginPlans.warnings,
@@ -4239,6 +4427,10 @@ export async function autoMigrateLegacyState(params: {
       detected: detected.voiceWake,
       stateDir: detected.stateDir,
     });
+    const updateCheck = migrateLegacyUpdateCheckState({
+      detected: detected.updateCheck,
+      stateDir: detected.stateDir,
+    });
     const execApprovals = migrateLegacyExecApprovals(detected.execApprovals);
     const preSessionChannelPlans = await runLegacyMigrationPlans(
       detected.channelPlans.plans.filter((plan) => plan.kind === "plugin-state-import"),
@@ -4258,6 +4450,7 @@ export async function autoMigrateLegacyState(params: {
       ...taskStateSidecars.changes,
       ...deliveryQueues.changes,
       ...voiceWake.changes,
+      ...updateCheck.changes,
       ...execApprovals.changes,
       ...preSessionChannelPlans.changes,
       ...pluginPlans.changes,
@@ -4273,6 +4466,7 @@ export async function autoMigrateLegacyState(params: {
       ...taskStateSidecars.warnings,
       ...deliveryQueues.warnings,
       ...voiceWake.warnings,
+      ...updateCheck.warnings,
       ...execApprovals.warnings,
       ...preSessionChannelPlans.warnings,
       ...pluginPlans.warnings,
@@ -4290,6 +4484,7 @@ export async function autoMigrateLegacyState(params: {
         taskStateSidecars.changes.length > 0 ||
         deliveryQueues.changes.length > 0 ||
         voiceWake.changes.length > 0 ||
+        updateCheck.changes.length > 0 ||
         execApprovals.changes.length > 0 ||
         preSessionChannelPlans.changes.length > 0 ||
         pluginPlans.changes.length > 0,
@@ -4310,6 +4505,7 @@ export async function autoMigrateLegacyState(params: {
     !detected.taskStateSidecars.hasLegacy &&
     !detected.deliveryQueues.hasLegacy &&
     !detected.voiceWake.hasLegacy &&
+    !detected.updateCheck.hasLegacy &&
     !detected.execApprovals.hasLegacy
   ) {
     const changes = [
@@ -4358,6 +4554,10 @@ export async function autoMigrateLegacyState(params: {
     detected: detected.voiceWake,
     stateDir: detected.stateDir,
   });
+  const updateCheck = migrateLegacyUpdateCheckState({
+    detected: detected.updateCheck,
+    stateDir: detected.stateDir,
+  });
   const execApprovals = migrateLegacyExecApprovals(detected.execApprovals);
   const preSessionChannelPlans = await runLegacyMigrationPlans(
     detected.channelPlans.plans.filter((plan) => plan.kind === "plugin-state-import"),
@@ -4389,6 +4589,7 @@ export async function autoMigrateLegacyState(params: {
     ...taskStateSidecars.changes,
     ...deliveryQueues.changes,
     ...voiceWake.changes,
+    ...updateCheck.changes,
     ...execApprovals.changes,
     ...preSessionChannelPlans.changes,
     ...pluginPlans.changes,
@@ -4408,6 +4609,7 @@ export async function autoMigrateLegacyState(params: {
     ...taskStateSidecars.warnings,
     ...deliveryQueues.warnings,
     ...voiceWake.warnings,
+    ...updateCheck.warnings,
     ...execApprovals.warnings,
     ...preSessionChannelPlans.warnings,
     ...pluginPlans.warnings,
