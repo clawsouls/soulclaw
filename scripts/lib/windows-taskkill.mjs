@@ -36,9 +36,29 @@ function normalizeWindowsSystemRoot(raw) {
 }
 
 export function resolveWindowsTaskkillPath(env = process.env) {
-  const systemRoot =
+  return resolveWindowsSystem32Path("taskkill.exe", env);
+}
+
+function resolveWindowsSystemRoot(env) {
+  return (
     normalizeWindowsSystemRoot(getEnvValueCaseInsensitive(env, "SystemRoot")) ??
     normalizeWindowsSystemRoot(getEnvValueCaseInsensitive(env, "WINDIR")) ??
-    DEFAULT_WINDOWS_SYSTEM_ROOT;
-  return path.win32.join(systemRoot, "System32", "taskkill.exe");
+    DEFAULT_WINDOWS_SYSTEM_ROOT
+  );
+}
+
+export function resolveWindowsSystem32Path(executableName, env = process.env) {
+  if (
+    path.win32.basename(executableName) !== executableName ||
+    !/^[A-Za-z0-9_.-]+\.exe$/u.test(executableName)
+  ) {
+    throw new Error(`Invalid Windows System32 executable name: ${executableName}`);
+  }
+  const systemRoot = resolveWindowsSystemRoot(env);
+  return path.win32.join(systemRoot, "System32", executableName);
+}
+
+export function resolveWindowsPowerShellPath(env = process.env) {
+  const systemRoot = resolveWindowsSystemRoot(env);
+  return path.win32.join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
 }
