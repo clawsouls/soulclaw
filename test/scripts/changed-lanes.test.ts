@@ -1502,6 +1502,40 @@ describe("scripts/changed-lanes", () => {
     }
   });
 
+  it("runs macOS app CI tests for macOS packaging scripts and owner tests", () => {
+    for (const changedPath of [
+      "scripts/codesign-mac-app.sh",
+      "scripts/create-dmg.sh",
+      "scripts/lib/plistbuddy.sh",
+      "scripts/notarize-mac-artifact.sh",
+      "scripts/package-mac-app.sh",
+      "scripts/package-mac-dist.sh",
+      "test/scripts/codesign-mac-app.test.ts",
+      "test/scripts/create-dmg.test.ts",
+      "test/scripts/notarize-mac-artifact.test.ts",
+      "test/scripts/package-mac-app.test.ts",
+      "test/scripts/package-mac-dist.test.ts",
+    ]) {
+      const result = detectChangedLanes([changedPath]);
+      const plan = createChangedCheckPlan(result, {
+        env: { PATH: "/usr/bin" },
+        platform: "linux",
+        swiftlintAvailable: false,
+      });
+
+      expectLanes(result.lanes, {
+        tooling: true,
+      });
+      expect(plan.commands.map((command) => command.args[0])).not.toContain("lint:apps");
+      expect(plan.commands).toContainEqual(
+        expect.objectContaining({
+          name: "macOS app CI tests",
+          args: ["test:macos:ci"],
+        }),
+      );
+    }
+  });
+
   it("routes appcast changes to appcast owner tests", () => {
     const result = detectChangedLanes(["appcast.xml"]);
     const plan = createChangedCheckPlan(result);

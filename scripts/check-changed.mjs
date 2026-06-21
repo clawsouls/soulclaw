@@ -57,7 +57,8 @@ const ANDROID_VERSION_SYNC_PATHS = new Set([
   "apps/android/fastlane/metadata/android/en-US/release_notes.txt",
   "apps/android/version.json",
 ]);
-const MACOS_APP_CI_PATH_RE = /^(?:apps\/(?:macos|macos-mlx-tts|shared|swabble)\/|Swabble\/)/u;
+const MACOS_APP_CI_PATH_RE =
+  /^(?:apps\/(?:macos|macos-mlx-tts|shared|swabble)\/|Swabble\/|scripts\/(?:codesign-mac-app|create-dmg|notarize-mac-artifact|package-mac-app|package-mac-dist)\.sh$|scripts\/lib\/plistbuddy\.sh$|test\/scripts\/(?:codesign-mac-app|create-dmg|notarize-mac-artifact|package-mac-app|package-mac-dist)\.test\.ts$)/u;
 let corepackPnpmShimDir;
 let corepackPnpmShimCleanupRegistered = false;
 
@@ -414,7 +415,7 @@ export function createChangedCheckPlan(result, options = {}) {
   } else if (lanes.apps) {
     addLint("lint apps", ["lint:apps"]);
   }
-  if (lanes.apps && hasMacosAppCiPath(result.paths)) {
+  if (hasMacosAppCiPath(result.paths)) {
     add("macOS app CI tests", ["test:macos:ci"], baseEnv);
   }
 
