@@ -1749,6 +1749,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     "scripts/e2e/lib/openwebui/http-probe.mjs",
     ["test/e2e/qa-lab/runtime/openwebui-probe.e2e.test.ts"],
   ],
+  ["scripts/e2e/lib/text-file-utils.mjs", ["test/scripts/e2e-text-file-utils.test.ts"]],
   [
     "scripts/e2e/openwebui-docker.sh",
     [
