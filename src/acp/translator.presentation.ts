@@ -53,6 +53,7 @@ export type GatewaySessionPresentationRow = Pick<
   | "updatedAt"
   | "thinkingLevel"
   | "fastMode"
+  | "effectiveFastMode"
   | "modelProvider"
   | "model"
   | "thinkingLevels"
@@ -163,7 +164,7 @@ export function buildSessionPresentation(params: {
     ...BASE_THINKING_LEVELS,
   ];
   const currentModeId = normalizeOptionalString(row.thinkingLevel) || "adaptive";
-  const currentFastMode = normalizeFastMode(row.fastMode) ?? false;
+  const currentFastMode = normalizeFastMode(row.effectiveFastMode ?? row.fastMode) ?? false;
   if (!availableLevelIds.includes(currentModeId)) {
     availableLevelIds.push(currentModeId);
   }
