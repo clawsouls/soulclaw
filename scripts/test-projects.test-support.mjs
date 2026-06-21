@@ -2040,6 +2040,10 @@ const SOURCE_TEST_TARGETS = new Map([
     "test/helpers/agents/happy-path-prompt-snapshots.ts",
     HAPPY_PATH_PROMPT_SNAPSHOT_HELPER_TEST_TARGETS,
   ],
+  [
+    "test/e2e/qa-lab/runtime/qa-otel-smoke-runtime.ts",
+    ["test/e2e/qa-lab/runtime/qa-otel-smoke.e2e.test.ts"],
+  ],
   ["src/plugins/runtime-sidecar-paths-baseline.ts", RUNTIME_SIDECAR_BASELINE_OWNER_TEST_TARGETS],
   ["src/plugins/runtime-sidecar-paths.ts", RUNTIME_SIDECAR_PATH_CONSUMER_TEST_TARGETS],
   ["ui/config/control-ui-chunking.ts", ["ui/src/ui/control-ui-chunking.test.ts"]],

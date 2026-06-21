@@ -439,6 +439,10 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/e2e/lib/openwebui/http-probe.mjs",
         ["test/e2e/qa-lab/runtime/openwebui-probe.e2e.test.ts"],
       ],
+      [
+        "test/e2e/qa-lab/runtime/qa-otel-smoke-runtime.ts",
+        ["test/e2e/qa-lab/runtime/qa-otel-smoke.e2e.test.ts"],
+      ],
       ["scripts/e2e/lib/text-file-utils.mjs", ["test/scripts/e2e-text-file-utils.test.ts"]],
       [
         "scripts/e2e/lib/plugins/npm-registry-server.mjs",
