@@ -441,22 +441,172 @@ const INSTALL_DOCKERFILE_TEST_TARGETS = [
   "test/scripts/test-install-sh-docker.test.ts",
 ];
 const LIVE_MEDIA_RUNNER_IMAGE_TEST_TARGETS = ["test/scripts/package-acceptance-workflow.test.ts"];
+const GITHUB_YAML_PINNING_GUARD_TEST_TARGETS = ["test/scripts/ci-workflow-guards.test.ts"];
+const GITHUB_WORKFLOW_OWNER_TEST_TARGETS = new Map([
+  [
+    ".github/workflows/ci-build-artifacts-testbox.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/ci-check-arm-testbox.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/ci-check-testbox.yml",
+    ["test/scripts/changed-lanes.test.ts", "test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/ci.yml",
+    [
+      "test/scripts/changed-lanes.test.ts",
+      "test/scripts/check-workflows.test.ts",
+      "test/scripts/plugin-contract-test-plan.test.ts",
+      "test/scripts/plugin-prerelease-test-plan.test.ts",
+      "test/scripts/verify-pr-hosted-gates.test.ts",
+    ],
+  ],
+  [".github/workflows/crabbox-hydrate.yml", ["test/scripts/package-acceptance-workflow.test.ts"]],
+  [".github/workflows/dependency-guard.yml", ["test/scripts/dependency-guard-workflow.test.ts"]],
+  [".github/workflows/docker-release.yml", ["src/dockerfile.test.ts"]],
+  [
+    ".github/workflows/full-release-validation.yml",
+    [
+      "src/dockerfile.test.ts",
+      "test/scripts/package-acceptance-workflow.test.ts",
+      "test/scripts/plugin-prerelease-test-plan.test.ts",
+    ],
+  ],
+  [".github/workflows/install-smoke.yml", ["test/scripts/test-install-sh-docker.test.ts"]],
+  [
+    ".github/workflows/ios-periphery-comment.yml",
+    ["test/scripts/ios-periphery-comment-workflow.test.ts"],
+  ],
+  [".github/workflows/ios-periphery.yml", ["test/scripts/ios-periphery-comment-workflow.test.ts"]],
+  [
+    ".github/workflows/live-media-runner-image.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [".github/workflows/macos-release.yml", ["test/scripts/package-acceptance-workflow.test.ts"]],
+  [
+    ".github/workflows/mantis-telegram-desktop-proof.yml",
+    ["test/scripts/mantis-telegram-desktop-proof-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/mantis-telegram-live.yml",
+    [
+      "test/scripts/mantis-telegram-desktop-proof-workflow.test.ts",
+      "test/scripts/package-acceptance-workflow.test.ts",
+    ],
+  ],
+  [
+    ".github/workflows/npm-telegram-beta-e2e.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/openclaw-cross-os-release-checks-reusable.yml",
+    [
+      "test/scripts/openclaw-cross-os-release-checks.test.ts",
+      "test/scripts/openclaw-cross-os-release-workflow.test.ts",
+      "test/scripts/package-acceptance-workflow.test.ts",
+    ],
+  ],
+  [
+    ".github/workflows/openclaw-live-and-e2e-checks-reusable.yml",
+    [
+      "test/scripts/package-acceptance-workflow.test.ts",
+      "test/scripts/release-workflow-matrix-plan.test.ts",
+      "test/scripts/test-install-sh-docker.test.ts",
+    ],
+  ],
+  [
+    ".github/workflows/openclaw-npm-release.yml",
+    [
+      "test/openclaw-npm-postpublish-verify.test.ts",
+      "test/scripts/package-acceptance-workflow.test.ts",
+    ],
+  ],
+  [
+    ".github/workflows/openclaw-performance.yml",
+    ["test/scripts/openclaw-performance-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/openclaw-release-checks.yml",
+    [
+      "test/scripts/openclaw-cross-os-release-checks.test.ts",
+      "test/scripts/package-acceptance-workflow.test.ts",
+      "test/scripts/plugin-prerelease-test-plan.test.ts",
+      "test/scripts/test-install-sh-docker.test.ts",
+    ],
+  ],
+  [
+    ".github/workflows/openclaw-release-publish.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/openclaw-scheduled-live-checks.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/openclaw-stable-main-closeout.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/package-acceptance.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/plugin-clawhub-new.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/plugin-clawhub-release.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/plugin-npm-release.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [".github/workflows/plugin-prerelease.yml", ["test/scripts/plugin-prerelease-test-plan.test.ts"]],
+  [
+    ".github/workflows/qa-live-transports-convex.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/sandbox-common-smoke.yml",
+    ["test/scripts/sandbox-common-smoke-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/security-sensitive-guard.yml",
+    ["test/scripts/security-sensitive-guard-workflow.test.ts"],
+  ],
+  [".github/workflows/tui-pty.yml", ["test/scripts/package-acceptance-workflow.test.ts"]],
+  [".github/workflows/update-migration.yml", ["test/scripts/package-acceptance-workflow.test.ts"]],
+  [
+    ".github/workflows/website-installer-sync.yml",
+    ["test/scripts/website-installer-sync-workflow.test.ts"],
+  ],
+  [
+    ".github/workflows/windows-node-release.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [".github/workflows/windows-testbox-probe.yml", ["test/scripts/check-workflows.test.ts"]],
+]);
 const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["Dockerfile", ROOT_DOCKERFILE_TEST_TARGETS],
   [".crabbox.yaml", ["test/scripts/package-acceptance-workflow.test.ts"]],
   [".github/actions/detect-docs-changes/action.yml", ["test/scripts/ci-workflow-guards.test.ts"]],
   [
     ".github/actions/docker-e2e-plan/action.yml",
-    ["test/scripts/package-acceptance-workflow.test.ts"],
+    ["test/scripts/package-acceptance-workflow.test.ts", "test/scripts/ci-workflow-guards.test.ts"],
   ],
   [".github/actions/ensure-base-commit/action.yml", ["test/scripts/ci-workflow-guards.test.ts"]],
   [
     ".github/actions/setup-node-env/action.yml",
-    ["test/scripts/package-acceptance-workflow.test.ts"],
+    ["test/scripts/package-acceptance-workflow.test.ts", "test/scripts/ci-workflow-guards.test.ts"],
   ],
   [
     ".github/actions/setup-pnpm-store-cache/action.yml",
-    ["test/scripts/package-acceptance-workflow.test.ts"],
+    ["test/scripts/package-acceptance-workflow.test.ts", "test/scripts/ci-workflow-guards.test.ts"],
   ],
   [".github/images/live-media-runner/Dockerfile", LIVE_MEDIA_RUNNER_IMAGE_TEST_TARGETS],
   [".github/workflows/ci.yml", ["test/scripts/ci-workflow-guards.test.ts"]],
@@ -476,10 +626,13 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ".github/workflows/crabbox-hydrate.yml",
     ["test/scripts/ci-workflow-guards.test.ts", "test/scripts/package-acceptance-workflow.test.ts"],
   ],
-  [".github/workflows/live-media-runner-image.yml", LIVE_MEDIA_RUNNER_IMAGE_TEST_TARGETS],
+  [
+    ".github/workflows/live-media-runner-image.yml",
+    [...LIVE_MEDIA_RUNNER_IMAGE_TEST_TARGETS, "test/scripts/ci-workflow-guards.test.ts"],
+  ],
   [
     ".github/workflows/openclaw-live-and-e2e-checks-reusable.yml",
-    ["test/scripts/package-acceptance-workflow.test.ts"],
+    ["test/scripts/package-acceptance-workflow.test.ts", "test/scripts/ci-workflow-guards.test.ts"],
   ],
   [
     ".github/workflows/openclaw-release-checks.yml",
@@ -2814,6 +2967,20 @@ function resolveParallelsToolingTestTargets(changedPath) {
   return targets;
 }
 
+function resolveGithubYamlGuardTargets(changedPath) {
+  if (/^\.github\/workflows\/[^/]+\.ya?ml$/u.test(changedPath)) {
+    return GITHUB_YAML_PINNING_GUARD_TEST_TARGETS;
+  }
+  if (/^\.github\/actions\/.+\.ya?ml$/u.test(changedPath)) {
+    return GITHUB_YAML_PINNING_GUARD_TEST_TARGETS;
+  }
+  return null;
+}
+
+function resolveGithubWorkflowOwnerTargets(changedPath) {
+  return GITHUB_WORKFLOW_OWNER_TEST_TARGETS.get(changedPath) ?? null;
+}
+
 function resolveToolingTestTargets(changedPath, cwd = process.cwd()) {
   const explicitTargets =
     TOOLING_SOURCE_TEST_TARGETS.get(changedPath) ??
@@ -2823,15 +2990,19 @@ function resolveToolingTestTargets(changedPath, cwd = process.cwd()) {
     resolveDocsI18nGoTargets(changedPath) ??
     resolveK8sManifestTargets(changedPath) ??
     resolveParallelsToolingTestTargets(changedPath);
+  const githubWorkflowOwnerTargets = resolveGithubWorkflowOwnerTargets(changedPath);
+  const githubYamlGuardTargets = resolveGithubYamlGuardTargets(changedPath);
   const conventionalTargets = resolveConventionalToolingTestTargets(changedPath, cwd);
-  if (explicitTargets && conventionalTargets) {
-    return uniqueOrdered([...explicitTargets, ...conventionalTargets]);
+  const targets = [
+    ...(explicitTargets ?? []),
+    ...(githubWorkflowOwnerTargets ?? []),
+    ...(githubYamlGuardTargets ?? []),
+    ...(conventionalTargets ?? []),
+  ];
+  if (targets.length > 0) {
+    return uniqueOrdered(targets);
   }
-  return (
-    explicitTargets ??
-    conventionalTargets ??
-    (isToolingScriptPath(changedPath) ? [TOOLING_VITEST_CONFIG] : null)
-  );
+  return isToolingScriptPath(changedPath) ? [TOOLING_VITEST_CONFIG] : null;
 }
 
 function shouldUseBroadChangedTargets(env = process.env) {

@@ -1135,7 +1135,14 @@ describe("scripts/test-projects changed-target routing", () => {
   it("keeps CI workflow edits on workflow guard tests", () => {
     expect(resolveChangedTestTargetPlan([".github/workflows/ci.yml"])).toEqual({
       mode: "targets",
-      targets: ["test/scripts/ci-workflow-guards.test.ts"],
+      targets: [
+        "test/scripts/ci-workflow-guards.test.ts",
+        "test/scripts/changed-lanes.test.ts",
+        "test/scripts/check-workflows.test.ts",
+        "test/scripts/plugin-contract-test-plan.test.ts",
+        "test/scripts/plugin-prerelease-test-plan.test.ts",
+        "test/scripts/verify-pr-hosted-gates.test.ts",
+      ],
     });
   });
 
@@ -1144,22 +1151,42 @@ describe("scripts/test-projects changed-target routing", () => {
       resolveChangedTestTargetPlan([".github/workflows/security-sensitive-guard.yml"]),
     ).toEqual({
       mode: "targets",
-      targets: ["test/scripts/security-sensitive-guard-workflow.test.ts"],
+      targets: [
+        "test/scripts/security-sensitive-guard-workflow.test.ts",
+        "test/scripts/ci-workflow-guards.test.ts",
+      ],
     });
   });
 
   it("keeps Crabbox and Testbox workflow edits on workflow regression tests", () => {
-    for (const workflowPath of [
-      ".github/workflows/ci-check-testbox.yml",
-      ".github/workflows/ci-check-arm-testbox.yml",
-      ".github/workflows/crabbox-hydrate.yml",
-    ]) {
-      expect(resolveChangedTestTargetPlan([workflowPath])).toEqual({
-        mode: "targets",
-        targets: [
+    const workflowTargets = new Map([
+      [
+        ".github/workflows/ci-check-testbox.yml",
+        [
+          "test/scripts/ci-workflow-guards.test.ts",
+          "test/scripts/package-acceptance-workflow.test.ts",
+          "test/scripts/changed-lanes.test.ts",
+        ],
+      ],
+      [
+        ".github/workflows/ci-check-arm-testbox.yml",
+        [
           "test/scripts/ci-workflow-guards.test.ts",
           "test/scripts/package-acceptance-workflow.test.ts",
         ],
+      ],
+      [
+        ".github/workflows/crabbox-hydrate.yml",
+        [
+          "test/scripts/ci-workflow-guards.test.ts",
+          "test/scripts/package-acceptance-workflow.test.ts",
+        ],
+      ],
+    ]);
+    for (const [workflowPath, targets] of workflowTargets) {
+      expect(resolveChangedTestTargetPlan([workflowPath])).toEqual({
+        mode: "targets",
+        targets,
       });
     }
   });
@@ -1168,7 +1195,13 @@ describe("scripts/test-projects changed-target routing", () => {
     expect(resolveChangedTestTargetPlan([".github/workflows/openclaw-release-checks.yml"])).toEqual(
       {
         mode: "targets",
-        targets: ["test/scripts/package-acceptance-workflow.test.ts"],
+        targets: [
+          "test/scripts/package-acceptance-workflow.test.ts",
+          "test/scripts/openclaw-cross-os-release-checks.test.ts",
+          "test/scripts/plugin-prerelease-test-plan.test.ts",
+          "test/scripts/test-install-sh-docker.test.ts",
+          "test/scripts/ci-workflow-guards.test.ts",
+        ],
       },
     );
   });
@@ -1580,7 +1613,10 @@ describe("scripts/test-projects changed-target routing", () => {
       ],
       [
         ".github/actions/docker-e2e-plan/action.yml",
-        ["test/scripts/package-acceptance-workflow.test.ts"],
+        [
+          "test/scripts/package-acceptance-workflow.test.ts",
+          "test/scripts/ci-workflow-guards.test.ts",
+        ],
       ],
       [
         ".github/actions/ensure-base-commit/action.yml",
@@ -1588,19 +1624,54 @@ describe("scripts/test-projects changed-target routing", () => {
       ],
       [
         ".github/actions/setup-node-env/action.yml",
-        ["test/scripts/package-acceptance-workflow.test.ts"],
+        [
+          "test/scripts/package-acceptance-workflow.test.ts",
+          "test/scripts/ci-workflow-guards.test.ts",
+        ],
       ],
       [
         ".github/actions/setup-pnpm-store-cache/action.yml",
-        ["test/scripts/package-acceptance-workflow.test.ts"],
+        [
+          "test/scripts/package-acceptance-workflow.test.ts",
+          "test/scripts/ci-workflow-guards.test.ts",
+        ],
       ],
       [
         ".github/workflows/live-media-runner-image.yml",
-        ["test/scripts/package-acceptance-workflow.test.ts"],
+        [
+          "test/scripts/package-acceptance-workflow.test.ts",
+          "test/scripts/ci-workflow-guards.test.ts",
+        ],
       ],
       [
         ".github/workflows/openclaw-live-and-e2e-checks-reusable.yml",
-        ["test/scripts/package-acceptance-workflow.test.ts"],
+        [
+          "test/scripts/package-acceptance-workflow.test.ts",
+          "test/scripts/ci-workflow-guards.test.ts",
+          "test/scripts/release-workflow-matrix-plan.test.ts",
+          "test/scripts/test-install-sh-docker.test.ts",
+        ],
+      ],
+      [
+        ".github/workflows/package-acceptance.yml",
+        [
+          "test/scripts/package-acceptance-workflow.test.ts",
+          "test/scripts/ci-workflow-guards.test.ts",
+        ],
+      ],
+      [".github/workflows/workflow-sanity.yml", ["test/scripts/ci-workflow-guards.test.ts"]],
+      [
+        ".github/workflows/docker-release.yml",
+        ["src/dockerfile.test.ts", "test/scripts/ci-workflow-guards.test.ts"],
+      ],
+      [
+        ".github/workflows/full-release-validation.yml",
+        [
+          "src/dockerfile.test.ts",
+          "test/scripts/package-acceptance-workflow.test.ts",
+          "test/scripts/plugin-prerelease-test-plan.test.ts",
+          "test/scripts/ci-workflow-guards.test.ts",
+        ],
       ],
       [
         "Dockerfile",
