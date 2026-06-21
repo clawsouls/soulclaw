@@ -474,6 +474,28 @@ describe("truncateOversizedToolResultsInMessages", () => {
       true,
     );
     expect(messages).toEqual([...prefix, ...suffix]);
+
+    const stableState = createToolResultPromptProjectionState();
+    const stableHistory = [
+      makeToolResult("a".repeat(4_000), "stable_1"),
+      makeToolResult("b".repeat(4_000), "stable_2"),
+    ];
+    const stableFirst = truncateOversizedToolResultsInMessages(
+      stableHistory,
+      128_000,
+      12_000,
+      12_000,
+      stableState,
+    );
+    const stableSecond = truncateOversizedToolResultsInMessages(
+      [...stableHistory, makeToolResult("c".repeat(15_000), "stable_3")],
+      128_000,
+      12_000,
+      12_000,
+      stableState,
+    );
+    expect(stableFirst.truncatedCount).toBe(0);
+    expect(stableSecond.messages.slice(0, stableHistory.length)).toEqual(stableFirst.messages);
   });
 });
 

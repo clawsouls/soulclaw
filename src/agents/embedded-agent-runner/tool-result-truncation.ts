@@ -356,7 +356,7 @@ export function truncateOversizedToolResultsInMessages(
       id: `message-${index}`,
       type: "message",
       message: (projectionKey && projectionState?.replacements.get(projectionKey)) ?? message,
-      aggregateEligible: !projectionKey || !projectionState?.replacements.has(projectionKey),
+      aggregateEligible: !projectionKey || !projectionState?.frozen.has(projectionKey),
     };
   });
   const plan = buildToolResultReplacementPlan({
@@ -365,6 +365,14 @@ export function truncateOversizedToolResultsInMessages(
     aggregateBudgetChars,
     minKeepChars: RECOVERY_MIN_KEEP_CHARS,
   });
+  if (projectionState) {
+    for (const message of messages) {
+      const projectionKey = getToolResultProjectionKey(message);
+      if (projectionKey) {
+        projectionState.frozen.add(projectionKey);
+      }
+    }
+  }
   if (plan.replacements.length === 0) {
     const projectedMessages = branch.map((entry) => entry.message as AgentMessage);
     const hasProjectedChanges = projectedMessages.some(
@@ -382,8 +390,11 @@ export function truncateOversizedToolResultsInMessages(
     for (const [index, originalMessage] of messages.entries()) {
       const projectedMessage = replacedBranch[index]?.message;
       const projectionKey = getToolResultProjectionKey(originalMessage);
-      if (projectionKey && projectedMessage && projectedMessage !== originalMessage) {
-        projectionState.replacements.set(projectionKey, projectedMessage);
+      if (projectionKey) {
+        projectionState.frozen.add(projectionKey);
+        if (projectedMessage && projectedMessage !== originalMessage) {
+          projectionState.replacements.set(projectionKey, projectedMessage);
+        }
       }
     }
   }
@@ -431,10 +442,11 @@ type ToolResultReplacement = {
 
 export type ToolResultPromptProjectionState = {
   replacements: Map<string, AgentMessage>;
+  frozen: Set<string>;
 };
 
 export function createToolResultPromptProjectionState(): ToolResultPromptProjectionState {
-  return { replacements: new Map<string, AgentMessage>() };
+  return { replacements: new Map<string, AgentMessage>(), frozen: new Set<string>() };
 }
 
 function getToolResultProjectionKey(message: AgentMessage): string | undefined {
@@ -442,10 +454,11 @@ function getToolResultProjectionKey(message: AgentMessage): string | undefined {
     return undefined;
   }
   const toolCallId = (message as { toolCallId?: unknown }).toolCallId;
-  if (typeof toolCallId === "string" && toolCallId.length > 0) {
-    return `tool:${toolCallId}`;
-  }
   const timestamp = (message as { timestamp?: unknown }).timestamp;
+  const timestampKey = typeof timestamp === "number" ? `:${timestamp}` : "";
+  if (typeof toolCallId === "string" && toolCallId.length > 0) {
+    return `tool:${toolCallId}${timestampKey}`;
+  }
   return typeof timestamp === "number" ? `timestamp:${timestamp}` : undefined;
 }
 
