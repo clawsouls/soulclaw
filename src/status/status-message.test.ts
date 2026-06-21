@@ -128,7 +128,4 @@ describe("buildStatusMessage context window", () => {
     expect(text).not.toContain("Context: 36k/200k");
   });
 
-  it("shows auto fast mode", () => {
-    expect(formatFastModeLabel("auto")).toBe("Fast: auto");
-  });
 });

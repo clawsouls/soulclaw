@@ -121,8 +121,13 @@ describe("runCliAgentWithLifecycle", () => {
   });
 
   it("propagates yielded result metadata on lifecycle end", async () => {
-    cliDispatchMocks.emitAgentEvent.mockClear();
-    cliDispatchMocks.runCliAgent.mockResolvedValueOnce({
+    const events: Array<{ stream?: string; data?: Record<string, unknown> }> = [];
+    const stop = onAgentEvent((event) => {
+      if (event.runId === "run-yielded") {
+        events.push(event);
+      }
+    });
+    cliDispatchState.runCliAgentMock.mockResolvedValueOnce({
       payloads: [],
       meta: {
         durationMs: 1,
@@ -132,25 +137,29 @@ describe("runCliAgentWithLifecycle", () => {
       },
     } satisfies EmbeddedAgentRunResult);
 
-    await runCliAgentWithLifecycle({
-      runId: "run-yielded",
-      provider: "claude-cli",
-      runParams: {
-        sessionId: "session-1",
-        sessionFile: "/tmp/session.jsonl",
-        workspaceDir: "/tmp/workspace",
-        prompt: "hello",
-        provider: "claude-cli",
-        model: "claude",
-        thinkLevel: "off",
-        timeoutMs: 1_000,
+    try {
+      await runCliAgentWithLifecycle({
         runId: "run-yielded",
-      },
-    });
+        provider: "claude-cli",
+        runParams: {
+          sessionId: "session-1",
+          sessionFile: "/tmp/session.jsonl",
+          workspaceDir: "/tmp/workspace",
+          prompt: "hello",
+          provider: "claude-cli",
+          model: "claude",
+          thinkLevel: "off",
+          timeoutMs: 1_000,
+          runId: "run-yielded",
+        },
+      });
+    } finally {
+      stop();
+    }
 
-    const terminal = cliDispatchMocks.emitAgentEvent.mock.calls
-      .map(([event]) => event as { stream?: string; data?: Record<string, unknown> })
-      .find((event) => event.stream === "lifecycle" && event.data?.phase === "end");
+    const terminal = events.find(
+      (event) => event.stream === "lifecycle" && event.data?.phase === "end",
+    );
     expect(terminal?.data).toMatchObject({
       yielded: true,
       livenessState: "paused",
