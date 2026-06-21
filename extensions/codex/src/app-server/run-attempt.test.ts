@@ -5623,6 +5623,7 @@ describe("runCodexAppServerAttempt", () => {
       name: "fast off",
       fastMode: false,
       configuredServiceTier: "priority",
+      expectedServiceTier: null,
     },
     {
       name: "fast auto active",
@@ -5633,7 +5634,7 @@ describe("runCodexAppServerAttempt", () => {
     name: string;
     fastMode: EmbeddedRunAttemptParams["fastMode"];
     configuredServiceTier?: "priority";
-    expectedServiceTier?: "priority";
+    expectedServiceTier?: "priority" | null;
   }>)(
     "maps $name to app-server resume and turn service tier",
     async ({ fastMode, configuredServiceTier, expectedServiceTier }) => {

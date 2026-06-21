@@ -217,12 +217,6 @@ export function resolveRunFastModeForFallbackCandidate(params: {
   model: string;
   sessionEntry?: Pick<SessionEntry, "fastMode">;
 }) {
-  if (params.run.fastModeOverride) {
-    return {
-      fastMode: params.run.fastMode,
-      fastModeAutoOnSeconds: params.run.fastModeAutoOnSeconds,
-    };
-  }
   const state = resolveFastModeState({
     cfg: params.config,
     provider: params.provider,
@@ -230,6 +224,14 @@ export function resolveRunFastModeForFallbackCandidate(params: {
     agentId: params.run.agentId,
     sessionEntry: params.sessionEntry,
   });
+  if (params.run.fastModeOverride) {
+    return {
+      fastMode: params.run.fastMode,
+      fastModeAutoOnSeconds: params.run.fastModeAutoOnSecondsOverride
+        ? params.run.fastModeAutoOnSeconds
+        : state.fastAutoOnSeconds,
+    };
+  }
   return {
     fastMode: state.mode,
     fastModeAutoOnSeconds: params.run.fastModeAutoOnSecondsOverride
