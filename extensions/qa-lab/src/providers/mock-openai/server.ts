@@ -230,7 +230,10 @@ function readBody(req: IncomingMessage): Promise<string> {
 
 function parseOpenAiJsonBody(raw: string): Record<string, unknown> | null {
   try {
-    return raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    const parsed = raw ? (JSON.parse(raw) as unknown) : {};
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
   } catch {
     return null;
   }

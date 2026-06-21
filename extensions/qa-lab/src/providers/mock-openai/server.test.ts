@@ -4275,18 +4275,20 @@ describe("qa mock openai server", () => {
     });
 
     for (const path of ["/v1/responses", "/v1/embeddings", "/v1/images/generations"]) {
-      const response = await fetch(`${server.baseUrl}${path}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: "{bad",
-      });
+      for (const rawBody of ["{bad", "[]", '"text"']) {
+        const response = await fetch(`${server.baseUrl}${path}`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: rawBody,
+        });
 
-      expect(response.status).toBe(400);
-      const body = (await response.json()) as {
-        error: { type: string; message: string };
-      };
-      expect(body.error.type).toBe("invalid_request_error");
-      expect(body.error.message).toContain("Malformed JSON body");
+        expect(response.status).toBe(400);
+        const body = (await response.json()) as {
+          error: { type: string; message: string };
+        };
+        expect(body.error.type).toBe("invalid_request_error");
+        expect(body.error.message).toContain("Malformed JSON body");
+      }
     }
 
     const health = await fetch(`${server.baseUrl}/healthz`);
