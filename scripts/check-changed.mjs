@@ -290,21 +290,26 @@ export function createChangedCheckPlan(result, options = {}) {
     add("prompt snapshot drift", ["prompt:snapshots:check"]);
   }
   if (shouldRunPromptSnapshotOwnerTest(result.paths)) {
-    add("prompt snapshot owner test", ["test:serial", "test/scripts/prompt-snapshots.test.ts"]);
+    add(
+      "prompt snapshot owner test",
+      ["test:serial", "test/scripts/prompt-snapshots.test.ts"],
+      baseEnv,
+    );
   }
   if (shouldRunRuntimeSidecarBaselineCheck(result.paths)) {
     add("runtime sidecar baseline", ["runtime-sidecars:check"]);
-    add("runtime sidecar owner test", [
-      "test:serial",
-      "src/plugins/bundled-plugin-metadata.test.ts",
-    ]);
+    add(
+      "runtime sidecar owner test",
+      ["test:serial", "src/plugins/bundled-plugin-metadata.test.ts"],
+      baseEnv,
+    );
   }
   if (shouldRunAppcastOwnerTest(result.paths)) {
-    add("appcast owner tests", [
-      "test:serial",
-      "test/appcast.test.ts",
-      "test/scripts/make-appcast.test.ts",
-    ]);
+    add(
+      "appcast owner tests",
+      ["test:serial", "test/appcast.test.ts", "test/scripts/make-appcast.test.ts"],
+      baseEnv,
+    );
   }
   add("package patch guard", ["deps:patches:check"]);
 
@@ -410,7 +415,7 @@ export function createChangedCheckPlan(result, options = {}) {
     addLint("lint apps", ["lint:apps"]);
   }
   if (lanes.apps && hasMacosAppCiPath(result.paths)) {
-    add("macOS app CI tests", ["test:macos:ci"]);
+    add("macOS app CI tests", ["test:macos:ci"], baseEnv);
   }
 
   if (lanes.core || lanes.extensions) {
