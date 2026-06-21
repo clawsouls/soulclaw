@@ -2677,6 +2677,13 @@ function resolveDocsI18nBehaviorTargets(changedPath) {
   return ["test/scripts/docs-i18n-behavior.test.ts"];
 }
 
+function resolveDocsI18nGoTargets(changedPath) {
+  if (!/^scripts\/docs-i18n\/(?:go\.(?:mod|sum)|[^/]+\.go)$/u.test(changedPath)) {
+    return null;
+  }
+  return ["test/scripts/docs-i18n.test.ts"];
+}
+
 function resolveK8sManifestTargets(changedPath) {
   if (!/^scripts\/k8s\/manifests\/[^/]+\.yaml$/u.test(changedPath)) {
     return null;
@@ -2714,6 +2721,7 @@ function resolveToolingTestTargets(changedPath, cwd = process.cwd()) {
     TOOLING_TEST_TARGETS.get(changedPath) ??
     resolveUpgradeSurvivorConfigRecipeTargets(changedPath) ??
     resolveDocsI18nBehaviorTargets(changedPath) ??
+    resolveDocsI18nGoTargets(changedPath) ??
     resolveK8sManifestTargets(changedPath) ??
     resolveParallelsToolingTestTargets(changedPath);
   const conventionalTargets = resolveConventionalToolingTestTargets(changedPath, cwd);

@@ -1084,6 +1084,19 @@ describe("scripts/test-projects changed-target routing", () => {
     }
   });
 
+  it("keeps docs i18n Go module edits on Go module tests", () => {
+    for (const modulePath of [
+      "scripts/docs-i18n/main.go",
+      "scripts/docs-i18n/main_test.go",
+      "scripts/docs-i18n/go.mod",
+    ]) {
+      expect(resolveChangedTestTargetPlan([modulePath]), modulePath).toEqual({
+        mode: "targets",
+        targets: ["test/scripts/docs-i18n.test.ts"],
+      });
+    }
+  });
+
   it("keeps k8s manifest edits on manifest tests", () => {
     expect(resolveChangedTestTargetPlan(["scripts/k8s/manifests/configmap.yaml"])).toEqual({
       mode: "targets",
