@@ -953,6 +953,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ],
   ],
   [
+    "scripts/github/resolve-openclaw-ref.sh",
+    ["test/scripts/resolve-openclaw-ref.test.ts"],
+  ],
+  [
     "scripts/github/run-openclaw-cross-os-release-checks.sh",
     ["test/scripts/openclaw-cross-os-release-workflow.test.ts"],
   ],
