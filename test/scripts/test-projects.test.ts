@@ -430,6 +430,10 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/e2e/lib/upgrade-survivor/run.sh",
         ["test/scripts/upgrade-survivor-assertions.test.ts"],
       ],
+      [
+        "scripts/e2e/lib/upgrade-survivor/config-recipe/plugins-configured-installs.json",
+        ["test/scripts/upgrade-survivor-config-recipe.test.ts"],
+      ],
       ["scripts/e2e/lib/run-with-pty.mjs", ["test/scripts/e2e-run-with-pty.test.ts"]],
     ]);
 
@@ -1208,6 +1212,11 @@ describe("scripts/test-projects changed-target routing", () => {
     ).toEqual({
       mode: "targets",
       targets: ["test/scripts/dependency-ownership-surface-report.test.ts"],
+    });
+
+    expect(resolveChangedTestTargetPlan(["scripts/clawtributors-map.json"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/update-clawtributors.test.ts"],
     });
 
     expect(resolveChangedTestTargetPlan(["scripts/docs-link-audit.mjs"])).toEqual({
