@@ -1637,6 +1637,10 @@ describe("scripts/test-projects changed-target routing", () => {
         ],
       ],
       [
+        ".github/actions/setup-pnpm-store-cache/ensure-node.sh",
+        ["test/scripts/setup-pnpm-store-cache-ensure-node.test.ts"],
+      ],
+      [
         ".github/workflows/live-media-runner-image.yml",
         [
           "test/scripts/package-acceptance-workflow.test.ts",

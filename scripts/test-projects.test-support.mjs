@@ -608,6 +608,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ".github/actions/setup-pnpm-store-cache/action.yml",
     ["test/scripts/package-acceptance-workflow.test.ts", "test/scripts/ci-workflow-guards.test.ts"],
   ],
+  [
+    ".github/actions/setup-pnpm-store-cache/ensure-node.sh",
+    ["test/scripts/setup-pnpm-store-cache-ensure-node.test.ts"],
+  ],
   [".github/images/live-media-runner/Dockerfile", LIVE_MEDIA_RUNNER_IMAGE_TEST_TARGETS],
   [".github/workflows/ci.yml", ["test/scripts/ci-workflow-guards.test.ts"]],
   [
