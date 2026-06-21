@@ -325,7 +325,9 @@ import {
 } from "../tool-result-context-guard.js";
 import {
   resolveLiveToolResultMaxChars,
+  createToolResultPromptProjectionState,
   truncateOversizedToolResultsInMessages,
+  type ToolResultPromptProjectionState,
   truncateOversizedToolResultsInSessionManager,
 } from "../tool-result-truncation.js";
 import { splitSdkTools } from "../tool-split.js";
@@ -2579,6 +2581,8 @@ export async function runEmbeddedAttempt(
           await baseConvertToLlm(normalizeMessagesForLlmBoundary(messages, buildBoundaryOptions()));
       }
       let prePromptMessageCount = activeSession.messages.length;
+      const toolResultPromptProjectionState: ToolResultPromptProjectionState =
+        createToolResultPromptProjectionState();
       let contextEngineAfterTurnCheckpoint: number | null = null;
       let unwindowedContextEngineMessagesForPrecheck: AgentMessage[] | undefined;
       let contextEnginePromptAuthority: NonNullable<AssembleResult["promptAuthority"]> =
@@ -4177,6 +4181,7 @@ export async function runEmbeddedAttempt(
             contextTokenBudget,
             promptToolResultMaxChars,
             promptToolResultMaxChars * PROMPT_TOOL_RESULT_AGGREGATE_CAP_MULTIPLIER,
+            toolResultPromptProjectionState,
           );
           if (promptToolResultTruncation.truncatedCount > 0) {
             promptHistoryMessages = promptToolResultTruncation.messages;
@@ -4717,7 +4722,8 @@ export async function runEmbeddedAttempt(
                     messages,
                     contextTokenBudget,
                     promptToolResultMaxChars,
-                    null,
+                    promptToolResultMaxChars * PROMPT_TOOL_RESULT_AGGREGATE_CAP_MULTIPLIER,
+                    toolResultPromptProjectionState,
                   );
                   return providerPromptHistoryTruncation.truncatedCount > 0
                     ? providerPromptHistoryTruncation.messages

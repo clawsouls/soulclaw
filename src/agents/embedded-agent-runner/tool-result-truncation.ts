@@ -338,27 +338,27 @@ export function truncateOversizedToolResultsInMessages(
   messages: AgentMessage[],
   contextWindowTokens: number,
   maxCharsOverride?: number,
-  aggregateMaxCharsOverride?: number | null,
+  aggregateMaxCharsOverride?: number,
+  projectionState?: ToolResultPromptProjectionState,
 ): { messages: AgentMessage[]; truncatedCount: number } {
   const maxChars = Math.max(
     1,
     maxCharsOverride ?? calculateMaxToolResultChars(contextWindowTokens),
   );
-  // Live prompt assembly disables aggregate rewriting so unchanged history stays byte-stable
-  // for provider prefix caches; recovery and persisted-session callers keep the aggregate guard.
-  const aggregateBudgetChars =
-    aggregateMaxCharsOverride === null
-      ? Number.POSITIVE_INFINITY
-      : calculateRecoveryAggregateToolResultChars(
-          contextWindowTokens,
-          maxChars,
-          aggregateMaxCharsOverride,
-        );
-  const branch = messages.map((message, index) => ({
-    id: `message-${index}`,
-    type: "message",
-    message,
-  }));
+  const aggregateBudgetChars = calculateRecoveryAggregateToolResultChars(
+    contextWindowTokens,
+    maxChars,
+    aggregateMaxCharsOverride,
+  );
+  const branch = messages.map((message, index) => {
+    const projectionKey = projectionState ? getToolResultProjectionKey(message) : undefined;
+    return {
+      id: `message-${index}`,
+      type: "message",
+      message: (projectionKey && projectionState?.replacements.get(projectionKey)) ?? message,
+      aggregateEligible: !projectionKey || !projectionState?.replacements.has(projectionKey),
+    };
+  });
   const plan = buildToolResultReplacementPlan({
     branch,
     maxChars,
@@ -366,11 +366,23 @@ export function truncateOversizedToolResultsInMessages(
     minKeepChars: RECOVERY_MIN_KEEP_CHARS,
   });
   if (plan.replacements.length === 0) {
-    return { messages, truncatedCount: 0 };
+    return {
+      messages: branch.map((entry) => entry.message as AgentMessage),
+      truncatedCount: 0,
+    };
   }
 
   const replacementIds = new Set(plan.replacements.map((replacement) => replacement.entryId));
   const replacedBranch = applyToolResultReplacementsToBranch(branch, plan.replacements);
+  if (projectionState) {
+    for (const [index, originalMessage] of messages.entries()) {
+      const projectedMessage = replacedBranch[index]?.message;
+      const projectionKey = getToolResultProjectionKey(originalMessage);
+      if (projectionKey && projectedMessage && projectedMessage !== originalMessage) {
+        projectionState.replacements.set(projectionKey, projectedMessage);
+      }
+    }
+  }
   return {
     messages: replacedBranch.map((entry) => entry.message as AgentMessage),
     truncatedCount: replacementIds.size,
@@ -405,12 +417,33 @@ type ToolResultBranchEntry = {
   id: string;
   type: string;
   message?: AgentMessage;
+  aggregateEligible?: boolean;
 };
 
 type ToolResultReplacement = {
   entryId: string;
   message: AgentMessage;
 };
+
+export type ToolResultPromptProjectionState = {
+  replacements: Map<string, AgentMessage>;
+};
+
+export function createToolResultPromptProjectionState(): ToolResultPromptProjectionState {
+  return { replacements: new Map<string, AgentMessage>() };
+}
+
+function getToolResultProjectionKey(message: AgentMessage): string | undefined {
+  if (message.role !== "toolResult") {
+    return undefined;
+  }
+  const toolCallId = (message as { toolCallId?: unknown }).toolCallId;
+  if (typeof toolCallId === "string" && toolCallId.length > 0) {
+    return `tool:${toolCallId}`;
+  }
+  const timestamp = (message as { timestamp?: unknown }).timestamp;
+  return typeof timestamp === "number" ? `timestamp:${timestamp}` : undefined;
+}
 
 function buildAggregateToolResultReplacements(params: {
   branch: ToolResultBranchEntry[];
@@ -429,6 +462,7 @@ function buildAggregateToolResultReplacements(params: {
       } =>
         item.entry.type === "message" &&
         Boolean(item.entry.message) &&
+        item.entry.aggregateEligible !== false &&
         (item.entry.message as { role?: string }).role === "toolResult",
     )
     .map((item) => ({

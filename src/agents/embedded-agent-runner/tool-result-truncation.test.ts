@@ -22,6 +22,7 @@ let sessionLikelyHasOversizedToolResults: typeof import("./tool-result-truncatio
 let estimateToolResultReductionPotential: typeof import("./tool-result-truncation.js").estimateToolResultReductionPotential;
 let DEFAULT_MAX_LIVE_TOOL_RESULT_CHARS: typeof import("./tool-result-truncation.js").DEFAULT_MAX_LIVE_TOOL_RESULT_CHARS;
 let resolveLiveToolResultMaxChars: typeof import("./tool-result-truncation.js").resolveLiveToolResultMaxChars;
+let createToolResultPromptProjectionState: typeof import("./tool-result-truncation.js").createToolResultPromptProjectionState;
 let tmpDir: string | undefined;
 
 async function loadFreshToolResultTruncationModuleForTest() {
@@ -40,6 +41,7 @@ async function loadFreshToolResultTruncationModuleForTest() {
     estimateToolResultReductionPotential,
     DEFAULT_MAX_LIVE_TOOL_RESULT_CHARS,
     resolveLiveToolResultMaxChars,
+    createToolResultPromptProjectionState,
   } = await import("./tool-result-truncation.js"));
 }
 
@@ -448,17 +450,25 @@ describe("truncateOversizedToolResultsInMessages", () => {
       makeToolResult("y".repeat(15_000), "current_2"),
     ];
     const messages = [...prefix, ...suffix];
+    const projectionState = createToolResultPromptProjectionState();
 
-    const first = truncateOversizedToolResultsInMessages(messages, 128_000, 12_000, null);
+    const first = truncateOversizedToolResultsInMessages(
+      messages,
+      128_000,
+      12_000,
+      12_000,
+      projectionState,
+    );
     const second = truncateOversizedToolResultsInMessages(
       [...messages, makeToolResult("z".repeat(15_000), "current_3")],
       128_000,
       12_000,
-      null,
+      12_000,
+      projectionState,
     );
 
     expect(first.truncatedCount).toBe(4);
-    expect(second.truncatedCount).toBe(5);
+    expect(second.truncatedCount).toBe(1);
     expect(second.messages.slice(0, messages.length)).toEqual(first.messages);
     expect(second.messages.every((message) => getToolResultTextLength(message) <= 12_000)).toBe(
       true,
