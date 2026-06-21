@@ -410,6 +410,19 @@ const PRECISE_SOURCE_TEST_TARGETS = new Map([
     ],
   ],
 ]);
+const PLUGIN_SDK_ENTRY_METADATA_TEST_TARGETS = [
+  "src/plugins/contracts/plugin-sdk-index.bundle.test.ts",
+  "src/plugins/contracts/plugin-sdk-index.test.ts",
+  "src/plugins/contracts/plugin-sdk-package-contract-guardrails.test.ts",
+  "src/plugins/contracts/plugin-sdk-subpaths.test.ts",
+  "src/plugins/contracts/extension-package-project-boundaries.test.ts",
+  "test/scripts/plugin-sdk-surface-report.test.ts",
+  "test/scripts/build-all.test.ts",
+  "test/release-check.test.ts",
+  "test/scripts/prepare-extension-package-boundary-artifacts.test.ts",
+  "test/scripts/ts-topology.test.ts",
+  TOOLING_VITEST_CONFIG,
+];
 const TOOLING_SOURCE_TEST_TARGETS = new Map([
   [".crabbox.yaml", ["test/scripts/package-acceptance-workflow.test.ts"]],
   [".github/workflows/ci.yml", ["test/scripts/ci-workflow-guards.test.ts"]],
@@ -773,6 +786,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ["test/scripts/check-deprecated-api-usage.test.ts"],
   ],
   [
+    "scripts/lib/plugin-sdk-deprecated-barrel-subpaths.json",
+    PLUGIN_SDK_ENTRY_METADATA_TEST_TARGETS,
+  ],
+  [
     "scripts/lib/plugin-sdk-deprecated-public-subpaths.json",
     [
       "test/scripts/check-deprecated-api-usage.test.ts",
@@ -781,18 +798,11 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
       "test/scripts/build-all.test.ts",
     ],
   ],
+  ["scripts/lib/plugin-sdk-entrypoints.json", PLUGIN_SDK_ENTRY_METADATA_TEST_TARGETS],
+  ["scripts/lib/plugin-sdk-entries.mjs", PLUGIN_SDK_ENTRY_METADATA_TEST_TARGETS],
   [
-    "scripts/lib/plugin-sdk-entries.mjs",
-    [
-      "src/plugins/contracts/plugin-sdk-package-contract-guardrails.test.ts",
-      "src/plugins/contracts/extension-package-project-boundaries.test.ts",
-      "test/scripts/plugin-sdk-surface-report.test.ts",
-      "test/scripts/build-all.test.ts",
-      "test/release-check.test.ts",
-      "test/scripts/prepare-extension-package-boundary-artifacts.test.ts",
-      "test/scripts/ts-topology.test.ts",
-      TOOLING_VITEST_CONFIG,
-    ],
+    "scripts/lib/plugin-sdk-private-local-only-subpaths.json",
+    PLUGIN_SDK_ENTRY_METADATA_TEST_TARGETS,
   ],
   ["scripts/lib/direct-run.mjs", ["test/scripts/changed-lanes.test.ts"]],
   ["scripts/docker/cleanup-smoke/run.sh", ["test/scripts/docker-build-helper.test.ts"]],
