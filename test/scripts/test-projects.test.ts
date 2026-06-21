@@ -478,6 +478,14 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/docker-build-helper.test.ts"],
       ],
       [
+        "scripts/e2e/lib/codex-install-utils.mjs",
+        ["test/scripts/codex-install-assertions.test.ts"],
+      ],
+      [
+        "scripts/e2e/lib/codex-on-demand/assertions.mjs",
+        ["test/scripts/codex-install-assertions.test.ts"],
+      ],
+      [
         "scripts/e2e/lib/clawhub-fixture-server.cjs",
         [
           "test/scripts/clawhub-fixture-server.test.ts",
