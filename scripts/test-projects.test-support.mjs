@@ -970,6 +970,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ["test/scripts/plugin-release-pretag-pack-check.test.ts"],
   ],
   [
+    "scripts/validate-release-publish-approval.mjs",
+    ["test/scripts/validate-release-publish-approval.test.ts"],
+  ],
+  [
     "scripts/github/security-sensitive-guard.mjs",
     [
       "test/scripts/security-sensitive-guard-script.test.ts",

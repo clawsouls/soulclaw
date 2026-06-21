@@ -1949,6 +1949,10 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/release-workflow-matrix-plan.test.ts"],
       ],
       [
+        "scripts/validate-release-publish-approval.mjs",
+        ["test/scripts/validate-release-publish-approval.test.ts"],
+      ],
+      [
         "scripts/lib/plugin-npm-runtime-assets.mjs",
         ["test/scripts/plugin-npm-runtime-build-args.test.ts"],
       ],
