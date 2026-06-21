@@ -4265,6 +4265,34 @@ describe("qa mock openai server", () => {
     expect(body.error.message).toContain("Malformed JSON body");
   });
 
+  it("rejects malformed OpenAI-compatible JSON without crashing the mock server", async () => {
+    const server = await startQaMockOpenAiServer({
+      host: "127.0.0.1",
+      port: 0,
+    });
+    cleanups.push(async () => {
+      await server.stop();
+    });
+
+    for (const path of ["/v1/responses", "/v1/embeddings", "/v1/images/generations"]) {
+      const response = await fetch(`${server.baseUrl}${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{bad",
+      });
+
+      expect(response.status).toBe(400);
+      const body = (await response.json()) as {
+        error: { type: string; message: string };
+      };
+      expect(body.error.type).toBe("invalid_request_error");
+      expect(body.error.message).toContain("Malformed JSON body");
+    }
+
+    const health = await fetch(`${server.baseUrl}/healthz`);
+    expect(health.status).toBe(200);
+  });
+
   it("defaults empty-string Anthropic /v1/messages model to claude-opus-4-8", async () => {
     // Regression for the loop-7 Copilot finding: a bare `typeof
     // body.model === "string"` check lets an empty-string model leak
