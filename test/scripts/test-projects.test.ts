@@ -2281,6 +2281,7 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/e2e/parallels/update-job-timeout.ts",
         "scripts/e2e/parallels/windows-smoke.ts",
         "scripts/e2e/parallels-windows-smoke.sh",
+        "scripts/e2e/lib/parallels-package/build-info-commit.mjs",
       ]),
     ).toEqual([
       {
@@ -2290,6 +2291,7 @@ describe("scripts/test-projects changed-target routing", () => {
           "test/scripts/parallels-smoke-model.test.ts",
           "test/scripts/parallels-npm-update-smoke.test.ts",
           "test/scripts/parallels-update-job-timeout.test.ts",
+          "test/scripts/parallels-lib-helpers.test.ts",
         ],
         watchMode: false,
       },
