@@ -886,7 +886,6 @@ describe("scripts/test-projects changed-target routing", () => {
     const targets = [
       "scripts/check-no-raw-http2-imports.mjs",
       "scripts/e2e/lib/clawhub-fixture-server.cjs",
-      "scripts/auth-monitor.sh",
     ];
 
     expect(resolveChangedTestTargetPlan(targets)).toEqual({
@@ -1365,6 +1364,27 @@ describe("scripts/test-projects changed-target routing", () => {
       ["scripts/pr-merge", ["test/scripts/pr-wrappers.test.ts"]],
       ["scripts/pr-prepare", ["test/scripts/pr-wrappers.test.ts"]],
       ["scripts/pr-review", ["test/scripts/pr-wrappers.test.ts"]],
+    ]);
+
+    for (const [source, targets] of expectedTargets) {
+      expect(resolveChangedTestTargetPlan([source]), source).toEqual({
+        mode: "targets",
+        targets,
+      });
+    }
+  });
+
+  it("keeps auth monitoring helper edits on owner tests", () => {
+    const expectedTargets = new Map([
+      ["scripts/auth-monitor.sh", ["test/scripts/auth-monitor.test.ts"]],
+      ["scripts/mobile-reauth.sh", ["test/scripts/auth-monitor.test.ts"]],
+      ["scripts/setup-auth-system.sh", ["test/scripts/auth-monitor.test.ts"]],
+      ["scripts/systemd/openclaw-auth-monitor.service", ["test/scripts/auth-monitor.test.ts"]],
+      ["scripts/systemd/openclaw-auth-monitor.timer", ["test/scripts/auth-monitor.test.ts"]],
+      ["scripts/termux-auth-widget.sh", ["test/scripts/auth-monitor.test.ts"]],
+      ["scripts/termux-quick-auth.sh", ["test/scripts/auth-monitor.test.ts"]],
+      ["scripts/termux-sync-widget.sh", ["test/scripts/auth-monitor.test.ts"]],
+      ["test/scripts/auth-monitor.test.ts", ["test/scripts/auth-monitor.test.ts"]],
     ]);
 
     for (const [source, targets] of expectedTargets) {
