@@ -350,7 +350,9 @@ export function truncateOversizedToolResultsInMessages(
     maxChars,
     aggregateMaxCharsOverride,
   );
-  const projectionKeys = projectionState ? getToolResultProjectionKeys(messages) : [];
+  const projectionKeys = projectionState
+    ? getToolResultProjectionKeys(messages, projectionState)
+    : [];
   const branch = messages.map((message, index) => {
     const projectionKey = projectionKeys[index];
     const projectedMessage = projectionKey
@@ -453,10 +455,15 @@ type ToolResultReplacement = {
 export type ToolResultPromptProjectionState = {
   replacements: Map<string, AgentMessage>;
   frozen: Set<string>;
+  ambiguousBaseKeys: Set<string>;
 };
 
 export function createToolResultPromptProjectionState(): ToolResultPromptProjectionState {
-  return { replacements: new Map<string, AgentMessage>(), frozen: new Set<string>() };
+  return {
+    replacements: new Map<string, AgentMessage>(),
+    frozen: new Set<string>(),
+    ambiguousBaseKeys: new Set<string>(),
+  };
 }
 
 function getToolResultProjectionBaseKey(message: AgentMessage): string | undefined {
@@ -472,11 +479,28 @@ function getToolResultProjectionBaseKey(message: AgentMessage): string | undefin
   return typeof timestamp === "number" ? `timestamp:${timestamp}` : undefined;
 }
 
-function getToolResultProjectionKeys(messages: AgentMessage[]): Array<string | undefined> {
+function getToolResultProjectionKeys(
+  messages: AgentMessage[],
+  projectionState: ToolResultPromptProjectionState,
+): Array<string | undefined> {
+  const baseKeys = messages.map((message) => getToolResultProjectionBaseKey(message));
+  const baseKeyCounts = new Map<string, number>();
+  for (const baseKey of baseKeys) {
+    if (baseKey) {
+      baseKeyCounts.set(baseKey, (baseKeyCounts.get(baseKey) ?? 0) + 1);
+    }
+  }
+  for (const [baseKey, count] of baseKeyCounts) {
+    if (count > 1) {
+      projectionState.ambiguousBaseKeys.add(baseKey);
+    }
+  }
   const occurrences = new Map<string, number>();
-  return messages.map((message) => {
-    const baseKey = getToolResultProjectionBaseKey(message);
+  return baseKeys.map((baseKey) => {
     if (!baseKey) {
+      return undefined;
+    }
+    if (projectionState.ambiguousBaseKeys.has(baseKey)) {
       return undefined;
     }
     const occurrence = occurrences.get(baseKey) ?? 0;

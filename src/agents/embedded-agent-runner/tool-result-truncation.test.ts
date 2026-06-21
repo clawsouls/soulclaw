@@ -556,6 +556,33 @@ describe("truncateOversizedToolResultsInMessages", () => {
       result?.content?.[1] && "text" in result.content[1] ? result.content[1].text.length : 0,
     ).toBeLessThan(15_000);
   });
+
+  it("does not reuse ambiguous projections across filtered history", () => {
+    const projectionState = createToolResultPromptProjectionState();
+    const duplicate = (text: string) => ({
+      role: "toolResult" as const,
+      toolCallId: "duplicate-call",
+      timestamp: 1,
+      content: [{ type: "text" as const, text }],
+    });
+    const first = truncateOversizedToolResultsInMessages(
+      [duplicate("a".repeat(100)), duplicate("b".repeat(100))],
+      128_000,
+      100,
+      100,
+      projectionState,
+    );
+    const filtered = truncateOversizedToolResultsInMessages(
+      [duplicate("b".repeat(100))],
+      128_000,
+      100,
+      100,
+      projectionState,
+    );
+
+    expect(first.messages[0]).not.toEqual(first.messages[1]);
+    expect(filtered.messages[0]).toEqual(duplicate("b".repeat(100)));
+  });
 });
 
 describe("truncateOversizedToolResultsInSession", () => {
