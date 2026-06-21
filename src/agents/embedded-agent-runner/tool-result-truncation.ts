@@ -525,7 +525,6 @@ function buildAggregateToolResultReplacements(params: {
       } =>
         item.entry.type === "message" &&
         Boolean(item.entry.message) &&
-        item.entry.aggregateEligible !== false &&
         (item.entry.message as { role?: string }).role === "toolResult",
     )
     .map((item) => ({
@@ -533,6 +532,7 @@ function buildAggregateToolResultReplacements(params: {
       entryId: item.entry.id,
       message: item.entry.message,
       textLength: getToolResultTextLength(item.entry.message),
+      aggregateEligible: item.entry.aggregateEligible !== false,
     }))
     .filter((item) => item.textLength > 0);
 
@@ -556,12 +556,14 @@ function buildAggregateToolResultReplacements(params: {
   const replacements: Array<{ entryId: string; message: AgentMessage }> = [];
 
   // Spend aggregate reduction on older entries first so fresh tool output stays intact.
-  for (const candidate of candidates.toSorted((a, b) => {
-    if (a.index !== b.index) {
-      return a.index - b.index;
-    }
-    return b.textLength - a.textLength;
-  })) {
+  for (const candidate of candidates
+    .filter((item) => item.aggregateEligible)
+    .toSorted((a, b) => {
+      if (a.index !== b.index) {
+        return a.index - b.index;
+      }
+      return b.textLength - a.textLength;
+    })) {
     if (remainingReduction <= 0) {
       break;
     }
