@@ -1439,6 +1439,8 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
       "src/gateway/config-reload.test.ts",
     ],
   ],
+  ["scripts/e2e/lib/env-limits.mjs", ["test/scripts/e2e-helper-env-limits.test.ts"]],
+  ["scripts/e2e/mock-openai-server.mjs", ["test/scripts/e2e-mock-config-limits.test.ts"]],
   [
     "scripts/e2e/gateway-network-docker.sh",
     [
