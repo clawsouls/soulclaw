@@ -497,6 +497,27 @@ describe("truncateOversizedToolResultsInMessages", () => {
     expect(stableFirst.truncatedCount).toBe(0);
     expect(stableSecond.messages.slice(0, stableHistory.length)).toEqual(stableFirst.messages);
   });
+
+  it("does not restore filtered image blocks when reusing a projection", () => {
+    const projectionState = createToolResultPromptProjectionState();
+    const source = makeToolResult("x".repeat(15_000), "image_call");
+    source.content = [
+      { type: "image", data: "filtered-after-conversion" },
+      { type: "text", text: "x".repeat(15_000) },
+    ] as never;
+    truncateOversizedToolResultsInMessages([source], 128_000, 12_000, 12_000, projectionState);
+
+    const providerMessage = { ...source, content: [{ type: "text", text: "x".repeat(15_000) }] };
+    const result = truncateOversizedToolResultsInMessages(
+      [providerMessage],
+      128_000,
+      12_000,
+      12_000,
+      projectionState,
+    ).messages[0];
+
+    expect(result?.content).toEqual([{ type: "text", text: expect.stringContaining("truncated") }]);
+  });
 });
 
 describe("truncateOversizedToolResultsInSession", () => {

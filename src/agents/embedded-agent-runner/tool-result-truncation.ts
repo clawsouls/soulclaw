@@ -355,7 +355,13 @@ export function truncateOversizedToolResultsInMessages(
     return {
       id: `message-${index}`,
       type: "message",
-      message: (projectionKey && projectionState?.replacements.get(projectionKey)) ?? message,
+      message:
+        projectionKey && projectionState?.replacements.get(projectionKey)
+          ? mergeProjectedToolResultMessage(
+              message,
+              projectionState.replacements.get(projectionKey)!,
+            )
+          : message,
       aggregateEligible: !projectionKey || !projectionState?.frozen.has(projectionKey),
     };
   });
@@ -460,6 +466,36 @@ function getToolResultProjectionKey(message: AgentMessage): string | undefined {
     return `tool:${toolCallId}${timestampKey}`;
   }
   return typeof timestamp === "number" ? `timestamp:${timestamp}` : undefined;
+}
+
+function mergeProjectedToolResultMessage(
+  message: AgentMessage,
+  projectedMessage: AgentMessage,
+): AgentMessage {
+  if (message.role !== "toolResult" || projectedMessage.role !== "toolResult") {
+    return projectedMessage;
+  }
+  const currentContent = (message as { content?: unknown }).content;
+  const projectedContent = (projectedMessage as { content?: unknown }).content;
+  if (!Array.isArray(currentContent) || !Array.isArray(projectedContent)) {
+    return projectedMessage;
+  }
+  const projectedText = projectedContent.filter(
+    (block): block is { type: "text"; text: string } =>
+      Boolean(block) &&
+      typeof block === "object" &&
+      (block as { type?: unknown }).type === "text" &&
+      typeof (block as { text?: unknown }).text === "string",
+  );
+  let textIndex = 0;
+  const mergedContent = currentContent.map((block) => {
+    if (!block || typeof block !== "object" || (block as { type?: unknown }).type !== "text") {
+      return block;
+    }
+    const projectedBlock = projectedText[textIndex++];
+    return projectedBlock ? { ...block, text: projectedBlock.text } : block;
+  });
+  return { ...message, content: mergedContent } as AgentMessage;
 }
 
 function buildAggregateToolResultReplacements(params: {
