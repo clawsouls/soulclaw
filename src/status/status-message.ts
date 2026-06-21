@@ -25,6 +25,7 @@ import {
   formatProviderModelRef,
   resolveSelectedAndActiveModel,
 } from "../auto-reply/model-runtime.js";
+import { formatFastModeStatusValue } from "../shared/fast-mode.js";
 import type {
   ElevatedLevel,
   ReasoningLevel,
@@ -969,7 +970,7 @@ export function buildStatusMessage(args: StatusArgs): string {
     `Execution: ${execution.label}`,
     `Runtime: ${agentRuntimeLabel}`,
     `Think: ${thinkLevel}`,
-    `Fast: ${fastMode ? "on" : "off"}`,
+    `Fast: ${formatFastModeStatusValue({ mode: fastMode })}`,
     textVerbosity ? `Text: ${textVerbosity}` : null,
     verboseLabel,
     traceLabel,

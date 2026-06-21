@@ -292,8 +292,7 @@ function withCodexAppServerFastModeServiceTier(
   if (serviceTier) {
     return { ...appServer, serviceTier };
   }
-  const { serviceTier: _serviceTier, ...withoutServiceTier } = appServer;
-  return withoutServiceTier;
+  return { ...appServer, serviceTier: null };
 }
 
 function estimateCodexAppServerProjectedTurnTokens(params: {
