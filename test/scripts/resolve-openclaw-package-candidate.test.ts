@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resolveWindowsTaskkillPath } from "../../scripts/lib/windows-taskkill.mjs";
 import {
   ARTIFACT_TARBALL_SCAN_MAX_ENTRIES,
   assertExpectedSha256ForTest,
@@ -23,6 +24,10 @@ import {
   signalChildProcessTree,
   validateOpenClawPackageSpec,
 } from "../../scripts/resolve-openclaw-package-candidate.mjs";
+
+function expectedTaskkillPath(): string {
+  return resolveWindowsTaskkillPath();
+}
 
 const tempDirs: string[] = [];
 
@@ -226,17 +231,27 @@ describe("resolve-openclaw-package-candidate", () => {
       platform: "win32",
       runTaskkill,
     });
-    expect(runTaskkill).toHaveBeenNthCalledWith(1, "taskkill", ["/PID", "12345", "/T"], {
-      stdio: "ignore",
-    });
+    expect(runTaskkill).toHaveBeenNthCalledWith(
+      1,
+      expectedTaskkillPath(),
+      ["/PID", "12345", "/T"],
+      {
+        stdio: "ignore",
+      },
+    );
 
     signalChildProcessTree(child, "SIGKILL", {
       platform: "win32",
       runTaskkill,
     });
-    expect(runTaskkill).toHaveBeenNthCalledWith(2, "taskkill", ["/PID", "12345", "/T", "/F"], {
-      stdio: "ignore",
-    });
+    expect(runTaskkill).toHaveBeenNthCalledWith(
+      2,
+      expectedTaskkillPath(),
+      ["/PID", "12345", "/T", "/F"],
+      {
+        stdio: "ignore",
+      },
+    );
     expect(child.kill).not.toHaveBeenCalled();
   });
 
@@ -255,12 +270,22 @@ describe("resolve-openclaw-package-candidate", () => {
       runTaskkill,
     });
 
-    expect(runTaskkill).toHaveBeenNthCalledWith(1, "taskkill", ["/PID", "12345", "/T"], {
-      stdio: "ignore",
-    });
-    expect(runTaskkill).toHaveBeenNthCalledWith(2, "taskkill", ["/PID", "12345", "/T", "/F"], {
-      stdio: "ignore",
-    });
+    expect(runTaskkill).toHaveBeenNthCalledWith(
+      1,
+      expectedTaskkillPath(),
+      ["/PID", "12345", "/T"],
+      {
+        stdio: "ignore",
+      },
+    );
+    expect(runTaskkill).toHaveBeenNthCalledWith(
+      2,
+      expectedTaskkillPath(),
+      ["/PID", "12345", "/T", "/F"],
+      {
+        stdio: "ignore",
+      },
+    );
     expect(child.kill).not.toHaveBeenCalled();
   });
 
