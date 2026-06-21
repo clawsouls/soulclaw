@@ -1390,6 +1390,44 @@ describe("scripts/test-projects changed-target routing", () => {
     }
   });
 
+  it("routes script declaration edits through implementation owner tests", () => {
+    const declarationMirrors = new Map([
+      ["scripts/build-stamp.d.mts", "scripts/build-stamp.mjs"],
+      ["scripts/ci-changed-scope.d.mts", "scripts/ci-changed-scope.mjs"],
+      ["scripts/copy-bundled-plugin-metadata.d.mts", "scripts/copy-bundled-plugin-metadata.mjs"],
+      ["scripts/docs-link-audit.d.mts", "scripts/docs-link-audit.mjs"],
+      [
+        "scripts/lib/bundled-plugin-build-entries.d.mts",
+        "scripts/lib/bundled-plugin-build-entries.mjs",
+      ],
+      ["scripts/lib/config-boundary-guard.d.mts", "scripts/lib/config-boundary-guard.mjs"],
+      [
+        "scripts/lib/deprecated-config-api-guard.d.mts",
+        "scripts/lib/deprecated-config-api-guard.mjs",
+      ],
+      [
+        "scripts/lib/extension-source-classifier.d.mts",
+        "scripts/lib/extension-source-classifier.mjs",
+      ],
+      [
+        "scripts/lib/local-build-metadata-paths.d.mts",
+        "scripts/lib/local-build-metadata-paths.mjs",
+      ],
+      ["scripts/lib/local-build-metadata.d.mts", "scripts/lib/local-build-metadata.mjs"],
+      ["scripts/lib/plugin-sdk-entries.d.mts", "scripts/lib/plugin-sdk-entries.mjs"],
+      ["scripts/lib/vitest-local-scheduling.d.mts", "scripts/lib/vitest-local-scheduling.mjs"],
+      ["scripts/run-node.d.mts", "scripts/run-node.mjs"],
+      ["scripts/stage-bundled-plugin-runtime.d.mts", "scripts/stage-bundled-plugin-runtime.mjs"],
+      ["scripts/watch-node.d.mts", "scripts/watch-node.mjs"],
+    ]);
+
+    for (const [declarationPath, implementationPath] of declarationMirrors) {
+      expect(resolveChangedTestTargetPlan([declarationPath]), declarationPath).toEqual(
+        resolveChangedTestTargetPlan([implementationPath]),
+      );
+    }
+  });
+
   it("keeps QA Lab gateway smoke script edits on QA e2e tests", () => {
     expect(resolveChangedTestTargetPlan(["scripts/dev/gateway-smoke.ts"])).toEqual({
       mode: "targets",

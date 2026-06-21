@@ -1248,6 +1248,11 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/run-oxlint-shards.mjs", ["test/scripts/run-oxlint.test.ts"]],
   ["scripts/run-with-env.mjs", ["test/scripts/run-with-env.test.ts"]],
   ["scripts/run-node.mjs", ["src/infra/run-node.test.ts"]],
+  [
+    "scripts/stage-bundled-plugin-runtime.mjs",
+    ["test/scripts/stage-bundled-plugin-runtime.test.ts"],
+  ],
+  ["scripts/watch-node.mjs", ["test/scripts/watch-node.test.ts"]],
   ["scripts/auth-monitor.sh", ["test/scripts/auth-monitor.test.ts"]],
   ["scripts/codespell-dictionary.txt", ["test/scripts/docs-spellcheck.test.ts"]],
   ["scripts/codespell-ignore.txt", ["test/scripts/docs-spellcheck.test.ts"]],
@@ -1790,6 +1795,36 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["extensions/canvas/scripts/bundle-a2ui.mjs", ["extensions/canvas/scripts/bundle-a2ui.test.ts"]],
   ["extensions/canvas/scripts/copy-a2ui.mjs", ["extensions/canvas/scripts/copy-a2ui.test.ts"]],
 ]);
+
+const TOOLING_DECLARATION_SOURCE_MIRRORS = [
+  ["scripts/build-stamp.d.mts", "scripts/build-stamp.mjs"],
+  ["scripts/ci-changed-scope.d.mts", "scripts/ci-changed-scope.mjs"],
+  ["scripts/copy-bundled-plugin-metadata.d.mts", "scripts/copy-bundled-plugin-metadata.mjs"],
+  ["scripts/docs-link-audit.d.mts", "scripts/docs-link-audit.mjs"],
+  [
+    "scripts/lib/bundled-plugin-build-entries.d.mts",
+    "scripts/lib/bundled-plugin-build-entries.mjs",
+  ],
+  ["scripts/lib/config-boundary-guard.d.mts", "scripts/lib/config-boundary-guard.mjs"],
+  ["scripts/lib/deprecated-config-api-guard.d.mts", "scripts/lib/deprecated-config-api-guard.mjs"],
+  ["scripts/lib/extension-source-classifier.d.mts", "scripts/lib/extension-source-classifier.mjs"],
+  ["scripts/lib/local-build-metadata-paths.d.mts", "scripts/lib/local-build-metadata-paths.mjs"],
+  ["scripts/lib/local-build-metadata.d.mts", "scripts/lib/local-build-metadata.mjs"],
+  ["scripts/lib/plugin-sdk-entries.d.mts", "scripts/lib/plugin-sdk-entries.mjs"],
+  ["scripts/lib/vitest-local-scheduling.d.mts", "scripts/lib/vitest-local-scheduling.mjs"],
+  ["scripts/run-node.d.mts", "scripts/run-node.mjs"],
+  ["scripts/stage-bundled-plugin-runtime.d.mts", "scripts/stage-bundled-plugin-runtime.mjs"],
+  ["scripts/watch-node.d.mts", "scripts/watch-node.mjs"],
+];
+
+for (const [declarationPath, implementationPath] of TOOLING_DECLARATION_SOURCE_MIRRORS) {
+  const targets = TOOLING_SOURCE_TEST_TARGETS.get(implementationPath);
+  if (targets === undefined) {
+    throw new Error(`Missing changed-test route for declaration mirror ${implementationPath}`);
+  }
+  TOOLING_SOURCE_TEST_TARGETS.set(declarationPath, targets);
+}
+
 const TOOLING_TEST_TARGETS = new Map([
   ["test/scripts/auth-monitor.test.ts", ["test/scripts/auth-monitor.test.ts"]],
   ["test/scripts/barnacle-auto-response.test.ts", ["test/scripts/barnacle-auto-response.test.ts"]],
