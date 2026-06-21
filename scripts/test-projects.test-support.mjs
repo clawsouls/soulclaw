@@ -1090,6 +1090,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/lib/kova-report-gate.mjs", ["test/scripts/kova-report-gate.test.ts"]],
   ["scripts/lib/managed-child-process.mjs", ["test/scripts/managed-child-process.test.ts"]],
   [
+    "scripts/lib/windows-taskkill.mjs",
+    ["test/scripts/managed-child-process.test.ts", "test/scripts/run-with-env.test.ts"],
+  ],
+  [
     "scripts/lib/local-build-metadata.mjs",
     [
       "src/infra/build-stamp.test.ts",
