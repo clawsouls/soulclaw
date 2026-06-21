@@ -427,8 +427,24 @@ const OFFICIAL_EXTERNAL_CATALOG_TEST_TARGETS = [
   "src/plugins/official-external-plugin-catalog.test.ts",
   "test/release-check.test.ts",
 ];
+const DOCKERFILE_CACHE_AND_DIGEST_TEST_TARGETS = [
+  "src/docker-build-cache.test.ts",
+  "src/docker-image-digests.test.ts",
+];
+const ROOT_DOCKERFILE_TEST_TARGETS = [
+  ...DOCKERFILE_CACHE_AND_DIGEST_TEST_TARGETS,
+  "src/dockerfile.test.ts",
+  "test/scripts/test-install-sh-docker.test.ts",
+];
+const INSTALL_DOCKERFILE_TEST_TARGETS = [
+  ...DOCKERFILE_CACHE_AND_DIGEST_TEST_TARGETS,
+  "test/scripts/test-install-sh-docker.test.ts",
+];
+const LIVE_MEDIA_RUNNER_IMAGE_TEST_TARGETS = ["test/scripts/package-acceptance-workflow.test.ts"];
 const TOOLING_SOURCE_TEST_TARGETS = new Map([
+  ["Dockerfile", ROOT_DOCKERFILE_TEST_TARGETS],
   [".crabbox.yaml", ["test/scripts/package-acceptance-workflow.test.ts"]],
+  [".github/images/live-media-runner/Dockerfile", LIVE_MEDIA_RUNNER_IMAGE_TEST_TARGETS],
   [".github/workflows/ci.yml", ["test/scripts/ci-workflow-guards.test.ts"]],
   [
     ".github/workflows/security-sensitive-guard.yml",
@@ -446,6 +462,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ".github/workflows/crabbox-hydrate.yml",
     ["test/scripts/ci-workflow-guards.test.ts", "test/scripts/package-acceptance-workflow.test.ts"],
   ],
+  [".github/workflows/live-media-runner-image.yml", LIVE_MEDIA_RUNNER_IMAGE_TEST_TARGETS],
   [
     ".github/workflows/openclaw-release-checks.yml",
     ["test/scripts/package-acceptance-workflow.test.ts"],
@@ -830,13 +847,49 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/lib/official-external-plugin-catalog.json", OFFICIAL_EXTERNAL_CATALOG_TEST_TARGETS],
   ["scripts/lib/official-external-provider-catalog.json", OFFICIAL_EXTERNAL_CATALOG_TEST_TARGETS],
   ["scripts/lib/direct-run.mjs", ["test/scripts/changed-lanes.test.ts"]],
+  [
+    "scripts/docker/cleanup-smoke/Dockerfile",
+    [...DOCKERFILE_CACHE_AND_DIGEST_TEST_TARGETS, "test/scripts/docker-build-helper.test.ts"],
+  ],
   ["scripts/docker/cleanup-smoke/run.sh", ["test/scripts/docker-build-helper.test.ts"]],
+  ["scripts/docker/install-sh-e2e/Dockerfile", INSTALL_DOCKERFILE_TEST_TARGETS],
   [
     "scripts/docker/install-sh-e2e/run.sh",
     ["test/scripts/docker-build-helper.test.ts", "test/scripts/test-install-sh-docker.test.ts"],
   ],
+  ["scripts/docker/install-sh-nonroot/Dockerfile", INSTALL_DOCKERFILE_TEST_TARGETS],
   ["scripts/docker/install-sh-nonroot/run.sh", ["test/scripts/test-install-sh-docker.test.ts"]],
+  ["scripts/docker/install-sh-smoke/Dockerfile", INSTALL_DOCKERFILE_TEST_TARGETS],
   ["scripts/docker/install-sh-smoke/run.sh", ["test/scripts/test-install-sh-docker.test.ts"]],
+  [
+    "scripts/docker/sandbox/Dockerfile",
+    [...DOCKERFILE_CACHE_AND_DIGEST_TEST_TARGETS, "src/dockerfile.test.ts"],
+  ],
+  [
+    "scripts/docker/sandbox/Dockerfile.browser",
+    [...DOCKERFILE_CACHE_AND_DIGEST_TEST_TARGETS, "src/agents/sandbox/browser.create.test.ts"],
+  ],
+  ["scripts/docker/sandbox/Dockerfile.common", ["src/docker-build-cache.test.ts"]],
+  [
+    "scripts/e2e/Dockerfile",
+    [
+      ...DOCKERFILE_CACHE_AND_DIGEST_TEST_TARGETS,
+      "test/scripts/docker-build-helper.test.ts",
+      "test/scripts/docker-e2e-plan.test.ts",
+    ],
+  ],
+  [
+    "scripts/e2e/Dockerfile.qr-import",
+    [...DOCKERFILE_CACHE_AND_DIGEST_TEST_TARGETS, "test/scripts/docker-build-helper.test.ts"],
+  ],
+  [
+    "scripts/e2e/plugin-binding-command-escape.Dockerfile",
+    [
+      "src/docker-image-digests.test.ts",
+      "test/scripts/docker-build-helper.test.ts",
+      "test/scripts/docker-e2e-plan.test.ts",
+    ],
+  ],
   ["scripts/lib/docker-e2e-container.sh", ["test/scripts/docker-build-helper.test.ts"]],
   ["scripts/lib/docker-e2e-package.sh", ["test/scripts/docker-build-helper.test.ts"]],
   [

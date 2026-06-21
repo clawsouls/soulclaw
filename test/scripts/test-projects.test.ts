@@ -1507,13 +1507,104 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/lib/ios-version.ts",
         ["test/scripts/ios-version.test.ts", "test/scripts/ios-pin-version.test.ts"],
       ],
+      [
+        ".github/images/live-media-runner/Dockerfile",
+        ["test/scripts/package-acceptance-workflow.test.ts"],
+      ],
+      [
+        ".github/workflows/live-media-runner-image.yml",
+        ["test/scripts/package-acceptance-workflow.test.ts"],
+      ],
+      [
+        "Dockerfile",
+        [
+          "src/docker-build-cache.test.ts",
+          "src/docker-image-digests.test.ts",
+          "src/dockerfile.test.ts",
+          "test/scripts/test-install-sh-docker.test.ts",
+        ],
+      ],
+      [
+        "scripts/docker/cleanup-smoke/Dockerfile",
+        [
+          "src/docker-build-cache.test.ts",
+          "src/docker-image-digests.test.ts",
+          "test/scripts/docker-build-helper.test.ts",
+        ],
+      ],
       ["scripts/docker/cleanup-smoke/run.sh", ["test/scripts/docker-build-helper.test.ts"]],
+      [
+        "scripts/docker/install-sh-e2e/Dockerfile",
+        [
+          "src/docker-build-cache.test.ts",
+          "src/docker-image-digests.test.ts",
+          "test/scripts/test-install-sh-docker.test.ts",
+        ],
+      ],
       [
         "scripts/docker/install-sh-e2e/run.sh",
         ["test/scripts/docker-build-helper.test.ts", "test/scripts/test-install-sh-docker.test.ts"],
       ],
+      [
+        "scripts/docker/install-sh-nonroot/Dockerfile",
+        [
+          "src/docker-build-cache.test.ts",
+          "src/docker-image-digests.test.ts",
+          "test/scripts/test-install-sh-docker.test.ts",
+        ],
+      ],
       ["scripts/docker/install-sh-nonroot/run.sh", ["test/scripts/test-install-sh-docker.test.ts"]],
+      [
+        "scripts/docker/install-sh-smoke/Dockerfile",
+        [
+          "src/docker-build-cache.test.ts",
+          "src/docker-image-digests.test.ts",
+          "test/scripts/test-install-sh-docker.test.ts",
+        ],
+      ],
       ["scripts/docker/install-sh-smoke/run.sh", ["test/scripts/test-install-sh-docker.test.ts"]],
+      [
+        "scripts/docker/sandbox/Dockerfile",
+        [
+          "src/docker-build-cache.test.ts",
+          "src/docker-image-digests.test.ts",
+          "src/dockerfile.test.ts",
+        ],
+      ],
+      [
+        "scripts/docker/sandbox/Dockerfile.browser",
+        [
+          "src/docker-build-cache.test.ts",
+          "src/docker-image-digests.test.ts",
+          "src/agents/sandbox/browser.create.test.ts",
+        ],
+      ],
+      ["scripts/docker/sandbox/Dockerfile.common", ["src/docker-build-cache.test.ts"]],
+      [
+        "scripts/e2e/Dockerfile",
+        [
+          "src/docker-build-cache.test.ts",
+          "src/docker-image-digests.test.ts",
+          "test/scripts/docker-build-helper.test.ts",
+          "test/scripts/docker-e2e-plan.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/Dockerfile.qr-import",
+        [
+          "src/docker-build-cache.test.ts",
+          "src/docker-image-digests.test.ts",
+          "test/scripts/docker-build-helper.test.ts",
+        ],
+      ],
+      [
+        "scripts/e2e/plugin-binding-command-escape.Dockerfile",
+        [
+          "src/docker-image-digests.test.ts",
+          "test/scripts/docker-build-helper.test.ts",
+          "test/scripts/docker-e2e-plan.test.ts",
+        ],
+      ],
       [
         "scripts/lib/package-dist-imports.mjs",
         [
