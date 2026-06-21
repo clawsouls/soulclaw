@@ -131,6 +131,12 @@ describe("plugin gateway gauntlet helpers", () => {
     });
   });
 
+  it("rejects valued flags followed by another option", () => {
+    for (const flag of ["--repo-root", "--output-dir", "--plugin", "--qa-scenario"]) {
+      expect(() => parseArgs([flag, "--skip-qa"])).toThrow(`Missing value for ${flag}`);
+    }
+  });
+
   it("discovers bundled plugin manifests into lifecycle matrix rows", async () => {
     await writeManifest(
       "alpha",
