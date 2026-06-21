@@ -34,7 +34,7 @@ import { fetchZaiUsage } from "openclaw/plugin-sdk/provider-usage";
 import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/string-coerce-runtime";
 import { detectZaiEndpoint, type ZaiEndpointId } from "./detect.js";
 import { zaiMediaUnderstandingProvider } from "./media-understanding-provider.js";
-import { buildZaiModelDefinition } from "./model-definitions.js";
+import { buildZaiModelDefinition, resolveZaiBaseUrl } from "./model-definitions.js";
 import { applyZaiConfig, applyZaiProviderConfig, resolveZaiModelId } from "./onboard.js";
 
 const PROVIDER_ID = "zai";
@@ -104,7 +104,8 @@ function resolveGlm5ForwardCompatModel(
     ...template,
     id: def.id,
     name: def.name,
-    baseUrl: ctx.providerConfig?.baseUrl ?? template?.baseUrl,
+    // Native models must never fall through to the OpenAI SDK's default host.
+    baseUrl: ctx.providerConfig?.baseUrl ?? template?.baseUrl ?? resolveZaiBaseUrl(),
     api: "openai-completions",
     provider: PROVIDER_ID,
     reasoning: def.reasoning,
