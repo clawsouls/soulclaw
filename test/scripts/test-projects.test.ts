@@ -269,6 +269,21 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("routes release wrapper changes through their owner tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/android-release.sh"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/android-release-wrapper-args.test.ts"],
+    });
+    expect(resolveChangedTestTargetPlan(["scripts/android-release-upload.sh"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/android-release-wrapper-args.test.ts"],
+    });
+    expect(resolveChangedTestTargetPlan(["scripts/release-fast-pretag-check.sh"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/package-acceptance-workflow.test.ts"],
+    });
+  });
+
   it("routes control UI i18n script changes through its regression test", () => {
     expect(resolveChangedTestTargetPlan(["scripts/control-ui-i18n.ts"])).toEqual({
       mode: "targets",
