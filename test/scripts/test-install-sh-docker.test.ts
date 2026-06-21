@@ -9,13 +9,16 @@ import { createTempDirTracker } from "../helpers/temp-dir.js";
 
 const SCRIPT_PATH = "scripts/test-install-sh-docker.sh";
 const INSTALL_E2E_DOCKER_PATH = "scripts/test-install-sh-e2e-docker.sh";
+const INSTALL_E2E_DOCKERFILE_PATH = "scripts/docker/install-sh-e2e/Dockerfile";
 const INSTALL_E2E_RUNNER_PATH = "scripts/docker/install-sh-e2e/run.sh";
 const DOCKER_SETUP_PATH = "scripts/docker/setup.sh";
 const HOST_TIMEOUT_PATH = "scripts/lib/host-timeout.sh";
 const PODMAN_SETUP_PATH = "scripts/podman/setup.sh";
 const PODMAN_QUADLET_TEMPLATE_PATH = "scripts/podman/openclaw.container.in";
 const PODMAN_RUN_PATH = "scripts/run-openclaw-podman.sh";
+const SMOKE_DOCKERFILE_PATH = "scripts/docker/install-sh-smoke/Dockerfile";
 const SMOKE_RUNNER_PATH = "scripts/docker/install-sh-smoke/run.sh";
+const NONROOT_DOCKERFILE_PATH = "scripts/docker/install-sh-nonroot/Dockerfile";
 const NONROOT_RUNNER_PATH = "scripts/docker/install-sh-nonroot/run.sh";
 const BUN_GLOBAL_SMOKE_PATH = "scripts/e2e/bun-global-install-smoke.sh";
 const BUN_GLOBAL_ASSERTIONS_PATH = "scripts/e2e/lib/bun-global-install/assertions.mjs";
@@ -133,6 +136,27 @@ function normalizeInstallE2eAgentOutput(output: string) {
   } finally {
     rmSync(root, { force: true, recursive: true });
   }
+}
+
+function expectInstallDockerfileContract(
+  dockerfilePath: string,
+  runnerPath: string,
+  entrypoint: string,
+): string {
+  const dockerfile = readFileSync(dockerfilePath, "utf8");
+
+  expect(dockerfile).toContain("# syntax=docker/dockerfile:1.7");
+  expect(dockerfile).toMatch(/^FROM \S+@sha256:[a-f0-9]{64}$/m);
+  expect(dockerfile).toContain("apt-get");
+  expect(dockerfile).toContain("bash");
+  expect(dockerfile).toContain("ca-certificates");
+  expect(dockerfile).toContain("curl");
+  expect(dockerfile).toContain(
+    "COPY install-sh-common/version-parse.sh /usr/local/install-sh-common/version-parse.sh",
+  );
+  expect(dockerfile).toContain(`COPY --chmod=755 ${runnerPath} ${entrypoint}`);
+  expect(dockerfile).toContain(`ENTRYPOINT ["${entrypoint}"]`);
+  return dockerfile;
 }
 
 async function waitForCondition(
@@ -267,6 +291,35 @@ describe("test-install-sh-docker", () => {
     expect(workflow).toContain(
       "OPENCLAW_INSTALL_SMOKE_UPDATE_BASELINE: ${{ inputs.update_baseline_version || 'latest' }}",
     );
+  });
+
+  it("keeps install-sh Dockerfiles wired to their runner contracts", () => {
+    const e2eDockerfile = expectInstallDockerfileContract(
+      INSTALL_E2E_DOCKERFILE_PATH,
+      "install-sh-e2e/run.sh",
+      "/usr/local/bin/openclaw-install-e2e",
+    );
+    const smokeDockerfile = expectInstallDockerfileContract(
+      SMOKE_DOCKERFILE_PATH,
+      "install-sh-smoke/run.sh",
+      "/usr/local/bin/openclaw-install-smoke",
+    );
+    const nonrootDockerfile = expectInstallDockerfileContract(
+      NONROOT_DOCKERFILE_PATH,
+      "install-sh-nonroot/run.sh",
+      "/usr/local/bin/openclaw-install-nonroot",
+    );
+
+    expect(e2eDockerfile).toContain("USER appuser");
+    expect(smokeDockerfile).toContain(
+      "COPY install-sh-common/cli-verify.sh /usr/local/install-sh-common/cli-verify.sh",
+    );
+    expect(nonrootDockerfile).toContain(
+      "COPY install-sh-common/cli-verify.sh /usr/local/install-sh-common/cli-verify.sh",
+    );
+    expect(nonrootDockerfile).toContain("USER app");
+    expect(nonrootDockerfile).toContain("WORKDIR /home/app");
+    expect(nonrootDockerfile).toContain("NPM_CONFIG_UPDATE_NOTIFIER=false");
   });
 
   it("can reuse dist from the already-built root Docker smoke image", () => {

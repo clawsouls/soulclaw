@@ -478,6 +478,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ],
   [".github/workflows/live-media-runner-image.yml", LIVE_MEDIA_RUNNER_IMAGE_TEST_TARGETS],
   [
+    ".github/workflows/openclaw-live-and-e2e-checks-reusable.yml",
+    ["test/scripts/package-acceptance-workflow.test.ts"],
+  ],
+  [
     ".github/workflows/openclaw-release-checks.yml",
     ["test/scripts/package-acceptance-workflow.test.ts"],
   ],

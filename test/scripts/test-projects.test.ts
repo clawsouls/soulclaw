@@ -1599,6 +1599,10 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/package-acceptance-workflow.test.ts"],
       ],
       [
+        ".github/workflows/openclaw-live-and-e2e-checks-reusable.yml",
+        ["test/scripts/package-acceptance-workflow.test.ts"],
+      ],
+      [
         "Dockerfile",
         [
           "src/docker-build-cache.test.ts",
