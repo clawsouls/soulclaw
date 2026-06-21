@@ -467,6 +467,13 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/bundled-plugin-install-uninstall-probe.test.ts"],
       ],
       [
+        "scripts/e2e/lib/auth-profile-store-assertions.mjs",
+        [
+          "test/scripts/release-scenarios-assertions.test.ts",
+          "test/scripts/npm-onboard-channel-agent-assertions.test.ts",
+        ],
+      ],
+      [
         "scripts/e2e/lib/codex-npm-plugin-live/assertions.mjs",
         ["test/scripts/docker-build-helper.test.ts"],
       ],

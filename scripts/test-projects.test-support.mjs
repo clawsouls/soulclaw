@@ -1530,6 +1530,13 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ["test/scripts/test-install-sh-docker.test.ts"],
   ],
   [
+    "scripts/e2e/lib/auth-profile-store-assertions.mjs",
+    [
+      "test/scripts/release-scenarios-assertions.test.ts",
+      "test/scripts/npm-onboard-channel-agent-assertions.test.ts",
+    ],
+  ],
+  [
     "scripts/e2e/lib/codex-npm-plugin-live/assertions.mjs",
     ["test/scripts/docker-build-helper.test.ts"],
   ],
