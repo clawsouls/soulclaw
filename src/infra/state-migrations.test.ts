@@ -7,7 +7,13 @@ import type { OpenClawConfig } from "../config/config.js";
 import { resolveChannelAllowFromPath } from "../pairing/pairing-store.js";
 import { openOpenClawStateDatabase } from "../state/openclaw-state-db.js";
 import { createTrackedTempDirs } from "../test-utils/tracked-temp-dirs.js";
-import { detectLegacyStateMigrations, runLegacyStateMigrations } from "./state-migrations.js";
+import {
+  autoMigrateLegacyState,
+  detectLegacyStateMigrations,
+  runLegacyStateMigrations,
+} from "./state-migrations.js";
+import { loadVoiceWakeRoutingConfig, setVoiceWakeRoutingConfig } from "./voicewake-routing.js";
+import { loadVoiceWakeConfig, setVoiceWakeTriggers } from "./voicewake.js";
 
 vi.mock("../channels/plugins/bundled.js", () => {
   function fileExists(filePath: string): boolean {
@@ -399,6 +405,117 @@ describe("state migrations", () => {
     ]);
     await expectMissingPath(path.join(stateDir, "delivery-queue"));
     await expectMissingPath(path.join(stateDir, "session-delivery-queue"));
+  });
+
+  it("migrates legacy voice wake JSON settings into shared SQLite state", async () => {
+    const root = await createTempDir();
+    const stateDir = path.join(root, ".openclaw");
+    const env = createEnv(stateDir);
+    const cfg = createConfig();
+    const settingsDir = path.join(stateDir, "settings");
+    const triggersPath = path.join(settingsDir, "voicewake.json");
+    const routingPath = path.join(settingsDir, "voicewake-routing.json");
+    await fs.mkdir(settingsDir, { recursive: true });
+    await fs.writeFile(
+      triggersPath,
+      JSON.stringify({ triggers: ["  wake ", "", "there"], updatedAtMs: -1 }),
+      "utf8",
+    );
+    await fs.writeFile(
+      routingPath,
+      JSON.stringify({
+        defaultTarget: { mode: "current" },
+        routes: [
+          { trigger: "  Robot   Wake ", target: { agentId: "Main Agent" } },
+          { trigger: "", target: { sessionKey: "agent:main:voice" } },
+        ],
+      }),
+      "utf8",
+    );
+
+    const detected = await detectLegacyStateMigrations({ cfg, env, homedir: () => root });
+    expect(detected.voiceWake.hasLegacy).toBe(true);
+    expect(detected.preview).toContain(
+      "- Voice Wake settings: legacy JSON files → shared SQLite state",
+    );
+
+    const result = await runLegacyStateMigrations({ detected, config: cfg });
+
+    expect(result.warnings).toStrictEqual([]);
+    expect(result.changes).toContain("Migrated 2 voice wake triggers → shared SQLite state");
+    expect(result.changes).toContain(
+      "Migrated voice wake routing config with 1 route → shared SQLite state",
+    );
+    await expect(loadVoiceWakeConfig(stateDir)).resolves.toMatchObject({
+      triggers: ["wake", "there"],
+    });
+    await expect(loadVoiceWakeRoutingConfig(stateDir)).resolves.toMatchObject({
+      defaultTarget: { mode: "current" },
+      routes: [{ trigger: "robot wake", target: { agentId: "main-agent" } }],
+    });
+    await expectMissingPath(triggersPath);
+    await expectMissingPath(routingPath);
+    await expect(fs.readFile(`${triggersPath}.migrated`, "utf8")).resolves.toContain("wake");
+    await expect(fs.readFile(`${routingPath}.migrated`, "utf8")).resolves.toContain("Robot");
+  });
+
+  it("archives legacy voice wake JSON when shared SQLite already matches", async () => {
+    const root = await createTempDir();
+    const stateDir = path.join(root, ".openclaw");
+    const env = createEnv(stateDir);
+    const cfg = createConfig();
+    const settingsDir = path.join(stateDir, "settings");
+    const triggersPath = path.join(settingsDir, "voicewake.json");
+    const routingPath = path.join(settingsDir, "voicewake-routing.json");
+    await setVoiceWakeTriggers(["wake"], stateDir);
+    await setVoiceWakeRoutingConfig(
+      {
+        defaultTarget: { mode: "current" },
+        routes: [{ trigger: "robot wake", target: { agentId: "main" } }],
+      },
+      stateDir,
+    );
+    await fs.mkdir(settingsDir, { recursive: true });
+    await fs.writeFile(triggersPath, JSON.stringify({ triggers: ["wake"] }), "utf8");
+    await fs.writeFile(
+      routingPath,
+      JSON.stringify({
+        defaultTarget: { mode: "current" },
+        routes: [{ trigger: "robot wake", target: { agentId: "main" } }],
+      }),
+      "utf8",
+    );
+
+    const detected = await detectLegacyStateMigrations({ cfg, env, homedir: () => root });
+    const result = await runLegacyStateMigrations({ detected, config: cfg });
+
+    expect(result.warnings).toStrictEqual([]);
+    await expectMissingPath(triggersPath);
+    await expectMissingPath(routingPath);
+    await expect(fs.readFile(`${triggersPath}.migrated`, "utf8")).resolves.toContain("wake");
+    await expect(fs.readFile(`${routingPath}.migrated`, "utf8")).resolves.toContain("robot wake");
+  });
+
+  it("auto-migrates standalone legacy voice wake JSON settings", async () => {
+    const root = await createTempDir();
+    const stateDir = path.join(root, ".openclaw");
+    const env = createEnv(stateDir);
+    const cfg = createConfig();
+    const settingsDir = path.join(stateDir, "settings");
+    await fs.mkdir(settingsDir, { recursive: true });
+    await fs.writeFile(
+      path.join(settingsDir, "voicewake.json"),
+      JSON.stringify({ triggers: ["wake"] }),
+      "utf8",
+    );
+
+    const result = await autoMigrateLegacyState({ cfg, env, homedir: () => root });
+
+    expect(result.skipped).toBe(false);
+    expect(result.migrated).toBe(true);
+    expect(result.warnings).toStrictEqual([]);
+    await expect(loadVoiceWakeConfig(stateDir)).resolves.toMatchObject({ triggers: ["wake"] });
+    await expectMissingPath(path.join(settingsDir, "voicewake.json"));
   });
 
   it("keeps legacy delivery queue files when shared SQLite already has a conflicting row", async () => {
