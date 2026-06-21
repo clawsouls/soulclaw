@@ -542,6 +542,8 @@ export {
 };
 
 const MAX_BTW_SNAPSHOT_MESSAGES = 100;
+const PROMPT_TOOL_RESULT_AGGREGATE_CAP_MULTIPLIER = 4;
+
 function pluginMetadataSnapshotCoversProvider(
   snapshot: PluginMetadataSnapshot | undefined,
   provider: string,
@@ -4174,14 +4176,17 @@ export async function runEmbeddedAttempt(
             activeSession.messages,
             contextTokenBudget,
             promptToolResultMaxChars,
-            null,
+            promptToolResultMaxChars * PROMPT_TOOL_RESULT_AGGREGATE_CAP_MULTIPLIER,
           );
           if (promptToolResultTruncation.truncatedCount > 0) {
             promptHistoryMessages = promptToolResultTruncation.messages;
             log.info(
               `[tool-result-truncation] Truncated ${promptToolResultTruncation.truncatedCount} ` +
                 `tool result(s) for prompt history ` +
-                `(maxChars=${promptToolResultMaxChars}) ` +
+                `(maxChars=${promptToolResultMaxChars} ` +
+                `aggregateBudgetChars=${
+                  promptToolResultMaxChars * PROMPT_TOOL_RESULT_AGGREGATE_CAP_MULTIPLIER
+                }) ` +
                 `sessionKey=${params.sessionKey ?? params.sessionId ?? "unknown"}`,
             );
           }
