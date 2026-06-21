@@ -1061,6 +1061,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/run-node.mjs", ["src/infra/run-node.test.ts"]],
   ["scripts/committer", ["test/scripts/committer.test.ts"]],
   ["scripts/gh-read", ["test/scripts/gh-read.test.ts"]],
+  ["scripts/pr", ["test/scripts/pr-wrappers.test.ts"]],
+  ["scripts/pr-merge", ["test/scripts/pr-wrappers.test.ts"]],
+  ["scripts/pr-prepare", ["test/scripts/pr-wrappers.test.ts"]],
+  ["scripts/pr-review", ["test/scripts/pr-wrappers.test.ts"]],
   ["scripts/setup-auth-system.sh", ["test/scripts/test-projects.test.ts"]],
   ["scripts/ci-run-timings.mjs", ["test/scripts/ci-run-timings.test.ts"]],
   ["scripts/docker-e2e.mjs", ["test/scripts/docker-e2e-helper-cli.test.ts"]],
@@ -1574,6 +1578,7 @@ const TOOLING_TEST_TARGETS = new Map([
     "test/scripts/plugin-prerelease-test-plan.test.ts",
     ["test/scripts/plugin-prerelease-test-plan.test.ts"],
   ],
+  ["test/scripts/pr-wrappers.test.ts", ["test/scripts/pr-wrappers.test.ts"]],
   ["test/scripts/test-projects.test.ts", ["test/scripts/test-projects.test.ts"]],
   [
     "test/scripts/vitest-local-scheduling.test.ts",

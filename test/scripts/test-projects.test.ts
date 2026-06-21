@@ -1361,6 +1361,10 @@ describe("scripts/test-projects changed-target routing", () => {
     const expectedTargets = new Map([
       ["scripts/committer", ["test/scripts/committer.test.ts"]],
       ["scripts/gh-read", ["test/scripts/gh-read.test.ts"]],
+      ["scripts/pr", ["test/scripts/pr-wrappers.test.ts"]],
+      ["scripts/pr-merge", ["test/scripts/pr-wrappers.test.ts"]],
+      ["scripts/pr-prepare", ["test/scripts/pr-wrappers.test.ts"]],
+      ["scripts/pr-review", ["test/scripts/pr-wrappers.test.ts"]],
     ]);
 
     for (const [source, targets] of expectedTargets) {
