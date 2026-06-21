@@ -673,6 +673,14 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/e2e/lib/onboard/scenario.sh",
         ["test/scripts/e2e-shell-tempfiles.test.ts", "test/scripts/openclaw-test-state.test.ts"],
       ],
+      [
+        "scripts/e2e/lib/onboard/assert-config.mjs",
+        ["test/scripts/onboard-config-fixtures.test.ts"],
+      ],
+      [
+        "scripts/e2e/lib/onboard/write-config.mjs",
+        ["test/scripts/onboard-config-fixtures.test.ts"],
+      ],
       ["scripts/e2e/lib/package-compat.mjs", ["test/scripts/docker-build-helper.test.ts"]],
       [
         "scripts/e2e/agents-delete-shared-workspace-docker.sh",
