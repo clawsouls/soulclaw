@@ -507,6 +507,7 @@ describe("truncateOversizedToolResultsInMessages", () => {
       12_000,
       stableState,
     );
+    expect(stableThird.messages).toHaveLength(4);
     const stableFourth = truncateOversizedToolResultsInMessages(
       [
         ...stableHistory,

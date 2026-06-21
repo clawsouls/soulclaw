@@ -350,8 +350,9 @@ export function truncateOversizedToolResultsInMessages(
     maxChars,
     aggregateMaxCharsOverride,
   );
+  const projectionKeys = projectionState ? getToolResultProjectionKeys(messages) : [];
   const branch = messages.map((message, index) => {
-    const projectionKey = projectionState ? getToolResultProjectionKey(message) : undefined;
+    const projectionKey = projectionKeys[index];
     const projectedMessage = projectionKey
       ? projectionState?.replacements.get(projectionKey)
       : undefined;
@@ -375,8 +376,8 @@ export function truncateOversizedToolResultsInMessages(
     minKeepChars: RECOVERY_MIN_KEEP_CHARS,
   });
   if (projectionState) {
-    for (const message of messages) {
-      const projectionKey = getToolResultProjectionKey(message);
+    for (const [index] of messages.entries()) {
+      const projectionKey = projectionKeys[index];
       if (projectionKey) {
         projectionState.frozen.add(projectionKey);
       }
@@ -398,7 +399,7 @@ export function truncateOversizedToolResultsInMessages(
   if (projectionState) {
     for (const [index, originalMessage] of messages.entries()) {
       const projectedMessage = replacedBranch[index]?.message;
-      const projectionKey = getToolResultProjectionKey(originalMessage);
+      const projectionKey = projectionKeys[index];
       if (projectionKey) {
         projectionState.frozen.add(projectionKey);
         if (projectedMessage && projectedMessage !== originalMessage) {
@@ -458,7 +459,7 @@ export function createToolResultPromptProjectionState(): ToolResultPromptProject
   return { replacements: new Map<string, AgentMessage>(), frozen: new Set<string>() };
 }
 
-function getToolResultProjectionKey(message: AgentMessage): string | undefined {
+function getToolResultProjectionBaseKey(message: AgentMessage): string | undefined {
   if (message.role !== "toolResult") {
     return undefined;
   }
@@ -469,6 +470,19 @@ function getToolResultProjectionKey(message: AgentMessage): string | undefined {
     return `tool:${toolCallId}${timestampKey}`;
   }
   return typeof timestamp === "number" ? `timestamp:${timestamp}` : undefined;
+}
+
+function getToolResultProjectionKeys(messages: AgentMessage[]): Array<string | undefined> {
+  const occurrences = new Map<string, number>();
+  return messages.map((message) => {
+    const baseKey = getToolResultProjectionBaseKey(message);
+    if (!baseKey) {
+      return undefined;
+    }
+    const occurrence = occurrences.get(baseKey) ?? 0;
+    occurrences.set(baseKey, occurrence + 1);
+    return `${baseKey}:${occurrence}`;
+  });
 }
 
 function mergeProjectedToolResultMessage(
@@ -604,7 +618,15 @@ function buildAggregateToolResultReplacements(params: {
       if (actualReduction <= 0) {
         continue;
       }
-      replacements.push({ entryId: candidate.entryId, message: emptyMessage });
+      const replacement = { entryId: candidate.entryId, message: emptyMessage };
+      const existingIndex = replacements.findIndex(
+        (existing) => existing.entryId === candidate.entryId,
+      );
+      if (existingIndex >= 0) {
+        replacements[existingIndex] = replacement;
+      } else {
+        replacements.push(replacement);
+      }
       remainingReduction -= actualReduction;
     }
   }
