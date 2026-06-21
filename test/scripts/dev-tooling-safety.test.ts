@@ -356,6 +356,14 @@ describe("script-specific dev tooling hardening", () => {
     expect(result.stdout).toBe("");
   });
 
+  it("rejects short flags as TUI PTY watch option values", () => {
+    for (const flag of ["--mode", "--mirror-path"]) {
+      expect(() => tuiPtyWatchTesting.parseOptions([flag, "-h"])).toThrow(
+        `${flag} requires a value`,
+      );
+    }
+  });
+
   it("keeps TUI PTY watch vitest args behind the separator", () => {
     expect(tuiPtyWatchTesting.parseOptions(["--mode", "all", "--", "--help"])).toMatchObject({
       mode: "all",
