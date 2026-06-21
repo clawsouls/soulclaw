@@ -443,11 +443,12 @@ describe("qa test file scenario runner", () => {
         runTaskkill,
       ),
     ).toBe(true);
-    expect(runTaskkill).toHaveBeenNthCalledWith(1, "taskkill", ["/pid", "12345", "/T"], {
+    const taskkillPath = path.win32.join("C:\\Windows", "System32", "taskkill.exe");
+    expect(runTaskkill).toHaveBeenNthCalledWith(1, taskkillPath, ["/pid", "12345", "/T"], {
       stdio: "ignore",
       windowsHide: true,
     });
-    expect(runTaskkill).toHaveBeenNthCalledWith(2, "taskkill", ["/pid", "12345", "/T", "/F"], {
+    expect(runTaskkill).toHaveBeenNthCalledWith(2, taskkillPath, ["/pid", "12345", "/T", "/F"], {
       stdio: "ignore",
       windowsHide: true,
     });

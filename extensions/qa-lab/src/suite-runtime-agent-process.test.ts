@@ -213,10 +213,14 @@ describe("qa suite runtime agent process helpers", () => {
 
       await waitForSpawnCount(1);
       await timeoutAssertion;
-      expect(spawnSyncMock).toHaveBeenCalledWith("taskkill", ["/PID", "12345", "/T", "/F"], {
-        stdio: "ignore",
-        windowsHide: true,
-      });
+      expect(spawnSyncMock).toHaveBeenCalledWith(
+        path.win32.join("C:\\Windows", "System32", "taskkill.exe"),
+        ["/PID", "12345", "/T", "/F"],
+        {
+          stdio: "ignore",
+          windowsHide: true,
+        },
+      );
       expect(child.kill).not.toHaveBeenCalled();
     } finally {
       if (platformDescriptor) {
