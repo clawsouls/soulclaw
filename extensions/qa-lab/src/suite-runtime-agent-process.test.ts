@@ -187,7 +187,11 @@ describe("qa suite runtime agent process helpers", () => {
 
   it("force-kills timed-out Windows qa cli process trees with taskkill", async () => {
     const platformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
+    const originalSystemRoot = process.env.SystemRoot;
+    const originalWindir = process.env.WINDIR;
     Object.defineProperty(process, "platform", { value: "win32", configurable: true });
+    process.env.SystemRoot = "C:\\Windows";
+    delete process.env.WINDIR;
     try {
       const child = createSpawnedProcess({ pid: 12345 });
       spawnMock.mockReturnValue(child);
@@ -225,6 +229,16 @@ describe("qa suite runtime agent process helpers", () => {
     } finally {
       if (platformDescriptor) {
         Object.defineProperty(process, "platform", platformDescriptor);
+      }
+      if (originalSystemRoot === undefined) {
+        delete process.env.SystemRoot;
+      } else {
+        process.env.SystemRoot = originalSystemRoot;
+      }
+      if (originalWindir === undefined) {
+        delete process.env.WINDIR;
+      } else {
+        process.env.WINDIR = originalWindir;
       }
     }
   });

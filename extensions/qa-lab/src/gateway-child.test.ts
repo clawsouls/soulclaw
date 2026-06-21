@@ -1006,7 +1006,11 @@ describe("buildQaRuntimeEnv", () => {
 
   it("force-kills Windows gateway process trees when graceful taskkill fails", () => {
     const platformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
+    const originalSystemRoot = process.env.SystemRoot;
+    const originalWindir = process.env.WINDIR;
     Object.defineProperty(process, "platform", { value: "win32", configurable: true });
+    process.env.SystemRoot = "C:\\Windows";
+    delete process.env.WINDIR;
     try {
       const child = Object.assign(new EventEmitter(), {
         pid: 12345,
@@ -1038,6 +1042,16 @@ describe("buildQaRuntimeEnv", () => {
     } finally {
       if (platformDescriptor) {
         Object.defineProperty(process, "platform", platformDescriptor);
+      }
+      if (originalSystemRoot === undefined) {
+        delete process.env.SystemRoot;
+      } else {
+        process.env.SystemRoot = originalSystemRoot;
+      }
+      if (originalWindir === undefined) {
+        delete process.env.WINDIR;
+      } else {
+        process.env.WINDIR = originalWindir;
       }
     }
   });
