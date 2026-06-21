@@ -1436,6 +1436,13 @@ describe("scripts/test-projects changed-target routing", () => {
       ],
       ["scripts/lib/test-group-report.mjs", ["test/scripts/test-group-report.test.ts"]],
       ["scripts/lib/stable-release-closeout.mjs", ["test/stable-release-closeout.test.ts"]],
+      [
+        "scripts/lib/extension-source-classifier.mjs",
+        [
+          "test/scripts/extension-source-classifier.test.ts",
+          "src/channels/plugins/contracts/channel-import-guardrails.test.ts",
+        ],
+      ],
       ["scripts/lib/ts-topology/analyze.ts", ["test/scripts/ts-topology.test.ts"]],
       ["scripts/lib/ts-topology/reports.ts", ["test/scripts/ts-topology.test.ts"]],
       ["scripts/lib/ts-topology/scope.ts", ["test/scripts/ts-topology.test.ts"]],
