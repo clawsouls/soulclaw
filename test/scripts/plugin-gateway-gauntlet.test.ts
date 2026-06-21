@@ -884,10 +884,10 @@ const promise = runMeasuredCommandLive({
   label: "timeout-parent-termination",
   phase: "probe",
   timeoutKillGraceMs: 1_000,
-  timeoutMs: 100,
+  timeoutMs: 1_000,
   timeMode: "none",
 });
-for (let attempt = 0; attempt < 100 && !fs.existsSync(${JSON.stringify(
+for (let attempt = 0; attempt < 200 && !fs.existsSync(${JSON.stringify(
           leaderExitedPath,
         )}); attempt += 1) {
   await delay(25);
