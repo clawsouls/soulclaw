@@ -1243,6 +1243,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ],
   ],
   [
+    "scripts/lib/plugin-package-dependencies.mjs",
+    ["test/scripts/plugin-package-dependencies.test.ts"],
+  ],
+  [
     "scripts/lib/plugin-npm-runtime-assets.mjs",
     ["test/scripts/plugin-npm-runtime-build-args.test.ts"],
   ],
