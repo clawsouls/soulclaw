@@ -8,6 +8,7 @@ import path from "node:path";
 import process from "node:process";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { resolveWindowsTaskkillPath } from "../lib/windows-taskkill.mjs";
 
 const PLUGIN_SPEC =
   process.env.OPENCLAW_KITCHEN_SINK_NPM_SPEC || "npm:@openclaw/kitchen-sink@latest";
@@ -575,11 +576,12 @@ function commandProcessTreeIsAlive(child) {
 }
 
 function signalWindowsProcessTree(pid, signal, runTaskkill = childProcess.spawnSync) {
+  const taskkillPath = resolveWindowsTaskkillPath();
   const args = ["/PID", String(pid), "/T"];
   if (signal === "SIGKILL") {
     args.push("/F");
   }
-  const result = runTaskkill("taskkill", args, { stdio: "ignore" });
+  const result = runTaskkill(taskkillPath, args, { stdio: "ignore" });
   return !result?.error && result?.status === 0;
 }
 

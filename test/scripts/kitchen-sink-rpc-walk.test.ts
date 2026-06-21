@@ -62,9 +62,14 @@ import {
   validateCliArgs,
   waitForGatewayReady,
 } from "../../scripts/e2e/kitchen-sink-rpc-walk.mjs";
+import { resolveWindowsTaskkillPath } from "../../scripts/lib/windows-taskkill.mjs";
 import { cleanupTempDirs, makeTempDir } from "../helpers/temp-dir.js";
 
 const posixIt = process.platform === "win32" ? it.skip : it;
+
+function expectedTaskkillPath(): string {
+  return resolveWindowsTaskkillPath();
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -296,9 +301,14 @@ describe("kitchen-sink RPC gateway teardown", () => {
         runTaskkill,
       }),
     ).toBe(true);
-    expect(runTaskkill).toHaveBeenNthCalledWith(1, "taskkill", ["/PID", "12345", "/T"], {
-      stdio: "ignore",
-    });
+    expect(runTaskkill).toHaveBeenNthCalledWith(
+      1,
+      expectedTaskkillPath(),
+      ["/PID", "12345", "/T"],
+      {
+        stdio: "ignore",
+      },
+    );
 
     expect(
       signalGateway(child, "SIGKILL", killProcess, {
@@ -306,9 +316,14 @@ describe("kitchen-sink RPC gateway teardown", () => {
         runTaskkill,
       }),
     ).toBe(true);
-    expect(runTaskkill).toHaveBeenNthCalledWith(2, "taskkill", ["/PID", "12345", "/T", "/F"], {
-      stdio: "ignore",
-    });
+    expect(runTaskkill).toHaveBeenNthCalledWith(
+      2,
+      expectedTaskkillPath(),
+      ["/PID", "12345", "/T", "/F"],
+      {
+        stdio: "ignore",
+      },
+    );
     expect(killProcess).not.toHaveBeenCalled();
     expect(child.kill).not.toHaveBeenCalled();
   });
@@ -331,12 +346,22 @@ describe("kitchen-sink RPC gateway teardown", () => {
       }),
     ).toBe(true);
 
-    expect(runTaskkill).toHaveBeenNthCalledWith(1, "taskkill", ["/PID", "12345", "/T"], {
-      stdio: "ignore",
-    });
-    expect(runTaskkill).toHaveBeenNthCalledWith(2, "taskkill", ["/PID", "12345", "/T", "/F"], {
-      stdio: "ignore",
-    });
+    expect(runTaskkill).toHaveBeenNthCalledWith(
+      1,
+      expectedTaskkillPath(),
+      ["/PID", "12345", "/T"],
+      {
+        stdio: "ignore",
+      },
+    );
+    expect(runTaskkill).toHaveBeenNthCalledWith(
+      2,
+      expectedTaskkillPath(),
+      ["/PID", "12345", "/T", "/F"],
+      {
+        stdio: "ignore",
+      },
+    );
     expect(killProcess).not.toHaveBeenCalled();
     expect(child.kill).not.toHaveBeenCalled();
   });
@@ -702,17 +727,27 @@ setInterval(() => {}, 1000);
       platform: "win32",
       runTaskkill,
     });
-    expect(runTaskkill).toHaveBeenNthCalledWith(1, "taskkill", ["/PID", "12345", "/T"], {
-      stdio: "ignore",
-    });
+    expect(runTaskkill).toHaveBeenNthCalledWith(
+      1,
+      expectedTaskkillPath(),
+      ["/PID", "12345", "/T"],
+      {
+        stdio: "ignore",
+      },
+    );
 
     signalProcessGroup(child, "SIGKILL", {
       platform: "win32",
       runTaskkill,
     });
-    expect(runTaskkill).toHaveBeenNthCalledWith(2, "taskkill", ["/PID", "12345", "/T", "/F"], {
-      stdio: "ignore",
-    });
+    expect(runTaskkill).toHaveBeenNthCalledWith(
+      2,
+      expectedTaskkillPath(),
+      ["/PID", "12345", "/T", "/F"],
+      {
+        stdio: "ignore",
+      },
+    );
     expect(child.kill).not.toHaveBeenCalled();
   });
 
@@ -731,12 +766,22 @@ setInterval(() => {}, 1000);
       runTaskkill,
     });
 
-    expect(runTaskkill).toHaveBeenNthCalledWith(1, "taskkill", ["/PID", "12345", "/T"], {
-      stdio: "ignore",
-    });
-    expect(runTaskkill).toHaveBeenNthCalledWith(2, "taskkill", ["/PID", "12345", "/T", "/F"], {
-      stdio: "ignore",
-    });
+    expect(runTaskkill).toHaveBeenNthCalledWith(
+      1,
+      expectedTaskkillPath(),
+      ["/PID", "12345", "/T"],
+      {
+        stdio: "ignore",
+      },
+    );
+    expect(runTaskkill).toHaveBeenNthCalledWith(
+      2,
+      expectedTaskkillPath(),
+      ["/PID", "12345", "/T", "/F"],
+      {
+        stdio: "ignore",
+      },
+    );
     expect(child.kill).not.toHaveBeenCalled();
   });
 
