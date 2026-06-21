@@ -1395,6 +1395,22 @@ describe("scripts/test-projects changed-target routing", () => {
     }
   });
 
+  it("keeps docs spellcheck config edits on owner tests", () => {
+    const expectedTargets = new Map([
+      ["scripts/codespell-dictionary.txt", ["test/scripts/docs-spellcheck.test.ts"]],
+      ["scripts/codespell-ignore.txt", ["test/scripts/docs-spellcheck.test.ts"]],
+      ["scripts/docs-spellcheck.sh", ["test/scripts/docs-spellcheck.test.ts"]],
+      ["test/scripts/docs-spellcheck.test.ts", ["test/scripts/docs-spellcheck.test.ts"]],
+    ]);
+
+    for (const [source, targets] of expectedTargets) {
+      expect(resolveChangedTestTargetPlan([source]), source).toEqual({
+        mode: "targets",
+        targets,
+      });
+    }
+  });
+
   it("keeps shared script library edits on owner tests", () => {
     const expectedTargets = new Map([
       [
