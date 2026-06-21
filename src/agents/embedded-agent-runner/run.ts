@@ -23,7 +23,6 @@ import {
   captureAgentRunLifecycleGeneration,
   claimAgentRunContext,
   emitAgentItemEvent,
-  emitAgentPlanEvent,
   getAgentEventLifecycleGeneration,
   getAgentRunContext,
   registerAgentRunContext,
