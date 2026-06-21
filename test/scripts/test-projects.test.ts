@@ -1927,6 +1927,10 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/lib/workspace-bootstrap-smoke.mjs",
         ["test/release-check.test.ts", "test/openclaw-npm-release-check.test.ts"],
       ],
+      [
+        "scripts/openclaw-release-clawhub-runtime-state.ts",
+        ["test/scripts/openclaw-release-clawhub-runtime-state.test.ts"],
+      ],
       ["scripts/lib/openclaw-release-clawhub-plan.ts", ["test/plugin-clawhub-release.test.ts"]],
       [
         "scripts/lib/plugin-clawhub-release.ts",
@@ -1935,6 +1939,14 @@ describe("scripts/test-projects changed-target routing", () => {
       [
         "scripts/lib/plugin-npm-release.ts",
         ["test/plugin-npm-release.test.ts", "test/plugin-clawhub-release.test.ts"],
+      ],
+      [
+        "scripts/plugin-release-pretag-pack-check.ts",
+        ["test/scripts/plugin-release-pretag-pack-check.test.ts"],
+      ],
+      [
+        "scripts/plan-release-workflow-matrix.mjs",
+        ["test/scripts/release-workflow-matrix-plan.test.ts"],
       ],
       [
         "scripts/lib/plugin-npm-runtime-assets.mjs",
