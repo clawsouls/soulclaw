@@ -451,6 +451,13 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
   ["scripts/check-dependency-pins.mjs", ["test/scripts/check-dependency-pins.test.ts"]],
   ["scripts/check-deadcode-unused-files.mjs", ["test/scripts/check-deadcode-unused-files.test.ts"]],
   ["scripts/check-dynamic-import-warts.mjs", ["test/scripts/check-dynamic-import-warts.test.ts"]],
+  [
+    "scripts/lib/config-boundary-guard.mjs",
+    [
+      "src/plugins/contracts/config-boundary-guard.test.ts",
+      "src/plugins/contracts/deprecated-internal-config-api.test.ts",
+    ],
+  ],
   ["scripts/check-extension-plugin-sdk-boundary.mjs", ["test/extension-import-boundaries.test.ts"]],
   ["scripts/check-no-conflict-markers.mjs", ["test/scripts/check-no-conflict-markers.test.ts"]],
   [
