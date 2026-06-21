@@ -496,6 +496,31 @@ describe("truncateOversizedToolResultsInMessages", () => {
     );
     expect(stableFirst.truncatedCount).toBe(0);
     expect(stableSecond.messages.slice(0, stableHistory.length)).toEqual(stableFirst.messages);
+    const stableThird = truncateOversizedToolResultsInMessages(
+      [
+        ...stableHistory,
+        makeToolResult("c".repeat(15_000), "stable_3"),
+        makeToolResult("d".repeat(15_000), "stable_4"),
+      ],
+      128_000,
+      12_000,
+      12_000,
+      stableState,
+    );
+    const stableFourth = truncateOversizedToolResultsInMessages(
+      [
+        ...stableHistory,
+        makeToolResult("c".repeat(15_000), "stable_3"),
+        makeToolResult("d".repeat(15_000), "stable_4"),
+        makeToolResult("e".repeat(15_000), "stable_5"),
+      ],
+      128_000,
+      12_000,
+      12_000,
+      stableState,
+    );
+    const lastText = stableFourth.messages.at(-1);
+    expect(lastText && getToolResultTextLength(lastText)).toBeLessThanOrEqual(12_000);
   });
 
   it("does not restore filtered image blocks when reusing a projection", () => {

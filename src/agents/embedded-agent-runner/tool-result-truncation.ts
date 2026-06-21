@@ -588,7 +588,43 @@ function buildAggregateToolResultReplacements(params: {
     remainingReduction -= actualReduction;
   }
 
+  if (remainingReduction > 0) {
+    for (const candidate of candidates.filter((item) => item.aggregateEligible)) {
+      if (remainingReduction <= 0) {
+        break;
+      }
+      if (replacements.some((replacement) => replacement.entryId === candidate.entryId)) {
+        continue;
+      }
+      const emptyMessage = clearToolResultText(candidate.message);
+      const actualReduction = Math.max(
+        0,
+        candidate.textLength - getToolResultTextLength(emptyMessage),
+      );
+      if (actualReduction <= 0) {
+        continue;
+      }
+      replacements.push({ entryId: candidate.entryId, message: emptyMessage });
+      remainingReduction -= actualReduction;
+    }
+  }
+
   return replacements;
+}
+
+function clearToolResultText(message: AgentMessage): AgentMessage {
+  const content = (message as { content?: unknown }).content;
+  if (!Array.isArray(content)) {
+    return message;
+  }
+  return {
+    ...message,
+    content: content.map((block) =>
+      block && typeof block === "object" && (block as { type?: unknown }).type === "text"
+        ? { ...block, text: "" }
+        : block,
+    ),
+  } as AgentMessage;
 }
 
 function buildOversizedToolResultReplacements(params: {
