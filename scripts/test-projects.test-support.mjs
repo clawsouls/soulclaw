@@ -451,6 +451,7 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ["test/scripts/package-acceptance-workflow.test.ts"],
   ],
   ["scripts/clawtributors-map.json", ["test/scripts/update-clawtributors.test.ts"]],
+  ["scripts/tsconfig.json", ["test/scripts/oxlint-config.test.ts"]],
   ["scripts/build-all.mjs", ["test/scripts/build-all.test.ts"]],
   ["scripts/build-stamp.mjs", ["src/infra/build-stamp.test.ts"]],
   ["scripts/crabbox-wrapper.mjs", ["test/scripts/crabbox-wrapper.test.ts"]],
@@ -2669,6 +2670,20 @@ function resolveUpgradeSurvivorConfigRecipeTargets(changedPath) {
   return ["test/scripts/upgrade-survivor-config-recipe.test.ts"];
 }
 
+function resolveDocsI18nBehaviorTargets(changedPath) {
+  if (!/^scripts\/docs-i18n\/testdata\/behavior\/[^/]+\/[^/]+$/u.test(changedPath)) {
+    return null;
+  }
+  return ["test/scripts/docs-i18n-behavior.test.ts"];
+}
+
+function resolveK8sManifestTargets(changedPath) {
+  if (!/^scripts\/k8s\/manifests\/[^/]+\.yaml$/u.test(changedPath)) {
+    return null;
+  }
+  return ["test/scripts/k8s-manifests.test.ts"];
+}
+
 function resolveParallelsToolingTestTargets(changedPath) {
   if (
     !/^scripts\/e2e\/parallels\/[^/]+\.ts$/u.test(changedPath) &&
@@ -2698,6 +2713,8 @@ function resolveToolingTestTargets(changedPath, cwd = process.cwd()) {
     TOOLING_SOURCE_TEST_TARGETS.get(changedPath) ??
     TOOLING_TEST_TARGETS.get(changedPath) ??
     resolveUpgradeSurvivorConfigRecipeTargets(changedPath) ??
+    resolveDocsI18nBehaviorTargets(changedPath) ??
+    resolveK8sManifestTargets(changedPath) ??
     resolveParallelsToolingTestTargets(changedPath);
   const conventionalTargets = resolveConventionalToolingTestTargets(changedPath, cwd);
   if (explicitTargets && conventionalTargets) {
