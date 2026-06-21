@@ -1576,6 +1576,10 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ["test/scripts/plugin-update-unchanged-docker.test.ts"],
   ],
   [
+    "scripts/e2e/lib/plugin-update/registry-server.mjs",
+    ["test/scripts/plugin-update-unchanged-docker.test.ts"],
+  ],
+  [
     "scripts/e2e/lib/plugin-update/unchanged-scenario.sh",
     ["test/scripts/plugin-update-unchanged-docker.test.ts"],
   ],

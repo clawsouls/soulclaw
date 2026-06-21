@@ -761,6 +761,10 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/plugin-update-unchanged-docker.test.ts"],
       ],
       [
+        "scripts/e2e/lib/plugin-update/registry-server.mjs",
+        ["test/scripts/plugin-update-unchanged-docker.test.ts"],
+      ],
+      [
         "scripts/e2e/lib/plugin-update/unchanged-scenario.sh",
         ["test/scripts/plugin-update-unchanged-docker.test.ts"],
       ],
