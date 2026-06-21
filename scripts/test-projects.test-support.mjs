@@ -962,13 +962,34 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     ["test/scripts/openclaw-release-clawhub-runtime-state.test.ts"],
   ],
   [
+    "scripts/openclaw-release-clawhub-plan.ts",
+    ["test/scripts/release-wrapper-scripts.test.ts"],
+  ],
+  [
     "scripts/plan-release-workflow-matrix.mjs",
     ["test/scripts/release-workflow-matrix-plan.test.ts"],
+  ],
+  [
+    "scripts/plugin-clawhub-release-check.ts",
+    ["test/scripts/release-wrapper-scripts.test.ts"],
+  ],
+  [
+    "scripts/plugin-clawhub-release-plan.ts",
+    ["test/scripts/release-wrapper-scripts.test.ts"],
+  ],
+  [
+    "scripts/plugin-npm-release-check.ts",
+    ["test/scripts/release-wrapper-scripts.test.ts"],
+  ],
+  [
+    "scripts/plugin-npm-release-plan.ts",
+    ["test/scripts/release-wrapper-scripts.test.ts"],
   ],
   [
     "scripts/plugin-release-pretag-pack-check.ts",
     ["test/scripts/plugin-release-pretag-pack-check.test.ts"],
   ],
+  ["scripts/release-verify-beta.ts", ["test/scripts/release-wrapper-scripts.test.ts"]],
   [
     "scripts/validate-release-publish-approval.mjs",
     ["test/scripts/validate-release-publish-approval.test.ts"],
