@@ -593,10 +593,10 @@ function buildAggregateToolResultReplacements(params: {
       if (remainingReduction <= 0) {
         break;
       }
-      if (replacements.some((replacement) => replacement.entryId === candidate.entryId)) {
-        continue;
-      }
-      const emptyMessage = clearToolResultText(candidate.message);
+      const existingReplacement = replacements.find(
+        (replacement) => replacement.entryId === candidate.entryId,
+      );
+      const emptyMessage = clearToolResultText(existingReplacement?.message ?? candidate.message);
       const actualReduction = Math.max(
         0,
         candidate.textLength - getToolResultTextLength(emptyMessage),
