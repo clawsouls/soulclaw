@@ -11,7 +11,6 @@ export * from "./harness/env/kill-tree.js";
 export * from "./harness/messages.js";
 export * from "./harness/prompt-template-arguments.js";
 export * from "./harness/skills.js";
-export * from "./harness/system-prompt.js";
 export * from "./harness/types.js";
 export * from "./harness/session/jsonl-storage.js";
 export * from "./harness/session/memory-storage.js";

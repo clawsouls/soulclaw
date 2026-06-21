@@ -42,8 +42,8 @@ export function toError(error: unknown): Error {
 /**
  * Skill loaded from a `SKILL.md` file or provided by an application.
  *
- * `name`, `description`, `filePath`, and optional `promptVersion` are inserted into the system prompt in an XML-formatted block as suggested by agentskills.io.
- * Use {@link formatSkillsForSystemPrompt} to generate the spec-compatible system prompt block.
+ * `name`, `description`, `filePath`, and optional `promptVersion` are available to host-owned prompt builders and
+ * direct skill invocation.
  */
 export interface Skill {
   /** Stable skill name used for lookup and model-visible listings. */
@@ -722,11 +722,6 @@ export type AgentHarnessEventResultMap = {
   abort: undefined;
   settled: undefined;
 };
-
-/** Options for a prompt submitted through AgentHarness. */
-export interface AgentHarnessPromptOptions {
-  images?: ImageContent[];
-}
 
 /** Queued messages removed by an abort operation. */
 export interface AbortResult {

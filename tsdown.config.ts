@@ -351,7 +351,6 @@ function buildAgentCoreDistEntries(): Record<string, string> {
     "harness/prompt-template-arguments":
       "packages/agent-core/src/harness/prompt-template-arguments.ts",
     "harness/skills": "packages/agent-core/src/harness/skills.ts",
-    "harness/system-prompt": "packages/agent-core/src/harness/system-prompt.ts",
     "harness/utils/truncate": "packages/agent-core/src/harness/utils/truncate.ts",
   };
 }

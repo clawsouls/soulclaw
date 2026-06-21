@@ -89,10 +89,6 @@
       "types": "./dist/harness/skills.d.ts",
       "default": "./dist/harness/skills.js"
     },
-    "./harness/system-prompt": {
-      "types": "./dist/harness/system-prompt.d.ts",
-      "default": "./dist/harness/system-prompt.js"
-    },
     "./harness/utils/truncate": {
       "types": "./dist/harness/utils/truncate.d.ts",
       "default": "./dist/harness/utils/truncate.js"
