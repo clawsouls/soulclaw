@@ -2299,6 +2299,8 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/e2e/parallels/windows-smoke.ts",
         "scripts/e2e/parallels-windows-smoke.sh",
         "scripts/e2e/lib/parallels-package/build-info-commit.mjs",
+        "scripts/e2e/lib/parallels-macos-common.sh",
+        "scripts/e2e/lib/parallels-package-common.sh",
       ]),
     ).toEqual([
       {
@@ -2313,6 +2315,25 @@ describe("scripts/test-projects changed-target routing", () => {
         watchMode: false,
       },
     ]);
+  });
+
+  it("routes mac restart helpers through restart-mac owner tests", () => {
+    expect(resolveChangedTestTargetPlan(["scripts/lib/restart-mac-gateway.sh"])).toEqual({
+      mode: "targets",
+      targets: ["test/scripts/restart-mac.test.ts"],
+    });
+  });
+
+  it("routes Parallels common shell helpers through lib helper owner tests", () => {
+    for (const changedPath of [
+      "scripts/e2e/lib/parallels-macos-common.sh",
+      "scripts/e2e/lib/parallels-package-common.sh",
+    ]) {
+      expect(resolveChangedTestTargetPlan([changedPath]), changedPath).toEqual({
+        mode: "targets",
+        targets: ["test/scripts/parallels-lib-helpers.test.ts"],
+      });
+    }
   });
 
   it("routes MCP Docker E2E script targets instead of skipping changed tests", () => {
