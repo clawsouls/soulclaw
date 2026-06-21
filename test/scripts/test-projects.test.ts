@@ -702,6 +702,7 @@ describe("scripts/test-projects changed-target routing", () => {
         ],
       ],
       ["scripts/e2e/npm-telegram-live-docker.sh", ["test/scripts/npm-telegram-live.test.ts"]],
+      ["scripts/e2e/npm-telegram-live-runner.ts", ["test/scripts/npm-telegram-live.test.ts"]],
       [
         "scripts/e2e/multi-node-update-docker.sh",
         ["test/scripts/docker-build-helper.test.ts", "test/scripts/docker-e2e-plan.test.ts"],
