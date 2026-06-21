@@ -53,6 +53,7 @@ import {
   normalizeAgentId,
   normalizeMainKey,
   parseAgentSessionKey,
+  resolveAgentIdFromSessionKey,
 } from "../routing/session-key.js";
 import { normalizeSessionKeyPreservingOpaquePeerIds } from "../sessions/session-key-utils.js";
 import type { DB as OpenClawStateKyselyDatabase } from "../state/openclaw-state-db.generated.js";
@@ -70,6 +71,8 @@ import {
 } from "./kysely-sync.js";
 import { requireNodeSqlite } from "./node-sqlite.js";
 import { parseRegistryNpmSpec } from "./npm-registry-spec.js";
+import { normalizeConversationRef } from "./outbound/session-binding-normalization.js";
+import type { SessionBindingRecord } from "./outbound/session-binding.types.js";
 import { isWithinDir } from "./path-safety.js";
 import {
   detectLegacyDebugProxyCaptureSidecar,
@@ -149,6 +152,10 @@ export type LegacyStateDetection = {
     sourcePath: string;
     hasLegacy: boolean;
   };
+  currentConversationBindings: {
+    sourcePath: string;
+    hasLegacy: boolean;
+  };
   execApprovals: {
     sourcePath: string;
     targetPath: string;
@@ -192,6 +199,10 @@ type LegacyVoiceWakeImportDatabase = Pick<
   "voicewake_routing_config" | "voicewake_routing_routes" | "voicewake_triggers"
 >;
 type LegacyUpdateCheckImportDatabase = Pick<OpenClawStateKyselyDatabase, "update_check_state">;
+type LegacyCurrentConversationBindingsImportDatabase = Pick<
+  OpenClawStateKyselyDatabase,
+  "current_conversation_bindings"
+>;
 type SqliteBindRow = Record<string, SQLInputValue>;
 
 type DetectedPluginDoctorStateMigrationPlan = {
@@ -1965,6 +1976,213 @@ function migrateLegacyUpdateCheckState(params: {
   return { changes, warnings };
 }
 
+const CURRENT_BINDING_CONVERSATION_KIND = "current";
+
+type LegacyCurrentConversationBindingsFile = {
+  version?: unknown;
+  bindings?: unknown;
+};
+
+function resolveLegacyCurrentConversationBindingsPath(stateDir: string): string {
+  return path.join(stateDir, "bindings", "current-conversations.json");
+}
+
+function currentConversationBindingKey(ref: SessionBindingRecord["conversation"]): string {
+  const normalized = normalizeConversationRef(ref);
+  return [
+    normalized.channel,
+    normalized.accountId,
+    normalized.parentConversationId ?? "",
+    normalized.conversationId,
+  ].join("\u241f");
+}
+
+function normalizeLegacyCurrentConversationBindingRecord(
+  input: unknown,
+): SessionBindingRecord | null {
+  const record = input && typeof input === "object" ? (input as Partial<SessionBindingRecord>) : {};
+  if (!record.conversation?.conversationId) {
+    return null;
+  }
+  const conversation = normalizeConversationRef(record.conversation);
+  const targetSessionKey =
+    typeof record.targetSessionKey === "string" ? record.targetSessionKey.trim() : "";
+  if (!targetSessionKey) {
+    return null;
+  }
+  const targetKind = record.targetKind === "subagent" ? "subagent" : "session";
+  const status = record.status === "ending" || record.status === "ended" ? record.status : "active";
+  const boundAt =
+    typeof record.boundAt === "number" && Number.isFinite(record.boundAt)
+      ? Math.floor(record.boundAt)
+      : Date.now();
+  const expiresAt =
+    typeof record.expiresAt === "number" && Number.isFinite(record.expiresAt)
+      ? Math.floor(record.expiresAt)
+      : undefined;
+  return {
+    bindingId: `generic:${currentConversationBindingKey(conversation)}`,
+    targetSessionKey,
+    targetKind,
+    conversation,
+    status,
+    boundAt,
+    ...(expiresAt !== undefined ? { expiresAt } : {}),
+    ...(record.metadata && typeof record.metadata === "object" && !Array.isArray(record.metadata)
+      ? { metadata: record.metadata }
+      : {}),
+  };
+}
+
+function normalizeLegacyCurrentConversationBindingFile(input: unknown): SessionBindingRecord[] {
+  const file =
+    input && typeof input === "object" ? (input as LegacyCurrentConversationBindingsFile) : {};
+  if (file.version !== 1 || !Array.isArray(file.bindings)) {
+    return [];
+  }
+  const records = new Map<string, SessionBindingRecord>();
+  for (const item of file.bindings) {
+    const record = normalizeLegacyCurrentConversationBindingRecord(item);
+    if (!record) {
+      continue;
+    }
+    records.set(currentConversationBindingKey(record.conversation), record);
+  }
+  return [...records.values()].toSorted((a, b) => a.bindingId.localeCompare(b.bindingId));
+}
+
+function currentConversationBindingRow(record: SessionBindingRecord): {
+  binding_key: string;
+  binding_id: string;
+  target_agent_id: string;
+  target_session_id: string | null;
+  target_session_key: string;
+  channel: string;
+  account_id: string;
+  conversation_kind: string;
+  parent_conversation_id: string | null;
+  conversation_id: string;
+  target_kind: string;
+  status: string;
+  bound_at: number;
+  expires_at: number | null;
+  metadata_json: string | null;
+  record_json: string;
+  updated_at: number;
+} {
+  const conversation = normalizeConversationRef(record.conversation);
+  return {
+    binding_key: currentConversationBindingKey(conversation),
+    binding_id: record.bindingId,
+    target_agent_id: resolveAgentIdFromSessionKey(record.targetSessionKey),
+    target_session_id: null,
+    target_session_key: record.targetSessionKey,
+    channel: conversation.channel,
+    account_id: conversation.accountId,
+    conversation_kind: CURRENT_BINDING_CONVERSATION_KIND,
+    parent_conversation_id: conversation.parentConversationId ?? null,
+    conversation_id: conversation.conversationId,
+    target_kind: record.targetKind,
+    status: record.status,
+    bound_at: record.boundAt,
+    expires_at: record.expiresAt ?? null,
+    metadata_json: record.metadata ? JSON.stringify(record.metadata) : null,
+    record_json: JSON.stringify(record),
+    updated_at: Date.now(),
+  };
+}
+
+function migrateLegacyCurrentConversationBindings(params: {
+  detected: LegacyStateDetection["currentConversationBindings"];
+  stateDir: string;
+}): { changes: string[]; warnings: string[] } {
+  const changes: string[] = [];
+  const warnings: string[] = [];
+  if (!fileExists(params.detected.sourcePath)) {
+    return { changes, warnings };
+  }
+  let records: SessionBindingRecord[];
+  try {
+    records = normalizeLegacyCurrentConversationBindingFile(
+      readLegacyJsonObject(params.detected.sourcePath),
+    );
+  } catch (err) {
+    warnings.push(
+      `Failed reading legacy current-conversation bindings ${params.detected.sourcePath}: ${String(err)}`,
+    );
+    return { changes, warnings };
+  }
+
+  let importedCount = 0;
+  let shouldArchive = records.length === 0;
+  try {
+    runOpenClawStateWriteTransaction(
+      ({ db }) => {
+        const stateDb = getNodeSqliteKysely<LegacyCurrentConversationBindingsImportDatabase>(db);
+        const existing = executeSqliteQuerySync(
+          db,
+          stateDb
+            .selectFrom("current_conversation_bindings")
+            .select(["binding_key", "record_json"]),
+        ).rows;
+        const existingByKey = new Map(
+          existing.map((row) => [row.binding_key, row.record_json] as const),
+        );
+        const recordsToInsert: SessionBindingRecord[] = [];
+        let conflictCount = 0;
+        for (const record of records) {
+          const key = currentConversationBindingKey(record.conversation);
+          const existingRecordJson = existingByKey.get(key);
+          if (existingRecordJson === undefined) {
+            recordsToInsert.push(record);
+          } else if (existingRecordJson !== JSON.stringify(record)) {
+            conflictCount += 1;
+          }
+        }
+        if (recordsToInsert.length === 0) {
+          shouldArchive = conflictCount === 0;
+          if (conflictCount > 0) {
+            warnings.push(
+              `Left legacy current-conversation bindings in place because ${conflictCount} ${conflictCount === 1 ? "binding conflicts" : "bindings conflict"} with shared SQLite state: ${params.detected.sourcePath}`,
+            );
+          }
+          return;
+        }
+        executeSqliteQuerySync(
+          db,
+          stateDb
+            .insertInto("current_conversation_bindings")
+            .values(recordsToInsert.map(currentConversationBindingRow)),
+        );
+        importedCount = recordsToInsert.length;
+        shouldArchive = conflictCount === 0;
+        if (conflictCount > 0) {
+          warnings.push(
+            `Left legacy current-conversation bindings in place because ${conflictCount} ${conflictCount === 1 ? "binding conflicts" : "bindings conflict"} with shared SQLite state: ${params.detected.sourcePath}`,
+          );
+        }
+      },
+      { env: { ...process.env, OPENCLAW_STATE_DIR: params.stateDir } },
+    );
+  } catch (err) {
+    warnings.push(`Failed migrating legacy current-conversation bindings: ${String(err)}`);
+  }
+  if (importedCount > 0) {
+    changes.push(
+      `Migrated ${importedCount} current-conversation ${importedCount === 1 ? "binding" : "bindings"} → shared SQLite state`,
+    );
+  }
+  if (shouldArchive) {
+    archiveLegacyImportSource({
+      sourcePath: params.detected.sourcePath,
+      label: "current-conversation bindings",
+      changes,
+      warnings,
+    });
+  }
+  return { changes, warnings };
+}
+
 async function migrateLegacyPluginStateSidecar(params: {
   stateDir: string;
 }): Promise<{ changes: string[]; warnings: string[] }> {
@@ -3393,6 +3611,10 @@ export async function detectLegacyStateMigrations(params: {
     sourcePath: resolveLegacyUpdateCheckPath(stateDir),
   };
   const hasUpdateCheck = fileExists(updateCheck.sourcePath);
+  const currentConversationBindings = {
+    sourcePath: resolveLegacyCurrentConversationBindingsPath(stateDir),
+  };
+  const hasCurrentConversationBindings = fileExists(currentConversationBindings.sourcePath);
   const channelPlans = await collectChannelLegacyStateMigrationPlans({
     cfg: params.cfg,
     env,
@@ -3460,6 +3682,9 @@ export async function detectLegacyStateMigrations(params: {
   if (hasUpdateCheck) {
     preview.push("- Update-check state: legacy JSON file → shared SQLite state");
   }
+  if (hasCurrentConversationBindings) {
+    preview.push("- Current-conversation bindings: legacy JSON file → shared SQLite state");
+  }
   if (execApprovals.hasLegacy) {
     preview.push(`- Exec approvals: ${execApprovals.sourcePath} → ${execApprovals.targetPath}`);
   }
@@ -3526,6 +3751,10 @@ export async function detectLegacyStateMigrations(params: {
     updateCheck: {
       ...updateCheck,
       hasLegacy: hasUpdateCheck,
+    },
+    currentConversationBindings: {
+      ...currentConversationBindings,
+      hasLegacy: hasCurrentConversationBindings,
     },
     execApprovals,
     preview,
@@ -4053,6 +4282,10 @@ export async function runLegacyStateMigrations(params: {
     detected: detected.updateCheck,
     stateDir: detected.stateDir,
   });
+  const currentConversationBindings = migrateLegacyCurrentConversationBindings({
+    detected: detected.currentConversationBindings,
+    stateDir: detected.stateDir,
+  });
   const execApprovals = migrateLegacyExecApprovals(detected.execApprovals);
   const preSessionChannelPlans = await runLegacyMigrationPlans(
     detected.channelPlans.plans.filter((plan) => plan.kind === "plugin-state-import"),
@@ -4085,6 +4318,7 @@ export async function runLegacyStateMigrations(params: {
       ...deliveryQueues.changes,
       ...voiceWake.changes,
       ...updateCheck.changes,
+      ...currentConversationBindings.changes,
       ...execApprovals.changes,
       ...preSessionChannelPlans.changes,
       ...pluginPlans.changes,
@@ -4102,6 +4336,7 @@ export async function runLegacyStateMigrations(params: {
       ...deliveryQueues.warnings,
       ...voiceWake.warnings,
       ...updateCheck.warnings,
+      ...currentConversationBindings.warnings,
       ...execApprovals.warnings,
       ...preSessionChannelPlans.warnings,
       ...pluginPlans.warnings,
@@ -4431,6 +4666,10 @@ export async function autoMigrateLegacyState(params: {
       detected: detected.updateCheck,
       stateDir: detected.stateDir,
     });
+    const currentConversationBindings = migrateLegacyCurrentConversationBindings({
+      detected: detected.currentConversationBindings,
+      stateDir: detected.stateDir,
+    });
     const execApprovals = migrateLegacyExecApprovals(detected.execApprovals);
     const preSessionChannelPlans = await runLegacyMigrationPlans(
       detected.channelPlans.plans.filter((plan) => plan.kind === "plugin-state-import"),
@@ -4451,6 +4690,7 @@ export async function autoMigrateLegacyState(params: {
       ...deliveryQueues.changes,
       ...voiceWake.changes,
       ...updateCheck.changes,
+      ...currentConversationBindings.changes,
       ...execApprovals.changes,
       ...preSessionChannelPlans.changes,
       ...pluginPlans.changes,
@@ -4467,6 +4707,7 @@ export async function autoMigrateLegacyState(params: {
       ...deliveryQueues.warnings,
       ...voiceWake.warnings,
       ...updateCheck.warnings,
+      ...currentConversationBindings.warnings,
       ...execApprovals.warnings,
       ...preSessionChannelPlans.warnings,
       ...pluginPlans.warnings,
@@ -4485,6 +4726,7 @@ export async function autoMigrateLegacyState(params: {
         deliveryQueues.changes.length > 0 ||
         voiceWake.changes.length > 0 ||
         updateCheck.changes.length > 0 ||
+        currentConversationBindings.changes.length > 0 ||
         execApprovals.changes.length > 0 ||
         preSessionChannelPlans.changes.length > 0 ||
         pluginPlans.changes.length > 0,
@@ -4506,6 +4748,7 @@ export async function autoMigrateLegacyState(params: {
     !detected.deliveryQueues.hasLegacy &&
     !detected.voiceWake.hasLegacy &&
     !detected.updateCheck.hasLegacy &&
+    !detected.currentConversationBindings.hasLegacy &&
     !detected.execApprovals.hasLegacy
   ) {
     const changes = [
@@ -4558,6 +4801,10 @@ export async function autoMigrateLegacyState(params: {
     detected: detected.updateCheck,
     stateDir: detected.stateDir,
   });
+  const currentConversationBindings = migrateLegacyCurrentConversationBindings({
+    detected: detected.currentConversationBindings,
+    stateDir: detected.stateDir,
+  });
   const execApprovals = migrateLegacyExecApprovals(detected.execApprovals);
   const preSessionChannelPlans = await runLegacyMigrationPlans(
     detected.channelPlans.plans.filter((plan) => plan.kind === "plugin-state-import"),
@@ -4590,6 +4837,7 @@ export async function autoMigrateLegacyState(params: {
     ...deliveryQueues.changes,
     ...voiceWake.changes,
     ...updateCheck.changes,
+    ...currentConversationBindings.changes,
     ...execApprovals.changes,
     ...preSessionChannelPlans.changes,
     ...pluginPlans.changes,
@@ -4610,6 +4858,7 @@ export async function autoMigrateLegacyState(params: {
     ...deliveryQueues.warnings,
     ...voiceWake.warnings,
     ...updateCheck.warnings,
+    ...currentConversationBindings.warnings,
     ...execApprovals.warnings,
     ...preSessionChannelPlans.warnings,
     ...pluginPlans.warnings,

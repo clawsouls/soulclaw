@@ -11,7 +11,11 @@ import {
   openOpenClawStateDatabase,
 } from "../state/openclaw-state-db.js";
 import { createTrackedTempDirs } from "../test-utils/tracked-temp-dirs.js";
-import { executeSqliteQueryTakeFirstSync, getNodeSqliteKysely } from "./kysely-sync.js";
+import {
+  executeSqliteQuerySync,
+  executeSqliteQueryTakeFirstSync,
+  getNodeSqliteKysely,
+} from "./kysely-sync.js";
 import {
   autoMigrateLegacyState,
   detectLegacyStateMigrations,
@@ -93,6 +97,10 @@ vi.mock("../channels/plugins/bundled.js", () => {
 const tempDirs = createTrackedTempDirs();
 
 type UpdateCheckStateDatabase = Pick<OpenClawStateKyselyDatabase, "update_check_state">;
+type CurrentConversationBindingsDatabase = Pick<
+  OpenClawStateKyselyDatabase,
+  "current_conversation_bindings"
+>;
 
 async function expectMissingPath(targetPath: string): Promise<void> {
   let statError: NodeJS.ErrnoException | undefined;
@@ -129,6 +137,72 @@ function readUpdateCheckState(env: NodeJS.ProcessEnv):
         "auto_install_id",
       ])
       .where("state_key", "=", "default"),
+  );
+}
+
+function readCurrentConversationBindingRows(env: NodeJS.ProcessEnv): Array<{
+  binding_key: string;
+  binding_id: string;
+  target_session_key: string;
+  channel: string;
+  account_id: string;
+  conversation_id: string;
+  record_json: string;
+}> {
+  const { db } = openOpenClawStateDatabase({ env });
+  const stateDb = getNodeSqliteKysely<CurrentConversationBindingsDatabase>(db);
+  return executeSqliteQuerySync(
+    db,
+    stateDb
+      .selectFrom("current_conversation_bindings")
+      .select([
+        "binding_key",
+        "binding_id",
+        "target_session_key",
+        "channel",
+        "account_id",
+        "conversation_id",
+        "record_json",
+      ])
+      .orderBy("binding_id", "asc"),
+  ).rows;
+}
+
+function insertCurrentConversationBindingRow(
+  env: NodeJS.ProcessEnv,
+  params: {
+    bindingKey: string;
+    bindingId: string;
+    targetSessionKey: string;
+    channel: string;
+    accountId: string;
+    conversationId: string;
+    recordJson: string;
+  },
+): void {
+  const { db } = openOpenClawStateDatabase({ env });
+  const stateDb = getNodeSqliteKysely<CurrentConversationBindingsDatabase>(db);
+  executeSqliteQuerySync(
+    db,
+    stateDb.insertInto("current_conversation_bindings").values({
+      binding_key: params.bindingKey,
+      binding_id: params.bindingId,
+      target_agent_id: "codex",
+      target_session_id: null,
+      target_session_key: params.targetSessionKey,
+      channel: params.channel,
+      account_id: params.accountId,
+      conversation_kind: "current",
+      parent_conversation_id: null,
+      conversation_id: params.conversationId,
+      target_kind: "session",
+      status: "active",
+      bound_at: 1,
+      expires_at: null,
+      metadata_json: null,
+      record_json: params.recordJson,
+      updated_at: 1,
+    }),
   );
 }
 
@@ -586,6 +660,153 @@ describe("state migrations", () => {
     });
     await expectMissingPath(sourcePath);
     await expect(fs.readFile(`${sourcePath}.migrated`, "utf8")).resolves.toContain("2.0.0");
+  });
+
+  it("migrates legacy current-conversation bindings JSON into shared SQLite state", async () => {
+    const root = await createTempDir();
+    const stateDir = path.join(root, ".openclaw");
+    const env = createEnv(stateDir);
+    const cfg = createConfig();
+    const bindingsDir = path.join(stateDir, "bindings");
+    const sourcePath = path.join(bindingsDir, "current-conversations.json");
+    await fs.mkdir(bindingsDir, { recursive: true });
+    await fs.writeFile(
+      sourcePath,
+      JSON.stringify({
+        version: 1,
+        bindings: [
+          {
+            bindingId: "generic:workspace\u241fdefault\u241f\u241fuser:U123",
+            targetSessionKey: " agent:codex:acp:workspace-dm ",
+            targetKind: "session",
+            conversation: {
+              channel: "workspace",
+              accountId: "default",
+              conversationId: "user:U123",
+            },
+            status: "active",
+            boundAt: 1234,
+            metadata: {
+              label: "workspace-dm",
+            },
+          },
+        ],
+      }),
+      "utf8",
+    );
+
+    const detected = await detectLegacyStateMigrations({ cfg, env, homedir: () => root });
+    expect(detected.currentConversationBindings.hasLegacy).toBe(true);
+    expect(detected.preview).toContain(
+      "- Current-conversation bindings: legacy JSON file → shared SQLite state",
+    );
+
+    const result = await runLegacyStateMigrations({ detected, config: cfg });
+
+    expect(result.warnings).toStrictEqual([]);
+    expect(result.changes).toContain(
+      "Migrated 1 current-conversation binding → shared SQLite state",
+    );
+    const rows = readCurrentConversationBindingRows(env);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      binding_id: "generic:workspace\u241fdefault\u241f\u241fuser:U123",
+      target_session_key: "agent:codex:acp:workspace-dm",
+      channel: "workspace",
+      account_id: "default",
+      conversation_id: "user:U123",
+    });
+    expect(JSON.parse(rows[0]?.record_json ?? "{}")).toMatchObject({
+      metadata: { label: "workspace-dm" },
+    });
+    await expectMissingPath(sourcePath);
+    await expect(fs.readFile(`${sourcePath}.migrated`, "utf8")).resolves.toContain("workspace-dm");
+  });
+
+  it("imports non-conflicting legacy current-conversation bindings when SQLite has a conflict", async () => {
+    const root = await createTempDir();
+    const stateDir = path.join(root, ".openclaw");
+    const env = createEnv(stateDir);
+    const cfg = createConfig();
+    const bindingsDir = path.join(stateDir, "bindings");
+    const sourcePath = path.join(bindingsDir, "current-conversations.json");
+    const conflictingKey = "workspace\u241fdefault\u241f\u241fuser:U123";
+    const missingKey = "workspace\u241fdefault\u241f\u241fuser:U456";
+    await fs.mkdir(bindingsDir, { recursive: true });
+    insertCurrentConversationBindingRow(env, {
+      bindingKey: conflictingKey,
+      bindingId: `generic:${conflictingKey}`,
+      targetSessionKey: "agent:codex:acp:existing",
+      channel: "workspace",
+      accountId: "default",
+      conversationId: "user:U123",
+      recordJson: JSON.stringify({
+        bindingId: `generic:${conflictingKey}`,
+        targetSessionKey: "agent:codex:acp:existing",
+        targetKind: "session",
+        conversation: {
+          channel: "workspace",
+          accountId: "default",
+          conversationId: "user:U123",
+        },
+        status: "active",
+        boundAt: 1,
+      }),
+    });
+    await fs.writeFile(
+      sourcePath,
+      JSON.stringify({
+        version: 1,
+        bindings: [
+          {
+            bindingId: `generic:${conflictingKey}`,
+            targetSessionKey: "agent:codex:acp:legacy-conflict",
+            targetKind: "session",
+            conversation: {
+              channel: "workspace",
+              accountId: "default",
+              conversationId: "user:U123",
+            },
+            status: "active",
+            boundAt: 2,
+          },
+          {
+            bindingId: `generic:${missingKey}`,
+            targetSessionKey: "agent:codex:acp:legacy-missing",
+            targetKind: "session",
+            conversation: {
+              channel: "workspace",
+              accountId: "default",
+              conversationId: "user:U456",
+            },
+            status: "active",
+            boundAt: 3,
+          },
+        ],
+      }),
+      "utf8",
+    );
+
+    const detected = await detectLegacyStateMigrations({ cfg, env, homedir: () => root });
+    const result = await runLegacyStateMigrations({ detected, config: cfg });
+
+    expect(result.changes).toContain(
+      "Migrated 1 current-conversation binding → shared SQLite state",
+    );
+    expect(result.warnings).toContain(
+      `Left legacy current-conversation bindings in place because 1 binding conflicts with shared SQLite state: ${sourcePath}`,
+    );
+    expect(readCurrentConversationBindingRows(env)).toMatchObject([
+      {
+        binding_key: conflictingKey,
+        target_session_key: "agent:codex:acp:existing",
+      },
+      {
+        binding_key: missingKey,
+        target_session_key: "agent:codex:acp:legacy-missing",
+      },
+    ]);
+    await expect(fs.readFile(sourcePath, "utf8")).resolves.toContain("legacy-conflict");
   });
 
   it("keeps legacy delivery queue files when shared SQLite already has a conflicting row", async () => {
