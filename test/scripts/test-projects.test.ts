@@ -1499,6 +1499,10 @@ describe("scripts/test-projects changed-target routing", () => {
         ["src/plugins/contracts/deprecated-internal-config-api.test.ts"],
       ],
       [
+        "scripts/lib/extension-package-boundary.ts",
+        ["src/plugins/contracts/extension-package-project-boundaries.test.ts"],
+      ],
+      [
         "scripts/check-src-extension-import-boundary.mjs",
         ["test/extension-import-boundaries.test.ts"],
       ],
