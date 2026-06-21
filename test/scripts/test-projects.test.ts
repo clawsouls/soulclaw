@@ -1348,6 +1348,20 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
+  it("keeps extensionless helper script edits on owner tests", () => {
+    const expectedTargets = new Map([
+      ["scripts/committer", ["test/scripts/committer.test.ts"]],
+      ["scripts/gh-read", ["test/scripts/gh-read.test.ts"]],
+    ]);
+
+    for (const [source, targets] of expectedTargets) {
+      expect(resolveChangedTestTargetPlan([source]), source).toEqual({
+        mode: "targets",
+        targets,
+      });
+    }
+  });
+
   it("keeps shared script library edits on owner tests", () => {
     const expectedTargets = new Map([
       [
