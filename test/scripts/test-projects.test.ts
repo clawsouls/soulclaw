@@ -1342,6 +1342,10 @@ describe("scripts/test-projects changed-target routing", () => {
         ["test/scripts/check-deprecated-api-usage.test.ts"],
       ],
       [
+        "scripts/lib/dependency-ownership.json",
+        ["test/scripts/dependency-ownership-surface-report.test.ts"],
+      ],
+      [
         "scripts/lib/plugin-sdk-deprecated-barrel-subpaths.json",
         [
           "src/plugins/contracts/plugin-sdk-index.bundle.test.ts",
@@ -1413,6 +1417,22 @@ describe("scripts/test-projects changed-target routing", () => {
           "test/scripts/ts-topology.test.ts",
           "test/vitest/vitest.tooling.config.ts",
         ],
+      ],
+      [
+        "scripts/lib/official-external-channel-catalog.json",
+        [
+          "src/plugins/official-external-plugin-catalog.test.ts",
+          "test/release-check.test.ts",
+          "test/official-channel-catalog.test.ts",
+        ],
+      ],
+      [
+        "scripts/lib/official-external-plugin-catalog.json",
+        ["src/plugins/official-external-plugin-catalog.test.ts", "test/release-check.test.ts"],
+      ],
+      [
+        "scripts/lib/official-external-provider-catalog.json",
+        ["src/plugins/official-external-plugin-catalog.test.ts", "test/release-check.test.ts"],
       ],
       ["scripts/lib/direct-run.mjs", ["test/scripts/changed-lanes.test.ts"]],
       ["scripts/lib/npm-verify-exec.ts", ["test/scripts/npm-verify-exec.test.ts"]],
@@ -1529,6 +1549,15 @@ describe("scripts/test-projects changed-target routing", () => {
       [
         "scripts/lib/bundled-plugin-source-utils.mjs",
         ["test/scripts/bundled-plugin-source-utils.test.ts"],
+      ],
+      [
+        "scripts/lib/bundled-runtime-sidecar-paths.json",
+        [
+          "src/plugins/bundled-plugin-metadata.test.ts",
+          "src/infra/update-global.test.ts",
+          "src/infra/update-runner.test.ts",
+          "test/openclaw-npm-postpublish-verify.test.ts",
+        ],
       ],
       [
         "scripts/lib/bundled-plugin-build-entries.mjs",

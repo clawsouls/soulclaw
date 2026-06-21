@@ -423,6 +423,10 @@ const PLUGIN_SDK_ENTRY_METADATA_TEST_TARGETS = [
   "test/scripts/ts-topology.test.ts",
   TOOLING_VITEST_CONFIG,
 ];
+const OFFICIAL_EXTERNAL_CATALOG_TEST_TARGETS = [
+  "src/plugins/official-external-plugin-catalog.test.ts",
+  "test/release-check.test.ts",
+];
 const TOOLING_SOURCE_TEST_TARGETS = new Map([
   [".crabbox.yaml", ["test/scripts/package-acceptance-workflow.test.ts"]],
   [".github/workflows/ci.yml", ["test/scripts/ci-workflow-guards.test.ts"]],
@@ -779,8 +783,21 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     "scripts/lib/bundled-plugin-source-utils.mjs",
     ["test/scripts/bundled-plugin-source-utils.test.ts"],
   ],
+  [
+    "scripts/lib/bundled-runtime-sidecar-paths.json",
+    [
+      "src/plugins/bundled-plugin-metadata.test.ts",
+      "src/infra/update-global.test.ts",
+      "src/infra/update-runner.test.ts",
+      "test/openclaw-npm-postpublish-verify.test.ts",
+    ],
+  ],
   ["scripts/lib/changed-extensions.mjs", ["test/scripts/test-extension.test.ts"]],
   ["scripts/lib/dev-tooling-safety.ts", ["test/scripts/dev-tooling-safety.test.ts"]],
+  [
+    "scripts/lib/dependency-ownership.json",
+    ["test/scripts/dependency-ownership-surface-report.test.ts"],
+  ],
   [
     "scripts/lib/deprecated-plugin-sdk-usage.mjs",
     ["test/scripts/check-deprecated-api-usage.test.ts"],
@@ -804,6 +821,12 @@ const TOOLING_SOURCE_TEST_TARGETS = new Map([
     "scripts/lib/plugin-sdk-private-local-only-subpaths.json",
     PLUGIN_SDK_ENTRY_METADATA_TEST_TARGETS,
   ],
+  [
+    "scripts/lib/official-external-channel-catalog.json",
+    [...OFFICIAL_EXTERNAL_CATALOG_TEST_TARGETS, "test/official-channel-catalog.test.ts"],
+  ],
+  ["scripts/lib/official-external-plugin-catalog.json", OFFICIAL_EXTERNAL_CATALOG_TEST_TARGETS],
+  ["scripts/lib/official-external-provider-catalog.json", OFFICIAL_EXTERNAL_CATALOG_TEST_TARGETS],
   ["scripts/lib/direct-run.mjs", ["test/scripts/changed-lanes.test.ts"]],
   ["scripts/docker/cleanup-smoke/run.sh", ["test/scripts/docker-build-helper.test.ts"]],
   [
