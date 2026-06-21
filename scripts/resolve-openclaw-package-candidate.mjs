@@ -487,6 +487,18 @@ export async function readArtifactPackageCandidateMetadata(dir) {
   if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(`artifact package-candidate.json must contain a JSON object`);
   }
+  const packageSourceSha =
+    typeof parsed.packageSourceSha === "string" ? parsed.packageSourceSha.trim() : "";
+  if (packageSourceSha && !/^[0-9a-f]{40}$/iu.test(packageSourceSha)) {
+    throw new Error(
+      "artifact package-candidate.json packageSourceSha must be a 40-character commit SHA",
+    );
+  }
+  if (typeof parsed.packageSourceSha === "string") {
+    return packageSourceSha
+      ? { ...parsed, packageSourceSha: packageSourceSha.toLowerCase() }
+      : { ...parsed, packageSourceSha: "" };
+  }
   return parsed;
 }
 
