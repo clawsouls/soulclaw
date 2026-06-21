@@ -3450,6 +3450,13 @@ describe("scripts/test-projects changed-target routing", () => {
     }
   });
 
+  it("routes appcast edits to appcast owner tests", () => {
+    expect(resolveChangedTestTargetPlan(["appcast.xml"])).toEqual({
+      mode: "targets",
+      targets: ["test/appcast.test.ts", "test/scripts/make-appcast.test.ts"],
+    });
+  });
+
   it.each([
     "test/vitest/vitest.agents-core.config.ts",
     "test/vitest/vitest.agents-embedded-agent.config.ts",

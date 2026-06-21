@@ -19,6 +19,7 @@ import {
   createPnpmManagedCommand,
   createTargetedCoreLintCommand,
   shouldDelegateChangedCheckToCrabbox,
+  shouldRunAppcastOwnerTest,
   shouldRunPromptSnapshotCheck,
   shouldRunPromptSnapshotOwnerTest,
   shouldRunRuntimeSidecarBaselineCheck,
@@ -1449,26 +1450,45 @@ describe("scripts/changed-lanes", () => {
     expect(plan.commands.map((command) => command.args[0])).not.toContain("tsgo:all");
   });
 
-  it("keeps app lint explicit when non-macOS hosts lack SwiftLint", () => {
-    const result = detectChangedLanes([
+  it("runs macOS app CI tests for macOS app dependency changes", () => {
+    for (const changedPath of [
+      "apps/macos/Sources/OpenClawMac/AppDelegate.swift",
+      "apps/macos-mlx-tts/Sources/OpenClawMLXTTS/main.swift",
       "apps/shared/OpenClawKit/Sources/OpenClawProtocol/GatewayModels.swift",
-    ]);
-    const plan = createChangedCheckPlan(result, {
-      env: { PATH: "/usr/bin" },
-      platform: "linux",
-      swiftlintAvailable: false,
-    });
+      "apps/swabble/Sources/SwabbleKit/WakeWordGate.swift",
+      "Swabble/Sources/SwabbleKit/WakeWordGate.swift",
+    ]) {
+      const result = detectChangedLanes([changedPath]);
+      const plan = createChangedCheckPlan(result, {
+        env: { PATH: "/usr/bin" },
+        platform: "linux",
+        swiftlintAvailable: false,
+      });
 
-    expectLanes(result.lanes, {
-      apps: true,
+      expect(plan.commands.map((command) => command.args[0])).not.toContain("lint:apps");
+      expect(plan.commands).toContainEqual(
+        expect.objectContaining({
+          name: "lint apps (swiftlint unavailable on this host)",
+          bin: "node",
+        }),
+      );
+      expect(plan.commands).toContainEqual({
+        name: "macOS app CI tests",
+        args: ["test:macos:ci"],
+      });
+    }
+  });
+
+  it("routes appcast changes to appcast owner tests", () => {
+    const result = detectChangedLanes(["appcast.xml"]);
+    const plan = createChangedCheckPlan(result);
+
+    expect(shouldRunAppcastOwnerTest(result.paths)).toBe(true);
+    expect(plan.commands).toContainEqual({
+      name: "appcast owner tests",
+      args: ["test:serial", "test/appcast.test.ts", "test/scripts/make-appcast.test.ts"],
     });
-    expect(plan.commands.map((command) => command.args[0])).not.toContain("lint:apps");
-    expect(plan.commands).toContainEqual(
-      expect.objectContaining({
-        name: "lint apps (swiftlint unavailable on this host)",
-        bin: "node",
-      }),
-    );
+    expect(plan.commands.map((command) => command.name)).not.toContain("macOS app CI tests");
   });
 
   it("runs app lint when SwiftLint is available in Testbox", () => {
@@ -1482,6 +1502,24 @@ describe("scripts/changed-lanes", () => {
     });
 
     expect(plan.commands.map((command) => command.args[0])).toContain("lint:apps");
+    expect(plan.commands).toContainEqual({
+      name: "macOS app CI tests",
+      args: ["test:macos:ci"],
+    });
+  });
+
+  it("keeps macOS app CI tests out of Android-only app changes", () => {
+    const result = detectChangedLanes(["apps/android/app/src/main/AndroidManifest.xml"]);
+    const plan = createChangedCheckPlan(result, {
+      env: { CI: "1", PATH: "/usr/bin" },
+      platform: "linux",
+      swiftlintAvailable: true,
+    });
+
+    expectLanes(result.lanes, {
+      apps: true,
+    });
+    expect(plan.commands.map((command) => command.name)).not.toContain("macOS app CI tests");
   });
 
   it("routes legacy root asset deletions as tooling during root cleanup", () => {
