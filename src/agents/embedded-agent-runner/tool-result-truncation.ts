@@ -352,17 +352,20 @@ export function truncateOversizedToolResultsInMessages(
   );
   const branch = messages.map((message, index) => {
     const projectionKey = projectionState ? getToolResultProjectionKey(message) : undefined;
+    const projectedMessage = projectionKey
+      ? projectionState?.replacements.get(projectionKey)
+      : undefined;
+    const mergedMessage = projectedMessage
+      ? mergeProjectedToolResultMessage(message, projectedMessage)
+      : message;
     return {
       id: `message-${index}`,
       type: "message",
-      message:
-        projectionKey && projectionState?.replacements.get(projectionKey)
-          ? mergeProjectedToolResultMessage(
-              message,
-              projectionState.replacements.get(projectionKey)!,
-            )
-          : message,
-      aggregateEligible: !projectionKey || !projectionState?.frozen.has(projectionKey),
+      message: mergedMessage,
+      aggregateEligible:
+        !projectionKey ||
+        !projectionState?.frozen.has(projectionKey) ||
+        (projectedMessage !== undefined && mergedMessage === message),
     };
   });
   const plan = buildToolResultReplacementPlan({
