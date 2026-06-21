@@ -1341,6 +1341,28 @@ describe("scripts/test-projects changed-target routing", () => {
         "scripts/lib/deprecated-plugin-sdk-usage.mjs",
         ["test/scripts/check-deprecated-api-usage.test.ts"],
       ],
+      [
+        "scripts/lib/plugin-sdk-deprecated-public-subpaths.json",
+        [
+          "test/scripts/check-deprecated-api-usage.test.ts",
+          "src/plugins/contracts/plugin-sdk-package-contract-guardrails.test.ts",
+          "test/scripts/plugin-sdk-surface-report.test.ts",
+          "test/scripts/build-all.test.ts",
+        ],
+      ],
+      [
+        "scripts/lib/plugin-sdk-entries.mjs",
+        [
+          "src/plugins/contracts/plugin-sdk-package-contract-guardrails.test.ts",
+          "src/plugins/contracts/extension-package-project-boundaries.test.ts",
+          "test/scripts/plugin-sdk-surface-report.test.ts",
+          "test/scripts/build-all.test.ts",
+          "test/release-check.test.ts",
+          "test/scripts/prepare-extension-package-boundary-artifacts.test.ts",
+          "test/scripts/ts-topology.test.ts",
+          "test/vitest/vitest.tooling.config.ts",
+        ],
+      ],
       ["scripts/lib/direct-run.mjs", ["test/scripts/changed-lanes.test.ts"]],
       ["scripts/lib/npm-verify-exec.ts", ["test/scripts/npm-verify-exec.test.ts"]],
       [
