@@ -347,6 +347,9 @@ function collectUncoveredConfiguredToolSectionGrantEntries(
   configuredEntries: ConfiguredToolSectionGrantEntry[],
   profilePolicy: ToolPolicyConfig | undefined,
 ): ConfiguredToolSectionGrantEntry[] {
+  if (!profilePolicy) {
+    return [];
+  }
   return configuredEntries
     .map((entry) => ({
       ...entry,
