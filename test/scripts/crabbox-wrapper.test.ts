@@ -2296,10 +2296,24 @@ describe.concurrent("scripts/crabbox-wrapper", () => {
   if (process.platform === "win32") {
     it("preserves shell metacharacters through Windows Crabbox command shims", () => {
       const remoteCommand = "pnpm build && pnpm test | more < in.txt > out.txt %PATH%";
-      const result = runWrapper("provider: aws\n", ["run", "--shell", "--", remoteCommand]);
+      const result = runWrapper("provider: aws\n", [
+        "run",
+        "--provider",
+        "aws",
+        "--shell",
+        "--",
+        remoteCommand,
+      ]);
 
       expect(result.status).toBe(0);
-      expect(parseFakeCrabboxOutput(result).args).toEqual(["run", "--shell", "--", remoteCommand]);
+      expect(parseFakeCrabboxOutput(result).args).toEqual([
+        "run",
+        "--provider",
+        "aws",
+        "--shell",
+        "--",
+        remoteCommand,
+      ]);
     });
   }
 

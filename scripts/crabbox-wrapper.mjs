@@ -118,6 +118,13 @@ function isExecutableFile(path, platform) {
 function spawnInvocation(command, commandArgs, env, platform) {
   const extension = extname(command).toLowerCase();
   if (platform === "win32" && (extension === ".cmd" || extension === ".bat")) {
+    const nodeShim = resolveNodeCmdShim(command);
+    if (nodeShim) {
+      return {
+        command: nodeShim.node,
+        args: [nodeShim.script, ...commandArgs],
+      };
+    }
     return {
       command: resolveWindowsCmdExePath(env),
       args: ["/d", "/s", "/c", buildBatchCommandLine(command, commandArgs)],
@@ -125,6 +132,28 @@ function spawnInvocation(command, commandArgs, env, platform) {
     };
   }
   return { command, args: commandArgs };
+}
+
+function resolveNodeCmdShim(command) {
+  let content;
+  try {
+    content = readFileSync(command, "utf8");
+  } catch {
+    return null;
+  }
+  for (const rawLine of content.split(/\r?\n/u)) {
+    const line = rawLine.trim();
+    const match = /^"([^"]+node(?:\.exe)?)"\s+"%~dp0([^"]+)"\s+%\*$/iu.exec(line);
+    if (!match) {
+      continue;
+    }
+    const script = resolve(dirname(command), match[2]);
+    if (!isExecutableFile(script, process.platform)) {
+      continue;
+    }
+    return { node: match[1], script };
+  }
+  return null;
 }
 
 const cmdMetaCharactersRe = /([()\][%!^"`<>&|;, *?])/g;
