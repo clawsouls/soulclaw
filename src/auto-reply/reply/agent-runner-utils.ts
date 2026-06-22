@@ -31,10 +31,7 @@ import {
   resolveRunAuthProfile,
 } from "./agent-runner-auth-profile.js";
 export { resolveProviderScopedAuthProfile, resolveRunAuthProfile };
-import {
-  buildEmbeddedRunBaseParams as buildEmbeddedRunBaseParamsCore,
-  resolveEnforceFinalTagWithResolver,
-} from "./agent-runner-run-params.js";
+import { buildEmbeddedRunBaseParams as buildEmbeddedRunBaseParamsCore } from "./agent-runner-run-params.js";
 export { resolveModelFallbackOptions } from "./agent-runner-run-params.js";
 import { hasInboundAudio } from "./inbound-media.js";
 import { resolveOriginMessageProvider, resolveOriginMessageTo } from "./origin-routing.js";
@@ -201,13 +198,6 @@ export const formatBunFetchSocketError = (message: string) => {
     "```",
   ].join("\n");
 };
-
-/** Resolves whether final-answer tags should be enforced for a queued run. */
-export const resolveEnforceFinalTag = (
-  run: FollowupRun["run"],
-  provider: string,
-  model = run.model,
-) => resolveEnforceFinalTagWithResolver(run, provider, model, isReasoningTagProvider);
 
 /** Resolves candidate-scoped fast mode after model fallback changes provider/model. */
 export function resolveRunFastModeForFallbackCandidate(params: {
