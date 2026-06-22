@@ -456,10 +456,12 @@ describe("ci workflow guards", () => {
 
   it("fails and retries quiet Node test shard stalls quickly", () => {
     const workflow = readCiWorkflow();
+    const preflightJob = workflow.jobs.preflight;
     const nodeTestJob = workflow.jobs["checks-node-core-test-nondist-shard"];
     const runStep = nodeTestJob.steps.find((step) => step.name === "Run Node test shard");
 
-    expect(nodeTestJob["timeout-minutes"]).toBe(60);
+    expect(JSON.stringify(preflightJob.steps)).toContain("timeout_minutes: shard.timeoutMinutes");
+    expect(nodeTestJob["timeout-minutes"]).toBe("${{ matrix.timeout_minutes || 60 }}");
     expect(runStep.env.OPENCLAW_VITEST_NO_OUTPUT_TIMEOUT_MS).toBe("300000");
     expect(runStep.env.OPENCLAW_VITEST_NO_OUTPUT_RETRY).toBe("1");
     expect(runStep.env.OPENCLAW_TEST_PROJECTS_PARALLEL).toBe("2");
