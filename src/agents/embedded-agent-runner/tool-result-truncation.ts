@@ -358,8 +358,15 @@ export function truncateOversizedToolResultsInMessages(
     const projectedMessage = projectionKey
       ? projectionState?.replacements.get(projectionKey)
       : undefined;
+    if (projectionKey && projectionState && !projectionState.sourceTextByKey.has(projectionKey)) {
+      projectionState.sourceTextByKey.set(projectionKey, getToolResultTextBlocks(message));
+    }
     const mergedMessage = projectedMessage
-      ? mergeProjectedToolResultMessage(message, projectedMessage)
+      ? mergeProjectedToolResultMessage(
+          message,
+          projectedMessage,
+          projectionState?.sourceTextByKey.get(projectionKey ?? ""),
+        )
       : message;
     return {
       id: `message-${index}`,
@@ -456,6 +463,7 @@ export type ToolResultPromptProjectionState = {
   replacements: Map<string, AgentMessage>;
   frozen: Set<string>;
   ambiguousBaseKeys: Set<string>;
+  sourceTextByKey: Map<string, string[]>;
 };
 
 export function createToolResultPromptProjectionState(): ToolResultPromptProjectionState {
@@ -463,6 +471,7 @@ export function createToolResultPromptProjectionState(): ToolResultPromptProject
     replacements: new Map<string, AgentMessage>(),
     frozen: new Set<string>(),
     ambiguousBaseKeys: new Set<string>(),
+    sourceTextByKey: new Map<string, string[]>(),
   };
 }
 
@@ -512,6 +521,7 @@ function getToolResultProjectionKeys(
 function mergeProjectedToolResultMessage(
   message: AgentMessage,
   projectedMessage: AgentMessage,
+  sourceText: string[] | undefined,
 ): AgentMessage {
   if (message.role !== "toolResult" || projectedMessage.role !== "toolResult") {
     return projectedMessage;
@@ -528,6 +538,10 @@ function mergeProjectedToolResultMessage(
       (block as { type?: unknown }).type === "text" &&
       typeof (block as { text?: unknown }).text === "string",
   );
+  const currentText = getToolResultTextBlocks(message);
+  if (sourceText && currentText.some((text, index) => text !== sourceText[index])) {
+    return message;
+  }
   const currentTextCount = currentContent.filter(
     (block) =>
       Boolean(block) && typeof block === "object" && (block as { type?: unknown }).type === "text",
@@ -544,6 +558,22 @@ function mergeProjectedToolResultMessage(
     return projectedBlock ? { ...block, text: projectedBlock.text } : block;
   });
   return { ...message, content: mergedContent } as AgentMessage;
+}
+
+function getToolResultTextBlocks(message: AgentMessage): string[] {
+  const content = (message as { content?: unknown }).content;
+  if (!Array.isArray(content)) {
+    return [];
+  }
+  return content.flatMap((block) =>
+    block && typeof block === "object" && (block as { type?: unknown }).type === "text"
+      ? [
+          typeof (block as { text?: unknown }).text === "string"
+            ? (block as { text: string }).text
+            : "",
+        ]
+      : [],
+  );
 }
 
 function buildAggregateToolResultReplacements(params: {
