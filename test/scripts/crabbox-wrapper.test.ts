@@ -191,11 +191,7 @@ function writeFakeCrabbox(binDir: string, helpText: string): string {
     `require(${JSON.stringify(helperPath)});`,
   ].join("\n");
   writeFileSync(crabboxPath, `${script}\n`, "utf8");
-  writeFileSync(
-    `${crabboxPath}.cmd`,
-    `@echo off\r\n"${process.execPath}" "%~dp0crabbox" %*\r\n`,
-    "utf8",
-  );
+  writeFileSync(`${crabboxPath}.cmd`, windowsNodeCmdShim("crabbox"), "utf8");
   chmodSync(crabboxPath, 0o755);
   return crabboxPath;
 }
@@ -212,13 +208,32 @@ function makeSlowVersionCrabbox(helpText: string): string {
     `else if (args[0] === "run" && args[1] === "--help") { process.stdout.write(${JSON.stringify(helpText)}); }`,
   ].join("\n");
   writeFileSync(crabboxPath, `${script}\n`, "utf8");
-  writeFileSync(
-    `${crabboxPath}.cmd`,
-    `@echo off\r\n"${process.execPath}" "%~dp0crabbox" %*\r\n`,
-    "utf8",
-  );
+  writeFileSync(`${crabboxPath}.cmd`, windowsNodeCmdShim("crabbox"), "utf8");
   chmodSync(crabboxPath, 0o755);
   return binDir;
+}
+
+function windowsNodeCmdShim(target: string): string {
+  return [
+    "@ECHO off",
+    "GOTO start",
+    ":find_dp0",
+    "SET dp0=%~dp0",
+    "EXIT /b",
+    ":start",
+    "SETLOCAL",
+    "CALL :find_dp0",
+    'IF EXIST "%dp0%\\node.exe" (',
+    '  SET "_prog=%dp0%\\node.exe"',
+    ") ELSE (",
+    '  SET "_prog=node"',
+    ")",
+    "",
+    'endLocal & goto #_undefined_# 2>NUL || title %COMSPEC% & set PATHEXT=%PATHEXT:;.JS;=;% & "%_prog%"  "%dp0%\\' +
+      target +
+      '" %*',
+    "",
+  ].join("\r\n");
 }
 
 function shellSingleQuote(value: string): string {
@@ -282,7 +297,7 @@ function makeFakeGit(
     "process.exit(response.status ?? 0);",
   ].join("\n");
   writeFileSync(gitPath, `${script}\n`, "utf8");
-  writeFileSync(`${gitPath}.cmd`, `@echo off\r\n"${process.execPath}" "%~dp0git" %*\r\n`, "utf8");
+  writeFileSync(`${gitPath}.cmd`, windowsNodeCmdShim("git"), "utf8");
   chmodSync(gitPath, 0o755);
   return binDir;
 }

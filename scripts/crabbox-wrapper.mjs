@@ -122,7 +122,7 @@ function spawnInvocation(command, commandArgs, env, platform) {
     if (nodeShim) {
       return {
         command: nodeShim.node,
-        args: [nodeShim.script, ...commandArgs],
+        args: [...nodeShim.args, ...commandArgs],
       };
     }
     return {
@@ -151,9 +151,37 @@ function resolveNodeCmdShim(command, platform) {
     if (!isExecutableFile(script, platform)) {
       continue;
     }
-    return { node: match[1], script };
+    return { node: match[1], args: [script] };
+  }
+  const npmCmdShim = resolveNpmNodeCmdShim(command, content, platform);
+  if (npmCmdShim) {
+    return npmCmdShim;
   }
   return null;
+}
+
+function resolveNpmNodeCmdShim(command, content, platform) {
+  const lines = content.split(/\r?\n/u).map((line) => line.trim());
+  if (
+    !lines.some((line) => /^IF EXIST "%dp0%\\node\.exe" \($/iu.test(line)) ||
+    !lines.some((line) => /^SET "_prog=node(?:\.exe)?"$/iu.test(line))
+  ) {
+    return null;
+  }
+  const invocation = lines.find((line) => line.includes('"%_prog%"') && line.endsWith("%*"));
+  if (!invocation) {
+    return null;
+  }
+  const match = /(?:^|&)\s*"%_prog%"\s+(.*?)"(%dp0%\\[^"]+)"\s+%\*$/iu.exec(invocation);
+  if (!match || match[1].trim()) {
+    return null;
+  }
+  const script = resolve(dirname(command), match[2].replace(/^%dp0%\\/iu, ""));
+  if (!isExecutableFile(script, platform)) {
+    return null;
+  }
+  const localNode = resolve(dirname(command), "node.exe");
+  return { node: isExecutableFile(localNode, platform) ? localNode : "node", args: [script] };
 }
 
 const cmdMetaCharactersRe = /([()\][%!^"`<>&|;, *?])/g;
