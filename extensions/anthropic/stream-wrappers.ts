@@ -10,7 +10,6 @@ import {
   composeProviderStreamWrappers,
   createAnthropicThinkingPrefillPayloadWrapper,
   resolveAnthropicPayloadPolicy,
-  stripTrailingAnthropicAssistantPrefillWhenThinking,
   streamWithPayloadPatch,
 } from "openclaw/plugin-sdk/provider-stream-shared";
 import { createSubsystemLogger } from "openclaw/plugin-sdk/runtime-env";
@@ -251,6 +250,5 @@ export function wrapAnthropicProviderStream(
 /** Test-only hooks for Anthropic stream wrapper behavior. */
 export const testing = {
   log,
-  stripTrailingAssistantPrefillWhenThinking: stripTrailingAnthropicAssistantPrefillWhenThinking,
 };
 export { testing as __testing };
