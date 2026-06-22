@@ -3129,7 +3129,9 @@ export async function runCodexAppServerAttempt(
       systemPromptReport,
     };
   } finally {
-    await maybeEmitFastModeAutoResetBestEffort();
+    if (params.isFinalFallbackAttempt !== false) {
+      await maybeEmitFastModeAutoResetBestEffort();
+    }
     codexModelCallDiagnostics.emitError(
       "codex app-server run completed without model-call terminal event",
     );

@@ -540,7 +540,9 @@ async function runCliAgentWithLifecycleInternal(
     for (const bridge of bridges) {
       bridge.unsubscribe();
     }
-    await maybeEmitFastModeAutoReset();
+    if (params.runParams.isFinalFallbackAttempt !== false) {
+      await maybeEmitFastModeAutoReset();
+    }
     if (emitLifecycleTerminal && !lifecycleTerminalEmitted) {
       emitAgentEvent({
         runId: params.runId,
