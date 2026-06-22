@@ -643,22 +643,7 @@ export async function readSessionMessageCountAsync(
   if (!filePath) {
     return 0;
   }
-  let stat: fs.Stats | null = null;
-  try {
-    stat = await fs.promises.stat(filePath);
-    const cached = getCachedTranscriptMessageCount(filePath, stat);
-    if (typeof cached === "number") {
-      return cached;
-    }
-  } catch {
-    // Count from the transcript reader below when stat metadata is unavailable.
-  }
-  const index = await readSessionTranscriptIndex(filePath);
-  const count = index?.entries.length ?? 0;
-  if (stat) {
-    setCachedTranscriptMessageCount(filePath, stat, count);
-  }
-  return count;
+  return await readSessionMessageCountFromPathAsync(filePath);
 }
 
 export function readRecentSessionMessagesWithStats(
