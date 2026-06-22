@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
+import { MAX_TIMER_TIMEOUT_MS } from "@openclaw/normalization-core/number-coercion";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildObservationGuardFailures,
@@ -579,6 +580,26 @@ describe("plugin gateway gauntlet helpers", () => {
     expect(row.status).toBe(1);
     expect(row.spawnError?.code).toBe("ENOENT");
     await expect(fs.readFile(row.logPath, "utf8")).resolves.toContain("[spawn error] ENOENT");
+  });
+
+  it("clamps oversized measured command timers before scheduling", async () => {
+    const logDir = path.join(repoRoot, "logs");
+    const row = await runMeasuredCommandLive({
+      cwd: repoRoot,
+      env: process.env,
+      logDir,
+      command: process.execPath,
+      args: ["-e", "setTimeout(() => process.exit(0), 25)"],
+      label: "oversized-timeout",
+      phase: "probe",
+      timeoutKillGraceMs: MAX_TIMER_TIMEOUT_MS + 1,
+      timeoutMs: MAX_TIMER_TIMEOUT_MS + 1,
+      timeMode: "none",
+    });
+
+    expect(row.status).toBe(0);
+    expect(row.timedOut).toBe(false);
+    await expect(fs.readFile(row.logPath, "utf8")).resolves.not.toContain("ETIMEDOUT");
   });
 
   it.runIf(process.platform !== "win32")(
