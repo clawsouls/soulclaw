@@ -1,5 +1,5 @@
 // Discord plugin module implements realtime behavior.
-import { PassThrough } from "node:stream";
+import { PassThrough, pipeline } from "node:stream";
 import type { DiscordAccountConfig, OpenClawConfig } from "openclaw/plugin-sdk/config-contracts";
 import {
   asDateTimestampMs,
@@ -814,7 +814,15 @@ export class DiscordRealtimeVoiceSession implements VoiceRealtimeSession {
       this.resetOutputStream("opus-encode-error");
     });
     opusStream.once("close", () => this.handleOutputStreamClosed(stream, "stream-close"));
-    stream.pipe(opusStream);
+    pipeline(stream, opusStream, (err) => {
+      if (!err) {
+        return;
+      }
+      logger.warn(
+        `discord voice: realtime output pipeline failed guild=${this.params.entry.guildId} channel=${this.params.entry.channelId}: ${formatErrorMessage(err)}`,
+      );
+      this.resetOutputStream("output-pipeline-error");
+    });
     if (this.outputPacedBuffer.length > 0) {
       stream.write(this.outputPacedBuffer);
       this.outputPacedBuffer = Buffer.alloc(0);
