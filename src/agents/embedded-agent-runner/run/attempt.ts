@@ -358,6 +358,7 @@ import {
   remapInjectedContextFilesToWorkspace,
 } from "./attempt.bootstrap-context.js";
 export { buildContextEnginePromptCacheInfo } from "./attempt.context-engine-helpers.js";
+import { diagnosticErrorCategory } from "../../../infra/diagnostic-error-metadata.js";
 import { resolveUserTimezone } from "../../date-time.js";
 import {
   rotateTranscriptAfterCompaction,
@@ -390,10 +391,7 @@ import {
   normalizeMessagesForCurrentPromptBoundary,
   normalizeMessagesForLlmBoundary,
 } from "./attempt.llm-boundary.js";
-import {
-  diagnosticErrorCategory,
-  wrapStreamFnWithDiagnosticModelCallEvents,
-} from "./attempt.model-diagnostic-events.js";
+import { wrapStreamFnWithDiagnosticModelCallEvents } from "./attempt.model-diagnostic-events.js";
 import {
   buildAfterTurnRuntimeContext,
   buildAfterTurnRuntimeContextFromUsage,
@@ -521,13 +519,7 @@ export {
   resolvePromptBuildHookResult,
   resolvePromptModeForSession,
   shouldWarnOnOrphanedUserRepair,
-  shouldInjectHeartbeatPrompt,
 } from "./attempt.prompt-helpers.js";
-export {
-  persistSessionsYieldContextMessage,
-  queueSessionsYieldInterruptMessage,
-  stripSessionsYieldArtifacts,
-} from "./attempt.sessions-yield.js";
 export { wrapStreamFnRepairMalformedToolCallArguments } from "./attempt.tool-call-argument-repair.js";
 export {
   wrapStreamFnPromoteStandaloneTextToolCalls,
