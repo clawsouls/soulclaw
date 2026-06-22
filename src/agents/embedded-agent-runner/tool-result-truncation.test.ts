@@ -562,6 +562,8 @@ describe("truncateOversizedToolResultsInMessages", () => {
     const duplicate = (text: string) => ({
       role: "toolResult" as const,
       toolCallId: "duplicate-call",
+      toolName: "duplicate",
+      isError: false,
       timestamp: 1,
       content: [{ type: "text" as const, text }],
     });
