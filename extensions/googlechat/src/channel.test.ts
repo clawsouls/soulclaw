@@ -849,7 +849,7 @@ describe("googlechatPlugin outbound sanitizeText", () => {
 
   it("strips internal tool-trace failure banners from outbound text (#90684)", () => {
     const text =
-      "Visible answer.\n" + "⚠️ 🛠️ `run openclaw definitely-not-a-real-subcommand (agent)` failed";
+      "Visible answer.\n⚠️ 🛠️ `run openclaw definitely-not-a-real-subcommand (agent)` failed";
     const out = sanitizeText({ text });
     expect(out).toBe("Visible answer.");
     expect(out).not.toContain("failed");
