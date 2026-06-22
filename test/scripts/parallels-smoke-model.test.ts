@@ -17,7 +17,10 @@ import { tmpdir } from "node:os";
 import { basename, delimiter, join, win32 } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
-import { MAX_TIMER_TIMEOUT_MS } from "@openclaw/normalization-core/number-coercion";
+import {
+  MAX_TIMER_TIMEOUT_MS,
+  MAX_TIMER_TIMEOUT_SECONDS,
+} from "@openclaw/normalization-core/number-coercion";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   extractLastOpenClawVersionFromLog,
@@ -1268,6 +1271,24 @@ if (isPrlctl) {
     } finally {
       stderrWrite.mockRestore();
       rmSync(runDir, { force: true, recursive: true });
+    }
+  });
+
+  it("clamps oversized phase timers before scheduling", async () => {
+    const runDir = makeTempDir(tempDirs, "openclaw-parallels-phase-timeout-");
+    const phaseRunner = new PhaseRunner(runDir, 128);
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+
+    try {
+      await expect(
+        phaseRunner.phase("oversized", MAX_TIMER_TIMEOUT_SECONDS + 1, () => undefined),
+      ).resolves.toBeUndefined();
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), MAX_TIMER_TIMEOUT_MS);
+      expect(readFileSync(join(runDir, "phase-timings.json"), "utf8")).toContain(
+        `"timeoutSeconds": ${MAX_TIMER_TIMEOUT_SECONDS + 1}`,
+      );
+    } finally {
+      setTimeoutSpy.mockRestore();
     }
   });
 
