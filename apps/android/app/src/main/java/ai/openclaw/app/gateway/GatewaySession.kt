@@ -279,28 +279,6 @@ class GatewaySession(
     }
   }
 
-  private suspend fun refreshPluginSurfaceUrl(
-    method: String,
-    params: JsonElement?,
-    timeoutMs: Long,
-  ): String? {
-    val conn = currentConnection ?: return null
-    return try {
-      val res = conn.request(method, params, timeoutMs)
-      if (!res.ok) return null
-      val obj = res.payloadJson?.let { json.parseToJsonElement(it).asObjectOrNull() } ?: return null
-      val raw =
-        obj["pluginSurfaceUrls"]
-          .asObjectOrNull()
-          ?.get("canvas")
-          .asStringOrNull()
-      normalizeCanvasHostUrl(raw, conn.endpoint, isTlsConnection = conn.tls != null)
-    } catch (err: Throwable) {
-      Log.d("OpenClawGateway", "$method failed: ${err.message ?: err::class.java.simpleName}")
-      null
-    }
-  }
-
   /** Sends node.event and preserves the gateway RPC error shape for callers that need diagnostics. */
   suspend fun sendNodeEventDetailed(
     event: String,
