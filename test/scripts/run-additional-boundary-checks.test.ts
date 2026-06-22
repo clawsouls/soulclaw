@@ -3,6 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { MAX_TIMER_TIMEOUT_MS } from "@openclaw/normalization-core/number-coercion";
 import { describe, expect, it } from "vitest";
 import {
   BOUNDARY_CHECKS,
@@ -268,6 +269,25 @@ describe("run-additional-boundary-checks", () => {
     expect(result.code).toBe(1);
     expect(result.timedOut).toBe(true);
     expect(result.output).toContain("timed out after 50ms");
+  });
+
+  it("clamps oversized check timers before scheduling", async () => {
+    const result = await runSingleCheck(
+      {
+        label: "slow-pass",
+        command: process.execPath,
+        args: ["-e", "setTimeout(() => process.exit(0), 25)"],
+      },
+      {
+        checkTimeoutMs: MAX_TIMER_TIMEOUT_MS + 1,
+        cwd: process.cwd(),
+        env: process.env,
+        outputMaxBytes: 4096,
+      },
+    );
+
+    expect(result.code).toBe(0);
+    expect(result.timedOut).toBe(false);
   });
 
   it.skipIf(process.platform === "win32")(
