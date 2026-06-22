@@ -557,6 +557,9 @@ describe("qa scenario catalog", () => {
     expect(config?.anthropicModelRef).toBe("anthropic/claude-sonnet-4-6");
     expect(config?.openAiXhighModelRef).toBe("openai/gpt-5.5");
     expect(config?.noXhighModelRef).toBe("anthropic/claude-sonnet-4-6");
+    const flowText = JSON.stringify(scenario.execution.flow);
+    expect(flowText).toContain("include max and omit xhigh");
+    expect(flowText).not.toContain("omit xhigh/max");
     expect(scenario.execution.flow?.steps.map((step) => step.name)).toEqual([
       "selects Anthropic and verifies adaptive options",
       "maps adaptive to medium when switching to OpenAI",
