@@ -1115,6 +1115,36 @@ describe("resolve-openclaw-package-candidate", () => {
     await expect(missing(`${target}.tmp`)).resolves.toBe(true);
   });
 
+  it("clamps oversized package_url download timers before scheduling", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "openclaw-package-download-"));
+    tempDirs.push(dir);
+    const target = path.join(dir, "openclaw.tgz");
+
+    await downloadUrl("https://packages.example/openclaw.tgz", target, {
+      fetchImpl: async () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              setTimeout(() => {
+                controller.enqueue(new Uint8Array([1, 2, 3]));
+                controller.close();
+              }, 25);
+            },
+          }),
+          {
+            headers: { "content-length": "3" },
+            status: 200,
+          },
+        ),
+      lookupHost: lookupAddresses([{ address: "93.184.216.34", family: 4 }]),
+      maxBytes: 3,
+      timeoutMs: MAX_TIMER_TIMEOUT_MS + 1,
+    });
+
+    await expect(readFile(target)).resolves.toEqual(Buffer.from([1, 2, 3]));
+    await expect(missing(`${target}.tmp`)).resolves.toBe(true);
+  });
+
   it("times out stalled package_url response bodies", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "openclaw-package-download-timeout-"));
     tempDirs.push(dir);
