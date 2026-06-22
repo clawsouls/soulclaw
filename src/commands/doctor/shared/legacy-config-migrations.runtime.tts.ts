@@ -32,18 +32,7 @@ function hasLegacyTtsProviderKeys(value: unknown): boolean {
 }
 
 function hasLegacyPluginEntryTtsProviderKeys(value: unknown): boolean {
-  const entries = getRecord(value);
-  if (!entries) {
-    return false;
-  }
-  return Object.entries(entries).some(([pluginId, entryValue]) => {
-    if (isBlockedObjectKey(pluginId) || !LEGACY_TTS_PLUGIN_IDS.has(pluginId)) {
-      return false;
-    }
-    const entry = getRecord(entryValue);
-    const config = getRecord(entry?.config);
-    return hasLegacyTtsProviderKeys(config?.tts);
-  });
+  return hasLegacyTtsInPluginLocations(value, hasLegacyTtsProviderKeys);
 }
 
 function hasLegacyTtsEnabled(value: unknown): boolean {
