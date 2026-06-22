@@ -393,7 +393,7 @@ export function truncateOversizedToolResultsInMessages(
     }
   }
   if (plan.replacements.length === 0) {
-    const projectedMessages = branch.map((entry) => entry.message as AgentMessage);
+    const projectedMessages = branch.map((entry) => entry.message);
     const hasProjectedChanges = projectedMessages.some(
       (message, index) => message !== messages[index],
     );
@@ -555,7 +555,7 @@ function mergeProjectedToolResultMessage(
       return block;
     }
     const projectedBlock = projectedText[textIndex++];
-    return projectedBlock ? { ...block, text: projectedBlock.text } : block;
+    return projectedBlock ? Object.assign({}, block, { text: projectedBlock.text }) : block;
   });
   return { ...message, content: mergedContent } as AgentMessage;
 }
@@ -588,7 +588,7 @@ function buildAggregateToolResultReplacements(params: {
       (
         item,
       ): item is {
-        entry: { id: string; type: string; message: AgentMessage };
+        entry: { id: string; type: string; message: AgentMessage; aggregateEligible?: boolean };
         index: number;
       } =>
         item.entry.type === "message" &&
@@ -697,7 +697,7 @@ function clearToolResultText(message: AgentMessage): AgentMessage {
     ...message,
     content: content.map((block) =>
       block && typeof block === "object" && (block as { type?: unknown }).type === "text"
-        ? { ...block, text: "" }
+        ? Object.assign({}, block, { text: "" })
         : block,
     ),
   } as AgentMessage;

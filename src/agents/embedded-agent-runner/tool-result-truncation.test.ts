@@ -533,11 +533,11 @@ describe("truncateOversizedToolResultsInMessages", () => {
     ] as never;
     truncateOversizedToolResultsInMessages([source], 128_000, 12_000, 12_000, projectionState);
 
-    const providerMessage = {
+    const providerMessage: ToolResultMessage = {
       ...source,
       content: [
-        { type: "text", text: "Image reading is disabled." },
-        { type: "text", text: "x".repeat(15_000) },
+        { type: "text" as const, text: "Image reading is disabled." },
+        { type: "text" as const, text: "x".repeat(15_000) },
       ],
     };
     const result = truncateOversizedToolResultsInMessages(
@@ -546,7 +546,7 @@ describe("truncateOversizedToolResultsInMessages", () => {
       12_000,
       12_000,
       projectionState,
-    ).messages[0];
+    ).messages[0] as ToolResultMessage | undefined;
 
     expect(result?.content?.[0]).toEqual({
       type: "text",
