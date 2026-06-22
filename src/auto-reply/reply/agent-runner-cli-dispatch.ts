@@ -415,7 +415,11 @@ async function runCliAgentWithLifecycleInternal(
     await emitFastModeAutoProgress(next);
   };
   const maybeEmitFastModeAutoReset = async () => {
-    if (!fastModeAutoProgressState.offAnnounced || fastModeAutoProgressState.resetAnnounced) {
+    if (
+      params.runParams.fastMode !== "auto" ||
+      !fastModeAutoProgressState.offAnnounced ||
+      fastModeAutoProgressState.resetAnnounced
+    ) {
       return;
     }
     fastModeAutoProgressState.resetAnnounced = true;

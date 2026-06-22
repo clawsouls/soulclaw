@@ -2981,7 +2981,11 @@ export async function dispatchReplyFromConfig(
                 if (isDispatchOperationAborted()) {
                   return;
                 }
-                if (isFastModeAutoProgress && progressCallbackForwarded) {
+                if (
+                  isFastModeAutoProgress &&
+                  progressCallbackForwarded &&
+                  onToolResultFromReplyOptions
+                ) {
                   return;
                 }
                 if (sendPolicyDenied) {

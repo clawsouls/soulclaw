@@ -1836,7 +1836,11 @@ export async function runCodexAppServerAttempt(
     await emitFastModeAutoProgress(next);
   };
   const maybeEmitFastModeAutoReset = async (): Promise<void> => {
-    if (!fastModeAutoProgressState.offAnnounced || fastModeAutoProgressState.resetAnnounced) {
+    if (
+      params.fastModeAuto !== true ||
+      !fastModeAutoProgressState.offAnnounced ||
+      fastModeAutoProgressState.resetAnnounced
+    ) {
       return;
     }
     fastModeAutoProgressState.resetAnnounced = true;

@@ -891,7 +891,11 @@ async function runEmbeddedAgentInternal(
         return resolveAttemptFastMode();
       };
       const maybeEmitFastModeAutoReset = async () => {
-        if (!fastModeAutoProgressState.offAnnounced || fastModeAutoProgressState.resetAnnounced) {
+        if (
+          params.fastMode !== "auto" ||
+          !fastModeAutoProgressState.offAnnounced ||
+          fastModeAutoProgressState.resetAnnounced
+        ) {
           return;
         }
         fastModeAutoProgressState.resetAnnounced = true;
