@@ -118,7 +118,7 @@ function isExecutableFile(path, platform) {
 function spawnInvocation(command, commandArgs, env, platform) {
   const extension = extname(command).toLowerCase();
   if (platform === "win32" && (extension === ".cmd" || extension === ".bat")) {
-    const nodeShim = resolveNodeCmdShim(command);
+    const nodeShim = resolveNodeCmdShim(command, platform);
     if (nodeShim) {
       return {
         command: nodeShim.node,
@@ -134,7 +134,7 @@ function spawnInvocation(command, commandArgs, env, platform) {
   return { command, args: commandArgs };
 }
 
-function resolveNodeCmdShim(command) {
+function resolveNodeCmdShim(command, platform) {
   let content;
   try {
     content = readFileSync(command, "utf8");
@@ -148,7 +148,7 @@ function resolveNodeCmdShim(command) {
       continue;
     }
     const script = resolve(dirname(command), match[2]);
-    if (!isExecutableFile(script, process.platform)) {
+    if (!isExecutableFile(script, platform)) {
       continue;
     }
     return { node: match[1], script };
