@@ -345,7 +345,7 @@ function readPreviewStringList(value: unknown): string[] | undefined {
 
 function collectUncoveredConfiguredToolSectionGrantEntries(
   configuredEntries: ConfiguredToolSectionGrantEntry[],
-  profilePolicy: ToolPolicyConfig,
+  profilePolicy: ToolPolicyConfig | undefined,
 ): ConfiguredToolSectionGrantEntry[] {
   return configuredEntries
     .map((entry) => ({
