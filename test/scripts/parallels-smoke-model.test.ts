@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { basename, delimiter, join, win32 } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
+import { MAX_TIMER_TIMEOUT_MS } from "@openclaw/normalization-core/number-coercion";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   extractLastOpenClawVersionFromLog,
@@ -1466,6 +1467,16 @@ if (isPrlctl) {
     expect(result.stdout).toBeTypeOf("string");
   });
 
+  it("clamps oversized timed host command wrapper timeouts", () => {
+    const result = run(process.execPath, ["-e", "setTimeout(() => process.exit(0), 25);"], {
+      check: false,
+      quiet: true,
+      timeoutMs: MAX_TIMER_TIMEOUT_MS + 1,
+    });
+
+    expect(result.status).toBe(0);
+  });
+
   it.runIf(process.platform !== "win32")(
     "lets timed host command descendants drain before force kill",
     () => {
@@ -1681,6 +1692,21 @@ setInterval(() => {}, 1000);
       expect(vi.getTimerCount()).toBe(0);
     } finally {
       vi.useRealTimers();
+    }
+  });
+
+  it("clamps oversized streaming host command timeouts before arming timers", async () => {
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    try {
+      await expect(
+        runStreaming(process.execPath, ["-e", "setTimeout(() => process.exit(0), 25);"], {
+          quiet: true,
+          timeoutMs: MAX_TIMER_TIMEOUT_MS + 1,
+        }),
+      ).resolves.toBe(0);
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), MAX_TIMER_TIMEOUT_MS);
+    } finally {
+      setTimeoutSpy.mockRestore();
     }
   });
 
