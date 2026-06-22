@@ -67,9 +67,3 @@ fun overlayContainerColor(): Color {
   // Light mode keeps overlays away from pure-white glare on the app canvas.
   return if (isDark) base else base.copy(alpha = 0.88f)
 }
-
-/**
- * Overlay icon token kept next to overlayContainerColor for callers outside the design package.
- */
-@Composable
-fun overlayIconColor(): Color = MaterialTheme.colorScheme.onSurfaceVariant

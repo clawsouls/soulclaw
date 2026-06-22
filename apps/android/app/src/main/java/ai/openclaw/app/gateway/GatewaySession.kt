@@ -260,24 +260,6 @@ class GatewaySession(
     currentConnection?.closeQuietly()
   }
 
-  fun currentCanvasHostUrl(): String? = pluginSurfaceUrls["canvas"]
-
-  /** Refreshes the canvas plugin surface URL and caches the normalized Android-reachable URL. */
-  suspend fun refreshCanvasHostUrl(timeoutMs: Long = 8_000): String? {
-    val refreshed =
-      refreshPluginSurfaceUrl(
-        method = "node.pluginSurface.refresh",
-        params = buildJsonObject { put("surface", JsonPrimitive("canvas")) },
-        timeoutMs = timeoutMs,
-      )
-    if (!refreshed.isNullOrBlank()) {
-      pluginSurfaceUrls = pluginSurfaceUrls + ("canvas" to refreshed)
-    }
-    return refreshed
-  }
-
-  fun currentMainSessionKey(): String? = mainSessionKey
-
   /** Sends a best-effort node.event and returns false instead of throwing on failure. */
   suspend fun sendNodeEvent(
     event: String,
