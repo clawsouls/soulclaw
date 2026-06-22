@@ -3,6 +3,7 @@
 // Summarizes GitHub Actions run/job timings for CI analysis.
 import { execFileSync } from "node:child_process";
 import { parsePositiveInt } from "./lib/numeric-options.mjs";
+import { execPlainGh } from "./lib/plain-gh.mjs";
 
 const DEFAULT_GITHUB_REPOSITORY = "openclaw/openclaw";
 const RUN_JOBS_PAGE_SIZE = 20;
@@ -17,12 +18,17 @@ function parseJsonCommand(command, args, options = {}) {
   let lastError;
   for (let attempt = 0; attempt <= GH_JSON_RETRY_DELAYS_MS.length; attempt += 1) {
     try {
-      return JSON.parse(
-        execFileSync(command, args, {
-          encoding: "utf8",
-          ...options,
-        }),
-      );
+      const stdout =
+        command === "gh"
+          ? execPlainGh(args, {
+              encoding: "utf8",
+              ...options,
+            })
+          : execFileSync(command, args, {
+              encoding: "utf8",
+              ...options,
+            });
+      return JSON.parse(stdout);
     } catch (error) {
       lastError = error;
       const message = error instanceof Error ? error.message : String(error);
@@ -216,8 +222,7 @@ export function selectLatestMainPushCiRun(runs, headSha = null) {
 }
 
 function getLatestCiRunId() {
-  const raw = execFileSync(
-    "gh",
+  const raw = execPlainGh(
     ["run", "list", "--branch", "main", "--workflow", "CI", "--limit", "1", "--json", "databaseId"],
     { encoding: "utf8" },
   );
@@ -240,8 +245,7 @@ function getRemoteMainSha() {
 
 function getLatestMainPushCiRunId() {
   const headSha = getRemoteMainSha();
-  const raw = execFileSync(
-    "gh",
+  const raw = execPlainGh(
     [
       "run",
       "list",
@@ -264,8 +268,7 @@ function getLatestMainPushCiRunId() {
 }
 
 function listRecentSuccessfulCiRuns(limit) {
-  const raw = execFileSync(
-    "gh",
+  const raw = execPlainGh(
     [
       "run",
       "list",
