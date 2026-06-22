@@ -1926,6 +1926,7 @@ async function agentCommandInternal(
                 fastMode === "auto"
                   ? (opts.fastModeAutoOnSeconds ?? fastModeState.fastAutoOnSeconds)
                   : fastModeState.fastAutoOnSeconds,
+              isFinalFallbackAttempt: runOptions?.isFinalFallbackAttempt,
               timeoutMs,
               runTimeoutOverrideMs,
               runId,

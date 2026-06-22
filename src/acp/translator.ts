@@ -1498,6 +1498,7 @@ export class AcpGatewayAgent implements Agent {
       modelProvider: session.modelProvider,
       model: session.model,
       fastMode: session.fastMode,
+      effectiveFastMode: session.effectiveFastMode,
       verboseLevel: session.verboseLevel,
       traceLevel: session.traceLevel,
       reasoningLevel: session.reasoningLevel,

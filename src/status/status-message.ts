@@ -9,6 +9,7 @@ import {
 import { resolveContextTokensForModel } from "../agents/context.js";
 import { DEFAULT_CONTEXT_TOKENS, DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 import { resolveExtraParams } from "../agents/embedded-agent-runner/extra-params.js";
+import { resolveFastModeState } from "../agents/fast-mode.js";
 import { resolveModelAuthMode } from "../agents/model-auth.js";
 import {
   areRuntimeModelRefsEquivalent,
@@ -25,7 +26,6 @@ import {
   formatProviderModelRef,
   resolveSelectedAndActiveModel,
 } from "../auto-reply/model-runtime.js";
-import { formatFastModeStatusValue } from "../shared/fast-mode.js";
 import type {
   ElevatedLevel,
   ReasoningLevel,
@@ -56,6 +56,7 @@ import {
 } from "../media-understanding/runner.entries.js";
 import type { MediaUnderstandingDecision } from "../media-understanding/types.js";
 import { resolveAgentIdFromSessionKey } from "../routing/session-key.js";
+import { formatFastModeStatusValue } from "../shared/fast-mode.js";
 import { resolveStatusTtsSnapshot } from "../tts/status-config.js";
 import {
   estimateUsageCost,
@@ -882,6 +883,13 @@ export function buildStatusMessage(args: StatusArgs): string {
   const verboseLevel =
     args.resolvedVerbose ?? args.sessionEntry?.verboseLevel ?? args.agent?.verboseDefault ?? "off";
   const fastMode = args.resolvedFast ?? args.sessionEntry?.fastMode ?? false;
+  const fastModeState = resolveFastModeState({
+    cfg: args.config,
+    provider: activeProvider,
+    model: activeModel,
+    agentId: args.agentId,
+    sessionEntry: args.sessionEntry,
+  });
   const reasoningLevel =
     args.resolvedReasoning ??
     args.sessionEntry?.reasoningLevel ??
@@ -970,7 +978,10 @@ export function buildStatusMessage(args: StatusArgs): string {
     `Execution: ${execution.label}`,
     `Runtime: ${agentRuntimeLabel}`,
     `Think: ${thinkLevel}`,
-    `Fast: ${formatFastModeStatusValue({ mode: fastMode })}`,
+    `Fast: ${formatFastModeStatusValue({
+      mode: fastMode,
+      fastAutoOnSeconds: fastModeState.fastAutoOnSeconds,
+    })}`,
     textVerbosity ? `Text: ${textVerbosity}` : null,
     verboseLabel,
     traceLabel,

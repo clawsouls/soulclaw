@@ -153,6 +153,8 @@ export type RunEmbeddedAgentParams = {
   fastModeAutoOnSeconds?: number;
   /** Shared notification state for nested harnesses that can observe the same tool boundary. */
   fastModeAutoProgressState?: FastModeAutoProgressState;
+  /** True when the outer model fallback loop has reached its final candidate. */
+  isFinalFallbackAttempt?: boolean;
   verboseLevel?: VerboseLevel;
   reasoningLevel?: ReasoningLevel;
   toolResultFormat?: ToolResultFormat;
