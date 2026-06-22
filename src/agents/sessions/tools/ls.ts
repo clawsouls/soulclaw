@@ -7,12 +7,11 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import nodePath from "node:path";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { keyHint } from "../../modes/interactive/components/keybinding-hints.js";
 import type { AgentTool } from "../../runtime/index.js";
 import type { ToolDefinition, ToolRenderResultOptions } from "../extensions/types.js";
 import { normalizePositiveLimit } from "./limits.js";
 import { resolveToCwd } from "./path-utils.js";
-import { getTextOutput, invalidArgText, shortenPath, str } from "./render-utils.js";
+import { formatSessionToolOutput, invalidArgText, shortenPath, str } from "./render-utils.js";
 import type { LsToolDetails } from "./tool-contracts.js";
 import { wrapToolDefinition } from "./tool-definition-wrapper.js";
 import { DEFAULT_MAX_BYTES, formatSize, truncateHead } from "./truncate.js";
@@ -79,18 +78,7 @@ function formatLsResult(
   theme: typeof import("../../modes/interactive/theme/theme.js").theme,
   showImages: boolean,
 ): string {
-  const output = getTextOutput(result, showImages).trim();
-  let text = "";
-  if (output) {
-    const lines = output.split("\n");
-    const maxLines = options.expanded ? lines.length : 20;
-    const displayLines = lines.slice(0, maxLines);
-    const remaining = lines.length - maxLines;
-    text += `\n${displayLines.map((line) => theme.fg("toolOutput", line)).join("\n")}`;
-    if (remaining > 0) {
-      text += `${theme.fg("muted", `\n... (${remaining} more lines,`)} ${keyHint("app.tools.expand", "to expand")})`;
-    }
-  }
+  let text = formatSessionToolOutput(result, options, theme, showImages, 20);
 
   const entryLimit = result.details?.entryLimitReached;
   const truncation = result.details?.truncation;
