@@ -385,6 +385,20 @@ function readPreviewStringList(value: unknown): string[] | undefined {
     : undefined;
 }
 
+function collectUncoveredConfiguredToolSectionGrantEntries(
+  configuredEntries: ConfiguredToolSectionGrantEntry[],
+  profilePolicy: ToolPolicyConfig,
+): ConfiguredToolSectionGrantEntry[] {
+  return configuredEntries
+    .map((entry) => ({
+      ...entry,
+      grants: entry.grants.filter(
+        (toolName) => !isToolAllowedByPolicyName(toolName, profilePolicy),
+      ),
+    }))
+    .filter((entry) => entry.grants.length > 0);
+}
+
 function formatProfileConfiguredSectionGrantAdvice(params: {
   pathLabel: string;
   grants: string[];
@@ -431,14 +445,10 @@ function collectProfileConfiguredToolSectionScopeWarnings(params: {
     ? tools.alsoAllow.filter((entry): entry is string => typeof entry === "string")
     : params.inheritedAlsoAllow;
   const profilePolicy = mergeAlsoAllowPolicy(resolveToolProfilePolicy(profile), alsoAllow);
-  const uncoveredEntries = configuredEntries
-    .map((entry) => {
-      const grants = entry.grants.filter(
-        (toolName) => !isToolAllowedByPolicyName(toolName, profilePolicy),
-      );
-      return { grants, label: entry.label };
-    })
-    .filter((entry) => entry.grants.length > 0);
+  const uncoveredEntries = collectUncoveredConfiguredToolSectionGrantEntries(
+    configuredEntries,
+    profilePolicy,
+  );
   if (uncoveredEntries.length === 0) {
     return [];
   }
@@ -486,14 +496,10 @@ function collectByProviderConfiguredToolSectionWarnings(params: {
     const alsoAllow =
       readPreviewStringList(policy.alsoAllow) ?? readPreviewStringList(inheritedPolicy?.alsoAllow);
     const profilePolicy = mergeAlsoAllowPolicy(resolveToolProfilePolicy(profile), alsoAllow);
-    const uncoveredEntries = params.configuredEntries
-      .map((entry) => ({
-        ...entry,
-        grants: entry.grants.filter(
-          (toolName) => !isToolAllowedByPolicyName(toolName, profilePolicy),
-        ),
-      }))
-      .filter((entry) => entry.grants.length > 0);
+    const uncoveredEntries = collectUncoveredConfiguredToolSectionGrantEntries(
+      params.configuredEntries,
+      profilePolicy,
+    );
     if (uncoveredEntries.length === 0) {
       return [];
     }
@@ -626,14 +632,10 @@ function collectInheritedByProviderConfiguredToolSectionWarnings(params: {
       readPreviewStringList(overridingPolicy?.alsoAllow) ??
       readPreviewStringList(inheritedPolicy.alsoAllow);
     const profilePolicy = mergeAlsoAllowPolicy(resolveToolProfilePolicy(profile), alsoAllow);
-    const uncoveredEntries = params.configuredEntries
-      .map((entry) => ({
-        ...entry,
-        grants: entry.grants.filter(
-          (toolName) => !isToolAllowedByPolicyName(toolName, profilePolicy),
-        ),
-      }))
-      .filter((entry) => entry.grants.length > 0);
+    const uncoveredEntries = collectUncoveredConfiguredToolSectionGrantEntries(
+      params.configuredEntries,
+      profilePolicy,
+    );
     if (uncoveredEntries.length === 0) {
       return [];
     }
