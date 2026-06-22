@@ -1120,6 +1120,9 @@ Core examples:
 - reactions: `react`, `reactions`, `emojiList`
 - moderation: `timeout`, `kick`, `ban`
 - presence: `setPresence`
+- server management: `server-info`, `server-edit`, `role-create`, `role-edit`, `role-delete`
+- AutoMod: `automod-list`, `automod-create`, `automod-edit`, `automod-delete`
+- webhooks: `webhook-list`, `webhook-create`, `webhook-edit`, `webhook-delete`
 
 The `event-create` action accepts an optional `image` parameter (URL or local file path) to set the scheduled event cover image.
 
@@ -1132,6 +1135,7 @@ Default gate behavior:
 | reactions, messages, threads, pins, polls, search, memberInfo, roleInfo, channelInfo, channels, voiceStatus, events, stickers, emojiUploads, stickerUploads, permissions | enabled  |
 | roles                                                                                                                                                                    | disabled |
 | moderation                                                                                                                                                               | disabled |
+| roleManagement, server, automod, webhooks                                                                                                                                | disabled |
 | presence                                                                                                                                                                 | disabled |
 
 ## Components v2 UI

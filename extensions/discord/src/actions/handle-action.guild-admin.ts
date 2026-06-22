@@ -57,6 +57,7 @@ export async function tryHandleDiscordMessageActionGuildAdmin(params: {
 }): Promise<AgentToolResult<unknown> | undefined> {
   const { ctx, resolveChannelId } = params;
   const { action, params: actionParams, cfg } = ctx;
+  const actionName = action as string;
   const accountId = ctx.accountId ?? readStringParam(actionParams, "accountId");
   const senderUserId = readDiscordRequesterSenderId(ctx);
 
@@ -160,6 +161,53 @@ export async function tryHandleDiscordMessageActionGuildAdmin(params: {
         guildId,
         userId,
         roleId,
+        ...senderParam(senderUserId),
+      },
+      cfg,
+    );
+  }
+
+  if (actionName === "role-create" || actionName === "role-edit" || actionName === "role-delete") {
+    const guildId = readStringParam(actionParams, "guildId", { required: true });
+    const roleId = readStringParam(actionParams, "roleId");
+    return await handleDiscordAction(
+      {
+        ...actionParams,
+        action:
+          actionName === "role-create"
+            ? "roleCreate"
+            : actionName === "role-edit"
+              ? "roleEdit"
+              : "roleDelete",
+        accountId: accountId ?? undefined,
+        guildId,
+        ...(roleId ? { roleId } : {}),
+        ...senderParam(senderUserId),
+      },
+      cfg,
+    );
+  }
+
+  if (
+    actionName === "server-info" ||
+    actionName === "server-edit" ||
+    actionName === "automod-list" ||
+    actionName === "automod-create" ||
+    actionName === "automod-edit" ||
+    actionName === "automod-delete" ||
+    actionName === "webhook-list" ||
+    actionName === "webhook-create" ||
+    actionName === "webhook-edit" ||
+    actionName === "webhook-delete"
+  ) {
+    const translatedAction = actionName.replace(/-([a-z])/g, (_, letter: string) =>
+      letter.toUpperCase(),
+    );
+    return await handleDiscordAction(
+      {
+        ...actionParams,
+        action: translatedAction,
+        accountId: accountId ?? undefined,
         ...senderParam(senderUserId),
       },
       cfg,

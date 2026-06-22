@@ -77,6 +77,24 @@ describe("discord config schema", () => {
     expect(cfg.historyLimit).toBe(3);
   });
 
+  it("accepts server management action gates", () => {
+    const cfg = expectValidDiscordConfig({
+      actions: {
+        roleManagement: true,
+        server: true,
+        automod: true,
+        webhooks: true,
+      },
+    });
+
+    expect(cfg.actions).toMatchObject({
+      roleManagement: true,
+      server: true,
+      automod: true,
+      webhooks: true,
+    });
+  });
+
   it("accepts suppressEmbeds at top-level and account scope", () => {
     const cfg = expectValidDiscordConfig({
       suppressEmbeds: true,

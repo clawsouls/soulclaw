@@ -36,6 +36,20 @@ import {
   uploadEmojiDiscord,
   uploadStickerDiscord,
   resolveEventCoverImage,
+  fetchGuildSettingsDiscord,
+  editGuildSettingsDiscord,
+  listGuildRolesDiscord,
+  createGuildRoleDiscord,
+  editGuildRoleDiscord,
+  deleteGuildRoleDiscord,
+  listAutoModerationRulesDiscord,
+  createAutoModerationRuleDiscord,
+  editAutoModerationRuleDiscord,
+  deleteAutoModerationRuleDiscord,
+  listChannelWebhooksDiscord,
+  createChannelWebhookDiscord,
+  editWebhookDiscord,
+  deleteWebhookDiscord,
 } from "../send.js";
 import {
   createDiscordActionOptions,
@@ -68,6 +82,20 @@ export const discordGuildActionRuntime = {
   setChannelPermissionDiscord,
   uploadEmojiDiscord,
   uploadStickerDiscord,
+  fetchGuildSettingsDiscord,
+  editGuildSettingsDiscord,
+  listGuildRolesDiscord,
+  createGuildRoleDiscord,
+  editGuildRoleDiscord,
+  deleteGuildRoleDiscord,
+  listAutoModerationRulesDiscord,
+  createAutoModerationRuleDiscord,
+  editAutoModerationRuleDiscord,
+  deleteAutoModerationRuleDiscord,
+  listChannelWebhooksDiscord,
+  createChannelWebhookDiscord,
+  editWebhookDiscord,
+  deleteWebhookDiscord,
 };
 
 type DiscordRoleMutationOpts = { cfg: OpenClawConfig; accountId?: string };
@@ -133,6 +161,84 @@ const guildAdminActionGuards: Partial<Record<string, GuildAdminActionGuard>> = {
     defaultEnabled: false,
     disabledMessage: "Discord role changes are disabled.",
     permissions: [PermissionFlagsBits.ManageRoles],
+  },
+  roleCreate: {
+    gate: "roleManagement",
+    defaultEnabled: false,
+    disabledMessage: "Discord role management is disabled.",
+    permissions: [PermissionFlagsBits.ManageRoles],
+  },
+  roleEdit: {
+    gate: "roleManagement",
+    defaultEnabled: false,
+    disabledMessage: "Discord role management is disabled.",
+    permissions: [PermissionFlagsBits.ManageRoles],
+  },
+  roleDelete: {
+    gate: "roleManagement",
+    defaultEnabled: false,
+    disabledMessage: "Discord role management is disabled.",
+    permissions: [PermissionFlagsBits.ManageRoles],
+  },
+  serverInfo: {
+    gate: "server",
+    defaultEnabled: false,
+    disabledMessage: "Discord server inspection is disabled.",
+    permissions: [PermissionFlagsBits.ManageGuild],
+  },
+  serverEdit: {
+    gate: "server",
+    defaultEnabled: false,
+    disabledMessage: "Discord server management is disabled.",
+    permissions: [PermissionFlagsBits.ManageGuild],
+  },
+  automodList: {
+    gate: "automod",
+    defaultEnabled: false,
+    disabledMessage: "Discord AutoMod management is disabled.",
+    permissions: [PermissionFlagsBits.ManageGuild],
+  },
+  automodCreate: {
+    gate: "automod",
+    defaultEnabled: false,
+    disabledMessage: "Discord AutoMod management is disabled.",
+    permissions: [PermissionFlagsBits.ManageGuild],
+  },
+  automodEdit: {
+    gate: "automod",
+    defaultEnabled: false,
+    disabledMessage: "Discord AutoMod management is disabled.",
+    permissions: [PermissionFlagsBits.ManageGuild],
+  },
+  automodDelete: {
+    gate: "automod",
+    defaultEnabled: false,
+    disabledMessage: "Discord AutoMod management is disabled.",
+    permissions: [PermissionFlagsBits.ManageGuild],
+  },
+  webhookList: {
+    gate: "webhooks",
+    defaultEnabled: false,
+    disabledMessage: "Discord webhook management is disabled.",
+    permissions: [PermissionFlagsBits.ManageWebhooks],
+  },
+  webhookCreate: {
+    gate: "webhooks",
+    defaultEnabled: false,
+    disabledMessage: "Discord webhook management is disabled.",
+    permissions: [PermissionFlagsBits.ManageWebhooks],
+  },
+  webhookEdit: {
+    gate: "webhooks",
+    defaultEnabled: false,
+    disabledMessage: "Discord webhook management is disabled.",
+    permissions: [PermissionFlagsBits.ManageWebhooks],
+  },
+  webhookDelete: {
+    gate: "webhooks",
+    defaultEnabled: false,
+    disabledMessage: "Discord webhook management is disabled.",
+    permissions: [PermissionFlagsBits.ManageWebhooks],
   },
   eventCreate: {
     gate: "events",
@@ -351,6 +457,18 @@ function readChannelPermissionTarget(params: Record<string, unknown>) {
   };
 }
 
+function readManagementPayload(params: Record<string, unknown>, excluded: readonly string[]) {
+  const excludedSet = new Set(["action", "accountId", "senderUserId", ...excluded]);
+  return Object.fromEntries(
+    Object.entries(params)
+      .filter(([key]) => !excludedSet.has(key))
+      .map(([key, value]) => [
+        key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`),
+        value,
+      ]),
+  );
+}
+
 export async function handleDiscordGuildAction(
   action: string,
   params: Record<string, unknown>,
@@ -481,6 +599,128 @@ export async function handleDiscordGuildAction(
         mutate: discordGuildActionRuntime.removeRoleDiscord,
       });
       return jsonResult({ ok: true });
+    }
+    case "roleCreate": {
+      const guildId = readStringParam(params, "guildId", { required: true });
+      const role = await discordGuildActionRuntime.createGuildRoleDiscord(
+        guildId,
+        readManagementPayload(params, ["guildId"]),
+        withOpts(),
+      );
+      return jsonResult({ ok: true, role });
+    }
+    case "roleEdit": {
+      const guildId = readStringParam(params, "guildId", { required: true });
+      const roleId = readStringParam(params, "roleId", { required: true });
+      const role = await discordGuildActionRuntime.editGuildRoleDiscord(
+        guildId,
+        roleId,
+        readManagementPayload(params, ["guildId", "roleId"]),
+        withOpts(),
+      );
+      return jsonResult({ ok: true, role });
+    }
+    case "roleDelete": {
+      const guildId = readStringParam(params, "guildId", { required: true });
+      const roleId = readStringParam(params, "roleId", { required: true });
+      return jsonResult(
+        await discordGuildActionRuntime.deleteGuildRoleDiscord(guildId, roleId, withOpts()),
+      );
+    }
+    case "serverInfo": {
+      const guildId = readStringParam(params, "guildId", { required: true });
+      return jsonResult({
+        ok: true,
+        guild: await discordGuildActionRuntime.fetchGuildSettingsDiscord(guildId, withOpts()),
+      });
+    }
+    case "serverEdit": {
+      const guildId = readStringParam(params, "guildId", { required: true });
+      return jsonResult({
+        ok: true,
+        guild: await discordGuildActionRuntime.editGuildSettingsDiscord(
+          guildId,
+          readManagementPayload(params, ["guildId"]),
+          withOpts(),
+        ),
+      });
+    }
+    case "automodList": {
+      const guildId = readStringParam(params, "guildId", { required: true });
+      return jsonResult({
+        ok: true,
+        rules: await discordGuildActionRuntime.listAutoModerationRulesDiscord(guildId, withOpts()),
+      });
+    }
+    case "automodCreate": {
+      const guildId = readStringParam(params, "guildId", { required: true });
+      return jsonResult({
+        ok: true,
+        rule: await discordGuildActionRuntime.createAutoModerationRuleDiscord(
+          guildId,
+          readManagementPayload(params, ["guildId"]),
+          withOpts(),
+        ),
+      });
+    }
+    case "automodEdit": {
+      const guildId = readStringParam(params, "guildId", { required: true });
+      const ruleId = readStringParam(params, "ruleId", { required: true });
+      return jsonResult({
+        ok: true,
+        rule: await discordGuildActionRuntime.editAutoModerationRuleDiscord(
+          guildId,
+          ruleId,
+          readManagementPayload(params, ["guildId", "ruleId"]),
+          withOpts(),
+        ),
+      });
+    }
+    case "automodDelete": {
+      const guildId = readStringParam(params, "guildId", { required: true });
+      const ruleId = readStringParam(params, "ruleId", { required: true });
+      return jsonResult(
+        await discordGuildActionRuntime.deleteAutoModerationRuleDiscord(
+          guildId,
+          ruleId,
+          withOpts(),
+        ),
+      );
+    }
+    case "webhookList": {
+      const channelId = readStringParam(params, "channelId", { required: true });
+      return jsonResult({
+        ok: true,
+        webhooks: await discordGuildActionRuntime.listChannelWebhooksDiscord(channelId, withOpts()),
+      });
+    }
+    case "webhookCreate": {
+      const channelId = readStringParam(params, "channelId", { required: true });
+      return jsonResult({
+        ok: true,
+        webhook: await discordGuildActionRuntime.createChannelWebhookDiscord(
+          channelId,
+          readManagementPayload(params, ["channelId"]),
+          withOpts(),
+        ),
+      });
+    }
+    case "webhookEdit": {
+      const webhookId = readStringParam(params, "webhookId", { required: true });
+      return jsonResult({
+        ok: true,
+        webhook: await discordGuildActionRuntime.editWebhookDiscord(
+          webhookId,
+          readManagementPayload(params, ["webhookId"]),
+          withOpts(),
+        ),
+      });
+    }
+    case "webhookDelete": {
+      const webhookId = readStringParam(params, "webhookId", { required: true });
+      return jsonResult(
+        await discordGuildActionRuntime.deleteWebhookDiscord(webhookId, withOpts()),
+      );
     }
     case "channelInfo": {
       if (!isActionEnabled("channelInfo")) {

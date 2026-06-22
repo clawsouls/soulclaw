@@ -143,6 +143,29 @@ function describeDiscordMessageTool({
   if (discovery.isEnabled("roles", false)) {
     actions.add("role-add");
     actions.add("role-remove");
+    actions.add("role-create");
+    actions.add("role-edit");
+  }
+  if (discovery.isEnabled("roleManagement", false)) {
+    actions.add("role-create");
+    actions.add("role-edit");
+    actions.add("role-delete");
+  }
+  if (discovery.isEnabled("server", false)) {
+    actions.add("server-info");
+    actions.add("server-edit");
+  }
+  if (discovery.isEnabled("automod", false)) {
+    actions.add("automod-list");
+    actions.add("automod-create");
+    actions.add("automod-edit");
+    actions.add("automod-delete");
+  }
+  if (discovery.isEnabled("webhooks", false)) {
+    actions.add("webhook-list");
+    actions.add("webhook-create");
+    actions.add("webhook-edit");
+    actions.add("webhook-delete");
   }
   if (discovery.isEnabled("channelInfo")) {
     actions.add("channel-info");

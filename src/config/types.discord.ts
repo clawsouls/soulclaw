@@ -108,6 +108,14 @@ export type DiscordActionConfig = {
   memberInfo?: boolean;
   roleInfo?: boolean;
   roles?: boolean;
+  /** Enable guild role CRUD actions (default: false). */
+  roleManagement?: boolean;
+  /** Enable guild settings actions (default: false). */
+  server?: boolean;
+  /** Enable AutoMod rule actions (default: false). */
+  automod?: boolean;
+  /** Enable webhook management actions (default: false). */
+  webhooks?: boolean;
   channelInfo?: boolean;
   voiceStatus?: boolean;
   events?: boolean;
