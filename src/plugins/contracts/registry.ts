@@ -263,10 +263,6 @@ function loadProviderContractPluginIds(): string[] {
   return [...resolveBundledProviderContractPluginIds()];
 }
 
-function loadProviderContractCompatPluginIds(): string[] {
-  return loadProviderContractPluginIds();
-}
-
 function resolveWebSearchCredentialValue(provider: WebSearchProviderPlugin): unknown {
   if (provider.requiresCredential === false) {
     return `${provider.id}-no-key-needed`;
@@ -396,13 +392,6 @@ export function requireProviderContractProvider(providerId: string): ProviderPlu
   return provider;
 }
 
-export function resolveProviderContractPluginIdsForProvider(
-  providerId: string,
-): string[] | undefined {
-  const pluginIds = resolveBundledProviderContractPluginIdsByProviderId().get(providerId) ?? [];
-  return pluginIds.length > 0 ? pluginIds : undefined;
-}
-
 export function resolveProviderContractPluginIdsForProviderAlias(
   providerId: string,
 ): string[] | undefined {
@@ -442,9 +431,6 @@ export function resolveProviderContractProvidersForPluginIds(
 
 export const providerContractPluginIds: string[] = createLazyArrayView(
   loadProviderContractPluginIds,
-);
-export const providerContractCompatPluginIds: string[] = createLazyArrayView(
-  loadProviderContractCompatPluginIds,
 );
 
 function loadPluginRegistrationContractRegistry(): PluginRegistrationContractEntry[] {
