@@ -42,7 +42,7 @@ import {
   freezeDiagnosticTraceContext,
 } from "../../../infra/diagnostic-trace-context.js";
 import { isEmbeddedMode } from "../../../infra/embedded-mode.js";
-import { formatErrorMessage } from "../../../infra/errors.js";
+import { formatErrorMessage, toErrorObject } from "../../../infra/errors.js";
 import { resolveHeartbeatSummaryForAgent } from "../../../infra/heartbeat-summary.js";
 import { getMachineDisplayName } from "../../../infra/machine-name.js";
 import { createCodexNativeWebSearchWrapper } from "../../../llm/providers/stream-wrappers/openai.js";
@@ -5737,7 +5737,7 @@ export async function runEmbeddedAttempt(
             }),
           );
         } else {
-          await Promise.reject(toLintErrorObject(cleanupFailure, "Non-Error rejection"));
+          await Promise.reject(toErrorObject(cleanupFailure, "Non-Error rejection"));
         }
       }
     }
@@ -5766,18 +5766,4 @@ export async function runEmbeddedAttempt(
     );
     restoreSkillEnv?.();
   }
-}
-
-function toLintErrorObject(value: unknown, fallbackMessage: string): Error {
-  if (value instanceof Error) {
-    return value;
-  }
-  if (typeof value === "string") {
-    return new Error(value);
-  }
-  const error = new Error(fallbackMessage, { cause: value });
-  if ((typeof value === "object" && value !== null) || typeof value === "function") {
-    Object.assign(error, value);
-  }
-  return error;
 }
