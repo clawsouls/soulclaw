@@ -7,6 +7,7 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import nodePath from "node:path";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import { toErrorObject } from "../../../infra/errors.js";
 import type { AgentTool } from "../../runtime/index.js";
 import type { ToolDefinition, ToolRenderResultOptions } from "../extensions/types.js";
 import { normalizePositiveLimit } from "./limits.js";
@@ -216,7 +217,7 @@ export function createLsToolDefinition(
             });
           } catch (e: unknown) {
             signal?.removeEventListener("abort", onAbort);
-            reject(toLintErrorObject(e, "Non-Error rejection"));
+            reject(toErrorObject(e, "Non-Error rejection"));
           }
         })();
       });
@@ -236,18 +237,4 @@ export function createLsToolDefinition(
 
 export function createLsTool(cwd: string, options?: LsToolOptions): AgentTool<typeof lsSchema> {
   return wrapToolDefinition(createLsToolDefinition(cwd, options));
-}
-
-function toLintErrorObject(value: unknown, fallbackMessage: string): Error {
-  if (value instanceof Error) {
-    return value;
-  }
-  if (typeof value === "string") {
-    return new Error(value);
-  }
-  const error = new Error(fallbackMessage, { cause: value });
-  if ((typeof value === "object" && value !== null) || typeof value === "function") {
-    Object.assign(error, value);
-  }
-  return error;
 }
