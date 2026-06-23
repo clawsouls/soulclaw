@@ -132,7 +132,7 @@ jobs:
     if: ${{ inputs.qa_evidence_run_id == '' }}
     uses: ./.github/workflows/qa-profile-evidence.yml
     with:
-      ref: ${{ needs.validate_selected_ref.outputs.selected_revision }}
+      ref: ${{ inputs.ref }}
       expected_sha: ${{ needs.validate_selected_ref.outputs.selected_revision }}
       qa_profile: all
     secrets:
