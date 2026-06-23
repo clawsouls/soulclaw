@@ -34,6 +34,7 @@ import {
   runQaCli,
   startAgentRun,
   waitForAgentRun,
+  waitForAgentHistoryReply,
   waitForMemorySearchMatch,
 } from "./suite-runtime-agent-process.js";
 
@@ -704,6 +705,38 @@ describe("qa suite runtime agent process helpers", () => {
       started: { runId: "run-completed" },
       waited: { status: "completed" },
     });
+  });
+
+  it("waits for the latest assistant history reply", async () => {
+    const gatewayCall = vi
+      .fn()
+      .mockResolvedValueOnce({ messages: [{ role: "assistant", content: "still working" }] })
+      .mockResolvedValueOnce({
+        messages: [
+          { role: "user", content: "hello" },
+          {
+            role: "assistant",
+            content: [{ type: "output_text", text: "HISTORY-REPLY-OK" }],
+          },
+        ],
+      });
+
+    await expect(
+      waitForAgentHistoryReply(
+        { gateway: { call: gatewayCall } } as never,
+        "session-history",
+        (text) => text === "HISTORY-REPLY-OK",
+        1_000,
+        1,
+      ),
+    ).resolves.toMatchObject({
+      text: "HISTORY-REPLY-OK",
+    });
+    expect(gatewayCall).toHaveBeenLastCalledWith(
+      "chat.history",
+      { sessionKey: "session-history", limit: 12 },
+      { timeoutMs: 10_000 },
+    );
   });
 
   it("waits for a specific agent run id", async () => {
