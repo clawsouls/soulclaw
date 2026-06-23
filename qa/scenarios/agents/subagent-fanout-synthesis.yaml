@@ -47,6 +47,9 @@ scenario:
       expectedChildLabels:
         - qa-fanout-alpha
         - qa-fanout-beta
+      expectedChildCompletionMarkers:
+        - ALPHA-OK
+        - BETA-OK
 
 flow:
   steps:
@@ -149,6 +152,18 @@ flow:
                                     expr: "fanoutSpawnRequests.length >= 2"
                                     message:
                                       expr: "`expected at least two sessions_spawn tool calls during subagent fanout scenario, saw ${fanoutSpawnRequests.length}`"
+                                - forEach:
+                                    items:
+                                      expr: "config.expectedChildCompletionMarkers"
+                                    item: childCompletionMarker
+                                    actions:
+                                      - call: waitForOutboundMessage
+                                        args:
+                                          - ref: state
+                                          - lambda:
+                                              params: [candidate]
+                                              expr: "String(candidate.text ?? '').trim() === childCompletionMarker"
+                                          - 10000
                           - set: details
                             value:
                               expr: "outbound.text"
