@@ -374,6 +374,32 @@ export type SessionLifecycleRolloverResult = {
   sessionEntry: SessionEntry;
 };
 
+export type ReplySessionInitializationSnapshot = {
+  currentEntry?: SessionEntry;
+  readEntry: (sessionKey: string) => SessionEntry | undefined;
+  revision: string;
+};
+
+export type ReplySessionInitializationCommitContext = {
+  currentEntry?: SessionEntry;
+  readEntry: (sessionKey: string) => SessionEntry | undefined;
+  sessionEntry: SessionEntry;
+};
+
+export type ReplySessionInitializationCommitResult =
+  | {
+      ok: true;
+      previousSessionTranscript: SessionLifecycleTranscriptInfo;
+      sessionEntry: SessionEntry;
+      sessionStoreView: Record<string, SessionEntry>;
+    }
+  | {
+      ok: false;
+      currentEntry?: SessionEntry;
+      reason: "stale-snapshot";
+      revision: string;
+    };
+
 type SessionEntryRetirement = {
   entry: SessionEntry;
   key: string;
@@ -857,6 +883,39 @@ function cloneSessionEntries(store: Record<string, SessionEntry>): Record<string
   );
 }
 
+function createReplySessionInitializationRevision(entry: SessionEntry | undefined): string {
+  return JSON.stringify(entry ?? null);
+}
+
+function resolveInitializedReplySessionEntry(params: {
+  agentId: string;
+  currentEntry?: SessionEntry;
+  fallbackSessionFile?: string;
+  sessionEntry: SessionEntry;
+  storePath: string;
+}): SessionEntry {
+  const fallbackSessionFile = params.fallbackSessionFile?.trim();
+  const currentSessionFile = params.currentEntry?.sessionFile;
+  const inheritedPreviousSessionFile =
+    Boolean(currentSessionFile) &&
+    params.currentEntry?.sessionId !== params.sessionEntry.sessionId &&
+    currentSessionFile === params.sessionEntry.sessionFile;
+  const entryForResolve =
+    fallbackSessionFile && (inheritedPreviousSessionFile || !params.sessionEntry.sessionFile)
+      ? { ...params.sessionEntry, sessionFile: fallbackSessionFile }
+      : inheritedPreviousSessionFile
+        ? { ...params.sessionEntry, sessionFile: undefined }
+        : params.sessionEntry;
+  const sessionFile = resolveSessionFilePath(params.sessionEntry.sessionId, entryForResolve, {
+    agentId: params.agentId,
+    sessionsDir: path.dirname(path.resolve(params.storePath)),
+  });
+  return {
+    ...params.sessionEntry,
+    sessionFile,
+  };
+}
+
 // File-backed creation resolves the concrete transcript artifact and writes the
 // header before the store mutation is saved; SQLite adapters implement this as
 // the same lifecycle operation without exposing rollback details to callers.
@@ -1225,6 +1284,114 @@ export async function persistSessionRolloverLifecycle(params: {
   return {
     previousSessionTranscript,
     sessionEntry: params.sessionEntry,
+  };
+}
+
+/** Loads the reply-session initialization rows without exposing a mutable store. */
+export function loadReplySessionInitializationSnapshot(params: {
+  storePath: string;
+  sessionKey: string;
+}): ReplySessionInitializationSnapshot {
+  const store = loadSessionStore(params.storePath, { skipCache: true, clone: false });
+  const resolved = resolveSessionStoreEntry({ store, sessionKey: params.sessionKey });
+  const currentEntry = resolved.existing ? { ...resolved.existing } : undefined;
+  const entries = cloneSessionEntries(store);
+  return {
+    ...(currentEntry ? { currentEntry } : {}),
+    readEntry: (sessionKey) => {
+      const entry = resolveSessionStoreEntry({ store: entries, sessionKey }).existing;
+      return entry ? { ...entry } : undefined;
+    },
+    revision: createReplySessionInitializationRevision(currentEntry),
+  };
+}
+
+/**
+ * Persists one reply-session initialization result and archives the previous
+ * transcript after metadata commits. SQLite adapters map the guarded write to a
+ * transaction and keep archive failure warning-only, matching file storage.
+ */
+export async function commitReplySessionInitialization(params: {
+  activeSessionKey: string;
+  agentId: string;
+  expectedRevision: string;
+  fallbackSessionFile?: string;
+  maintenanceConfig?: ResolvedSessionMaintenanceConfig;
+  onArchiveError?: (error: unknown, sourcePath: string) => void;
+  onMaintenanceWarning?: (warning: SessionMaintenanceWarning) => void | Promise<void>;
+  prepareSessionEntry?: (
+    context: ReplySessionInitializationCommitContext,
+  ) => Promise<SessionEntry> | SessionEntry;
+  previousEntry?: SessionEntry;
+  retiredEntry?: SessionEntryRetirement;
+  sessionEntry: SessionEntry;
+  sessionKey: string;
+  storePath: string;
+}): Promise<ReplySessionInitializationCommitResult> {
+  const committed = await updateSessionStore(
+    params.storePath,
+    async (store): Promise<ReplySessionInitializationCommitResult> => {
+      const resolved = resolveSessionStoreEntry({ store, sessionKey: params.sessionKey });
+      const currentEntry = resolved.existing ? { ...resolved.existing } : undefined;
+      const revision = createReplySessionInitializationRevision(currentEntry);
+      if (revision !== params.expectedRevision) {
+        return {
+          ok: false,
+          ...(currentEntry ? { currentEntry } : {}),
+          reason: "stale-snapshot",
+          revision,
+        };
+      }
+
+      const readEntry = (sessionKey: string) => {
+        const entry = resolveSessionStoreEntry({ store, sessionKey }).existing;
+        return entry ? { ...entry } : undefined;
+      };
+      const preparedSessionEntry = params.prepareSessionEntry
+        ? await params.prepareSessionEntry({
+            ...(currentEntry ? { currentEntry } : {}),
+            readEntry,
+            sessionEntry: params.sessionEntry,
+          })
+        : params.sessionEntry;
+      const sessionEntry = resolveInitializedReplySessionEntry({
+        agentId: params.agentId,
+        ...(currentEntry ? { currentEntry } : {}),
+        fallbackSessionFile: params.fallbackSessionFile,
+        sessionEntry: preparedSessionEntry,
+        storePath: params.storePath,
+      });
+      store[resolved.normalizedKey] = sessionEntry;
+      if (params.retiredEntry) {
+        store[params.retiredEntry.key] = params.retiredEntry.entry;
+      }
+      return {
+        ok: true,
+        previousSessionTranscript: {},
+        sessionEntry: { ...(store[resolved.normalizedKey] ?? sessionEntry) },
+        sessionStoreView: cloneSessionEntries(store),
+      };
+    },
+    {
+      activeSessionKey: params.activeSessionKey,
+      maintenanceConfig: params.maintenanceConfig,
+      onWarn: params.onMaintenanceWarning,
+      skipSaveWhenResult: (result) => !result.ok,
+    },
+  );
+  if (!committed.ok) {
+    return committed;
+  }
+
+  const previousSessionTranscript = await archivePreviousSessionTranscript({
+    agentId: params.agentId,
+    onArchiveError: params.onArchiveError,
+    previousEntry: params.previousEntry,
+    storePath: params.storePath,
+  });
+  return {
+    ...committed,
+    previousSessionTranscript,
   };
 }
 
