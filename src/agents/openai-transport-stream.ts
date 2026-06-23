@@ -26,6 +26,7 @@ import { calculateCost } from "../llm/model-utils.js";
 import { resolveAzureDeploymentNameFromMap } from "../llm/providers/azure-deployment-map.js";
 import { convertMessages } from "../llm/providers/openai-completions.js";
 import { clampOpenAIPromptCacheKey } from "../llm/providers/openai-prompt-cache.js";
+import { mapOpenAIStopReason } from "../llm/providers/openai-stop-reason.js";
 import type { Api, Context, Model } from "../llm/types.js";
 import { createAssistantMessageEventStream } from "../llm/utils/event-stream.js";
 import { parseStreamingJson } from "../llm/utils/json-parse.js";
@@ -3101,7 +3102,9 @@ async function processOpenAICompletionsStream(
       hasReasoningUsageActivity = hasOpenAICompletionsReasoningUsageActivity(choiceUsage);
     }
     if (choice.finish_reason) {
-      const finishReasonResult = mapStopReason(choice.finish_reason);
+      const finishReasonResult = mapOpenAIStopReason(choice.finish_reason, {
+        allowSingularToolCall: true,
+      });
       output.stopReason = finishReasonResult.stopReason;
       if (finishReasonResult.stopReason === "stop") {
         sawStopFinishReason = true;
@@ -4476,32 +4479,6 @@ function hasOpenAICompletionsReasoningUsageActivity(
   return (
     typeof reasoningTokens === "number" && Number.isFinite(reasoningTokens) && reasoningTokens > 0
   );
-}
-
-function mapStopReason(reason: string | null) {
-  if (reason === null) {
-    return { stopReason: "stop" };
-  }
-  switch (reason) {
-    case "stop":
-    case "end":
-      return { stopReason: "stop" };
-    case "length":
-      return { stopReason: "length" };
-    case "function_call":
-    case "tool_call":
-    case "tool_calls":
-      return { stopReason: "toolUse" };
-    case "content_filter":
-      return { stopReason: "error", errorMessage: "Provider finish_reason: content_filter" };
-    case "network_error":
-      return { stopReason: "error", errorMessage: "Provider finish_reason: network_error" };
-    default:
-      return {
-        stopReason: "error",
-        errorMessage: `Provider finish_reason: ${reason}`,
-      };
-  }
 }
 
 export const testing = {
