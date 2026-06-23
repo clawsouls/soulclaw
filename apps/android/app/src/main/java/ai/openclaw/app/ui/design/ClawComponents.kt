@@ -205,6 +205,33 @@ internal fun ClawPlainIconButton(
   }
 }
 
+/** Compact label/value row for health and readiness summaries. */
+@Composable
+internal fun ClawStatusRow(
+  title: String,
+  value: String,
+  healthy: Boolean,
+  modifier: Modifier = Modifier,
+) {
+  Row(
+    modifier = modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(9.dp),
+  ) {
+    Text(
+      text = title,
+      style = ClawTheme.type.body,
+      color = ClawTheme.colors.text,
+      modifier = Modifier.weight(1f),
+      maxLines = 1,
+    )
+    ClawStatusPill(
+      text = value,
+      status = if (healthy) ClawStatus.Success else ClawStatus.Warning,
+    )
+  }
+}
+
 /** Compact status chip with a semantic color dot. */
 @Composable
 internal fun ClawStatusPill(
