@@ -679,6 +679,33 @@ describe("qa suite runtime agent process helpers", () => {
     ).rejects.toThrow("agent.wait returned error: boom");
   });
 
+  it("accepts completed agent wait status as a successful terminal run", async () => {
+    const gatewayCall = vi
+      .fn()
+      .mockResolvedValueOnce({ runId: "run-completed" })
+      .mockResolvedValueOnce({ status: "completed" });
+    const env = {
+      gateway: { call: gatewayCall },
+      transport: {
+        buildAgentDelivery: vi.fn(() => ({
+          channel: "qa-channel",
+          replyChannel: "reply-channel",
+          replyTo: "reply-target",
+        })),
+      },
+    } as never;
+
+    await expect(
+      runAgentPrompt(env, {
+        sessionKey: "session-completed",
+        message: "hello",
+      }),
+    ).resolves.toEqual({
+      started: { runId: "run-completed" },
+      waited: { status: "completed" },
+    });
+  });
+
   it("waits for a specific agent run id", async () => {
     const gatewayCall = vi.fn(async () => ({ status: "ok" }));
 
