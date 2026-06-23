@@ -102,7 +102,7 @@ describe("qa suite transport helpers", () => {
   it("checks no-outbound waits from the supplied outbound cursor", async () => {
     const state = createQaBusState();
     state.addOutboundMessage({
-      to: "channel:qa-room",
+      to: "dm:qa-operator",
       text: "previous scenario reply",
       senderId: "openclaw",
       senderName: "OpenClaw QA",

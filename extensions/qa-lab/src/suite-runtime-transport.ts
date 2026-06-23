@@ -9,6 +9,10 @@ import {
 import { extractQaFailureReplyText } from "./reply-failure.js";
 import type { QaBusMessage } from "./runtime-api.js";
 
+type WaitForNoOutboundOptions = {
+  sinceIndex?: number;
+};
+
 function findFailureOutboundMessage(
   state: QaTransportState,
   options?: { sinceIndex?: number; cursorSpace?: "all" | "outbound" },
@@ -50,7 +54,7 @@ async function waitForOutboundMessage(
 async function waitForNoOutbound(
   state: QaTransportState,
   timeoutMs = 1_200,
-  options?: { sinceIndex?: number },
+  options?: WaitForNoOutboundOptions,
 ) {
   await sleep(timeoutMs);
   const outbound = state
@@ -149,7 +153,7 @@ async function waitForChannelOutboundMessage(
 async function waitForNoTransportOutbound(
   state: QaTransportState,
   timeoutMs = 1_200,
-  options?: { sinceIndex?: number },
+  options?: WaitForNoOutboundOptions,
 ) {
   await waitForNoOutbound(state, timeoutMs, options);
 }

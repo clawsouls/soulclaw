@@ -40,6 +40,9 @@ flow:
             - ref: env
             - 60000
         - call: reset
+        - call: sleep
+          args:
+            - 1200
         - set: outboundStartIndex
           value:
             expr: "state.getSnapshot().messages.filter((message) => message.direction === 'outbound').length"
