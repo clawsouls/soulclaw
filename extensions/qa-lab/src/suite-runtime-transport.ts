@@ -62,7 +62,14 @@ async function waitForNoOutbound(
     .messages.filter((message: QaBusMessage) => message.direction === "outbound")
     .slice(options?.sinceIndex ?? 0);
   if (outbound.length > 0) {
-    throw new Error(`expected no outbound messages, saw ${outbound.length}`);
+    const summary = outbound
+      .slice(0, 5)
+      .map(
+        (message: QaBusMessage) =>
+          `${message.conversation.kind}:${message.conversation.id}:${message.senderId}:${message.text}`,
+      )
+      .join(" | ");
+    throw new Error(`expected no outbound messages, saw ${outbound.length}: ${summary}`);
   }
 }
 

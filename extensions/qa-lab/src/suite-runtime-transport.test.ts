@@ -120,7 +120,7 @@ describe("qa suite transport helpers", () => {
       senderName: "OpenClaw QA",
     });
     await expect(waitForNoOutbound(state, 1, { sinceIndex })).rejects.toThrow(
-      "expected no outbound messages, saw 1",
+      "expected no outbound messages, saw 1: channel:qa-room:openclaw:current scenario reply",
     );
   });
 
