@@ -379,7 +379,7 @@ async function waitForAgentRun(
 }
 
 function readLatestAssistantTextFromHistory(history: QaChatHistoryResponse | undefined) {
-  for (const message of [...(history?.messages ?? [])].reverse()) {
+  for (const message of (history?.messages ?? []).toReversed()) {
     if (!isRecord(message) || message.role !== "assistant") {
       continue;
     }
