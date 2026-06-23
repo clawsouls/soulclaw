@@ -471,9 +471,16 @@ function parseRepeatableFlag(flag: string): string[] {
 }
 
 function validateCliArgs(argv: readonly string[] = process.argv.slice(2)): void {
+  const seenSingleValueFlags = new Set<string>();
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (VALUE_FLAGS.has(arg)) {
+      if (arg !== "--case") {
+        if (seenSingleValueFlags.has(arg)) {
+          throw new Error(`${arg} was provided more than once`);
+        }
+        seenSingleValueFlags.add(arg);
+      }
       const value = argv[index + 1];
       if (!value || value.startsWith("-")) {
         throw new Error(`${arg} requires a value`);
