@@ -74,6 +74,8 @@ export const allowedSessionStoreRuntimeFileBackedCompatExports = new Set([
 
 export const migratedSessionAccessorFiles = new Set([
   "packages/memory-host-sdk/src/host/session-files.ts",
+  "src/acp/runtime/session-meta.ts",
+  "src/agents/acp-spawn.ts",
   "src/agents/embedded-agent-runner/compaction-successor-transcript.ts",
   "src/agents/embedded-agent-runner/run/attempt.ts",
   "src/agents/embedded-agent-runner/tool-result-truncation.ts",
@@ -124,6 +126,7 @@ export const migratedBundledPluginSessionAccessorFiles = new Set([
 ]);
 
 export const migratedSessionAccessorWriteFiles = new Set([
+  "src/acp/runtime/session-meta.ts",
   "src/agents/command/attempt-execution.shared.ts",
   "src/agents/command/session-store.ts",
   "src/agents/embedded-agent-runner/run.ts",
@@ -535,6 +538,7 @@ export async function main() {
     "extensions/discord/src/monitor",
     "extensions/memory-core/src",
     "extensions/telegram/src",
+    "src/acp",
     "src/agents",
     "src/auto-reply",
     "src/commands",
@@ -546,6 +550,7 @@ export async function main() {
     "src/tui",
   ]);
   const writeSourceRoots = resolveSourceRoots(repoRoot, [
+    "src/acp",
     "src/agents",
     "src/auto-reply",
     "src/commands",
