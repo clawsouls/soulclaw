@@ -727,18 +727,33 @@ describe("ci workflow guards", () => {
     expect(openDocsPrStep.if).toBe("${{ github.event_name == 'workflow_dispatch' }}");
   });
 
-  it("runs maturity scorecard from release checks", () => {
+  it("keeps maturity scorecard release docs opt-in from release checks", () => {
     const releaseWorkflow = readReleaseChecksWorkflow();
     const job = releaseWorkflow.jobs.maturity_scorecard_release_checks;
     const summaryJob = releaseWorkflow.jobs.summary;
     const verifyStep = summaryJob.steps.find(
       (step) => step.name === "Verify release check results",
     );
+    const inputs = releaseWorkflow.on.workflow_dispatch.inputs;
+    const resolveJob = releaseWorkflow.jobs.resolve_target;
+    const summarizeStep = resolveJob.steps.find((step) => step.name === "Summarize validated ref");
 
     expect(releaseWorkflow.jobs).not.toHaveProperty("qa_profile_release_evidence_release_checks");
+    expect(inputs.run_maturity_scorecard).toMatchObject({
+      required: false,
+      default: false,
+      type: "boolean",
+    });
+    expect(resolveJob.outputs.run_maturity_scorecard).toBe(
+      "${{ steps.inputs.outputs.run_maturity_scorecard }}",
+    );
+    expect(summarizeStep.env.RUN_MATURITY_SCORECARD).toBe(
+      "${{ steps.inputs.outputs.run_maturity_scorecard }}",
+    );
+    expect(summarizeStep.run).toContain("- Maturity scorecard docs:");
     expect(job.name).toBe("Render maturity scorecard release docs");
     expect(job.if).toBe(
-      'contains(fromJSON(\'["all","qa"]\'), needs.resolve_target.outputs.rerun_group)',
+      "contains(fromJSON('[\"all\",\"qa\"]'), needs.resolve_target.outputs.rerun_group) && needs.resolve_target.outputs.run_maturity_scorecard == 'true'",
     );
     expect(job.permissions).toMatchObject({
       actions: "read",
