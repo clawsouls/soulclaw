@@ -185,6 +185,26 @@ internal fun ClawIconButton(
   }
 }
 
+/** Transparent circular icon button for low-emphasis toolbar actions. */
+@Composable
+internal fun ClawPlainIconButton(
+  icon: ImageVector,
+  contentDescription: String,
+  onClick: () -> Unit,
+) {
+  Surface(
+    onClick = onClick,
+    modifier = Modifier.size(ClawTheme.spacing.touchTarget),
+    shape = CircleShape,
+    color = Color.Transparent,
+    contentColor = ClawTheme.colors.text,
+  ) {
+    Box(contentAlignment = Alignment.Center) {
+      Icon(imageVector = icon, contentDescription = contentDescription, modifier = Modifier.size(18.dp))
+    }
+  }
+}
+
 /** Compact status chip with a semantic color dot. */
 @Composable
 internal fun ClawStatusPill(
