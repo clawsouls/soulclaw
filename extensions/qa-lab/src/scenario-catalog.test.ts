@@ -541,6 +541,23 @@ describe("qa scenario catalog", () => {
     ]);
   });
 
+  it("keeps provider-sensitive QA flow scenarios on their supported lanes", () => {
+    const strandedConfig = readQaScenarioExecutionConfig("message-tool-stranded-final-reply") as
+      | { requiredProviderMode?: string }
+      | undefined;
+    const stranded = readQaScenarioById("message-tool-stranded-final-reply");
+    const heartbeat = readQaScenarioById("commitments-heartbeat-target-none");
+    const heartbeatFlow = JSON.stringify(heartbeat.execution.flow);
+
+    expect(strandedConfig?.requiredProviderMode).toBe("mock-openai");
+    expect(JSON.stringify(stranded.execution.flow)).toContain(
+      "this seeded scenario is mock-openai only",
+    );
+    expect(heartbeatFlow).toContain("sessionKey");
+    expect(heartbeatFlow).toContain("targetOutbound.length === 0");
+    expect(heartbeatFlow).not.toContain("waitForNoOutbound");
+  });
+
   it("includes the thinking slash model remap scenario", () => {
     const scenario = readQaScenarioById("thinking-slash-model-remap");
     const config = readQaScenarioExecutionConfig("thinking-slash-model-remap") as
