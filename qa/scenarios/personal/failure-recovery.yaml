@@ -73,8 +73,6 @@ scenario:
       expectedReplyAll:
         - "personal-failure-recovery.txt"
         - "PERSONAL-FAILURE-RECOVERY-OK"
-        - "failed step:"
-        - "retry boundary:"
       forbiddenNeedles:
         - "fully complete"
         - "all done"

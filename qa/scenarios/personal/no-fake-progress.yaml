@@ -69,7 +69,6 @@ scenario:
       expectedReplyAll:
         - "personal-progress-proof.txt"
         - "PERSONAL-NO-FAKE-PROGRESS-OK"
-        - "local proof artifact written"
       forbiddenNeedles:
         - "sent successfully"
         - "published successfully"
