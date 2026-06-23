@@ -84,6 +84,9 @@ describe("gateway startup benchmark script", () => {
     expect(() => testing.parseOptions(["--case", "default", "--case", "default"])).toThrow(
       'Duplicate --case "default"',
     );
+    expect(() =>
+      testing.parseOptions(["--output", "first.json", "--output", "second.json"]),
+    ).toThrow("--output was provided more than once");
     expect(() => testing.resolveEntry("--inspect")).toThrow(/must be a file path/u);
   });
 
