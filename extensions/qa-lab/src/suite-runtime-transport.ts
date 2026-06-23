@@ -47,11 +47,16 @@ async function waitForOutboundMessage(
   }, timeoutMs);
 }
 
-async function waitForNoOutbound(state: QaTransportState, timeoutMs = 1_200) {
+async function waitForNoOutbound(
+  state: QaTransportState,
+  timeoutMs = 1_200,
+  options?: { sinceIndex?: number },
+) {
   await sleep(timeoutMs);
   const outbound = state
     .getSnapshot()
-    .messages.filter((message: QaBusMessage) => message.direction === "outbound");
+    .messages.filter((message: QaBusMessage) => message.direction === "outbound")
+    .slice(options?.sinceIndex ?? 0);
   if (outbound.length > 0) {
     throw new Error(`expected no outbound messages, saw ${outbound.length}`);
   }
@@ -141,8 +146,12 @@ async function waitForChannelOutboundMessage(
   return await waitForTransportOutboundMessage(state, predicate, timeoutMs);
 }
 
-async function waitForNoTransportOutbound(state: QaTransportState, timeoutMs = 1_200) {
-  await waitForNoOutbound(state, timeoutMs);
+async function waitForNoTransportOutbound(
+  state: QaTransportState,
+  timeoutMs = 1_200,
+  options?: { sinceIndex?: number },
+) {
+  await waitForNoOutbound(state, timeoutMs, options);
 }
 
 export {

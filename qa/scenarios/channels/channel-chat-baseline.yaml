@@ -40,6 +40,9 @@ flow:
             - ref: env
             - 60000
         - call: reset
+        - set: outboundStartIndex
+          value:
+            expr: "state.getSnapshot().messages.filter((message) => message.direction === 'outbound').length"
         - call: state.addInboundMessage
           args:
             - conversation:
@@ -52,6 +55,9 @@ flow:
         - call: waitForNoOutbound
           args:
             - ref: state
+            - 1200
+            - sinceIndex:
+                ref: outboundStartIndex
     - name: replies when mentioned in channel
       actions:
         - call: waitForGatewayHealthy
