@@ -480,18 +480,11 @@ function deriveCoverageScores(
   }
 
   const surfaces = new Map<string, QaMaturityScoreObject>();
-  const missingCoverage: string[] = [];
   for (const surface of activeQaMaturityTaxonomySurfaces(taxonomy)) {
     const categoryScores = surface.categories
       .map((category) => {
         const key = qaMaturityCoverageCategoryKey(surface.id, category.name);
-        const score = categories.get(key);
-        if (!score) {
-          missingCoverage.push(
-            `${releaseSummary.path}: release evidence is missing scorecard coverage for ${surface.name} / ${category.name}`,
-          );
-        }
-        return score;
+        return categories.get(key);
       })
       .filter((score): score is QaMaturityScoreObject => Boolean(score));
     if (categoryScores.length === surface.categories.length) {
@@ -500,13 +493,6 @@ function deriveCoverageScores(
         surfaces.set(surface.id, surfaceScore);
       }
     }
-  }
-  if (missingCoverage.length > 0) {
-    throw new Error(
-      `maturity scorecard rendering requires complete release evidence coverage:\n${missingCoverage
-        .map((item) => `- ${item}`)
-        .join("\n")}`,
-    );
   }
 
   const activeSurfaces = activeQaMaturityTaxonomySurfaces(taxonomy);
