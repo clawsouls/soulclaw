@@ -1129,6 +1129,7 @@ function renderTaxonomy({
             `<div className="maturity-surface-rollup"><span>Coverage ${scoreLabel(coverage.surfaces.get(surface.id))}</span><span>Quality ${scoreLabel(scoreSurface?.scores?.quality)}</span><span>Completeness ${scoreLabel(scoreSurface?.scores?.completeness)}</span><span>${maturityLtsBadge(scoreSurface?.lts)}</span></div>`,
             "",
             ...categoryLines,
+            "",
           ],
           4,
         ),
