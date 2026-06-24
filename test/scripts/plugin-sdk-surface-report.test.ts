@@ -1,6 +1,5 @@
 // Plugin Sdk Surface Report tests cover plugin sdk surface report script behavior.
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 function runSurfaceReport(env: Record<string, string>) {
@@ -14,14 +13,16 @@ function runSurfaceReport(env: Record<string, string>) {
   });
 }
 
-function readDefaultPublicFunctionExportBudget() {
-  const source = readFileSync("scripts/plugin-sdk-surface-report.mjs", "utf8");
-  const match =
-    /publicFunctionExports:\s*readBudgetEnv\("OPENCLAW_PLUGIN_SDK_MAX_PUBLIC_FUNCTION_EXPORTS",\s*(\d+)\)/u.exec(
-      source,
-    );
+function readCurrentPublicFunctionExportCount() {
+  const result = runSurfaceReport({});
+  expect(result.status).toBe(0);
+  expect(result.stderr).toBe("");
+
+  const match = /public package SDK entrypoints:[\s\S]*?\n  callable exports: (\d+)/u.exec(
+    result.stdout,
+  );
   if (match === null || match[1] === undefined) {
-    throw new Error("failed to read default public function export budget");
+    throw new Error("failed to read current public function export count");
   }
   return Number(match[1]);
 }
@@ -95,7 +96,7 @@ describe("plugin SDK surface report", () => {
   });
 
   it("keeps generated package declarations out of source surface counts", () => {
-    const budget = readDefaultPublicFunctionExportBudget();
+    const budget = readCurrentPublicFunctionExportCount();
     const result = runSurfaceReport({
       OPENCLAW_PLUGIN_SDK_MAX_PUBLIC_FUNCTION_EXPORTS: String(budget - 1),
     });
