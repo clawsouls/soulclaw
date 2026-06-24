@@ -2879,9 +2879,7 @@ async function runGatewayModelSuite(params: GatewayModelSuiteParams) {
     lastGood: hostStore.lastGood ? { ...hostStore.lastGood } : undefined,
     usageStats: hostStore.usageStats ? { ...hostStore.usageStats } : undefined,
   });
-  const tempStateDir: string | undefined = await fs.mkdtemp(
-    path.join(os.tmpdir(), "openclaw-live-state-"),
-  );
+  const tempStateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-live-state-"));
   setTestEnvValue("OPENCLAW_STATE_DIR", tempStateDir);
   const tempAgentDir: string | undefined = path.join(
     tempStateDir,
