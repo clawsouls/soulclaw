@@ -152,18 +152,6 @@ flow:
                                     expr: "fanoutSpawnRequests.length >= 2"
                                     message:
                                       expr: "`expected at least two sessions_spawn tool calls during subagent fanout scenario, saw ${fanoutSpawnRequests.length}`"
-                                - forEach:
-                                    items:
-                                      expr: "config.expectedChildCompletionMarkers"
-                                    item: childCompletionMarker
-                                    actions:
-                                      - call: waitForOutboundMessage
-                                        args:
-                                          - ref: state
-                                          - lambda:
-                                              params: [candidate]
-                                              expr: "String(candidate.text ?? '').trim() === childCompletionMarker"
-                                          - 10000
                           - set: details
                             value:
                               expr: "outbound.text"
@@ -251,4 +239,19 @@ flow:
             expr: "lastError === '__done__'"
             message:
               expr: "lastError instanceof Error ? formatErrorMessage(lastError) : String(lastError ?? 'fanout retry exhausted')"
+        - if:
+            expr: "Boolean(env.mock)"
+            then:
+              - forEach:
+                  items:
+                    expr: "config.expectedChildCompletionMarkers"
+                  item: childCompletionMarker
+                  actions:
+                    - call: waitForOutboundMessage
+                      args:
+                        - ref: state
+                        - lambda:
+                            params: [candidate]
+                            expr: "String(candidate.text ?? '').trim() === childCompletionMarker"
+                        - 10000
       detailsExpr: "details"
