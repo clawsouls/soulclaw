@@ -15,6 +15,7 @@ import {
   loadCommitmentStore,
   resolveCommitmentStorePath,
 } from "../../dist/commitments/store.js";
+import { deleteTestEnvValue, setTestEnvValue } from "../../src/test-utils/env.js";
 
 const DEFAULT_COMMITMENT_EXTRACTION_QUEUE_MAX_ITEMS = 64;
 
@@ -28,14 +29,14 @@ async function withStateDir<T>(name: string, fn: (stateDir: string) => Promise<T
   const root = await fs.mkdtemp(path.join(os.tmpdir(), `openclaw-${name}-`));
   const previousStateDir = process.env.OPENCLAW_STATE_DIR;
   try {
-    process.env.OPENCLAW_STATE_DIR = root;
+    setTestEnvValue("OPENCLAW_STATE_DIR", root);
     return await fn(root);
   } finally {
     resetCommitmentExtractionRuntimeForTests();
     if (previousStateDir === undefined) {
-      delete process.env.OPENCLAW_STATE_DIR;
+      deleteTestEnvValue("OPENCLAW_STATE_DIR");
     } else {
-      process.env.OPENCLAW_STATE_DIR = previousStateDir;
+      setTestEnvValue("OPENCLAW_STATE_DIR", previousStateDir);
     }
     await fs.rm(root, { recursive: true, force: true });
   }
