@@ -253,5 +253,5 @@ flow:
                         - lambda:
                             params: [candidate]
                             expr: "String(candidate.text ?? '').trim() === childCompletionMarker"
-                        - 10000
+                        - 30000
       detailsExpr: "details"
