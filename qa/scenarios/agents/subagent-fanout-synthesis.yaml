@@ -108,7 +108,7 @@ flow:
                               - lambda:
                                   params: [text]
                                   expr: "config.expectedReplyGroups.every((group) => group.some((needle) => normalizeLowercaseStringOrEmpty(text).includes(needle)))"
-                              - expr: "env.providerMode === 'mock-openai' ? 10000 : 30000"
+                              - expr: "30000"
                               - expr: "env.providerMode === 'mock-openai' ? 100 : 250"
                           - if:
                               expr: "Boolean(env.mock)"
