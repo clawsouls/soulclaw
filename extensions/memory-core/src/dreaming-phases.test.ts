@@ -11,7 +11,7 @@ import {
   resolveMemoryRemDreamingConfig,
 } from "openclaw/plugin-sdk/memory-core-host-status";
 import { saveSessionStore } from "openclaw/plugin-sdk/session-store-runtime";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   testing,
   filterRecallEntriesWithinLookback,
@@ -78,6 +78,10 @@ function restoreDreamingTestEnv(): void {
     Reflect.set(process.env, "OPENCLAW_STATE_DIR", originalDreamingStateDir);
   }
 }
+
+afterEach(() => {
+  restoreDreamingTestEnv();
+});
 
 function requireCandidateByKey<T extends { key: string }>(candidates: T[], key: string): T {
   const candidate = candidates.find((entry) => entry.key === key);
