@@ -84,7 +84,11 @@ const TELEGRAM_WEBHOOK_REGISTRATION_RETRY_POLICY: BackoffPolicy = {
   factor: 2,
   jitter: 0.2,
 };
-const activeWebhookSpooledHandlersByLane = new Set<string>();
+type ActiveWebhookSpooledHandler = {
+  laneKey: string;
+};
+
+const activeWebhookSpooledHandlersByLane = new Map<string, ActiveWebhookSpooledHandler>();
 
 function buildWebhookSpooledHandlerKey(params: { laneKey: string; spoolDir: string }): string {
   return `${params.spoolDir}\0${params.laneKey}`;
@@ -93,9 +97,9 @@ function buildWebhookSpooledHandlerKey(params: { laneKey: string; spoolDir: stri
 function resolveActiveWebhookSpooledLaneKeys(spoolDir: string): Set<string> {
   const laneKeys = new Set<string>();
   const prefix = `${spoolDir}\0`;
-  for (const handlerKey of activeWebhookSpooledHandlersByLane) {
+  for (const [handlerKey, handler] of activeWebhookSpooledHandlersByLane) {
     if (handlerKey.startsWith(prefix)) {
-      laneKeys.add(handlerKey.slice(prefix.length));
+      laneKeys.add(handler.laneKey);
     }
   }
   return laneKeys;
@@ -454,17 +458,21 @@ async function waitForTimedOutWebhookReplayGrace(params: {
   log: (line: string) => void;
   replayTask: Promise<{ deferredWork?: TelegramSpooledReplayDeferredParticipant }>;
   updateId: number;
-}): Promise<void> {
+}): Promise<boolean> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await Promise.race([
-      params.replayTask.catch((replayErr: unknown) => {
-        params.log(
-          `[telegram][diag] timed out webhook spooled update ${params.updateId} replay later failed: ${formatErrorMessage(replayErr)}`,
-        );
-      }),
-      new Promise<void>((resolve) => {
-        timer = setTimeout(resolve, TELEGRAM_WEBHOOK_SPOOLED_HANDLER_ABORT_GRACE_MS);
+    return await Promise.race([
+      params.replayTask.then(
+        () => true,
+        (replayErr: unknown) => {
+          params.log(
+            `[telegram][diag] timed out webhook spooled update ${params.updateId} replay later failed: ${formatErrorMessage(replayErr)}`,
+          );
+          return true;
+        },
+      ),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), TELEGRAM_WEBHOOK_SPOOLED_HANDLER_ABORT_GRACE_MS);
         timer.unref?.();
       }),
     ]);
@@ -474,6 +482,10 @@ async function waitForTimedOutWebhookReplayGrace(params: {
     }
   }
 }
+
+type WebhookSpooledUpdateHandlerResult = {
+  retainLaneGuardTask?: Promise<unknown>;
+};
 
 async function runWebhookSpooledReplayWithTimeout(params: {
   bot: ReturnType<typeof createTelegramBot>;
@@ -549,7 +561,7 @@ async function handleWebhookSpooledUpdate(params: {
   bot: ReturnType<typeof createTelegramBot>;
   log: (line: string) => void;
   update: ClaimedTelegramSpooledUpdate;
-}): Promise<void> {
+}): Promise<WebhookSpooledUpdateHandlerResult> {
   let replay: { deferredWork?: TelegramSpooledReplayDeferredParticipant };
   try {
     const rawUpdate = params.update.update;
@@ -583,19 +595,28 @@ async function handleWebhookSpooledUpdate(params: {
         message: err.message,
         update: params.update,
       });
-      await waitForTimedOutWebhookReplayGrace({
+      const replaySettled = await waitForTimedOutWebhookReplayGrace({
         log: params.log,
         replayTask: err.replayTask,
         updateId: params.update.updateId,
       });
-      return;
+      if (replaySettled) {
+        return {};
+      }
+      return {
+        retainLaneGuardTask: err.replayTask.catch((replayErr: unknown) => {
+          params.log(
+            `[telegram][diag] timed out webhook spooled update ${params.update.updateId} replay later failed: ${formatErrorMessage(replayErr)}`,
+          );
+        }),
+      };
     }
     await releaseFailedWebhookSpooledUpdate({
       err,
       log: params.log,
       update: params.update,
     });
-    return;
+    return {};
   }
   if (replay.deferredWork) {
     const result = await waitForWebhookSpooledDeferredWork({
@@ -611,14 +632,14 @@ async function handleWebhookSpooledUpdate(params: {
           message: formatErrorMessage(result.error),
           update: params.update,
         });
-        return;
+        return {};
       }
       await releaseFailedWebhookSpooledUpdate({
         err: result.error,
         log: params.log,
         update: params.update,
       });
-      return;
+      return {};
     }
   }
   try {
@@ -628,6 +649,7 @@ async function handleWebhookSpooledUpdate(params: {
       `[telegram][diag] webhook spooled update ${params.update.updateId} completed but processing marker cleanup failed: ${formatErrorMessage(err)}`,
     );
   }
+  return {};
 }
 
 export async function startTelegramWebhook(opts: {
@@ -769,7 +791,8 @@ export async function startTelegramWebhook(opts: {
         const handlerKey = buildWebhookSpooledHandlerKey({ spoolDir, laneKey });
         // Webhook HTTP requests and same-process restarts can overlap; keep
         // one process-global active claim per spool lane to preserve ordering.
-        activeWebhookSpooledHandlersByLane.add(handlerKey);
+        const handlerState: ActiveWebhookSpooledHandler = { laneKey };
+        activeWebhookSpooledHandlersByLane.set(handlerKey, handlerState);
         blockedLaneKeys.add(laneKey);
         // Claim ownership has a finite lease; refresh while the handler runs so
         // another process cannot recover and replay this update concurrently.
@@ -777,12 +800,24 @@ export async function startTelegramWebhook(opts: {
           log,
           update: claimedUpdate,
         });
+        let retainLaneGuardTask: Promise<unknown> | undefined;
         void handleWebhookSpooledUpdate({
           accountId: opts.accountId ?? "default",
           bot,
           log,
           update: claimedUpdate,
         })
+          .then((result) => {
+            retainLaneGuardTask = result.retainLaneGuardTask;
+            if (retainLaneGuardTask) {
+              void retainLaneGuardTask.finally(() => {
+                if (activeWebhookSpooledHandlersByLane.get(handlerKey) === handlerState) {
+                  activeWebhookSpooledHandlersByLane.delete(handlerKey);
+                }
+                void Promise.resolve().then(drainWebhookSpool);
+              });
+            }
+          })
           .catch((err: unknown) => {
             runtime.log?.(
               `[telegram][diag] webhook spooled update ${claimedUpdate.updateId} handler failed after claim: ${formatErrorMessage(err)}`,
@@ -790,7 +825,12 @@ export async function startTelegramWebhook(opts: {
           })
           .finally(() => {
             stopClaimRefresh();
-            activeWebhookSpooledHandlersByLane.delete(handlerKey);
+            if (
+              !retainLaneGuardTask &&
+              activeWebhookSpooledHandlersByLane.get(handlerKey) === handlerState
+            ) {
+              activeWebhookSpooledHandlersByLane.delete(handlerKey);
+            }
             void Promise.resolve().then(drainWebhookSpool);
           });
         started += 1;

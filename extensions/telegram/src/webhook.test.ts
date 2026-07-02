@@ -825,6 +825,55 @@ describe("startTelegramWebhook", () => {
     );
   });
 
+  it("keeps a timed-out webhook lane guarded until replay settles", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    try {
+      let finishFirstUpdate: (() => void) | undefined;
+      const seenUpdateIds: number[] = [];
+      const firstUpdate = { update_id: 40, message: { chat: { id: 123 }, text: "slow" } };
+      const secondUpdate = { update_id: 41, message: { chat: { id: 123 }, text: "blocked" } };
+      await writeTelegramSpooledUpdate({
+        spoolDir: requireWebhookSpoolDir(),
+        update: firstUpdate,
+      });
+      await writeTelegramSpooledUpdate({
+        spoolDir: requireWebhookSpoolDir(),
+        update: secondUpdate,
+      });
+      handleUpdateSpy.mockImplementation(async (update: unknown) => {
+        const updateId = (update as { update_id: number }).update_id;
+        seenUpdateIds.push(updateId);
+        if (updateId === 40) {
+          await new Promise<void>((resolve) => {
+            finishFirstUpdate = resolve;
+          });
+        }
+      });
+
+      const started = await startTelegramWebhook({
+        token: TELEGRAM_TOKEN,
+        port: 0,
+        secret: TELEGRAM_SECRET,
+        path: TELEGRAM_WEBHOOK_PATH,
+        spoolDir: requireWebhookSpoolDir(),
+        runtime: { log: vi.fn(), error: vi.fn(), exit: vi.fn() },
+      });
+      try {
+        await vi.waitFor(() => expect(seenUpdateIds).toEqual([40]));
+        await vi.advanceTimersByTimeAsync(25 * 60_000 + 10_000);
+        await yieldWebhookTask();
+        expect(seenUpdateIds).toEqual([40]);
+
+        finishFirstUpdate?.();
+        await vi.waitFor(() => expect(seenUpdateIds).toEqual([40, 41]));
+      } finally {
+        await started.stop();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("drains spooled webhook updates left by a previous process on startup", async () => {
     const update = { update_id: 30, message: { text: "leftover" } };
     await writeTelegramSpooledUpdate({
@@ -917,7 +966,10 @@ describe("startTelegramWebhook", () => {
             [],
           ),
         );
-        expectMockMessageContains(runtimeLog, "reached retry limit after 8 attempts; dead-lettered");
+        expectMockMessageContains(
+          runtimeLog,
+          "reached retry limit after 8 attempts; dead-lettered",
+        );
       } finally {
         await started.stop();
       }
