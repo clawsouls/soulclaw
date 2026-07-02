@@ -7184,6 +7184,16 @@
       "translated": "Actualizando OpenClaw"
     },
     {
+      "id": "native.apple.b6bc54876f20104f",
+      "source": "Off",
+      "translated": "Desactivado"
+    },
+    {
+      "id": "native.apple.5590d661cdc81fbf",
+      "source": "Paused",
+      "translated": "En pausa"
+    },
+    {
       "id": "native.apple.732051c3e897a9f1",
       "source": "Talk to Claw",
       "translated": "Hablar con Claw"
