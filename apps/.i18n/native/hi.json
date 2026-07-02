@@ -7184,6 +7184,16 @@
       "translated": "OpenClaw अपडेट किया जा रहा है"
     },
     {
+      "id": "native.apple.b6bc54876f20104f",
+      "source": "Off",
+      "translated": "बंद"
+    },
+    {
+      "id": "native.apple.5590d661cdc81fbf",
+      "source": "Paused",
+      "translated": "रोका गया"
+    },
+    {
       "id": "native.apple.732051c3e897a9f1",
       "source": "Talk to Claw",
       "translated": "Claw से बात करें"
