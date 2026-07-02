@@ -5234,14 +5234,14 @@
       "translated": "OpenClaw वर्तमान नोटिफ़िकेशन अनुमति स्थिति निर्धारित नहीं कर सकता।"
     },
     {
+      "id": "native.apple.cfec8b4d042a8066",
+      "source": "Choose system, light, or dark appearance",
+      "translated": "सिस्टम, हल्का या गहरा रूप चुनें"
+    },
+    {
       "id": "native.apple.747143c7ef879774",
       "source": "Appearance",
       "translated": "दिखावट"
-    },
-    {
-      "id": "native.apple.80fade864c8ad242",
-      "source": "Choose system, light, or dark appearance",
-      "translated": "सिस्टम, लाइट या डार्क दिखावट चुनें"
     },
     {
       "id": "native.apple.0b50dca4526336be",
