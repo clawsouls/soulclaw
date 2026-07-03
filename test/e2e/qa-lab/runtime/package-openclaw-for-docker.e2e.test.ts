@@ -135,7 +135,7 @@ describe("package-openclaw-for-docker", () => {
     );
   });
 
-  it("uses build-all as the single bounded package artifact build step", async () => {
+  it("uses build-all with declaration generation for package artifacts", async () => {
     const calls: Array<{
       command: string;
       args: string[];
