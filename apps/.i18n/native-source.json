@@ -12731,7 +12731,7 @@
     },
     {
       "kind": "conditional-branch",
-      "line": 634,
+      "line": 641,
       "path": "apps/macos/Sources/OpenClaw/AppState.swift",
       "source": "\\(user)@\\(host)",
       "surface": "apple",
@@ -12739,7 +12739,7 @@
     },
     {
       "kind": "conditional-branch",
-      "line": 634,
+      "line": 641,
       "path": "apps/macos/Sources/OpenClaw/AppState.swift",
       "source": "\\(user)@\\(host):\\(port)",
       "surface": "apple",
@@ -16299,7 +16299,7 @@
     },
     {
       "kind": "conditional-branch",
-      "line": 382,
+      "line": 395,
       "path": "apps/macos/Sources/OpenClaw/NodePairingApprovalPrompter.swift",
       "source": "Node pairing approved",
       "surface": "apple",
@@ -16307,7 +16307,7 @@
     },
     {
       "kind": "conditional-branch",
-      "line": 382,
+      "line": 395,
       "path": "apps/macos/Sources/OpenClaw/NodePairingApprovalPrompter.swift",
       "source": "Node pairing rejected",
       "surface": "apple",
@@ -17635,7 +17635,7 @@
     },
     {
       "kind": "conditional-branch",
-      "line": 173,
+      "line": 167,
       "path": "apps/macos/Sources/OpenClaw/RemotePortTunnel.swift",
       "source": "ssh tunnel exited before listening",
       "surface": "apple",
@@ -17643,7 +17643,7 @@
     },
     {
       "kind": "conditional-branch",
-      "line": 189,
+      "line": 183,
       "path": "apps/macos/Sources/OpenClaw/RemotePortTunnel.swift",
       "source": "ssh tunnel did not open local port \\(localPort)",
       "surface": "apple",
@@ -17651,7 +17651,7 @@
     },
     {
       "kind": "conditional-branch",
-      "line": 189,
+      "line": 183,
       "path": "apps/macos/Sources/OpenClaw/RemotePortTunnel.swift",
       "source": "ssh tunnel failed: \\(stderr)",
       "surface": "apple",
