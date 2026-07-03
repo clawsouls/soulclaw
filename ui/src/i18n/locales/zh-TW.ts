@@ -1315,7 +1315,7 @@ export const zh_TW: TranslationMap = {
     dismissUpdateBanner: "關閉更新橫幅",
     switchedSession: "已切換至 {session}",
     sidebar: {
-      allSessions: "All sessions",
+      allSessions: "所有工作階段",
     },
     welcome: {
       ready: "Ready to chat",
