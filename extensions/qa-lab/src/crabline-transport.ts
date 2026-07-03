@@ -338,6 +338,11 @@ class QaCrablineTransport extends QaStateBackedTransportAdapter {
   readonly #adapter: StartedOpenClawCrablineAdapter;
   readonly #selection: OpenClawCrablineChannelDriverSelection;
   readonly #state: QaCrablineTransportState;
+  readonly sendNativeCommand?: (input: QaTransportNativeCommandInput) => Promise<void>;
+  readonly waitForOutboundSequence?: (input: QaTransportOutboundSequenceMatch) => Promise<{
+    events: QaTransportOutboundEvent[];
+    final: QaBusMessage;
+  }>;
 
   constructor(params: {
     adapter: StartedOpenClawCrablineAdapter;
@@ -354,6 +359,21 @@ class QaCrablineTransport extends QaStateBackedTransportAdapter {
     this.#adapter = params.adapter;
     this.#selection = params.selection;
     this.#state = params.state;
+    if (params.selection.channel === "telegram") {
+      this.sendNativeCommand = async (input) => {
+        const { command, ...message } = input;
+        await this.sendInbound({
+          ...message,
+          text: `/${command}`,
+          nativeCommand: { name: command },
+        });
+      };
+      this.waitForOutboundSequence = async (input) =>
+        await waitForQaTransportOutboundSequence({
+          input,
+          readEvents: () => this.#state.getOutboundEvents(),
+        });
+    }
   }
 
   createGatewayConfig = (params: { baseUrl: string }): QaTransportGatewayConfig =>
@@ -377,27 +397,6 @@ class QaCrablineTransport extends QaStateBackedTransportAdapter {
   };
 
   createRuntimeEnvPatch = () => this.#adapter.createChannelDriverSmokeEnv({});
-
-  override async sendNativeCommand(input: QaTransportNativeCommandInput): Promise<void> {
-    if (this.#selection.channel !== "telegram") {
-      throw new Error(
-        `Crabline ${this.#selection.channel} does not support native command injection.`,
-      );
-    }
-    const { command, ...message } = input;
-    await this.sendInbound({
-      ...message,
-      text: `/${command}`,
-      nativeCommand: { name: command },
-    });
-  }
-
-  override async waitForOutboundSequence(input: QaTransportOutboundSequenceMatch) {
-    return await waitForQaTransportOutboundSequence({
-      input,
-      readEvents: () => this.#state.getOutboundEvents(),
-    });
-  }
 
   handleAction = async (_params: {
     action: QaTransportActionName;
