@@ -6349,9 +6349,9 @@
       "translated": "OpenClaw có thể sử dụng dữ liệu chuyển động để hỗ trợ các tương tác và tự động hóa nhận biết thiết bị."
     },
     {
-      "id": "native.apple.b6c35a14bb309193",
-      "source": "OpenClaw needs photo library access when you choose existing photos to share with your assistant.",
-      "translated": "OpenClaw cần quyền truy cập thư viện ảnh khi bạn chọn ảnh hiện có để chia sẻ với trợ lý của mình."
+      "id": "native.apple.40ed4259ec869f1b",
+      "source": "OpenClaw lets your assistant read photos you allow and lets you choose photos to share.",
+      "translated": "OpenClaw cho phép trợ lý của bạn đọc những ảnh bạn cho phép và cho phép bạn chọn ảnh để chia sẻ."
     },
     {
       "id": "native.apple.81b673f0c6fc4371",
@@ -6984,6 +6984,11 @@
       "translated": "Tìm kiếm và thêm liên hệ từ trợ lý."
     },
     {
+      "id": "native.apple.eda8d96e40bcc36a",
+      "source": "Photos",
+      "translated": "Ảnh"
+    },
+    {
       "id": "native.apple.df0159ff34744870",
       "source": "Calendar (Add Events)",
       "translated": "Lịch (Thêm sự kiện)"
@@ -7012,6 +7017,21 @@
       "id": "native.apple.d6fd5e9f85b0e298",
       "source": "List, add, and complete reminders.",
       "translated": "Liệt kê, thêm và hoàn tất lời nhắc."
+    },
+    {
+      "id": "native.apple.651cc89381dd69c0",
+      "source": "Limited",
+      "translated": "Giới hạn"
+    },
+    {
+      "id": "native.apple.ab998419291361da",
+      "source": "Read photos you select for the assistant.",
+      "translated": "Đọc ảnh bạn chọn cho trợ lý."
+    },
+    {
+      "id": "native.apple.e8c07f7c48d086f9",
+      "source": "Read recent photos for the assistant.",
+      "translated": "Đọc ảnh gần đây cho trợ lý."
     },
     {
       "id": "native.apple.22b335bddf72e453",
