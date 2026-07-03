@@ -1764,6 +1764,26 @@
       "translated": "अपडेट"
     },
     {
+      "id": "native.android.13f70e22b5648308",
+      "source": "Licenses",
+      "translated": "लाइसेंस"
+    },
+    {
+      "id": "native.android.996367534eb94cc2",
+      "source": "OpenClaw appreciates its partners in the open-source community.",
+      "translated": "OpenClaw ओपन-सोर्स समुदाय में अपने भागीदारों की सराहना करता है।"
+    },
+    {
+      "id": "native.android.24da1d2eb750ba07",
+      "source": "No license notices are packaged in this build.",
+      "translated": "इस बिल्ड में कोई लाइसेंस नोटिस पैकेज नहीं किए गए हैं।"
+    },
+    {
+      "id": "native.android.933e72cac84c571e",
+      "source": "Open ${license.title}",
+      "translated": "${license.title} खोलें"
+    },
+    {
       "id": "native.android.cfffa5b838a65ca4",
       "source": "Check",
       "translated": "जाँचें"
