@@ -6349,9 +6349,9 @@
       "translated": "OpenClaw kann Bewegungsdaten verwenden, um gerätebewusste Interaktionen und Automatisierungen zu unterstützen."
     },
     {
-      "id": "native.apple.b6c35a14bb309193",
-      "source": "OpenClaw needs photo library access when you choose existing photos to share with your assistant.",
-      "translated": "OpenClaw benötigt Zugriff auf die Fotomediathek, wenn du vorhandene Fotos auswählst, um sie mit deinem Assistenten zu teilen."
+      "id": "native.apple.40ed4259ec869f1b",
+      "source": "OpenClaw lets your assistant read photos you allow and lets you choose photos to share.",
+      "translated": "OpenClaw ermöglicht deinem Assistenten, von dir erlaubte Fotos zu lesen, und lässt dich Fotos zum Teilen auswählen."
     },
     {
       "id": "native.apple.81b673f0c6fc4371",
@@ -6984,6 +6984,11 @@
       "translated": "Kontakte über den Assistenten suchen und hinzufügen."
     },
     {
+      "id": "native.apple.eda8d96e40bcc36a",
+      "source": "Photos",
+      "translated": "Fotos"
+    },
+    {
       "id": "native.apple.df0159ff34744870",
       "source": "Calendar (Add Events)",
       "translated": "Kalender (Ereignisse hinzufügen)"
@@ -7012,6 +7017,21 @@
       "id": "native.apple.d6fd5e9f85b0e298",
       "source": "List, add, and complete reminders.",
       "translated": "Erinnerungen auflisten, hinzufügen und abschließen."
+    },
+    {
+      "id": "native.apple.651cc89381dd69c0",
+      "source": "Limited",
+      "translated": "Eingeschränkt"
+    },
+    {
+      "id": "native.apple.ab998419291361da",
+      "source": "Read photos you select for the assistant.",
+      "translated": "Lies Fotos, die du für den Assistenten auswählst."
+    },
+    {
+      "id": "native.apple.e8c07f7c48d086f9",
+      "source": "Read recent photos for the assistant.",
+      "translated": "Lies aktuelle Fotos für den Assistenten."
     },
     {
       "id": "native.apple.22b335bddf72e453",
