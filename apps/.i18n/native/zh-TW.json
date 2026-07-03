@@ -3154,6 +3154,11 @@
       "translated": "傳送"
     },
     {
+      "id": "native.android.ff4e568bce360d5f",
+      "source": "No commands found",
+      "translated": "找不到指令"
+    },
+    {
       "id": "native.android.bef360f847488651",
       "source": "Image unavailable",
       "translated": "圖片無法使用"
@@ -3229,6 +3234,11 @@
       "translated": "OpenClaw"
     },
     {
+      "id": "native.android.4437f3cbdb3c8cbe",
+      "source": "New chat",
+      "translated": "新增聊天"
+    },
+    {
       "id": "native.android.0066c3883e9eff15",
       "source": "Refresh chat",
       "translated": "重新整理聊天"
@@ -3289,6 +3299,11 @@
       "translated": "停止"
     },
     {
+      "id": "native.android.5953c956ff208e6e",
+      "source": "No commands found",
+      "translated": "找不到指令"
+    },
+    {
       "id": "native.android.8e3e367df24cae4b",
       "source": "Gateway offline",
       "translated": "Gateway 離線"
@@ -3312,11 +3327,6 @@
       "id": "native.android.5054269049758d6a",
       "source": "Remove attachment",
       "translated": "移除附件"
-    },
-    {
-      "id": "native.android.326caa6b92aa9bdf",
-      "source": "New chat",
-      "translated": "新增聊天"
     },
     {
       "id": "native.android.5fa853a957713a56",
