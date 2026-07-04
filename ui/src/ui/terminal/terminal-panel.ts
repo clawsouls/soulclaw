@@ -6,7 +6,7 @@ import type { FitAddon, Terminal } from "ghostty-web";
 // ghostty-web (WASM, ~0.5MB) is dynamically imported on first open so it never
 // weighs down the initial Control UI bundle.
 import { LitElement, css, html, nothing, svg } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { property, state } from "lit/decorators.js";
 import { t } from "../../i18n/index.ts";
 import { TerminalConnection, type TerminalGatewayClient } from "./terminal-connection.ts";
 import { terminalTheme } from "./terminal-theme.ts";
@@ -96,7 +96,6 @@ function clampSize(value: unknown, min: number, max: number, fallback: number): 
 }
 
 /** `<openclaw-terminal-panel>` — the dockable Control UI shell surface. */
-@customElement("openclaw-terminal-panel")
 export class OpenClawTerminalPanel extends LitElement {
   /** Gateway client used for terminal.* RPCs; null until connected. */
   @property({ attribute: false }) client: TerminalGatewayClient | null = null;
@@ -780,6 +779,12 @@ export class OpenClawTerminalPanel extends LitElement {
       color: var(--danger, #ff6b6b);
     }
   `;
+}
+
+// Guarded define (not @customElement) so re-imports under a shared registry —
+// e.g. vitest with isolate=false — don't throw "already registered".
+if (!customElements.get("openclaw-terminal-panel")) {
+  customElements.define("openclaw-terminal-panel", OpenClawTerminalPanel);
 }
 
 declare global {
