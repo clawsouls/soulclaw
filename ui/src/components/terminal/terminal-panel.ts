@@ -547,6 +547,11 @@ export class OpenClawTerminalPanel extends LitElement {
   private disposeAllTabs(): void {
     for (const tab of this.tabs) {
       if (tab.gatewaySessionId && tab.status === "live") {
+        // Safe for the reattach flow: on a real disconnect the client rejects
+        // this locally (socket not OPEN), and after an instant reconnect the
+        // server refuses it because the new connection does not own the
+        // session. It only takes effect on deliberate teardown while this
+        // connection still owns the session (disable/scope loss) — intended.
         void this.connection?.close(tab.gatewaySessionId);
       }
       // Covers a tab whose open RPC is still in flight; its continuation
