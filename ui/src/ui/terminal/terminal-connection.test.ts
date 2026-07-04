@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { TerminalConnection, type TerminalGatewayClient } from "./terminal-connection.ts";
 
 /** Fake gateway client that records requests and lets tests push events. */
@@ -263,7 +263,7 @@ describe("TerminalConnection", () => {
 
     // The server finalizes the session (emitting terminal.exit) before it
     // responds to terminal.close, so the event arrives with no sink.
-    const baseRequest = client.request;
+    const baseRequest = client.request.bind(client);
     client.request = ((method: string, params: unknown) => {
       if (method === "terminal.close") {
         client.emit("terminal.exit", {
