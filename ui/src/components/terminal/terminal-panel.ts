@@ -188,10 +188,10 @@ export class OpenClawTerminalPanel extends LitElement {
         // tabs and the connection (disposeAllTabs drops the gateway
         // subscription too). Server sessions survive a disconnect for the
         // detach grace period, and their ids stay persisted, so the restore on
-        // reconnect reattaches them instead of opening fresh shells.
-        if (this.open) {
-          this.closePanel();
-        }
+        // reconnect reattaches them instead of opening fresh shells. Hide the
+        // panel WITHOUT persisting: a disconnect must not overwrite the user's
+        // open preference, or the reconnect path would never auto-reopen.
+        this.open = false;
         this.disposeAllTabs();
       } else if (!this.open && loadLayout().open) {
         // Hello arrived after mount (or a reconnect); restore the persisted
