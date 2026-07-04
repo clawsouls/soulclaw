@@ -442,6 +442,7 @@ export const nl: TranslationMap = {
     tabHint: "{agent} · {cwd}",
     exited: "exited",
     exitedCode: "exited ({code})",
+    detached: "detached",
     dockBottom: "Dock to bottom",
     dockRight: "Dock to right",
   },
