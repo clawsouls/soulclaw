@@ -180,6 +180,11 @@ export class TerminalConnection {
     this.sinks.delete(sessionId);
     this.pending.delete(sessionId);
     await this.client.request("terminal.close", { sessionId }).catch(() => undefined);
+    // The server emits this session's final terminal.exit while handling the
+    // close RPC (the event frame precedes the response), and with the sink
+    // already gone it lands in the early-event buffer. Drop it again or closed
+    // ids accumulate for the lifetime of the subscription.
+    this.pending.delete(sessionId);
     this.maybeUnsubscribe();
   }
 

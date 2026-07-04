@@ -247,6 +247,59 @@ describe("TerminalConnection", () => {
     expect(data).toEqual(["early"]);
   });
 
+  it("drops the final exit the server emits while a close RPC is in flight", async () => {
+    const client = makeFakeClient();
+    const conn = new TerminalConnection(client);
+    await conn.open({ cols: 80, rows: 24 }, { onData: () => {}, onExit: () => {} });
+    // A second session keeps the event subscription alive across the close.
+    client.nextResponse = {
+      sessionId: "s2",
+      agentId: "main",
+      shell: "/bin/zsh",
+      cwd: "/work",
+      confined: false,
+    };
+    await conn.open({ cols: 80, rows: 24 }, { onData: () => {}, onExit: () => {} });
+
+    // The server finalizes the session (emitting terminal.exit) before it
+    // responds to terminal.close, so the event arrives with no sink.
+    const baseRequest = client.request;
+    client.request = ((method: string, params: unknown) => {
+      if (method === "terminal.close") {
+        client.emit("terminal.exit", {
+          sessionId: "s1",
+          exitCode: null,
+          signal: null,
+          reason: "closed",
+        });
+      }
+      return baseRequest(method, params);
+    }) as typeof client.request;
+    await conn.close("s1");
+
+    // If that exit were buffered, reusing the id would replay it into the new
+    // session's sink and instantly mark a live tab as exited.
+    client.nextResponse = {
+      sessionId: "s1",
+      agentId: "main",
+      shell: "/bin/zsh",
+      cwd: "/work",
+      confined: false,
+    };
+    let staleExit = false;
+    await conn.open(
+      { cols: 80, rows: 24 },
+      {
+        onData: () => {},
+        onExit: () => {
+          staleExit = true;
+        },
+      },
+    );
+    expect(staleExit).toBe(false);
+    expect(conn.size).toBe(2);
+  });
+
   it("dispose() drops the gateway subscription and clears buffered state", async () => {
     const client = makeFakeClient();
     const conn = new TerminalConnection(client);
