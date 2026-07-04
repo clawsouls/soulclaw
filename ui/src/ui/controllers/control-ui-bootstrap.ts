@@ -38,6 +38,7 @@ export type ControlUiBootstrapState = {
   embedSandboxMode: ControlUiEmbedSandboxMode;
   allowExternalEmbedUrls: boolean;
   chatMessageMaxWidth?: string | null;
+  terminalEnabled?: boolean;
   sessionKey?: string | null;
   hello?: { auth?: { deviceToken?: string | null } | null } | null;
   settings?: { token?: string | null } | null;
@@ -188,6 +189,8 @@ export async function loadControlUiBootstrapConfig(
       typeof parsed.chatMessageMaxWidth === "string" && parsed.chatMessageMaxWidth.trim()
         ? parsed.chatMessageMaxWidth
         : null;
+    // Default true when older gateways omit the flag; only an explicit false hides it.
+    state.terminalEnabled = parsed.terminalEnabled !== false;
     applyControlUiSeamColor(parsed.seamColor);
     setUiTimeFormatPreference(parsed.timeFormat);
   } catch {
