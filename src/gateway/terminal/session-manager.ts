@@ -109,7 +109,8 @@ export class TerminalSessionManager {
     } catch (err) {
       this.opening -= 1;
       this.untrackPendingOpen(request.connId, token);
-      return { ok: false, code: "spawn_failed", message: String((err as Error)?.message ?? err) };
+      const message = err instanceof Error ? err.message : String(err);
+      return { ok: false, code: "spawn_failed", message };
     }
     // Hand the reservation over to the live session (synchronous from here — no
     // await — so the counts never both drop).
@@ -239,8 +240,8 @@ export class TerminalSessionManager {
     if (!ids) {
       return;
     }
-    // Copy ids first: finalize() mutates the same set during iteration.
-    for (const id of [...ids]) {
+    // Snapshot first: finalize() mutates the same set during iteration.
+    for (const id of Array.from(ids)) {
       const session = this.sessions.get(id);
       if (session) {
         this.finalize(session, "disconnected", {}, { silent: true });
@@ -262,7 +263,8 @@ export class TerminalSessionManager {
         token.aborted = true;
       }
     }
-    for (const session of [...this.sessions.values()]) {
+    // Snapshot first: finalize() deletes from this.sessions during iteration.
+    for (const session of Array.from(this.sessions.values())) {
       this.finalize(session, "disconnected", {}, { silent: true });
     }
   }
