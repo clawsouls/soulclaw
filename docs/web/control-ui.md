@@ -165,13 +165,6 @@ Imported themes are stored only in the current browser profile. They are not wri
     - Structured SecretRef object values are rendered read-only in form text inputs to prevent accidental object-to-string corruption.
 
   </Accordion>
-  <Accordion title="Operator terminal">
-    - Dockable PTY shell on the gateway host (`terminal.*` RPCs), restricted to admin-scope operator sessions; hidden unless the gateway advertises it (`gateway.terminal.enabled`).
-    - Sessions start in the target agent's workspace; fully sandboxed agents (`sandbox.mode: "all"`) are refused fail-closed.
-    - Dropped connections (page reload, laptop sleep) detach sessions instead of killing them; on reconnect the same browser tab reattaches its sessions and replays recent output. Detached sessions are killed after `gateway.terminal.detachedSessionTimeoutSeconds` (default 300; `0` restores kill-on-disconnect).
-    - `terminal.list` shows attachable sessions, `terminal.attach` adopts one (tmux-style take-over), and `terminal.text` reads a session's recent output as plain text without attaching — an agent/tooling affordance.
-
-  </Accordion>
   <Accordion title="Debug, logs, update">
     - Debug: status/health/models snapshots + event log + manual RPC calls (`status`, `health`, `models.list`).
     - The event log includes Control UI refresh/RPC timings, slow chat/config render timings, and browser responsiveness entries for long animation frames or long tasks when the browser exposes those PerformanceObserver entry types.
@@ -223,6 +216,8 @@ The terminal is an unconfined host shell and inherits the Gateway process enviro
 </Warning>
 
 Use **Ctrl + backtick** to toggle the dock. The layout supports bottom and right docking, resizes with the browser viewport, and keeps multiple shell tabs. See [Gateway configuration](/gateway/configuration-reference#gateway) for `gateway.terminal.enabled` and the optional `gateway.terminal.shell` override.
+
+Sessions survive disconnects: a page reload, laptop sleep, or network blip detaches the session on the Gateway instead of killing it, and the same browser tab reattaches on reconnect with recent output replayed. Detached sessions are killed after `gateway.terminal.detachedSessionTimeoutSeconds` (default 300 seconds; `0` restores kill-on-disconnect). `terminal.list` shows attachable sessions, `terminal.attach` adopts one (tmux-style take-over), and `terminal.text` reads a session's recent output as plain text without attaching — an agent/tooling affordance.
 
 ## Chat behavior
 

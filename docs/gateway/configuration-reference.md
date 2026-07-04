@@ -616,6 +616,7 @@ See [Inferred commitments](/concepts/commitments).
 - `controlUi.dangerouslyAllowHostHeaderOriginFallback`: dangerous mode that enables Host-header origin fallback for deployments that intentionally rely on Host-header origin policy.
 - `terminal.enabled`: opt in to the admin-scoped operator terminal. Default: `false`. The terminal starts a host PTY in the selected agent workspace, inherits the Gateway process environment, and is refused for agents with `sandbox.mode: "all"`. Enable it only for trusted operator deployments; changing it restarts the Gateway and updates the Control UI content security policy.
 - `terminal.shell`: optional shell executable. When unset, OpenClaw uses `$SHELL` on Unix and `%ComSpec%` on Windows.
+- `terminal.detachedSessionTimeoutSeconds`: how long a terminal session survives after its connection drops (page reload, laptop sleep), staying reattachable via `terminal.attach` with its recent output replayed. Default: `300`. Set `0` to kill sessions the moment their connection drops. Detached sessions keep running their commands, so shorten this on shared or exposed hosts.
 - `remote.transport`: `ssh` (default) or `direct` (ws/wss). For `direct`, `remote.url` must be `wss://` for public hosts; plaintext `ws://` is accepted only for loopback, LAN, link-local, `.local`, `.ts.net`, and Tailscale CGNAT hosts.
 - `remote.remotePort`: gateway port on the remote SSH host. Defaults to `18789`; use this when the local tunnel port differs from the remote gateway port.
 - `remote.sshHostKeyPolicy`: macOS SSH tunnel host-key policy. `strict` is the default and requires an already trusted key. `openssh` is an explicit opt-in to the effective OpenSSH configuration for managed aliases; review matching user and system SSH settings before using it. The macOS app and `configure-remote` reset this policy to `strict` when changing targets unless explicitly opted in again.
@@ -716,26 +717,6 @@ See [Multiple Gateways](/gateway/multiple-gateways).
   - `"hybrid"` (default): try hot reload first; fall back to restart if required.
 - `debounceMs`: debounce window in ms before config changes are applied (non-negative integer).
 - `deferralTimeoutMs`: optional maximum time in ms to wait for in-flight operations before forcing a restart or channel hot reload. Omit it to use the default bounded wait (`300000`); set `0` to wait indefinitely and log periodic still-pending warnings.
-
-### `gateway.terminal`
-
-```json5
-{
-  gateway: {
-    terminal: {
-      enabled: true,
-      shell: "/bin/zsh",
-      detachedSessionTimeoutSeconds: 300,
-    },
-  },
-}
-```
-
-Operator terminal served to the Control UI and mobile clients: a PTY-backed shell on the gateway host, restricted to admin-scope operator sessions. Changing any `gateway.terminal.*` key restarts the gateway.
-
-- `enabled`: master switch for the terminal surface (default: `true`). Disabling removes the browser/mobile shell entirely.
-- `shell`: shell executable to launch. Unset uses the host login shell (`$SHELL` on Unix, `%ComSpec%` on Windows).
-- `detachedSessionTimeoutSeconds`: how long a session survives after its connection drops (page reload, laptop sleep), staying reattachable with its recent output replayed (default: `300`). Set `0` to kill sessions the moment their connection drops. Detached sessions keep running their commands, so shorten this on shared or exposed hosts.
 
 ---
 
