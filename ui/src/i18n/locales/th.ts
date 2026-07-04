@@ -438,7 +438,7 @@ export const th: TranslationMap = {
     tabHint: "{agent} · {cwd}",
     exited: "exited",
     exitedCode: "exited ({code})",
-    detached: "detached",
+    detached: "แยกออกแล้ว",
     dockBottom: "Dock to bottom",
     dockRight: "Dock to right",
   },

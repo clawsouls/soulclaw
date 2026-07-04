@@ -439,7 +439,7 @@ export const ar: TranslationMap = {
     tabHint: "{agent} · {cwd}",
     exited: "exited",
     exitedCode: "exited ({code})",
-    detached: "detached",
+    detached: "غير متصل",
     dockBottom: "Dock to bottom",
     dockRight: "Dock to right",
   },

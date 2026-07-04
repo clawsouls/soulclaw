@@ -443,7 +443,7 @@ export const fr: TranslationMap = {
     tabHint: "{agent} · {cwd}",
     exited: "exited",
     exitedCode: "exited ({code})",
-    detached: "detached",
+    detached: "détaché",
     dockBottom: "Dock to bottom",
     dockRight: "Dock to right",
   },

@@ -439,7 +439,7 @@ export const ko: TranslationMap = {
     tabHint: "{agent} · {cwd}",
     exited: "exited",
     exitedCode: "exited ({code})",
-    detached: "detached",
+    detached: "분리됨",
     dockBottom: "Dock to bottom",
     dockRight: "Dock to right",
   },

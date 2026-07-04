@@ -437,7 +437,7 @@ export const zh_CN: TranslationMap = {
     tabHint: "{agent} · {cwd}",
     exited: "exited",
     exitedCode: "exited ({code})",
-    detached: "detached",
+    detached: "已分离",
     dockBottom: "Dock to bottom",
     dockRight: "Dock to right",
   },

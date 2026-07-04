@@ -444,7 +444,7 @@ export const ja_JP: TranslationMap = {
     tabHint: "{agent} · {cwd}",
     exited: "exited",
     exitedCode: "exited ({code})",
-    detached: "detached",
+    detached: "デタッチ済み",
     dockBottom: "Dock to bottom",
     dockRight: "Dock to right",
   },
