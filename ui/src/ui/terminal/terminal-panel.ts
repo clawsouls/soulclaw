@@ -39,6 +39,13 @@ type TerminalTabState = {
   host: HTMLDivElement;
   status: "live" | "exited";
   statusLabel?: string;
+  /**
+   * Set when the tab is closed while its terminal.open RPC is still in flight
+   * (gatewaySessionId is empty in that window, so closeTab cannot close the
+   * server session). The open continuation checks this and closes the freshly
+   * created session instead of wiring it to the disposed terminal.
+   */
+  cancelled?: boolean;
 };
 
 /** Reduces a shell path to a tab label, e.g. "/bin/zsh" -> "zsh". */
@@ -63,16 +70,29 @@ function loadLayout(): PanelLayout {
     return {
       open: Boolean(parsed.open),
       dock: parsed.dock === "right" ? "right" : "bottom",
-      height: clampSize(parsed.height, MIN_HEIGHT, DEFAULT_LAYOUT.height),
-      width: clampSize(parsed.width, MIN_WIDTH, DEFAULT_LAYOUT.width),
+      height: clampSize(parsed.height, MIN_HEIGHT, maxPanelHeight(), DEFAULT_LAYOUT.height),
+      width: clampSize(parsed.width, MIN_WIDTH, maxPanelWidth(), DEFAULT_LAYOUT.width),
     };
   } catch {
     return { ...DEFAULT_LAYOUT };
   }
 }
 
-function clampSize(value: unknown, min: number, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) && value >= min ? value : fallback;
+// A size persisted on a large desktop must not swallow a smaller window: cap
+// the dock at 80% of the viewport so the header/resizer stay reachable and the
+// shell content keeps a usable slice.
+function maxPanelHeight(): number {
+  return Math.max(MIN_HEIGHT, Math.floor((globalThis.innerHeight || 800) * 0.8));
+}
+
+function maxPanelWidth(): number {
+  return Math.max(MIN_WIDTH, Math.floor((globalThis.innerWidth || 1280) * 0.8));
+}
+
+function clampSize(value: unknown, min: number, max: number, fallback: number): number {
+  const size =
+    typeof value === "number" && Number.isFinite(value) && value >= min ? value : fallback;
+  return Math.min(size, max);
 }
 
 /** `<openclaw-terminal-panel>` — the dockable Control UI shell surface. */
@@ -98,6 +118,19 @@ export class OpenClawTerminalPanel extends LitElement {
   private tabSeq = 0;
   private readonly onGlobalKeyDown = (event: KeyboardEvent) => this.handleGlobalKey(event);
   private readonly onToggleRequest = () => this.toggle();
+  // Re-clamp a dock sized on a larger window so the header/resizer never end
+  // up off-screen after the viewport shrinks (e.g. rotate, window resize).
+  private readonly onViewportResize = () => {
+    const height = Math.min(this.height, maxPanelHeight());
+    const width = Math.min(this.width, maxPanelWidth());
+    if (height === this.height && width === this.width) {
+      return;
+    }
+    this.height = height;
+    this.width = width;
+    this.syncLayoutReservation();
+    this.tabs.find((tab) => tab.id === this.activeId)?.fit.fit();
+  };
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -109,6 +142,7 @@ export class OpenClawTerminalPanel extends LitElement {
     this.open = layout.open && this.available;
     window.addEventListener("keydown", this.onGlobalKeyDown);
     window.addEventListener(TOGGLE_EVENT, this.onToggleRequest);
+    window.addEventListener("resize", this.onViewportResize);
     if (this.open) {
       void this.ensureInitialSession();
     }
@@ -118,6 +152,7 @@ export class OpenClawTerminalPanel extends LitElement {
     super.disconnectedCallback();
     window.removeEventListener("keydown", this.onGlobalKeyDown);
     window.removeEventListener(TOGGLE_EVENT, this.onToggleRequest);
+    window.removeEventListener("resize", this.onViewportResize);
     // Release the content-area reservation so the shell reflows to full size.
     document.documentElement.style.setProperty("--oc-terminal-reserve-bottom", "0px");
     document.documentElement.style.setProperty("--oc-terminal-reserve-right", "0px");
@@ -145,7 +180,15 @@ export class OpenClawTerminalPanel extends LitElement {
     if (changed.has("themeMode")) {
       const theme = terminalTheme(this.themeMode);
       for (const tab of this.tabs) {
-        tab.term.options.theme = theme;
+        // ghostty-web 0.4.0 ignores options.theme after open() (its option
+        // handler only warns), so update the renderer directly and force one
+        // full render — the frame loop repaints only dirty rows, which would
+        // leave a static screen on the old palette.
+        const { term } = tab;
+        if (term.renderer && term.wasmTerm) {
+          term.renderer.setTheme(theme);
+          term.renderer.render(term.wasmTerm, true, term.viewportY, term);
+        }
       }
     }
     // Hiding the panel returns `nothing`, which detaches each session's ghostty
@@ -227,6 +270,9 @@ export class OpenClawTerminalPanel extends LitElement {
       if (!this.connection) {
         this.connection = new TerminalConnection(this.client);
       }
+      // Captured so the cancelled-open cleanup below can close the session even
+      // if a teardown swaps this.connection while the open RPC is in flight.
+      const connection = this.connection;
       const host = document.createElement("div");
       host.className = "tp-host";
       const term = new Terminal({
@@ -269,13 +315,26 @@ export class OpenClawTerminalPanel extends LitElement {
       const cols = term.cols || 80;
       const rows = term.rows || 24;
 
-      const result = await this.connection.open(
+      const result = await connection.open(
         { cols, rows },
         {
-          onData: (data) => term.write(data),
+          // The cancelled guard also protects the buffered-event replay inside
+          // connection.open from writing to an already-disposed terminal.
+          onData: (data) => {
+            if (!tab.cancelled) {
+              term.write(data);
+            }
+          },
           onExit: (info) => this.handleExit(id, info),
         },
       );
+      if (tab.cancelled) {
+        // The tab's close button was clicked while the open RPC was in flight.
+        // The server session is live and its sink registered; close it now or
+        // it survives invisibly (eating the session cap) until disconnect.
+        void connection.close(result.sessionId);
+        return;
+      }
       tab.gatewaySessionId = result.sessionId;
       tab.shellName = shellBasename(result.shell);
       tab.hint = t("terminal.tabHint", { agent: result.agentId, cwd: result.cwd });
@@ -327,6 +386,10 @@ export class OpenClawTerminalPanel extends LitElement {
     }
     if (tab.gatewaySessionId && tab.status === "live") {
       void this.connection?.close(tab.gatewaySessionId);
+    } else if (!tab.gatewaySessionId && tab.status === "live") {
+      // Open still in flight: no session id to close yet. Flag it so the open
+      // continuation closes the server session as soon as the RPC resolves.
+      tab.cancelled = true;
     }
     this.disposeTab(tab);
     this.tabs = this.tabs.filter((entry) => entry.id !== tabId);
@@ -363,6 +426,9 @@ export class OpenClawTerminalPanel extends LitElement {
       if (tab.gatewaySessionId && tab.status === "live") {
         void this.connection?.close(tab.gatewaySessionId);
       }
+      // Covers a tab whose open RPC is still in flight; its continuation
+      // closes the fresh session instead of adopting the disposed terminal.
+      tab.cancelled = true;
       this.disposeTab(tab);
     }
     this.tabs = [];
@@ -405,9 +471,11 @@ export class OpenClawTerminalPanel extends LitElement {
     const startWidth = this.width;
     const onMove = (move: PointerEvent) => {
       if (this.dock === "bottom") {
-        this.height = Math.max(MIN_HEIGHT, startHeight + (startY - move.clientY));
+        const next = Math.max(MIN_HEIGHT, startHeight + (startY - move.clientY));
+        this.height = Math.min(next, maxPanelHeight());
       } else {
-        this.width = Math.max(MIN_WIDTH, startWidth + (startX - move.clientX));
+        const next = Math.max(MIN_WIDTH, startWidth + (startX - move.clientX));
+        this.width = Math.min(next, maxPanelWidth());
       }
       // Reflow the content reservation live so the shell tracks the drag.
       this.syncLayoutReservation();
