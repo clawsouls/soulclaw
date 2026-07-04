@@ -207,6 +207,46 @@ describe("TerminalConnection", () => {
     expect(client.listenerCount()).toBe(0);
   });
 
+  it("keeps the listener while an open is in flight even if every session closes", async () => {
+    const client = makeFakeClient();
+    const conn = new TerminalConnection(client);
+    await conn.open({ cols: 80, rows: 24 }, { onData: () => {}, onExit: () => {} });
+
+    // Second open held in flight while the only registered session closes.
+    let resolveOpen: (() => void) | undefined;
+    client.request = ((method: string, params: unknown) => {
+      client.requests.push({ method, params });
+      if (method === "terminal.open") {
+        return new Promise<unknown>((resolve) => {
+          resolveOpen = () =>
+            resolve({
+              sessionId: "s2",
+              agentId: "main",
+              shell: "/bin/zsh",
+              cwd: "/work",
+              confined: false,
+            });
+        });
+      }
+      return Promise.resolve({});
+    }) as typeof client.request;
+    const data: string[] = [];
+    const openPromise = conn.open(
+      { cols: 80, rows: 24 },
+      { onData: (d) => data.push(d), onExit: () => {} },
+    );
+
+    await conn.close("s1");
+    // The in-flight open must keep the subscription so s2's early output
+    // is buffered instead of silently lost.
+    expect(client.listenerCount()).toBe(1);
+    client.emit("terminal.data", { sessionId: "s2", seq: 0, data: "early" });
+
+    resolveOpen?.();
+    await openPromise;
+    expect(data).toEqual(["early"]);
+  });
+
   it("dispose() drops the gateway subscription and clears buffered state", async () => {
     const client = makeFakeClient();
     const conn = new TerminalConnection(client);
