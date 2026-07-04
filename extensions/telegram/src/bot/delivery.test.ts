@@ -1334,6 +1334,31 @@ describe("deliverReplies", () => {
     expect(mockCallArg(sendMessage, 0, 2)).not.toHaveProperty("parse_mode");
   });
 
+  it("falls back to plain text when a rich message is rejected for empty rich content", async () => {
+    const runtime = createRuntime();
+    const sendMessage = vi.fn().mockResolvedValue({
+      message_id: 15,
+      chat: { id: "123" },
+    });
+    const bot = createBot({ sendMessage });
+    (bot.api.raw as unknown as { sendRichMessage: ReturnType<typeof vi.fn> }).sendRichMessage = vi
+      .fn()
+      .mockRejectedValue(createRichContentRequiredError());
+    const text = "delivery continues as plain text";
+
+    await deliverWith({
+      replies: [{ text }],
+      runtime,
+      bot,
+      richMessages: true,
+    });
+
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(firstMockCallArg(sendMessage, 0)).toBe("123");
+    expect(firstMockCallArg(sendMessage, 1)).toBe(text);
+    expect(mockCallArg(sendMessage, 0, 2)).not.toHaveProperty("parse_mode");
+  });
+
   it("uses table-aware plain text when rich reply fallback sends", async () => {
     const runtime = createRuntime();
     const sendMessage = vi.fn().mockResolvedValue({

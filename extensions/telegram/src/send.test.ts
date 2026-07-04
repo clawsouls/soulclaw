@@ -1117,6 +1117,21 @@ describe("sendMessageTelegram", () => {
     expect(result).toEqual({ messageId: "46", chatId: "123" });
   });
 
+  it("falls back to plain text when durable rich sends require nonempty content", async () => {
+    const text = "still visible after rich content rejection";
+    botRawApi.sendRichMessage.mockRejectedValueOnce(createRichContentRequiredError());
+    botApi.sendMessage.mockResolvedValueOnce({ message_id: 55, chat: { id: "123" } });
+
+    const result = await sendMessageTelegram("123", text, {
+      cfg: { channels: { telegram: { richMessages: true } } },
+      token: "tok",
+    });
+
+    expect(botRawApi.sendRichMessage).toHaveBeenCalledTimes(1);
+    expect(botApi.sendMessage).toHaveBeenCalledWith("123", text);
+    expect(result).toEqual({ messageId: "55", chatId: "123" });
+  });
+
   it("uses table-aware plain text when durable rich sends fall back", async () => {
     const logFile = captureInfoLogs();
     const html =

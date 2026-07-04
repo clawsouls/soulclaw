@@ -183,8 +183,20 @@ describe("createTypingCallbacks", () => {
       expect(start).toHaveBeenCalledTimes(2);
       expect(onStartError).toHaveBeenCalledTimes(2);
 
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(start).toHaveBeenCalledTimes(3);
+      expect(onStartError).toHaveBeenCalledTimes(3);
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(start).toHaveBeenCalledTimes(4);
+      expect(onStartError).toHaveBeenCalledTimes(4);
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(start).toHaveBeenCalledTimes(5);
+      expect(onStartError).toHaveBeenCalledTimes(5);
+
       await vi.advanceTimersByTimeAsync(9_000);
-      expect(start).toHaveBeenCalledTimes(2);
+      expect(start).toHaveBeenCalledTimes(5);
     });
   });
 
@@ -207,8 +219,20 @@ describe("createTypingCallbacks", () => {
       expect(start).toHaveBeenCalledTimes(2);
       expect(onStartError).toHaveBeenCalledTimes(2);
 
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(start).toHaveBeenCalledTimes(3);
+      expect(onStartError).toHaveBeenCalledTimes(3);
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(start).toHaveBeenCalledTimes(4);
+      expect(onStartError).toHaveBeenCalledTimes(4);
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(start).toHaveBeenCalledTimes(5);
+      expect(onStartError).toHaveBeenCalledTimes(5);
+
       await vi.advanceTimersByTimeAsync(9_000);
-      expect(start).toHaveBeenCalledTimes(2);
+      expect(start).toHaveBeenCalledTimes(5);
     });
   });
 
