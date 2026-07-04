@@ -4,15 +4,18 @@ import { existsSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+  listAgentIds,
   resolveAgentWorkspaceDir,
   resolveDefaultAgentId,
 } from "../../agents/agent-scope-config.js";
 import { resolveSandboxConfigForAgent } from "../../agents/sandbox/config.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import { normalizeAgentId } from "../../routing/session-key.js";
 
 /** Why a terminal cannot open, or `null` when it can. */
 export type TerminalLaunchBlock =
   | { kind: "disabled" }
+  | { kind: "unknown-agent"; agentId: string }
   | { kind: "sandboxed"; agentId: string; mode: "all" };
 
 /** Resolved plan for a host terminal session. */
@@ -73,7 +76,14 @@ export function resolveTerminalLaunch(params: {
     return { ok: false, block: { kind: "disabled" } };
   }
   const env = params.env ?? process.env;
-  const agentId = params.agentId?.trim() || resolveDefaultAgentId(params.config);
+  const requested = params.agentId?.trim();
+  const agentId = requested ? normalizeAgentId(requested) : resolveDefaultAgentId(params.config);
+  // Fail closed on unknown ids: they would resolve against the *global*
+  // sandbox defaults and an invented workspace, sidestepping a per-agent
+  // `sandbox.mode: "all"` refusal below.
+  if (requested && !listAgentIds(params.config).includes(agentId)) {
+    return { ok: false, block: { kind: "unknown-agent", agentId } };
+  }
   const sandbox = resolveSandboxConfigForAgent(params.config, agentId);
   // Only "all" sandboxes every session. Under "non-main" the agent's main
   // session still runs on the host, so a host terminal there is consistent with

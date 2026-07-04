@@ -67,6 +67,14 @@ export const terminalHandlers: GatewayRequestHandlers = {
         respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, "terminal is disabled"));
         return;
       }
+      if (launch.block.kind === "unknown-agent") {
+        respond(
+          false,
+          undefined,
+          errorShape(ErrorCodes.INVALID_REQUEST, `unknown agent "${launch.block.agentId}"`),
+        );
+        return;
+      }
       // Fail closed: a sandboxed agent must never receive a host shell.
       respond(
         false,

@@ -90,6 +90,45 @@ describe("resolveTerminalLaunch", () => {
       expect(result.plan.cwd).toBe(workspace);
     }
   });
+
+  it("fails closed for an unknown explicit agent id", () => {
+    // Every configured agent is fully sandboxed; an unknown id must not fall
+    // through to the (unsandboxed) global defaults and a host-home shell.
+    const config = {
+      agents: {
+        list: [{ id: "locked", sandbox: { mode: "all" } }],
+      },
+    } as unknown as OpenClawConfig;
+    const result = resolveTerminalLaunch({
+      config,
+      enabled: true,
+      agentId: "ghost",
+      env: { SHELL: "/bin/zsh" },
+      platform: "linux",
+    });
+    expect(result).toEqual({ ok: false, block: { kind: "unknown-agent", agentId: "ghost" } });
+  });
+
+  it("accepts an explicit id that names a configured agent", () => {
+    const workspace = mkdtempSync(path.join(os.tmpdir(), "term-ws-id-"));
+    const config = {
+      agents: {
+        defaults: { workspace },
+        list: [{ id: "Ops" }],
+      },
+    } as unknown as OpenClawConfig;
+    const result = resolveTerminalLaunch({
+      config,
+      enabled: true,
+      agentId: "ops",
+      env: { SHELL: "/bin/zsh" },
+      platform: "linux",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.plan.agentId).toBe("ops");
+    }
+  });
 });
 
 describe("buildTerminalEnv", () => {
