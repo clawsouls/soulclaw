@@ -717,6 +717,26 @@ See [Multiple Gateways](/gateway/multiple-gateways).
 - `debounceMs`: debounce window in ms before config changes are applied (non-negative integer).
 - `deferralTimeoutMs`: optional maximum time in ms to wait for in-flight operations before forcing a restart or channel hot reload. Omit it to use the default bounded wait (`300000`); set `0` to wait indefinitely and log periodic still-pending warnings.
 
+### `gateway.terminal`
+
+```json5
+{
+  gateway: {
+    terminal: {
+      enabled: true,
+      shell: "/bin/zsh",
+      detachedSessionTimeoutSeconds: 300,
+    },
+  },
+}
+```
+
+Operator terminal served to the Control UI and mobile clients: a PTY-backed shell on the gateway host, restricted to admin-scope operator sessions. Changing any `gateway.terminal.*` key restarts the gateway.
+
+- `enabled`: master switch for the terminal surface (default: `true`). Disabling removes the browser/mobile shell entirely.
+- `shell`: shell executable to launch. Unset uses the host login shell (`$SHELL` on Unix, `%ComSpec%` on Windows).
+- `detachedSessionTimeoutSeconds`: how long a session survives after its connection drops (page reload, laptop sleep), staying reattachable with its recent output replayed (default: `300`). Set `0` to kill sessions the moment their connection drops. Detached sessions keep running their commands, so shorten this on shared or exposed hosts.
+
 ---
 
 ## Hooks
