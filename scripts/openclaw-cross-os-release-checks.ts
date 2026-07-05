@@ -727,7 +727,7 @@ export function resolvePackageCandidatePackCommand(sourceDir, packDir) {
   const packageHelper = join(sourceDir, "scripts", "package-openclaw-for-docker.mjs");
   if (existsSync(packageHelper)) {
     return {
-      args: [packageHelper, "--skip-build", "--source-dir", sourceDir, "--output-dir", packDir],
+      args: [packageHelper, "--skip-build", "--output-dir", packDir],
       command: process.execPath,
       kind: "docker-helper",
       logFileName: "package-candidate.log",

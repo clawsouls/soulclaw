@@ -680,7 +680,7 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
       const helper = resolvePackageCandidatePackCommand(dir, packDir);
 
       expect(helper).toMatchObject({
-        args: [helperPath, "--skip-build", "--source-dir", dir, "--output-dir", packDir],
+        args: [helperPath, "--skip-build", "--output-dir", packDir],
         command: process.execPath,
         kind: "docker-helper",
       });
