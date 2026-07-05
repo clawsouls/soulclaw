@@ -31,6 +31,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- **Status signal:** omit the redundant `Plugins: OK` row from compact `/status` output while retaining actionable plugin-health warnings and detailed plugin status.
 - **Control UI terminal rendering:** adopt the shared `@openclaw/libterminal` browser lifecycle and add Nerd Font fallbacks so icon-enabled shell listings render their glyphs when a compatible local font is installed.
 - **Control UI chat history:** hide redundant channel-final delivery mirrors when the preceding app-server assistant reply already shows the same text.
 - **Control UI chat spacing:** keep the first message comfortably clear of the topbar with a responsive minimum transcript inset.
