@@ -25,6 +25,7 @@ import ai.openclaw.app.ui.design.ClawScaffold
 import ai.openclaw.app.ui.design.ClawSecondaryButton
 import ai.openclaw.app.ui.design.ClawStatus
 import ai.openclaw.app.ui.design.ClawTheme
+import ai.openclaw.app.ui.design.OpenClawMascot
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -98,7 +99,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -506,12 +506,7 @@ private fun OverviewHeader(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(10.dp),
   ) {
-    Icon(
-      painter = painterResource(id = R.drawable.openclaw_logo),
-      contentDescription = null,
-      modifier = Modifier.size(25.dp),
-      tint = ClawTheme.colors.text,
-    )
+    OpenClawMascot(modifier = Modifier.size(25.dp), tint = ClawTheme.colors.text)
     Text(
       text = "OpenClaw",
       style = ClawTheme.type.title.copy(fontSize = 17.sp, lineHeight = 21.sp),
