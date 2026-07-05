@@ -143,6 +143,9 @@ describeControlUiE2e("Control UI responsive login gate E2E", () => {
         ),
       ).toBe(true);
 
+      // Recovery details live behind the collapsed failure disclosure; expand
+      // it before checking the docs link stays reachable inside the viewport.
+      await page.locator(".login-gate__failure-title").click();
       const failureDocs = page.locator(".login-gate__failure-docs");
       await failureDocs.scrollIntoViewIfNeeded();
       const failureDocsBox = await failureDocs.boundingBox();
@@ -155,14 +158,19 @@ describeControlUiE2e("Control UI responsive login gate E2E", () => {
     }
   });
 
-  it("keeps failure recovery visible while generic help stays collapsed", async () => {
+  it("collapses the failure and help disclosures until expanded", async () => {
     const context = await browser.newContext({ viewport: { height: 900, width: 1280 } });
     const page = await context.newPage();
 
     try {
       await renderLoginGate(page);
       const failure = page.locator(".login-gate__failure");
-      expect(await failure.evaluate((element) => element.tagName)).toBe("DIV");
+      expect(await failure.evaluate((element) => element.tagName)).toBe("DETAILS");
+      expect(await failure.getAttribute("open")).toBeNull();
+      expect(await page.locator(".login-gate__failure-title").isVisible()).toBe(true);
+      expect(await page.locator(".login-gate__failure-steps").isVisible()).toBe(false);
+
+      await page.locator(".login-gate__failure-title").click();
       expect(await page.locator(".login-gate__failure-summary").isVisible()).toBe(true);
       expect(await page.locator(".login-gate__failure-steps").isVisible()).toBe(true);
       expect(await page.locator(".login-gate__failure-docs").isVisible()).toBe(true);
@@ -171,6 +179,9 @@ describeControlUiE2e("Control UI responsive login gate E2E", () => {
       expect(await help.evaluate((element) => element.tagName)).toBe("DETAILS");
       expect(await help.getAttribute("open")).toBeNull();
       expect(await page.locator(".login-gate__steps").isVisible()).toBe(false);
+
+      await page.locator(".login-gate__help-title").click();
+      expect(await page.locator(".login-gate__steps").isVisible()).toBe(true);
     } finally {
       await closeContext(context);
     }
