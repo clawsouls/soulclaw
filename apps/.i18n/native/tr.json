@@ -3149,9 +3149,9 @@
       "translated": "Bir mesaj yazın…"
     },
     {
-      "id": "native.android.6522139155c1eebd",
-      "source": "Gateway is offline. Open Settings to reconnect.",
-      "translated": "Gateway çevrimdışı. Yeniden bağlanmak için Ayarlar'ı açın."
+      "id": "native.android.8e06942aa080e420",
+      "source": "Gateway is offline. Text messages are queued and sent after reconnecting.",
+      "translated": "Gateway çevrimdışı. Metin mesajları kuyruğa alındı ve yeniden bağlandıktan sonra gönderilecek."
     },
     {
       "id": "native.android.d6227e983e46ca7c",
@@ -3222,6 +3222,16 @@
       "id": "native.android.29021f925bf290c7",
       "source": "... +${toolCalls.size - 6} more",
       "translated": "... +${toolCalls.size - 6} daha"
+    },
+    {
+      "id": "native.android.9bd31c23ebdf7c7a",
+      "source": "Retry",
+      "translated": "Yeniden dene"
+    },
+    {
+      "id": "native.android.b728b15914267f57",
+      "source": "Delete",
+      "translated": "Sil"
     },
     {
       "id": "native.android.1d0bb431f08154a6",

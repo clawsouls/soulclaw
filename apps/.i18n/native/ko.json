@@ -3149,9 +3149,9 @@
       "translated": "메시지를 입력하세요…"
     },
     {
-      "id": "native.android.6522139155c1eebd",
-      "source": "Gateway is offline. Open Settings to reconnect.",
-      "translated": "Gateway가 오프라인입니다. 다시 연결하려면 설정을 여세요."
+      "id": "native.android.8e06942aa080e420",
+      "source": "Gateway is offline. Text messages are queued and sent after reconnecting.",
+      "translated": "Gateway가 오프라인 상태입니다. 문자 메시지는 대기열에 추가되며 다시 연결된 후 전송됩니다."
     },
     {
       "id": "native.android.d6227e983e46ca7c",
@@ -3222,6 +3222,16 @@
       "id": "native.android.29021f925bf290c7",
       "source": "... +${toolCalls.size - 6} more",
       "translated": "... +${toolCalls.size - 6}개 더"
+    },
+    {
+      "id": "native.android.9bd31c23ebdf7c7a",
+      "source": "Retry",
+      "translated": "다시 시도"
+    },
+    {
+      "id": "native.android.b728b15914267f57",
+      "source": "Delete",
+      "translated": "삭제"
     },
     {
       "id": "native.android.1d0bb431f08154a6",

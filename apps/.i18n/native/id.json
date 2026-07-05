@@ -3149,9 +3149,9 @@
       "translated": "Ketik pesan…"
     },
     {
-      "id": "native.android.6522139155c1eebd",
-      "source": "Gateway is offline. Open Settings to reconnect.",
-      "translated": "Gateway sedang offline. Buka Pengaturan untuk menyambungkan kembali."
+      "id": "native.android.8e06942aa080e420",
+      "source": "Gateway is offline. Text messages are queued and sent after reconnecting.",
+      "translated": "Gateway sedang offline. Pesan teks diantrekan dan dikirim setelah tersambung kembali."
     },
     {
       "id": "native.android.d6227e983e46ca7c",
@@ -3222,6 +3222,16 @@
       "id": "native.android.29021f925bf290c7",
       "source": "... +${toolCalls.size - 6} more",
       "translated": "... +${toolCalls.size - 6} lagi"
+    },
+    {
+      "id": "native.android.9bd31c23ebdf7c7a",
+      "source": "Retry",
+      "translated": "Coba lagi"
+    },
+    {
+      "id": "native.android.b728b15914267f57",
+      "source": "Delete",
+      "translated": "Hapus"
     },
     {
       "id": "native.android.1d0bb431f08154a6",

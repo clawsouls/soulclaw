@@ -3149,9 +3149,9 @@
       "translated": "输入消息…"
     },
     {
-      "id": "native.android.6522139155c1eebd",
-      "source": "Gateway is offline. Open Settings to reconnect.",
-      "translated": "Gateway 已离线。打开设置以重新连接。"
+      "id": "native.android.8e06942aa080e420",
+      "source": "Gateway is offline. Text messages are queued and sent after reconnecting.",
+      "translated": "Gateway 已离线。短信已排队，并将在重新连接后发送。"
     },
     {
       "id": "native.android.d6227e983e46ca7c",
@@ -3222,6 +3222,16 @@
       "id": "native.android.29021f925bf290c7",
       "source": "... +${toolCalls.size - 6} more",
       "translated": "... +${toolCalls.size - 6} 个更多"
+    },
+    {
+      "id": "native.android.9bd31c23ebdf7c7a",
+      "source": "Retry",
+      "translated": "重试"
+    },
+    {
+      "id": "native.android.b728b15914267f57",
+      "source": "Delete",
+      "translated": "删除"
     },
     {
       "id": "native.android.1d0bb431f08154a6",
