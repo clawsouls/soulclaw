@@ -699,25 +699,47 @@ async function prepareCandidate(params) {
     sourceDir: params.sourceDir,
     logPath: join(params.logsDir, "pnpm-pack-dry-run.log"),
   });
-  logPhase("prepare", "pnpm-pack");
+  logPhase("prepare", "package-candidate");
   const packResult = await runCommand(
-    pnpmCommand(),
-    ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", packDir],
+    process.execPath,
+    [
+      join(params.sourceDir, "scripts", "package-openclaw-for-docker.mjs"),
+      "--skip-build",
+      "--source-dir",
+      params.sourceDir,
+      "--output-dir",
+      packDir,
+    ],
     {
       cwd: params.sourceDir,
-      logPath: join(params.logsDir, "pnpm-pack.log"),
-      timeoutMs: 10 * 60 * 1000,
+      logPath: join(params.logsDir, "package-candidate.log"),
+      timeoutMs: 15 * 60 * 1000,
     },
   );
-  writeFileSync(packJsonPath, packResult.stdout, "utf8");
-  const parsedPack = JSON.parse(packResult.stdout);
-  const lastPack = Array.isArray(parsedPack) ? parsedPack.at(-1) : parsedPack;
-  const packedTarball = resolvePackDestinationTarball(lastPack?.filename, packDir, "pnpm pack");
+  const packOutputLines = packResult.stdout.trim().split(/\r?\n/u).filter(Boolean);
+  const packedTarball = resolvePackDestinationTarball(
+    packOutputLines.at(-1),
+    packDir,
+    "package-openclaw-for-docker",
+  );
+  writeFileSync(
+    packJsonPath,
+    `${JSON.stringify(
+      {
+        filename: packedTarball.fileName,
+        path: packedTarball.path,
+        version: packageJson.version,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
 
   return {
     sourceDir: params.sourceDir,
     sourceSha,
-    candidateVersion: String(lastPack.version ?? packageJson.version ?? "").trim(),
+    candidateVersion: String(packageJson.version ?? "").trim(),
     candidateTgz: packedTarball.path,
     candidateFileName: packedTarball.fileName,
   };

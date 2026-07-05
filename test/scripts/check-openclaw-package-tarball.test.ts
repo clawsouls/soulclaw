@@ -479,6 +479,52 @@ describe("check-openclaw-package-tarball", () => {
     );
   });
 
+  it("rejects private workspace dependencies that are not bundled", () => {
+    withTarball(
+      ["dist/index.js"],
+      { "dist/index.js": "export {};\n" },
+      (tarball) => {
+        const result = spawnSync("node", [CHECK_SCRIPT, tarball], { encoding: "utf8" });
+
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain(
+          "package.json dependencies.@openclaw/ai must be listed in bundleDependencies because it is private to the OpenClaw workspace",
+        );
+        expect(result.stderr).toContain(
+          "package.json dependencies.@openclaw/ai must be bundled in node_modules/@openclaw/ai",
+        );
+      },
+      "2026.6.11",
+      { packageJson: { dependencies: { "@openclaw/ai": "2026.6.11" } } },
+    );
+  });
+
+  it("accepts private workspace dependencies when bundled in the tarball", () => {
+    withTarball(
+      ["dist/index.js"],
+      {
+        "dist/index.js": "export {};\n",
+        "node_modules/@openclaw/ai/package.json": JSON.stringify({
+          name: "@openclaw/ai",
+          version: "2026.6.11",
+        }),
+      },
+      (tarball) => {
+        const result = spawnSync("node", [CHECK_SCRIPT, tarball], { encoding: "utf8" });
+
+        expect(result.status, result.stderr).toBe(0);
+        expect(result.stdout).toContain("OpenClaw package tarball integrity passed.");
+      },
+      "2026.6.11",
+      {
+        packageJson: {
+          dependencies: { "@openclaw/ai": "2026.6.11" },
+          bundleDependencies: ["@openclaw/ai"],
+        },
+      },
+    );
+  });
+
   it("rejects local build metadata entries in package tarballs", () => {
     withTarball(
       ["dist/index.js", ...LOCAL_BUILD_METADATA_DIST_PATHS],

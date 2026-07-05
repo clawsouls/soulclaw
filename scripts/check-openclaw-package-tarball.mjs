@@ -64,6 +64,7 @@ const PACKAGE_DEPENDENCY_SECTIONS = [
   "peerDependencies",
   "devDependencies",
 ];
+const REQUIRED_BUNDLED_WORKSPACE_DEPENDENCIES = ["@openclaw/ai"];
 
 function collectWorkspaceProtocolDependencyErrors(packageJson, label) {
   const errors = [];
@@ -81,6 +82,50 @@ function collectWorkspaceProtocolDependencyErrors(packageJson, label) {
       if (typeof spec === "string" && spec.startsWith("workspace:")) {
         errors.push(`${label} ${section}.${name} must not use workspace protocol ${spec}`);
       }
+    }
+  }
+
+  return errors;
+}
+
+function listBundleDependencies(packageJson) {
+  if (!packageJson || typeof packageJson !== "object") {
+    return [];
+  }
+  if (packageJson.bundleDependencies === true) {
+    return Object.keys(packageJson.dependencies ?? {});
+  }
+  const bundleDependencies = Array.isArray(packageJson.bundleDependencies)
+    ? packageJson.bundleDependencies
+    : packageJson.bundledDependencies;
+  return Array.isArray(bundleDependencies)
+    ? bundleDependencies.filter((name) => typeof name === "string")
+    : [];
+}
+
+function collectRequiredBundledWorkspaceDependencyErrors(packageJson, entrySet) {
+  const errors = [];
+  if (!packageJson || typeof packageJson !== "object") {
+    return errors;
+  }
+
+  const dependencies = packageJson.dependencies;
+  if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies)) {
+    return errors;
+  }
+
+  const bundledDependencies = new Set(listBundleDependencies(packageJson));
+  for (const name of REQUIRED_BUNDLED_WORKSPACE_DEPENDENCIES) {
+    if (typeof dependencies[name] !== "string") {
+      continue;
+    }
+    if (!bundledDependencies.has(name)) {
+      errors.push(
+        `package.json dependencies.${name} must be listed in bundleDependencies because it is private to the OpenClaw workspace`,
+      );
+    }
+    if (!entrySet.has(`node_modules/${name}/package.json`)) {
+      errors.push(`package.json dependencies.${name} must be bundled in node_modules/${name}`);
     }
   }
 
@@ -248,6 +293,7 @@ if (entrySet.has("package.json")) {
     const packageJson = JSON.parse(readTarEntry("package.json"));
     packageVersion = typeof packageJson.version === "string" ? packageJson.version : "";
     errors.push(...collectWorkspaceProtocolDependencyErrors(packageJson, "package.json"));
+    errors.push(...collectRequiredBundledWorkspaceDependencyErrors(packageJson, entrySet));
   } catch {
     packageVersion = "";
   }
