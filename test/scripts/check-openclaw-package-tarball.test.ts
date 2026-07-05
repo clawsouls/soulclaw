@@ -90,7 +90,7 @@ describe("check-openclaw-package-tarball", () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain(
-      "Usage: node scripts/check-openclaw-package-tarball.mjs <openclaw.tgz>",
+      "Usage: node scripts/check-openclaw-package-tarball.mjs [--require-bundled-workspace-deps] <openclaw.tgz>",
     );
     expect(result.stderr).toBe("");
   });
@@ -479,12 +479,31 @@ describe("check-openclaw-package-tarball", () => {
     );
   });
 
-  it("rejects private workspace dependencies that are not bundled", () => {
+  it("accepts separately published private workspace dependencies by default", () => {
     withTarball(
       ["dist/index.js"],
       { "dist/index.js": "export {};\n" },
       (tarball) => {
         const result = spawnSync("node", [CHECK_SCRIPT, tarball], { encoding: "utf8" });
+
+        expect(result.status, result.stderr).toBe(0);
+        expect(result.stdout).toContain("OpenClaw package tarball integrity passed.");
+      },
+      "2026.6.11",
+      { packageJson: { dependencies: { "@openclaw/ai": "2026.6.11" } } },
+    );
+  });
+
+  it("rejects private workspace dependencies that are not bundled when strict packaging requires it", () => {
+    withTarball(
+      ["dist/index.js"],
+      { "dist/index.js": "export {};\n" },
+      (tarball) => {
+        const result = spawnSync(
+          "node",
+          [CHECK_SCRIPT, "--require-bundled-workspace-deps", tarball],
+          { encoding: "utf8" },
+        );
 
         expect(result.status).not.toBe(0);
         expect(result.stderr).toContain(

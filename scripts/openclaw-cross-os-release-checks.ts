@@ -2959,7 +2959,7 @@ async function installPackageSpec(params) {
       },
     );
   } catch (error) {
-    const debugTail = appendLatestNpmDebugLogTail(params.lane.homeDir, params.logPath);
+    const debugTail = appendLatestNpmDebugLogTail(params.lane.homeDir, params.logPath, installEnv);
     if (!debugTail) {
       throw error;
     }
@@ -2967,9 +2967,13 @@ async function installPackageSpec(params) {
   }
 }
 
-function appendLatestNpmDebugLogTail(homeDir, logPath) {
-  const logsDir = join(homeDir, ".npm", "_logs");
-  const candidates = findNpmDebugLogs(logsDir);
+export function appendLatestNpmDebugLogTail(
+  homeDir,
+  logPath,
+  env = process.env,
+  platform = process.platform,
+) {
+  const candidates = resolveNpmDebugLogDirs(homeDir, env, platform).flatMap(findNpmDebugLogs);
   const latest = candidates.at(-1);
   if (!latest) {
     return "";
@@ -2986,6 +2990,17 @@ function appendLatestNpmDebugLogTail(homeDir, logPath) {
     "utf8",
   );
   return tail;
+}
+
+export function resolveNpmDebugLogDirs(homeDir, env = process.env, platform = process.platform) {
+  const configuredCache = String(env.npm_config_cache ?? env.NPM_CONFIG_CACHE ?? "").trim();
+  const localAppData = String(env.LOCALAPPDATA ?? "").trim();
+  const cacheDirs = [
+    configuredCache,
+    platform === "win32" && localAppData ? join(localAppData, "npm-cache") : "",
+    join(homeDir, ".npm"),
+  ].filter(Boolean);
+  return [...new Set(cacheDirs)].map((cacheDir) => join(cacheDir, "_logs"));
 }
 
 function findNpmDebugLogs(logsDir) {

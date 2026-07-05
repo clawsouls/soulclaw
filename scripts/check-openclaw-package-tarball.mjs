@@ -15,7 +15,7 @@ import {
 } from "./lib/package-dist-imports.mjs";
 
 function usage() {
-  return "Usage: node scripts/check-openclaw-package-tarball.mjs <openclaw.tgz>";
+  return "Usage: node scripts/check-openclaw-package-tarball.mjs [--require-bundled-workspace-deps] <openclaw.tgz>";
 }
 
 function fail(message) {
@@ -25,21 +25,29 @@ function fail(message) {
 
 function parseArgs(argv) {
   const args = argv[0] === "--" ? argv.slice(1) : argv;
-  const tarball = args[0]?.trim() ?? "";
-  if (tarball === "--help" || tarball === "-h") {
-    return { help: true, tarball: "" };
+  let requireBundledWorkspaceDeps = false;
+  let tarball = "";
+  for (const rawArg of args) {
+    const arg = rawArg?.trim() ?? "";
+    if (arg === "--help" || arg === "-h") {
+      return { help: true, requireBundledWorkspaceDeps: false, tarball: "" };
+    }
+    if (arg === "--require-bundled-workspace-deps") {
+      requireBundledWorkspaceDeps = true;
+      continue;
+    }
+    if (arg.startsWith("-")) {
+      throw new Error(`Unknown OpenClaw package tarball check option: ${arg}`);
+    }
+    if (tarball) {
+      throw new Error(`Unexpected OpenClaw package tarball check argument: ${arg}`);
+    }
+    tarball = arg;
   }
   if (!tarball) {
     throw new Error(usage());
   }
-  if (tarball.startsWith("-")) {
-    throw new Error(`Unknown OpenClaw package tarball check option: ${tarball}`);
-  }
-  const extraArg = args[1]?.trim();
-  if (extraArg) {
-    throw new Error(`Unexpected OpenClaw package tarball check argument: ${extraArg}`);
-  }
-  return { help: false, tarball };
+  return { help: false, requireBundledWorkspaceDeps, tarball };
 }
 
 let cliArgs;
@@ -293,7 +301,9 @@ if (entrySet.has("package.json")) {
     const packageJson = JSON.parse(readTarEntry("package.json"));
     packageVersion = typeof packageJson.version === "string" ? packageJson.version : "";
     errors.push(...collectWorkspaceProtocolDependencyErrors(packageJson, "package.json"));
-    errors.push(...collectRequiredBundledWorkspaceDependencyErrors(packageJson, entrySet));
+    if (cliArgs.requireBundledWorkspaceDeps) {
+      errors.push(...collectRequiredBundledWorkspaceDependencyErrors(packageJson, entrySet));
+    }
   } catch {
     packageVersion = "";
   }
@@ -331,10 +341,7 @@ if (!entrySet.has("npm-shrinkwrap.json")) {
       errors.push("npm-shrinkwrap.json must not lock root devDependencies");
     }
     errors.push(
-      ...collectWorkspaceProtocolDependencyErrors(
-        rootPackage,
-        "npm-shrinkwrap.json packages root",
-      ),
+      ...collectWorkspaceProtocolDependencyErrors(rootPackage, "npm-shrinkwrap.json packages root"),
     );
     const devLockedPackages = Object.entries(shrinkwrap.packages ?? {})
       .filter(([, packageMetadata]) => packageMetadata?.dev === true)

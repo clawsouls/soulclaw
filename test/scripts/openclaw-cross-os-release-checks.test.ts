@@ -31,6 +31,7 @@ import {
   buildWindowsFreshShellVersionCheckScript,
   buildInstalledBrowserOverrideImportProbeScript,
   buildNpmGlobalInstallArgs,
+  appendLatestNpmDebugLogTail,
   buildGatewayStatusArgsFromHelpText,
   buildWindowsPathBootstrapScript,
   canConnectToLoopbackPort,
@@ -74,6 +75,7 @@ import {
   resolveInstalledCliInvocation,
   resolveInstalledPackageRootFromCliPath,
   resolveNpmPackTarballFileName,
+  resolveNpmDebugLogDirs,
   resolvePackDestinationTarball,
   resolveProviderConfig,
   resolveDevUpdateVerificationRef,
@@ -1328,6 +1330,29 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
       );
 
       expect(readFileSync(logPath, "utf8")).toContain(marker);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reads npm debug logs from the Windows cache root", () => {
+    const dir = mkdtempSync(join(tmpdir(), "openclaw-cross-os-npm-debug-"));
+    try {
+      const homeDir = join(dir, "home");
+      const localAppData = join(homeDir, "AppData", "Local");
+      const logsDir = join(localAppData, "npm-cache", "_logs");
+      const logPath = join(dir, "install.log");
+      mkdirSync(logsDir, { recursive: true });
+      writeFileSync(join(logsDir, "2026-07-05T00_00_00_000Z-debug-0.log"), "windows log\n");
+      writeFileSync(logPath, "install failed\n");
+
+      expect(resolveNpmDebugLogDirs(homeDir, { LOCALAPPDATA: localAppData }, "win32")).toContain(
+        logsDir,
+      );
+      expect(
+        appendLatestNpmDebugLogTail(homeDir, logPath, { LOCALAPPDATA: localAppData }, "win32"),
+      ).toContain("windows log");
+      expect(readFileSync(logPath, "utf8")).toContain("windows log");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
