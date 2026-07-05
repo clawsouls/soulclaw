@@ -2963,7 +2963,7 @@ async function installPackageSpec(params) {
     if (!debugTail) {
       throw error;
     }
-    throw new Error(`${formatError(error)}\n\nnpm debug log tail:\n${debugTail}`);
+    throw new Error(`${formatError(error)}\n\nnpm debug log tail:\n${debugTail}`, { cause: error });
   }
 }
 
