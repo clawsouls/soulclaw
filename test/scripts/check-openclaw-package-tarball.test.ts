@@ -23,13 +23,21 @@ function withTarball(
   files: Record<string, string>,
   testBody: (tarball: string) => void,
   version = "0.0.0",
-  options: { includeControlUi?: boolean; includeShrinkwrap?: boolean } = {},
+  options: {
+    includeControlUi?: boolean;
+    includeShrinkwrap?: boolean;
+    packageJson?: Record<string, unknown>;
+    shrinkwrapRootPackage?: Record<string, unknown>;
+  } = {},
 ) {
   const root = mkdtempSync(join(tmpdir(), "openclaw-package-tarball-test-"));
   try {
     const packageRoot = join(root, "package");
     mkdirSync(join(packageRoot, "dist"), { recursive: true });
-    writeFileSync(join(packageRoot, "package.json"), JSON.stringify({ name: "openclaw", version }));
+    writeFileSync(
+      join(packageRoot, "package.json"),
+      JSON.stringify({ name: "openclaw", version, ...options.packageJson }),
+    );
     if (options.includeShrinkwrap !== false) {
       writeFileSync(
         join(packageRoot, "npm-shrinkwrap.json"),
@@ -41,6 +49,7 @@ function withTarball(
             "": {
               name: "openclaw",
               version,
+              ...options.shrinkwrapRootPackage,
             },
           },
         }),
@@ -433,6 +442,40 @@ describe("check-openclaw-package-tarball", () => {
         );
       },
       "2026.4.27",
+    );
+  });
+
+  it("rejects workspace protocol dependencies in package manifests", () => {
+    withTarball(
+      ["dist/index.js"],
+      { "dist/index.js": "export {};\n" },
+      (tarball) => {
+        const result = spawnSync("node", [CHECK_SCRIPT, tarball], { encoding: "utf8" });
+
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain(
+          "package.json dependencies.@openclaw/ai must not use workspace protocol workspace:*",
+        );
+      },
+      "2026.6.11",
+      { packageJson: { dependencies: { "@openclaw/ai": "workspace:*" } } },
+    );
+  });
+
+  it("rejects workspace protocol dependencies in shrinkwrap root metadata", () => {
+    withTarball(
+      ["dist/index.js"],
+      { "dist/index.js": "export {};\n" },
+      (tarball) => {
+        const result = spawnSync("node", [CHECK_SCRIPT, tarball], { encoding: "utf8" });
+
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain(
+          "npm-shrinkwrap.json packages root dependencies.@openclaw/ai must not use workspace protocol workspace:*",
+        );
+      },
+      "2026.6.11",
+      { shrinkwrapRootPackage: { dependencies: { "@openclaw/ai": "workspace:*" } } },
     );
   });
 

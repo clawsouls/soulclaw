@@ -680,15 +680,15 @@ async function prepareCandidate(params) {
   logPhase("prepare", "package-dist-inventory");
   await writePackageDistInventoryForCandidate({
     sourceDir: params.sourceDir,
-    logPath: join(params.logsDir, "npm-pack-dry-run.log"),
+    logPath: join(params.logsDir, "pnpm-pack-dry-run.log"),
   });
-  logPhase("prepare", "npm-pack");
+  logPhase("prepare", "pnpm-pack");
   const packResult = await runCommand(
-    npmCommand(),
+    pnpmCommand(),
     ["pack", "--ignore-scripts", "--json", "--pack-destination", packDir],
     {
       cwd: params.sourceDir,
-      logPath: join(params.logsDir, "npm-pack.log"),
+      logPath: join(params.logsDir, "pnpm-pack.log"),
       timeoutMs: 10 * 60 * 1000,
     },
   );
@@ -812,7 +812,7 @@ function isPackagedDistPath(relativePath) {
 export async function writePackageDistInventoryForCandidate(params) {
   assertNoLegacyPluginDependencyStagingDebris(params.sourceDir);
   const dryRun = await runCommand(
-    npmCommand(),
+    pnpmCommand(),
     ["pack", "--dry-run", "--ignore-scripts", "--json"],
     {
       cwd: params.sourceDir,
@@ -825,7 +825,7 @@ export async function writePackageDistInventoryForCandidate(params) {
   const files = Array.isArray(lastPack?.files) ? lastPack.files : [];
   if (files.length === 0) {
     throw new Error(
-      "npm pack --dry-run did not report package files for dist inventory generation.",
+      "pnpm pack --dry-run did not report package files for dist inventory generation.",
     );
   }
   const inventory = files

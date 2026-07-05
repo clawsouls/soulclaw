@@ -58,6 +58,35 @@ if (!fs.existsSync(tarball)) {
   fail(`OpenClaw package tarball does not exist: ${tarball}`);
 }
 
+const PACKAGE_DEPENDENCY_SECTIONS = [
+  "dependencies",
+  "optionalDependencies",
+  "peerDependencies",
+  "devDependencies",
+];
+
+function collectWorkspaceProtocolDependencyErrors(packageJson, label) {
+  const errors = [];
+  if (!packageJson || typeof packageJson !== "object") {
+    return errors;
+  }
+
+  for (const section of PACKAGE_DEPENDENCY_SECTIONS) {
+    const dependencies = packageJson[section];
+    if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies)) {
+      continue;
+    }
+
+    for (const [name, spec] of Object.entries(dependencies)) {
+      if (typeof spec === "string" && spec.startsWith("workspace:")) {
+        errors.push(`${label} ${section}.${name} must not use workspace protocol ${spec}`);
+      }
+    }
+  }
+
+  return errors;
+}
+
 const phaseTimingsEnabled = process.env.OPENCLAW_PACKAGE_TARBALL_CHECK_TIMINGS !== "0";
 function runPhase(label, action) {
   const startedAt = performance.now();
@@ -218,6 +247,7 @@ if (entrySet.has("package.json")) {
   try {
     const packageJson = JSON.parse(readTarEntry("package.json"));
     packageVersion = typeof packageJson.version === "string" ? packageJson.version : "";
+    errors.push(...collectWorkspaceProtocolDependencyErrors(packageJson, "package.json"));
   } catch {
     packageVersion = "";
   }
@@ -254,6 +284,12 @@ if (!entrySet.has("npm-shrinkwrap.json")) {
     if (rootPackage?.devDependencies) {
       errors.push("npm-shrinkwrap.json must not lock root devDependencies");
     }
+    errors.push(
+      ...collectWorkspaceProtocolDependencyErrors(
+        rootPackage,
+        "npm-shrinkwrap.json packages root",
+      ),
+    );
     const devLockedPackages = Object.entries(shrinkwrap.packages ?? {})
       .filter(([, packageMetadata]) => packageMetadata?.dev === true)
       .map(([packagePath]) => packagePath);
