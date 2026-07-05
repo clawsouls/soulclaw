@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { createConnection as createNetConnection, createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
-import { join, resolve as resolvePath, win32 } from "node:path";
+import { dirname, join, resolve as resolvePath, win32 } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -74,6 +74,7 @@ import {
   resolveInstalledCliInvocation,
   resolveInstalledPackageRootFromCliPath,
   resolveNpmPackTarballFileName,
+  resolvePackDestinationTarball,
   resolveProviderConfig,
   resolveDevUpdateVerificationRef,
   resolveInstalledPrefixDirFromCliPath,
@@ -615,6 +616,44 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
     for (const filename of unsafeFilenames) {
       expect(() => resolveNpmPackTarballFileName(filename)).toThrow(
         "npm pack did not report a safe .tgz filename.",
+      );
+    }
+  });
+
+  it("accepts pnpm pack tarballs reported under the requested destination", () => {
+    const packDir = resolvePath("/tmp/openclaw-pack");
+
+    expect(resolvePackDestinationTarball("openclaw-2026.6.17.tgz", packDir, "pnpm pack")).toEqual({
+      fileName: "openclaw-2026.6.17.tgz",
+      path: resolvePath(packDir, "openclaw-2026.6.17.tgz"),
+    });
+    expect(
+      resolvePackDestinationTarball(
+        resolvePath(packDir, "openclaw-2026.6.17.tgz"),
+        packDir,
+        "pnpm pack",
+      ),
+    ).toEqual({
+      fileName: "openclaw-2026.6.17.tgz",
+      path: resolvePath(packDir, "openclaw-2026.6.17.tgz"),
+    });
+  });
+
+  it("rejects pnpm pack tarballs outside the requested destination", () => {
+    const packDir = resolvePath("/tmp/openclaw-pack");
+    const unsafeFilenames = [
+      "../openclaw.tgz",
+      "nested/openclaw.tgz",
+      "nested\\openclaw.tgz",
+      resolvePath(dirname(packDir), "openclaw.tgz"),
+      resolvePath(packDir, "nested", "openclaw.tgz"),
+      "openclaw\u0000.tgz",
+      "openclaw.tar.gz",
+    ];
+
+    for (const filename of unsafeFilenames) {
+      expect(() => resolvePackDestinationTarball(filename, packDir, "pnpm pack")).toThrow(
+        "pnpm pack did not report a safe .tgz filename.",
       );
     }
   });

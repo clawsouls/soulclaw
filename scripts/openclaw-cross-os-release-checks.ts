@@ -207,6 +207,23 @@ export function resolveNpmPackTarballFileName(value, label = "npm pack") {
   return filename;
 }
 
+export function resolvePackDestinationTarball(value, packDestination, label = "package pack") {
+  const filename = typeof value === "string" ? value.trim() : "";
+  const fileName = basename(filename);
+  const destinationDir = resolve(packDestination);
+  const tarballPath = resolve(destinationDir, filename);
+  if (
+    !filename.endsWith(".tgz") ||
+    filename.includes("\0") ||
+    !fileName ||
+    fileName !== pathWin32.basename(filename) ||
+    dirname(tarballPath) !== destinationDir
+  ) {
+    throw new Error(`${label} did not report a safe .tgz filename.`);
+  }
+  return { fileName, path: tarballPath };
+}
+
 if (isMainModule()) {
   try {
     await main(process.argv.slice(2));
@@ -695,14 +712,14 @@ async function prepareCandidate(params) {
   writeFileSync(packJsonPath, packResult.stdout, "utf8");
   const parsedPack = JSON.parse(packResult.stdout);
   const lastPack = Array.isArray(parsedPack) ? parsedPack.at(-1) : parsedPack;
-  const packFilename = resolveNpmPackTarballFileName(lastPack?.filename);
+  const packedTarball = resolvePackDestinationTarball(lastPack?.filename, packDir, "pnpm pack");
 
   return {
     sourceDir: params.sourceDir,
     sourceSha,
     candidateVersion: String(lastPack.version ?? packageJson.version ?? "").trim(),
-    candidateTgz: join(packDir, packFilename),
-    candidateFileName: packFilename,
+    candidateTgz: packedTarball.path,
+    candidateFileName: packedTarball.fileName,
   };
 }
 
