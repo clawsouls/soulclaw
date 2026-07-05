@@ -3011,25 +3011,29 @@ export function appendLatestNpmDebugLogTail(
   env = process.env,
   platform = process.platform,
 ) {
-  const candidates = resolveNpmDebugLogDirs(homeDir, env, platform)
-    .flatMap(findNpmDebugLogs)
-    .toSorted((left, right) => left.mtimeMs - right.mtimeMs);
-  const latest = candidates.at(-1);
-  if (!latest) {
+  try {
+    const candidates = resolveNpmDebugLogDirs(homeDir, env, platform)
+      .flatMap(findNpmDebugLogs)
+      .toSorted((left, right) => left.mtimeMs - right.mtimeMs);
+    const latest = candidates.at(-1);
+    if (!latest) {
+      return "";
+    }
+
+    const tail = readLogTextWindow(latest.path, { maxBytes: CROSS_OS_NPM_DEBUG_LOG_TAIL_BYTES });
+    if (!tail.trim()) {
+      return "";
+    }
+
+    appendFileSync(
+      logPath,
+      `\n${new Date().toISOString()} npm-debug-log path=${latest.path}\n${tail}\n`,
+      "utf8",
+    );
+    return tail;
+  } catch {
     return "";
   }
-
-  const tail = readLogTextWindow(latest.path, { maxBytes: CROSS_OS_NPM_DEBUG_LOG_TAIL_BYTES });
-  if (!tail.trim()) {
-    return "";
-  }
-
-  appendFileSync(
-    logPath,
-    `\n${new Date().toISOString()} npm-debug-log path=${latest.path}\n${tail}\n`,
-    "utf8",
-  );
-  return tail;
 }
 
 export function resolveNpmDebugLogDirs(homeDir, env = process.env, platform = process.platform) {

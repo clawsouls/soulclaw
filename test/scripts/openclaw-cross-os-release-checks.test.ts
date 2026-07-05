@@ -1417,6 +1417,24 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
     }
   });
 
+  it("keeps npm debug log collection best-effort", () => {
+    const dir = mkdtempSync(join(tmpdir(), "openclaw-cross-os-npm-debug-best-effort-"));
+    try {
+      const homeDir = join(dir, "home");
+      const logPath = join(dir, "install.log");
+      const logsDir = join(dir, "not-a-directory");
+      writeFileSync(logPath, "install failed\n");
+      writeFileSync(logsDir, "not a directory\n");
+
+      expect(appendLatestNpmDebugLogTail(homeDir, logPath, { npm_config_logs_dir: logsDir })).toBe(
+        "",
+      );
+      expect(readFileSync(logPath, "utf8")).toBe("install failed\n");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("resolves relative npm log config from the install working directory", () => {
     const dir = mkdtempSync(join(tmpdir(), "openclaw-cross-os-npm-relative-logs-"));
     try {
