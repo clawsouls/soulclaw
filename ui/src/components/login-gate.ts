@@ -263,16 +263,14 @@ export function resolveLoginFailureFeedback(
 }
 
 function renderLoginFailure(feedback: LoginFailureFeedback) {
-  // Collapsed by default on purpose: the failure title stays visible while the
-  // gate keeps its compact single-screen layout; users expand for recovery steps.
   return html`
-    <details
+    <div
       class="callout danger login-gate__failure"
       role="alert"
       aria-live="polite"
       data-kind=${feedback.kind}
     >
-      <summary class="login-gate__failure-title">${feedback.title}</summary>
+      <div class="login-gate__failure-title">${feedback.title}</div>
       <div class="login-gate__failure-summary">${feedback.summary}</div>
       <ol class="login-gate__failure-steps">
         ${feedback.steps.map((step) => html`<li>${step}</li>`)}
@@ -288,7 +286,7 @@ function renderLoginFailure(feedback: LoginFailureFeedback) {
         rel=${buildExternalLinkRel()}
         >${feedback.docsLabel}</a
       >
-    </details>
+    </div>
   `;
 }
 

@@ -93,7 +93,6 @@
   font-size: 14px;
   font-weight: 700;
   color: var(--fg);
-  cursor: pointer;
 }
 
 .login-gate__failure-summary {
