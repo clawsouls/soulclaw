@@ -444,6 +444,7 @@ export function discoverConfigSecretTargetsByIds(
     : null;
   const canUseConfiguredEntries =
     configuredEntries !== null &&
+    allowedTargetIds !== null &&
     Array.from(allowedTargetIds).every((targetId) => configuredEntriesById?.has(targetId));
   const registryState = canUseConfiguredEntries ? null : getCompiledSecretTargetRegistryState();
   const discoveryEntries = resolveDiscoveryEntries({
