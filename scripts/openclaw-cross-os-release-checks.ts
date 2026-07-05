@@ -2993,14 +2993,20 @@ export function appendLatestNpmDebugLogTail(
 }
 
 export function resolveNpmDebugLogDirs(homeDir, env = process.env, platform = process.platform) {
+  const configuredLogsDir = String(env.npm_config_logs_dir ?? env.NPM_CONFIG_LOGS_DIR ?? "").trim();
   const configuredCache = String(env.npm_config_cache ?? env.NPM_CONFIG_CACHE ?? "").trim();
   const localAppData = String(env.LOCALAPPDATA ?? "").trim();
-  const cacheDirs = [
-    configuredCache,
-    platform === "win32" && localAppData ? join(localAppData, "npm-cache") : "",
-    join(homeDir, ".npm"),
+  const logDirs = [
+    configuredLogsDir,
+    configuredCache ? normalizeNpmCacheLogDir(configuredCache) : "",
+    platform === "win32" && localAppData ? join(localAppData, "npm-cache", "_logs") : "",
+    join(homeDir, ".npm", "_logs"),
   ].filter(Boolean);
-  return [...new Set(cacheDirs)].map((cacheDir) => join(cacheDir, "_logs"));
+  return [...new Set(logDirs)];
+}
+
+function normalizeNpmCacheLogDir(logDir) {
+  return logDir.endsWith("/_logs") || logDir.endsWith("\\_logs") ? logDir : join(logDir, "_logs");
 }
 
 function findNpmDebugLogs(logsDir) {

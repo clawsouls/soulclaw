@@ -1358,6 +1358,26 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
     }
   });
 
+  it("prefers npm configured log directories over cache defaults", () => {
+    const dir = mkdtempSync(join(tmpdir(), "openclaw-cross-os-npm-logs-dir-"));
+    try {
+      const homeDir = join(dir, "home");
+      const logsDir = join(dir, "custom-logs");
+      const logPath = join(dir, "install.log");
+      mkdirSync(logsDir, { recursive: true });
+      writeFileSync(join(logsDir, "2026-07-05T00_00_00_000Z-debug-0.log"), "custom log\n");
+      writeFileSync(logPath, "install failed\n");
+
+      expect(resolveNpmDebugLogDirs(homeDir, { npm_config_logs_dir: logsDir })).toContain(logsDir);
+      expect(
+        appendLatestNpmDebugLogTail(homeDir, logPath, { npm_config_logs_dir: logsDir }),
+      ).toContain("custom log");
+      expect(readFileSync(logPath, "utf8")).toContain("custom log");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("kills timed-out command process groups", async () => {
     if (process.platform === "win32") {
       return;
