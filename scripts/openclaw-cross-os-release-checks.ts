@@ -694,7 +694,7 @@ async function prepareCandidate(params) {
   );
   writeFileSync(packJsonPath, packResult.stdout, "utf8");
   const parsedPack = JSON.parse(packResult.stdout);
-  const lastPack = Array.isArray(parsedPack) ? parsedPack.at(-1) : null;
+  const lastPack = Array.isArray(parsedPack) ? parsedPack.at(-1) : parsedPack;
   const packFilename = resolveNpmPackTarballFileName(lastPack?.filename);
 
   return {
@@ -821,7 +821,7 @@ export async function writePackageDistInventoryForCandidate(params) {
     },
   );
   const parsedPack = JSON.parse(dryRun.stdout);
-  const lastPack = Array.isArray(parsedPack) ? parsedPack.at(-1) : null;
+  const lastPack = Array.isArray(parsedPack) ? parsedPack.at(-1) : parsedPack;
   const files = Array.isArray(lastPack?.files) ? lastPack.files : [];
   if (files.length === 0) {
     throw new Error(
