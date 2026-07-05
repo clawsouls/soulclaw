@@ -685,7 +685,7 @@ async function prepareCandidate(params) {
   logPhase("prepare", "pnpm-pack");
   const packResult = await runCommand(
     pnpmCommand(),
-    ["pack", "--ignore-scripts", "--json", "--pack-destination", packDir],
+    ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", packDir],
     {
       cwd: params.sourceDir,
       logPath: join(params.logsDir, "pnpm-pack.log"),
@@ -813,7 +813,7 @@ export async function writePackageDistInventoryForCandidate(params) {
   assertNoLegacyPluginDependencyStagingDebris(params.sourceDir);
   const dryRun = await runCommand(
     pnpmCommand(),
-    ["pack", "--dry-run", "--ignore-scripts", "--json"],
+    ["pack", "--dry-run", "--config.ignore-scripts=true", "--json"],
     {
       cwd: params.sourceDir,
       logPath: params.logPath,
