@@ -1,7 +1,7 @@
 package ai.openclaw.app
 
-import ai.openclaw.app.chat.ChatController
 import ai.openclaw.app.chat.ChatCommandEntry
+import ai.openclaw.app.chat.ChatController
 import ai.openclaw.app.chat.ChatMessage
 import ai.openclaw.app.chat.ChatPendingToolCall
 import ai.openclaw.app.chat.ChatSessionEntry
@@ -16,6 +16,7 @@ import ai.openclaw.app.gateway.GatewayTlsProbeFailure
 import ai.openclaw.app.gateway.GatewayTlsProbeResult
 import ai.openclaw.app.gateway.GatewayUpdateAvailableSummary
 import ai.openclaw.app.gateway.NodeEventSendOutcome
+import ai.openclaw.app.gateway.formatGatewayAuthority
 import ai.openclaw.app.gateway.normalizeGatewayApprovalRequestId
 import ai.openclaw.app.gateway.normalizeGatewayTlsFingerprint
 import ai.openclaw.app.gateway.parseChatSendAck
@@ -302,6 +303,17 @@ class NodeRuntime(
     val password: String?,
   )
 
+  /**
+   * HTTP(S) page origin of the connected gateway plus the shared credential a
+   * gateway-served page (e.g. the `?view=terminal` Control UI document) can
+   * authenticate with. Derived from the same endpoint/auth the WS sessions use.
+   */
+  data class GatewayControlPage(
+    val baseUrl: String,
+    val token: String?,
+    val password: String?,
+  )
+
   private val appContext = context.applicationContext
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private val deviceAuthStore = DeviceAuthStore(prefs)
@@ -490,6 +502,8 @@ class NodeRuntime(
 
   private val _isConnected = MutableStateFlow(false)
   val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+  private val _gatewayControlPage = MutableStateFlow<GatewayControlPage?>(null)
+  val gatewayControlPage: StateFlow<GatewayControlPage?> = _gatewayControlPage.asStateFlow()
   private val _nodeConnected = MutableStateFlow(false)
   val nodeConnected: StateFlow<Boolean> = _nodeConnected.asStateFlow()
   private val _nodeCapabilityApproval = MutableStateFlow<GatewayNodeCapabilityApproval>(GatewayNodeCapabilityApproval.Loading)
@@ -1964,6 +1978,12 @@ class NodeRuntime(
   ) {
     if (!isCurrentConnectAttempt(connectAttemptId)) return
     connectedEndpoint = endpoint
+    _gatewayControlPage.value =
+      GatewayControlPage(
+        baseUrl = gatewayControlPageBaseUrl(endpoint),
+        token = auth.token?.trim()?.takeIf { it.isNotEmpty() },
+        password = auth.password?.trim()?.takeIf { it.isNotEmpty() },
+      )
     updateStatus {
       operatorConnectionProblem = null
       nodeConnectionProblem = null
@@ -1982,6 +2002,12 @@ class NodeRuntime(
     auth: GatewayConnectAuth,
   ) {
     beginConnect(endpoint = endpoint, auth = resolveGatewayConnectAuth(auth))
+  }
+
+  /** HTTP(S) origin serving the connected gateway's Control UI pages. */
+  private fun gatewayControlPageBaseUrl(endpoint: GatewayEndpoint): String {
+    val scheme = if (endpoint.tlsEnabled) "https" else "http"
+    return "$scheme://${formatGatewayAuthority(endpoint.host, endpoint.port)}"
   }
 
   internal fun resolveGatewayConnectAuth(explicitAuth: GatewayConnectAuth? = null): GatewayConnectAuth =
@@ -2075,6 +2101,7 @@ class NodeRuntime(
     connectAttemptSeq.incrementAndGet()
     stopActiveVoiceSession()
     connectedEndpoint = null
+    _gatewayControlPage.value = null
     activeGatewayAuth = null
     updateStatus {
       operatorConnectionProblem = null
@@ -3635,11 +3662,9 @@ internal fun parseGatewayNodeApprovalState(raw: String?): GatewayNodeApprovalSta
     else -> GatewayNodeApprovalState.Loading
   }
 
-internal fun gatewayEventInvalidatesNodesDevices(event: String): Boolean =
-  event == "node.pair.requested" || event == "node.pair.resolved"
+internal fun gatewayEventInvalidatesNodesDevices(event: String): Boolean = event == "node.pair.requested" || event == "node.pair.resolved"
 
-internal fun nodeConnectFailureNeedsApprovalRefresh(error: GatewaySession.ErrorShape): Boolean =
-  error.details?.code == "PAIRING_REQUIRED"
+internal fun nodeConnectFailureNeedsApprovalRefresh(error: GatewaySession.ErrorShape): Boolean = error.details?.code == "PAIRING_REQUIRED"
 
 internal fun currentNodeCapabilityApproval(
   nodes: List<GatewayNodeSummary>,
