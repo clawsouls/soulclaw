@@ -59,6 +59,7 @@ export const CROSS_OS_AGENT_TURN_TIMEOUT_SECONDS = parsePositiveIntegerEnv(
 );
 export const CROSS_OS_COMMAND_CAPTURE_TAIL_BYTES = 16 * 1024 * 1024;
 const CROSS_OS_AGENT_LOG_FALLBACK_TAIL_BYTES = 2 * 1024 * 1024;
+const CROSS_OS_NPM_DEBUG_LOG_TAIL_BYTES = 256 * 1024;
 const CROSS_OS_PROCESS_TREE_KILL_AFTER_MS = parsePositiveIntegerEnv(
   "OPENCLAW_CROSS_OS_PROCESS_TREE_KILL_AFTER_MS",
   15_000,
@@ -2907,16 +2908,66 @@ async function installPackageSpec(params) {
     npm_config_prefix: params.lane.prefixDir,
   };
   rmSync(installedPackageRoot(params.lane.prefixDir), { force: true, recursive: true });
-  await runCommand(
-    npmCommand(),
-    buildNpmGlobalInstallArgs(params.packageSpec, { ignoreScripts: params.ignoreScripts }),
-    {
-      cwd: params.lane.homeDir,
-      env: installEnv,
-      logPath: params.logPath,
-      timeoutMs: params.timeoutMs ?? installTimeoutMs(),
-    },
+  try {
+    await runCommand(
+      npmCommand(),
+      buildNpmGlobalInstallArgs(params.packageSpec, { ignoreScripts: params.ignoreScripts }),
+      {
+        cwd: params.lane.homeDir,
+        env: installEnv,
+        logPath: params.logPath,
+        timeoutMs: params.timeoutMs ?? installTimeoutMs(),
+      },
+    );
+  } catch (error) {
+    const debugTail = appendLatestNpmDebugLogTail(params.lane.homeDir, params.logPath);
+    if (!debugTail) {
+      throw error;
+    }
+    throw new Error(`${formatError(error)}\n\nnpm debug log tail:\n${debugTail}`);
+  }
+}
+
+function appendLatestNpmDebugLogTail(homeDir, logPath) {
+  const logsDir = join(homeDir, ".npm", "_logs");
+  const candidates = findNpmDebugLogs(logsDir);
+  const latest = candidates.at(-1);
+  if (!latest) {
+    return "";
+  }
+
+  const tail = readLogTextWindow(latest.path, { maxBytes: CROSS_OS_NPM_DEBUG_LOG_TAIL_BYTES });
+  if (!tail.trim()) {
+    return "";
+  }
+
+  appendFileSync(
+    logPath,
+    `\n${new Date().toISOString()} npm-debug-log path=${latest.path}\n${tail}\n`,
+    "utf8",
   );
+  return tail;
+}
+
+function findNpmDebugLogs(logsDir) {
+  if (!existsSync(logsDir)) {
+    return [];
+  }
+
+  return readdirSync(logsDir)
+    .flatMap((fileName) => {
+      if (!fileName.endsWith("-debug-0.log")) {
+        return [];
+      }
+      const path = join(logsDir, fileName);
+      try {
+        const stat = statSync(path);
+        return stat.isFile() ? [{ path, mtimeMs: stat.mtimeMs }] : [];
+      } catch {
+        return [];
+      }
+    })
+    .toSorted((left, right) => left.mtimeMs - right.mtimeMs);
 }
 
 export function buildNpmGlobalInstallArgs(packageSpec, options = {}) {
