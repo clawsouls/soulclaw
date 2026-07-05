@@ -3043,7 +3043,7 @@ export function resolveNpmDebugLogDirs(homeDir, env = process.env, platform = pr
     env.npm_config_cache ?? env.NPM_CONFIG_CACHE,
     platform,
   );
-  const localAppData = String(env.LOCALAPPDATA ?? "").trim();
+  const localAppData = (env.LOCALAPPDATA ?? "").trim();
   const logDirs = [
     configuredLogsDir,
     configuredCache ? normalizeNpmCacheLogDir(configuredCache) : "",
