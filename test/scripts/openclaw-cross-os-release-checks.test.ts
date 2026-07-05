@@ -8,6 +8,7 @@ import {
   realpathSync,
   rmSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { createConnection as createNetConnection, createServer as createNetServer } from "node:net";
@@ -77,6 +78,7 @@ import {
   resolveNpmPackTarballFileName,
   resolveNpmDebugLogDirs,
   resolvePackDestinationTarball,
+  resolvePackageCandidatePackCommand,
   resolveProviderConfig,
   resolveDevUpdateVerificationRef,
   resolveInstalledPrefixDirFromCliPath,
@@ -657,6 +659,33 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
       expect(() => resolvePackDestinationTarball(filename, packDir, "pnpm pack")).toThrow(
         "pnpm pack did not report a safe .tgz filename.",
       );
+    }
+  });
+
+  it("falls back to pnpm pack for historical refs without the Docker package helper", () => {
+    const dir = mkdtempSync(join(tmpdir(), "openclaw-cross-os-pack-command-"));
+    try {
+      const packDir = join(dir, "out");
+      const fallback = resolvePackageCandidatePackCommand(dir, packDir);
+
+      expect(fallback).toMatchObject({
+        args: ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", packDir],
+        command: process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+        kind: "pnpm-pack",
+      });
+
+      const helperPath = join(dir, "scripts", "package-openclaw-for-docker.mjs");
+      mkdirSync(dirname(helperPath), { recursive: true });
+      writeFileSync(helperPath, "export {};\n");
+      const helper = resolvePackageCandidatePackCommand(dir, packDir);
+
+      expect(helper).toMatchObject({
+        args: [helperPath, "--skip-build", "--source-dir", dir, "--output-dir", packDir],
+        command: process.execPath,
+        kind: "docker-helper",
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 
@@ -1365,6 +1394,16 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
       const logsDir = join(dir, "custom-logs");
       const logPath = join(dir, "install.log");
       mkdirSync(logsDir, { recursive: true });
+      mkdirSync(join(homeDir, ".npm", "_logs"), { recursive: true });
+      writeFileSync(
+        join(homeDir, ".npm", "_logs", "2026-07-05T00_00_00_000Z-debug-0.log"),
+        "old fallback log\n",
+      );
+      utimesSync(
+        join(homeDir, ".npm", "_logs", "2026-07-05T00_00_00_000Z-debug-0.log"),
+        new Date("2020-01-01T00:00:00Z"),
+        new Date("2020-01-01T00:00:00Z"),
+      );
       writeFileSync(join(logsDir, "2026-07-05T00_00_00_000Z-debug-0.log"), "custom log\n");
       writeFileSync(logPath, "install failed\n");
 
@@ -1373,6 +1412,26 @@ describe("scripts/openclaw-cross-os-release-checks", () => {
         appendLatestNpmDebugLogTail(homeDir, logPath, { npm_config_logs_dir: logsDir }),
       ).toContain("custom log");
       expect(readFileSync(logPath, "utf8")).toContain("custom log");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves relative npm log config from the install working directory", () => {
+    const dir = mkdtempSync(join(tmpdir(), "openclaw-cross-os-npm-relative-logs-"));
+    try {
+      const homeDir = join(dir, "home");
+      const logsDir = join(homeDir, "relative-logs");
+      const cacheLogsDir = join(homeDir, "relative-cache", "_logs");
+      mkdirSync(logsDir, { recursive: true });
+      mkdirSync(cacheLogsDir, { recursive: true });
+
+      expect(resolveNpmDebugLogDirs(homeDir, { npm_config_logs_dir: "relative-logs" })).toContain(
+        logsDir,
+      );
+      expect(resolveNpmDebugLogDirs(homeDir, { npm_config_cache: "relative-cache" })).toContain(
+        cacheLogsDir,
+      );
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

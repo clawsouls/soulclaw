@@ -699,49 +699,87 @@ async function prepareCandidate(params) {
     sourceDir: params.sourceDir,
     logPath: join(params.logsDir, "pnpm-pack-dry-run.log"),
   });
-  logPhase("prepare", "package-candidate");
-  const packResult = await runCommand(
-    process.execPath,
-    [
-      join(params.sourceDir, "scripts", "package-openclaw-for-docker.mjs"),
-      "--skip-build",
-      "--source-dir",
-      params.sourceDir,
-      "--output-dir",
-      packDir,
-    ],
-    {
-      cwd: params.sourceDir,
-      logPath: join(params.logsDir, "package-candidate.log"),
-      timeoutMs: 15 * 60 * 1000,
-    },
-  );
-  const packOutputLines = packResult.stdout.trim().split(/\r?\n/u).filter(Boolean);
-  const packedTarball = resolvePackDestinationTarball(
-    packOutputLines.at(-1),
+  const packCommand = resolvePackageCandidatePackCommand(params.sourceDir, packDir);
+  logPhase("prepare", packCommand.phase);
+  const packResult = await runCommand(packCommand.command, packCommand.args, {
+    cwd: params.sourceDir,
+    logPath: join(params.logsDir, packCommand.logFileName),
+    timeoutMs: 15 * 60 * 1000,
+  });
+  const packedCandidate = resolvePackedCandidateFromOutput({
+    output: packResult.stdout,
     packDir,
-    "package-openclaw-for-docker",
-  );
-  writeFileSync(
-    packJsonPath,
-    `${JSON.stringify(
-      {
-        filename: packedTarball.fileName,
-        path: packedTarball.path,
-        version: packageJson.version,
-      },
-      null,
-      2,
-    )}\n`,
-    "utf8",
-  );
+    packageJson,
+    packCommand,
+  });
+  writeFileSync(packJsonPath, packedCandidate.packJson, "utf8");
 
   return {
     sourceDir: params.sourceDir,
     sourceSha,
-    candidateVersion: String(packageJson.version ?? "").trim(),
-    candidateTgz: packedTarball.path,
-    candidateFileName: packedTarball.fileName,
+    candidateVersion: packedCandidate.version,
+    candidateTgz: packedCandidate.path,
+    candidateFileName: packedCandidate.fileName,
+  };
+}
+
+export function resolvePackageCandidatePackCommand(sourceDir, packDir) {
+  const packageHelper = join(sourceDir, "scripts", "package-openclaw-for-docker.mjs");
+  if (existsSync(packageHelper)) {
+    return {
+      args: [packageHelper, "--skip-build", "--source-dir", sourceDir, "--output-dir", packDir],
+      command: process.execPath,
+      kind: "docker-helper",
+      logFileName: "package-candidate.log",
+      phase: "package-candidate",
+    };
+  }
+
+  return {
+    args: ["pack", "--config.ignore-scripts=true", "--json", "--pack-destination", packDir],
+    command: pnpmCommand(),
+    kind: "pnpm-pack",
+    logFileName: "pnpm-pack.log",
+    phase: "pnpm-pack",
+  };
+}
+
+function resolvePackedCandidateFromOutput(params) {
+  if (params.packCommand.kind === "docker-helper") {
+    const packOutputLines = params.output.trim().split(/\r?\n/u).filter(Boolean);
+    const packedTarball = resolvePackDestinationTarball(
+      packOutputLines.at(-1),
+      params.packDir,
+      "package-openclaw-for-docker",
+    );
+    return {
+      fileName: packedTarball.fileName,
+      packJson: `${JSON.stringify(
+        {
+          filename: packedTarball.fileName,
+          path: packedTarball.path,
+          version: params.packageJson.version,
+        },
+        null,
+        2,
+      )}\n`,
+      path: packedTarball.path,
+      version: String(params.packageJson.version ?? "").trim(),
+    };
+  }
+
+  const parsedPack = JSON.parse(params.output);
+  const lastPack = Array.isArray(parsedPack) ? parsedPack.at(-1) : parsedPack;
+  const packedTarball = resolvePackDestinationTarball(
+    lastPack?.filename,
+    params.packDir,
+    "pnpm pack",
+  );
+  return {
+    fileName: packedTarball.fileName,
+    packJson: params.output,
+    path: packedTarball.path,
+    version: String(lastPack?.version ?? params.packageJson.version ?? "").trim(),
   };
 }
 
@@ -2973,7 +3011,9 @@ export function appendLatestNpmDebugLogTail(
   env = process.env,
   platform = process.platform,
 ) {
-  const candidates = resolveNpmDebugLogDirs(homeDir, env, platform).flatMap(findNpmDebugLogs);
+  const candidates = resolveNpmDebugLogDirs(homeDir, env, platform)
+    .flatMap(findNpmDebugLogs)
+    .toSorted((left, right) => left.mtimeMs - right.mtimeMs);
   const latest = candidates.at(-1);
   if (!latest) {
     return "";
@@ -2993,8 +3033,16 @@ export function appendLatestNpmDebugLogTail(
 }
 
 export function resolveNpmDebugLogDirs(homeDir, env = process.env, platform = process.platform) {
-  const configuredLogsDir = String(env.npm_config_logs_dir ?? env.NPM_CONFIG_LOGS_DIR ?? "").trim();
-  const configuredCache = String(env.npm_config_cache ?? env.NPM_CONFIG_CACHE ?? "").trim();
+  const configuredLogsDir = resolveNpmConfiguredPath(
+    homeDir,
+    env.npm_config_logs_dir ?? env.NPM_CONFIG_LOGS_DIR,
+    platform,
+  );
+  const configuredCache = resolveNpmConfiguredPath(
+    homeDir,
+    env.npm_config_cache ?? env.NPM_CONFIG_CACHE,
+    platform,
+  );
   const localAppData = String(env.LOCALAPPDATA ?? "").trim();
   const logDirs = [
     configuredLogsDir,
@@ -3003,6 +3051,14 @@ export function resolveNpmDebugLogDirs(homeDir, env = process.env, platform = pr
     join(homeDir, ".npm", "_logs"),
   ].filter(Boolean);
   return [...new Set(logDirs)];
+}
+
+function resolveNpmConfiguredPath(homeDir, value, platform) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return "";
+  }
+  return platform === "win32" ? pathWin32.resolve(homeDir, raw) : resolve(homeDir, raw);
 }
 
 function normalizeNpmCacheLogDir(logDir) {
