@@ -21,6 +21,7 @@ Docs: https://docs.openclaw.ai
 
 ### Fixes
 
+- **Gateway provider auth startup:** avoid default provider-auth warm sweeps while preserving on-demand auth checks and auth-failure rewarming, preventing startup discovery from starving gateway RPCs and channel timers. (#100667, #86752, #86512) Thanks @vincentkoc.
 - **Small-context compaction:** cap the effective reserve against the known model context window so small local models do not enter compaction from the first token. (#100621) Thanks @vincentkoc.
 - **Control UI terminal reset:** isolate each web terminal's Ghostty WASM runtime so closing a tab and reopening starts with an empty screen instead of reusing freed terminal cells.
 - **Plugin install diagnostics:** suppress the misleading hook-pack fallback after plugin install failures only when the hook manifest is absent, while preserving actionable malformed hook-pack errors. (#100554) Thanks @vincentkoc.
