@@ -1835,6 +1835,8 @@ export const zh_CN: TranslationMap = {
       disable: "禁用",
       enable: "启用",
       run: "运行",
+      runIfDue: "到期时运行",
+      moreActions: "更多操作",
       history: "历史",
       remove: "删除",
     },

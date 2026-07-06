@@ -1890,6 +1890,8 @@ export const pl: TranslationMap = {
       disable: "Wyłącz",
       enable: "Włącz",
       run: "Uruchom",
+      runIfDue: "Uruchom, jeśli nadszedł termin",
+      moreActions: "Więcej działań",
       history: "Historia",
       remove: "Usuń",
     },

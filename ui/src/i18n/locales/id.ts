@@ -1878,6 +1878,8 @@ export const id: TranslationMap = {
       disable: "Nonaktifkan",
       enable: "Aktifkan",
       run: "Jalankan",
+      runIfDue: "Jalankan jika waktunya",
+      moreActions: "Tindakan lainnya",
       history: "Riwayat",
       remove: "Hapus",
     },

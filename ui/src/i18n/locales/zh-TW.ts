@@ -1837,6 +1837,8 @@ export const zh_TW: TranslationMap = {
       disable: "停用",
       enable: "啟用",
       run: "執行",
+      runIfDue: "到期時執行",
+      moreActions: "更多操作",
       history: "記錄",
       remove: "移除",
     },

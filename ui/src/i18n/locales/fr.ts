@@ -1903,6 +1903,8 @@ export const fr: TranslationMap = {
       disable: "Désactiver",
       enable: "Activer",
       run: "Exécuter",
+      runIfDue: "Exécuter à l’échéance",
+      moreActions: "Plus d’actions",
       history: "Historique",
       remove: "Supprimer",
     },

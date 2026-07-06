@@ -1857,6 +1857,8 @@ export const ar: TranslationMap = {
       disable: "تعطيل",
       enable: "تفعيل",
       run: "تشغيل",
+      runIfDue: "تشغيل إذا حان الموعد",
+      moreActions: "إجراءات أخرى",
       history: "السجل",
       remove: "إزالة",
     },

@@ -1885,6 +1885,8 @@ export const nl: TranslationMap = {
       disable: "Uitschakelen",
       enable: "Inschakelen",
       run: "Uitvoeren",
+      runIfDue: "Uitvoeren indien gepland",
+      moreActions: "Meer acties",
       history: "Historie",
       remove: "Verwijderen",
     },

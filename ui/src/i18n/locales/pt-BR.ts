@@ -1884,6 +1884,8 @@ export const pt_BR: TranslationMap = {
       disable: "Desativar",
       enable: "Ativar",
       run: "Executar",
+      runIfDue: "Executar se estiver no horário",
+      moreActions: "Mais ações",
       history: "Histórico",
       remove: "Remover",
     },

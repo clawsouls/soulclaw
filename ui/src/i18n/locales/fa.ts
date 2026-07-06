@@ -1877,6 +1877,8 @@ export const fa: TranslationMap = {
       disable: "غیرفعال کردن",
       enable: "فعال کردن",
       run: "اجرا",
+      runIfDue: "اجرا در صورت سررسید",
+      moreActions: "اقدامات بیشتر",
       history: "تاریخچه",
       remove: "حذف",
     },

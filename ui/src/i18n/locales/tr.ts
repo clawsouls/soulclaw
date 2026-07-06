@@ -1887,6 +1887,8 @@ export const tr: TranslationMap = {
       disable: "Devre dışı bırak",
       enable: "Etkinleştir",
       run: "Çalıştır",
+      runIfDue: "Zamanı geldiyse çalıştır",
+      moreActions: "Diğer işlemler",
       history: "Geçmiş",
       remove: "Kaldır",
     },

@@ -1883,6 +1883,8 @@ export const uk: TranslationMap = {
       disable: "Вимкнути",
       enable: "Увімкнути",
       run: "Запустити",
+      runIfDue: "Запустити, якщо настав час",
+      moreActions: "Інші дії",
       history: "Історія",
       remove: "Видалити",
     },

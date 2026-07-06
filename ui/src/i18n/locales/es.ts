@@ -1895,6 +1895,8 @@ export const es: TranslationMap = {
       disable: "Deshabilitar",
       enable: "Habilitar",
       run: "Ejecutar",
+      runIfDue: "Ejecutar si corresponde",
+      moreActions: "Más acciones",
       history: "Historial",
       remove: "Eliminar",
     },

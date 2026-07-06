@@ -1840,6 +1840,8 @@ export const th: TranslationMap = {
       disable: "ปิดใช้งาน",
       enable: "เปิดใช้งาน",
       run: "รัน",
+      runIfDue: "เรียกใช้เมื่อถึงกำหนด",
+      moreActions: "การดำเนินการเพิ่มเติม",
       history: "ประวัติ",
       remove: "ลบ",
     },

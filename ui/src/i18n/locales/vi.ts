@@ -1868,6 +1868,8 @@ export const vi: TranslationMap = {
       disable: "Tắt",
       enable: "Bật",
       run: "Chạy",
+      runIfDue: "Chạy nếu đến hạn",
+      moreActions: "Thao tác khác",
       history: "Lịch sử",
       remove: "Xóa",
     },

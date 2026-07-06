@@ -1900,6 +1900,8 @@ export const de: TranslationMap = {
       disable: "Deaktivieren",
       enable: "Aktivieren",
       run: "Ausführen",
+      runIfDue: "Ausführen, wenn fällig",
+      moreActions: "Weitere Aktionen",
       history: "Verlauf",
       remove: "Entfernen",
     },

@@ -1863,6 +1863,8 @@ export const ko: TranslationMap = {
       disable: "비활성화",
       enable: "활성화",
       run: "실행",
+      runIfDue: "실행 시점이면 실행",
+      moreActions: "추가 작업",
       history: "기록",
       remove: "제거",
     },
