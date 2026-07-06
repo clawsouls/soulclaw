@@ -1541,6 +1541,8 @@ export type {
   SessionsDescribeParams,
   SessionsResolveParams,
   SessionOperationEvent,
+  SessionWorktreeInfo,
+  SessionsCreateResult,
   SessionsPatchParams,
   SessionsPatchResult,
   SessionsResetParams,
