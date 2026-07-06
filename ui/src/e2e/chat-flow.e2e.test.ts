@@ -158,29 +158,38 @@ async function visibleChatBubbleTexts(page: Page): Promise<string[]> {
       .filter(Boolean);
   });
 }
-function chatSessionListResponse() {
+function chatSessionListResponse(
+  sessions: Array<
+    Record<string, unknown> & {
+      key: string;
+      kind: string;
+      label: string;
+      updatedAt: number;
+    }
+  > = [
+    {
+      key: "agent:main:session-a",
+      kind: "direct",
+      label: "Session A",
+      updatedAt: 2,
+    },
+    {
+      key: "agent:main:session-b",
+      kind: "direct",
+      label: "Session B",
+      updatedAt: 1,
+    },
+  ],
+) {
   return {
-    count: 2,
+    count: sessions.length,
     defaults: {
       contextTokens: null,
       model: "gpt-5.5",
       modelProvider: "openai",
     },
     path: "",
-    sessions: [
-      {
-        key: "agent:main:session-a",
-        kind: "direct",
-        label: "Session A",
-        updatedAt: 2,
-      },
-      {
-        key: "agent:main:session-b",
-        kind: "direct",
-        label: "Session B",
-        updatedAt: 1,
-      },
-    ],
+    sessions,
     ts: Date.now(),
   };
 }
@@ -313,6 +322,57 @@ describeControlUiE2e("Control UI mocked Gateway E2E", () => {
       await composer.press("Meta+Enter");
       const modifierRequest = await gateway.waitForRequest("chat.send");
       expect(requireRecord(modifierRequest.params).message).toBe("modifier send");
+    } finally {
+      await closeBrowserContext(context);
+    }
+  });
+
+  it("steers an active run when the session row only reports hasActiveRun", async () => {
+    const context = await newBrowserContext({
+      locale: "en-US",
+      serviceWorkers: "block",
+      viewport: { height: 900, width: 1280 },
+    });
+    const page = await context.newPage();
+    const gateway = await installMockGateway(page, {
+      historyMessages: [
+        {
+          content: [{ text: "Active run is waiting for steering.", type: "text" }],
+          role: "assistant",
+          timestamp: Date.now(),
+        },
+      ],
+      methodResponses: {
+        "sessions.list": chatSessionListResponse([
+          {
+            hasActiveRun: true,
+            key: "main",
+            kind: "direct",
+            label: "Main",
+            updatedAt: Date.now(),
+          },
+        ]),
+      },
+    });
+
+    try {
+      await page.goto(`${server.baseUrl}chat`);
+      await page.getByText("Active run is waiting for steering.").waitFor({ timeout: 10_000 });
+      await gateway.waitForRequest("sessions.list");
+
+      await page
+        .locator(".agent-chat__composer-combobox textarea")
+        .fill("/steer use the smaller fix");
+      await page.getByRole("button", { name: "Queue message" }).click();
+
+      const steerRequest = await gateway.waitForRequest("chat.send");
+      const params = requireRecord(steerRequest.params);
+      expect(params.sessionKey).toBe("main");
+      expect(params.message).toBe("use the smaller fix");
+      expect(params.deliver).toBe(false);
+
+      await page.getByText("Steered.", { exact: true }).waitFor({ timeout: 10_000 });
+      expect(await page.getByText("No active run").count()).toBe(0);
     } finally {
       await closeBrowserContext(context);
     }
