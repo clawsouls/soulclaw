@@ -25,7 +25,7 @@ export type CreateTypingCallbacksParams = {
   maxDurationMs?: number;
 };
 
-const DEFAULT_MAX_CONSECUTIVE_TYPING_FAILURES = 5;
+const DEFAULT_MAX_CONSECUTIVE_TYPING_FAILURES = 2;
 
 function resolvePositiveIntegerOption(value: number | undefined, fallback: number): number {
   const parsed = parseFiniteNumber(value);

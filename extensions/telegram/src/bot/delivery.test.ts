@@ -212,6 +212,12 @@ function createRichEntityInvalidError(entity = "EMAIL", operation = "sendRichMes
   );
 }
 
+function createRichContentRequiredError(operation = "sendRichMessage") {
+  return new Error(
+    `GrammyError: Call to '${operation}' failed! (400: Bad Request: RICH_MESSAGE_CONTENT_REQUIRED)`,
+  );
+}
+
 function createHtmlParseError(operation = "sendMessage") {
   return new Error(
     `GrammyError: Call to '${operation}' failed! (400: Bad Request: can't parse entities: Can't find end of the entity)`,
