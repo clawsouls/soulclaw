@@ -1663,7 +1663,7 @@ export const id: TranslationMap = {
       microphonePageInactive: "Input mikrofon tidak tersedia saat halaman ini tidak aktif.",
       microphonePermissionBlocked:
         "Akses mikrofon diblokir. Izinkan di pengaturan situs browser untuk menampilkan daftar input.",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone: "Input suara realtime memerlukan akses mikrofon browser.",
       selectedMicrophoneUnavailable:
         "Mikrofon yang dipilih tidak tersedia. Pilih input lain atau default Sistem.",
       startVoiceInput: "Mulai input suara",

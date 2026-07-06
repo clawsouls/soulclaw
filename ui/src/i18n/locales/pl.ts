@@ -1667,7 +1667,8 @@ export const pl: TranslationMap = {
       microphonePageInactive: "Wejścia mikrofonu są niedostępne, gdy ta strona jest nieaktywna.",
       microphonePermissionBlocked:
         "Dostęp do mikrofonu jest zablokowany. Zezwól na niego w ustawieniach witryny w przeglądarce, aby wyświetlić listę wejść.",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone:
+        "Głosowe wprowadzanie w czasie rzeczywistym wymaga dostępu do mikrofonu przeglądarki.",
       selectedMicrophoneUnavailable:
         "Wybrany mikrofon jest niedostępny. Wybierz inne wejście lub domyślne ustawienie systemowe.",
       startVoiceInput: "Rozpocznij wprowadzanie głosowe",

@@ -1669,7 +1669,8 @@ export const nl: TranslationMap = {
         "Microfooningangen zijn niet beschikbaar terwijl deze pagina inactief is.",
       microphonePermissionBlocked:
         "Microfoontoegang is geblokkeerd. Sta dit toe in de site-instellingen van de browser om ingangen weer te geven.",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone:
+        "Realtime spraakinvoer vereist toegang tot de microfoon van de browser.",
       selectedMicrophoneUnavailable:
         "De geselecteerde microfoon is niet beschikbaar. Kies een andere ingang of System default.",
       startVoiceInput: "Spraakinvoer starten",

@@ -1654,7 +1654,8 @@ export const vi: TranslationMap = {
       microphonePageInactive: "Đầu vào micrô không khả dụng khi trang này không hoạt động.",
       microphonePermissionBlocked:
         "Quyền truy cập micrô bị chặn. Hãy cho phép trong phần cài đặt trang web của trình duyệt để liệt kê các đầu vào.",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone:
+        "Nhập giọng nói thời gian thực yêu cầu quyền truy cập micrô của trình duyệt.",
       selectedMicrophoneUnavailable:
         "Micrô đã chọn không khả dụng. Chọn một đầu vào khác hoặc mặc định hệ thống.",
       startVoiceInput: "Bắt đầu nhập bằng giọng nói",

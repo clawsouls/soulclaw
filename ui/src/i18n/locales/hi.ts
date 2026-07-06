@@ -1647,7 +1647,7 @@ export const hi: TranslationMap = {
       microphonePageInactive: "इस पेज के निष्क्रिय होने पर माइक्रोफ़ोन इनपुट उपलब्ध नहीं होते।",
       microphonePermissionBlocked:
         "माइक्रोफ़ोन एक्सेस ब्लॉक है। इनपुट की सूची देखने के लिए ब्राउज़र साइट सेटिंग्स में इसकी अनुमति दें।",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone: "रीयलटाइम वॉइस इनपुट के लिए ब्राउज़र माइक्रोफ़ोन एक्सेस आवश्यक है।",
       selectedMicrophoneUnavailable:
         "चुना गया माइक्रोफ़ोन उपलब्ध नहीं है। कोई दूसरा इनपुट या System default चुनें।",
       startVoiceInput: "वॉइस इनपुट शुरू करें",

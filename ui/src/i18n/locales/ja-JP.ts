@@ -1669,7 +1669,8 @@ export const ja_JP: TranslationMap = {
       microphonePageInactive: "このページが非アクティブな間は、マイク入力を利用できません。",
       microphonePermissionBlocked:
         "マイクへのアクセスがブロックされています。入力を一覧表示するには、ブラウザのサイト設定で許可してください。",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone:
+        "リアルタイム音声入力にはブラウザのマイクへのアクセスが必要です。",
       selectedMicrophoneUnavailable:
         "選択したマイクは利用できません。別の入力またはシステムデフォルトを選択してください。",
       startVoiceInput: "音声入力を開始",

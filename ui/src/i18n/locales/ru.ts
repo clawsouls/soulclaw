@@ -1675,7 +1675,8 @@ export const ru: TranslationMap = {
       microphonePageInactive: "Входы микрофона недоступны, пока эта страница неактивна.",
       microphonePermissionBlocked:
         "Доступ к микрофону заблокирован. Разрешите его в настройках сайта браузера, чтобы отобразить список входов.",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone:
+        "Для голосового ввода в реальном времени требуется доступ к микрофону браузера.",
       selectedMicrophoneUnavailable:
         "Выбранный микрофон недоступен. Выберите другой вход или System default.",
       startVoiceInput: "Начать голосовой ввод",

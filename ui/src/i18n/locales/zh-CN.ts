@@ -1623,7 +1623,7 @@ export const zh_CN: TranslationMap = {
       microphoneNoneFound: "未找到麦克风输入。",
       microphonePageInactive: "此页面处于非活动状态时，麦克风输入不可用。",
       microphonePermissionBlocked: "麦克风访问被阻止。请在浏览器的网站设置中允许访问以列出输入。",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone: "实时语音输入需要浏览器麦克风访问权限。",
       selectedMicrophoneUnavailable: "所选麦克风不可用。请选择其他输入或系统默认。",
       startVoiceInput: "开始语音输入",
       stillListening: "仍在聆听",

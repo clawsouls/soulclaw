@@ -1665,7 +1665,8 @@ export const uk: TranslationMap = {
       microphonePageInactive: "Входи мікрофона недоступні, поки ця сторінка неактивна.",
       microphonePermissionBlocked:
         "Доступ до мікрофона заблоковано. Дозвольте його в налаштуваннях сайту браузера, щоб показати список входів.",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone:
+        "Голосовий ввід у реальному часі потребує доступу до мікрофона браузера.",
       selectedMicrophoneUnavailable:
         "Вибраний мікрофон недоступний. Виберіть інший вхід або System default.",
       startVoiceInput: "Почати голосове введення",

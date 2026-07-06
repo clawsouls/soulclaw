@@ -1663,7 +1663,7 @@ export const fa: TranslationMap = {
       microphonePageInactive: "وقتی این صفحه غیرفعال است، ورودی‌های میکروفون در دسترس نیستند.",
       microphonePermissionBlocked:
         "دسترسی به میکروفون مسدود شده است. برای فهرست‌کردن ورودی‌ها، آن را در تنظیمات سایتِ مرورگر مجاز کنید.",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone: "ورودی صوتی بلادرنگ نیاز به دسترسی میکروفون مرورگر دارد.",
       selectedMicrophoneUnavailable:
         "میکروفون انتخاب‌شده در دسترس نیست. ورودی دیگری یا System default را انتخاب کنید.",
       startVoiceInput: "شروع ورودی صوتی",

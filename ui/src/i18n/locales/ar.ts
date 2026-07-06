@@ -1645,7 +1645,8 @@ export const ar: TranslationMap = {
       microphonePageInactive: "مدخلات الميكروفون غير متاحة أثناء عدم نشاط هذه الصفحة.",
       microphonePermissionBlocked:
         "تم حظر الوصول إلى الميكروفون. اسمح به في إعدادات موقع المتصفح لعرض المدخلات.",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone:
+        "يتطلب الإدخال الصوتي في الوقت الفعلي الوصول إلى ميكروفون المتصفح.",
       selectedMicrophoneUnavailable:
         "الميكروفون المحدد غير متاح. اختر مدخلاً آخر أو الإعداد الافتراضي للنظام.",
       startVoiceInput: "بدء الإدخال الصوتي",

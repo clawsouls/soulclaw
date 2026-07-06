@@ -1629,7 +1629,7 @@ export const th: TranslationMap = {
       microphonePageInactive: "อินพุตไมโครโฟนไม่พร้อมใช้งานขณะที่หน้านี้ไม่ได้ใช้งาน",
       microphonePermissionBlocked:
         "การเข้าถึงไมโครโฟนถูกบล็อก อนุญาตในการตั้งค่าเว็บไซต์ของเบราว์เซอร์เพื่อแสดงรายการอินพุต",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone: "การป้อนเสียงแบบเรียลไทม์ต้องการสิทธิ์เข้าถึงไมโครโฟนของเบราว์เซอร์",
       selectedMicrophoneUnavailable: "ไมโครโฟนที่เลือกไม่พร้อมใช้งาน เลือกอินพุตอื่นหรือค่าเริ่มต้นของระบบ",
       startVoiceInput: "เริ่มการป้อนข้อมูลด้วยเสียง",
       stillListening: "ยังฟังอยู่",

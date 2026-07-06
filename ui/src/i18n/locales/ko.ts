@@ -1653,7 +1653,8 @@ export const ko: TranslationMap = {
         "이 페이지가 비활성 상태인 동안에는 마이크 입력을 사용할 수 없습니다.",
       microphonePermissionBlocked:
         "마이크 액세스가 차단되었습니다. 입력 목록을 표시하려면 브라우저 사이트 설정에서 허용하세요.",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone:
+        "실시간 음성 입력을 사용하려면 브라우저 마이크 접근 권한이 필요합니다.",
       selectedMicrophoneUnavailable:
         "선택한 마이크를 사용할 수 없습니다. 다른 입력 또는 시스템 기본값을 선택하세요.",
       startVoiceInput: "음성 입력 시작",

@@ -1625,7 +1625,7 @@ export const zh_TW: TranslationMap = {
       microphoneNoneFound: "找不到麥克風輸入。",
       microphonePageInactive: "此頁面處於非使用中狀態時，麥克風輸入無法使用。",
       microphonePermissionBlocked: "麥克風存取已遭封鎖。請在瀏覽器網站設定中允許，以列出輸入裝置。",
-      realtimeTalkRequiresMicrophone: "Realtime voice input requires browser microphone access.",
+      realtimeTalkRequiresMicrophone: "即時語音輸入需要瀏覽器麥克風存取權限。",
       selectedMicrophoneUnavailable: "所選的麥克風無法使用。請選擇其他輸入或系統預設值。",
       startVoiceInput: "開始語音輸入",
       stillListening: "仍在聆聽",
