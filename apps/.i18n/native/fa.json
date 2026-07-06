@@ -3759,6 +3759,21 @@
       "translated": "توقف"
     },
     {
+      "id": "native.android.2cb3ec7379426dfe",
+      "source": "Default",
+      "translated": "پیش‌فرض"
+    },
+    {
+      "id": "native.android.f8d0f6ba7608abc3",
+      "source": "Pin model",
+      "translated": "سنجاق کردن مدل"
+    },
+    {
+      "id": "native.android.09a13ed8f039a9c3",
+      "source": "Unpin model",
+      "translated": "برداشتن سنجاق مدل"
+    },
+    {
       "id": "native.android.5953c956ff208e6e",
       "source": "No commands found",
       "translated": "هیچ دستوری یافت نشد"

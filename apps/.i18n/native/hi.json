@@ -3759,6 +3759,21 @@
       "translated": "रोकें"
     },
     {
+      "id": "native.android.2cb3ec7379426dfe",
+      "source": "Default",
+      "translated": "डिफ़ॉल्ट"
+    },
+    {
+      "id": "native.android.f8d0f6ba7608abc3",
+      "source": "Pin model",
+      "translated": "मॉडल पिन करें"
+    },
+    {
+      "id": "native.android.09a13ed8f039a9c3",
+      "source": "Unpin model",
+      "translated": "मॉडल अनपिन करें"
+    },
+    {
       "id": "native.android.5953c956ff208e6e",
       "source": "No commands found",
       "translated": "कोई कमांड नहीं मिली"

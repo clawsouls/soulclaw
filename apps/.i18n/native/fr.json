@@ -3759,6 +3759,21 @@
       "translated": "Arrêter"
     },
     {
+      "id": "native.android.2cb3ec7379426dfe",
+      "source": "Default",
+      "translated": "Par défaut"
+    },
+    {
+      "id": "native.android.f8d0f6ba7608abc3",
+      "source": "Pin model",
+      "translated": "Épingler le modèle"
+    },
+    {
+      "id": "native.android.09a13ed8f039a9c3",
+      "source": "Unpin model",
+      "translated": "Désépingler le modèle"
+    },
+    {
       "id": "native.android.5953c956ff208e6e",
       "source": "No commands found",
       "translated": "Aucune commande trouvée"
