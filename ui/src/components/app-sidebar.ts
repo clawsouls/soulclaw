@@ -22,8 +22,8 @@ import {
   type ApplicationContext,
   type ApplicationNavigationOptions,
 } from "../app/context.ts";
+import { controlUiPublicAssetPath } from "../app/public-assets.ts";
 import "./theme-mode-toggle.ts";
-import "./session-picker.ts";
 import "./tooltip.ts";
 import type { ThemeMode } from "../app/theme.ts";
 import { t } from "../i18n/index.ts";
@@ -285,7 +285,6 @@ export class AppSidebar extends LitElement {
     return {
       routeSessionKey: navigation.currentSessionKey,
       selectedAgentId: navigation.selectedAgentId,
-      defaultAgentId: navigation.defaultAgentId,
       recentSessions,
       newSessionDisabled,
       newSessionTitle: !this.connected
@@ -1106,7 +1105,6 @@ export class AppSidebar extends LitElement {
     const {
       routeSessionKey,
       selectedAgentId,
-      defaultAgentId,
       recentSessions,
       newSessionDisabled,
       newSessionTitle,
@@ -1148,8 +1146,9 @@ export class AppSidebar extends LitElement {
           </div>
         `
       : newSessionButton;
-    const allRows = recentSessions;
-    const sections = groupSidebarSessionRows(allRows);
+    // Stable navigation ordering carries through each pinned/category bucket;
+    // selecting a visible row only moves the active highlight.
+    const sections = groupSidebarSessionRows(recentSessions);
     const hasCategorySections = sections.some((section) => section.category !== undefined);
     return html`
       <section class="sidebar-sessions ${this.collapsed ? "sidebar-sessions--collapsed" : ""}">
@@ -1187,20 +1186,7 @@ export class AppSidebar extends LitElement {
                             ? t("sessionsView.ungrouped")
                             : t("sessionsView.title")}</span
                         >
-                        <openclaw-session-picker
-                          .sessions=${context?.sessions}
-                          .sessionsResult=${this.sessionsResult}
-                          .currentSessionKey=${routeSessionKey}
-                          .agentId=${selectedAgentId}
-                          .defaultAgentId=${defaultAgentId}
-                          .mainKey=${resolveUiConfiguredMainKey({
-                            agentsList: context?.agents.state.agentsList,
-                            hello: context?.gateway.snapshot.hello,
-                          })}
-                          .connected=${this.connected}
-                          .onSelectSession=${this.selectSession}
-                          .onReplaceCurrentSession=${this.replaceCurrentSession}
-                        ></openclaw-session-picker>
+                        ${this.renderAgentScope(routeSessionKey, selectedAgentId)}
                         <button
                           type="button"
                           class="sidebar-session-sort"
@@ -1217,9 +1203,8 @@ export class AppSidebar extends LitElement {
                           ${icons.listFilter}
                         </button>
                       </div>
-                      ${this.renderAgentFilter(routeSessionKey, selectedAgentId)}
                       <div class="sidebar-recent-sessions__list">
-                        ${allRows.length === 0
+                        ${recentSessions.length === 0
                           ? this.renderChatFallback()
                           : section.rows.map((session) => this.renderRecentSession(session))}
                       </div>
@@ -1248,7 +1233,8 @@ export class AppSidebar extends LitElement {
     `;
   }
 
-  private renderAgentFilter(sessionKey: string, selectedAgentId: string) {
+  /** Compact agent scope switcher for the ungrouped session header. */
+  private renderAgentScope(sessionKey: string, selectedAgentId: string) {
     const options = resolveSessionAgentFilterOptions({
       agentsList: this.context?.agents.state.agentsList,
       sessionsResult: this.sessionsResult,
@@ -1260,25 +1246,23 @@ export class AppSidebar extends LitElement {
     const selectedLabel =
       options.find((option) => option.id === selectedAgentId)?.label ?? selectedAgentId;
     return html`
-      <div class="sidebar-agent-filter">
-        <label class="field chat-controls__session chat-controls__agent">
-          <select
-            data-chat-agent-filter="true"
-            aria-label=${t("chat.selectors.agentFilter")}
-            title=${selectedLabel}
-            .value=${selectedAgentId}
-            ?disabled=${!this.connected}
-            @change=${(event: Event) => this.selectAgent((event.target as HTMLSelectElement).value)}
-          >
-            ${options.map(
-              (option) =>
-                html`<option value=${option.id} ?selected=${option.id === selectedAgentId}>
-                  ${option.label}
-                </option>`,
-            )}
-          </select>
-        </label>
-      </div>
+      <label class="sidebar-agent-scope" title=${selectedLabel}>
+        <select
+          data-chat-agent-filter="true"
+          aria-label=${t("chat.selectors.agentFilter")}
+          .value=${selectedAgentId}
+          ?disabled=${!this.connected}
+          @change=${(event: Event) => this.selectAgent((event.target as HTMLSelectElement).value)}
+        >
+          ${options.map(
+            (option) =>
+              html`<option value=${option.id} ?selected=${option.id === selectedAgentId}>
+                ${option.label}
+              </option>`,
+          )}
+        </select>
+        <span class="sidebar-agent-scope__chevron" aria-hidden="true">${icons.chevronDown}</span>
+      </label>
     `;
   }
 
@@ -1348,6 +1332,13 @@ export class AppSidebar extends LitElement {
       this.activeRouteId !== undefined && isSettingsNavigationRoute(this.activeRouteId);
     return html`
       <aside class="sidebar ${this.collapsed ? "sidebar--collapsed" : ""}">
+        <!-- macOS app only (CSS-gated on html.openclaw-native-macos): use the
+             otherwise-empty native titlebar strip instead of a sidebar row. -->
+        <img
+          class="sidebar-native-brand"
+          src="${controlUiPublicAssetPath("favicon.svg", this.basePath)}"
+          alt="OpenClaw"
+        />
         <div class="sidebar-shell">
           <div class="sidebar-shell__body">
             <nav class="sidebar-nav" @contextmenu=${this.openCustomizeMenuFromContext}>

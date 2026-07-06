@@ -1022,7 +1022,7 @@ export const en: TranslationMap = {
       terminal: "Terminal",
     },
     palette: {
-      placeholder: "Type a command…",
+      placeholder: "Search chats and commands…",
       noResults: "No results",
       categories: {
         search: "Search",
