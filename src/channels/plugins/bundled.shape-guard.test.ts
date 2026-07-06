@@ -1030,12 +1030,12 @@ describe("bundled channel entry shape guards", () => {
       expect(bundled.getBundledChannelPlugin("alpha")?.meta.label).toBe("Source Alpha");
       expect(bundled.getBundledChannelSetupPlugin("alpha")?.meta.label).toBe("Setup Alpha");
       expect(bundled.getBundledChannelPlugin("escape")).toBeUndefined();
-      expect(testGlobal.__escapedBundledSourceLoaded).toBeUndefined();
+      expect(testGlobal["__escapedBundledSourceLoaded"]).toBeUndefined();
     } finally {
       restoreBundledPluginsDir(previousBundledPluginsDir);
       fs.rmSync(root, { recursive: true, force: true });
       fs.rmSync(outsideRoot, { recursive: true, force: true });
-      delete testGlobal.__escapedBundledSourceLoaded;
+      delete testGlobal["__escapedBundledSourceLoaded"];
     }
   });
 
