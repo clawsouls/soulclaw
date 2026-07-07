@@ -140,6 +140,7 @@ import {
   suspendSession,
   type SessionSuspensionParams,
 } from "../session-suspension.js";
+import { DEFAULT_AGENT_TIMEOUT_MS } from "../timeout.js";
 import { resolveToolLoopDetectionConfig } from "../tool-loop-detection-config.js";
 import { deriveContextPromptTokens, normalizeUsage, type UsageLike } from "../usage.js";
 import { redactRunIdentifier, resolveRunWorkspaceDir } from "../workspace-run.js";
@@ -356,18 +357,21 @@ function buildBeforeAgentFinalizeRetryPrompt(reason: string): string {
   return `${BEFORE_AGENT_FINALIZE_RETRY_PROMPT_PREFIX}\n\n${reason}`;
 }
 
-function resolveEmbeddedRunLaneTimeoutMs(timeoutMs: number): number | undefined {
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
-    return undefined;
-  }
-  return Math.floor(timeoutMs) + EMBEDDED_RUN_LANE_TIMEOUT_GRACE_MS;
+function resolveEmbeddedRunLaneTimeoutMs(timeoutMs: number): number {
+  // "No timeout" resolves to the timer-safe MAX_TIMER sentinel upstream.
+  // Lane ownership still caps at the default agent deadline.
+  const normalizedTimeoutMs =
+    Number.isFinite(timeoutMs) && timeoutMs > 0 ? Math.floor(timeoutMs) : DEFAULT_AGENT_TIMEOUT_MS;
+  return (
+    Math.min(normalizedTimeoutMs, DEFAULT_AGENT_TIMEOUT_MS) + EMBEDDED_RUN_LANE_TIMEOUT_GRACE_MS
+  );
 }
 
 function withEmbeddedRunLaneTimeout(
   opts: CommandQueueEnqueueOptions | undefined,
-  laneTaskTimeoutMs: number | undefined,
+  laneTaskTimeoutMs: number,
 ): CommandQueueEnqueueOptions | undefined {
-  if (laneTaskTimeoutMs === undefined || opts?.taskTimeoutMs !== undefined) {
+  if (opts?.taskTimeoutMs !== undefined) {
     return opts;
   }
   return { ...opts, taskTimeoutMs: laneTaskTimeoutMs };
@@ -4315,3 +4319,9 @@ function resolveAuthProfileStateProvider(
   const idProvider = profileId.split(":", 1)[0]?.trim();
   return idProvider || fallbackProvider;
 }
+
+export const testing = {
+  EMBEDDED_RUN_LANE_TIMEOUT_GRACE_MS,
+  resolveEmbeddedRunLaneTimeoutMs,
+};
+export { testing as __testing };
