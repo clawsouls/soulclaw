@@ -21,7 +21,7 @@ baseline="${OPENCLAW_UPDATE_CORRUPT_PLUGIN_BASELINE:-openclaw@latest}"
 update_timeout_seconds="$(openclaw_e2e_read_positive_int_env OPENCLAW_UPDATE_CORRUPT_PLUGIN_TIMEOUT_SECONDS 900)"
 default_update_step_timeout_seconds="$update_timeout_seconds"
 if [ "$update_timeout_seconds" -gt 60 ]; then
-  default_update_step_timeout_seconds=$((update_timeout_seconds - 30))
+  default_update_step_timeout_seconds=$((10#$update_timeout_seconds - 30))
 fi
 update_step_timeout_seconds="$(openclaw_e2e_read_positive_int_env OPENCLAW_UPDATE_CORRUPT_PLUGIN_STEP_TIMEOUT_SECONDS "$default_update_step_timeout_seconds")"
 echo "Installing baseline OpenClaw package: $baseline"
