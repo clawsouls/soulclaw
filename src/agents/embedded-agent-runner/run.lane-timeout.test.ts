@@ -11,6 +11,9 @@ describe("resolveEmbeddedRunLaneTimeoutMs", () => {
     expect(__testing.resolveEmbeddedRunLaneTimeoutMs(60_000.9)).toBe(
       60_000 + __testing.EMBEDDED_RUN_LANE_TIMEOUT_GRACE_MS,
     );
+    expect(__testing.resolveEmbeddedRunLaneTimeoutMs(DEFAULT_AGENT_TIMEOUT_MS + 60_000)).toBe(
+      DEFAULT_AGENT_TIMEOUT_MS + 60_000 + __testing.EMBEDDED_RUN_LANE_TIMEOUT_GRACE_MS,
+    );
   });
 
   it("keeps the lane watchdog active when the run timeout is disabled", () => {

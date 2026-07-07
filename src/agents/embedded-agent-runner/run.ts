@@ -3,6 +3,10 @@
  */
 import { randomBytes } from "node:crypto";
 import fs from "node:fs/promises";
+import {
+  addTimerTimeoutGraceMs,
+  MAX_TIMER_TIMEOUT_MS,
+} from "@openclaw/normalization-core/number-coercion";
 import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
 import { sanitizeForLog } from "../../../packages/terminal-core/src/ansi.js";
 import { FAST_MODE_AUTO_PROGRESS_KIND, type ReplyPayload } from "../../auto-reply/reply-payload.js";
@@ -358,12 +362,15 @@ function buildBeforeAgentFinalizeRetryPrompt(reason: string): string {
 }
 
 function resolveEmbeddedRunLaneTimeoutMs(timeoutMs: number): number {
+  const defaultLaneTimeoutMs = DEFAULT_AGENT_TIMEOUT_MS + EMBEDDED_RUN_LANE_TIMEOUT_GRACE_MS;
   // "No timeout" resolves to the timer-safe MAX_TIMER sentinel upstream.
-  // Lane ownership still caps at the default agent deadline.
-  const normalizedTimeoutMs =
-    Number.isFinite(timeoutMs) && timeoutMs > 0 ? Math.floor(timeoutMs) : DEFAULT_AGENT_TIMEOUT_MS;
+  // Lane ownership still caps at the default agent deadline in that case.
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs >= MAX_TIMER_TIMEOUT_MS) {
+    return defaultLaneTimeoutMs;
+  }
   return (
-    Math.min(normalizedTimeoutMs, DEFAULT_AGENT_TIMEOUT_MS) + EMBEDDED_RUN_LANE_TIMEOUT_GRACE_MS
+    addTimerTimeoutGraceMs(Math.floor(timeoutMs), EMBEDDED_RUN_LANE_TIMEOUT_GRACE_MS) ??
+    defaultLaneTimeoutMs
   );
 }
 
