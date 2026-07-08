@@ -32,7 +32,7 @@ describe("buildExecApprovalText", () => {
         commandPreview: `${safePrefix}🎉 trailing text`,
       },
     });
-    const codeFence = text.split("```\n")[1]?.split("\n```")[0] ?? "";
+    const codeFence = text.match(/```\n([\s\S]*?)\n```/)?.[1] ?? "";
     expect(codeFence).toBe(safePrefix);
   });
 });

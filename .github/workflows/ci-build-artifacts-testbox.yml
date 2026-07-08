@@ -150,6 +150,7 @@ jobs:
             .artifacts/build-all-cache/
             dist/
             dist-runtime/
+            packages/*/dist/
           key: ${{ runner.os }}-dist-build-${{ github.sha }}
           restore-keys: ${{ steps.dist-cache-seeds.outputs.restore-keys }}
 
@@ -176,6 +177,7 @@ jobs:
           fi
           test -f dist/build-info.json
           test -f dist/control-ui/index.html
+          test -f packages/ai/dist/internal/runtime.mjs
 
       - name: Save dist build cache
         if: steps.dist-cache.outputs.cache-hit != 'true'
@@ -185,6 +187,7 @@ jobs:
             .artifacts/build-all-cache/
             dist/
             dist-runtime/
+            packages/*/dist/
           key: ${{ runner.os }}-dist-build-${{ github.sha }}
 
       - name: Prepare Testbox shell

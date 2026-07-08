@@ -607,16 +607,75 @@ describe("TUI PTY real backends", () => {
         queueMode: "followup",
         firstResponseDelayMs: 0,
       });
+      const terminalChatRunIds = new Set<string>();
+      let eventProbeConnected = false;
+      const eventProbe = new GatewayChatClient({
+        url: fixture.gateway.url,
+        token: fixture.gateway.gatewayToken,
+        allowInsecureLocalOperatorUi: false,
+      });
+      eventProbe.onConnected = () => {
+        eventProbeConnected = true;
+      };
+      eventProbe.onEvent = ({ event, payload }) => {
+        if (event !== "chat" || !payload || typeof payload !== "object") {
+          return;
+        }
+        const chat = payload as { runId?: unknown; state?: unknown };
+        if (chat.state === "final" && typeof chat.runId === "string") {
+          terminalChatRunIds.add(chat.runId);
+        }
+      };
+      eventProbe.start();
       try {
+        await waitFor({
+          timeoutMs: LOCAL_STARTUP_TIMEOUT_MS,
+          read: () => (eventProbeConnected ? true : null),
+          onTimeout: () => new Error("Gateway event probe did not connect"),
+        });
         await fixture.run.waitForOutput("gateway connected", LOCAL_STARTUP_TIMEOUT_MS);
         await fixture.run.write("seed gateway session\r");
         await fixture.run.waitForOutput("FIRST_RUN_ACTIVE");
 
         const responseOffset = fixture.run.output().lastIndexOf("FIRST_RUN_ACTIVE");
+        await waitFor({
+          timeoutMs: LOCAL_OUTPUT_TIMEOUT_MS,
+          read: () => (terminalChatRunIds.size > 0 ? true : null),
+          onTimeout: () =>
+            new Error(
+              `Gateway did not publish the terminal chat event\n${fixture.gateway.logs()}\n${fixture.run.output()}`,
+            ),
+        });
         await waitForOutputAfter(fixture.run, "| idle", responseOffset);
 
-        await fixture.run.write("/new\r", { delay: false });
-        await fixture.run.waitForOutput("new session: agent:main:tui-");
+        let createdSession = false;
+        for (let attempt = 1; attempt <= 10; attempt += 1) {
+          const commandOffset = fixture.run.output().length;
+          await fixture.run.write("/new\r", { delay: false });
+          const outcome = await waitFor({
+            timeoutMs: LOCAL_OUTPUT_TIMEOUT_MS,
+            read: () => {
+              const output = fixture.run.output().slice(commandOffset);
+              const matchedOutcome = output.match(
+                /new session: agent:main:tui-|abort the current run before \/new/,
+              )?.[0];
+              if (!matchedOutcome) {
+                return null;
+              }
+              return matchedOutcome.startsWith("new session:") ? "created" : "busy";
+            },
+            onTimeout: () =>
+              new Error(
+                `TUI did not resolve /new\n${fixture.gateway.logs()}\n${fixture.run.output()}`,
+              ),
+          });
+          if (outcome === "created") {
+            createdSession = true;
+            break;
+          }
+          await sleep(attempt * 25);
+        }
+        expect(createdSession).toBe(true);
         await fixture.run.write("send after gateway new\r");
         await waitFor({
           timeoutMs: LOCAL_OUTPUT_TIMEOUT_MS,
@@ -633,6 +692,7 @@ describe("TUI PTY real backends", () => {
         await fixture.run.write("/exit\r", { delay: false });
         expect((await fixture.run.waitForExit()).exitCode).toBe(0);
       } finally {
+        eventProbe.stop();
         await fixture.cleanup();
       }
     },

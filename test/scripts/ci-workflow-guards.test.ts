@@ -714,11 +714,25 @@ describe("ci workflow guards", () => {
 
   it("restores the dist build cache before building and saves only cache misses", () => {
     const workflow = readCiWorkflow();
+    const buildArtifactsTestbox = readBuildArtifactsTestboxWorkflow();
     const buildArtifactSteps = workflow.jobs["build-artifacts"].steps;
+    const testboxBuildArtifactSteps = buildArtifactsTestbox.jobs["build-artifacts"].steps;
     const stepNames = buildArtifactSteps.map((step) => step.name);
     const restoreStep = buildArtifactSteps.find((step) => step.name === "Restore dist build cache");
     const buildDistStep = buildArtifactSteps.find((step) => step.name === "Build dist");
     const saveStep = buildArtifactSteps.find((step) => step.name === "Save dist build cache");
+    const packStep = buildArtifactSteps.find(
+      (step) => step.name === "Pack built runtime artifacts",
+    );
+    const testboxRestoreStep = testboxBuildArtifactSteps.find(
+      (step) => step.name === "Restore dist build cache",
+    );
+    const testboxVerifyStep = testboxBuildArtifactSteps.find(
+      (step) => step.name === "Verify build artifacts",
+    );
+    const testboxSaveStep = testboxBuildArtifactSteps.find(
+      (step) => step.name === "Save dist build cache",
+    );
 
     expect(stepNames.indexOf("Restore dist build cache")).toBeLessThan(
       stepNames.indexOf("Build dist"),
@@ -736,8 +750,14 @@ describe("ci workflow guards", () => {
     expect(saveStep.with.key).toBe("${{ steps.dist_build_cache.outputs.cache-primary-key }}");
     expect(restoreStep.with.path).toContain("dist/");
     expect(restoreStep.with.path).toContain("dist-runtime/");
+    expect(restoreStep.with.path).toContain("packages/*/dist/");
     expect(restoreStep.with.path).toContain("extensions/*/src/host/**/.bundle.hash");
     expect(restoreStep.with.path).toContain("extensions/*/src/host/**/*.bundle.js");
+    expect(saveStep.with.path).toContain("packages/*/dist/");
+    expect(packStep.run).toContain("packages/*/dist");
+    expect(testboxRestoreStep.with.path).toContain("packages/*/dist/");
+    expect(testboxSaveStep.with.path).toContain("packages/*/dist/");
+    expect(testboxVerifyStep.run).toContain("packages/ai/dist/internal/runtime.mjs");
     expect(buildArtifactSteps.map((step) => step.name)).not.toContain("Cache dist build");
   });
 
