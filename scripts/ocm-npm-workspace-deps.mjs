@@ -64,11 +64,27 @@ function runNpm(npm, args, options = {}) {
   return result;
 }
 
+function runTar(args) {
+  const result = spawnSync("tar", args, {
+    env: process.env,
+    stdio: "inherit",
+  });
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`tar failed with status ${result.status ?? 1}`);
+  }
+}
+
 function packWorkspaceDependencies(npm, workspaceDirs, outputDir) {
   return workspaceDirs.map((packageDir) => {
     const packageJson = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8"));
     if (typeof packageJson.name !== "string" || packageJson.name.trim() === "") {
       throw new Error(`workspace dependency has no package name: ${packageDir}`);
+    }
+    if (typeof packageJson.version !== "string" || packageJson.version.trim() === "") {
+      throw new Error(`workspace dependency has no package version: ${packageDir}`);
     }
     const before = new Set(readdirSync(outputDir));
     const result = runNpm(npm, ["pack", packageDir, "--pack-destination", outputDir, "--silent"], {
@@ -88,9 +104,56 @@ function packWorkspaceDependencies(npm, workspaceDirs, outputDir) {
     }
     return {
       name: packageJson.name,
+      version: packageJson.version,
       tarball: join(outputDir, tarballs[0]),
     };
   });
+}
+
+export function rewriteWorkspaceDependencyVersions(packageJson, workspacePackages) {
+  const workspaceVersions = new Map(workspacePackages.map(({ name, version }) => [name, version]));
+  let rewritten = 0;
+  for (const section of [
+    "dependencies",
+    "optionalDependencies",
+    "peerDependencies",
+    "devDependencies",
+  ]) {
+    const dependencies = packageJson[section];
+    if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies)) {
+      continue;
+    }
+    for (const [name, spec] of Object.entries(dependencies)) {
+      if (typeof spec !== "string" || !spec.startsWith("workspace:")) {
+        continue;
+      }
+      const version = workspaceVersions.get(name);
+      if (!version) {
+        throw new Error(`root archive references unconfigured workspace dependency: ${name}`);
+      }
+      dependencies[name] = version;
+      rewritten += 1;
+    }
+  }
+  return rewritten;
+}
+
+function patchRootArchiveWorkspaceDependencies(rootArchive, workspacePackages, outputDir) {
+  const unpackDir = join(outputDir, "root-archive");
+  mkdirSync(unpackDir);
+  runTar(["-xzf", rootArchive, "-C", unpackDir]);
+
+  const packageJsonPath = join(unpackDir, "package", "package.json");
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+  const rewritten = rewriteWorkspaceDependencyVersions(packageJson, workspacePackages);
+  if (rewritten === 0) {
+    return rootArchive;
+  }
+
+  writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+  const patchedArchive = join(outputDir, "openclaw-root-patched.tgz");
+  runTar(["-czf", patchedArchive, "-C", unpackDir, "package"]);
+  return patchedArchive;
 }
 
 function main() {
@@ -106,10 +169,15 @@ function main() {
   const packDir = mkdtempSync(join(tmpdir(), "openclaw-ocm-workspace-deps-"));
   try {
     const workspacePackages = packWorkspaceDependencies(npm, workspaceDirs, packDir);
+    const rootArchive = patchRootArchiveWorkspaceDependencies(
+      plan.rootArchive,
+      workspacePackages,
+      packDir,
+    );
     mkdirSync(plan.prefixDir, { recursive: true });
     writeFileSync(
       join(plan.prefixDir, "package.json"),
-      `${JSON.stringify(buildInstallManifest(plan.rootArchive, workspacePackages), null, 2)}\n`,
+      `${JSON.stringify(buildInstallManifest(rootArchive, workspacePackages), null, 2)}\n`,
     );
     const result = runNpm(npm, plan.installArgs, { stdio: "inherit" });
     return result.status ?? 1;
