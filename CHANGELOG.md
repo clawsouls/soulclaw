@@ -2,7 +2,6 @@
 
 Docs: https://docs.openclaw.ai
 
-
 ## 2026.7.1
 
 ### Highlights
@@ -62,7 +61,7 @@ Docs: https://docs.openclaw.ai
 - **Microsoft Teams Graph response bounds:** cap successful file-upload and chat JSON reads so oversized Microsoft Graph responses cannot be buffered without limit. (#97784) Thanks @Alix-007.
 - **Packaged speech runtime:** stop treating package-backed `speech-core` as a bundled plugin sidecar, restoring TTS startup in npm installs while release checks keep true activation-bypassing facades package-complete. (#89899, #89425) Thanks @zhangguiping-xydt, @ant1b0t, and @vincentkoc.
 - **Container image upgrades:** run versioned state migrations and plugin convergence before Gateway readiness when reusing mounted state, failing closed with `doctor --fix` recovery guidance instead of serving half-upgraded state. (#101881) Fixes #98565 Thanks @sallyom, @jacobtomlinson, and @shakkernerd.
-- **Codex app-server protocol:** require app-server 0.142 or newer, remove pre-0.142 wire-shape compatibility, and teach Codex to retrieve deferred native `spawn_agent` through `tool_search` so native subagent task mirroring works on search-capable models. Thanks @vincentkoc.
+- **Codex app-server protocol:** require app-server 0.143 or newer, remove pre-0.142 wire-shape compatibility, migrate retired `on-failure` approval settings to `on-request` in Codex configuration and saved bindings, and teach Codex to retrieve deferred native `spawn_agent` through `tool_search` so native subagent task mirroring works on search-capable models. Thanks @vincentkoc.
 - **Android hardware keyboard chat:** send with unmodified Enter on physical keyboards while preserving Shift+Enter and other modified Enter combinations for multiline input. (#101239) Thanks @3ninyt3nin-creator and @vincentkoc.
 - **CJK Markdown emphasis:** render adjacent Chinese, Japanese, and Korean emphasis punctuation through the shared Markdown pipeline instead of leaking literal markers across channels. (#101230, #101120) Thanks @nicknmorty and @j08577600-jpg.
 - **Backup retry cleanup:** close partial archive output handles and isolate each retry path after live-write failures, preventing Windows `EBUSY` locks from cascading across attempts or leaving stale temp archives. (#101397, #101449) Thanks @ZOOWH, @LiLan0125, @vincentkoc, @aniruddhaadak80, @shakkernerd, and @obviyus.
@@ -203,7 +202,7 @@ Docs: https://docs.openclaw.ai
 
 ### Complete contribution record
 
-This audited record covers the complete v2026.6.11..HEAD history: 1974 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete v2026.6.11..70153f7f9c12be2ff025802c019e428047d1f579 history: 1974 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 #### Pull requests
 
@@ -542,7 +541,7 @@ This audited record covers the complete v2026.6.11..HEAD history: 1974 merged PR
 - **PR #97575** fix(webchat): keep media loads pinned to bottom. Related #96593. Thanks @TurboTheTurtle and @yyz20161101-create.
 - **PR #85829** Avoid post-run auth success lane delay. Related #85822. Thanks @TurboTheTurtle and @ericpearson.
 - **PR #96577** fix(slack): truncate rich text preview on a UTF-16 boundary. Thanks @llagy009.
-- **PR #83187** fix(heartbeat): clear pendingFinalDelivery* on send success. Related #83184. Thanks @agocs.
+- **PR #83187** fix(heartbeat): clear pendingFinalDelivery\* on send success. Related #83184. Thanks @agocs.
 - **PR #97540** fix(zai): bound Z.AI endpoint-probe error body reads to prevent OOM. Thanks @Alix-007 and @vincentkoc.
 - **PR #97551** fix(proxy-capture): bound captured response bodies to prevent OOM. Thanks @Alix-007 and @vincentkoc.
 - **PR #97548** improve(qa-lab): bound Discord API response reads in mantis smoke. Thanks @Alix-007 and @vincentkoc.
@@ -2181,6 +2180,7 @@ This audited record covers the complete v2026.6.11..HEAD history: 1974 merged PR
 - **PR #102256** ci: temporarily disable QA smoke again. Thanks @RomneyDa.
 - **PR #99776** policy: preview review-required gateway repairs. Thanks @giodl73-repo.
 - **PR #101881** Fix container image upgrade migrations before gateway readiness. Related #98565. Thanks @sallyom and @jacobtomlinson.
+
 ## 2026.6.11
 
 We heard the feedback. v2026.6.11 focuses on the rough edges that make OpenClaw feel less dependable, with fixes for misplaced replies, stuck sends, reconnects, model setup failures, and safer admin defaults.
