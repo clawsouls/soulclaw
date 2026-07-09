@@ -1,4 +1,5 @@
 // Package Acceptance Workflow tests cover package acceptance workflow script behavior.
+import { execFileSync, spawnSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
@@ -601,6 +602,44 @@ describe("package acceptance workflow", () => {
 });
 
 describe("package artifact reuse", () => {
+  it("keeps every tracked repository skill visible to Git-aware syncs", () => {
+    const gitignore = readFileSync(".gitignore", "utf8");
+    const skillFiles = execFileSync("git", ["ls-files", ".agents/skills/*/SKILL.md"], {
+      encoding: "utf8",
+    })
+      .trim()
+      .split("\n");
+    const skillDirs = skillFiles.map((path) => path.split("/").slice(0, 3).join("/"));
+
+    for (const skillDir of skillDirs) {
+      expect(gitignore).toContain(`!${skillDir}/`);
+      expect(gitignore).toContain(`!${skillDir}/**`);
+    }
+    const ignored = spawnSync("git", ["check-ignore", "--no-index", "--stdin"], {
+      encoding: "utf8",
+      input: `${skillFiles.join("\n")}\n`,
+    });
+    expect(ignored.status).toBe(1);
+    expect(ignored.stdout).toBe("");
+    expect(ignored.stderr).toBe("");
+  });
+
+  it("keeps tracked sync metadata and QA Mantis sources visible to remote full syncs", () => {
+    for (const path of [
+      ".gitignore",
+      "apps/android/.gitignore",
+      "extensions/qa-lab/src/mantis/cli.ts",
+    ]) {
+      const result = spawnSync("git", ["check-ignore", "--no-index", path], {
+        encoding: "utf8",
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toBe("");
+    }
+  });
+
   it("lets reusable Docker E2E consume an already resolved package artifact", () => {
     const workflow = readFileSync(LIVE_E2E_WORKFLOW, "utf8");
     const packageJson = readFileSync(PACKAGE_JSON, "utf8");
@@ -1980,8 +2019,56 @@ describe("package artifact reuse", () => {
     expect(npmTelegramWorkflow).toContain("package artifact digest mismatch");
     expect(workflow).toContain("Checkout release SHA");
     expect(workflow).toContain('git show "${TARGET_SHA}:CHANGELOG.md" > "${changelog_file}"');
-    expect(workflow).toContain('$0 == "## Unreleased" { in_section = 1; next }');
-    expect(workflow).toContain("Unreleased prerelease fallback");
+    expect(workflow).toContain("render_github_release_notes()");
+    expect(workflow).toContain("node scripts/render-github-release-notes.mjs");
+    expect(workflow).toContain('--tag "${RELEASE_TAG}"');
+    expect(workflow).toContain('--repository "${GITHUB_REPOSITORY}"');
+    expect(workflow).toContain('render_args+=(--verification-file "${verification_file}")');
+    expect(workflow).toContain('render_args+=(--metadata-output "${metadata_file}")');
+    expect(workflow).toContain('--notes-file "${prepared_release_notes_file}"');
+    expect(workflow).not.toContain("return_run_details: true");
+    expect(workflow).toContain("API 2026-03-10 removed return_run_details");
+    expect(workflow).toContain("Accept: application/vnd.github+json");
+    expect(workflow).toContain("X-GitHub-Api-Version: 2026-03-10");
+    expect(workflow).toContain("'.workflow_run_id'");
+    expect(workflow).toContain("'.html_url'");
+    expect(workflow).not.toContain("gh workflow run --repo");
+    expect(workflow).toContain("verify_release_tag_target()");
+    expect(workflow).toContain("git ls-remote --tags origin");
+    expect(workflow).toContain("Release tag ${RELEASE_TAG} moved:");
+    expect(workflow).toContain("canonical_release_body_matches()");
+    expect(workflow).toContain('has_canonical_body="true"');
+    expect(workflow).toContain('"${has_canonical_body}" == "true"');
+    expect(workflow).toContain('"${has_sha}" == "true"');
+    expect(workflow).toContain('"${has_proof}" == "true"');
+    expect(workflow).toContain('"${has_asset}" == "true"');
+    expect(workflow).toContain('prerelease_arg="--prerelease=false"');
+    expect(workflow).toContain('latest_arg="--latest=false"');
+    expect(workflow).toContain("--json isDraft,isPrerelease");
+    expect(workflow).toContain("verificationIncluded == true");
+    expect(workflow).toContain(
+      "Release verification proof omitted because the canonical release notes already reach GitHub's body limit.",
+    );
+    expect(workflow).not.toContain('$0 == "## " version { in_section = 1; next }');
+    expect(workflow).not.toContain("Unreleased prerelease fallback");
+    const releaseNotesPreflightIndex = workflow.indexOf(
+      'prepared_release_notes_file="${RUNNER_TEMP}/release-notes-prepublish.md"',
+    );
+    const publishGateIndex = workflow.indexOf(
+      'if [[ "${PUBLISH_OPENCLAW_NPM}" == "true" ]]; then',
+      releaseNotesPreflightIndex,
+    );
+    const releaseNotesRenderIndex = workflow.indexOf(
+      "render_github_release_notes \\",
+      releaseNotesPreflightIndex,
+    );
+    const firstPublishDispatchIndex = workflow.indexOf(
+      'plugin_npm_run_id="$(dispatch_workflow plugin-npm-release.yml',
+    );
+    expect(releaseNotesPreflightIndex).toBeGreaterThanOrEqual(0);
+    expect(publishGateIndex).toBeGreaterThan(releaseNotesPreflightIndex);
+    expect(releaseNotesRenderIndex).toBeGreaterThan(publishGateIndex);
+    expect(firstPublishDispatchIndex).toBeGreaterThan(releaseNotesPreflightIndex);
     expect(workflow).not.toContain("gh api --repo");
     expect(workflow).not.toContain("timeout-minutes: 360");
   });
@@ -2370,9 +2457,12 @@ describe("package artifact reuse", () => {
     expect(clawHubMetadataIndex).toBeGreaterThan(clawHubSetupIndex);
     expect(releaseWorkflow).toContain("Plugin npm run ID");
     expect(releaseWorkflow).toContain("Plugin ClawHub run ID");
-    expect(releaseWorkflow).toContain(
+    expect(releaseWorkflow).not.toContain(
       "did not return an Actions run URL; refusing to guess from recent workflow_dispatch runs",
     );
+    expect(releaseWorkflow).not.toContain("return_run_details: true");
+    expect(releaseWorkflow).toContain("'.workflow_run_id'");
+    expect(releaseWorkflow).toContain("'.html_url'");
     expect(releaseWorkflow).not.toContain("BEFORE_IDS=");
     expect(releaseWorkflow).not.toContain("before_json");
     expect(releaseWorkflow).toContain("plugin-clawhub-new.yml");
