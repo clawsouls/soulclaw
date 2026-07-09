@@ -1,6 +1,14 @@
 // Test Install Sh Docker tests cover test install sh docker script behavior.
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path, { join } from "node:path";
 import { runInNewContext } from "node:vm";
@@ -864,19 +872,13 @@ describe("install-sh smoke runner", () => {
 });
 
 describe("bun global install smoke", () => {
-  it("packs the current package set and verifies image-provider discovery through Bun", () => {
+  it("packs the current tree and verifies image-provider discovery through Bun", () => {
     const script = readFileSync(BUN_GLOBAL_SMOKE_PATH, "utf8");
     const assertions = readFileSync(BUN_GLOBAL_ASSERTIONS_PATH, "utf8");
 
     expect(script).toContain("node scripts/package-openclaw-for-docker.mjs");
-    expect(script).toContain("--output-name openclaw-bun-smoke.tgz");
-    expect(script).toContain('pnpm --dir packages/ai pack --silent --pack-destination "$PACK_DIR"');
-    expect(script).toContain("OPENCLAW_NPM_REGISTRY_UPSTREAM=https://registry.npmjs.org");
-    expect(script).toContain("scripts/e2e/lib/plugins/npm-registry-server.mjs");
-    expect(script).toContain('"@openclaw/ai"');
-    expect(script).toContain(
-      '"$bun_path" install -g "openclaw@$PACKAGE_VERSION" --registry "$REGISTRY_URL" --no-progress',
-    );
+    expect(script).toContain("--skip-build");
+    expect(script).toContain("--output-name openclaw-current.tgz");
     expect(script).not.toContain("npm pack --ignore-scripts --json --pack-destination");
     expect(script).toContain('"$bun_path" install -g "$PACKAGE_TGZ" --no-progress');
     expect(script).toContain("infer image providers --json");
@@ -894,6 +896,9 @@ describe("bun global install smoke", () => {
     expect(script).toContain(
       'docker_e2e_docker_cmd cp "${container_id}:/app/dist" "$temp_dir/dist"',
     );
+    expect(script).toContain('"${container_id}:/app/node_modules/@openclaw/ai/dist"');
+    expect(script).toContain('"$temp_dir/ai-dist"');
+    expect(script).toContain('mv "$temp_dir/ai-dist" "$ROOT_DIR/packages/ai/dist"');
     expect(script).toContain("cleanup_restore_dist() {");
     expect(script).toContain('mv "$ROOT_DIR/dist" "$backup_dir"');
     expect(script).toContain('mv "$temp_dir/dist" "$ROOT_DIR/dist"');
@@ -922,15 +927,134 @@ describe("bun global install smoke", () => {
     expect(result.stderr).not.toContain("Bun is required");
   });
 
-  it("uses the canonical package builder inside the Bun smoke pack directory", () => {
+  it("uses the canonical package builder for bundled workspace dependencies", () => {
     const script = readFileSync(BUN_GLOBAL_SMOKE_PATH, "utf8");
 
+    expect(script).toContain('PACK_DIR="$(mktemp -d');
     expect(script).toContain("node scripts/package-openclaw-for-docker.mjs");
     expect(script).toContain('--output-dir "$PACK_DIR"');
-    expect(script).toContain("--output-name openclaw-bun-smoke.tgz");
-    expect(script).not.toContain("resolve_pack_tarball_path");
-    expect(script).not.toContain("npm pack --ignore-scripts");
+    expect(script).toContain("--output-name openclaw-current.tgz");
   });
+
+  it("resolves the matching candidate AI package without changing the public registry", () => {
+    const script = readFileSync(BUN_GLOBAL_SMOKE_PATH, "utf8");
+
+    expect(script).toContain("assert-release-versions");
+    expect(script).toContain('"$BUN_INSTALL/install/global/package.json"');
+    expect(script).toContain("package/node_modules/@openclaw/ai");
+    expect(script).toContain("--strip-components=4");
+    expect(script).toContain('npm pack --ignore-scripts --silent --pack-destination "$PACK_DIR"');
+    expect(script).toContain('overrides: { "@openclaw/ai": `file:${aiPackageTarball}` }');
+    expect(script).not.toContain("--registry");
+    expect(script).not.toContain("@openclaw:registry");
+  });
+
+  it("requires root and AI candidate versions to match", () => {
+    const tempDir = tempDirs.make("openclaw-bun-candidate-versions-");
+    const rootManifestPath = join(tempDir, "openclaw.json");
+    const aiManifestPath = join(tempDir, "ai.json");
+    writeFileSync(
+      rootManifestPath,
+      JSON.stringify({
+        name: "openclaw",
+        version: "2026.6.17",
+        dependencies: { "@openclaw/ai": "2026.6.17" },
+      }),
+    );
+    writeFileSync(aiManifestPath, JSON.stringify({ name: "@openclaw/ai", version: "2026.6.17" }));
+
+    const matching = spawnSync(
+      process.execPath,
+      [BUN_GLOBAL_ASSERTIONS_PATH, "assert-release-versions", rootManifestPath, aiManifestPath],
+      { encoding: "utf8" },
+    );
+    expect(matching).toMatchObject({ status: 0, stdout: "2026.6.17" });
+
+    writeFileSync(aiManifestPath, JSON.stringify({ name: "@openclaw/ai", version: "2026.6.18" }));
+    const mismatched = spawnSync(
+      process.execPath,
+      [BUN_GLOBAL_ASSERTIONS_PATH, "assert-release-versions", rootManifestPath, aiManifestPath],
+      { encoding: "utf8" },
+    );
+    expect(mismatched.status).not.toBe(0);
+    expect(mismatched.stderr).toContain(
+      "candidate version mismatch: openclaw=2026.6.17, dependency=2026.6.17, @openclaw/ai=2026.6.18",
+    );
+  });
+
+  it.runIf(process.platform !== "win32")(
+    "uses bundled AI bytes when a prebuilt tarball is provided",
+    () => {
+      const tempDir = tempDirs.make("openclaw-bun-prebuilt-");
+      const packageDir = join(tempDir, "fixture", "package");
+      const aiDir = join(packageDir, "node_modules", "@openclaw", "ai");
+      const packageTgz = join(tempDir, "openclaw-prebuilt.tgz");
+      const bunPath = join(tempDir, "bun");
+      mkdirSync(aiDir, { recursive: true });
+      writeFileSync(
+        join(packageDir, "package.json"),
+        JSON.stringify({
+          name: "openclaw",
+          version: "2026.6.17",
+          dependencies: { "@openclaw/ai": "2026.6.17" },
+          bundleDependencies: ["@openclaw/ai"],
+        }),
+      );
+      writeFileSync(
+        join(aiDir, "package.json"),
+        JSON.stringify({ name: "@openclaw/ai", version: "2026.6.17" }),
+      );
+      const packed = spawnSync(
+        "tar",
+        ["-czf", packageTgz, "-C", join(tempDir, "fixture"), "package"],
+        {
+          encoding: "utf8",
+        },
+      );
+      expect(packed.status, packed.stderr).toBe(0);
+      writeFileSync(
+        bunPath,
+        `#!/usr/bin/env bash
+set -euo pipefail
+if [ "\${1:-}" = "--version" ]; then
+  echo "1.3.14"
+  exit 0
+fi
+override="$(node -e 'const p=require(process.argv[1]);process.stdout.write(p.overrides["@openclaw/ai"])' "$BUN_INSTALL/install/global/package.json")"
+case "\${override#file:}" in
+  *.tgz) ;;
+  *) exit 1 ;;
+esac
+test -f "\${override#file:}"
+mkdir -p "$BUN_INSTALL/bin"
+cat >"$BUN_INSTALL/bin/openclaw" <<'OPENCLAW'
+#!/usr/bin/env bash
+if [ "\${1:-}" = "--version" ]; then
+  echo "OpenClaw 2026.6.17"
+else
+  printf '[{"id":"google"},{"id":"openai"},{"id":"xai"}]\n'
+fi
+OPENCLAW
+chmod +x "$BUN_INSTALL/bin/openclaw"
+`,
+      );
+      chmodSync(bunPath, 0o755);
+
+      const result = spawnSync("bash", [BUN_GLOBAL_SMOKE_PATH], {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          BUN_BIN: bunPath,
+          OPENCLAW_BUN_GLOBAL_SMOKE_HOST_BUILD: "0",
+          OPENCLAW_BUN_GLOBAL_SMOKE_PACKAGE_TGZ: packageTgz,
+          OPENCLAW_BUN_GLOBAL_SMOKE_TIMEOUT_MS: "10000",
+        },
+      });
+
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("bun-global-install-smoke: image providers OK (3 providers)");
+    },
+  );
 
   it.runIf(process.platform !== "win32" && existsSync("/usr/bin/time"))(
     "preserves Bun global timeout kill grace after the leader exits",

@@ -22,26 +22,52 @@ BUN_BIN="${BUN_BIN:-bun}"
 HOST_BUILD="${OPENCLAW_BUN_GLOBAL_SMOKE_HOST_BUILD:-1}"
 DIST_IMAGE="${OPENCLAW_BUN_GLOBAL_SMOKE_DIST_IMAGE:-}"
 PACKAGE_TGZ="${OPENCLAW_BUN_GLOBAL_SMOKE_PACKAGE_TGZ:-}"
-AI_PACKAGE_TGZ=""
-PACKAGE_VERSION=""
 COMMAND_TIMEOUT_MS="$(read_positive_int_env OPENCLAW_BUN_GLOBAL_SMOKE_TIMEOUT_MS 180000)"
 DOCKER_COMMAND_TIMEOUT="${DOCKER_COMMAND_TIMEOUT:-${OPENCLAW_BUN_GLOBAL_SMOKE_DOCKER_COMMAND_TIMEOUT:-600s}}"
+AI_PACKAGE_TGZ=""
 SMOKE_DIR=""
 PACK_DIR=""
-REGISTRY_PID=""
-REGISTRY_URL=""
 
 cleanup() {
-  if [ -n "${REGISTRY_PID:-}" ]; then
-    kill "$REGISTRY_PID" >/dev/null 2>&1 || true
-    wait "$REGISTRY_PID" >/dev/null 2>&1 || true
-  fi
   if [ -n "${SMOKE_DIR:-}" ]; then
     rm -rf "$SMOKE_DIR"
   fi
   if [ -n "${PACK_DIR:-}" ]; then
     rm -rf "$PACK_DIR"
   fi
+}
+
+prepare_ai_candidate() {
+  local ai_manifest
+  local ai_package_dir
+  local ai_tarballs
+  local root_manifest
+
+  if [ -z "$PACK_DIR" ]; then
+    PACK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/openclaw-bun-pack.XXXXXX")"
+  fi
+  echo "==> Extract bundled candidate @openclaw/ai package"
+  ai_package_dir="$PACK_DIR/ai-candidate"
+  mkdir -p "$ai_package_dir"
+  tar -xzf "$PACKAGE_TGZ" \
+    -C "$ai_package_dir" \
+    --strip-components=4 \
+    package/node_modules/@openclaw/ai
+  root_manifest="$PACK_DIR/openclaw-package.json"
+  ai_manifest="$ai_package_dir/package.json"
+  tar -xOf "$PACKAGE_TGZ" package/package.json >"$root_manifest"
+  node scripts/e2e/lib/bun-global-install/assertions.mjs \
+    assert-release-versions \
+    "$root_manifest" \
+    "$ai_manifest" \
+    >/dev/null
+  npm pack --ignore-scripts --silent --pack-destination "$PACK_DIR" "$ai_package_dir" >/dev/null
+  ai_tarballs=("$PACK_DIR"/openclaw-ai-*.tgz)
+  if [ "${#ai_tarballs[@]}" -ne 1 ] || [ ! -f "${ai_tarballs[0]}" ]; then
+    echo "expected one packed @openclaw/ai candidate in $PACK_DIR" >&2
+    exit 1
+  fi
+  AI_PACKAGE_TGZ="${ai_tarballs[0]}"
 }
 
 trap cleanup EXIT
@@ -52,46 +78,49 @@ run_with_timeout() {
   node scripts/e2e/lib/bun-global-install/assertions.mjs run-with-timeout "$timeout_ms" "$@"
 }
 
-read_package_tarball_field() {
-  local tarball="$1"
-  local field="$2"
-
-  tar -xOf "$tarball" package/package.json |
-    node -e '
-let raw = "";
-process.stdin.on("data", (chunk) => (raw += chunk));
-process.stdin.on("end", () => {
-  const value = JSON.parse(raw)[process.argv[1]];
-  if (typeof value !== "string" || !value) {
-    throw new Error(`package tarball is missing ${process.argv[1]}`);
-  }
-  process.stdout.write(value);
-});
-' "$field"
-}
-
 restore_dist_from_image() {
   local image="$1"
+  local ai_backup_dir=""
+  local ai_dist_installed=0
   local backup_dir=""
   local container_id=""
-  local swapped=0
+  local dist_installed=0
+  local restore_complete=0
   local temp_dir=""
 
   cleanup_restore_dist() {
     if [ -n "$container_id" ]; then
       docker_e2e_docker_cmd rm -f "$container_id" >/dev/null 2>&1 || true
     fi
-    if [ "$swapped" != "1" ] && [ -n "$backup_dir" ] && [ -d "$backup_dir" ]; then
-      rm -rf "$ROOT_DIR/dist" >/dev/null 2>&1 || true
-      if [ ! -e "$ROOT_DIR/dist" ] && mv "$backup_dir" "$ROOT_DIR/dist" >/dev/null 2>&1; then
-        backup_dir=""
+    # Both build trees come from one image. A partial swap must restore both or
+    # the following package step could mix artifacts from different builds.
+    if [ "$restore_complete" != "1" ]; then
+      if [ "$dist_installed" = "1" ]; then
+        rm -rf "$ROOT_DIR/dist" >/dev/null 2>&1 || true
+      fi
+      if [ -n "$backup_dir" ] && [ -d "$backup_dir" ]; then
+        if [ ! -e "$ROOT_DIR/dist" ] && mv "$backup_dir" "$ROOT_DIR/dist" >/dev/null 2>&1; then
+          backup_dir=""
+        fi
+      fi
+      if [ "$ai_dist_installed" = "1" ]; then
+        rm -rf "$ROOT_DIR/packages/ai/dist" >/dev/null 2>&1 || true
+      fi
+      if [ -n "$ai_backup_dir" ] && [ -d "$ai_backup_dir" ]; then
+        if [ ! -e "$ROOT_DIR/packages/ai/dist" ] && \
+          mv "$ai_backup_dir" "$ROOT_DIR/packages/ai/dist" >/dev/null 2>&1; then
+          ai_backup_dir=""
+        fi
       fi
     fi
     if [ -n "$temp_dir" ]; then
       rm -rf "$temp_dir"
     fi
-    if [ "$swapped" = "1" ] && [ -n "$backup_dir" ]; then
+    if [ "$restore_complete" = "1" ] && [ -n "$backup_dir" ]; then
       rm -rf "$backup_dir"
+    fi
+    if [ "$restore_complete" = "1" ] && [ -n "$ai_backup_dir" ]; then
+      rm -rf "$ai_backup_dir"
     fi
   }
 
@@ -105,6 +134,12 @@ restore_dist_from_image() {
     return 1
   fi
   if ! docker_e2e_docker_cmd cp "${container_id}:/app/dist" "$temp_dir/dist"; then
+    cleanup_restore_dist
+    return 1
+  fi
+  if ! docker_e2e_docker_cmd cp \
+    "${container_id}:/app/node_modules/@openclaw/ai/dist" \
+    "$temp_dir/ai-dist"; then
     cleanup_restore_dist
     return 1
   fi
@@ -126,7 +161,27 @@ restore_dist_from_image() {
     cleanup_restore_dist
     return 1
   fi
-  swapped=1
+  dist_installed=1
+  if [ -e "$ROOT_DIR/packages/ai/dist" ]; then
+    if ! ai_backup_dir="$(mktemp -d "$ROOT_DIR/packages/ai/.dist-backup.XXXXXX")"; then
+      cleanup_restore_dist
+      return 1
+    fi
+    if ! rmdir "$ai_backup_dir"; then
+      cleanup_restore_dist
+      return 1
+    fi
+    if ! mv "$ROOT_DIR/packages/ai/dist" "$ai_backup_dir"; then
+      cleanup_restore_dist
+      return 1
+    fi
+  fi
+  if ! mv "$temp_dir/ai-dist" "$ROOT_DIR/packages/ai/dist"; then
+    cleanup_restore_dist
+    return 1
+  fi
+  ai_dist_installed=1
+  restore_complete=1
   cleanup_restore_dist
 }
 
@@ -159,81 +214,14 @@ resolve_package_tgz() {
   echo "==> Pack OpenClaw tarball"
   PACKAGE_TGZ="$(
     node scripts/package-openclaw-for-docker.mjs \
+      --skip-build \
       --output-dir "$PACK_DIR" \
-      --output-name openclaw-bun-smoke.tgz \
-      --skip-build
+      --output-name openclaw-current.tgz
   )"
   if [ -z "$PACKAGE_TGZ" ] || [ ! -f "$PACKAGE_TGZ" ]; then
     echo "missing packed OpenClaw tarball" >&2
     exit 1
   fi
-
-  echo "==> Pack @openclaw/ai companion tarball"
-  pnpm --dir packages/ai pack --silent --pack-destination "$PACK_DIR" >/dev/null
-  local ai_tarballs=()
-  while IFS= read -r tarball; do
-    ai_tarballs+=("$tarball")
-  done < <(find "$PACK_DIR" -maxdepth 1 -type f -name "openclaw-ai-*.tgz" -print)
-  if [ "${#ai_tarballs[@]}" -ne 1 ]; then
-    echo "expected one packed @openclaw/ai tarball, found ${#ai_tarballs[@]}" >&2
-    exit 1
-  fi
-  AI_PACKAGE_TGZ="${ai_tarballs[0]}"
-
-  local package_name
-  local ai_package_name
-  local ai_package_version
-  package_name="$(read_package_tarball_field "$PACKAGE_TGZ" name)"
-  PACKAGE_VERSION="$(read_package_tarball_field "$PACKAGE_TGZ" version)"
-  ai_package_name="$(read_package_tarball_field "$AI_PACKAGE_TGZ" name)"
-  ai_package_version="$(read_package_tarball_field "$AI_PACKAGE_TGZ" version)"
-  if [ "$package_name" != "openclaw" ]; then
-    echo "packed root package must be named openclaw, found $package_name" >&2
-    exit 1
-  fi
-  if [ "$ai_package_name" != "@openclaw/ai" ]; then
-    echo "packed companion package must be named @openclaw/ai, found $ai_package_name" >&2
-    exit 1
-  fi
-  if [ "$ai_package_version" != "$PACKAGE_VERSION" ]; then
-    echo "packed package versions do not match: openclaw@$PACKAGE_VERSION and @openclaw/ai@$ai_package_version" >&2
-    exit 1
-  fi
-}
-
-start_package_registry() {
-  local port_file="$PACK_DIR/npm-registry-port"
-  local registry_log="$PACK_DIR/npm-registry.log"
-
-  # Bun does not resolve the bundled workspace dependency from the root tarball,
-  # so install the exact release package set through the shared fixture registry.
-  OPENCLAW_NPM_REGISTRY_UPSTREAM=https://registry.npmjs.org \
-    node scripts/e2e/lib/plugins/npm-registry-server.mjs \
-      "$port_file" \
-      openclaw \
-      "$PACKAGE_VERSION" \
-      "$PACKAGE_TGZ" \
-      "@openclaw/ai" \
-      "$PACKAGE_VERSION" \
-      "$AI_PACKAGE_TGZ" \
-      >"$registry_log" 2>&1 &
-  REGISTRY_PID="$!"
-
-  for _ in $(seq 1 100); do
-    if [ -s "$port_file" ]; then
-      REGISTRY_URL="http://127.0.0.1:$(cat "$port_file")"
-      return 0
-    fi
-    if ! kill -0 "$REGISTRY_PID" >/dev/null 2>&1; then
-      cat "$registry_log" >&2
-      return 1
-    fi
-    sleep 0.1
-  done
-
-  cat "$registry_log" >&2
-  echo "timed out waiting for Bun package registry" >&2
-  return 1
 }
 
 main() {
@@ -245,6 +233,7 @@ main() {
   fi
 
   resolve_package_tgz
+  prepare_ai_candidate
 
   local bun_path
   local openclaw_bin
@@ -257,20 +246,27 @@ main() {
   export OPENCLAW_NO_ONBOARD=1
   export OPENCLAW_DISABLE_UPDATE_CHECK=1
   export NO_COLOR=1
-  mkdir -p "$HOME" "$BUN_INSTALL/bin" "$XDG_CACHE_HOME"
+  mkdir -p "$HOME" "$BUN_INSTALL/bin" "$BUN_INSTALL/install/global" "$XDG_CACHE_HOME"
   export PATH="$BUN_INSTALL/bin:$(dirname "$(command -v node)"):$PATH"
+  # Release publishes @openclaw/ai first. Bun 1.3.14 ignores bundled deps in
+  # local tarballs, so resolve that one package from the exact candidate bytes.
+  node --input-type=module - \
+    "$BUN_INSTALL/install/global/package.json" \
+    "$AI_PACKAGE_TGZ" <<'NODE'
+import fs from "node:fs";
+
+const [, , packageJsonPath, aiPackageTarball] = process.argv;
+fs.writeFileSync(
+  packageJsonPath,
+  `${JSON.stringify({ private: true, overrides: { "@openclaw/ai": `file:${aiPackageTarball}` } })}\n`,
+);
+NODE
 
   echo "==> Bun version"
   "$bun_path" --version
 
-  if [ -n "$AI_PACKAGE_TGZ" ]; then
-    start_package_registry
-    echo "==> Bun global install prepared OpenClaw package set"
-    "$bun_path" install -g "openclaw@$PACKAGE_VERSION" --registry "$REGISTRY_URL" --no-progress
-  else
-    echo "==> Bun global install packed OpenClaw"
-    "$bun_path" install -g "$PACKAGE_TGZ" --no-progress
-  fi
+  echo "==> Bun global install packed OpenClaw"
+  "$bun_path" install -g "$PACKAGE_TGZ" --no-progress
 
   openclaw_bin="$BUN_INSTALL/bin/openclaw"
   if [ ! -x "$openclaw_bin" ]; then
