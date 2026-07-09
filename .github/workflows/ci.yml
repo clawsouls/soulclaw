@@ -675,7 +675,7 @@ jobs:
             packages/*/dist/
             extensions/*/src/host/**/.bundle.hash
             extensions/*/src/host/**/*.bundle.js
-          key: ${{ runner.os }}-dist-build-${{ needs.preflight.outputs.checkout_revision }}
+          key: ${{ runner.os }}-dist-build-v2-${{ needs.preflight.outputs.checkout_revision }}
 
       - name: Build dist
         if: steps.dist_build_cache.outputs.cache-hit != 'true'

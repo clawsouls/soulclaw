@@ -98,7 +98,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          cache_prefix="${RUNNER_OS}-dist-build-"
+          cache_prefix="${RUNNER_OS}-dist-build-v2-"
           declare -A seen=()
 
           resolve_tag_sha() {
@@ -151,7 +151,7 @@ jobs:
             dist/
             dist-runtime/
             packages/*/dist/
-          key: ${{ runner.os }}-dist-build-${{ github.sha }}
+          key: ${{ runner.os }}-dist-build-v2-${{ github.sha }}
           restore-keys: ${{ steps.dist-cache-seeds.outputs.restore-keys }}
 
       - name: Build dist on cache miss
@@ -188,7 +188,7 @@ jobs:
             dist/
             dist-runtime/
             packages/*/dist/
-          key: ${{ runner.os }}-dist-build-${{ github.sha }}
+          key: ${{ runner.os }}-dist-build-v2-${{ github.sha }}
 
       - name: Prepare Testbox shell
         shell: bash

@@ -754,10 +754,17 @@ describe("ci workflow guards", () => {
     expect(restoreStep.with.path).toContain("extensions/*/src/host/**/.bundle.hash");
     expect(restoreStep.with.path).toContain("extensions/*/src/host/**/*.bundle.js");
     expect(saveStep.with.path).toContain("packages/*/dist/");
+    expect(restoreStep.with.key).toContain("dist-build-v2-");
     expect(packStep.run).toContain("packages/*/dist");
     expect(testboxRestoreStep.with.path).toContain("packages/*/dist/");
+    expect(testboxRestoreStep.with.key).toContain("dist-build-v2-");
     expect(testboxSaveStep.with.path).toContain("packages/*/dist/");
+    expect(testboxSaveStep.with.key).toContain("dist-build-v2-");
     expect(testboxVerifyStep.run).toContain("packages/ai/dist/internal/runtime.mjs");
+    expect(
+      testboxBuildArtifactSteps.find((step) => step.name === "Resolve release dist cache seeds")
+        .run,
+    ).toContain('cache_prefix="${RUNNER_OS}-dist-build-v2-"');
     expect(buildArtifactSteps.map((step) => step.name)).not.toContain("Cache dist build");
   });
 
