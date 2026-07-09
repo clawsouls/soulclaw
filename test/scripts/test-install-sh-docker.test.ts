@@ -864,12 +864,19 @@ describe("install-sh smoke runner", () => {
 });
 
 describe("bun global install smoke", () => {
-  it("packs the current tree and verifies image-provider discovery through Bun", () => {
+  it("packs the current package set and verifies image-provider discovery through Bun", () => {
     const script = readFileSync(BUN_GLOBAL_SMOKE_PATH, "utf8");
     const assertions = readFileSync(BUN_GLOBAL_ASSERTIONS_PATH, "utf8");
 
     expect(script).toContain("node scripts/package-openclaw-for-docker.mjs");
     expect(script).toContain("--output-name openclaw-bun-smoke.tgz");
+    expect(script).toContain('pnpm --dir packages/ai pack --silent --pack-destination "$PACK_DIR"');
+    expect(script).toContain("OPENCLAW_NPM_REGISTRY_UPSTREAM=https://registry.npmjs.org");
+    expect(script).toContain("scripts/e2e/lib/plugins/npm-registry-server.mjs");
+    expect(script).toContain('"@openclaw/ai"');
+    expect(script).toContain(
+      '"$bun_path" install -g "openclaw@$PACKAGE_VERSION" --registry "$REGISTRY_URL" --no-progress',
+    );
     expect(script).not.toContain("npm pack --ignore-scripts --json --pack-destination");
     expect(script).toContain('"$bun_path" install -g "$PACKAGE_TGZ" --no-progress');
     expect(script).toContain("infer image providers --json");

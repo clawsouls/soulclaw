@@ -22,12 +22,20 @@ BUN_BIN="${BUN_BIN:-bun}"
 HOST_BUILD="${OPENCLAW_BUN_GLOBAL_SMOKE_HOST_BUILD:-1}"
 DIST_IMAGE="${OPENCLAW_BUN_GLOBAL_SMOKE_DIST_IMAGE:-}"
 PACKAGE_TGZ="${OPENCLAW_BUN_GLOBAL_SMOKE_PACKAGE_TGZ:-}"
+AI_PACKAGE_TGZ=""
+PACKAGE_VERSION=""
 COMMAND_TIMEOUT_MS="$(read_positive_int_env OPENCLAW_BUN_GLOBAL_SMOKE_TIMEOUT_MS 180000)"
 DOCKER_COMMAND_TIMEOUT="${DOCKER_COMMAND_TIMEOUT:-${OPENCLAW_BUN_GLOBAL_SMOKE_DOCKER_COMMAND_TIMEOUT:-600s}}"
 SMOKE_DIR=""
 PACK_DIR=""
+REGISTRY_PID=""
+REGISTRY_URL=""
 
 cleanup() {
+  if [ -n "${REGISTRY_PID:-}" ]; then
+    kill "$REGISTRY_PID" >/dev/null 2>&1 || true
+    wait "$REGISTRY_PID" >/dev/null 2>&1 || true
+  fi
   if [ -n "${SMOKE_DIR:-}" ]; then
     rm -rf "$SMOKE_DIR"
   fi
@@ -42,6 +50,24 @@ run_with_timeout() {
   local timeout_ms="$1"
   shift
   node scripts/e2e/lib/bun-global-install/assertions.mjs run-with-timeout "$timeout_ms" "$@"
+}
+
+read_package_tarball_field() {
+  local tarball="$1"
+  local field="$2"
+
+  tar -xOf "$tarball" package/package.json |
+    node -e '
+let raw = "";
+process.stdin.on("data", (chunk) => (raw += chunk));
+process.stdin.on("end", () => {
+  const value = JSON.parse(raw)[process.argv[1]];
+  if (typeof value !== "string" || !value) {
+    throw new Error(`package tarball is missing ${process.argv[1]}`);
+  }
+  process.stdout.write(value);
+});
+' "$field"
 }
 
 restore_dist_from_image() {
@@ -141,6 +167,73 @@ resolve_package_tgz() {
     echo "missing packed OpenClaw tarball" >&2
     exit 1
   fi
+
+  echo "==> Pack @openclaw/ai companion tarball"
+  pnpm --dir packages/ai pack --silent --pack-destination "$PACK_DIR" >/dev/null
+  local ai_tarballs=()
+  while IFS= read -r tarball; do
+    ai_tarballs+=("$tarball")
+  done < <(find "$PACK_DIR" -maxdepth 1 -type f -name "openclaw-ai-*.tgz" -print)
+  if [ "${#ai_tarballs[@]}" -ne 1 ]; then
+    echo "expected one packed @openclaw/ai tarball, found ${#ai_tarballs[@]}" >&2
+    exit 1
+  fi
+  AI_PACKAGE_TGZ="${ai_tarballs[0]}"
+
+  local package_name
+  local ai_package_name
+  local ai_package_version
+  package_name="$(read_package_tarball_field "$PACKAGE_TGZ" name)"
+  PACKAGE_VERSION="$(read_package_tarball_field "$PACKAGE_TGZ" version)"
+  ai_package_name="$(read_package_tarball_field "$AI_PACKAGE_TGZ" name)"
+  ai_package_version="$(read_package_tarball_field "$AI_PACKAGE_TGZ" version)"
+  if [ "$package_name" != "openclaw" ]; then
+    echo "packed root package must be named openclaw, found $package_name" >&2
+    exit 1
+  fi
+  if [ "$ai_package_name" != "@openclaw/ai" ]; then
+    echo "packed companion package must be named @openclaw/ai, found $ai_package_name" >&2
+    exit 1
+  fi
+  if [ "$ai_package_version" != "$PACKAGE_VERSION" ]; then
+    echo "packed package versions do not match: openclaw@$PACKAGE_VERSION and @openclaw/ai@$ai_package_version" >&2
+    exit 1
+  fi
+}
+
+start_package_registry() {
+  local port_file="$PACK_DIR/npm-registry-port"
+  local registry_log="$PACK_DIR/npm-registry.log"
+
+  # Bun does not resolve the bundled workspace dependency from the root tarball,
+  # so install the exact release package set through the shared fixture registry.
+  OPENCLAW_NPM_REGISTRY_UPSTREAM=https://registry.npmjs.org \
+    node scripts/e2e/lib/plugins/npm-registry-server.mjs \
+      "$port_file" \
+      openclaw \
+      "$PACKAGE_VERSION" \
+      "$PACKAGE_TGZ" \
+      "@openclaw/ai" \
+      "$PACKAGE_VERSION" \
+      "$AI_PACKAGE_TGZ" \
+      >"$registry_log" 2>&1 &
+  REGISTRY_PID="$!"
+
+  for _ in $(seq 1 100); do
+    if [ -s "$port_file" ]; then
+      REGISTRY_URL="http://127.0.0.1:$(cat "$port_file")"
+      return 0
+    fi
+    if ! kill -0 "$REGISTRY_PID" >/dev/null 2>&1; then
+      cat "$registry_log" >&2
+      return 1
+    fi
+    sleep 0.1
+  done
+
+  cat "$registry_log" >&2
+  echo "timed out waiting for Bun package registry" >&2
+  return 1
 }
 
 main() {
@@ -170,8 +263,14 @@ main() {
   echo "==> Bun version"
   "$bun_path" --version
 
-  echo "==> Bun global install packed OpenClaw"
-  "$bun_path" install -g "$PACKAGE_TGZ" --no-progress
+  if [ -n "$AI_PACKAGE_TGZ" ]; then
+    start_package_registry
+    echo "==> Bun global install prepared OpenClaw package set"
+    "$bun_path" install -g "openclaw@$PACKAGE_VERSION" --registry "$REGISTRY_URL" --no-progress
+  else
+    echo "==> Bun global install packed OpenClaw"
+    "$bun_path" install -g "$PACKAGE_TGZ" --no-progress
+  fi
 
   openclaw_bin="$BUN_INSTALL/bin/openclaw"
   if [ ! -x "$openclaw_bin" ]; then
