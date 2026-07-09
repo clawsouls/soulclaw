@@ -267,6 +267,8 @@ jobs:
             },
             ...(Array.isArray(manifest.dependencyTarballs) ? manifest.dependencyTarballs : []),
           ];
+          const packageNames = new Set();
+          const tarballNames = new Set();
           for (const entry of entries) {
             if (
               !entry.packageName ||
@@ -277,6 +279,11 @@ jobs:
             ) {
               throw new Error("package artifact manifest contains invalid tarball metadata");
             }
+            if (packageNames.has(entry.packageName) || tarballNames.has(entry.tarballName)) {
+              throw new Error("package artifact manifest contains duplicate package metadata");
+            }
+            packageNames.add(entry.packageName);
+            tarballNames.add(entry.tarballName);
             const tarballPath = path.join(packageDir, entry.tarballName);
             if (!fs.existsSync(tarballPath)) {
               throw new Error(`package artifact is missing ${entry.tarballName}`);
@@ -293,6 +300,16 @@ jobs:
             if (packageJson.name !== entry.packageName || packageJson.version !== entry.packageVersion) {
               throw new Error(`package artifact metadata mismatch for ${entry.packageName}`);
             }
+          }
+          const artifactTarballs = fs
+            .readdirSync(packageDir, { withFileTypes: true })
+            .filter((entry) => entry.isFile() && entry.name.endsWith(".tgz"))
+            .map((entry) => entry.name);
+          if (
+            artifactTarballs.length !== tarballNames.size ||
+            artifactTarballs.some((name) => !tarballNames.has(name))
+          ) {
+            throw new Error("package artifact tarball set does not match preflight manifest");
           }
           process.stdout.write(path.join(packageDir, manifest.tarballName));
           NODE

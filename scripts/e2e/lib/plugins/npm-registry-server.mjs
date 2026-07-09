@@ -114,8 +114,10 @@ async function proxyUpstream(url, response) {
     const upstreamUrl = new URL(`${url.pathname}${url.search}`, `${upstreamRegistry}/`);
     const upstreamResponse = await fetch(upstreamUrl, { redirect: "manual" });
     const body = Buffer.from(await upstreamResponse.arrayBuffer());
-    const headers = {};
-    for (const name of ["content-length", "content-type", "location"]) {
+    // Fetch decodes compressed bodies but preserves upstream length metadata.
+    // Emit the decoded size so npm clients do not truncate proxied responses.
+    const headers = { "content-length": String(body.length) };
+    for (const name of ["content-type", "location"]) {
       const value = upstreamResponse.headers.get(name);
       if (value) {
         headers[name] = value;

@@ -1785,6 +1785,8 @@ describe("package artifact reuse", () => {
       'manifest="${package_dir}/preflight-manifest.json"',
       'candidate_manifest="${package_dir}/package-candidate.json"',
       'find "${package_dir}" -type f -name "*.tgz"',
+      "package artifact manifest contains duplicate package metadata",
+      "package artifact tarball set does not match preflight manifest",
       "package candidate manifest does not match the OpenClaw tarball",
       "package candidate digest mismatch",
       'export OPENCLAW_NPM_TELEGRAM_PACKAGE_DIR="${package_dir}"',
