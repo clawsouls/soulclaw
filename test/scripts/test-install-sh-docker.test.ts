@@ -216,40 +216,6 @@ read_pack_tarball_filename "$pack_json_file"`,
   );
 }
 
-function extractResolvePackTarballPath(): string {
-  const script = readFileSync(BUN_GLOBAL_SMOKE_PATH, "utf8");
-  const match = script.match(/(resolve_pack_tarball_path\(\) \{[\s\S]*?\n\})\n\nrestore_dist/u);
-  if (!match) {
-    throw new Error("resolve_pack_tarball_path helper was not found");
-  }
-  return match[1];
-}
-
-function runResolvePackTarballPath(filename: string) {
-  return spawnSync(
-    "bash",
-    [
-      "--noprofile",
-      "--norc",
-      "-c",
-      `${extractResolvePackTarballPath()}
-pack_dir="$(mktemp -d)"
-pack_json_file="$pack_dir/pack.json"
-trap 'rm -rf "$pack_dir"' EXIT
-printf '%s' "$PACK_JSON" >"$pack_json_file"
-resolve_pack_tarball_path "$pack_json_file" "$pack_dir"`,
-    ],
-    {
-      encoding: "utf8",
-      env: {
-        HOME: "/tmp",
-        PACK_JSON: JSON.stringify([{ filename }]),
-        PATH: process.env.PATH ?? "",
-      },
-    },
-  );
-}
-
 describe("test-install-sh-docker", () => {
   it("defaults ARM hosts to native arm64 while keeping x64 CI on amd64", () => {
     expect(runDefaultSmokePlatform({ CI: "true" }, "aarch64")).toBe("linux/arm64");
@@ -902,7 +868,9 @@ describe("bun global install smoke", () => {
     const script = readFileSync(BUN_GLOBAL_SMOKE_PATH, "utf8");
     const assertions = readFileSync(BUN_GLOBAL_ASSERTIONS_PATH, "utf8");
 
-    expect(script).toContain("npm pack --ignore-scripts --json --pack-destination");
+    expect(script).toContain("node scripts/package-openclaw-for-docker.mjs");
+    expect(script).toContain("--output-name openclaw-bun-smoke.tgz");
+    expect(script).not.toContain("npm pack --ignore-scripts --json --pack-destination");
     expect(script).toContain('"$bun_path" install -g "$PACKAGE_TGZ" --no-progress');
     expect(script).toContain("infer image providers --json");
     expect(script).toContain("assert-image-providers");
@@ -947,39 +915,14 @@ describe("bun global install smoke", () => {
     expect(result.stderr).not.toContain("Bun is required");
   });
 
-  it("keeps npm pack tarball paths inside the Bun smoke pack directory", () => {
+  it("uses the canonical package builder inside the Bun smoke pack directory", () => {
     const script = readFileSync(BUN_GLOBAL_SMOKE_PATH, "utf8");
 
-    expect(script).toContain("resolve_pack_tarball_path()");
-    expect(script).toContain(
-      'PACKAGE_TGZ="$(resolve_pack_tarball_path "$pack_json_file" "$PACK_DIR")"',
-    );
-    expect(script).toContain("filename !== path.basename(filename)");
-    expect(script).toContain("filename !== path.win32.basename(filename)");
-    expect(script).toContain("npm pack reported unsafe tarball filename");
-  });
-
-  it("rejects path-like npm pack tarball filenames in Bun smoke metadata", () => {
-    const safeResult = runResolvePackTarballPath("openclaw-2026.6.17.tgz");
-
-    expect(safeResult.status).toBe(0);
-    expect(safeResult.stdout).toMatch(/\/openclaw-2026\.6\.17\.tgz$/u);
-
-    const unsafeFilenames = [
-      "../openclaw.tgz",
-      "nested/openclaw.tgz",
-      "nested\\openclaw.tgz",
-      "/tmp/openclaw.tgz",
-      "C:\\temp\\openclaw.tgz",
-      "openclaw.tar.gz",
-    ];
-
-    for (const filename of unsafeFilenames) {
-      const result = runResolvePackTarballPath(filename);
-
-      expect(result.status, filename).not.toBe(0);
-      expect(result.stderr, filename).toContain("npm pack reported unsafe tarball filename");
-    }
+    expect(script).toContain("node scripts/package-openclaw-for-docker.mjs");
+    expect(script).toContain('--output-dir "$PACK_DIR"');
+    expect(script).toContain("--output-name openclaw-bun-smoke.tgz");
+    expect(script).not.toContain("resolve_pack_tarball_path");
+    expect(script).not.toContain("npm pack --ignore-scripts");
   });
 
   it.runIf(process.platform !== "win32" && existsSync("/usr/bin/time"))(

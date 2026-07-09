@@ -44,29 +44,6 @@ run_with_timeout() {
   node scripts/e2e/lib/bun-global-install/assertions.mjs run-with-timeout "$timeout_ms" "$@"
 }
 
-resolve_pack_tarball_path() {
-  local pack_json_file="$1"
-  local pack_dir="$2"
-  node -e '
-const fs = require("node:fs");
-const path = require("node:path");
-const raw = fs.readFileSync(process.argv[1], "utf8") || "[]";
-const parsed = JSON.parse(raw);
-const last = Array.isArray(parsed) ? parsed.at(-1) : null;
-const filename = typeof last?.filename === "string" ? last.filename.trim() : "";
-if (
-  !filename.endsWith(".tgz") ||
-  filename.includes("\0") ||
-  filename !== path.basename(filename) ||
-  filename !== path.win32.basename(filename)
-) {
-  console.error(`ERROR: npm pack reported unsafe tarball filename ${JSON.stringify(filename)}`);
-  process.exit(1);
-}
-process.stdout.write(path.resolve(process.argv[2], filename));
-' "$pack_json_file" "$pack_dir"
-}
-
 restore_dist_from_image() {
   local image="$1"
   local backup_dir=""
@@ -151,16 +128,15 @@ resolve_package_tgz() {
     exit 1
   fi
 
-  echo "==> Write package inventory"
-  node --import tsx scripts/write-package-dist-inventory.ts
-
-  local pack_json_file
   PACK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/openclaw-bun-pack.XXXXXX")"
-  pack_json_file="$PACK_DIR/pack.json"
 
   echo "==> Pack OpenClaw tarball"
-  npm pack --ignore-scripts --json --pack-destination "$PACK_DIR" >"$pack_json_file"
-  PACKAGE_TGZ="$(resolve_pack_tarball_path "$pack_json_file" "$PACK_DIR")"
+  PACKAGE_TGZ="$(
+    node scripts/package-openclaw-for-docker.mjs \
+      --output-dir "$PACK_DIR" \
+      --output-name openclaw-bun-smoke.tgz \
+      --skip-build
+  )"
   if [ -z "$PACKAGE_TGZ" ] || [ ! -f "$PACKAGE_TGZ" ]; then
     echo "missing packed OpenClaw tarball" >&2
     exit 1
