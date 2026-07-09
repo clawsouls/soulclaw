@@ -1783,6 +1783,10 @@ describe("package artifact reuse", () => {
     ]);
     expectTextToIncludeAll(runStep.run, [
       'manifest="${package_dir}/preflight-manifest.json"',
+      'candidate_manifest="${package_dir}/package-candidate.json"',
+      'find "${package_dir}" -type f -name "*.tgz"',
+      "package candidate manifest does not match the OpenClaw tarball",
+      "package candidate digest mismatch",
       'export OPENCLAW_NPM_TELEGRAM_PACKAGE_DIR="${package_dir}"',
       'export OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ="${package_tgz}"',
     ]);

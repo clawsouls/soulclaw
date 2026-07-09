@@ -299,12 +299,44 @@ jobs:
               )"
               export OPENCLAW_NPM_TELEGRAM_PACKAGE_DIR="${package_dir}"
             else
-              mapfile -t package_tgzs < <(find "${package_dir}" -type f -name "openclaw-[0-9]*.tgz" | sort)
+              mapfile -t package_tgzs < <(find "${package_dir}" -type f -name "*.tgz" | sort)
               if [[ "${#package_tgzs[@]}" -ne 1 ]]; then
-                echo "package artifact ${PACKAGE_ARTIFACT_NAME} without a preflight manifest must contain exactly one root openclaw tgz; found ${#package_tgzs[@]}" >&2
+                echo "package artifact ${PACKAGE_ARTIFACT_NAME} without a preflight manifest must contain exactly one tgz; found ${#package_tgzs[@]}" >&2
                 exit 1
               fi
               package_tgz="${package_tgzs[0]}"
+              candidate_manifest="${package_dir}/package-candidate.json"
+              node - "${package_tgz}" "${candidate_manifest}" <<'NODE'
+          const crypto = require("node:crypto");
+          const childProcess = require("node:child_process");
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const [tarballPath, manifestPath] = process.argv.slice(2);
+          const packageJson = JSON.parse(
+            childProcess.execFileSync("tar", ["-xOf", tarballPath, "package/package.json"], {
+              encoding: "utf8",
+            }),
+          );
+          if (packageJson.name !== "openclaw" || typeof packageJson.version !== "string") {
+            throw new Error("package artifact tgz is not a versioned openclaw package");
+          }
+          if (fs.existsSync(manifestPath)) {
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+            const expectedTarballName = path.basename(manifest.tarball || "");
+            if (
+              manifest.name !== "openclaw" ||
+              manifest.version !== packageJson.version ||
+              expectedTarballName !== path.basename(tarballPath) ||
+              typeof manifest.sha256 !== "string"
+            ) {
+              throw new Error("package candidate manifest does not match the OpenClaw tarball");
+            }
+            const digest = crypto.createHash("sha256").update(fs.readFileSync(tarballPath)).digest("hex");
+            if (digest !== manifest.sha256) {
+              throw new Error("package candidate digest mismatch");
+            }
+          }
+          NODE
             fi
             export OPENCLAW_NPM_TELEGRAM_PACKAGE_TGZ="${package_tgz}"
             if [[ -z "${OPENCLAW_NPM_TELEGRAM_PACKAGE_LABEL// }" ]]; then
