@@ -19,6 +19,7 @@ Docs: https://docs.openclaw.ai
 
 - **Android chat agent selector:** switch the active agent directly from the live chat screen while keeping chat, Talk mode, and home canvas on the same canonical session. (#80422) Thanks @bcperry and @joshavant.
 - **Gateway host status:** show the connected Gateway's host, network address, OS, runtime, uptime, CPU, memory, and disk details in Control UI Settings. (#100478)
+- **Gateway crash-loop recovery:** persist boot outcomes, enter control-plane-safe mode after repeated unclean starts, hold transport and provider activation until recovery, and exit with `EX_CONFIG` for fatal configuration errors so systemd and launchd stop restart flapping. Thanks @obviyus.
 - **iOS offline chat:** pre-paint recent sessions and canonical transcripts from a protected, bounded per-gateway cache, keep sending disabled offline, and purge cached conversation text when pairing is reset. (#100219)
 - **Slack progress indicators:** use Slack's native assistant thread status and rotating loading messages by default while keeping acknowledgement reactions static; lifecycle reaction updates now require `messages.statusReactions.enabled: true`.
 - **Control UI Talk controls:** keep voice, model, sensitivity, and other realtime defaults in Settings → Communications → Talk, and use the composer microphone caret to select any browser audio input. (#101046)
@@ -51,6 +52,7 @@ Docs: https://docs.openclaw.ai
 
 - **Browser actions on Node 24:** keep browser request cancellation bound to the client and response lifetime instead of Node 24.16+'s prematurely aborted body-stream signal, preventing valid POST actions from failing after JSON parsing. Thanks @obviyus and @vincentkoc.
 - **SecretRef model credentials:** keep resolved provider secrets behind process-local sentinels through auth storage, stream setup, SDK configuration, and managed local-provider probing, then inject plaintext only at the final network or provider-plugin boundary while retaining exact-value log redaction. (#102008, #102009)
+- **Diagnostics provider evidence:** emit one deduplicated `provider.request` timeline event for every completed or failed model call, so opt-in timelines can prove real provider traffic without double-counting terminal paths. Fixes #103063. Thanks @vincentkoc.
 - **Lean local model shell access:** keep `exec` directly visible beside the default structured Tool Search controls so coding-tuned local models can use their shell fallback instead of searching for missing domain tools. (#101607) Thanks @vincentkoc and @maweibin.
 - **OAuth refresh contention diagnostics:** keep local lock paths out of user-facing refresh failures and avoid duplicate failure prefixes while preserving structured provider and profile classification. (#101573) Thanks @vincentkoc.
 - **Exec approval prompts:** keep background-disabled fallback warnings out of pending gateway/node approvals and show them only after a command actually runs in the foreground. (#101561) Thanks @vincentkoc.
@@ -131,7 +133,7 @@ Docs: https://docs.openclaw.ai
 - **MCP loopback tool results:** preserve schema-valid text, image, and embedded-resource content through HTTP tool calls while rendering malformed or protocol-incompatible blocks as safe text. (#100336) Thanks @tzy-17, @OpenClawKobian99, @vincentkoc, @shakkernerd, and @maweibin.
 - **Control UI tool-result images:** render direct image content blocks from Gateway history and make the delayed-send scroll E2E setup deterministic. (#100295) Thanks @lzyyzznl, @Pandah97, @rquinones84, and @maweibin.
 - **Control UI live tool ordering:** keep assistant stream text before its matching tool card when browser and Gateway timestamps disagree. (#93184) Thanks @Pick-cat and @lileilei-camera.
-- **IRC Unicode messages:** split outbound PRIVMSG payloads on UTF-16 code-point boundaries so emoji cannot be cut into lone surrogates. (#96572) Thanks @llagy009, @vincentkoc, @mushuiyu886, and @cursoragent.
+- **IRC Unicode messages:** split outbound PRIVMSG payloads on UTF-16 code-point boundaries so emoji cannot be cut into lone surrogates. (#96572) Thanks @WeeLi-009, @vincentkoc, @mushuiyu886, and @cursoragent.
 - **OpenAI realtime voice greetings:** prevent server VAD from creating a second outbound greeting while an explicit greeting response owns the turn, without disabling caller interruption. (#86285) Thanks @giodl73-repo and @jnikolaidis.
 - **Realtime voice tools:** filter malformed tool names at each OpenAI, Azure, and Google realtime payload boundary while preserving provider-specific valid names. (#89175) Thanks @vincentkoc.
 - **Discord voice status:** treat Discord error 10065 as a normal disconnected state while preserving unrelated REST failures. (#90969) Thanks @asock.
@@ -189,7 +191,7 @@ Docs: https://docs.openclaw.ai
 
 ### Complete contribution record
 
-This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..69bdd92a61e6122c62f876b49189d3bc99a89bb7 history: 1455 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..7253552c68d0ac8c6098126d373f185bb6df22a2 history: 1456 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020, #92657, #93466, #93650, #93767, #93810, #97118).
 
@@ -217,7 +219,7 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #97785** fix(sessions): avoid cross-cwd recent resumes. Related #96542. Thanks @qingminglong and @yetval.
 - **PR #97698** fix(pdf): reject empty parsed page ranges before native analysis. Thanks @zhangguiping-xydt.
 - **PR #97693** fix(discord): bound requestDiscord happy-path response reads to prevent OOM. Thanks @Alix-007.
-- **PR #97683** fix(irc): guard surrogate-range codepoints in \u literal-escape decoder. Thanks @llagy009.
+- **PR #97683** fix(irc): guard surrogate-range codepoints in \u literal-escape decoder. Thanks @WeeLi-009.
 - **PR #96938** fix(utils): keep reply directive ids unicode-safe. Thanks @ly-wang19.
 - **PR #97857** fix(memory): detect unindexed session transcripts in status mode (fixes #97814). Thanks @zw-xysk and @CHE10X.
 - **PR #98094** fix(android): clarify gateway auth recovery states. Thanks @qingminglong.
@@ -869,7 +871,7 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #100418** fix(gateway): clarify URL override auth recovery. Thanks @gmays.
 - **PR #93636** fix(infra): tolerate deleted cwd across startup, PATH, home-dir, and TUI [AI-assisted]. Related #73676. Thanks @ml12580 and @oldsix-cell.
 - **PR #100336** fix(gateway): preserve non-text MCP content blocks through loopback normalizer. Related #100329. Thanks @tzy-17 and @OpenClawKobian99.
-- **PR #96572** fix(irc): chunk PRIVMSG on UTF-16 boundary to avoid lone surrogates. Thanks @llagy009.
+- **PR #96572** fix(irc): chunk PRIVMSG on UTF-16 boundary to avoid lone surrogates. Thanks @WeeLi-009.
 - **PR #100437** fix(test): bound local full-suite RAM. Related #100429.
 - **PR #100201** chore(ios): add deterministic streaming replay test harness for the shared chat pipeline.
 - **PR #100384** feat(android): restore in-flight runs after reconnect.
@@ -1650,6 +1652,8 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #102256** ci: temporarily disable QA smoke again. Thanks @RomneyDa.
 - **PR #99776** policy: preview review-required gateway repairs. Thanks @giodl73-repo.
 - **PR #101881** Fix container image upgrade migrations before gateway readiness. Related #98565. Thanks @sallyom and @jacobtomlinson.
+- **PR #102600** fix(release): accept tool-only completion signal.
+
 ## 2026.6.11
 
 We heard the feedback. v2026.6.11 focuses on the rough edges that make OpenClaw feel less dependable, with fixes for misplaced replies, stuck sends, reconnects, model setup failures, and safer admin defaults.
