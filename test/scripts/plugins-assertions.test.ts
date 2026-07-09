@@ -682,9 +682,14 @@ test -d "$OPENCLAW_PLUGINS_TMP_DIR"
     const tarballPath = path.join(root, "demo-plugin.tgz");
     const upstreamBody = JSON.stringify({ payload: "x".repeat(1_000) });
     const compressedBody = gzipSync(upstreamBody);
+    let upstreamHits = 0;
+    let upstreamRequestUrl: string | undefined;
+    let escapeHits = 0;
     writeFileSync(tarballPath, "fixture package archive", "utf8");
 
-    const upstream = createServer((_request, response) => {
+    const upstream = createServer((request, response) => {
+      upstreamHits += 1;
+      upstreamRequestUrl = request.url;
       response.writeHead(200, {
         "content-encoding": "gzip",
         "content-length": String(compressedBody.length),
@@ -692,12 +697,24 @@ test -d "$OPENCLAW_PLUGINS_TMP_DIR"
       });
       response.end(compressedBody);
     });
+    const escape = createServer((_request, response) => {
+      escapeHits += 1;
+      response.writeHead(200, { "content-type": "text/plain" });
+      response.end("escaped");
+    });
     await new Promise<void>((resolve) => {
       upstream.listen(0, "127.0.0.1", resolve);
+    });
+    await new Promise<void>((resolve) => {
+      escape.listen(0, "127.0.0.1", resolve);
     });
     const upstreamAddress = upstream.address();
     if (!upstreamAddress || typeof upstreamAddress === "string") {
       throw new Error("expected upstream registry address");
+    }
+    const escapeAddress = escape.address();
+    if (!escapeAddress || typeof escapeAddress === "string") {
+      throw new Error("expected escape registry address");
     }
 
     const child = spawn(
@@ -721,11 +738,23 @@ test -d "$OPENCLAW_PLUGINS_TMP_DIR"
 
     try {
       const port = await waitForPortFile(portFile);
-      const response = await requestFixtureRegistry(port, "/upstream-package");
+      const escaped = await requestFixtureRegistry(
+        port,
+        `http://registry.invalid//127.0.0.1:${escapeAddress.port}/probe`,
+      );
 
+      expect(escaped.statusCode).toBe(502);
+      expect(escaped.body).toContain("refusing non-origin registry request URL");
+      expect(upstreamHits).toBe(0);
+      expect(escapeHits).toBe(0);
+
+      const response = await requestFixtureRegistry(port, "/upstream-package?tag=beta");
       expect(response.statusCode).toBe(200);
       expect(response.body).toBe(upstreamBody);
       expect(response.contentLength).toBe(String(Buffer.byteLength(upstreamBody)));
+      expect(upstreamRequestUrl).toBe("/upstream-package?tag=beta");
+      expect(upstreamHits).toBe(1);
+      expect(escapeHits).toBe(0);
     } finally {
       if (child.exitCode === null) {
         child.kill();
@@ -735,6 +764,9 @@ test -d "$OPENCLAW_PLUGINS_TMP_DIR"
       }
       await new Promise<void>((resolve) => {
         upstream.close(() => resolve());
+      });
+      await new Promise<void>((resolve) => {
+        escape.close(() => resolve());
       });
       cleanupTempDirs(tempDirs);
     }
