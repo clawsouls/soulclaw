@@ -452,7 +452,7 @@ export function subtractShippedPullRequests(source, baselines) {
   return { baselines: metadata, pullRequests: excluded };
 }
 
-function withoutExcludedContributionRecords(record, excludedReferences) {
+export function withoutExcludedContributionRecords(record, excludedReferences) {
   if (excludedReferences.size === 0) {
     return record;
   }
@@ -1672,16 +1672,21 @@ function main() {
         .join(", ")}`,
     );
   }
+  const excludedRecordedReferences = new Set([
+    ...source.revertedReferences,
+    ...shippedExclusions.pullRequests,
+  ]);
+  const effectiveRenderedRecord = options.writeLedger
+    ? withoutExcludedContributionRecords(renderedRecord, excludedRecordedReferences)
+    : renderedRecord;
+  const effectiveRenderedRecordReferences =
+    contributionRecordMetadataReferences(effectiveRenderedRecord);
   let priorRecord = { legacyIssues: new Map(), pullRequests: new Map() };
   if (options.seedRef) {
     const seedChangelog = git(["show", `${options.seedRef}:CHANGELOG.md`]);
     const seedSection = sectionFor(seedChangelog, options.version);
     priorRecord = contributionRecordFor(seedSection);
   }
-  const excludedRecordedReferences = new Set([
-    ...source.revertedReferences,
-    ...shippedExclusions.pullRequests,
-  ]);
   priorRecord = withoutExcludedContributionRecords(priorRecord, excludedRecordedReferences);
   const recordedReferences = contributionRecordMetadataReferences(priorRecord);
   const revertedRecordedReferences = recordedReferences.filter((number) =>
@@ -1696,12 +1701,12 @@ function main() {
   }
   const references = [...source.references];
   appendReferences(references, noteReferences);
-  appendReferences(references, renderedRecordReferences);
+  appendReferences(references, effectiveRenderedRecordReferences);
   appendReferences(references, recordedReferences);
   let nodes = resolveReferences(references);
   const contamination = contaminatingPullRequestReferences({
     noteReferences,
-    recordedReferences: renderedRecordReferences,
+    recordedReferences: effectiveRenderedRecordReferences,
     sourcePullRequests: source.pullRequests,
     sourceReferences: source.references,
     seededPullRequests: new Set(priorRecord.pullRequests.keys()),

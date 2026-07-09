@@ -10,6 +10,7 @@ import {
   highlightCountError,
   releaseNoteReferences,
   subtractShippedPullRequests,
+  withoutExcludedContributionRecords,
 } from "../../.agents/skills/openclaw-changelog-update/scripts/verify-release-notes.mjs";
 
 const verifier = resolve(
@@ -126,6 +127,24 @@ describe("release-note verification", () => {
       { ref: "v2026.6.11", count: 1, pullRequests: [1] },
     ]);
     expect([...result.pullRequests].toSorted((a, b) => a - b)).toEqual([1, 2, 4]);
+  });
+
+  it("removes rewrite-excluded references from an existing contribution record", () => {
+    const record = {
+      pullRequests: new Map([
+        [1, { references: [2, 10], thanks: [] }],
+        [2, { references: [11], thanks: [] }],
+      ]),
+      legacyIssues: new Map([
+        [10, { references: [], thanks: [] }],
+        [11, { references: [], thanks: [] }],
+      ]),
+    };
+
+    const filtered = withoutExcludedContributionRecords(record, new Set([2, 10]));
+
+    expect([...filtered.pullRequests]).toEqual([[1, { references: [], thanks: [] }]]);
+    expect([...filtered.legacyIssues]).toEqual([[11, { references: [], thanks: [] }]]);
   });
 
   it("does not treat the shipped baseline inventory as current release-note references", () => {
