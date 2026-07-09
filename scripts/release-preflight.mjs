@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 // Checks or refreshes generated release artifacts before a release publish.
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { runManagedCommand } from "./lib/managed-child-process.mjs";
+import { parseReleaseVersion } from "./lib/npm-publish-plan.mjs";
 
 const parsedArgs = parseArgs(process.argv.slice(2));
 const fix = parsedArgs.fix;
+const macosInfoPlistPath = "apps/macos/Sources/OpenClaw/Resources/Info.plist";
 
 const fixCommands = [
   { name: "plugin versions", args: ["plugins:sync"] },
@@ -39,15 +43,96 @@ if (fix) {
 }
 
 console.log("[release-preflight] checking release generated artifacts and manifests");
+console.log("\n[release-preflight] macOS app version metadata");
+const macosVersionErrors = collectMacosVersionErrors();
+if (macosVersionErrors.length === 0) {
+  console.log("[release-preflight] macOS app version metadata OK");
+}
 const failed = await runAll(checkCommands);
-if (failed.length !== 0) {
-  printFailures("release preflight found drift", failed);
+if (macosVersionErrors.length !== 0 || failed.length !== 0) {
+  console.error("\nrelease preflight found drift:");
+  for (const error of macosVersionErrors) {
+    console.error(`- macOS app version metadata: ${error}`);
+  }
+  printCommandFailures(failed);
   console.error(
-    "\nRun `pnpm release:prep` if the version/config/API changes are intentional, then commit the generated files.",
+    "\nCorrect manual version metadata first. Run `pnpm release:prep` for intentional generated version/config/API changes, then commit the resulting files.",
   );
   process.exit(1);
 }
 console.log("[release-preflight] OK");
+
+function collectMacosVersionErrors(rootDir = resolve(".")) {
+  const packageJsonPath = resolve(rootDir, "package.json");
+  const infoPlistPath = resolve(rootDir, macosInfoPlistPath);
+  let packageVersion;
+  let infoPlist;
+
+  try {
+    const parsedPackage = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+    packageVersion = typeof parsedPackage.version === "string" ? parsedPackage.version.trim() : "";
+  } catch (error) {
+    return [`unable to read package.json: ${formatError(error)}`];
+  }
+
+  const releaseVersion = parseReleaseVersion(packageVersion);
+  if (!releaseVersion) {
+    return [`package.json has invalid release version ${JSON.stringify(packageVersion)}`];
+  }
+
+  try {
+    infoPlist = readFileSync(infoPlistPath, "utf8");
+  } catch (error) {
+    return [`unable to read ${macosInfoPlistPath}: ${formatError(error)}`];
+  }
+
+  const errors = [];
+  // The source plist tracks native base metadata. Packaging stamps the exact
+  // prerelease version and canonical Sparkle build into the copied app bundle.
+  const expectedShortVersion = releaseVersion.baseVersion;
+  const expectedBuildVersion = [
+    String(releaseVersion.year),
+    String(releaseVersion.month).padStart(2, "0"),
+    String(releaseVersion.patch).padStart(2, "0"),
+    "00",
+  ].join("");
+  const shortVersion = readPlistString(infoPlist, "CFBundleShortVersionString");
+  const buildVersion = readPlistString(infoPlist, "CFBundleVersion");
+
+  if (shortVersion.error) {
+    errors.push(shortVersion.error);
+  } else if (shortVersion.value !== expectedShortVersion) {
+    errors.push(
+      `${macosInfoPlistPath} CFBundleShortVersionString is ${JSON.stringify(shortVersion.value)}; expected ${JSON.stringify(expectedShortVersion)} from package.json base version`,
+    );
+  }
+
+  if (buildVersion.error) {
+    errors.push(buildVersion.error);
+  } else if (buildVersion.value !== expectedBuildVersion) {
+    errors.push(
+      `${macosInfoPlistPath} CFBundleVersion is ${JSON.stringify(buildVersion.value)}; expected ${JSON.stringify(expectedBuildVersion)} for ${expectedShortVersion}`,
+    );
+  }
+
+  return errors;
+}
+
+function readPlistString(infoPlist, key) {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`<key>\\s*${escapedKey}\\s*</key>\\s*<string>([^<]*)</string>`, "gu");
+  const matches = [...infoPlist.matchAll(pattern)];
+  if (matches.length !== 1) {
+    return {
+      error: `${macosInfoPlistPath} must contain exactly one string value for ${key}; found ${matches.length}`,
+    };
+  }
+  return { value: matches[0][1]?.trim() ?? "" };
+}
+
+function formatError(error) {
+  return error instanceof Error ? error.message : String(error);
+}
 
 async function runSerial(commands) {
   const failedValue = [];
@@ -87,6 +172,10 @@ async function runCommand(command) {
 
 function printFailures(title, failures) {
   console.error(`\n${title}:`);
+  printCommandFailures(failures);
+}
+
+function printCommandFailures(failures) {
   for (const failure of failures) {
     console.error(`- ${failure.name}: exit ${failure.status} (pnpm ${failure.args.join(" ")})`);
   }
