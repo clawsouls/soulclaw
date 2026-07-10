@@ -200,7 +200,7 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 
 - **PR #96502** Thanks @hugenshen and @cursoragent.
 - **PR #98249** Thanks @Patrick-Erichsen.
-- **PR #93820** Related #93767. Thanks @Alix-007.
+- **PR #93820** Thanks @Alix-007.
 - **PR #94096** Thanks @Alix-007.
 - **PR #97125** Thanks @giodl73-repo.
 - **PR #98256** Thanks @eleqtrizit.
