@@ -192,7 +192,7 @@ Docs: https://docs.openclaw.ai
 
 ### Complete contribution record
 
-This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..ac54f80430c199a745c7d10ba1eb3e7f4062028c history: 1471 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..ffe682f32517cb9b198691fb269475b8c37ebae9 history: 1472 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020, #92657, #93466, #93650, #93767, #93810, #97118).
 
@@ -1669,6 +1669,7 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #103654** fix(ci): run live suites from manual dispatches. Related #103652.
 - **PR #103681** fix(qa): accept structured gateway restart outcomes. Related #103676.
 - **PR #103685** fix(qa): require web fetch after tool discovery. Related #103678.
+- **PR #103718** test(qa): wait for durable webchat transcript. Related #103701.
 
 ## 2026.6.11
 
