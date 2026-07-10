@@ -5892,6 +5892,7 @@ describe("dispatchTelegramMessage draft streaming", () => {
     // a later superseding peer (authorized explicit command) cannot abort it.
     await adoptTurn?.();
     expect(firstAbortSignal?.aborted).toBe(false);
+    expect(supersedeTelegramReplyFence("agent:main:telegram:group:-100123")).toBe(false);
 
     await dispatchWithContext({
       context: createGroupContext(100, "/export-trajectory bundle"),

@@ -904,10 +904,11 @@ export const dispatchTelegramMessage = async ({
     replyFenceGeneration = undefined;
   };
   const adoptReplyTurn = async () => {
-    // Fence abort authority ends at adoption. Core (queue interrupt mode /
-    // reply-run registry abort) is the sole owner of killing adopted runs.
+    // Fence abort and supersession authority end at adoption. Core (queue
+    // interrupt mode / reply-run registry abort) owns adopted runs.
     await onTurnAdopted?.();
     queuedTurnAdopted = true;
+    releaseReplyFence();
     releaseTelegramReplyFenceAbortController(activeReplyFenceKey, replyAbortController);
   };
   // Block mode sizes preview rotation steps from streaming.preview.chunk (same
