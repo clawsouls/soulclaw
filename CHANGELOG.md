@@ -52,7 +52,7 @@ Docs: https://docs.openclaw.ai
 
 - **Browser actions on Node 24:** keep browser request cancellation bound to the client and response lifetime instead of Node 24.16+'s prematurely aborted body-stream signal, preventing valid POST actions from failing after JSON parsing. Thanks @obviyus and @vincentkoc.
 - **SecretRef model credentials:** keep resolved provider secrets behind process-local sentinels through auth storage, stream setup, SDK configuration, and managed local-provider probing, then inject plaintext only at the final network or provider-plugin boundary while retaining exact-value log redaction. (#102008, #102009)
-- **Diagnostics provider evidence:** emit one deduplicated `provider.request` timeline event for every completed or failed model call, so opt-in timelines can prove real provider traffic without double-counting terminal paths. Fixes #103063. Thanks @vincentkoc.
+- **Diagnostics provider evidence:** emit one deduplicated `provider.request` timeline event for every completed or failed model call, so opt-in timelines can prove real provider traffic without double-counting terminal paths. Fixes #103063 Thanks @vincentkoc.
 - **Lean local model shell access:** keep `exec` directly visible beside the default structured Tool Search controls so coding-tuned local models can use their shell fallback instead of searching for missing domain tools. (#101607) Thanks @vincentkoc and @maweibin.
 - **OAuth refresh contention diagnostics:** keep local lock paths out of user-facing refresh failures and avoid duplicate failure prefixes while preserving structured provider and profile classification. (#101573) Thanks @vincentkoc.
 - **Exec approval prompts:** keep background-disabled fallback warnings out of pending gateway/node approvals and show them only after a command actually runs in the foreground. (#101561) Thanks @vincentkoc.
@@ -62,7 +62,7 @@ Docs: https://docs.openclaw.ai
 - **Microsoft Teams Graph response bounds:** cap successful file-upload and chat JSON reads so oversized Microsoft Graph responses cannot be buffered without limit. (#97784) Thanks @Alix-007.
 - **Packaged speech runtime:** stop treating package-backed `speech-core` as a bundled plugin sidecar, restoring TTS startup in npm installs while release checks keep true activation-bypassing facades package-complete. (#89899, #89425) Thanks @zhangguiping-xydt, @ant1b0t, and @vincentkoc.
 - **Container image upgrades:** run versioned state migrations and plugin convergence before Gateway readiness when reusing mounted state, failing closed with `doctor --fix` recovery guidance instead of serving half-upgraded state. (#101881) Fixes #98565 Thanks @sallyom, @jacobtomlinson, and @shakkernerd.
-- **Codex app-server protocol:** require app-server 0.143 or newer, remove pre-0.142 wire-shape compatibility, migrate retired `on-failure` approval settings to `on-request` in Codex configuration and saved bindings, and teach Codex to retrieve deferred native `spawn_agent` through `tool_search` so native subagent task mirroring works on search-capable models. Thanks @vincentkoc.
+- **Codex app-server protocol:** require app-server 0.143 or newer, remove pre-0.142 wire-shape compatibility, migrate retired `on-failure` approval settings to `on-request` in Codex configuration and saved bindings, teach Codex to retrieve deferred native `spawn_agent` through `tool_search` so native subagent task mirroring works on search-capable models, and update the managed runtime to 0.144.1 for code-mode host installation and missing-host fallback reliability. Thanks @vincentkoc.
 - **Android hardware keyboard chat:** send with unmodified Enter on physical keyboards while preserving Shift+Enter and other modified Enter combinations for multiline input. (#101239) Thanks @3ninyt3nin-creator and @vincentkoc.
 - **CJK Markdown emphasis:** render adjacent Chinese, Japanese, and Korean emphasis punctuation through the shared Markdown pipeline instead of leaking literal markers across channels. (#101230, #101120) Thanks @nicknmorty and @j08577600-jpg.
 - **Backup retry cleanup:** close partial archive output handles and isolate each retry path after live-write failures, preventing Windows `EBUSY` locks from cascading across attempts or leaving stale temp archives. (#101449, #101464) Thanks @ZOOWH, @LiLan0125, @vincentkoc, @aniruddhaadak80, @shakkernerd, and @obviyus.
@@ -191,7 +191,7 @@ Docs: https://docs.openclaw.ai
 
 ### Complete contribution record
 
-This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..7253552c68d0ac8c6098126d373f185bb6df22a2 history: 1456 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..5dcba9fae725c080b62c4b4e19533f5fcd59b964 history: 1455 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020, #92657, #93466, #93650, #93767, #93810, #97118).
 
@@ -1514,7 +1514,6 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #101572** fix(feishu): support drive folder pagination. Thanks @zhangguiping-xydt.
 - **PR #101489** fix(infra): handle detached respawn child errors. Related #101458. Thanks @momothemage and @aniruddhaadak80.
 - **PR #101434** fix(browser): keep screenshots private by default. Related #44759. Thanks @sunshineo.
-- **PR #101435** feat(android): render LaTeX display math in chat via bundled KaTeX.
 - **PR #101583** refactor(memory): remove unused runtime facade exports. Thanks @vincentkoc.
 - **PR #101534** fix(codex): use truncateUtf16Safe for attempt notification text truncation. Thanks @lsr911.
 - **PR #101574** fix(memory): preserve UTF-16 chunk boundaries. Related #65782. Thanks @jensenwang560-blip.
@@ -1653,7 +1652,6 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #99776** policy: preview review-required gateway repairs. Thanks @giodl73-repo.
 - **PR #101881** Fix container image upgrade migrations before gateway readiness. Related #98565. Thanks @sallyom and @jacobtomlinson.
 - **PR #102600** fix(release): accept tool-only completion signal.
-
 ## 2026.6.11
 
 We heard the feedback. v2026.6.11 focuses on the rough edges that make OpenClaw feel less dependable, with fixes for misplaced replies, stuck sends, reconnects, model setup failures, and safer admin defaults.
