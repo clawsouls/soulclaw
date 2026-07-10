@@ -119,7 +119,9 @@ describe("scripts/release-preflight.mjs", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Unknown release preflight argument: --fiix");
-    expect(result.stderr).toContain("Usage: node scripts/release-preflight.mjs [--check|--fix]");
+    expect(result.stderr).toContain(
+      "Usage: node scripts/release-preflight.mjs [--check|--fix|--macos-versions-only]",
+    );
     expect(result.stdout).toBe("");
   });
 

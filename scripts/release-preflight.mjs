@@ -9,6 +9,20 @@ const parsedArgs = parseArgs(process.argv.slice(2));
 const fix = parsedArgs.fix;
 const macosInfoPlistPath = "apps/macos/Sources/OpenClaw/Resources/Info.plist";
 
+// Release-evidence reuse validates version-stamp targets without running any
+// package-manager commands; keep this mode dependency-free file reads only.
+if (parsedArgs.macosVersionsOnly) {
+  const errors = collectMacosVersionErrors();
+  if (errors.length !== 0) {
+    for (const error of errors) {
+      console.error(`[release-preflight] macOS app version metadata: ${error}`);
+    }
+    process.exit(1);
+  }
+  console.log("[release-preflight] macOS app version metadata OK");
+  process.exit(0);
+}
+
 const fixCommands = [
   { name: "plugin versions", args: ["plugins:sync"] },
   { name: "npm shrinkwraps", args: ["deps:shrinkwrap:changed:generate"] },
@@ -184,6 +198,7 @@ function printCommandFailures(failures) {
 function parseArgs(argv) {
   let check = false;
   let wantsFix = false;
+  let macosVersionsOnly = false;
   for (const arg of argv) {
     if (arg === "--help") {
       printUsage(console.log);
@@ -197,6 +212,10 @@ function parseArgs(argv) {
       wantsFix = true;
       continue;
     }
+    if (arg === "--macos-versions-only") {
+      macosVersionsOnly = true;
+      continue;
+    }
     console.error(`Unknown release preflight argument: ${arg}`);
     printUsage(console.error);
     process.exit(1);
@@ -205,12 +224,17 @@ function parseArgs(argv) {
     console.error("Use either --fix or --check, not both.");
     process.exit(1);
   }
-  return { fix: wantsFix };
+  if (macosVersionsOnly && (wantsFix || check)) {
+    console.error("Use --macos-versions-only without --fix or --check.");
+    process.exit(1);
+  }
+  return { fix: wantsFix, macosVersionsOnly };
 }
 
 function printUsage(writeLine) {
-  writeLine("Usage: node scripts/release-preflight.mjs [--check|--fix]");
+  writeLine("Usage: node scripts/release-preflight.mjs [--check|--fix|--macos-versions-only]");
   writeLine("");
   writeLine("  --check  verify generated release artifacts without writing changes (default)");
   writeLine("  --fix    refresh generated release artifacts, then verify them");
+  writeLine("  --macos-versions-only  verify macOS source version metadata only, no commands");
 }
