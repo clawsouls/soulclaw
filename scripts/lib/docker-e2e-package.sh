@@ -163,6 +163,7 @@ docker_e2e_restore_package_dist_from_image() (
   local backup_dir=""
   local container_id=""
   local dist_installed=0
+  local requires_ai_dist=0
   local restore_complete=0
   local temp_dir=""
 
@@ -170,8 +171,8 @@ docker_e2e_restore_package_dist_from_image() (
     if [ -n "$container_id" ]; then
       docker_e2e_docker_cmd rm -f "$container_id" >/dev/null 2>&1 || true
     fi
-    # Both build trees come from one image. A partial swap must restore both or
-    # the following package step could mix artifacts from different builds.
+    # Root and AI artifacts come from one image. Restore both on partial failure
+    # so the package step cannot combine outputs from different builds.
     if [ "$restore_complete" != "1" ]; then
       if [ "$dist_installed" = "1" ]; then
         rm -rf "$ROOT_DIR/dist" >/dev/null 2>&1 || true
@@ -202,7 +203,11 @@ docker_e2e_restore_package_dist_from_image() (
     fi
   }
 
-  echo "==> Reuse package dist from Docker image: $image"
+  if [ -f "$ROOT_DIR/packages/ai/package.json" ]; then
+    requires_ai_dist=1
+  fi
+
+  echo "==> Reuse package build artifacts from Docker image: $image"
   if ! container_id="$(docker_e2e_docker_cmd create "$image")"; then
     cleanup_restore_package_dist
     return 1
@@ -215,9 +220,10 @@ docker_e2e_restore_package_dist_from_image() (
     cleanup_restore_package_dist
     return 1
   fi
-  if ! docker_e2e_docker_cmd cp \
-    "${container_id}:/app/node_modules/@openclaw/ai/dist" \
-    "$temp_dir/ai-dist"; then
+  if [ "$requires_ai_dist" = "1" ] && \
+    ! docker_e2e_docker_cmd cp \
+      "${container_id}:/app/node_modules/@openclaw/ai/dist" \
+      "$temp_dir/ai-dist"; then
     cleanup_restore_package_dist
     return 1
   fi
@@ -240,25 +246,27 @@ docker_e2e_restore_package_dist_from_image() (
     return 1
   fi
   dist_installed=1
-  if [ -e "$ROOT_DIR/packages/ai/dist" ]; then
-    if ! ai_backup_dir="$(mktemp -d "$ROOT_DIR/packages/ai/.dist-backup.XXXXXX")"; then
+  if [ "$requires_ai_dist" = "1" ]; then
+    if [ -e "$ROOT_DIR/packages/ai/dist" ]; then
+      if ! ai_backup_dir="$(mktemp -d "$ROOT_DIR/packages/ai/.dist-backup.XXXXXX")"; then
+        cleanup_restore_package_dist
+        return 1
+      fi
+      if ! rmdir "$ai_backup_dir"; then
+        cleanup_restore_package_dist
+        return 1
+      fi
+      if ! mv "$ROOT_DIR/packages/ai/dist" "$ai_backup_dir"; then
+        cleanup_restore_package_dist
+        return 1
+      fi
+    fi
+    if ! mv "$temp_dir/ai-dist" "$ROOT_DIR/packages/ai/dist"; then
       cleanup_restore_package_dist
       return 1
     fi
-    if ! rmdir "$ai_backup_dir"; then
-      cleanup_restore_package_dist
-      return 1
-    fi
-    if ! mv "$ROOT_DIR/packages/ai/dist" "$ai_backup_dir"; then
-      cleanup_restore_package_dist
-      return 1
-    fi
+    ai_dist_installed=1
   fi
-  if ! mv "$temp_dir/ai-dist" "$ROOT_DIR/packages/ai/dist"; then
-    cleanup_restore_package_dist
-    return 1
-  fi
-  ai_dist_installed=1
   restore_complete=1
   cleanup_restore_package_dist
 )
