@@ -192,7 +192,7 @@ Docs: https://docs.openclaw.ai
 
 ### Complete contribution record
 
-This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..a56643e552837b14902b27f012cb6a05e723c9ae history: 1473 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..93ea3a93bfbb35e01da6cbae560710733a830385 history: 1474 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020, #92657, #93466, #93650, #93767, #93810, #97118).
 
@@ -1671,6 +1671,7 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #103685** fix(qa): require web fetch after tool discovery. Related #103678.
 - **PR #103718** test(qa): wait for durable webchat transcript. Related #103701.
 - **PR #103906** fix(release): keep validation evidence immutable across reruns.
+- **PR #103923** fix(i18n): recognize Meta docs glossary terms.
 
 ## 2026.6.11
 
