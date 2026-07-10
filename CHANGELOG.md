@@ -192,7 +192,7 @@ Docs: https://docs.openclaw.ai
 
 ### Complete contribution record
 
-This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..b9dd72b2f2fd97b215aff481ec1f7a9cdcbb1cf3 history: 1469 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..ac54f80430c199a745c7d10ba1eb3e7f4062028c history: 1471 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020, #92657, #93466, #93650, #93767, #93810, #97118).
 
@@ -1667,6 +1667,8 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #103635** fix(qa): keep retry passes terminally successful. Related #103631.
 - **PR #103650** fix(qa): keep non-assistant fixtures out of token usage gate. Related #103641.
 - **PR #103654** fix(ci): run live suites from manual dispatches. Related #103652.
+- **PR #103681** fix(qa): accept structured gateway restart outcomes. Related #103676.
+- **PR #103685** fix(qa): require web fetch after tool discovery. Related #103678.
 
 ## 2026.6.11
 
