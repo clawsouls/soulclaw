@@ -17,7 +17,7 @@ Docs: https://docs.openclaw.ai
 
 ### Changes
 
-- **Meta provider:** add bundled `muse-spark-1.1` Responses API support with streaming, tool calls, encrypted reasoning replay, onboarding, and standalone npm/ClawHub distribution as `@openclaw/meta-provider`. (#102873, #103070) Thanks @HamidShojanazeri, @davemorin, @Solvely-Colin, @jalehman, and @vincentkoc.
+- **Meta provider:** add bundled `muse-spark-1.1` Responses API support with streaming, tool calls, encrypted reasoning replay, onboarding, exact-model live validation, and standalone npm/ClawHub distribution as `@openclaw/meta-provider`. (#102873, #103070, #103163) Thanks @HamidShojanazeri, @davemorin, @Solvely-Colin, @jalehman, and @vincentkoc.
 - **Android chat agent selector:** switch the active agent directly from the live chat screen while keeping chat, Talk mode, and home canvas on the same canonical session. (#80422) Thanks @bcperry and @joshavant.
 - **Gateway host status:** show the connected Gateway's host, network address, OS, runtime, uptime, CPU, memory, and disk details in Control UI Settings. (#100478)
 - **Gateway crash-loop recovery:** persist boot outcomes, enter control-plane-safe mode after repeated unclean starts, hold transport and provider activation until recovery, and exit with `EX_CONFIG` for fatal configuration errors so systemd and launchd stop restart flapping. Thanks @obviyus.
@@ -192,7 +192,7 @@ Docs: https://docs.openclaw.ai
 
 ### Complete contribution record
 
-This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..e2ba78cbd32e0b916b611af6896812b1a4e32960 history: 1460 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..306b800ace5398dcfc5eae6e15dcae533db42c95 history: 1461 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020, #92657, #93466, #93650, #93767, #93810, #97118).
 
@@ -1658,6 +1658,7 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #103244** Related #103240.
 - **PR #102873** Thanks @HamidShojanazeri and @davemorin and @Solvely-Colin and @jalehman.
 - **PR #103070** Thanks @vincentkoc.
+- **PR #103163**
 
 ## 2026.6.11
 
