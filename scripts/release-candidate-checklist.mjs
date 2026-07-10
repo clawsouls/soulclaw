@@ -16,6 +16,10 @@ import {
   releaseNotesVersionForTag,
   renderGithubReleaseNotes,
 } from "./render-github-release-notes.mjs";
+import {
+  isShaPinnedReleaseValidationBranch,
+  validateFullReleaseValidationEvidence,
+} from "./validate-full-release-validation-evidence.mjs";
 
 const DEFAULT_REPO = "openclaw/openclaw";
 const DEFAULT_PROVIDER = "openai";
@@ -26,6 +30,7 @@ const DEFAULT_TELEGRAM_PROVIDER_MODE = "mock-openai";
 const DEFAULT_GITHUB_API_TIMEOUT_MS = 30_000;
 const DEFAULT_GITHUB_API_RESPONSE_BODY_MAX_BYTES = 16 * 1024 * 1024;
 const COMMAND_CAPTURE_MAX_BUFFER_BYTES = 16 * 1024 * 1024;
+const FULL_RELEASE_WORKFLOW_PATH = ".github/workflows/full-release-validation.yml";
 const WINDOWS_NODE_TAG_PATTERN = /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$/u;
 const WINDOWS_NODE_REPO = "openclaw/openclaw-windows-node";
 const WINDOWS_NODE_REQUIRED_ASSETS = [
@@ -33,6 +38,26 @@ const WINDOWS_NODE_REQUIRED_ASSETS = [
   "OpenClawCompanion-Setup-arm64.exe",
 ];
 const SHA256_DIGEST_PATTERN = /^sha256:[a-f0-9]{64}$/u;
+
+export function supportsImmutableFullValidationEvidence(workflowSource) {
+  const v3ManifestPaths = workflowSource.match(/\bversion: 3,/gu)?.length ?? 0;
+  return (
+    v3ManifestPaths >= 2 &&
+    workflowSource.includes(
+      "full-release-validation-${{ github.run_id }}-${{ github.run_attempt }}",
+    )
+  );
+}
+
+function requireImmutableFullValidationProducer() {
+  const workflowSource = readFileSync(FULL_RELEASE_WORKFLOW_PATH, "utf8");
+  if (supportsImmutableFullValidationEvidence(workflowSource)) {
+    return;
+  }
+  throw new Error(
+    "Automatic Full Release Validation dispatch requires a v3 attempt-qualified producer. Pass --full-release-run from the trusted current-main scripts/full-release-validation-at-sha.mjs helper.",
+  );
+}
 
 function usage() {
   return `Usage: pnpm release:candidate -- --tag vYYYY.M.PATCH-beta.N [options]
@@ -683,7 +708,10 @@ async function runInfo(repo, runId) {
   ]);
   return {
     databaseId: runData.id,
+    runAttempt: runData.run_attempt,
     workflowName: runData.name,
+    workflowPath: runData.path,
+    repository: runData.repository?.full_name,
     headBranch: runData.head_branch,
     headSha: runData.head_sha,
     event: runData.event,
@@ -760,7 +788,9 @@ async function waitForSuccessfulRun(repo, runId, expected) {
           `run ${runId} workflow mismatch: expected ${expected.workflowName}, got ${info.workflowName}`,
         );
       }
-      if (info.headBranch !== expected.workflowRef) {
+      const acceptsPinnedWorkflow =
+        expected.allowShaPinnedWorkflowRef && isShaPinnedReleaseValidationBranch(info.headBranch);
+      if (info.headBranch !== expected.workflowRef && !acceptsPinnedWorkflow) {
         throw new Error(
           `run ${runId} branch mismatch: expected ${expected.workflowRef}, got ${info.headBranch}`,
         );
@@ -834,6 +864,7 @@ export function buildPublishCommand(options) {
     ["tag", options.tag],
     ["preflight_run_id", options.npmPreflightRunId],
     ["full_release_validation_run_id", options.fullReleaseRunId],
+    ["full_release_validation_run_attempt", options.fullReleaseRunAttempt],
     ["npm_dist_tag", options.npmDistTag],
     ["plugin_publish_scope", options.pluginPublishScope],
     ["publish_openclaw_npm", "true"],
@@ -1038,6 +1069,9 @@ async function main() {
   const localGeneratedCheck = runLocalGeneratedCheckIfNeeded(options);
 
   if (!options.fullReleaseRunId && !options.skipDispatch) {
+    // Older release branches cannot produce the immutable evidence consumed below.
+    // Fail before an expensive run; their candidate must use the trusted-main helper.
+    requireImmutableFullValidationProducer();
     const workflowFile = "full-release-validation.yml";
     options.fullReleaseRunId = dispatchWorkflow(options.repo, workflowFile, options.workflowRef, {
       ref: options.tag,
@@ -1047,6 +1081,7 @@ async function main() {
       run_release_soak:
         options.releaseProfile === "stable" || options.releaseProfile === "full" ? "true" : "false",
       rerun_group: "all",
+      reuse_evidence: "false",
     });
   }
 
@@ -1062,15 +1097,14 @@ async function main() {
   const fullRun = await waitForSuccessfulRun(options.repo, options.fullReleaseRunId, {
     workflowName: "Full Release Validation",
     workflowRef: options.workflowRef,
+    allowShaPinnedWorkflowRef: true,
   });
   const npmRun = await waitForSuccessfulRun(options.repo, options.npmPreflightRunId, {
     workflowName: "OpenClaw NPM Release",
     workflowRef: options.workflowRef,
   });
-  if (fullRun.headSha !== targetSha || npmRun.headSha !== targetSha) {
-    throw new Error(
-      `run SHA mismatch: tag=${targetSha} full=${fullRun.headSha} npm=${npmRun.headSha}`,
-    );
+  if (npmRun.headSha !== targetSha) {
+    throw new Error(`run SHA mismatch: tag=${targetSha} npm=${npmRun.headSha}`);
   }
 
   const npmDir = join(options.outputDir, "npm-preflight");
@@ -1082,19 +1116,32 @@ async function main() {
     "openclaw-npm-preflight-",
     npmDir,
   );
-  const fullArtifactName = await downloadResolvedArtifact(
-    options.repo,
-    options.fullReleaseRunId,
-    `full-release-validation-${options.fullReleaseRunId}`,
-    "full-release-validation-",
-    fullDir,
-  );
+  if (!Number.isInteger(fullRun.runAttempt) || fullRun.runAttempt < 1) {
+    throw new Error(`Full Release Validation run ${options.fullReleaseRunId} has invalid attempt.`);
+  }
+  const fullArtifactName = `full-release-validation-${options.fullReleaseRunId}-${fullRun.runAttempt}`;
+  downloadArtifact(options.repo, options.fullReleaseRunId, fullArtifactName, fullDir);
 
   const npmManifest = readJson(join(npmDir, "preflight-manifest.json"), "npm preflight manifest");
   const fullManifest = readJson(
     join(fullDir, "full-release-validation-manifest.json"),
     "full validation manifest",
   );
+  run("git", ["fetch", "--no-tags", "origin", "+refs/heads/main:refs/remotes/origin/main"], {
+    capture: true,
+  });
+  const fullValidationEvidence = validateFullReleaseValidationEvidence({
+    run: fullRun,
+    manifest: fullManifest,
+    expectedRepository: options.repo,
+    expectedRunId: options.fullReleaseRunId,
+    expectedTargetSha: targetSha,
+    expectedWorkflowBranch: options.workflowRef,
+    isTrustedMainAncestor: (sha) => gitIsAncestor(sha, "refs/remotes/origin/main"),
+  });
+  if (fullValidationEvidence.source === "direct" && fullRun.headSha !== targetSha) {
+    throw new Error(`run SHA mismatch: tag=${targetSha} full=${fullRun.headSha}`);
+  }
   validatePreflightManifest(npmManifest, {
     tag: options.tag,
     targetSha,
@@ -1139,7 +1186,10 @@ async function main() {
     "scripts/plugin-clawhub-release-plan.ts",
     options,
   );
-  const publishCommand = buildPublishCommand(options);
+  const publishCommand = buildPublishCommand({
+    ...options,
+    fullReleaseRunAttempt: fullRun.runAttempt,
+  });
   const evidence = {
     version: 1,
     tag: options.tag,
@@ -1147,6 +1197,7 @@ async function main() {
     workflowRef: options.workflowRef,
     npmDistTag: options.npmDistTag,
     fullReleaseValidationRunId: options.fullReleaseRunId,
+    fullReleaseValidationRunAttempt: fullRun.runAttempt,
     npmPreflightRunId: options.npmPreflightRunId,
     windowsNodeTag: options.windowsNodeTag || undefined,
     windowsNodeSourceRelease,
