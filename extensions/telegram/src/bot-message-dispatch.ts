@@ -887,12 +887,15 @@ export const dispatchTelegramMessage = async ({
   let replyAbortControllerQueued = false;
   let queuedTurnAdopted = false;
   let dispatchWasSuperseded;
+  // Queued source dispatches release their generation before admission but retain this controller.
+  // Its aborted bit preserves supersession across the later async adoption handoff.
   const isDispatchSuperseded = () =>
-    replyFenceGeneration !== undefined &&
-    isTelegramReplyFenceSuperseded({
-      key: activeReplyFenceKey,
-      generation: replyFenceGeneration,
-    });
+    replyAbortController.signal.aborted ||
+    (replyFenceGeneration !== undefined &&
+      isTelegramReplyFenceSuperseded({
+        key: activeReplyFenceKey,
+        generation: replyFenceGeneration,
+      }));
   const releaseReplyFence = () => {
     if (replyFenceGeneration === undefined) {
       return;
