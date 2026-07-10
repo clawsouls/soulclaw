@@ -44,9 +44,9 @@ describe("OpenClaw performance workflow", () => {
     expect(workflow).toContain("Optional parent workflow dispatch identifier");
   });
 
-  it("pins the Kova evaluator that attributes gateway process snapshots", () => {
+  it("pins the Kova evaluator with release validation contracts", () => {
     const workflow = readFileSync(WORKFLOW, "utf8");
-    const kovaRef = "a0632ce20d69be319dc12337f929980c250c70f9";
+    const kovaRef = "24c26969e57d4d49f9d1a5071af85dd3d79daa2d";
 
     expect(workflow).toContain(`default: ${kovaRef}`);
     expect(workflow).toContain(`inputs.kova_ref || '${kovaRef}'`);
