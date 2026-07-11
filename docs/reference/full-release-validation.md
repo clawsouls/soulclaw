@@ -24,9 +24,23 @@ gh workflow run full-release-validation.yml \
 ```
 
 `provider` also accepts `anthropic` or `minimax` for cross-OS onboarding and the
-end-to-end agent turn. Child workflows use the trusted workflow ref for the
-harness and the input `ref` for the candidate under test, so new validation
-logic stays available when validating an older release branch or tag.
+end-to-end agent turn. Reusable child jobs resolve the called workflow harness
+from `job.workflow_repository` and `job.workflow_sha`, while the input `ref`
+selects the candidate under test. This keeps current trusted validation logic
+available when validating an older release branch or tag.
+
+Every dispatched child must report the same workflow SHA as the parent
+`Full Release Validation` run. If `main` moves between the parent and child
+dispatches, the umbrella fails closed even when the child itself succeeds. For
+an immutable exact-commit proof, use
+`pnpm ci:full-release --sha <target-sha>`. The helper creates a temporary
+`release-ci/*` ref pinned to current trusted `origin/main`, passes the target
+SHA only as the candidate `ref`, reuses strict exact-target evidence when
+available, and deletes the ref after validation. Pass
+`-f reuse_evidence=false` to force a fresh run or
+`--workflow-sha <trusted-main-sha>` to select an older workflow commit still
+reachable from current `origin/main`. The workflow never creates or updates
+repository refs itself.
 
 `release_profile=stable` and `release_profile=full` always run the exhaustive
 live/Docker soak. Pass `run_release_soak=true` to include the same soak lanes
@@ -49,12 +63,16 @@ that plugin, then runs Codex CLI preflight and same-session OpenAI agent turns.
 ## Top-level stages
 
 For `rerun_group=all`, a `Check for reusable validation evidence` job runs
-first: it looks for the newest prior green full validation whose target differs
-from the current target only by release metadata paths (changelog, version
-stamps; see `RELEASE_METADATA_PATHS` in `scripts/changed-lanes.mjs`). When such
-evidence exists, every lane is skipped and the umbrella verifier re-checks the
-evidence run instead, so changelog-only commits do not re-drive hours of
-validation. Pass `reuse_evidence=false` to force a fresh full run.
+first: it looks for the newest prior green full validation for the exact same
+target SHA, release profile, effective soak setting, and validation inputs.
+When such evidence exists, every lane is skipped and the umbrella verifier
+re-checks the immutable parent artifact, child runs, and dispatch logs. This is
+same-candidate rerun recovery only; it does not authorize cross-SHA reuse. For
+a changed candidate, rerun every package, artifact, install, Docker, or provider
+gate affected by that delta. Pass `reuse_evidence=false` to force a fresh full
+run. Evidence reuse runs only from `main` or a canonical SHA-pinned
+`release-ci/*` ref whose workflow commit remains on trusted `main` lineage;
+other workflow refs run the selected lanes fresh.
 
 Also for `rerun_group=all`, a `Verify Docker runtime image assets` job builds
 the `runtime-assets` Docker target with

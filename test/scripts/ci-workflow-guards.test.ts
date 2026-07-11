@@ -1117,6 +1117,7 @@ describe("ci workflow guards", () => {
     expect(smokeRunStep.run).toContain("createQaSmokeCiMatrix");
     expect(smokeRunStep.run).toContain("--qa-profile smoke-ci");
     expect(smokeRunStep.run).toContain("--concurrency 8");
+    expect(smokeRunStep.run).toContain("--allow-unreleased-changelog");
     expect(smokeRunStep.run).toContain('scenario_args+=(--scenario "$scenario_id")');
     expect(smokeRunStep.run).not.toContain("--category");
     expect(smokeRunStep.run).not.toContain("--allow-failures");
