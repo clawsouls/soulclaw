@@ -1260,6 +1260,7 @@ export async function runReplyAgent(params: {
     }
   };
 
+  let shouldQueueAfterSteerRejection = false;
   if (effectiveShouldSteer && isActive) {
     const activeReplyOperation =
       providedReplyOperation ?? (sessionKey ? replyRunRegistry.get(sessionKey) : undefined);
@@ -1295,6 +1296,9 @@ export async function runReplyAgent(params: {
       typing.cleanup();
       return undefined;
     }
+    // The active runtime still owns the turn but cannot prove transcript adoption.
+    // Keep the inbound message queued so ingress can finalize after a later run.
+    shouldQueueAfterSteerRejection = steerOutcome.reason === "transcript_commit_wait_unsupported";
     const summary = formatEmbeddedAgentQueueFailureSummary(steerOutcome);
     logVerbose(`queue: active session ${steerSessionId} rejected steering injection: ${summary}`);
   }
@@ -1302,7 +1306,7 @@ export async function runReplyAgent(params: {
   const activeRunQueueAction = resolveActiveRunQueueAction({
     isActive,
     isHeartbeat,
-    shouldFollowup: effectiveShouldFollowup,
+    shouldFollowup: effectiveShouldFollowup || shouldQueueAfterSteerRejection,
     queueMode: activeRunQueueMode,
     resetTriggered: effectiveResetTriggered,
   });
