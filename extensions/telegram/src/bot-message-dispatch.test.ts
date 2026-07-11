@@ -6286,18 +6286,12 @@ describe("dispatchTelegramMessage draft streaming", () => {
     let deliverQueuedRoomEvent:
       | DispatchReplyWithBufferedBlockDispatcherArgs["dispatcherOptions"]["deliver"]
       | undefined;
-    let adoptionStarted: (() => void) | undefined;
-    const adoptionStartGate = new Promise<void>((resolve) => {
-      adoptionStarted = resolve;
-    });
-    let releaseAdoption: (() => void) | undefined;
-    const adoptionGate = new Promise<void>((resolve) => {
-      releaseAdoption = resolve;
-    });
+    let adoptQueuedRoomEvent: (() => void | Promise<void>) | undefined;
     dispatchReplyWithBufferedBlockDispatcher
       .mockImplementationOnce(async ({ dispatcherOptions, replyOptions }) => {
         roomEventAbortSignal = replyOptions?.abortSignal;
         queuedLifecycle = replyOptions?.queuedFollowupLifecycle;
+        adoptQueuedRoomEvent = replyOptions?.onTurnAdopted;
         deliverQueuedRoomEvent = dispatcherOptions.deliver;
         queuedLifecycle?.onEnqueued?.();
         return {
@@ -6345,15 +6339,8 @@ describe("dispatchTelegramMessage draft streaming", () => {
     await dispatchWithContext({
       context: createGroupContext("room_event", 99, "ambient chatter"),
       streamMode: "off",
-      onTurnAdopted: async () => {
-        adoptionStarted?.();
-        await adoptionGate;
-      },
     });
     expect(roomEventAbortSignal?.aborted).toBe(false);
-
-    const admissionPromise = queuedLifecycle?.onAdmitted?.();
-    await adoptionStartGate;
 
     await dispatchWithContext({
       context: createGroupContext("user_request", 100, "@bot answer now"),
@@ -6361,8 +6348,8 @@ describe("dispatchTelegramMessage draft streaming", () => {
     });
 
     expect(roomEventAbortSignal?.aborted).toBe(true);
-    releaseAdoption?.();
-    await admissionPromise;
+    await queuedLifecycle?.onAdmitted?.();
+    await adoptQueuedRoomEvent?.();
     await deliverQueuedRoomEvent?.({ text: "stale ambient answer" }, { kind: "final" });
     expect(deliverReplies).toHaveBeenCalledTimes(1);
     queuedLifecycle?.onComplete?.();
