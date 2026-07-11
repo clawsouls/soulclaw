@@ -196,7 +196,7 @@ Docs: https://docs.openclaw.ai
 
 ### Complete contribution record
 
-This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..34ce6d73cea79c311388cae6a639fc806e9abc6d history: 1487 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..78aa9f5c9f2077302168f4bafbd6e0ecba35f01f history: 1490 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020, #92657, #93466, #93650, #93767, #93810, #97118).
 
@@ -1689,6 +1689,9 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #103952** fix(telegram): detach adopted turns from reply fence. Thanks @vincentkoc.
 - **PR #103965** fix(telegram): suppress replies superseded during adoption.
 - **PR #103946** fix(tasks): repair legacy delivery statuses. Related #103168. Thanks @bek91 and @theo674.
+- **PR #104162** improve(release): reuse exact-SHA validation evidence. Related #104161. Thanks @vincentkoc.
+- **PR #103222** fix(release): validate GitHub notes before publish.
+- **PR #104186** fix: current-tree package checks support unreleased versions.
 ## 2026.6.11
 
 We heard the feedback. v2026.6.11 focuses on the rough edges that make OpenClaw feel less dependable, with fixes for misplaced replies, stuck sends, reconnects, model setup failures, and safer admin defaults.
