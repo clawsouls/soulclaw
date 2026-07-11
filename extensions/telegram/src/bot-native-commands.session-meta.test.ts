@@ -55,6 +55,7 @@ const persistentBindingMocks = vi.hoisted(() => ({
 const sessionMocks = vi.hoisted(() => ({
   getSessionEntry: vi.fn(),
   loadSessionStore: vi.fn(),
+  patchSessionEntry: vi.fn(),
   recordSessionMetaFromInbound: vi.fn(),
   resolveSessionTranscriptLegacyFileTarget: vi.fn(),
   resolveStorePath: vi.fn(),
@@ -176,6 +177,7 @@ vi.mock("openclaw/plugin-sdk/session-store-runtime", async () => {
     ...actual,
     getSessionEntry: sessionMocks.getSessionEntry,
     loadSessionStore: sessionMocks.loadSessionStore,
+    patchSessionEntry: sessionMocks.patchSessionEntry,
     resolveStorePath: sessionMocks.resolveStorePath,
   };
 });
@@ -638,6 +640,7 @@ function resetSessionMetaMocks() {
     ({ storePath, sessionKey }: { storePath: string; sessionKey: string }) =>
       sessionMocks.loadSessionStore(storePath)[sessionKey],
   );
+  sessionMocks.patchSessionEntry.mockClear().mockResolvedValue(null);
   sessionMocks.recordSessionMetaFromInbound.mockClear().mockResolvedValue(undefined);
   sessionMocks.resolveSessionTranscriptLegacyFileTarget.mockClear().mockResolvedValue({
     agentId: "main",
@@ -1575,7 +1578,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
     );
   });
 
-  it("passes the target session auth profile to Telegram /login codex", async () => {
+  it("moves the target session to the profile returned by Telegram /login codex", async () => {
     sessionMocks.loadSessionStore.mockReturnValue({
       "agent:main:main": {
         authProfileOverride: "openai:owner@example.com",
@@ -1591,7 +1594,9 @@ describe("registerTelegramNativeCommands — session metadata", () => {
       return {
         providerId: "openai",
         methodId: "device-code",
-        profiles: [{ profileId: "openai:owner@example.com", provider: "openai", mode: "oauth" }],
+        profiles: [
+          { profileId: "openai:new-owner@example.com", provider: "openai", mode: "oauth" },
+        ],
       };
     });
 
@@ -1611,9 +1616,33 @@ describe("registerTelegramNativeCommands — session metadata", () => {
         provider: "openai",
         method: "device-code",
         agent: "main",
-        profileId: "openai:owner@example.com",
       }),
     );
+    expect(
+      (runModelsAuthLoginFlow.mock.calls[0]?.[0] as { profileId?: string } | undefined)?.profileId,
+    ).toBeUndefined();
+    expect(sessionMocks.patchSessionEntry).toHaveBeenCalledWith({
+      agentId: "main",
+      sessionKey: "agent:main:main",
+      storePath: "/tmp/openclaw-sessions.json",
+      fallbackEntry: {
+        authProfileOverride: "openai:owner@example.com",
+        sessionId: "sess-main",
+        updatedAt: 1,
+      },
+      preserveActivity: true,
+      update: expect.any(Function),
+    });
+    const patchUpdate = (
+      sessionMocks.patchSessionEntry.mock.calls[0]?.[0] as {
+        update?: () => Record<string, unknown>;
+      }
+    )?.update?.();
+    expect(patchUpdate).toEqual({
+      authProfileOverride: "openai:new-owner@example.com",
+      authProfileOverrideSource: "user",
+      authProfileOverrideCompactionCount: undefined,
+    });
   });
 
   it("passes a resolved transcript file to plugin commands when the entry has no file", async () => {
