@@ -1,5 +1,4 @@
 // Codex plugin module implements thread lifecycle behavior.
-import * as crypto from "node:crypto";
 import {
   buildSkillWorkshopPromptSection,
   embeddedAgentLog,
@@ -63,6 +62,7 @@ import {
   type JsonValue,
 } from "./protocol.js";
 import {
+  hashCodexAppServerBindingFingerprint,
   isCodexAppServerNativeAuthProfile,
   normalizeCodexAppServerBindingModelProvider,
   reclaimCurrentCodexSessionGeneration,
@@ -1682,7 +1682,7 @@ export function areCodexDynamicToolFingerprintsCompatible(params: {
 }
 
 function fingerprintDynamicTools(dynamicTools: CodexDynamicToolSpec[]): string {
-  return hashCanonicalFingerprint(legacyFingerprintDynamicTools(dynamicTools));
+  return hashCodexAppServerBindingFingerprint(legacyFingerprintDynamicTools(dynamicTools));
 }
 
 function legacyFingerprintDynamicTools(dynamicTools: CodexDynamicToolSpec[]): string {
@@ -1691,15 +1691,11 @@ function legacyFingerprintDynamicTools(dynamicTools: CodexDynamicToolSpec[]): st
   );
 }
 
-function hashCanonicalFingerprint(canonical: string): string {
-  return "sha256:" + crypto.createHash("sha256").update(canonical).digest("hex");
-}
-
 function fingerprintUserMcpServersConfigPatch(
   configPatch: JsonObject | undefined,
 ): string | undefined {
   return configPatch
-    ? hashCanonicalFingerprint(JSON.stringify(stabilizeJsonValue(configPatch)))
+    ? hashCodexAppServerBindingFingerprint(JSON.stringify(stabilizeJsonValue(configPatch)))
     : undefined;
 }
 
@@ -1762,7 +1758,7 @@ function readActiveCodexTurnIds(thread: unknown): string[] {
 }
 
 const LEGACY_EMPTY_DYNAMIC_TOOLS_FINGERPRINT = legacyFingerprintDynamicTools([]);
-const EMPTY_DYNAMIC_TOOLS_FINGERPRINT = hashCanonicalFingerprint(
+const EMPTY_DYNAMIC_TOOLS_FINGERPRINT = hashCodexAppServerBindingFingerprint(
   LEGACY_EMPTY_DYNAMIC_TOOLS_FINGERPRINT,
 );
 
