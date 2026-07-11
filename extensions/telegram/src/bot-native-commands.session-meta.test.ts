@@ -1732,12 +1732,12 @@ describe("registerTelegramNativeCommands — session metadata", () => {
     await handler(createTelegramPrivateCommandContext({ match: "codex", userId: 200 }));
 
     expect(sendMessage).toHaveBeenCalledWith(
-      123,
+      100,
       "Codex login completed, but this Telegram session could not switch to the newly authenticated profile. Retry `/login codex`, or select the profile manually.",
-      expect.any(Object),
+      {},
     );
     expect(sendMessage).not.toHaveBeenCalledWith(
-      123,
+      100,
       "Codex login complete. Try your request again now.",
       expect.any(Object),
     );
@@ -1761,12 +1761,12 @@ describe("registerTelegramNativeCommands — session metadata", () => {
     await handler(createTelegramPrivateCommandContext({ match: "codex", userId: 200 }));
 
     expect(sendMessage).toHaveBeenCalledWith(
-      123,
+      100,
       "Codex login completed, but this Telegram session could not switch to the newly authenticated profile. Retry `/login codex`, or select the profile manually.",
-      expect.any(Object),
+      {},
     );
     expect(sendMessage).not.toHaveBeenCalledWith(
-      123,
+      100,
       "Codex login complete. Try your request again now.",
       expect.any(Object),
     );
@@ -1808,12 +1808,12 @@ describe("registerTelegramNativeCommands — session metadata", () => {
     await handler(createTelegramPrivateCommandContext({ match: "codex", userId: 200 }));
 
     expect(sendMessage).toHaveBeenCalledWith(
-      123,
+      100,
       "Codex login completed, but this Telegram session could not switch to the newly authenticated profile. Retry `/login codex`, or select the profile manually.",
-      expect.any(Object),
+      {},
     );
     expect(sendMessage).not.toHaveBeenCalledWith(
-      123,
+      100,
       "Codex login complete. Try your request again now.",
       expect.any(Object),
     );
