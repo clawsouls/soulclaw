@@ -35,7 +35,7 @@ Docs: https://docs.openclaw.ai
 - **Gateway TTS playback:** add an operator-scoped `tts.speak` RPC that returns configured-provider speech as inline whole-clip audio for remote clients. (#100770)
 
 - **Control UI context usage:** show context-window progress, latest-run input/output tokens, and the active model when the chat context ring is opened.
-- **Apple Watch voice turns:** dictate a message from the Watch chat and hear the new OpenClaw reply spoken on the Watch, with explicit silent-message and stop-speaking controls. (#100224)
+- **Apple Watch voice turns:** dictate a message from the Watch chat and hear the new OpenClaw reply spoken on the Watch, with explicit silent-message and stop-speaking controls. (#100224) Thanks @vincentkoc.
 - **Conversational onboarding:** add a real agent-loop Crestodian setup flow across the CLI, Gateway, web install, and macOS app, with typed operations, exact approval binding, masked credential prompts, isolated session transcripts, and safe handoff to the normal agent. Thanks @vincentkoc.
 - **Generated session titles:** name new Control UI sessions from their first message, and add default/per-agent `utilityModel` routing for lower-cost session, topic, and thread title generation. Thanks @Juliangsm, @zhangguiping-xydt, and @vincentkoc.
 - **ClawRouter routing and quotas:** add the bundled ClawRouter provider plugin with credential-scoped dynamic model discovery, OpenAI-compatible and native Anthropic/Gemini transports, and managed budget reporting across OpenClaw usage surfaces. (#99658)
@@ -53,6 +53,9 @@ Docs: https://docs.openclaw.ai
 
 - **Browser actions on Node 24:** keep browser request cancellation bound to the client and response lifetime instead of Node 24.16+'s prematurely aborted body-stream signal, preventing valid POST actions from failing after JSON parsing. Thanks @obviyus and @vincentkoc.
 - **SecretRef model credentials:** keep resolved provider secrets behind process-local sentinels through auth storage, stream setup, SDK configuration, and managed local-provider probing, then inject plaintext only at the final network or provider-plugin boundary while retaining exact-value log redaction. (#102008, #102009)
+- **Telegram token redaction:** redact bot tokens even when log transports split them across chunks, preventing fragmented credentials from escaping structured and streamed logs. (#103861) Thanks @vincentkoc.
+- **Telegram durable turn adoption:** complete spooled updates only after durable agent adoption, detach adopted turns from the ingress reply fence, and suppress superseded replies so recovery cannot leak stale or duplicate responses. (#103664, #103952, #103965) Thanks @obviyus and @vincentkoc.
+- **Task delivery recovery:** normalize legacy delivery statuses while restoring task records so older queued work becomes runnable instead of aborting registry recovery. (#103946) Fixes #103168 Thanks @bek91, @theo674, and @obviyus.
 - **Diagnostics provider evidence:** emit one deduplicated `provider.request` timeline event for every completed or failed model call, so opt-in timelines can prove real provider traffic without double-counting terminal paths. Fixes #103063 Thanks @vincentkoc.
 - **Lean local model shell access:** keep `exec` directly visible beside the default structured Tool Search controls so coding-tuned local models can use their shell fallback instead of searching for missing domain tools. (#101607) Thanks @vincentkoc and @maweibin.
 - **OAuth refresh contention diagnostics:** keep local lock paths out of user-facing refresh failures and avoid duplicate failure prefixes while preserving structured provider and profile classification. (#101573) Thanks @vincentkoc.
@@ -72,6 +75,7 @@ Docs: https://docs.openclaw.ai
 - **Outbound pre-connect recovery:** clear stale platform-send evidence atomically when a connect or DNS failure proves no request was sent, allowing queued Discord and other channel messages to replay after connectivity returns without weakening the unknown-send duplicate guard. (#101024, #100979) Thanks @SunnyShu0925 and @tiffanychum.
 - **Discord streamed finals:** send completion replies as fresh messages so inactive channels become unread, while preserving targeted mentions without escalating `@everyone` or `@here`. (#99711, #99662) Thanks @davelutztx and @xena68.
 - **OpenAI-compatible SSE parsing:** recognize event streams mislabeled as JSON without prepending a second `data:` prefix, preserving valid streamed responses from non-conforming providers. (#96503) Thanks @ZengWen-DT and @54meteor.
+- **Meta Model API contract:** use the current Meta endpoint and output-token field so `muse-spark-1.1` validation and live requests match the provider contract. (#103680) Fixes #103667 Thanks @vincentkoc, @HamidShojanazeri, @davemorin, @Solvely-Colin, and @jalehman.
 - **LM Studio embedding preload:** honor model- and provider-level context-window limits when preloading embedding models, preventing avoidable GPU out-of-memory failures. (#100750) Thanks @zak-li, @ZOOWH, and @hxz398.
 - **Provider overload messaging:** keep rate-limited responses classified for retry and fallback behavior while using overload wording when the provider supplies no explicit retry detail. (#98165) Thanks @SunnyShu0925.
 - **Microsoft Teams attachment metadata:** bound Bot Framework `attachmentInfo` JSON reads and cancel oversized streams before they can exhaust Gateway memory. (#99125) Thanks @ly85206559.
@@ -171,7 +175,7 @@ Docs: https://docs.openclaw.ai
 - **macOS SSH tunnels:** resolve user-installed SSH `ProxyCommand` helpers through the app's managed PATH while preserving inherited connection environment, so remote aliases work after Finder and sanitized-script launches.
 - **Control UI OpenAI speed picker:** show only Standard and Fast choices for OpenAI models.
 - **Control UI terminal rendering:** adopt the shared `@openclaw/libterminal` browser lifecycle and add Nerd Font fallbacks so icon-enabled shell listings render their glyphs when a compatible local font is installed.
-- **Slack transcript history:** let Codex app-server own its persisted assistant replies so Slack does not append redundant delivery-mirror rows, while the Control UI keeps legacy duplicate mirrors hidden.
+- **Slack transcript history:** let Codex app-server own its persisted assistant replies so Slack does not append redundant delivery-mirror rows, while the Control UI keeps legacy duplicate mirrors hidden. Thanks @bek91.
 - **Control UI chat history:** hide redundant channel-final delivery mirrors when the preceding app-server assistant reply already shows the same text.
 - **Control UI chat spacing:** keep the first message comfortably clear of the topbar with a responsive minimum transcript inset.
 - **ClawRouter auth profiles:** resolve credential-scoped catalog models during agent runs when the proxy key is stored in an auth profile, and document plugin and model allowlists.
@@ -192,7 +196,7 @@ Docs: https://docs.openclaw.ai
 
 ### Complete contribution record
 
-This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..93ea3a93bfbb35e01da6cbae560710733a830385 history: 1474 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..6fb7daa08744f6f862afd45dae7811b2b475b102 history: 1480 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020, #92657, #93466, #93650, #93767, #93810, #97118).
 
@@ -1672,7 +1676,12 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #103718** test(qa): wait for durable webchat transcript. Related #103701.
 - **PR #103906** fix(release): keep validation evidence immutable across reruns.
 - **PR #103923** fix(i18n): recognize Meta docs glossary terms.
-
+- **PR #103095** fix(ci): isolate OpenWebUI release smoke.
+- **PR #104032** fix(release): harden and accelerate 2026.7.1 handoff. Thanks @vincentkoc.
+- **PR #103680** fix(providers): align Meta Model API contract. Related #103667. Thanks @vincentkoc.
+- **PR #103861** fix(logging): redact Telegram tokens across chunk boundaries. Thanks @vincentkoc.
+- **PR #103965** fix(telegram): suppress replies superseded during adoption.
+- **PR #103946** fix(tasks): repair legacy delivery statuses. Related #103168. Thanks @bek91 and @theo674.
 ## 2026.6.11
 
 We heard the feedback. v2026.6.11 focuses on the rough edges that make OpenClaw feel less dependable, with fixes for misplaced replies, stuck sends, reconnects, model setup failures, and safer admin defaults.
