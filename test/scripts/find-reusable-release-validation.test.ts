@@ -918,5 +918,9 @@ describe("scripts/github/find-reusable-release-validation.sh", () => {
     expect(workflow).toContain('--arg workflowSha "$GITHUB_SHA"');
     expect(workflow).toContain("workflowSha: $workflowSha");
     expect(workflow).toContain("ref: ${{ github.sha }}");
+    expect(workflow.match(/\bversion: 3,/gu)).toHaveLength(2);
+    expect(workflow).toContain(
+      "full-release-validation-${{ github.run_id }}-${{ github.run_attempt }}",
+    );
   });
 });

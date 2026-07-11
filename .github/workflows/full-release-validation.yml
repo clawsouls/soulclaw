@@ -139,10 +139,10 @@ jobs:
       - name: Checkout trusted workflow helper
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.sha }}
           path: workflow
           fetch-depth: 1
-          persist-credentials: true
+          persist-credentials: false
           submodules: false
 
       - name: Resolve target SHA
@@ -251,10 +251,10 @@ jobs:
       - name: Checkout trusted workflow helper
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.sha }}
           path: workflow
           fetch-depth: 1
-          persist-credentials: true
+          persist-credentials: false
           submodules: false
 
       - name: Checkout target SHA
@@ -263,7 +263,7 @@ jobs:
           ref: ${{ needs.resolve_target.outputs.sha }}
           path: target
           fetch-depth: 1
-          persist-credentials: true
+          persist-credentials: false
           submodules: false
 
       - name: Find reusable validation evidence
@@ -1780,7 +1780,10 @@ jobs:
           PERFORMANCE_RUN_ID: ${{ needs.performance.outputs.run_id }}
           PERFORMANCE_CONCLUSION: ${{ needs.performance.outputs.conclusion }}
           EVIDENCE_REUSE: ${{ needs.evidence_reuse.outputs.reuse }}
+          EVIDENCE_RUN_ID: ${{ needs.evidence_reuse.outputs.evidence_run_id }}
           EVIDENCE_ROOT_RUN_ID: ${{ needs.evidence_reuse.outputs.evidence_root_run_id }}
+          EVIDENCE_SHA: ${{ needs.evidence_reuse.outputs.evidence_sha }}
+          EVIDENCE_CHANGED_PATHS: ${{ needs.evidence_reuse.outputs.changed_paths }}
           EVIDENCE_MANIFEST: ${{ needs.evidence_reuse.outputs.evidence_manifest }}
           PROVIDER: ${{ inputs.provider }}
           MODE: ${{ inputs.mode }}
@@ -1800,16 +1803,35 @@ jobs:
               --arg runId "$GITHUB_RUN_ID" \
               --arg runAttempt "$GITHUB_RUN_ATTEMPT" \
               --arg workflowRef "$GITHUB_REF_NAME" \
+              --arg workflowSha "$GITHUB_SHA" \
+              --arg workflowFullRef "$GITHUB_REF" \
+              --arg workflowRefType "$GITHUB_REF_TYPE" \
               --arg targetRef "$TARGET_REF" \
               --arg targetSha "$TARGET_SHA" \
+              --arg evidenceRunId "$EVIDENCE_RUN_ID" \
               --arg evidenceRootRunId "$EVIDENCE_ROOT_RUN_ID" \
+              --arg evidenceSha "$EVIDENCE_SHA" \
+              --argjson evidenceChangedPaths "$EVIDENCE_CHANGED_PATHS" \
               '. + {
+                version: 3,
                 runId: $runId,
                 runAttempt: $runAttempt,
                 workflowRef: $workflowRef,
+                workflowSha: $workflowSha,
+                workflowFullRef: $workflowFullRef,
+                workflowRefType: $workflowRefType,
                 targetRef: $targetRef,
                 targetSha: $targetSha,
-                evidenceReuse: {runId: $evidenceRootRunId}
+                evidenceReuse: {
+                  policy: "exact-target-full-validation-v1",
+                  runId: $evidenceRootRunId,
+                  selectedRunId: $evidenceRunId,
+                  evidenceSha: $evidenceSha,
+                  changedPaths: $evidenceChangedPaths
+                },
+                controls: ((.controls // {}) + {
+                  performanceReportPublication: "artifact-only"
+                })
               }' <<< "$EVIDENCE_MANIFEST" > "${manifest_dir}/full-release-validation-manifest.json"
             exit 0
           fi
@@ -1818,6 +1840,9 @@ jobs:
             --arg runId "$GITHUB_RUN_ID" \
             --arg runAttempt "$GITHUB_RUN_ATTEMPT" \
             --arg workflowRef "$GITHUB_REF_NAME" \
+            --arg workflowSha "$GITHUB_SHA" \
+            --arg workflowFullRef "$GITHUB_REF" \
+            --arg workflowRefType "$GITHUB_REF_TYPE" \
             --arg targetRef "$TARGET_REF" \
             --arg targetSha "$TARGET_SHA" \
             --arg releaseProfile "$RELEASE_PROFILE" \
@@ -1837,11 +1862,14 @@ jobs:
             --arg packageAcceptancePackageSpec "$PACKAGE_ACCEPTANCE_PACKAGE_SPEC" \
             --arg codexPluginSpec "$CODEX_PLUGIN_SPEC" \
             '{
-              version: 2,
+              version: 3,
               workflowName: $workflowName,
               runId: $runId,
               runAttempt: $runAttempt,
               workflowRef: $workflowRef,
+              workflowSha: $workflowSha,
+              workflowFullRef: $workflowFullRef,
+              workflowRefType: $workflowRefType,
               targetRef: $targetRef,
               targetSha: $targetSha,
               releaseProfile: $releaseProfile,
@@ -1858,7 +1886,8 @@ jobs:
               },
               controls: {
                 stableSoakRequired: ($releaseProfile == "stable" or $releaseProfile == "full"),
-                performanceBlocking: true
+                performanceBlocking: true,
+                performanceReportPublication: "artifact-only"
               },
               childRuns: {
                 normalCi: $normalCiRunId,
@@ -1877,6 +1906,15 @@ jobs:
         if: ${{ success() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
+          name: full-release-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/full-release-validation
+          if-no-files-found: error
+
+      - name: Upload legacy release validation manifest alias
+        if: ${{ success() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
           name: full-release-validation-${{ github.run_id }}
           path: ${{ runner.temp }}/full-release-validation
           if-no-files-found: error
+          overwrite: true
