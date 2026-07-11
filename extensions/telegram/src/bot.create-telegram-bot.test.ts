@@ -1171,8 +1171,10 @@ describe("createTelegramBot", () => {
       .spyOn(messageDispatchDedupe, "commitTelegramMessageDispatchReplay")
       .mockRejectedValueOnce(commitError);
     let queuedLifecycle: GetReplyOptions["queuedFollowupLifecycle"];
+    let onTurnAdopted: GetReplyOptions["onTurnAdopted"];
     replySpy.mockImplementationOnce(async (_ctx: MsgContext, opts?: GetReplyOptions) => {
       queuedLifecycle = opts?.queuedFollowupLifecycle;
+      onTurnAdopted = opts?.onTurnAdopted;
       queuedLifecycle?.onEnqueued?.();
       return undefined;
     });
@@ -1233,14 +1235,16 @@ describe("createTelegramBot", () => {
       flush?.();
       await vi.waitFor(() => {
         expect(queuedLifecycle?.onAdmitted).toEqual(expect.any(Function));
+        expect(onTurnAdopted).toEqual(expect.any(Function));
       });
 
-      await expect(queuedLifecycle?.onAdmitted?.()).rejects.toBe(commitError);
+      await queuedLifecycle?.onAdmitted?.();
+      await expect(onTurnAdopted?.()).rejects.toBe(commitError);
       await flushTelegramTestMicrotasks();
       expect(firstSettled).toBe(false);
       expect(secondSettled).toBe(false);
 
-      await queuedLifecycle?.onAdmitted?.();
+      await onTurnAdopted?.();
       await expect(Promise.all([firstParticipant.task, secondParticipant.task])).resolves.toEqual([
         { kind: "completed" },
         { kind: "completed" },
@@ -1289,15 +1293,18 @@ describe("createTelegramBot", () => {
       });
     const releaseSpy = vi.spyOn(messageDispatchDedupe, "releaseTelegramMessageDispatchReplay");
     let queuedLifecycle: GetReplyOptions["queuedFollowupLifecycle"];
+    let onTurnAdopted: GetReplyOptions["onTurnAdopted"];
     let queuedAbortSignal: AbortSignal | undefined;
     let runQueuedTurn: (() => Promise<void>) | undefined;
     let modelTurnRan = false;
     replySpy.mockImplementationOnce(async (_ctx: MsgContext, opts?: GetReplyOptions) => {
       queuedLifecycle = opts?.queuedFollowupLifecycle;
+      onTurnAdopted = opts?.onTurnAdopted;
       queuedAbortSignal = opts?.abortSignal;
       queuedLifecycle?.onEnqueued?.();
       runQueuedTurn = async () => {
         await queuedLifecycle?.onAdmitted?.();
+        await onTurnAdopted?.();
         if (queuedAbortSignal?.aborted) {
           throw queuedAbortSignal.reason;
         }
@@ -1410,9 +1417,11 @@ describe("createTelegramBot", () => {
     const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
     const commitSpy = vi.spyOn(messageDispatchDedupe, "commitTelegramMessageDispatchReplay");
     let queuedLifecycle: GetReplyOptions["queuedFollowupLifecycle"];
+    let onTurnAdopted: GetReplyOptions["onTurnAdopted"];
     let queuedAbortSignal: AbortSignal | undefined;
     replySpy.mockImplementationOnce(async (_ctx: MsgContext, opts?: GetReplyOptions) => {
       queuedLifecycle = opts?.queuedFollowupLifecycle;
+      onTurnAdopted = opts?.onTurnAdopted;
       queuedAbortSignal = opts?.abortSignal;
       queuedLifecycle?.onEnqueued?.();
       return undefined;
@@ -1466,6 +1475,7 @@ describe("createTelegramBot", () => {
       flush?.();
       await vi.waitFor(() => {
         expect(queuedLifecycle?.onAdmitted).toEqual(expect.any(Function));
+        expect(onTurnAdopted).toEqual(expect.any(Function));
       });
 
       const timeoutError = new Error("spooled replay timed out before admission");
@@ -1477,7 +1487,8 @@ describe("createTelegramBot", () => {
         kind: "failed-retryable",
         error: timeoutError,
       });
-      await expect(queuedLifecycle?.onAdmitted?.()).rejects.toBe(timeoutError);
+      await queuedLifecycle?.onAdmitted?.();
+      await expect(onTurnAdopted?.()).rejects.toBe(timeoutError);
       expect(commitSpy).not.toHaveBeenCalled();
       expect(replySpy).toHaveBeenCalledTimes(1);
     } finally {
