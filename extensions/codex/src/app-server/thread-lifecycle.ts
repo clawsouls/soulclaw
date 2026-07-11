@@ -355,7 +355,7 @@ export async function startOrResumeThread(params: {
       () => legacyFingerprintDynamicTools(params.dynamicTools),
     );
     const dynamicToolsFingerprint = lifecycleTiming.measureSync("dynamic-tools-fingerprint", () =>
-      hashCanonicalFingerprint(legacyDynamicToolsFingerprint),
+      hashCodexAppServerBindingFingerprint(legacyDynamicToolsFingerprint),
     );
     const dynamicToolsContainDeferred = flattenCodexDynamicToolFunctions(params.dynamicTools).some(
       (tool) => tool.deferLoading === true,
