@@ -644,6 +644,10 @@ describe("gateway session utils", () => {
 
     expect(defaults.thinkingLevels?.map((level) => level.id)).toContain("xhigh");
     expect(row.thinkingLevels?.map((level) => level.id)).toContain("xhigh");
+    expect(providerArtifactMocks.resolveBundledProviderPolicySurface).toHaveBeenCalledWith(
+      "openai",
+      { manifestRegistry: undefined },
+    );
   });
 
   test("session defaults use configured thinking default", () => {
