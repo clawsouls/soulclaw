@@ -380,6 +380,8 @@ export async function startOrResumeThread(params: {
         : buildCodexUserMcpServersThreadConfigPatch(params.params.config, {
             agentId: params.agentId ?? params.params.agentId,
           });
+    const legacyUserMcpServersFingerprint =
+      legacyFingerprintUserMcpServersConfigPatch(userMcpServersConfigPatch);
     const userMcpServersFingerprint =
       fingerprintUserMcpServersConfigPatch(userMcpServersConfigPatch);
     const environmentSelectionFingerprint = fingerprintEnvironmentSelection(
@@ -581,7 +583,14 @@ export async function startOrResumeThread(params: {
         rotatedContextEngineBinding = true;
       }
     }
-    if (binding?.threadId && binding.userMcpServersFingerprint !== userMcpServersFingerprint) {
+    if (
+      binding?.threadId &&
+      !areUserMcpServersFingerprintsCompatible({
+        previous: binding.userMcpServersFingerprint,
+        next: userMcpServersFingerprint,
+        nextLegacy: legacyUserMcpServersFingerprint,
+      })
+    ) {
       embeddedAgentLog.debug("codex app-server user MCP config changed; starting a new thread", {
         threadId: binding.threadId,
       });
@@ -1691,6 +1700,12 @@ function legacyFingerprintDynamicTools(dynamicTools: CodexDynamicToolSpec[]): st
   );
 }
 
+function legacyFingerprintUserMcpServersConfigPatch(
+  configPatch: JsonObject | undefined,
+): string | undefined {
+  return configPatch ? JSON.stringify(stabilizeJsonValue(configPatch)) : undefined;
+}
+
 function fingerprintUserMcpServersConfigPatch(
   configPatch: JsonObject | undefined,
 ): string | undefined {
@@ -1768,6 +1783,21 @@ function areDynamicToolFingerprintsCompatible(
   nextLegacy?: string,
 ): boolean {
   return !previous || previous === next || previous === nextLegacy;
+}
+
+function areUserMcpServersFingerprintsCompatible(params: {
+  previous?: string;
+  next?: string;
+  nextLegacy?: string;
+}): boolean {
+  // Beta 5 stored raw stabilized JSON, while doctor hashes those exact bytes.
+  // A successful resume rewrites either legacy form to the current redacted hash.
+  return (
+    params.previous === params.next ||
+    params.previous === params.nextLegacy ||
+    (params.nextLegacy !== undefined &&
+      params.previous === hashCodexAppServerBindingFingerprint(params.nextLegacy))
+  );
 }
 
 function shouldStartTransientNoToolThread(params: {
