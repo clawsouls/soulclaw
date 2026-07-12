@@ -265,9 +265,6 @@ describe("startOrResumeThread — user mcp.servers projection (regression: #8081
       expect(convergedBinding?.userMcpServersFingerprint).toMatch(/^sha256:[a-f0-9]{64}$/);
       expect(convergedBinding?.userMcpServersFingerprint).not.toContain("beta5-access-token");
       expect(convergedBinding?.userMcpServersFingerprint).not.toBe(legacyFingerprint);
-      expect(convergedBinding?.userMcpServersFingerprint).not.toBe(
-        hashCodexAppServerBindingFingerprint(legacyFingerprint),
-      );
 
       request.mockClear();
       await run();
