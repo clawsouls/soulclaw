@@ -1530,7 +1530,6 @@ describe("qa cli runtime", () => {
       scenarioIds: [
         "runtime-long-context-cache-stability",
         "runtime-soak-100-turn",
-        "runtime-tool-image-generate",
         "runtime-tool-memory-add",
         "runtime-tool-memory-recall",
         "runtime-tool-message-tool",
@@ -1540,6 +1539,76 @@ describe("qa cli runtime", () => {
         "runtime-tool-tts",
       ],
     });
+    expectWriteContains(
+      stderrWrite,
+      "excluded lane-incompatible scenario(s): runtime-tool-image-generate",
+    );
+  });
+
+  it("keeps runtime-pair tier selection on flow scenarios and reports exclusions", async () => {
+    await runQaSuiteCommand({
+      repoRoot: "/tmp/openclaw-repo",
+      runtimePair: "openclaw,codex",
+      runtimeParityTier: ["standard", "live-only"],
+    });
+
+    const scenarioIds = mockFirstObjectArg(runQaSuite).scenarioIds as string[];
+    expect(scenarioIds).toContain("runtime-first-hour-20-turn");
+    expect(scenarioIds).toContain("streaming-final-integrity");
+    expect(scenarioIds).not.toContain("gateway-restart-inflight-run");
+    expect(scenarioIds).not.toContain("hosted-image-generation-providers-live");
+    expect(scenarioIds).not.toContain("hosted-video-generation-providers-live");
+    expectFields(mockFirstObjectArg(runQaSuite), {
+      runtimePair: ["openclaw", "codex"],
+    });
+    expectWriteContains(
+      stderrWrite,
+      "excluded incompatible non-flow scenario(s): hosted-image-generation-providers-live (script), hosted-video-generation-providers-live (script)",
+    );
+    expectWriteContains(
+      stderrWrite,
+      "excluded lane-incompatible scenario(s): gateway-restart-inflight-run",
+    );
+  });
+
+  it("rejects explicit runtime-pair scenarios with no compatible flow execution", async () => {
+    await expect(
+      runQaSuiteCommand({
+        repoRoot: "/tmp/openclaw-repo",
+        runtimePair: "openclaw,codex",
+        scenarioIds: ["hosted-image-generation-providers-live"],
+      }),
+    ).rejects.toThrow(
+      "--runtime-pair requires execution.kind: flow scenarios; unsupported scenario(s): hosted-image-generation-providers-live (script)",
+    );
+
+    expect(runQaSuite).not.toHaveBeenCalled();
+  });
+
+  it("rejects runtime-pair tiers with no compatible flow scenarios", async () => {
+    const catalog = readQaScenarioPack();
+    const hostedImageScenario = catalog.scenarios.find(
+      (scenario) => scenario.id === "hosted-image-generation-providers-live",
+    );
+    if (!hostedImageScenario) {
+      throw new Error("missing hosted image scenario fixture");
+    }
+    readQaScenarioPack.mockReturnValueOnce({
+      ...catalog,
+      scenarios: [hostedImageScenario],
+    });
+
+    await expect(
+      runQaSuiteCommand({
+        repoRoot: "/tmp/openclaw-repo",
+        runtimePair: "openclaw,codex",
+        runtimeParityTier: ["live-only"],
+      }),
+    ).rejects.toThrow(
+      "--runtime-parity-tier matched no execution.kind: flow scenarios for live-only; incompatible scenario(s): hosted-image-generation-providers-live (script).",
+    );
+
+    expect(runQaSuite).not.toHaveBeenCalled();
   });
 
   it("rejects unknown runtime parity tier filters", async () => {
