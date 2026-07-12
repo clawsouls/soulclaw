@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CodexAppServerRuntimeOptions } from "./config.js";
 import {
   readCodexAppServerBinding,
+  registerCodexTestSessionIdentity,
   resetCodexTestBindingStore,
   testCodexAppServerBindingStore,
   writeCodexAppServerBinding,
