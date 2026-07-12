@@ -197,7 +197,7 @@ Docs: https://docs.openclaw.ai
 
 ### Complete contribution record
 
-This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..bcab5119a6eb6fff16b6969a1978a244a5290e44 history: 1526 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..35d82604b969a6adf92d6b7927a2333cc6140c4b history: 1527 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020, #92657, #93466, #93650, #93767, #93810, #97118).
 
@@ -1728,6 +1728,7 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #104975** fix(release): restore pnpm package artifacts.
 - **PR #104957** fix(release): verify named backport provenance. Thanks @vincentkoc.
 - **PR #103775** fix: Codex runtime rejected for Codex provider. Related #103762.
+- **PR #105133** test(ui): bound chat hover browser wait.
 - **PR #105055** fix(release): support explicit provenance overrides. Thanks @vincentkoc.
 
 ## 2026.6.11
