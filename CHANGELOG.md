@@ -198,7 +198,7 @@ Docs: https://docs.openclaw.ai
 
 ### Complete contribution record
 
-This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..602f90e01c8211bbbdb22a399a462808919e4395 history: 1530 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..e49319466d789f3d114dd07e31bfd20599ee9a14 history: 1531 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020, #92657, #93466, #93650, #93767, #93810, #97118).
 
@@ -1734,6 +1734,7 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #105405** fix(update): preserve ClawHub plugins after cutover. Thanks @vincentkoc.
 - **PR #105401** fix(qa): align mock catalog with selected models.
 - **PR #105444** fix(qa): preserve Codex mock routing.
+- **PR #105518** fix(openai): preserve image routing before catalog load. Thanks @vincentkoc.
 
 ## 2026.6.11
 
