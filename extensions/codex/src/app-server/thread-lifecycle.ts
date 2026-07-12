@@ -1791,7 +1791,7 @@ function areUserMcpServersFingerprintsCompatible(params: {
   nextLegacy?: string;
 }): boolean {
   // Beta 5 stored raw stabilized JSON, while doctor hashes those exact bytes.
-  // A successful resume rewrites either legacy form to the current redacted hash.
+  // A successful resume rewrites either legacy form to the current bounded hash.
   return (
     params.previous === params.next ||
     params.previous === params.nextLegacy ||
