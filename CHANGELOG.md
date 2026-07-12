@@ -197,7 +197,7 @@ Docs: https://docs.openclaw.ai
 
 ### Complete contribution record
 
-This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..35b438d6f5c3b6bfcdf9245a4b8e4c802acc943c history: 1523 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..bcab5119a6eb6fff16b6969a1978a244a5290e44 history: 1526 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020, #92657, #93466, #93650, #93767, #93810, #97118).
 
@@ -1721,11 +1721,14 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #104778** fix(zai): honor max thinking through gateway. Related #104716. Thanks @vincentkoc and @100yenadmin.
 - **PR #104848** fix(codex): preserve MCP bindings after beta5 upgrades. Thanks @vincentkoc.
 - **PR #98021** feat: support GPT-5.6 Ultra across OpenClaw and Codex runtimes. Thanks @anyech.
-- **PR #104939** test(live): harden GPT-5.6 nonce retries for July.
 - **PR #102980** fix(ci): retry known live tool nonce misses.
+- **PR #104905** test(live): retry GPT-5.6 nonce mismatches.
+- **PR #104956** ci: harden current and frozen release checks.
 - **PR #104892** fix(release): preserve original PRs for named backports. Thanks @vincentkoc.
 - **PR #104975** fix(release): restore pnpm package artifacts.
 - **PR #104957** fix(release): verify named backport provenance. Thanks @vincentkoc.
+- **PR #103775** fix: Codex runtime rejected for Codex provider. Related #103762.
+- **PR #105055** fix(release): support explicit provenance overrides. Thanks @vincentkoc.
 
 ## 2026.6.11
 
