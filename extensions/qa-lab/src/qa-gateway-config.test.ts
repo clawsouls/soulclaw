@@ -255,6 +255,64 @@ describe("buildQaGatewayConfig", () => {
     });
   });
 
+  it("keeps forced Codex cells free of OpenClaw request params", () => {
+    const cfg = buildQaGatewayConfig({
+      bind: "loopback",
+      gatewayPort: 18789,
+      gatewayToken: "token",
+      workspaceDir: "/tmp/qa-workspace",
+      providerMode: "live-frontier",
+      forcedRuntime: "codex",
+      fastMode: true,
+      primaryModel: "openai/gpt-5.5",
+      alternateModel: "openai/gpt-5.4",
+      ...createQaChannelTransportParams(),
+    });
+
+    expect(cfg.agents?.defaults?.models?.["openai/gpt-5.5"]).toEqual({});
+    expect(cfg.agents?.defaults?.models?.["openai/gpt-5.4"]).toEqual({});
+    expect(cfg.agents?.list?.[0]?.fastModeDefault).toBe(true);
+  });
+
+  it("routes forced Codex mock cells through the app-server OpenAI provider", () => {
+    const cfg = buildQaGatewayConfig({
+      bind: "loopback",
+      gatewayPort: 18789,
+      gatewayToken: "token",
+      providerBaseUrl: "http://127.0.0.1:44080/v1",
+      workspaceDir: "/tmp/qa-workspace",
+      providerMode: "mock-openai",
+      forcedRuntime: "codex",
+      primaryModel: "mock-openai/gpt-5.5",
+      alternateModel: "mock-openai/gpt-5.5-alt",
+      enabledPluginIds: ["codex"],
+      ...createQaChannelTransportParams(),
+    });
+
+    expect(getPrimaryModel(cfg.agents?.defaults?.model)).toBe("openai/gpt-5.5");
+    expect(getModelFallbacks(cfg.agents?.defaults?.model)).toEqual(["openai/gpt-5.5-alt"]);
+    expect(cfg.models?.mode).toBe("merge");
+    expect(cfg.models?.providers?.openai?.baseUrl).toBe("https://api.openai.com/v1");
+    expect(cfg.models?.providers?.openai?.request).toBeUndefined();
+    expect(cfg.models?.providers?.openai?.models.map((model) => model.id)).toContain(
+      "gpt-5.5-alt",
+    );
+    expect(cfg.plugins?.allow).toEqual([
+      "acpx",
+      "memory-core",
+      "qa-lab",
+      "codex",
+      "openai",
+      "qa-channel",
+    ]);
+    expect(cfg.plugins?.entries?.codex).toEqual({ enabled: true });
+    expect(cfg.plugins?.entries?.openai).toEqual({ enabled: true });
+    expect(cfg.agents?.defaults?.models).toEqual({
+      "openai/gpt-5.5": {},
+      "openai/gpt-5.5-alt": {},
+    });
+  });
+
   it("does not force OpenAI when the frontier lane only needs Anthropic and Google", () => {
     const cfg = buildQaGatewayConfig({
       bind: "loopback",
