@@ -121,7 +121,7 @@ describe("runQaManualLane", () => {
     });
 
     expect(startQaProviderServer).toHaveBeenCalledWith("live-frontier", {
-      modelRefs: ["openai/gpt-5.6-luna", "openai/gpt-5.6-luna"],
+      modelRefs: ["openai/gpt-5.5", "openai/gpt-5.5"],
     });
     expect(startQaLabServer).toHaveBeenCalledWith({
       repoRoot: "/tmp/openclaw-repo",

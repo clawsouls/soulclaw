@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { QaScenarioPack } from "./scenario-catalog.js";
 
 const {
   runQaManualLane,
@@ -19,6 +20,7 @@ const {
   buildQaDockerHarnessImage,
   runQaDockerUp,
   defaultQaRuntimeModelForMode,
+  readQaScenarioPack,
 } = vi.hoisted(() => ({
   runQaManualLane: vi.fn(),
   runQaFlowSuiteFromRuntime: vi.fn(),
@@ -35,6 +37,7 @@ const {
   runQaDockerUp: vi.fn(),
   defaultQaRuntimeModelForMode:
     vi.fn<(mode: string, options?: { alternate?: boolean }) => string>(),
+  readQaScenarioPack: vi.fn<() => QaScenarioPack>(),
 }));
 
 vi.mock("./manual-lane.runtime.js", () => ({
@@ -88,6 +91,15 @@ vi.mock("./docker-up.runtime.js", () => ({
 vi.mock("./model-selection.runtime.js", () => ({
   defaultQaRuntimeModelForMode,
 }));
+
+vi.mock("./scenario-catalog.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./scenario-catalog.js")>();
+  readQaScenarioPack.mockImplementation(actual.readQaScenarioPack);
+  return {
+    ...actual,
+    readQaScenarioPack,
+  };
+});
 
 import { resolveRepoRelativeOutputDir } from "./cli-paths.js";
 import {
@@ -253,6 +265,7 @@ describe("qa cli runtime", () => {
       (mode: string, options?: { alternate?: boolean }) =>
         defaultQaProviderModelForMode(mode as QaProviderModeInput, options),
     );
+    readQaScenarioPack.mockClear();
     runQaSuite.mockResolvedValue(
       flowSuiteRuntimeResult({
         reportPath: suiteReportPath,
@@ -1555,7 +1568,7 @@ describe("qa cli runtime", () => {
     const scenarioIds = mockFirstObjectArg(runQaSuite).scenarioIds as string[];
     expect(scenarioIds).toContain("runtime-first-hour-20-turn");
     expect(scenarioIds).toContain("streaming-final-integrity");
-    expect(scenarioIds).not.toContain("gateway-restart-inflight-run");
+    expect(scenarioIds).toContain("gateway-restart-inflight-run");
     expect(scenarioIds).not.toContain("hosted-image-generation-providers-live");
     expect(scenarioIds).not.toContain("hosted-video-generation-providers-live");
     expectFields(mockFirstObjectArg(runQaSuite), {
@@ -1564,10 +1577,6 @@ describe("qa cli runtime", () => {
     expectWriteContains(
       stderrWrite,
       "excluded incompatible non-flow scenario(s): hosted-image-generation-providers-live (script), hosted-video-generation-providers-live (script)",
-    );
-    expectWriteContains(
-      stderrWrite,
-      "excluded lane-incompatible scenario(s): gateway-restart-inflight-run",
     );
   });
 
