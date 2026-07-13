@@ -195,17 +195,17 @@ Docs: https://docs.openclaw.ai
 - **Runtime process safety:** prevent unhandled child-stream errors in SSH tunnels, supervisors, and MCP stdio transports; keep auto-replies from waiting on transcript mirroring; and avoid splitting Unicode characters in approval previews and LINE outbound fields. (#99800, #99802, #99803, #99549, #99566, #98994) Thanks @cxbAsDev, @vincentkoc, @Shagrat2, @mikasa0818, and @LEXES7.
 - **Node runtime compatibility:** installers, the CLI launcher, doctor, and the macOS app now reject incompatible Node 23 runtimes and guide users toward supported Node 22 or 24 releases. (#99832) Thanks @vincentkoc and @fuller-stack-dev.
 - **SQLite WAL safety:** require Node releases with a patched SQLite runtime, verify the loaded library before opening state databases, and make installers upgrade and validate unsafe runtimes across supported platforms. (#106065) Thanks @vincentkoc.
+- **Installer temporary-file cleanup:** remove Node staging directories and pnpm workspace rewrite files when downloads or rewrites fail. (#103725) Thanks @SebTardif.
 - **QQBot media delivery:** scope sandbox-generated media sends to the active session's workspace so `/workspace/...` and relative generated-file paths resolve safely across QQBot media tags, structured payloads, and streaming delivery. (#92872) Thanks @zhangguiping-xydt and @sliverp.
 
 ### Complete contribution record
 
-This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..28db14005a77ca146c1f10979501dcfd375e8d01 history: 1535 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
+This audited record covers the complete 66e676d29b92d040716376a75aca32bad655cfac..e0ce12504d428779bb5023d4f1442f4b92261f49 history: 1536 merged PRs. The generation manifest also supplies direct commits as editorial input; the grouped notes above prioritize user impact.
 
 Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020, #92657, #93466, #93650, #93767, #93810, #97118).
 
 #### Pull requests
 
-- **PR #106065** fix(sqlite): reject runtimes vulnerable to WAL corruption. Related #101290. Thanks @vincentkoc and @jarvis1982oc.
 - **PR #96502** fix(moonshot): bound video description JSON response reads. Thanks @hugenshen and @cursoragent.
 - **PR #98249** Preserve legacy ClawHub family for selected plugins. Thanks @Patrick-Erichsen.
 - **PR #93820** fix(imessage): recognize MiniMax mm: reasoning tags in reflection guard (completes #93767). Thanks @Alix-007.
@@ -344,7 +344,7 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #98134** fix: clear timeout timer in Tailscale binary probe Promise.race. Thanks @zhangLei99586.
 - **PR #97989** fix(sms): stop internal tool-trace banners from reaching SMS replies. Thanks @ZengWen-DT.
 - **PR #97972** fix(browser): CDP auth fails with percent-encoded credentials. Thanks @VectorPeak.
-- **PR #98063** fix(reply): suppress tool-error progress delivery when messages.suppressToolErrors is set. Thanks @moeedahmed and @amittell.
+- **PR #98063** fix(reply): suppress tool-error progress delivery when messages.suppressToolErrors is set. Thanks @moeedahmed.
 - **PR #94964** fix(reload): cancel deferred channel reload on in-process restart. Related #79487. Thanks @lzyyzznl and @tseller.
 - **PR #98598** fix: restore main lint after timer repairs. Related #98462, #98464. Thanks @zhangLei99586.
 - **PR #98587** fix(slack): guard relay WebSocket frame JSON.parse against malformed input. Thanks @lsr911 and @vincentkoc.
@@ -1740,6 +1740,8 @@ Shipped baseline exclusions: v2026.6.11 (10 PRs: #87298, #89949, #90811, #92020,
 - **PR #105488** fix(qa): keep mock memory embeddings offline.
 - **PR #105493** test(qa): model Codex compaction in parity mock.
 - **PR #105500** fix(qa): repair agentic runtime parity mocks.
+- **PR #106065** fix(sqlite): reject runtimes vulnerable to WAL corruption. Thanks @vincentkoc.
+- **PR #103725** fix(install-cli): track mktemp paths and clean up on EXIT. Thanks @SebTardif.
 
 ## 2026.6.11
 
