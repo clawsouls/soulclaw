@@ -127,6 +127,28 @@ describe("install.ps1 failure handling", () => {
         ].join("\n"),
       },
       {
+        name: "sqlite-versions",
+        source: [
+          scriptWithoutEntryPoint,
+          "",
+          "$cases = @{",
+          "  '3.44.5' = $false",
+          "  '3.44.6' = $true",
+          "  '3.50.6' = $false",
+          "  '3.50.7' = $true",
+          "  '3.51.2' = $false",
+          "  '3.51.3' = $true",
+          "  '3.53.1' = $true",
+          "  'unavailable' = $false",
+          "}",
+          "foreach ($entry in $cases.GetEnumerator()) {",
+          "  $actual = Test-NodeSqliteSupported -Version $entry.Key",
+          '  if ($actual -ne $entry.Value) { throw "Version=$($entry.Key) Actual=$actual" }',
+          "}",
+          "",
+        ].join("\n"),
+      },
+      {
         name: "native-arm64-git",
         source: [
           scriptWithoutEntryPoint,
@@ -435,15 +457,17 @@ describe("install.ps1 failure handling", () => {
     expect(versionBody).toContain("$major -eq 25");
     expect(versionBody).toContain("$minor -ge 9");
     expect(versionBody).toContain("$major -gt 25");
-    expect(sqliteBody).toContain("SELECT sqlite_version() AS version");
-    expect(sqliteBody).toContain("patch >= 3");
+    expect(sqliteBody).toContain("$minor -eq 51 -and $patch -ge 3");
     expect(checkNodeBody).toContain("Test-NodeVersionSupported -Version $nodeVersion");
-    expect(checkNodeBody).toContain("Test-NodeSqliteSupported");
+    expect(checkNodeBody).toContain("Get-Command node -CommandType Application");
+    expect(checkNodeBody).toContain("SELECT sqlite_version() AS version");
+    expect(checkNodeBody).toContain("Test-NodeSqliteSupported -Version $sqliteVersion");
     expect(source).toContain("Please install Node.js 24.15+ manually:");
   });
 
   runIfPowerShell("accepts only supported Node versions", () => {
     expectBatchedPowerShellCase("node-versions");
+    expectBatchedPowerShellCase("sqlite-versions");
   });
 
   runIfPowerShell("upgrades and validates Node installed by Windows package managers", () => {
