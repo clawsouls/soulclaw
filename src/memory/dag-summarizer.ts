@@ -73,8 +73,8 @@ export async function maybeSummarizeDag(params: {
  */
 async function maybeCreateHigherSummary(
   dagStore: DagStore,
-  sessionKey: string,
-  summarize: SummarizeFunction,
+  _sessionKey: string,
+  _summarize: SummarizeFunction,
   currentLevel: number,
 ): Promise<void> {
   // Get summaries at current level that haven't been rolled up

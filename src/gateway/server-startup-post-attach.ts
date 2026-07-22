@@ -828,6 +828,19 @@ export async function startGatewaySidecars(params: {
     scheduleGatewayMemoryBackend({ cfg: params.cfg, log: params.log, policy });
   });
 
+  await measureStartup(params.startupTrace, "sidecars.soulspec", async () => {
+    try {
+      const { startSoulSpecSidecars } = await import("./server-startup-soulspec.js");
+      startSoulSpecSidecars({
+        cfg: params.cfg,
+        workspaceDir: params.defaultWorkspaceDir,
+        log: params.log,
+      });
+    } catch (err) {
+      params.log.warn(`soulspec startup sidecars failed: ${String(err)}`);
+    }
+  });
+
   schedulePostReadySidecarTask({
     startupTrace: params.startupTrace,
     name: "sidecars.session-locks",

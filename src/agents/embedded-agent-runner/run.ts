@@ -23,6 +23,7 @@ import {
 } from "../../context-engine/registry.js";
 import { buildContextEngineRuntimeSettings } from "../../context-engine/runtime-settings.js";
 import { resolveCompactionSuccessorTranscript } from "../../context-engine/types.js";
+import { createInternalHookEvent, triggerInternalHook } from "../../hooks/internal-hooks.js";
 import {
   assertAgentRunLifecycleGenerationCurrent,
   captureAgentRunLifecycleGeneration,
@@ -1064,6 +1065,30 @@ async function runEmbeddedAgentInternal(
       const requestedModelId = modelId;
       const beforeAgentStartResult = hookSelection.beforeAgentStartResult;
       startupStages.mark("hooks");
+
+      // Fire session:start hook (SoulClaw session lifecycle). Best-effort:
+      // drives bundled hooks like session-start-index. Failures never abort the run.
+      try {
+        const sessionStartEvent = createInternalHookEvent(
+          "session",
+          "start",
+          params.sessionKey?.trim() || params.sessionId,
+          {
+            sessionId: params.sessionId,
+            sessionKey: params.sessionKey?.trim() || params.sessionId,
+            workspaceDir: resolvedWorkspace,
+            agentId: workspaceResolution.agentId,
+            cfg: params.config,
+          },
+        );
+        await triggerInternalHook(sessionStartEvent);
+      } catch (err) {
+        log.warn("session:start hook failed", {
+          errorMessage: err instanceof Error ? err.message : String(err),
+          errorStack: err instanceof Error ? err.stack : undefined,
+        });
+      }
+
       await ensureSelectedAgentHarnessPlugin({
         provider,
         modelId,

@@ -1,10 +1,16 @@
+import type {
+  EmbeddingProvider,
+  EmbeddingProviderOptions,
+} from "../../packages/memory-host-sdk/src/host/embeddings.types.js";
 import { resolveEnvApiKey } from "../agents/model-auth.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import type { SsrFPolicy } from "../infra/net/ssrf.js";
+import {
+  buildRemoteBaseUrlPolicy,
+  withRemoteHttpResponse,
+} from "../plugin-sdk/memory-core-host-engine-embeddings.js";
+import { resolveMemorySecretInputString } from "../plugin-sdk/memory-core-host-secret.js";
 import { normalizeOptionalSecretInput } from "../utils/normalize-secret-input.js";
-import type { EmbeddingProvider, EmbeddingProviderOptions } from "./embeddings.js";
-import { buildRemoteBaseUrlPolicy, withRemoteHttpResponse } from "./remote-http.js";
-import { resolveMemorySecretInputString } from "./secret-input.js";
 
 export type OllamaEmbeddingClient = {
   baseUrl: string;

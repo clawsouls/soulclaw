@@ -509,6 +509,14 @@ async function runSetupWizardOnce(
     skipOptionalBootstrapFiles: nextConfig.agents?.defaults?.skipOptionalBootstrapFiles,
   });
 
+  // Soul selection from ClawSouls — optional; network errors must not block onboarding.
+  try {
+    const { promptSoulSelection } = await import("../commands/onboard-soul-picker.js");
+    await promptSoulSelection({ workspaceDir, prompter });
+  } catch {
+    // Soul selection is best-effort — degrade gracefully on any failure.
+  }
+
   if (opts.skipSearch) {
     await prompter.note(t("wizard.setup.skipSearch"), t("wizard.setup.searchTitle"));
   } else {
@@ -548,6 +556,12 @@ async function runSetupWizardOnce(
   if (!opts.skipHooks) {
     const { enableDefaultOnboardingInternalHooks } = await import("../commands/onboard-hooks.js");
     nextConfig = enableDefaultOnboardingInternalHooks(nextConfig);
+  }
+
+  // Weekly memory review — only prompts when memory search is configured (not 'none').
+  {
+    const { setupWeeklyReview } = await import("../commands/onboard-weekly-review.js");
+    nextConfig = await setupWeeklyReview(nextConfig, runtime, prompter);
   }
 
   nextConfig = onboardHelpers.applyWizardMetadata(nextConfig, { command: "onboard", mode });

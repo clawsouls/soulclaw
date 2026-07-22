@@ -25,6 +25,7 @@ import {
   type ResolvedQmdConfig,
 } from "openclaw/plugin-sdk/memory-core-host-engine-storage";
 import { normalizeAgentId } from "openclaw/plugin-sdk/routing";
+import { wrapWithDagSearch } from "./dag-search.js";
 
 const MEMORY_SEARCH_MANAGER_CACHE_KEY = Symbol.for("openclaw.memorySearchManagerCache");
 type Maybe<T> = T | null;
@@ -192,12 +193,26 @@ export async function getMemorySearchManager(params: {
   const finish = (
     result: MemorySearchManagerResult,
     debug: MemorySearchManagerDebug,
-  ): MemorySearchManagerResult =>
-    applyManagerDebug(result, {
+  ): MemorySearchManagerResult => {
+    // SoulClaw Soul Memory: merge DAG FTS5 conversation hits into memory_search.
+    // Applied once at the public egress; idempotent so recursive resolves (the
+    // pending-create wait path) don't double-wrap.
+    if (result.manager) {
+      try {
+        const workspaceDir = resolveAgentWorkspaceDir(params.cfg, params.agentId);
+        if (workspaceDir) {
+          result = { ...result, manager: wrapWithDagSearch(result.manager, workspaceDir) };
+        }
+      } catch (err) {
+        log.debug(`dag search wrap skipped: ${formatErrorMessage(err)}`);
+      }
+    }
+    return applyManagerDebug(result, {
       purpose,
       managerMs: Math.max(0, Date.now() - acquireStartedAt),
       ...debug,
     });
+  };
   const resolved = resolveMemoryBackendConfig(params);
   if (resolved.backend === "qmd" && resolved.qmd) {
     const qmdResolved = resolved.qmd;
