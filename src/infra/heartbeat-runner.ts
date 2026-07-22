@@ -114,6 +114,7 @@ import { resolveMainScopedEventSessionKey } from "./event-session-routing.js";
 import { isWithinActiveHours, resolveActiveHoursTimezone } from "./heartbeat-active-hours.js";
 import { recordRunStart, shouldDeferWake, type DeferDecision } from "./heartbeat-cooldown.js";
 import {
+  buildExecEventPrompt,
   buildCronEventPrompt,
   buildExecEventPrompt,
   isCronSystemEvent,
@@ -1871,8 +1872,21 @@ export async function runHeartbeatOnce(opts: {
     consumeSelectedSystemEventEntries(sessionKey, inspectedSystemEventsToConsume);
   };
 
+  // Append weekly memory review on review day (default: Friday)
+  let enrichedPrompt = prompt;
+  try {
+    const { maybeRunWeeklyReview, resolveWeeklyReviewOptions } =
+      await import("../memory/weekly-review.js");
+    const reviewOpts = resolveWeeklyReviewOptions(cfg);
+    const weeklyReview = await maybeRunWeeklyReview(workspaceDir, reviewOpts);
+    if (weeklyReview) {
+      enrichedPrompt = `${prompt}\n\n${weeklyReview}`;
+    }
+  } catch {
+    // Weekly review failure is non-fatal
+  }
   const ctx = {
-    Body: appendCronStyleCurrentTimeLine(prompt, cfg, startedAt),
+    Body: appendCronStyleCurrentTimeLine(enrichedPrompt, cfg, startedAt),
     From: sender,
     To: sender,
     OriginatingChannel:

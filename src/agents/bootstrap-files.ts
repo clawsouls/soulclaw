@@ -19,6 +19,7 @@ import {
   resolveBootstrapTotalMaxChars,
 } from "./embedded-agent-helpers.js";
 import { shouldIncludeHeartbeatGuidanceForSystemPrompt } from "./heartbeat-system-prompt.js";
+import { filterByTier, type TieredFilterOptions } from "./tiered-bootstrap.js";
 import {
   DEFAULT_HEARTBEAT_FILENAME,
   DEFAULT_BOOTSTRAP_FILENAME,
@@ -298,6 +299,8 @@ export async function resolveBootstrapFilesForRun(params: {
   warn?: (message: string) => void;
   contextMode?: BootstrapContextMode;
   runKind?: BootstrapContextRunKind;
+  /** SoulClaw: tiered bootstrap options for progressive disclosure */
+  tieredBootstrap?: TieredFilterOptions;
 }): Promise<WorkspaceBootstrapFile[]> {
   const excludeHeartbeatBootstrapFile = shouldExcludeHeartbeatBootstrapFile(params);
   const sessionKey = params.sessionKey ?? params.sessionId;
@@ -308,12 +311,21 @@ export async function resolveBootstrapFilesForRun(params: {
         sessionKey: params.sessionKey,
       })
     : await loadWorkspaceBootstrapFiles(params.workspaceDir);
+  // Apply session-level filtering (subagent/cron get minimal set), then drop the
+  // root BOOTSTRAP.md once workspace setup is complete.
+  let filtered = filterCompletedWorkspaceBootstrapFile(
+    filterBootstrapFilesForSession(rawFiles, sessionKey),
+    workspaceSetupCompleted,
+    params.workspaceDir,
+  );
+
+  // SoulClaw: apply tiered progressive disclosure for main sessions.
+  if (params.tieredBootstrap && !params.tieredBootstrap.disabled) {
+    filtered = filterByTier(filtered, params.tieredBootstrap);
+  }
+
   const bootstrapFiles = applyContextModeFilter({
-    files: filterCompletedWorkspaceBootstrapFile(
-      filterBootstrapFilesForSession(rawFiles, sessionKey),
-      workspaceSetupCompleted,
-      params.workspaceDir,
-    ),
+    files: filtered,
     contextMode: params.contextMode,
     runKind: params.runKind,
   });
@@ -348,6 +360,8 @@ export async function resolveBootstrapContextForRun(params: {
   warn?: (message: string) => void;
   contextMode?: BootstrapContextMode;
   runKind?: BootstrapContextRunKind;
+  /** SoulClaw: tiered bootstrap options for progressive disclosure */
+  tieredBootstrap?: TieredFilterOptions;
 }): Promise<{
   bootstrapFiles: WorkspaceBootstrapFile[];
   contextFiles: EmbeddedContextFile[];

@@ -56,7 +56,7 @@ export function formatCliBannerLine(version: string, options: BannerOptions = {}
     emojiOptions,
   );
   const rich = options.richTty ?? isRich();
-  const title = decorativePrefix("🦞", "OpenClaw", emojiOptions);
+  const title = decorativePrefix("🦞", "SoulClaw", emojiOptions);
   const prefix = decorativeEmoji("🦞", emojiOptions);
   const indent = prefix ? `${prefix} ` : "";
   const columns = options.columns ?? process.stdout.columns ?? 120;
@@ -109,7 +109,10 @@ export function emitCliBanner(version: string, options: BannerOptions = {}) {
     return;
   }
   const line = formatCliBannerLine(version, options);
-  process.stdout.write(`\n${line}\n\n`);
+  const hostingHint = isRich()
+    ? `${theme.muted("☁️  24/7 cloud hosting →")} ${theme.info("soulclaw host")}`
+    : "☁️  24/7 cloud hosting → soulclaw host";
+  process.stdout.write(`\n${line}\n${hostingHint}\n\n`);
   bannerEmitted = true;
 }
 

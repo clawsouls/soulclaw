@@ -9,6 +9,8 @@ import {
   isGatewayStartupEvent,
   isMessageReceivedEvent,
   isMessageSentEvent,
+  isSessionEndEvent,
+  isSessionStartEvent,
   registerInternalHook,
   setInternalHooksEnabled,
   triggerInternalHook,
@@ -176,6 +178,25 @@ describe("hooks", () => {
 
       const injectedHandler = vi.fn();
       globalHooks.set("command:new", [injectedHandler]);
+      await triggerInternalHook(event);
+      expect(injectedHandler).toHaveBeenCalledWith(event);
+    });
+
+    it("stores handlers in the global singleton registry", async () => {
+      const globalHooks = globalThis as typeof globalThis & {
+        __openclaw_internal_hook_handlers__?: Map<string, Array<(event: unknown) => unknown>>;
+      };
+      const handler = vi.fn();
+      registerInternalHook("command:new", handler);
+
+      const event = createInternalHookEvent("command", "new", "test-session");
+      await triggerInternalHook(event);
+
+      expect(handler).toHaveBeenCalledWith(event);
+      expect(globalHooks.__openclaw_internal_hook_handlers__?.has("command:new")).toBe(true);
+
+      const injectedHandler = vi.fn();
+      globalHooks.__openclaw_internal_hook_handlers__?.set("command:new", [injectedHandler]);
       await triggerInternalHook(event);
       expect(injectedHandler).toHaveBeenCalledWith(event);
     });
@@ -479,6 +500,126 @@ describe("hooks", () => {
       expect(errorHandler).toHaveBeenCalled();
       expect(successHandler).toHaveBeenCalled();
     });
+  });
+
+  describe("isSessionEndEvent", () => {
+    const cases: Array<{
+      name: string;
+      event: ReturnType<typeof createInternalHookEvent>;
+      expected: boolean;
+    }> = [
+      {
+        name: "returns true for valid session:end event",
+        event: createInternalHookEvent("session", "end", "test-key", {
+          sessionId: "sess-123",
+          sessionKey: "agent:main:main",
+          workspaceDir: "/tmp/workspace",
+          reason: "compaction",
+        }),
+        expected: true,
+      },
+      {
+        name: "returns true for session:end with reaper reason",
+        event: createInternalHookEvent("session", "end", "test-key", {
+          sessionId: "sess-456",
+          sessionKey: "agent:main:main",
+          workspaceDir: "/tmp/workspace",
+          reason: "reaper",
+          messageCount: 42,
+        }),
+        expected: true,
+      },
+      {
+        name: "returns false for wrong type",
+        event: createInternalHookEvent("command", "end", "test-key", {
+          sessionId: "sess-123",
+          reason: "compaction",
+        }),
+        expected: false,
+      },
+      {
+        name: "returns false for wrong action",
+        event: createInternalHookEvent("session", "start", "test-key", {
+          sessionId: "sess-123",
+          reason: "compaction",
+        }),
+        expected: false,
+      },
+      {
+        name: "returns false when missing sessionId",
+        event: createInternalHookEvent("session", "end", "test-key", {
+          reason: "compaction",
+        }),
+        expected: false,
+      },
+      {
+        name: "returns false when missing reason",
+        event: createInternalHookEvent("session", "end", "test-key", {
+          sessionId: "sess-123",
+        }),
+        expected: false,
+      },
+    ];
+
+    for (const testCase of cases) {
+      it(testCase.name, () => {
+        expect(isSessionEndEvent(testCase.event)).toBe(testCase.expected);
+      });
+    }
+  });
+
+  describe("isSessionStartEvent", () => {
+    const cases: Array<{
+      name: string;
+      event: ReturnType<typeof createInternalHookEvent>;
+      expected: boolean;
+    }> = [
+      {
+        name: "returns true for valid session:start event",
+        event: createInternalHookEvent("session", "start", "test-key", {
+          sessionId: "sess-123",
+          sessionKey: "agent:main:main",
+          workspaceDir: "/tmp/workspace",
+        }),
+        expected: true,
+      },
+      {
+        name: "returns false for wrong type",
+        event: createInternalHookEvent("command", "start", "test-key", {
+          sessionId: "sess-123",
+          sessionKey: "agent:main:main",
+        }),
+        expected: false,
+      },
+      {
+        name: "returns false for wrong action",
+        event: createInternalHookEvent("session", "end", "test-key", {
+          sessionId: "sess-123",
+          sessionKey: "agent:main:main",
+        }),
+        expected: false,
+      },
+      {
+        name: "returns false when missing sessionId",
+        event: createInternalHookEvent("session", "start", "test-key", {
+          sessionKey: "agent:main:main",
+        }),
+        expected: false,
+      },
+      {
+        name: "returns false when missing sessionKey",
+        event: createInternalHookEvent("session", "start", "test-key", {
+          sessionId: "sess-123",
+        }),
+        expected: false,
+      },
+    ];
+
+    for (const testCase of cases) {
+      it(testCase.name, () => {
+        expect(isSessionStartEvent(testCase.event)).toBe(testCase.expected);
+      });
+    }
   });
 
   describe("getRegisteredEventKeys", () => {

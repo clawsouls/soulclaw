@@ -168,7 +168,7 @@ export function validateGatewayPasswordInput(value: unknown): string | undefined
 export function printWizardHeader(runtime: RuntimeEnv) {
   const bannerWidth = 54;
   const icon = decorativeEmoji("🦞");
-  const title = supportsDecorativeEmoji() && icon ? `${icon} OPENCLAW ${icon}` : "OPENCLAW";
+  const title = supportsDecorativeEmoji() && icon ? `${icon} SOULCLAW ${icon}` : "SOULCLAW";
   const pad = Math.max(0, bannerWidth - visibleWidth(title));
   const titleLine = `${" ".repeat(Math.floor(pad / 2))}${title}${" ".repeat(Math.ceil(pad / 2))}`;
   const header = [

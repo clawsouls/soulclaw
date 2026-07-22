@@ -13,7 +13,7 @@ type VoiceWakeConfig = {
   updatedAtMs: number;
 };
 
-const DEFAULT_TRIGGERS = ["openclaw", "claude", "computer"];
+const DEFAULT_TRIGGERS = ["soulclaw", "openclaw", "claude", "computer"];
 const VOICEWAKE_CONFIG_KEY = "default";
 
 type VoiceWakeDatabase = Pick<OpenClawStateKyselyDatabase, "voicewake_triggers">;

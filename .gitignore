@@ -303,3 +303,8 @@ extensions/diffs-language-pack/assets/viewer-runtime.js
 /.opengrep-out/
 /.crabbox-artifacts
 .comux*
+
+# Vector index cache (auto-generated from memory files)
+.memory-index/
+*.memory-vec.db
+*.memory-vec.db-journal
