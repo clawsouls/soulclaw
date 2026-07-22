@@ -122,3 +122,5 @@ grep '"action":"new"' ~/.openclaw/logs/commands.log | jq .   # filter by action
 
 - [CLI reference](/cli)
 - [Automation hooks](/automation/hooks)
+- [session-memory-autoflush hook](/automation/hooks#session-memory-autoflush)
+- [session-start-index hook](/automation/hooks#session-start-index)

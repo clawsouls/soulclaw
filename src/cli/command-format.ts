@@ -2,7 +2,7 @@
 import { replaceCliName, resolveCliName } from "./cli-name.js";
 import { normalizeProfileName } from "./profile-utils.js";
 
-const CLI_PREFIX_RE = /^(?:pnpm|npm|bunx|npx)\s+openclaw\b|^openclaw\b/;
+const CLI_PREFIX_RE = /^(?:pnpm|npm|bunx|npx)\s+(?:openclaw|soulclaw)\b|^(?:openclaw|soulclaw)\b/;
 const CONTAINER_FLAG_RE = /(?:^|\s)--container(?:\s|=|$)/;
 const PROFILE_FLAG_RE = /(?:^|\s)--profile(?:\s|=|$)/;
 const DEV_FLAG_RE = /(?:^|\s)--dev(?:\s|$)/;

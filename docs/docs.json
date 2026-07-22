@@ -1060,7 +1060,9 @@
                     "pages": [
                       "install/migrating",
                       "install/migrating-claude",
-                      "install/migrating-hermes"
+                      "install/migrating-hermes",
+                      "guides/migration-from-openclaw",
+                      "soulclaw/MIGRATION-v2026.7.1"
                     ]
                   },
                   "install/uninstall",
@@ -1399,32 +1401,10 @@
             "tab": "ClawHub",
             "groups": [
               {
-                "group": "Overview",
-                "pages": [
-                  "clawhub/index",
-                  "clawhub/quickstart",
-                  "clawhub/how-it-works"
-                ]
-              },
-              {
                 "group": "Using ClawHub",
                 "pages": [
                   "clawhub/cli",
-                  "clawhub/publishing",
-                  "clawhub/skill-format",
-                  "clawhub/auth",
-                  "clawhub/telemetry",
-                  "clawhub/troubleshooting"
-                ]
-              },
-              {
-                "group": "API and trust",
-                "pages": [
-                  "clawhub/api",
-                  "clawhub/http-api",
-                  "clawhub/acceptable-usage",
-                  "clawhub/moderation",
-                  "clawhub/security-audits"
+                  "clawhub/publishing"
                 ]
               }
             ]
@@ -1758,7 +1738,8 @@
                       "cli/promos",
                       "cli/sessions",
                       "cli/system",
-                      "cli/tasks"
+                      "cli/tasks",
+                      "cli/topic"
                     ]
                   },
                   {

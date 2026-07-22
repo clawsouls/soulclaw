@@ -51,8 +51,8 @@ export type ResolvedGlobalInstallTarget = ResolvedGlobalInstallCommand & {
   directNodeModulesRoot?: boolean;
 };
 
-const PRIMARY_PACKAGE_NAME = "openclaw";
-const ALL_PACKAGE_NAMES = [PRIMARY_PACKAGE_NAME] as const;
+const PRIMARY_PACKAGE_NAME = "soulclaw";
+const ALL_PACKAGE_NAMES = [PRIMARY_PACKAGE_NAME, "openclaw"] as const;
 const GLOBAL_RENAME_PREFIX = ".";
 /** npm-compatible spec used when the user asks to install the moving main branch. */
 export const OPENCLAW_MAIN_PACKAGE_SPEC = "github:openclaw/openclaw#main";

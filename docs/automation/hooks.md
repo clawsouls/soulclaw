@@ -220,13 +220,15 @@ Npm specs are registry-only (package name + optional exact version or dist-tag).
 
 ## Bundled hooks
 
-| Hook                  | Events                                            | What it does                                                   |
-| --------------------- | ------------------------------------------------- | -------------------------------------------------------------- |
-| session-memory        | `command:new`, `command:reset`                    | Saves session context to `<workspace>/memory/`                 |
-| bootstrap-extra-files | `agent:bootstrap`                                 | Injects additional bootstrap files from glob patterns          |
-| command-logger        | `command`                                         | Logs all commands to `~/.openclaw/logs/commands.log`           |
-| compaction-notifier   | `session:compact:before`, `session:compact:after` | Sends visible chat notices when session compaction starts/ends |
-| boot-md               | `gateway:startup`                                 | Runs `BOOT.md` when the gateway starts                         |
+| Hook                     | Events                                            | What it does                                                                                 |
+| ------------------------ | ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| session-memory           | `command:new`, `command:reset`                    | Saves session context to `<workspace>/memory/`                                               |
+| bootstrap-extra-files    | `agent:bootstrap`                                 | Injects additional bootstrap files from glob patterns                                        |
+| command-logger           | `command`                                         | Logs all commands to `~/.openclaw/logs/commands.log`                                         |
+| compaction-notifier      | `session:compact:before`, `session:compact:after` | Sends visible chat notices when session compaction starts/ends                               |
+| boot-md                  | `gateway:startup`                                 | Runs `BOOT.md` when the gateway starts                                                       |
+| session-memory-autoflush | `session:end`                                     | Saves session context to memory when sessions end unexpectedly (compaction, timeout, reaper) |
+| session-start-index      | `session:start`                                   | Runs an incremental memory index when a new agent session starts                             |
 
 Enable any bundled hook:
 
@@ -278,6 +280,115 @@ Sends short status messages into the current conversation when OpenClaw starts a
 ### boot-md details
 
 Runs `BOOT.md` at gateway startup for each configured agent scope, if the file exists in that agent's resolved workspace.
+
+<a id="session-memory-autoflush"></a>
+
+### session-memory-autoflush
+
+Automatically saves session context to memory when sessions end unexpectedly (compaction, timeout, reaper). This prevents memory loss from abnormal session termination — a critical gap when sessions crash or get reaped before the agent can write a memory flush.
+
+**Events**: `session:end`
+
+**Requirements**: `workspace.dir` must be configured
+
+**Output**: `<workspace>/memory/YYYY-MM-DD-autoflush.md`
+
+**What it does**:
+
+1. Checks the session end reason — skips `command` (the `session-memory` hook handles `/new` and `/reset`)
+2. Extracts the last 15 user/assistant messages from the session transcript
+3. Appends to a dated autoflush memory file with session metadata
+4. Times out after 10 seconds to never block session cleanup
+
+**Example output**:
+
+```markdown
+## Autoflush: 2026-03-20 04:30:00 UTC
+
+- **Session Key**: agent:main:main
+- **Session ID**: abc123def456
+- **Reason**: compaction
+
+### Recent Conversation
+
+user: How do I configure webhooks?
+assistant: You can configure webhooks in the settings...
+```
+
+**Configuration**:
+
+```json
+{
+  "hooks": {
+    "internal": {
+      "entries": {
+        "session-memory-autoflush": {
+          "enabled": true,
+          "excludeReasons": ["command"],
+          "onFailure": "warn"
+        }
+      }
+    }
+  }
+}
+```
+
+| Option           | Type     | Default       | Description                                        |
+| ---------------- | -------- | ------------- | -------------------------------------------------- |
+| `excludeReasons` | string[] | `["command"]` | Session end reasons to skip                        |
+| `onFailure`      | string   | `"warn"`      | Error behavior: `"warn"`, `"error"`, or `"silent"` |
+
+**Enable**:
+
+```bash
+openclaw hooks enable session-memory-autoflush
+```
+
+<a id="session-start-index"></a>
+
+### session-start-index
+
+Runs an incremental memory index when a new agent session starts, ensuring that any memory files written since the last session are immediately searchable.
+
+**Events**: `session:start`
+
+**Requirements**: Memory search must be configured (embedding provider + model)
+
+**Output**: No files written; memory vector index updated in-place.
+
+**What it does**:
+
+1. Resolves the workspace and agent ID from session context
+2. Initializes the memory index manager
+3. Runs an incremental sync (only new/changed files)
+4. Times out after 5 seconds to avoid delaying session start
+
+**Configuration**:
+
+```json
+{
+  "hooks": {
+    "internal": {
+      "entries": {
+        "session-start-index": {
+          "enabled": true,
+          "timeoutMs": 3000
+        }
+      }
+    }
+  }
+}
+```
+
+| Option      | Type   | Default | Description                    |
+| ----------- | ------ | ------- | ------------------------------ |
+| `timeoutMs` | number | `5000`  | Max time for incremental index |
+
+**Enable**:
+
+```bash
+openclaw hooks enable session-start-index
+```
 
 ## Plugin hooks
 

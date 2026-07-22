@@ -6,6 +6,7 @@
 import { createHash } from "node:crypto";
 import syncFs from "node:fs";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { readStringValue } from "@openclaw/normalization-core/string-coerce";
 import { extractFrontmatterBlock } from "../../packages/markdown-core/src/frontmatter.js";
@@ -21,15 +22,27 @@ import {
 import { runCommandWithTimeout } from "../process/exec.js";
 import { isCronSessionKey, isSubagentSessionKey } from "../routing/session-key.js";
 import { resolveUserPath } from "../utils.js";
-import { DEFAULT_AGENT_WORKSPACE_DIR } from "./workspace-default.js";
 import {
   resolveWorkspaceTemplateDir,
   resolveWorkspaceTemplateSearchDirs,
 } from "./workspace-templates.js";
-export {
-  DEFAULT_AGENT_WORKSPACE_DIR,
-  resolveDefaultAgentWorkspaceDir,
-} from "./workspace-default.js";
+
+// SoulClaw: resolve the agent workspace under the state dir so OPENCLAW_STATE_DIR
+// (and the profile layout) controls where the workspace lives, instead of the
+// upstream ~/.openclaw default that lives in workspace-default.ts.
+export function resolveDefaultAgentWorkspaceDir(
+  env: NodeJS.ProcessEnv = process.env,
+  homedir: () => string = os.homedir,
+): string {
+  const stateDir = resolveStateDir(env, homedir);
+  const profile = env.OPENCLAW_PROFILE?.trim();
+  if (profile && profile.toLowerCase() !== "default") {
+    return path.join(stateDir, `workspace-${profile}`);
+  }
+  return path.join(stateDir, "workspace");
+}
+
+export const DEFAULT_AGENT_WORKSPACE_DIR = resolveDefaultAgentWorkspaceDir();
 export const DEFAULT_AGENTS_FILENAME = "AGENTS.md";
 export const DEFAULT_SOUL_FILENAME = "SOUL.md";
 export const DEFAULT_TOOLS_FILENAME = "TOOLS.md";
@@ -38,6 +51,8 @@ export const DEFAULT_USER_FILENAME = "USER.md";
 export const DEFAULT_HEARTBEAT_FILENAME = "HEARTBEAT.md";
 export const DEFAULT_BOOTSTRAP_FILENAME = "BOOTSTRAP.md";
 export const DEFAULT_MEMORY_FILENAME = CANONICAL_ROOT_MEMORY_FILENAME;
+// SoulClaw: alternate lowercase root memory filename recognized by tiered bootstrap.
+export const DEFAULT_MEMORY_ALT_FILENAME = "memory.md";
 const LEGACY_WORKSPACE_STATE_DIRNAME = ".openclaw";
 const LEGACY_WORKSPACE_STATE_FILENAME = "workspace-state.json";
 const WORKSPACE_STATE_FILENAME = "openclaw-workspace-state.json";
@@ -976,6 +991,10 @@ export async function ensureAgentWorkspace(params?: {
   }
   const shouldWriteBootstrapFile = (fileName: string): boolean =>
     !OPTIONAL_BOOTSTRAP_FILENAMES.has(fileName) || !skipOptionalBootstrapFiles.has(fileName);
+
+  // SoulClaw: ensure the memory/ directory exists for memory search indexing.
+  const memoryDir = path.join(dir, "memory");
+  await fs.mkdir(memoryDir, { recursive: true });
 
   await writeFileIfMissing(agentsPath, agentsTemplate);
   if (shouldWriteBootstrapFile(DEFAULT_SOUL_FILENAME)) {

@@ -332,8 +332,9 @@ function ensureWatchdogStarted(intervalMs: number): void {
   watchdogState.started = true;
   watchdogState.intervalMs = intervalMs;
   watchdogState.timer = setInterval(() => {
-    void runLockWatchdogCheck().catch(() => {
-      // Ignore watchdog errors - best effort cleanup only.
+    void runLockWatchdogCheck().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error(`[session-write-lock] watchdog error:`, err);
     });
   }, intervalMs);
   watchdogState.timer.unref?.();
