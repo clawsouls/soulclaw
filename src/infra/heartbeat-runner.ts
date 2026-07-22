@@ -114,7 +114,6 @@ import { resolveMainScopedEventSessionKey } from "./event-session-routing.js";
 import { isWithinActiveHours, resolveActiveHoursTimezone } from "./heartbeat-active-hours.js";
 import { recordRunStart, shouldDeferWake, type DeferDecision } from "./heartbeat-cooldown.js";
 import {
-  buildExecEventPrompt,
   buildCronEventPrompt,
   buildExecEventPrompt,
   isCronSystemEvent,
