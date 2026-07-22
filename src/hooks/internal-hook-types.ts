@@ -31,7 +31,9 @@ export const KNOWN_INTERNAL_HOOK_EVENT_KEYS = [
   "message:transcribed",
   "session:compact:after",
   "session:compact:before",
+  "session:end",
   "session:patch",
+  "session:start",
 ] as const;
 
 export function isKnownInternalHookEventKey(key: string): boolean {

@@ -14,6 +14,7 @@ import {
   resolveSessionCompactionCheckpointReason,
   type CapturedCompactionCheckpointSnapshot,
 } from "../../gateway/session-compaction-checkpoints.js";
+import { createInternalHookEvent, triggerInternalHook } from "../../hooks/internal-hooks.js";
 import { resolveDiagnosticModelContentCapturePolicy } from "../../infra/diagnostic-llm-content.js";
 import {
   createDiagnosticTraceContext,
@@ -1686,6 +1687,26 @@ async function compactEmbeddedAgentSessionDirectOnce(
             firstKeptEntryId: effectiveFirstKeptEntryId,
             onHookMessages: params.onCompactionHookMessages,
           });
+          // Fire session:end (reason: compaction) after compaction completes
+          // (SoulClaw session lifecycle). Best-effort: drives bundled hooks like
+          // session-memory-autoflush. Failures never abort the compaction result.
+          try {
+            const sessionEndEvent = createInternalHookEvent("session", "end", hookSessionKey, {
+              sessionId: params.sessionId,
+              sessionKey: hookSessionKey,
+              workspaceDir: effectiveWorkspace,
+              agentId: sessionAgentId,
+              reason: "compaction",
+              messageCount: messageCountAfter,
+              cfg: params.config,
+            });
+            await triggerInternalHook(sessionEndEvent);
+          } catch (err) {
+            log.warn("session:end hook failed", {
+              errorMessage: err instanceof Error ? err.message : String(err),
+              errorStack: err instanceof Error ? err.stack : undefined,
+            });
+          }
           return {
             ok: true,
             compacted: true,

@@ -3,6 +3,7 @@ import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { isUsageCountedSessionTranscriptFileName } from "openclaw/plugin-sdk/memory-core-host-engine-qmd";
 import type { MemoryEmbeddingProbeResult } from "openclaw/plugin-sdk/memory-core-host-engine-storage";
 import {
   resolveMemoryDreamingConfig,
@@ -10,7 +11,6 @@ import {
   resolveMemoryRemDreamingConfig,
 } from "openclaw/plugin-sdk/memory-core-host-status";
 import { buildAgentSessionKey } from "openclaw/plugin-sdk/routing";
-import { isUsageCountedSessionTranscriptFileName } from "openclaw/plugin-sdk/memory-core-host-engine-qmd";
 import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/temp-path";
 import {
   colorize,
@@ -36,6 +36,7 @@ import {
 } from "./cli.host.runtime.js";
 import type {
   MemoryCommandOptions,
+  MemoryCompactCommandOptions,
   MemoryPromoteCommandOptions,
   MemoryPromoteExplainOptions,
   MemoryRemBackfillOptions,
@@ -1080,6 +1081,19 @@ export async function runMemoryStatus(opts: MemoryCommandOptions) {
         lines.push(`  ${muted(`Fix: openclaw memory status --fix --agent ${agentId}`)}`);
       }
     }
+    // SoulClaw Soul Memory: 3-tier statistics (T0 Soul / T1 Core / T2 Working).
+    if (status.workspaceDir) {
+      try {
+        const { computeTierStats } = await import("./memory/tier-stats.js");
+        const tierStats = await computeTierStats(status.workspaceDir);
+        lines.push(label("Soul Memory Tiers"));
+        lines.push(`  ${muted("T0 Soul:")} ${info(`${tierStats.t0.files} files`)}`);
+        lines.push(`  ${muted("T1 Core:")} ${info(`${tierStats.t1.files} files`)}`);
+        lines.push(`  ${muted("T2 Working:")} ${info(`${tierStats.t2.files} files`)}`);
+      } catch {
+        // Non-critical; tier stats are best-effort.
+      }
+    }
     defaultRuntime.log(lines.join("\n"));
     defaultRuntime.log("");
   }
@@ -1331,6 +1345,44 @@ export async function runMemorySearch(
         lines.push("");
       }
       defaultRuntime.log(lines.join("\n").trim());
+    },
+  });
+}
+
+export async function runMemoryCompact(opts: MemoryCompactCommandOptions) {
+  const { config: cfg, diagnostics } = await loadMemoryCommandConfig("memory compact");
+  emitMemorySecretResolveDiagnostics(diagnostics, { json: Boolean(opts.json) });
+  const agentId = resolveAgent(cfg, opts.agent);
+
+  await withMemoryManagerForAgent({
+    cfg,
+    agentId,
+    purpose: "status",
+    run: async (manager) => {
+      const workspaceDir = manager.status().workspaceDir?.trim();
+      if (!workspaceDir) {
+        defaultRuntime.error("Memory compact requires a resolvable workspace directory.");
+        process.exitCode = 1;
+        return;
+      }
+      const memoryDir = path.join(workspaceDir, "memory");
+      const { findCompactionCandidates, compactToQuarterly, formatCompactionReport } =
+        await import("./memory/compaction.js");
+      const candidates = await findCompactionCandidates(memoryDir, opts.days ?? 90);
+      if (opts.apply) {
+        const results = await compactToQuarterly(memoryDir, candidates, opts.remove ?? false);
+        if (opts.json) {
+          defaultRuntime.writeJson({ results });
+        } else {
+          defaultRuntime.log(formatCompactionReport(candidates, results));
+        }
+        return;
+      }
+      if (opts.json) {
+        defaultRuntime.writeJson({ candidates });
+      } else {
+        defaultRuntime.log(formatCompactionReport(candidates));
+      }
     },
   });
 }
