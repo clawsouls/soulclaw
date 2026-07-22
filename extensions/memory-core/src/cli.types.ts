@@ -36,6 +36,12 @@ export type MemoryPromoteExplainOptions = MemoryCommandOptions & {
   includePromoted?: boolean;
 };
 
+export type MemoryCompactCommandOptions = MemoryCommandOptions & {
+  days?: number;
+  apply?: boolean;
+  remove?: boolean;
+};
+
 export type MemoryRemHarnessOptions = MemoryCommandOptions & {
   includePromoted?: boolean;
   path?: string;

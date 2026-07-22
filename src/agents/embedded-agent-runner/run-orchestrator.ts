@@ -228,6 +228,30 @@ async function runEmbeddedAgentInternal(
         config: params.config,
       });
       startupStages.mark("workspace");
+
+      // SoulClaw session lifecycle: fire session:start once the workspace resolves.
+      // Best-effort — drives bundled hooks like session-start-index; failures never
+      // abort the run.
+      try {
+        const { createInternalHookEvent, triggerInternalHook } = await import(
+          "../../hooks/internal-hooks.js"
+        );
+        const startSessionKey = params.sessionKey?.trim() || params.sessionId;
+        const sessionStartEvent = createInternalHookEvent("session", "start", startSessionKey, {
+          sessionId: params.sessionId,
+          sessionKey: startSessionKey,
+          workspaceDir: requestedWorkspaceResolution.workspaceDir,
+          agentId: requestedWorkspaceResolution.agentId,
+          cfg: params.config,
+        });
+        await triggerInternalHook(sessionStartEvent);
+      } catch (err) {
+        log.warn("session:start hook failed", {
+          errorMessage: err instanceof Error ? err.message : String(err),
+          errorStack: err instanceof Error ? err.stack : undefined,
+        });
+      }
+
       const config = params.config ?? EMPTY_EMBEDDED_AGENT_CONFIG;
       const requestedAgentDir =
         params.agentDir ?? resolveAgentDir(config, requestedWorkspaceResolution.agentId);

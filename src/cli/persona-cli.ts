@@ -10,8 +10,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Command } from "commander";
-import { resolveStateDir, resolveCanonicalConfigPath } from "../config/paths.js";
-import { colorize, theme } from "../terminal/theme.js";
+import { colorize, theme } from "../../packages/terminal-core/src/theme.js";
+import { resolveStateDir, resolveConfigPath } from "../config/paths.js";
 
 function getWorkspaceDir(): string {
   return path.join(resolveStateDir(), "workspace");
@@ -201,7 +201,7 @@ export function registerPersonaCli(program: Command) {
         ollama?: boolean;
         model?: string;
       }) => {
-        const configPath = resolveCanonicalConfigPath();
+        const configPath = resolveConfigPath();
 
         // Read current config
         let config: Record<string, unknown> = {};

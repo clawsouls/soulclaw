@@ -142,6 +142,31 @@ const coreEntrySpecs: readonly CommandGroupDescriptorSpec<
       },
     ]),
   ),
+  // SoulClaw command surfaces (topic snapshots, Swarm Memory, SoulScan, Persona Engine).
+  ...withProgramOnlySpecs(
+    defineImportedProgramCommandGroupSpecs([
+      {
+        commandNames: ["topic"],
+        loadModule: () => import("../commands/topic.js"),
+        exportName: "registerTopicCommands",
+      },
+      {
+        commandNames: ["swarm"],
+        loadModule: () => import("../swarm-cli.js"),
+        exportName: "registerSwarmCli",
+      },
+      {
+        commandNames: ["soulscan"],
+        loadModule: () => import("../soulscan-cli.js"),
+        exportName: "registerSoulScanCli",
+      },
+      {
+        commandNames: ["persona"],
+        loadModule: () => import("../persona-cli.js"),
+        exportName: "registerPersonaCli",
+      },
+    ]),
+  ),
 ];
 
 function resolveCoreCommandGroups(ctx: ProgramContext, argv: string[]): CommandGroupEntry[] {

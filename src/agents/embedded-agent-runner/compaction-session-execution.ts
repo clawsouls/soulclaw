@@ -614,6 +614,29 @@ export async function executePreparedCompactionSession(runtime: PreparedCompacti
             assertActive,
             onHookMessages: params.onCompactionHookMessages,
           });
+          // SoulClaw session lifecycle: fire session:end (reason: compaction) once
+          // compaction completes. Best-effort — drives bundled hooks like
+          // session-memory-autoflush; failures never abort the compaction result.
+          try {
+            const { createInternalHookEvent, triggerInternalHook } = await import(
+              "../../hooks/internal-hooks.js"
+            );
+            const sessionEndEvent = createInternalHookEvent("session", "end", hookSessionKey, {
+              sessionId: params.sessionId,
+              sessionKey: hookSessionKey,
+              workspaceDir: effectiveWorkspace,
+              agentId: sessionAgentId,
+              reason: "compaction",
+              messageCount: messageCountAfter,
+              cfg: params.config,
+            });
+            await triggerInternalHook(sessionEndEvent);
+          } catch (err) {
+            log.warn("session:end hook failed", {
+              errorMessage: err instanceof Error ? err.message : String(err),
+              errorStack: err instanceof Error ? err.stack : undefined,
+            });
+          }
           return {
             ok: true,
             compacted: true,

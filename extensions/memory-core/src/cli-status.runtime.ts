@@ -522,6 +522,19 @@ export async function runMemoryStatus(
         lines.push(`  ${muted(`Fix: openclaw memory status --fix --agent ${agentId}`)}`);
       }
     }
+    // SoulClaw Soul Memory: 3-tier statistics (T0 Soul / T1 Core / T2 Working).
+    if (status.workspaceDir) {
+      try {
+        const { computeTierStats } = await import("./memory/tier-stats.js");
+        const tierStats = await computeTierStats(status.workspaceDir);
+        lines.push(label("Soul Memory Tiers"));
+        lines.push(`  ${muted("T0 Soul:")} ${info(`${tierStats.t0.files} files`)}`);
+        lines.push(`  ${muted("T1 Core:")} ${info(`${tierStats.t1.files} files`)}`);
+        lines.push(`  ${muted("T2 Working:")} ${info(`${tierStats.t2.files} files`)}`);
+      } catch {
+        // Non-critical; tier stats are best-effort.
+      }
+    }
     defaultRuntime.log(lines.join("\n"));
     defaultRuntime.log("");
   }

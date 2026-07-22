@@ -1,10 +1,14 @@
 // Memory Core plugin module owns builtin search manager acquisition and cleanup.
 import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
 import { createLazyRuntimeModule } from "openclaw/plugin-sdk/lazy-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
+import {
+  resolveAgentWorkspaceDir,
+  type OpenClawConfig,
+} from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
 import type { MemorySearchManager } from "openclaw/plugin-sdk/memory-core-host-engine-storage";
 import { normalizeAgentId } from "openclaw/plugin-sdk/routing";
 import type { MemoryCoreAcquireLocalService } from "./embedding-local-service.js";
+import { wrapWithDagSearch } from "./dag-search.js";
 
 const managerRuntimeLoader = createLazyRuntimeModule(() => import("../../manager-runtime.js"));
 const loadManagerRuntime = managerRuntimeLoader;
@@ -32,7 +36,20 @@ export async function getMemorySearchManager(
   params: MemorySearchManagerParams,
 ): Promise<MemorySearchManagerResult> {
   const startedAt = Date.now();
-  const result = await getBuiltinMemorySearchManager(params);
+  let result = await getBuiltinMemorySearchManager(params);
+  // SoulClaw Soul Memory: merge DAG FTS5 conversation hits into memory_search.
+  // Applied once at the public egress; wrapWithDagSearch is idempotent so a
+  // recursive resolve never double-wraps.
+  if (result.manager) {
+    try {
+      const workspaceDir = resolveAgentWorkspaceDir(params.cfg, params.agentId);
+      if (workspaceDir) {
+        result = { ...result, manager: wrapWithDagSearch(result.manager, workspaceDir) };
+      }
+    } catch {
+      // DAG wrapping is best-effort; fall through with the unwrapped manager.
+    }
+  }
   return {
     ...result,
     debug: {

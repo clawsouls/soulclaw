@@ -4,7 +4,7 @@
  */
 
 import { createSubsystemLogger } from "../logging/subsystem.js";
-import type { MemorySearchResult } from "./types.js";
+import type { MemorySearchResult } from "../plugin-sdk/memory-core-host-engine-storage.js";
 
 const log = createSubsystemLogger("dag-search");
 

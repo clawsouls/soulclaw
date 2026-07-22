@@ -138,6 +138,26 @@ const coreCliCommandCatalog = defineCommandDescriptorCatalog([
     description: "Inspect durable background tasks and TaskFlow state",
     hasSubcommands: true,
   },
+  {
+    name: "topic",
+    description: "Manage topic snapshots",
+    hasSubcommands: true,
+  },
+  {
+    name: "swarm",
+    description: "Manage Swarm Memory — shared memory sync across agents",
+    hasSubcommands: true,
+  },
+  {
+    name: "soulscan",
+    description: "Scan soul files for security and quality issues",
+    hasSubcommands: false,
+  },
+  {
+    name: "persona",
+    description: "Persona drift detection and metrics",
+    hasSubcommands: true,
+  },
 ] as const satisfies ReadonlyArray<CoreCliCommandDescriptor>);
 
 /** Static root-command descriptors for the core CLI surface. */

@@ -32,7 +32,9 @@ const KNOWN_INTERNAL_HOOK_EVENT_KEYS = [
   "session:auto-reset",
   "session:compact:after",
   "session:compact:before",
+  "session:end",
   "session:patch",
+  "session:start",
 ] as const;
 
 export function isKnownInternalHookEventKey(key: string): boolean {

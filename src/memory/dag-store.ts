@@ -13,7 +13,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createSubsystemLogger } from "../logging/subsystem.js";
-import { requireNodeSqlite } from "./sqlite.js";
+import { requireNodeSqlite } from "../plugin-sdk/memory-core-host-engine-storage.js";
 
 const log = createSubsystemLogger("dag-store");
 

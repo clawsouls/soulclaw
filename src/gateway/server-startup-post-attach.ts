@@ -881,6 +881,20 @@ export async function startGatewaySidecars(params: {
     });
   }
 
+  // SoulClaw: boot-time SoulScan integrity check + Swarm Memory sync (fire-and-forget).
+  await measureStartup(params.startupTrace, "sidecars.soulspec", async () => {
+    try {
+      const { startSoulSpecSidecars } = await import("./server-startup-soulspec.js");
+      startSoulSpecSidecars({
+        cfg: params.cfg,
+        workspaceDir: params.defaultWorkspaceDir,
+        log: params.log,
+      });
+    } catch (err) {
+      params.log.warn(`soulspec startup sidecars failed: ${String(err)}`);
+    }
+  });
+
   let restartSentinelWake: GatewayPostReadySidecarHandle | undefined;
   postReadySidecars.push(
     schedulePostReadySidecarTask({

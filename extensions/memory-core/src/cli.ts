@@ -12,6 +12,7 @@ import {
 } from "openclaw/plugin-sdk/number-runtime";
 import type {
   MemoryCommandOptions,
+  MemoryCompactCommandOptions,
   MemoryForgetCommandOptions,
   MemoryPromoteCommandOptions,
   MemoryPromoteExplainOptions,
@@ -63,6 +64,11 @@ async function runMemoryPromote(
 ) {
   const runtime = await loadMemoryCliRuntime();
   await runtime.runMemoryPromote(opts, hostOptions);
+}
+
+async function runMemoryCompact(opts: MemoryCompactCommandOptions) {
+  const runtime = await loadMemoryCliRuntime();
+  await runtime.runMemoryCompact(opts);
 }
 
 async function runMemoryPromoteExplain(
@@ -291,6 +297,20 @@ export function registerMemoryCli(program: Command, hostOptions?: MemoryCoreRunt
     .option("--json", "Print JSON")
     .action(async (opts: MemoryPromoteCommandOptions) => {
       await runMemoryPromote(opts, hostOptions);
+    });
+
+  memory
+    .command("compact")
+    .description("Archive aged T2 working-memory dailies into quarterly summaries")
+    .option("--agent <id>", "Agent id (default: default agent)")
+    .option("--days <n>", "Minimum age in days to compact (default: 90)", (value: string) =>
+      parseMemoryCliPositiveIntegerOption(value, "--days"),
+    )
+    .option("--apply", "Execute compaction (write quarterly archives)", false)
+    .option("--remove", "Remove original dailies after archiving (use with --apply)", false)
+    .option("--json", "Print JSON")
+    .action(async (opts: MemoryCompactCommandOptions) => {
+      await runMemoryCompact(opts);
     });
 
   memory

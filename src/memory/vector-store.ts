@@ -6,10 +6,12 @@
  */
 
 import type { DatabaseSync } from "node:sqlite";
+import {
+  loadSqliteVecExtension,
+  requireNodeSqlite,
+} from "../plugin-sdk/memory-core-host-engine-storage.js";
 import type { VectorStoreConfig } from "./config.js";
 import { DEFAULT_VECTOR_STORE_CONFIG } from "./config.js";
-import { loadSqliteVecExtension } from "./sqlite-vec.js";
-import { requireNodeSqlite } from "./sqlite.js";
 
 export interface StoredChunk {
   id: string;

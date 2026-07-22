@@ -10,4 +10,5 @@ export {
   runMemoryRemHarness,
   runMemorySessionBackfill,
 } from "./cli-rem.runtime.js";
+export { runMemoryCompact } from "./cli-compact.runtime.js";
 export { runMemoryStatus } from "./cli-status.runtime.js";

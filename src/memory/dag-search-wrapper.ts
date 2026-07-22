@@ -6,13 +6,13 @@
  */
 
 import { createSubsystemLogger } from "../logging/subsystem.js";
-import { getDagStore } from "./dag-hook.js";
 import type {
   MemoryEmbeddingProbeResult,
   MemorySearchManager,
   MemorySearchResult,
   MemorySyncProgressUpdate,
-} from "./types.js";
+} from "../plugin-sdk/memory-core-host-engine-storage.js";
+import { getDagStore } from "./dag-hook.js";
 
 const log = createSubsystemLogger("dag-search");
 
