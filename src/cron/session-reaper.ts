@@ -9,6 +9,7 @@ import {
 } from "../config/sessions/session-accessor.js";
 import { resolveMaintenanceConfig } from "../config/sessions/store-maintenance-runtime.js";
 import type { CronConfig } from "../config/types.cron.js";
+import { createInternalHookEvent, triggerInternalHook } from "../hooks/internal-hooks.js";
 import { formatErrorMessage } from "../infra/errors.js";
 import { normalizeAgentId, parseAgentSessionKey } from "../routing/session-key.js";
 import { isCronRunSessionKey } from "../sessions/session-key-utils.js";
@@ -121,6 +122,8 @@ export async function sweepCronRunSessions(params: {
 
   let pruned = 0;
   let transcriptCleanupError: unknown;
+  // SoulClaw: track reaped sessions (sessionId → sessionFile) for the session:end hook.
+  const prunedSessions = new Map<string, string | undefined>();
   try {
     const cutoff = now - retentionMs;
     const requestedOwner = normalizeAgentId(params.agentId);
@@ -158,6 +161,10 @@ export async function sweepCronRunSessions(params: {
         expectedUpdatedAt: entry.updatedAt,
         archiveRemovedTranscript: true,
       });
+      // SoulClaw: remember (sessionId → sessionFile) so the session:end hook can fire below.
+      if (entry.sessionId && (!prunedSessions.has(entry.sessionId) || entry.sessionFile)) {
+        prunedSessions.set(entry.sessionId, entry.sessionFile);
+      }
     }
     if (removals.length > 0) {
       // Archive-age cleanup follows the session maintenance retention knob:
@@ -199,6 +206,24 @@ export async function sweepCronRunSessions(params: {
       { pruned, retentionMs },
       `cron-reaper: pruned ${pruned} expired cron run session(s)`,
     );
+
+    // Fire session:end for each reaped session
+    for (const [sessionId, sessionFile] of prunedSessions) {
+      try {
+        const sessionEndEvent = createInternalHookEvent("session", "end", sessionId, {
+          sessionId,
+          sessionKey: sessionId,
+          workspaceDir: sessionFile ? path.dirname(path.dirname(sessionFile)) : "",
+          reason: "reaper",
+        });
+        await triggerInternalHook(sessionEndEvent);
+      } catch (err) {
+        params.log.warn(
+          { err: String(err) },
+          `cron-reaper: session:end hook failed for ${sessionId}`,
+        );
+      }
+    }
   }
 
   return { swept: true, pruned };

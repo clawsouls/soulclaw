@@ -236,3 +236,8 @@ extensions/discord/assets/embedded-app-sdk.mjs
 
 # Pinned Swift lint/format tools installed by scripts/install-swift-tools.sh
 .build/
+
+# Vector index cache (auto-generated from memory files)
+.memory-index/
+*.memory-vec.db
+*.memory-vec.db-journal

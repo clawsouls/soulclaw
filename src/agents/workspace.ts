@@ -61,6 +61,8 @@ export const DEFAULT_IDENTITY_FILENAME = "IDENTITY.md";
 export const DEFAULT_USER_FILENAME = "USER.md";
 export const DEFAULT_BOOTSTRAP_FILENAME = "BOOTSTRAP.md";
 export const DEFAULT_MEMORY_FILENAME = CANONICAL_ROOT_MEMORY_FILENAME;
+// SoulClaw: alternate lowercase root memory filename recognized by tiered bootstrap.
+export const DEFAULT_MEMORY_ALT_FILENAME = "memory.md";
 export const GENERATED_WORKSPACE_BOOTSTRAP_FILENAMES = [
   DEFAULT_AGENTS_FILENAME,
   DEFAULT_SOUL_FILENAME,
@@ -1067,6 +1069,10 @@ export async function ensureAgentWorkspace(params?: {
   }
   const shouldWriteBootstrapFile = (fileName: string): boolean =>
     !OPTIONAL_BOOTSTRAP_FILENAMES.has(fileName) || !skipOptionalBootstrapFiles.has(fileName);
+
+  // SoulClaw: ensure the memory/ directory exists for memory search indexing.
+  const memoryDir = path.join(dir, "memory");
+  await fs.mkdir(memoryDir, { recursive: true });
 
   await writeFileIfMissing(agentsPath, agentsTemplate);
   if (shouldWriteBootstrapFile(DEFAULT_SOUL_FILENAME)) {

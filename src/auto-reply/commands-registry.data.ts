@@ -32,6 +32,22 @@ let cachedRegistryVersion = -1;
 function buildChatCommands(): ChatCommandDefinition[] {
   const commands: ChatCommandDefinition[] = [
     ...buildBuiltinChatCommands({ listThinkingLevels }),
+    defineChatCommand({
+      key: "topic",
+      nativeName: "topic",
+      description: "Bind, show, or list topic snapshots.",
+      textAlias: "/topic",
+      acceptsArgs: true,
+      category: "session",
+      args: [
+        {
+          name: "action",
+          description: "Action: bind <name>, show [name], list",
+          type: "string",
+          captureRemaining: true,
+        },
+      ],
+    }),
     ...listLoadedChannelPlugins()
       .filter(supportsNativeCommands)
       .map((plugin) => defineDockCommand(plugin)),

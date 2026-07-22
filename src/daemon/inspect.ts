@@ -245,7 +245,11 @@ function isOpenClawGatewayTaskName(name: string): boolean {
   // gateway task is not misidentified as an extra gateway service.
   const stripped = normalized.replace(/^\\+/, "");
   const defaultName = normalizeLowercaseStringOrEmpty(resolveGatewayWindowsTaskName());
-  return stripped === defaultName || /^openclaw gateway \(.+\)$/.test(stripped);
+  return (
+    stripped === defaultName ||
+    /^openclaw gateway \(.+\)$/.test(stripped) ||
+    /^soulclaw gateway \(.+\)$/.test(stripped)
+  );
 }
 
 function isIgnoredLaunchdLabel(label: string): boolean {

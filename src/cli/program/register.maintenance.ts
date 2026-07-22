@@ -2,6 +2,7 @@
 import type { Command } from "commander";
 import { formatDocsLink } from "../../../packages/terminal-core/src/links.js";
 import { theme } from "../../../packages/terminal-core/src/theme.js";
+import { hostCommand } from "../../commands/host.js";
 import { defaultRuntime } from "../../runtime.js";
 import { formatErrorMessage as formatError, runCommandWithRuntime } from "../cli-utils.js";
 import { hasExplicitOptions } from "../command-options.js";
@@ -257,6 +258,13 @@ export function registerMaintenanceCommands(program: Command) {
           yes: Boolean(opts.yes),
         });
       });
+    });
+
+  program
+    .command("host")
+    .description("Open ClawSouls Hosting — deploy your agent to the cloud")
+    .action(async () => {
+      await hostCommand();
     });
 
   program

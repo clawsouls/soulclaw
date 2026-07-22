@@ -10,7 +10,7 @@ import type {
   UpdateRunnerOptions,
 } from "./update-runner-types.js";
 
-const DEFAULT_PACKAGE_NAME = "openclaw";
+const DEFAULT_PACKAGE_NAME = "soulclaw";
 const CORE_PACKAGE_NAMES = new Set([DEFAULT_PACKAGE_NAME]);
 
 export function normalizeDir(value?: string | null) {

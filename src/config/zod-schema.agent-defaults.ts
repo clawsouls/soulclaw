@@ -146,6 +146,8 @@ export const AgentDefaultsSchema = z
         keepRecentTokens: z.number().int().positive().optional(),
         identifierPolicy: z.union([z.literal("strict"), z.literal("off")]).optional(),
         recentTurnsPreserve: z.number().int().min(0).max(12).optional(),
+        /** Send a notification to the active channel when compaction completes. Default: true. */
+        notify: z.boolean().optional(),
         qualityGuard: z
           .object({
             enabled: z.boolean().optional(),
@@ -253,6 +255,49 @@ export const AgentDefaultsSchema = z
       .strict()
       .optional(),
     sandbox: AgentSandboxSchema,
+    personaDrift: z
+      .object({
+        /** Enable periodic persona drift checks (default: false) */
+        enabled: z.boolean().optional(),
+        /** Check interval: every N agent responses (default: 5) */
+        checkInterval: z.number().int().positive().optional(),
+        /** Drift score threshold for warning (0-1, default: 0.3) */
+        driftThreshold: z.number().min(0).max(1).optional(),
+        /** Drift score threshold for severe alert (0-1, default: 0.7) */
+        severeThreshold: z.number().min(0).max(1).optional(),
+        /** Send notifications on drift detection (default: true) */
+        notify: z.boolean().optional(),
+        /** Use Ollama for drift detection (default: true, falls back to keyword) */
+        useOllama: z.boolean().optional(),
+        /** Ollama model for drift detection (default: qwen3:8b) */
+        ollamaModel: z.string().optional(),
+      })
+      .strict()
+      .optional(),
+    swarm: z
+      .object({
+        /** Path to shared swarm git directory (default: ~/.openclaw/swarm) */
+        dir: z.string().optional(),
+        /** Enable automatic sync after agent turns (default: true) */
+        autoSync: z.boolean().optional(),
+        /** Sync interval in minutes (default: 10) */
+        syncIntervalMinutes: z.number().int().positive().optional(),
+      })
+      .strict()
+      .optional(),
+    weeklyReview: z
+      .object({
+        /** Disable weekly review entirely. Default: false (enabled). */
+        disabled: z.boolean().optional(),
+        /** Day of week to run (0=Sun, 1=Mon, ..., 5=Fri, 6=Sat). Default: 5 (Friday). */
+        reviewDay: z.number().int().min(0).max(6).optional(),
+        /** Number of days to look back. Default: 7. */
+        daysBack: z.number().int().positive().optional(),
+        /** Minimum confidence threshold. Default: 0.4. */
+        minConfidence: z.number().min(0).max(1).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
   .optional();

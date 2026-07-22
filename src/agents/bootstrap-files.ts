@@ -22,6 +22,7 @@ import {
   resolveBootstrapTotalMaxChars,
 } from "./embedded-agent-helpers.js";
 import type { AgentRunSessionTarget } from "./run-session-target.js";
+import { filterByTier, type TieredFilterOptions } from "./tiered-bootstrap.js";
 import {
   DEFAULT_BOOTSTRAP_FILENAME,
   DEFAULT_MEMORY_FILENAME,
@@ -301,6 +302,8 @@ export async function resolveBootstrapFilesForRun(params: {
   contextMode?: BootstrapContextMode;
   runKind?: BootstrapContextRunKind;
   readOnlyState?: boolean;
+  /** SoulClaw: tiered bootstrap options for progressive disclosure */
+  tieredBootstrap?: TieredFilterOptions;
 }): Promise<WorkspaceBootstrapFile[]> {
   const sessionKey = params.sessionKey ?? params.sessionId;
   const session = {
@@ -336,17 +339,24 @@ export async function resolveBootstrapFilesForRun(params: {
     ...(protectedRootMemoryFile ? [protectedRootMemoryFile] : []),
     ...ineligibleAutomaticMemoryFiles,
   ];
-  const bootstrapFiles = applyContextModeFilter({
-    files: filterCompletedWorkspaceBootstrapFile(
-      filterBootstrapFilesForSession(rawFiles, session).filter(
-        (file) =>
-          !ineligibleAutomaticMemoryFiles.some((ineligible) =>
-            workspaceFilesShareSourceIdentity(file, ineligible),
-          ),
-      ),
-      workspaceSetupCompleted,
-      params.workspaceDir,
+  let filtered = filterCompletedWorkspaceBootstrapFile(
+    filterBootstrapFilesForSession(rawFiles, session).filter(
+      (file) =>
+        !ineligibleAutomaticMemoryFiles.some((ineligible) =>
+          workspaceFilesShareSourceIdentity(file, ineligible),
+        ),
     ),
+    workspaceSetupCompleted,
+    params.workspaceDir,
+  );
+
+  // SoulClaw: apply tiered progressive disclosure for main sessions.
+  if (params.tieredBootstrap && !params.tieredBootstrap.disabled) {
+    filtered = filterByTier(filtered, params.tieredBootstrap);
+  }
+
+  const bootstrapFiles = applyContextModeFilter({
+    files: filtered,
     contextMode: params.contextMode,
     runKind: params.runKind,
   });
@@ -383,6 +393,8 @@ export async function resolveBootstrapContextForRun(params: {
   contextMode?: BootstrapContextMode;
   runKind?: BootstrapContextRunKind;
   readOnlyState?: boolean;
+  /** SoulClaw: tiered bootstrap options for progressive disclosure */
+  tieredBootstrap?: TieredFilterOptions;
 }): Promise<{
   bootstrapFiles: WorkspaceBootstrapFile[];
   contextFiles: EmbeddedContextFile[];

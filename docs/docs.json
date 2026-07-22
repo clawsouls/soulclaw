@@ -1100,7 +1100,9 @@
                     "pages": [
                       "install/migrating",
                       "install/migrating-claude",
-                      "install/migrating-hermes"
+                      "install/migrating-hermes",
+                      "guides/migration-from-openclaw",
+                      "soulclaw/MIGRATION-v2026.7.1"
                     ]
                   },
                   "install/uninstall",
@@ -1857,7 +1859,8 @@
                       "cli/promos",
                       "cli/sessions",
                       "cli/system",
-                      "cli/tasks"
+                      "cli/tasks",
+                      "cli/topic"
                     ]
                   },
                   {

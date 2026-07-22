@@ -10,7 +10,7 @@ export function classifyPortListener(listener: PortListener, _port: number): Por
   const raw = normalizeLowercaseStringOrEmpty(
     `${listener.commandLine ?? ""} ${listener.command ?? ""}`,
   );
-  if (raw.includes("openclaw")) {
+  if (raw.includes("openclaw") || raw.includes("soulclaw")) {
     return "gateway";
   }
   const command = normalizeLowercaseStringOrEmpty(listener.command ?? "");

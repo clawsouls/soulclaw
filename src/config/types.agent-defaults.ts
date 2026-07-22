@@ -365,6 +365,43 @@ export type AgentDefaultsConfig = {
   };
   /** Optional sandbox settings for non-main sessions. */
   sandbox?: AgentSandboxConfig;
+  /** Persona drift detection configuration (Soul Spec identity monitoring). */
+  personaDrift?: {
+    /** Enable periodic persona drift checks (default: false). */
+    enabled?: boolean;
+    /** Check interval: every N agent responses (default: 5). */
+    checkInterval?: number;
+    /** Drift score threshold for warning (0-1, default: 0.3). */
+    driftThreshold?: number;
+    /** Drift score threshold for severe alert (0-1, default: 0.7). */
+    severeThreshold?: number;
+    /** Send notifications on drift detection (default: true). */
+    notify?: boolean;
+    /** Use Ollama for drift detection (default: true, falls back to keyword). */
+    useOllama?: boolean;
+    /** Ollama model for drift detection (default: qwen3:8b). */
+    ollamaModel?: string;
+  };
+  /** Swarm memory synchronization configuration (git-based multi-agent memory). */
+  swarm?: {
+    /** Path to shared swarm git directory (default: ~/.openclaw/swarm). */
+    dir?: string;
+    /** Enable automatic sync after agent turns (default: true). */
+    autoSync?: boolean;
+    /** Sync interval in minutes (default: 10). */
+    syncIntervalMinutes?: number;
+  };
+  /** Weekly memory review configuration (Soul Memory promotion detection). */
+  weeklyReview?: {
+    /** Disable weekly review entirely. Default: false (enabled). */
+    disabled?: boolean;
+    /** Day of week to run (0=Sun, 1=Mon, ..., 5=Fri, 6=Sat). Default: 5 (Friday). */
+    reviewDay?: number;
+    /** Number of days to look back. Default: 7. */
+    daysBack?: number;
+    /** Minimum confidence threshold. Default: 0.4. */
+    minConfidence?: number;
+  };
 };
 
 export type AgentCompactionMode = "default" | "safeguard";
@@ -396,6 +433,8 @@ export type AgentCompactionConfig = {
   keepRecentTokens?: number;
   /** Preserve this many most-recent user/assistant turns verbatim in compaction summary context. */
   recentTurnsPreserve?: number;
+  /** Send a notification to the active channel when compaction completes. Default: true. */
+  notify?: boolean;
   /** Identifier-preservation instruction policy for compaction summaries. */
   identifierPolicy?: AgentCompactionIdentifierPolicy;
   /** Optional quality-audit retries for safeguard compaction summaries. */

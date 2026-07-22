@@ -238,6 +238,26 @@ export async function setupCommand(
     next = { ...next, gateway: { ...next.gateway, mode: "local" } };
   }
 
+  // SoulClaw: seed an ollama provider entry so local-first usage works out of the box.
+  const existingProviders = next.models?.providers ?? {};
+  if (!existingProviders.ollama) {
+    next = {
+      ...next,
+      models: {
+        ...next.models,
+        providers: {
+          ...existingProviders,
+          ollama: {
+            baseUrl: "http://127.0.0.1:11434/v1",
+            apiKey: "dummy",
+            api: "openai-completions",
+            models: [],
+          },
+        },
+      },
+    };
+  }
+
   if (!snapshot.exists) {
     const { ensureOnboardingAgent } = await import("./onboard-agent.js");
     const onboardingAgent = await ensureOnboardingAgent({

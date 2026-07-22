@@ -658,9 +658,25 @@ export async function invokeHeartbeatAgentRun(
     bootstrapContextMode: heartbeat?.lightContext === true ? ("lightweight" as const) : undefined,
     onModelSelected: replyPrefix.onModelSelected,
   };
+  // SoulClaw: append the weekly Soul Memory review on review day (default: Friday).
+  let heartbeatPrompt = prompt;
+  try {
+    const [{ resolveAgentWorkspaceDir }, { maybeRunWeeklyReview, resolveWeeklyReviewOptions }] =
+      await Promise.all([
+        import("../agents/agent-scope-config.js"),
+        import("../memory/weekly-review.js"),
+      ]);
+    const workspaceDir = resolveAgentWorkspaceDir(cfg, agentId);
+    const weeklyReview = await maybeRunWeeklyReview(workspaceDir, resolveWeeklyReviewOptions(cfg));
+    if (weeklyReview) {
+      heartbeatPrompt = `${prompt}\n\n${weeklyReview}`;
+    }
+  } catch {
+    // Weekly review failure is non-fatal.
+  }
   const replyResult = await getReplyFromConfig(
     {
-      Body: appendCronStyleCurrentTimeLine(prompt, cfg, startedAt),
+      Body: appendCronStyleCurrentTimeLine(heartbeatPrompt, cfg, startedAt),
       From: sender,
       To: sender,
       OriginatingChannel:
