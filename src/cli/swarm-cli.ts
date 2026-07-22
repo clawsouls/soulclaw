@@ -12,9 +12,9 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import type { Command } from "commander";
+import { colorize, theme } from "../../packages/terminal-core/src/theme.js";
 import { loadConfig } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";
-import { colorize, theme } from "../terminal/theme.js";
 
 function getSwarmDir(): string {
   const config = loadConfig();
