@@ -6,6 +6,16 @@
 
 SoulClaw is a fork of [OpenClaw](https://github.com/openclaw/openclaw) optimized for the [ClawSouls](https://clawsouls.ai) ecosystem. It adds a **3-Tier long-term memory system**, semantic memory search, persona drift detection, inline security scanning, and native swarm memory synchronization — all running locally.
 
+## What's new in 2026.7.1
+
+- **Rebased onto OpenClaw `v2026.7.1`** — brings four months of upstream work onto the new `extensions/` plugin architecture (providers, channels, and memory now ship as extensions).
+- **`/dreaming`** — idle-time memory synthesis (light → REM → deep sweeps) with a promotion policy that writes to `MEMORY.md` and keeps a `DREAMS.md` diary.
+- **Video & music generation** — built-in `video_generate` tool (xAI grok-imagine-video / Alibaba Wan / Runway) plus music generation (Google Lyria / MiniMax).
+- **Soul Memory ported into the `memory-core` extension** — the full 4-tier store (DAG lossless SQLite + FTS5, bge-m3 semantic search, T2→T1 promotion, tier stats, T2 compaction) is preserved on the new architecture.
+- **Compaction notification** rewired into upstream agent-hooks; topic snapshots (`/topic`), inline SoulScan, Persona Engine, native Swarm Memory, tiered bootstrap, and `soulclaw host` all carried forward.
+- **New Node requirement** — Node.js `>=22.22.3 <23`, `>=24.15.0 <25`, or `>=25.9.0` (see [Requirements](#requirements)).
+- **Installed from source** for now — the `soulclaw` npm package still serves the previous stable 2026.3.x line until monorepo npm packaging lands (see [Installation](#installation)).
+
 ## 🧠 Soul Memory — 4-Tier Adaptive Memory Architecture
 
 SoulClaw agents **never forget** while maintaining coherent identity. Soul Memory separates identity from experience through a 4-tier hierarchy with temporal decay and automatic promotion:
@@ -168,8 +178,24 @@ Full runtime isolation for embedded environments (VSCode extensions, etc).
 
 ## Installation
 
+### npm (previous stable, 2026.3.x)
+
+The `soulclaw` npm package currently serves the previous stable 2026.3.x line:
+
 ```bash
 npm install -g soulclaw
+```
+
+### From source (2026.7.1)
+
+`v2026.7.1` is installed from source until monorepo npm packaging lands:
+
+```bash
+git clone -b migrate/v2026.7.1 https://github.com/clawsouls/soulclaw.git
+cd soulclaw
+pnpm install
+node scripts/build-all.mjs
+node openclaw.mjs --version
 ```
 
 ## Quick Start
@@ -325,24 +351,26 @@ SoulClaw works without Ollama — it falls back to keyword-based text matching. 
 
 ## Roadmap
 
-| Tag                   | Status      | Description                                            |
-| --------------------- | ----------- | ------------------------------------------------------ |
-| `soulclaw/v2026.3.3`  | ✅ Released | Contained runtime (`OPENCLAW_STATE_DIR` workspace fix) |
-| `soulclaw/v2026.3.4`  | ✅ Released | Semantic memory search (bge-m3 vector embeddings)      |
-| `soulclaw/v2026.3.5`  | ✅ Released | Persona engine + Inline SoulScan + Native Swarm Memory |
-| `soulclaw/v2026.3.6`  | ✅ Released | Tiered bootstrap loading (40-60% token savings)        |
-| `soulclaw/v2026.3.12` | ✅ Released | Stability improvements + upstream sync                 |
-| `soulclaw/v2026.3.17` | ✅ Released | Passive memory auto-extraction                         |
-| `soulclaw/v2026.3.18` | ✅ Released | DAG lossless memory store (SQLite + FTS5)              |
-| `soulclaw/v2026.3.19` | ✅ Released | DAG FTS5 → memory_search pipeline integration          |
-| `soulclaw/v2026.3.20` | ✅ Released | Network stability fix (IPv6 auto-fallback)             |
+| Tag                              | Status      | Description                                                                                       |
+| -------------------------------- | ----------- | ------------------------------------------------------------------------------------------------- |
+| `soulclaw/v2026.3.3`             | ✅ Released | Contained runtime (`OPENCLAW_STATE_DIR` workspace fix)                                            |
+| `soulclaw/v2026.3.4`             | ✅ Released | Semantic memory search (bge-m3 vector embeddings)                                                 |
+| `soulclaw/v2026.3.5`             | ✅ Released | Persona engine + Inline SoulScan + Native Swarm Memory                                            |
+| `soulclaw/v2026.3.6`             | ✅ Released | Tiered bootstrap loading (40-60% token savings)                                                   |
+| `soulclaw/v2026.3.12`            | ✅ Released | Stability improvements + upstream sync                                                            |
+| `soulclaw/v2026.3.17`            | ✅ Released | Passive memory auto-extraction                                                                    |
+| `soulclaw/v2026.3.18`            | ✅ Released | DAG lossless memory store (SQLite + FTS5)                                                         |
+| `soulclaw/v2026.3.19`            | ✅ Released | DAG FTS5 → memory_search pipeline integration                                                     |
+| `soulclaw/v2026.3.20`            | ✅ Released | Network stability fix (IPv6 auto-fallback)                                                        |
+| `soulclaw/v2026.3.21–v2026.3.37` | ✅ Released | Topic snapshots, compaction notify, session hooks, `soulclaw host`, stability                     |
+| `soulclaw/v2026.7.1`             | 🔄 Tagging  | Rebase onto OpenClaw v2026.7.1 — extensions architecture, dreaming, video/music, memory-core port |
 
 ## Upstream Compatibility
 
 |                      | Version                            |
 | -------------------- | ---------------------------------- |
 | **Fork base**        | OpenClaw `v2026.3.1` (main branch) |
-| **Current SoulClaw** | `2026.3.20`                        |
+| **Current SoulClaw** | `2026.7.1`                         |
 | **License**          | MIT (same as OpenClaw)             |
 
 All OpenClaw features, plugins, and configurations work as-is. SoulClaw adds functionality — it doesn't remove or break anything.
@@ -351,7 +379,7 @@ The `openclaw/main` branch tracks upstream for migration purposes.
 
 ## Requirements
 
-- Node.js >= 22.12.0
+- Node.js `>=22.22.3 <23`, `>=24.15.0 <25`, or `>=25.9.0` (upstream requirement)
 - [Ollama](https://ollama.com) (optional but recommended)
   - `bge-m3` — memory search embeddings (default)
 
