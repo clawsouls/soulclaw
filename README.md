@@ -178,15 +178,9 @@ Full runtime isolation for embedded environments (VSCode extensions, etc).
 
 ## Installation
 
-### npm
+> **Note:** Install **v2026.7.1 from source** (below). The `soulclaw` npm package tracks the stable **2026.3.x** line; npm distribution of v2026.7.1 is pending a monorepo packaging fix. Requires Node.js `>=22.22.3 <23`, `>=24.15.0 <25`, or `>=25.9.0`.
 
-```bash
-npm install -g soulclaw
-```
-
-This installs SoulClaw `2026.7.1` (rebased onto OpenClaw v2026.7.1). Requires Node.js `>=22.22.3 <23`, `>=24.15.0 <25`, or `>=25.9.0`.
-
-### From source
+### From source (2026.7.1)
 
 ```bash
 git clone https://github.com/clawsouls/soulclaw.git
@@ -194,6 +188,12 @@ cd soulclaw
 pnpm install
 node scripts/build-all.mjs
 node openclaw.mjs --version
+```
+
+### npm (stable 2026.3.x)
+
+```bash
+npm install -g soulclaw
 ```
 
 ## Quick Start
