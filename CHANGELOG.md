@@ -2,6 +2,12 @@
 
 Docs: https://docs.openclaw.ai
 
+## 2026.7.2
+
+### Fixes
+
+- **npm packaging:** inject the `@openclaw/ai` registry entry into `npm-shrinkwrap.json` during release prep so `npm install -g soulclaw` installs the AI runtime and the gateway boots from the published package (previously the workspace-linked entry was omitted, so the gateway crashed with `Cannot find module '@openclaw/ai/internal/openai'`).
+
 ## 2026.7.1
 
 ### Highlights
