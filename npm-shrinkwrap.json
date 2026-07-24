@@ -1,12 +1,12 @@
 {
   "name": "openclaw",
-  "version": "2026.7.1",
+  "version": "2026.7.2",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
       "name": "openclaw",
-      "version": "2026.7.1",
+      "version": "2026.7.2",
       "hasInstallScript": true,
       "license": "MIT",
       "dependencies": {
@@ -64,7 +64,8 @@
         "web-tree-sitter": "0.26.10",
         "ws": "8.21.0",
         "yaml": "2.9.0",
-        "zod": "4.4.3"
+        "zod": "4.4.3",
+        "@openclaw/ai": "2026.7.1"
       },
       "bin": {
         "openclaw": "openclaw.mjs"
@@ -3612,6 +3613,23 @@
       "license": "ISC",
       "peerDependencies": {
         "zod": "^3.25.28 || ^4"
+      }
+    },
+    "node_modules/@openclaw/ai": {
+      "version": "2026.7.1",
+      "resolved": "https://registry.npmjs.org/@openclaw/ai/-/ai-2026.7.1.tgz",
+      "integrity": "sha512-FsKy5DXSHf4qyN8Huoz/10HZRgoEwLF4uk8UWaCafaIler+q5Fsl51HcrIqIrEe0S38OT7LOaxnR++MOshAlmw==",
+      "license": "MIT",
+      "dependencies": {
+        "@anthropic-ai/sdk": "0.109.1",
+        "@google/genai": "2.10.0",
+        "@mistralai/mistralai": "2.4.0",
+        "openai": "6.45.0",
+        "partial-json": "0.1.7",
+        "typebox": "1.3.3"
+      },
+      "engines": {
+        "node": ">=22.19.0"
       }
     }
   }
