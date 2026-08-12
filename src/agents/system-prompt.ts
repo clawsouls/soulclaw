@@ -75,6 +75,16 @@ import {
 } from "./watched-sessions-prompt.js";
 
 /**
+ * The very first line of every system prompt — the agent's base identity.
+ * SoulClaw's premise is that identity is a first-class, portable layer
+ * (Soul Spec), so the runtime introduces itself as a SoulClaw agent rather
+ * than inheriting the upstream OpenClaw wording. Embedders (e.g. ClawSouls
+ * Desktop) may override per-app via the SOULCLAW_IDENTITY_LINE env var.
+ */
+export const BASE_IDENTITY_LINE =
+  process.env.SOULCLAW_IDENTITY_LINE?.trim() || "You are a SoulClaw agent.";
+
+/**
  * Controls which hardcoded sections are included in the system prompt.
  * - "full": All sections (default, for main agent)
  * - "minimal": Reduced sections (Tooling, Workspace, Runtime) - used for subagents
@@ -850,9 +860,7 @@ export function buildAgentSystemPrompt(params: {
   const runtimeInfo = params.runtimeInfo;
   const modelIdentityLine = buildModelIdentityPromptLine(runtimeInfo?.model);
   if (promptMode === "none") {
-    return ["You are a personal assistant running inside OpenClaw.", modelIdentityLine]
-      .filter(Boolean)
-      .join("\n");
+    return [BASE_IDENTITY_LINE, modelIdentityLine].filter(Boolean).join("\n");
   }
 
   const acpEnabled = params.acpEnabled === true;
@@ -1206,7 +1214,7 @@ export function buildAgentSystemPrompt(params: {
   });
   const stablePrefix = cacheStablePromptPrefix(stablePrefixCacheKey, () => {
     const lines = [
-      "You are a personal assistant running inside OpenClaw.",
+      BASE_IDENTITY_LINE,
       "",
       ...(includeToolGuidance
         ? [

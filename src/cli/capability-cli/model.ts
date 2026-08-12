@@ -20,6 +20,7 @@ import { updateAuthProfileStoreWithLock } from "../../agents/auth-profiles/store
 import { buildExplicitSessionIdSessionKey } from "../../agents/command/session.js";
 import { DEFAULT_PROVIDER } from "../../agents/defaults.js";
 import { canonicalizeCaseOnlyCatalogModelRef } from "../../agents/model-selection.js";
+import { BASE_IDENTITY_LINE } from "../../agents/system-prompt.js";
 import { loadPreparedModelCatalog } from "../../agents/prepared-model-catalog.js";
 import {
   completeWithPreparedSimpleCompletionModel,
@@ -52,7 +53,7 @@ import {
   resolveTransport,
 } from "./shared.js";
 
-const LOCAL_MODEL_RUN_SYSTEM_PROMPT = "You are a personal assistant running inside OpenClaw.";
+const LOCAL_MODEL_RUN_SYSTEM_PROMPT = BASE_IDENTITY_LINE;
 const HEIC_MODEL_RUN_MIMES = new Set([
   "image/heic",
   "image/heic-sequence",

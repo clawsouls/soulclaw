@@ -1267,9 +1267,7 @@ describe("capability cli", () => {
     await runCapability("model", "run", "--model", "openai/gpt-5.5", "--prompt", "hello", "--json");
 
     const call = firstCompletionCall();
-    expect(call?.context?.systemPrompt).toBe(
-      "You are a personal assistant running inside OpenClaw.",
-    );
+    expect(call?.context?.systemPrompt).toBe("You are a SoulClaw agent.");
     expect(call?.context?.messages?.[0]?.role).toBe("user");
     expect(call?.context?.messages?.[0]?.content).toBe("hello");
   });
