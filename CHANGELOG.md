@@ -2,6 +2,12 @@
 
 Docs: https://docs.openclaw.ai
 
+## 2026.7.3
+
+### Changes
+
+- **Agent identity branding:** the system prompt now introduces the runtime as a SoulClaw agent ("You are a SoulClaw agent.") instead of the upstream OpenClaw wording, across both prompt modes and the local capability CLI. Embedders such as ClawSouls Desktop can override the base identity line per app via the `SOULCLAW_IDENTITY_LINE` environment variable.
+
 ## 2026.7.2
 
 ### Fixes
