@@ -1725,9 +1725,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
       });
 
       expect(context.params.prompt).toBe("latest ask");
-      expect(context.systemPrompt).toContain(
-        "You are a personal assistant running inside OpenClaw.",
-      );
+      expect(context.systemPrompt).toContain("You are a SoulClaw agent.");
       expect(context.systemPrompt).toContain("Current model identity: test-cli/test-model.");
       expect(context.systemPrompt).not.toContain("hook exploded");
       expect(hookRunner.runBeforePromptBuild).toHaveBeenCalledOnce();
