@@ -83,7 +83,19 @@ try {
 }
 
 // 4. npm pack — prepack 이 build·인벤토리·체인지로그를 만든다.
-run("npm", ["pack", "--ignore-scripts=false"]);
+//    ⚠️ 2026.8.1 의 prepack 은 dependencies 에 `workspace:*` 가 남아 있으면 스스로 거부한다
+//    (7.3 사고를 upstream 이 가드로 막았다). 그래서 pack 동안만 package.json 의 workspace
+//    의존을 registry 의 정확한 버전으로 바꿔 두고, 끝나면 반드시 원복한다.
+const pkgPath = join(root, "package.json");
+const pkgOriginal = readFileSync(pkgPath, "utf8");
+const pkgPatched = JSON.parse(pkgOriginal);
+for (const [dep, ver] of Object.entries(rewrites)) pkgPatched.dependencies[dep] = ver;
+writeFileSync(pkgPath, JSON.stringify(pkgPatched, null, 2) + "\n");
+try {
+  run("npm", ["pack", "--ignore-scripts=false"]);
+} finally {
+  writeFileSync(pkgPath, pkgOriginal); // 어떤 경로로 끝나든 작업 트리를 더럽히지 않는다
+}
 const rawTarball = join(root, `soulclaw-${version}.tgz`);
 if (!existsSync(rawTarball)) throw new Error(`expected ${rawTarball} after npm pack`);
 
