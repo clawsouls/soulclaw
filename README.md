@@ -274,20 +274,20 @@ SoulClaw works without Ollama — it falls back to keyword-based text matching. 
 
 ## Roadmap
 
-| Tag                              | Status        | Description                                                                                       |
-| -------------------------------- | ------------- | ------------------------------------------------------------------------------------------------- |
-| `soulclaw/v2026.8.1`             | 🚧 Publishing | Rebuilt on OpenClaw 2.0 (v2026.8.1); upstream memory used as-is, 7.x engine retired               |
-| `soulclaw/v2026.3.3`             | ✅ Released   | Contained runtime (`OPENCLAW_STATE_DIR` workspace fix)                                            |
-| `soulclaw/v2026.3.4`             | ✅ Released   | Semantic memory search (bge-m3 vector embeddings)                                                 |
-| `soulclaw/v2026.3.5`             | ✅ Released   | Persona engine + Inline SoulScan + Native Swarm Memory                                            |
-| `soulclaw/v2026.3.6`             | ✅ Released   | Tiered bootstrap loading (40-60% token savings)                                                   |
-| `soulclaw/v2026.3.12`            | ✅ Released   | Stability improvements + upstream sync                                                            |
-| `soulclaw/v2026.3.17`            | ✅ Released   | Passive memory auto-extraction                                                                    |
-| `soulclaw/v2026.3.18`            | ✅ Released   | DAG lossless memory store (SQLite + FTS5)                                                         |
-| `soulclaw/v2026.3.19`            | ✅ Released   | DAG FTS5 → memory_search pipeline integration                                                     |
-| `soulclaw/v2026.3.20`            | ✅ Released   | Network stability fix (IPv6 auto-fallback)                                                        |
-| `soulclaw/v2026.3.21–v2026.3.37` | ✅ Released   | Topic snapshots, compaction notify, session hooks, `soulclaw host`, stability                     |
-| `soulclaw/v2026.8.1`             | 🔄 Tagging    | Rebase onto OpenClaw v2026.8.1 — extensions architecture, dreaming, video/music, memory-core port |
+| Tag                              | Status       | Description                                                                                       |
+| -------------------------------- | ------------ | ------------------------------------------------------------------------------------------------- |
+| `soulclaw/v2026.8.1`             | ✅ Published | Rebuilt on OpenClaw 2.0 (v2026.8.1); upstream memory used as-is, 7.x engine retired               |
+| `soulclaw/v2026.3.3`             | ✅ Released  | Contained runtime (`OPENCLAW_STATE_DIR` workspace fix)                                            |
+| `soulclaw/v2026.3.4`             | ✅ Released  | Semantic memory search (bge-m3 vector embeddings)                                                 |
+| `soulclaw/v2026.3.5`             | ✅ Released  | Persona engine + Inline SoulScan + Native Swarm Memory                                            |
+| `soulclaw/v2026.3.6`             | ✅ Released  | Tiered bootstrap loading (40-60% token savings)                                                   |
+| `soulclaw/v2026.3.12`            | ✅ Released  | Stability improvements + upstream sync                                                            |
+| `soulclaw/v2026.3.17`            | ✅ Released  | Passive memory auto-extraction                                                                    |
+| `soulclaw/v2026.3.18`            | ✅ Released  | DAG lossless memory store (SQLite + FTS5)                                                         |
+| `soulclaw/v2026.3.19`            | ✅ Released  | DAG FTS5 → memory_search pipeline integration                                                     |
+| `soulclaw/v2026.3.20`            | ✅ Released  | Network stability fix (IPv6 auto-fallback)                                                        |
+| `soulclaw/v2026.3.21–v2026.3.37` | ✅ Released  | Topic snapshots, compaction notify, session hooks, `soulclaw host`, stability                     |
+| `soulclaw/v2026.8.1`             | 🔄 Tagging   | Rebase onto OpenClaw v2026.8.1 — extensions architecture, dreaming, video/music, memory-core port |
 
 ## Upstream Compatibility
 
