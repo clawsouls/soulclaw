@@ -122,8 +122,9 @@ export async function sweepCronRunSessions(params: {
 
   let pruned = 0;
   let transcriptCleanupError: unknown;
-  // SoulClaw: track reaped sessions (sessionId → sessionFile) for the session:end hook.
-  const prunedSessions = new Map<string, string | undefined>();
+  // SoulClaw: track reaped session ids for the session:end hook. Upstream 8.1 dropped
+  // `sessionFile` from the session entry, so the hook resolves the workspace itself.
+  const prunedSessions = new Set<string>();
   try {
     const cutoff = now - retentionMs;
     const requestedOwner = normalizeAgentId(params.agentId);
@@ -161,9 +162,9 @@ export async function sweepCronRunSessions(params: {
         expectedUpdatedAt: entry.updatedAt,
         archiveRemovedTranscript: true,
       });
-      // SoulClaw: remember (sessionId → sessionFile) so the session:end hook can fire below.
-      if (entry.sessionId && (!prunedSessions.has(entry.sessionId) || entry.sessionFile)) {
-        prunedSessions.set(entry.sessionId, entry.sessionFile);
+      // SoulClaw: remember the reaped session id so the session:end hook can fire below.
+      if (entry.sessionId) {
+        prunedSessions.add(entry.sessionId);
       }
     }
     if (removals.length > 0) {
@@ -208,12 +209,15 @@ export async function sweepCronRunSessions(params: {
     );
 
     // Fire session:end for each reaped session
-    for (const [sessionId, sessionFile] of prunedSessions) {
+    for (const sessionId of prunedSessions) {
       try {
         const sessionEndEvent = createInternalHookEvent("session", "end", sessionId, {
           sessionId,
           sessionKey: sessionId,
-          workspaceDir: sessionFile ? path.dirname(path.dirname(sessionFile)) : "",
+          // The reaper has no transcript path in 8.1; the hook falls back to the
+          // agent's configured workspace via agentId.
+          workspaceDir: "",
+          agentId: params.agentId,
           reason: "reaper",
         });
         await triggerInternalHook(sessionEndEvent);

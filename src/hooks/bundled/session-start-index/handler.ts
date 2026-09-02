@@ -5,7 +5,6 @@
  * ensuring recent memory files are searchable immediately.
  */
 
-import type { OpenClawConfig } from "../../../config/config.js";
 import { createSubsystemLogger } from "../../../logging/subsystem.js";
 import { resolveAgentIdFromSessionKey } from "../../../routing/session-key.js";
 import { resolveHookConfig } from "../../config.js";
@@ -43,14 +42,17 @@ const handler: HookHandler = async (event) => {
 
       const agentId = event.context.agentId ?? resolveAgentIdFromSessionKey(sessionKey) ?? "main";
 
-      // Import memory manager dynamically to avoid circular deps
-      const { MemoryIndexManager } = await import("../../../memory/index.js");
-      const manager = await MemoryIndexManager.get({
+      // Upstream v2026.8.1 moved the index manager into the memory-core plugin;
+      // go through the host accessor instead of the retired src/memory/index.js.
+      // Imported dynamically to avoid a hook -> plugin-runtime import cycle.
+      const { getActiveMemorySearchManagerCore } =
+        await import("../../../plugins/memory-runtime.js");
+      const { manager } = await getActiveMemorySearchManagerCore({
         cfg: typedCfg,
         agentId,
       });
 
-      if (!manager) {
+      if (!manager?.sync) {
         log.debug("Memory search not configured, skipping index", { sessionId });
         return;
       }
@@ -63,8 +65,8 @@ const handler: HookHandler = async (event) => {
         sessionId,
         elapsedMs: elapsed,
       });
-
-      await manager.close();
+      // The manager is owned and cached by the memory plugin runtime; closing it
+      // here would tear down a handle other callers still hold.
     } catch (err) {
       // Never block session start — log and continue
       log.debug("Memory index failed (non-blocking)", {

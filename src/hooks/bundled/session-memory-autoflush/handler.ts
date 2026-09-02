@@ -10,7 +10,6 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { resolveAgentWorkspaceDir } from "../../../agents/agent-scope.js";
-import type { OpenClawConfig } from "../../../config/config.js";
 import { resolveStateDir } from "../../../config/paths.js";
 import { writeFileWithinRoot } from "../../../infra/fs-safe.js";
 import { createSubsystemLogger } from "../../../logging/subsystem.js";
@@ -124,8 +123,9 @@ const handler: HookHandler = async (event) => {
       }
 
       const now = new Date(event.timestamp);
-      const dateStr = now.toISOString().split("T")[0];
-      const timeStr = now.toISOString().split("T")[1].split(".")[0];
+      const isoTimestamp = now.toISOString();
+      const dateStr = isoTimestamp.slice(0, 10);
+      const timeStr = isoTimestamp.slice(11, 19);
 
       // Build markdown entry
       const entryParts = [

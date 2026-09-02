@@ -22,10 +22,18 @@ import {
   DEFAULT_TOOLS_FILENAME,
   DEFAULT_USER_FILENAME,
   DEFAULT_BOOTSTRAP_FILENAME,
-  DEFAULT_HEARTBEAT_FILENAME,
   DEFAULT_MEMORY_FILENAME,
   DEFAULT_MEMORY_ALT_FILENAME,
 } from "./workspace.js";
+
+/**
+ * Upstream v2026.8.1 dropped DEFAULT_HEARTBEAT_FILENAME from workspace.ts and now
+ * spells the heartbeat bootstrap file as a literal (see zod-schema.agent-defaults).
+ * Keep a local constant so the tier tables stay readable. Typed as `string`
+ * because 8.1 narrowed WorkspaceBootstrapFile["name"] to the six canonical
+ * bootstrap files, which no longer include HEARTBEAT.md.
+ */
+const DEFAULT_HEARTBEAT_FILENAME: string = "HEARTBEAT.md";
 
 export type BootstrapTier = 1 | 2 | 3;
 
