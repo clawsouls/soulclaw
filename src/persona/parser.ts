@@ -76,7 +76,7 @@ function parseMarkdown(content: string): PersonaRules {
     // Detect section headers (## or ###)
     const headerMatch = line.match(/^#{2,3}\s+(.+)/);
     if (headerMatch) {
-      const heading = headerMatch[1].trim().toLowerCase();
+      const heading = (headerMatch[1] ?? "").trim().toLowerCase();
       currentField = SECTION_MAP[heading] ?? null;
       continue;
     }
@@ -85,7 +85,7 @@ function parseMarkdown(content: string): PersonaRules {
     if (currentField) {
       const bullet = line.match(/^\s*[-*]\s+(.+)/);
       if (bullet) {
-        rules[currentField].push(bullet[1].trim());
+        rules[currentField].push((bullet[1] ?? "").trim());
       }
     }
   }

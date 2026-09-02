@@ -2,8 +2,8 @@
  * Swarm Memory configuration
  */
 
-import { homedir } from "os";
-import { join } from "path";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 export interface SwarmConfig {
   /** Path to the shared swarm git directory */

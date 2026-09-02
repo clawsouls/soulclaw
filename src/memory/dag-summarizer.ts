@@ -17,9 +17,7 @@ Keep it under 200 words. Use bullet points.
 Conversation:
 `;
 
-export interface SummarizeFunction {
-  (prompt: string): Promise<string>;
-}
+export type SummarizeFunction = (prompt: string) => Promise<string>;
 
 /**
  * Check if a session needs summarization and perform it.
@@ -93,11 +91,7 @@ async function maybeCreateHigherSummary(
     `Creating level-${currentLevel + 1} summary from ${countAtLevel} level-${currentLevel} nodes`,
   );
 
-  // For now, cap at level 3 to avoid infinite recursion
-  if (currentLevel >= 3) {
-    return;
-  }
-
-  // Would need a more sophisticated query to find un-rolled-up summaries
-  // Skipping recursive summarization for v1 — level 1 summaries are sufficient
+  // For now, cap at level 3 to avoid infinite recursion.
+  // Rolling up further would need a query for un-rolled-up summaries; level 1
+  // summaries are sufficient for v1, so nothing runs past this point yet.
 }

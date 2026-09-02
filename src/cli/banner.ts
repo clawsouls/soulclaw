@@ -129,12 +129,7 @@ export function emitCliBanner(version: string, options: BannerOptions = {}) {
   const hostingHint = isRich()
     ? `${theme.muted("☁️  24/7 cloud hosting →")} ${theme.info("soulclaw host")}`
     : "☁️  24/7 cloud hosting → soulclaw host";
-  process.stdout.write(`
-${art ? `${art}
-` : ""}${line}
-${hostingHint}
-
-`);
+  process.stdout.write(`\n${art ? `${art}\n` : ""}${line}\n${hostingHint}\n\n`);
   bannerEmitted = true;
 }
 

@@ -5,10 +5,10 @@
  * can sync memory files via agent/{name} branches.
  */
 
-import { execFile } from "child_process";
-import { existsSync, mkdirSync } from "fs";
-import { join } from "path";
-import { promisify } from "util";
+import { execFile } from "node:child_process";
+import { existsSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import { type SwarmConfig, resolveSwarmConfig } from "./config.js";
 
 const execFileAsync = promisify(execFile);
@@ -126,7 +126,7 @@ export class SwarmClient {
       return false;
     }
 
-    const now = new Date().toISOString().replace("T", " ").substring(0, 16);
+    const now = new Date().toISOString().replace("T", " ").slice(0, 16);
     const commitMsg = message || `swarm: sync ${now}`;
     await this.git("commit", "-m", commitMsg);
 
@@ -226,7 +226,7 @@ export class SwarmClient {
       currentBranch,
       agentBranch,
       agentBranches,
-      hasChanges: !!statusOutput,
+      hasChanges: Boolean(statusOutput),
     };
   }
 

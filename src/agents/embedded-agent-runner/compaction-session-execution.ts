@@ -618,9 +618,8 @@ export async function executePreparedCompactionSession(runtime: PreparedCompacti
           // compaction completes. Best-effort — drives bundled hooks like
           // session-memory-autoflush; failures never abort the compaction result.
           try {
-            const { createInternalHookEvent, triggerInternalHook } = await import(
-              "../../hooks/internal-hooks.js"
-            );
+            const { createInternalHookEvent, triggerInternalHook } =
+              await import("../../hooks/internal-hooks.js");
             const sessionEndEvent = createInternalHookEvent("session", "end", hookSessionKey, {
               sessionId: params.sessionId,
               sessionKey: hookSessionKey,

@@ -41,7 +41,7 @@ export function registerSoulScanCli(program: Command) {
       console.log(colorize(theme.info, `\nScanning: ${targetDir}\n`));
 
       const result = await scanSoul(targetDir);
-      const minScore = parseInt(opts?.minScore ?? "30", 10);
+      const minScore = Number.parseInt(opts?.minScore ?? "30", 10);
 
       if (opts?.json) {
         console.log(JSON.stringify(result, null, 2));

@@ -30,7 +30,7 @@ export interface InlineSyncOptions {
 }
 
 /** Rate-limit: don't sync more than once per 10 minutes */
-const _lastSyncTime = new Map<string, number>();
+const lastSyncTimeByKey = new Map<string, number>();
 const SYNC_INTERVAL_MS = 10 * 60 * 1000;
 
 /**
@@ -59,13 +59,13 @@ export async function maybeSwarmSync(options: InlineSyncOptions): Promise<void> 
   // Rate-limit syncing
   const now = Date.now();
   const cacheKey = config.swarmDir;
-  const lastSync = _lastSyncTime.get(cacheKey) ?? 0;
+  const lastSync = lastSyncTimeByKey.get(cacheKey) ?? 0;
   if (now - lastSync < SYNC_INTERVAL_MS) {
     log.debug(`skipping sync — last sync ${Math.round((now - lastSync) / 1000)}s ago`);
     return;
   }
 
-  _lastSyncTime.set(cacheKey, now);
+  lastSyncTimeByKey.set(cacheKey, now);
 
   try {
     const result = await syncCycle(options.swarmConfig);

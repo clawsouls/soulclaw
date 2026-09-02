@@ -55,7 +55,7 @@ Reply with ONLY a decimal number between 0 and 1. Nothing else.`;
 
   const data = (await res.json()) as { response: string };
   const scoreMatch = data.response.trim().match(/([0-9]*\.?[0-9]+)/);
-  const score = scoreMatch ? Math.min(1, Math.max(0, parseFloat(scoreMatch[1]))) : 0.5;
+  const score = scoreMatch ? Math.min(1, Math.max(0, Number.parseFloat(scoreMatch[1] ?? ""))) : 0.5;
 
   return {
     score,

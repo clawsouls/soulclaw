@@ -6,8 +6,8 @@
  * Non-fatal: catches all errors, logs debug, returns empty on failure.
  */
 
-import { existsSync } from "fs";
-import { join } from "path";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { scanSoul, type ScanResult } from "./engine.js";
 import { formatSummary } from "./report.js";
 

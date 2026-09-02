@@ -18,9 +18,8 @@ export async function runMemoryCompact(opts: MemoryCompactCommandOptions) {
         return;
       }
       const memoryDir = path.join(workspaceDir, "memory");
-      const { findCompactionCandidates, compactToQuarterly, formatCompactionReport } = await import(
-        "./memory/compaction.js"
-      );
+      const { findCompactionCandidates, compactToQuarterly, formatCompactionReport } =
+        await import("./memory/compaction.js");
       const candidates = await findCompactionCandidates(memoryDir, opts.days ?? 90);
       if (opts.apply) {
         const results = await compactToQuarterly(memoryDir, candidates, opts.remove ?? false);

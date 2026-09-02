@@ -2,7 +2,7 @@
  * Swarm conflict resolver — LLM-assisted git merge conflict resolution
  */
 
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { type SwarmConfig, resolveSwarmConfig } from "./config.js";
 
 export interface ConflictResolution {

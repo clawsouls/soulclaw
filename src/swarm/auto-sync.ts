@@ -2,9 +2,9 @@
  * Swarm auto-sync — automatic pull/push on heartbeat + workspace sync
  */
 
-import { existsSync, mkdirSync, copyFileSync, readdirSync } from "fs";
-import { homedir } from "os";
-import { join } from "path";
+import { existsSync, mkdirSync, copyFileSync, readdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { SwarmClient } from "./client.js";
 import { type SwarmConfig, resolveSwarmConfig } from "./config.js";
 import { resolveConflict } from "./conflict-resolver.js";

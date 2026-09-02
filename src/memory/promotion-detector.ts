@@ -133,7 +133,7 @@ const PROMOTION_RULES: PromotionRule[] = [
       /\bNOTE\b|\bIMPORTANT\b|\bCRITICAL\b/,
       /★|⭐|🔴|❗/,
     ],
-    weight: 1.0,
+    weight: 1,
   },
 ];
 
@@ -170,7 +170,7 @@ function parseMarkdownSections(text: string): Section[] {
   let startLine = 1;
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const line = lines[i] ?? "";
     if (/^#{1,3}\s+/.test(line)) {
       if (currentHeading || currentLines.length > 0) {
         sections.push({
@@ -213,7 +213,7 @@ function detectInSection(file: string, section: Section): PromotionCandidate | n
   for (const rule of PROMOTION_RULES) {
     for (const pattern of rule.patterns) {
       for (let i = 0; i < lines.length; i++) {
-        const match = pattern.exec(lines[i]);
+        const match = pattern.exec(lines[i] ?? "");
         if (match) {
           reasons.push({
             category: rule.category,
@@ -329,8 +329,7 @@ export function formatPromotionReport(candidates: PromotionCandidate[]): string 
     ``,
   ];
 
-  for (let i = 0; i < candidates.length; i++) {
-    const c = candidates[i];
+  for (const [i, c] of candidates.entries()) {
     const categories = [...new Set(c.reasons.map((r) => r.category))];
     const confidence = Math.round(c.confidence * 100);
     lines.push(`### ${i + 1}. ${c.section || "(untitled)"}`);

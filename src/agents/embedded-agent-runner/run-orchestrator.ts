@@ -233,9 +233,8 @@ async function runEmbeddedAgentInternal(
       // Best-effort — drives bundled hooks like session-start-index; failures never
       // abort the run.
       try {
-        const { createInternalHookEvent, triggerInternalHook } = await import(
-          "../../hooks/internal-hooks.js"
-        );
+        const { createInternalHookEvent, triggerInternalHook } =
+          await import("../../hooks/internal-hooks.js");
         const startSessionKey = params.sessionKey?.trim() || params.sessionId;
         const sessionStartEvent = createInternalHookEvent("session", "start", startSessionKey, {
           sessionId: params.sessionId,

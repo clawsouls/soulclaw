@@ -6,6 +6,14 @@
  * @module persona
  */
 
+import type { PersonaEngineConfig } from "./config.js";
+import type { DriftResult } from "./drift-detector.js";
+import { detectDrift } from "./drift-detector.js";
+import type { EnforcementAction } from "./enforcer.js";
+import { evaluateDrift } from "./enforcer.js";
+import { recordDrift } from "./metrics.js";
+import type { PersonaRules } from "./parser.js";
+
 export { parseSoulSpec, rulesToPromptBlock } from "./parser.js";
 export type { PersonaRules } from "./parser.js";
 
@@ -22,14 +30,6 @@ export { mergeConfig, DEFAULT_PERSONA_CONFIG } from "./config.js";
 export type { PersonaEngineConfig } from "./config.js";
 
 // ─── Convenience: full pipeline ────────────────────────────────
-
-import type { PersonaEngineConfig } from "./config.js";
-import type { DriftResult } from "./drift-detector.js";
-import { detectDrift } from "./drift-detector.js";
-import type { EnforcementAction } from "./enforcer.js";
-import { evaluateDrift } from "./enforcer.js";
-import { recordDrift } from "./metrics.js";
-import type { PersonaRules } from "./parser.js";
 
 export interface PersonaCheckResult {
   drift: DriftResult;

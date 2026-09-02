@@ -139,13 +139,13 @@ async function removeFromSource(
   let endIdx = lines.length;
 
   for (let i = 0; i < lines.length; i++) {
-    if (sectionHeadingRe.test(lines[i])) {
+    if (sectionHeadingRe.test(lines[i] ?? "")) {
       startIdx = i;
       // Find next heading of same or higher level
-      const level = (lines[i].match(/^(#{1,3})\s/) ?? ["", "##"])[1].length;
+      const level = ((lines[i] ?? "").match(/^(#{1,3})\s/)?.[1] ?? "##").length;
       for (let j = i + 1; j < lines.length; j++) {
-        const headingMatch = lines[j].match(/^(#{1,3})\s/);
-        if (headingMatch && headingMatch[1].length <= level) {
+        const headingMatch = (lines[j] ?? "").match(/^(#{1,3})\s/);
+        if (headingMatch && (headingMatch[1]?.length ?? 0) <= level) {
           endIdx = j;
           break;
         }

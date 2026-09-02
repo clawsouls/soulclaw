@@ -152,14 +152,14 @@ export function registerTopicCommands(program: Command): void {
         const map = new TopicMap(workspaceDir);
         await map.load();
 
-        let topic = map.getTopicForSession(sessionKey);
-        if (!topic) {
-          topic = map.autoBindSession(sessionKey);
+        let topicName = map.getTopicForSession(sessionKey);
+        if (!topicName) {
+          topicName = map.autoBindSession(sessionKey);
           await map.save();
         }
 
-        await TopicSnapshot.appendHistory(workspaceDir, topic, message, sessionKey);
-        console.log(`✅ Checkpointed "${message}" to topic ${topic}`);
+        await TopicSnapshot.appendHistory(workspaceDir, topicName, message, sessionKey);
+        console.log(`✅ Checkpointed "${message}" to topic ${topicName}`);
       } catch (err) {
         console.error("❌ Error:", err instanceof Error ? err.message : String(err));
         process.exit(1);

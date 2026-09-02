@@ -7,8 +7,8 @@ import {
 } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
 import type { MemorySearchManager } from "openclaw/plugin-sdk/memory-core-host-engine-storage";
 import { normalizeAgentId } from "openclaw/plugin-sdk/routing";
-import type { MemoryCoreAcquireLocalService } from "./embedding-local-service.js";
 import { wrapWithDagSearch } from "./dag-search.js";
+import type { MemoryCoreAcquireLocalService } from "./embedding-local-service.js";
 
 const managerRuntimeLoader = createLazyRuntimeModule(() => import("../../manager-runtime.js"));
 const loadManagerRuntime = managerRuntimeLoader;

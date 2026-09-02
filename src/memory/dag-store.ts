@@ -210,7 +210,7 @@ export class DagStore {
   /**
    * Full-text search across all DAG nodes.
    */
-  search(query: string, limit: number = 10): DagSearchResult[] {
+  search(query: string, limit = 10): DagSearchResult[] {
     try {
       const stmt = this.db.prepare(`
         SELECT n.id, n.level, n.content, n.summary, rank
@@ -231,7 +231,7 @@ export class DagStore {
    * Get recent conversation context for a session.
    * Returns most recent raw messages + relevant summaries.
    */
-  getRecentContext(sessionKey: string, maxTokens: number = 4000): DagNode[] {
+  getRecentContext(sessionKey: string, maxTokens = 4000): DagNode[] {
     const nodes: DagNode[] = [];
     let tokenBudget = maxTokens;
 

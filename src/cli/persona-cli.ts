@@ -95,7 +95,7 @@ export function registerPersonaCli(program: Command) {
         metricsPath: path.join(workspaceDir, "data/persona-metrics.json"),
       });
       const entries = await getAllMetrics(config);
-      const lastN = parseInt(opts.last ?? "20", 10);
+      const lastN = Number.parseInt(opts.last ?? "20", 10);
 
       if (entries.length === 0) {
         console.log(colorize(theme.muted, "\nNo drift metrics recorded yet.\n"));
@@ -279,13 +279,13 @@ export function registerPersonaCli(program: Command) {
           drift["enabled"] = false;
         }
         if (opts.interval) {
-          drift["checkInterval"] = parseInt(opts.interval, 10);
+          drift["checkInterval"] = Number.parseInt(opts.interval, 10);
         }
         if (opts.threshold) {
-          drift["driftThreshold"] = parseFloat(opts.threshold);
+          drift["driftThreshold"] = Number.parseFloat(opts.threshold);
         }
         if (opts.severe) {
-          drift["severeThreshold"] = parseFloat(opts.severe);
+          drift["severeThreshold"] = Number.parseFloat(opts.severe);
         }
         if (opts.notify !== undefined) {
           drift["notify"] = opts.notify;

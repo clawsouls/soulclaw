@@ -109,8 +109,7 @@ export async function scanSoul(dir: string): Promise<ScanResult> {
 
   try {
     // Try to use clawsouls scanner (installed globally or as dependency)
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore — clawsouls may not have type declarations
+    // @ts-expect-error — clawsouls may not have type declarations
     const { scanSoulPackage } = (await import("clawsouls/dist/lib/scanner.js")) as {
       scanSoulPackage: (files: Map<string, { content: string; size: number }>) => {
         ok: boolean;

@@ -77,96 +77,103 @@ export class TopicMap {
 }
 
 // ── Topic Snapshot (read/write topic markdown files) ───────────────────────────
-export class TopicSnapshot {
-  static filePath(workspaceDir: string, topicName: string): string {
-    return path.join(workspaceDir, MEMORY_DIR, `topic-${sanitizeTopicName(topicName)}.md`);
-  }
 
-  static async load(workspaceDir: string, topicName: string): Promise<TopicData | null> {
-    try {
-      const raw = await fs.readFile(TopicSnapshot.filePath(workspaceDir, topicName), "utf-8");
-      return parseTopicMarkdown(topicName, raw);
-    } catch {
-      return null;
-    }
-  }
+function topicSnapshotPath(workspaceDir: string, topicName: string): string {
+  return path.join(workspaceDir, MEMORY_DIR, `topic-${sanitizeTopicName(topicName)}.md`);
+}
 
-  static async save(workspaceDir: string, data: TopicData): Promise<void> {
-    const dir = path.join(workspaceDir, MEMORY_DIR);
-    await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(
-      TopicSnapshot.filePath(workspaceDir, data.name),
-      renderTopicMarkdown(data),
-      "utf-8",
-    );
-  }
-
-  static async appendHistory(
-    workspaceDir: string,
-    topicName: string,
-    line: string,
-    sessionKey: string,
-  ): Promise<TopicData> {
-    const today = isoDate();
-    let data = await TopicSnapshot.load(workspaceDir, topicName);
-    if (!data) {
-      data = {
-        name: topicName,
-        meta: { created: today, updated: today, session: sessionKey },
-        status: "",
-        decisions: [],
-        history: [],
-      };
-    }
-    data.history.push(`- ${today}: ${line}`);
-    if (data.history.length > MAX_HISTORY_LINES) {
-      data.history = data.history.slice(-MAX_HISTORY_LINES);
-    }
-    data.meta.updated = today;
-    data.meta.session = sessionKey;
-    await TopicSnapshot.save(workspaceDir, data);
-    return data;
-  }
-
-  static async updateFromSummary(
-    workspaceDir: string,
-    topicName: string,
-    summary: string,
-    sessionKey: string,
-  ): Promise<void> {
-    const today = isoDate();
-    let data = await TopicSnapshot.load(workspaceDir, topicName);
-    if (!data) {
-      data = {
-        name: topicName,
-        meta: { created: today, updated: today, session: sessionKey },
-        status: "",
-        decisions: [],
-        history: [],
-      };
-    }
-
-    const extracted = extractFromCompactionSummary(summary);
-
-    if (extracted.status) {
-      data.status = extracted.status;
-    }
-    if (extracted.decisions.length > 0) {
-      for (const d of extracted.decisions) {
-        if (!data.decisions.includes(d)) {
-          data.decisions.push(d);
-        }
-      }
-      if (data.decisions.length > MAX_DECISIONS) {
-        data.decisions = data.decisions.slice(-MAX_DECISIONS);
-      }
-    }
-
-    data.meta.updated = today;
-    data.meta.session = sessionKey;
-    await TopicSnapshot.save(workspaceDir, data);
+async function loadTopicSnapshot(
+  workspaceDir: string,
+  topicName: string,
+): Promise<TopicData | null> {
+  try {
+    const raw = await fs.readFile(topicSnapshotPath(workspaceDir, topicName), "utf-8");
+    return parseTopicMarkdown(topicName, raw);
+  } catch {
+    return null;
   }
 }
+
+async function saveTopicSnapshot(workspaceDir: string, data: TopicData): Promise<void> {
+  const dir = path.join(workspaceDir, MEMORY_DIR);
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(
+    topicSnapshotPath(workspaceDir, data.name),
+    renderTopicMarkdown(data),
+    "utf-8",
+  );
+}
+
+function emptyTopicData(topicName: string, today: string, sessionKey: string): TopicData {
+  return {
+    name: topicName,
+    meta: { created: today, updated: today, session: sessionKey },
+    status: "",
+    decisions: [],
+    history: [],
+  };
+}
+
+async function appendTopicSnapshotHistory(
+  workspaceDir: string,
+  topicName: string,
+  line: string,
+  sessionKey: string,
+): Promise<TopicData> {
+  const today = isoDate();
+  const data =
+    (await loadTopicSnapshot(workspaceDir, topicName)) ??
+    emptyTopicData(topicName, today, sessionKey);
+  data.history.push(`- ${today}: ${line}`);
+  if (data.history.length > MAX_HISTORY_LINES) {
+    data.history = data.history.slice(-MAX_HISTORY_LINES);
+  }
+  data.meta.updated = today;
+  data.meta.session = sessionKey;
+  await saveTopicSnapshot(workspaceDir, data);
+  return data;
+}
+
+async function updateTopicSnapshotFromSummary(
+  workspaceDir: string,
+  topicName: string,
+  summary: string,
+  sessionKey: string,
+): Promise<void> {
+  const today = isoDate();
+  const data =
+    (await loadTopicSnapshot(workspaceDir, topicName)) ??
+    emptyTopicData(topicName, today, sessionKey);
+
+  const extracted = extractFromCompactionSummary(summary);
+
+  if (extracted.status) {
+    data.status = extracted.status;
+  }
+  if (extracted.decisions.length > 0) {
+    for (const d of extracted.decisions) {
+      if (!data.decisions.includes(d)) {
+        data.decisions.push(d);
+      }
+    }
+    if (data.decisions.length > MAX_DECISIONS) {
+      data.decisions = data.decisions.slice(-MAX_DECISIONS);
+    }
+  }
+
+  data.meta.updated = today;
+  data.meta.session = sessionKey;
+  await saveTopicSnapshot(workspaceDir, data);
+}
+
+/** Grouped topic-snapshot file operations; kept as a namespace object for callers. */
+export const TopicSnapshot = {
+  filePath: topicSnapshotPath,
+  load: loadTopicSnapshot,
+  save: saveTopicSnapshot,
+  appendHistory: appendTopicSnapshotHistory,
+  updateFromSummary: updateTopicSnapshotFromSummary,
+};
 
 // ── Compaction Summary Parser (no LLM, regex only) ─────────────────────────────
 export function extractFromCompactionSummary(summary: string): {
@@ -243,7 +250,7 @@ export function suggestTopicNameFromSummary(summary: string): string | null {
   if (decisionsMatch?.[1]) {
     const words = extractSignificantWords(decisionsMatch[1]);
     if (words.length > 0) {
-      return words[0];
+      return words[0] ?? null;
     }
   }
 
@@ -254,7 +261,7 @@ export function suggestTopicNameFromSummary(summary: string): string | null {
   if (todosMatch?.[1]) {
     const words = extractSignificantWords(todosMatch[1]);
     if (words.length > 0) {
-      return words[0];
+      return words[0] ?? null;
     }
   }
 
@@ -476,15 +483,15 @@ function parseTopicMarkdown(topicName: string, raw: string): TopicData {
   // Parse Meta
   const createdMatch = raw.match(/\*\*created\*\*:\s*(.+)/);
   if (createdMatch) {
-    data.meta.created = createdMatch[1].trim();
+    data.meta.created = (createdMatch[1] ?? "").trim();
   }
   const updatedMatch = raw.match(/\*\*updated\*\*:\s*(.+)/);
   if (updatedMatch) {
-    data.meta.updated = updatedMatch[1].trim();
+    data.meta.updated = (updatedMatch[1] ?? "").trim();
   }
   const sessionMatch = raw.match(/\*\*session\*\*:\s*(.+)/);
   if (sessionMatch) {
-    data.meta.session = sessionMatch[1].trim();
+    data.meta.session = (sessionMatch[1] ?? "").trim();
   }
 
   // Parse Current Status

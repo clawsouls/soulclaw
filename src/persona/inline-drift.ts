@@ -39,9 +39,9 @@ export interface InlineDriftOptions {
 }
 
 /** Response counter per session for check interval */
-const _responseCount = new Map<string, number>();
+const responseCountBySession = new Map<string, number>();
 /** Cached persona rules per workspace */
-const _rulesCache = new Map<string, { rules: PersonaRules; mtime: number }>();
+const rulesCacheByWorkspace = new Map<string, { rules: PersonaRules; mtime: number }>();
 
 /**
  * Run persona drift detection after an agent turn.
@@ -62,8 +62,8 @@ export async function maybeCheckDrift(options: InlineDriftOptions): Promise<void
   const config = mergeConfig(options.personaConfig);
 
   // Increment response counter, only check every N responses
-  const count = (_responseCount.get(sessionKey) ?? 0) + 1;
-  _responseCount.set(sessionKey, count);
+  const count = (responseCountBySession.get(sessionKey) ?? 0) + 1;
+  responseCountBySession.set(sessionKey, count);
   if (count % config.checkInterval !== 0) {
     return;
   }
@@ -135,14 +135,14 @@ async function loadPersonaRules(workspaceDir: string): Promise<PersonaRules | nu
 
   try {
     // Simple cache based on workspace path (not mtime for perf)
-    const cached = _rulesCache.get(workspaceDir);
+    const cached = rulesCacheByWorkspace.get(workspaceDir);
     if (cached && Date.now() - cached.mtime < 60_000) {
       return cached.rules;
     }
 
     const content = await readFile(filePath, "utf-8");
     const rules = parseSoulSpec(content, format);
-    _rulesCache.set(workspaceDir, { rules, mtime: Date.now() });
+    rulesCacheByWorkspace.set(workspaceDir, { rules, mtime: Date.now() });
     return rules;
   } catch {
     return null;

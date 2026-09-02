@@ -30,7 +30,7 @@ export interface InlineScanOptions {
 }
 
 /** Rate-limit: don't scan more than once per 5 minutes per workspace */
-const _lastScanTime = new Map<string, number>();
+const lastScanTimeByWorkspace = new Map<string, number>();
 const SCAN_INTERVAL_MS = 5 * 60 * 1000;
 
 /**
@@ -45,7 +45,7 @@ export async function maybeInlineScan(options: InlineScanOptions): Promise<void>
 
   // Rate-limit scanning
   const now = Date.now();
-  const lastScan = _lastScanTime.get(workspaceDir) ?? 0;
+  const lastScan = lastScanTimeByWorkspace.get(workspaceDir) ?? 0;
   if (now - lastScan < SCAN_INTERVAL_MS) {
     log.debug(`skipping scan — last scan ${Math.round((now - lastScan) / 1000)}s ago`);
     return;
@@ -59,7 +59,7 @@ export async function maybeInlineScan(options: InlineScanOptions): Promise<void>
     return;
   }
 
-  _lastScanTime.set(workspaceDir, now);
+  lastScanTimeByWorkspace.set(workspaceDir, now);
 
   try {
     const result = await scanSoul(workspaceDir);

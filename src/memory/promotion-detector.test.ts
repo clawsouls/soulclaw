@@ -5,6 +5,12 @@ import { describe, it, expect } from "vitest";
 import { scanForPromotionCandidates, formatPromotionReport } from "./promotion-detector.js";
 
 describe("promotion-detector", () => {
+  // Dated fixtures have to stay inside the scan window, so derive the filename
+  // from today instead of pinning a date that ages out of every daysBack range.
+  const recentDailyFile = `${new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10)}.md`;
+
   async function createTempMemory(files: Record<string, string>) {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "soul-memory-test-"));
     for (const [name, content] of Object.entries(files)) {
@@ -15,7 +21,7 @@ describe("promotion-detector", () => {
 
   it("detects decision entries", async () => {
     const dir = await createTempMemory({
-      "2026-03-19.md": `# 2026-03-19
+      [recentDailyFile]: `# 2026-03-19
 
 ## OneClick Hosting 가격 결정
 
@@ -46,7 +52,7 @@ describe("promotion-detector", () => {
 
   it("detects legal entries", async () => {
     const dir = await createTempMemory({
-      "2026-03-19.md": `# Test
+      [recentDailyFile]: `# Test
 
 ## 상표 출원 접수 완료
 
@@ -90,7 +96,7 @@ describe("promotion-detector", () => {
 
   it("formats report correctly", async () => {
     const dir = await createTempMemory({
-      "2026-03-19.md": `# Test\n\n## Architecture 설계 완료\n\n3-tier architecture로 결정. $9.99 pricing.\n`,
+      [recentDailyFile]: `# Test\n\n## Architecture 설계 완료\n\n3-tier architecture로 결정. $9.99 pricing.\n`,
     });
 
     const candidates = await scanForPromotionCandidates(dir, { daysBack: 30 });
@@ -105,7 +111,7 @@ describe("promotion-detector", () => {
 
   it("returns empty for no candidates", async () => {
     const dir = await createTempMemory({
-      "2026-03-19.md": `# Daily\n\n## 일상\n\n오늘 날씨가 좋았다.\n`,
+      [recentDailyFile]: `# Daily\n\n## 일상\n\n오늘 날씨가 좋았다.\n`,
     });
 
     const candidates = await scanForPromotionCandidates(dir, { daysBack: 30 });
