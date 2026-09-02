@@ -1,5 +1,20 @@
 ## 2026.8.1
 
+### SoulClaw
+
+This is the first SoulClaw release rebuilt on OpenClaw 2.0 (v2026.8.1). The
+SoulClaw layer — persona loading, SoulScan, Soul Rollback, swarm memory sync and
+the bundled session hooks — was re-applied on top of the upstream release rather
+than merged forward from 2026.7.x. Upstream's new built-in memory (memory-core,
+SQLite index, Active Memory) is used as-is; the 2026.7.x SoulClaw memory engine
+is retired from the bundle and will return as a plugin on top of upstream memory.
+The `session-start-index` hook, which had been failing silently since 2026.7.x,
+is wired to the 8.1 memory runtime again.
+
+Publishing is now `node scripts/publish-fork.mjs` (see PUBLISHING-FORK.md).
+
+Everything below is upstream OpenClaw 2026.8.1.
+
 ### Highlights
 
 - **Find past conversations:** search visible conversation text by exact words or phrases and reopen the surrounding messages from a matching result. (#105057, #105635, #105585) Thanks @hercial61.
