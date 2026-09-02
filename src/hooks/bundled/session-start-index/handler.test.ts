@@ -4,14 +4,11 @@ import { createInternalHookEvent } from "../../internal-hooks.js";
 const mockSync = vi.fn().mockResolvedValue(undefined);
 const mockDispose = vi.fn().mockResolvedValue(undefined);
 const mockGet = vi.fn().mockResolvedValue({
-  sync: mockSync,
-  dispose: mockDispose,
+  manager: { sync: mockSync, close: mockDispose },
 });
 
-vi.mock("../../../memory/index.js", () => ({
-  MemoryIndexManager: {
-    get: (...args: unknown[]) => mockGet(...args),
-  },
+vi.mock("../../../plugins/memory-runtime.js", () => ({
+  getActiveMemorySearchManagerCore: (...args: unknown[]) => mockGet(...args),
 }));
 
 vi.mock("../../../logging/subsystem.js", () => ({
@@ -37,8 +34,7 @@ describe("session-start-index handler", () => {
     mockDispose.mockClear();
     mockGet.mockClear();
     mockGet.mockResolvedValue({
-      sync: mockSync,
-      dispose: mockDispose,
+      manager: { sync: mockSync, close: mockDispose },
     });
   });
 
@@ -86,8 +82,8 @@ describe("session-start-index handler", () => {
     expect(mockSync).not.toHaveBeenCalled();
   });
 
-  it("should skip when MemoryIndexManager.get returns null", async () => {
-    mockGet.mockResolvedValueOnce(null);
+  it("should skip when no memory search manager is registered", async () => {
+    mockGet.mockResolvedValueOnce({ manager: null });
     const handler = (await import("./handler.js")).default;
 
     const event = createInternalHookEvent("session", "start", "agent:main:main", {

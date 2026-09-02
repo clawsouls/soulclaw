@@ -29,9 +29,9 @@ const handler: HookHandler = async (event) => {
       ? hookConfig.timeoutMs
       : DEFAULT_TIMEOUT_MS;
 
-  const timeoutPromise = new Promise<"timeout">((resolve) =>
-    setTimeout(() => resolve("timeout"), timeoutMs),
-  );
+  const timeoutPromise = new Promise<"timeout">((resolve) => {
+    setTimeout(() => resolve("timeout"), timeoutMs);
+  });
 
   const indexPromise = (async () => {
     try {

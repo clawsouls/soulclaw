@@ -42,6 +42,9 @@ describe("session-memory-autoflush handler", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
+    // vi.restoreAllMocks() does not reset call history for factory mocks, so a
+    // later "was not called" assertion would otherwise see the previous test's call.
+    vi.clearAllMocks();
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "autoflush-test-"));
   });
 

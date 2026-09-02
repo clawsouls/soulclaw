@@ -26,8 +26,9 @@ export async function setupWeeklyReview(
   _runtime: RuntimeEnv,
   prompter: WizardPrompter,
 ): Promise<OpenClawConfig> {
-  // Only show if memory search is configured
-  const provider = cfg.agents?.defaults?.memorySearch?.provider as string | undefined;
+  // Only show if memory search is configured. Upstream v2026.8.1 moved the memory
+  // search block from agents.defaults.memorySearch to the top-level memory.search.
+  const provider = cfg.memory?.search?.provider;
   if (!provider || provider === "none") {
     return cfg;
   }

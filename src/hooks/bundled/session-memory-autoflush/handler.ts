@@ -31,7 +31,7 @@ const AUTOFLUSH_TIMEOUT_MS = 10_000;
  */
 async function getRecentSessionContent(
   sessionFilePath: string,
-  messageCount: number = 15,
+  messageCount = 15,
 ): Promise<string | null> {
   try {
     const content = await fs.readFile(sessionFilePath, "utf-8");
@@ -96,9 +96,9 @@ const handler: HookHandler = async (event) => {
   const onFailure = (hookConfig?.onFailure as string) ?? "warn";
 
   // Wrap in timeout to never block session end
-  const timeoutPromise = new Promise<"timeout">((resolve) =>
-    setTimeout(() => resolve("timeout"), AUTOFLUSH_TIMEOUT_MS),
-  );
+  const timeoutPromise = new Promise<"timeout">((resolve) => {
+    setTimeout(() => resolve("timeout"), AUTOFLUSH_TIMEOUT_MS);
+  });
 
   const flushPromise = (async () => {
     try {

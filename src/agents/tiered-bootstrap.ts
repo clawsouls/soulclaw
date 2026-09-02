@@ -29,11 +29,11 @@ import {
 /**
  * Upstream v2026.8.1 dropped DEFAULT_HEARTBEAT_FILENAME from workspace.ts and now
  * spells the heartbeat bootstrap file as a literal (see zod-schema.agent-defaults).
- * Keep a local constant so the tier tables stay readable. Typed as `string`
- * because 8.1 narrowed WorkspaceBootstrapFile["name"] to the six canonical
- * bootstrap files, which no longer include HEARTBEAT.md.
+ * Keep a local constant so the tier tables stay readable. 8.1 also narrowed
+ * WorkspaceBootstrapFile["name"] to the six canonical bootstrap files, which no
+ * longer include HEARTBEAT.md, so comparisons widen the name to `string`.
  */
-const DEFAULT_HEARTBEAT_FILENAME: string = "HEARTBEAT.md";
+const DEFAULT_HEARTBEAT_FILENAME = "HEARTBEAT.md";
 
 export type BootstrapTier = 1 | 2 | 3;
 
@@ -49,6 +49,12 @@ const TIER_2_FILES = new Set([
   DEFAULT_TOOLS_FILENAME,
   DEFAULT_USER_FILENAME,
   DEFAULT_BOOTSTRAP_FILENAME,
+]);
+
+/** Tier 1 plus the heartbeat file: everything a heartbeat run needs. */
+const HEARTBEAT_TIER_FILES: ReadonlySet<string> = new Set([
+  ...TIER_1_FILES,
+  DEFAULT_HEARTBEAT_FILENAME,
 ]);
 
 /** Tier 3: Memory — loaded only on heartbeat or when explicitly needed */
@@ -113,7 +119,7 @@ export function filterByTier(
 
   // Heartbeat: Tier 1 + HEARTBEAT.md
   if (isHeartbeat) {
-    return files.filter((f) => TIER_1_FILES.has(f.name) || f.name === DEFAULT_HEARTBEAT_FILENAME);
+    return files.filter((f) => HEARTBEAT_TIER_FILES.has(f.name));
   }
 
   // First turn: Tier 1 + Tier 2
